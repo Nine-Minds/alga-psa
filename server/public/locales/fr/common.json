@@ -1023,6 +1023,10 @@
     "noResults": "Aucun résultat trouvé",
     "searchPlaceholder": "Rechercher..."
   },
+  "pickers": {
+    "addNewClient": "Ajouter un nouveau client",
+    "addNewContact": "Ajouter un nouveau contact"
+  },
   "tagFilter": {
     "placeholder": "Filtrer par étiquettes...",
     "filter": "Filtrer",

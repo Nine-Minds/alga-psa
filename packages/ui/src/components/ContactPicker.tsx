@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
+import { RemoveScroll } from 'react-remove-scroll';
 import { Input } from './Input';
 import { Button } from './Button';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
 import type { IContact } from '@alga-psa/types';
+import { useTranslation } from '../lib/i18n/client';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, ButtonComponent, FormFieldComponent } from '../ui-reflection/types';
@@ -93,6 +96,7 @@ export const ContactPicker = ({
   onAddNew,
   "data-automation-type": dataAutomationType = 'picker',
 }: ContactPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -224,6 +228,133 @@ export const ContactPicker = ({
     onAddNew?.();
   };
 
+  const dropdownContent = (
+    <RemoveScroll allowPinchZoom>
+      <FocusScope
+        asChild
+        loop
+        trapped
+        onMountAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+        onUnmountAutoFocus={(event) => {
+          event.preventDefault();
+          buttonRef.current?.focus();
+        }}
+      >
+        <div
+          ref={dropdownContentRef}
+          className="fixed z-[9999] overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] pointer-events-auto"
+          style={{
+            top: `${dropdownCoords.top}px`,
+            left: `${dropdownCoords.left}px`,
+            width: `${dropdownCoords.width}px`,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          data-radix-popper-content-wrapper=""
+        >
+          {/* Search Input Container */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Input
+                ref={searchInputRef}
+                id={`contact-picker-search-${label.replace(/\s+/g, '-').toLowerCase()}`}
+                placeholder="Search contacts..."
+                value={searchTerm}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setSearchTerm(e.target.value);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                autoComplete="off"
+                autoFocus
+              />
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+          <div
+            className="overflow-y-auto"
+            style={{ maxHeight: '200px', overscrollBehavior: 'contain' }}
+            onWheel={(e) => e.stopPropagation()}
+            role="listbox"
+            id={`${id || 'contact-picker'}-listbox`}
+            aria-label="Contacts"
+          >
+            {/* "None" Option */}
+            <ContactOptionButton
+              id={`${id || 'contact-picker'}-option-none`}
+              label="None"
+              selected={value === ''}
+              onSelect={() => handleSelect('')}
+              className="relative flex w-full items-center px-3 py-2 text-left text-sm rounded text-gray-700 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
+            >
+              None
+            </ContactOptionButton>
+
+            {/* Contact List */}
+            {filteredContacts.length === 0 ? (
+              <div className="px-4 py-2 text-gray-500">No contacts found</div>
+            ) : (
+              filteredContacts.map((contact) => (
+                <ContactOptionButton
+                  key={contact.contact_name_id}
+                  id={`${id || 'contact-picker'}-option-${contact.contact_name_id}`}
+                  label={contact.email ? `${contact.full_name} (${contact.email})` : contact.full_name}
+                  selected={contact.contact_name_id === value}
+                  onSelect={() => handleSelect(contact.contact_name_id)}
+                  className={`
+                    relative flex w-full items-center justify-between px-3 py-2 text-left text-sm rounded cursor-pointer
+                    hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
+                    ${contact.is_inactive
+                      ? 'text-gray-400 bg-gray-50'
+                      : contact.contact_name_id === value
+                        ? 'bg-gray-100 font-medium text-gray-900'
+                        : 'text-gray-900'
+                      }
+                  `}
+                >
+                  <div className="flex items-center gap-2 flex-1">
+                    <ContactAvatar
+                      contactId={contact.contact_name_id}
+                      contactName={contact.full_name}
+                      avatarUrl={contact.avatarUrl || null}
+                      size="xs"
+                    />
+                    <div className="flex-1">
+                      <div>{contact.full_name}</div>
+                      <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contact.email}</div>
+                    </div>
+                  </div>
+                  {contact.is_inactive && <span className="text-xs text-gray-400">(Inactive)</span>}
+                </ContactOptionButton>
+              ))
+            )}
+          </div>
+          {onAddNew && (
+            <>
+              <div className="border-t border-gray-200" />
+              <Button
+                id="contact-picker-add-new-btn"
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 rounded-none text-primary"
+                onClick={handleAddNew}
+              >
+                <Plus className="h-4 w-4" />
+                {t('pickers.addNewContact', { defaultValue: 'Add new contact' })}
+              </Button>
+            </>
+          )}
+        </div>
+      </FocusScope>
+    </RemoveScroll>
+  );
+
 
   const mappedOptions = useMemo(() => contacts.map((opt): { value: string; label: string } => ({
     value: opt.contact_name_id,
@@ -345,112 +476,8 @@ export const ContactPicker = ({
             </div>
           </button>
 
-          {isOpen && typeof document !== 'undefined' && createPortal(
-            <div
-              ref={dropdownContentRef}
-              className="fixed z-[9999] overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] pointer-events-auto"
-              style={{
-                top: `${dropdownCoords.top}px`,
-                left: `${dropdownCoords.left}px`,
-                width: `${dropdownCoords.width}px`,
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Search Input Container */}
-              <div className="p-2 border-b border-gray-200">
-                <div className="relative">
-                  <Input
-                    ref={searchInputRef}
-                    id={`contact-picker-search-${label.replace(/\s+/g, '-').toLowerCase()}`}
-                    placeholder="Search contacts..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSearchTerm(e.target.value);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
-                    autoComplete="off"
-                  />
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-              <div
-                className="overflow-y-auto"
-                style={{ maxHeight: '200px' }}
-                role="listbox"
-                id={`${id || 'contact-picker'}-listbox`}
-                aria-label="Contacts"
-              >
-                {/* "None" Option */}
-                <ContactOptionButton
-                  id={`${id || 'contact-picker'}-option-none`}
-                  label="None"
-                  selected={value === ''}
-                  onSelect={() => handleSelect('')}
-                  className="relative flex w-full items-center px-3 py-2 text-left text-sm rounded text-gray-700 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
-                >
-                  None
-                </ContactOptionButton>
-
-                {/* Contact List */}
-                {filteredContacts.length === 0 ? (
-                  <div className="px-4 py-2 text-gray-500">No contacts found</div>
-                ) : (
-                  filteredContacts.map((contact) => (
-                    <ContactOptionButton
-                      key={contact.contact_name_id}
-                      id={`${id || 'contact-picker'}-option-${contact.contact_name_id}`}
-                      label={contact.email ? `${contact.full_name} (${contact.email})` : contact.full_name}
-                      selected={contact.contact_name_id === value}
-                      onSelect={() => handleSelect(contact.contact_name_id)}
-                      className={`
-                        relative flex w-full items-center justify-between px-3 py-2 text-left text-sm rounded cursor-pointer
-                        hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
-                        ${contact.is_inactive
-                          ? 'text-gray-400 bg-gray-50'
-                          : contact.contact_name_id === value
-                            ? 'bg-gray-100 font-medium text-gray-900'
-                            : 'text-gray-900'
-                          }
-                      `}
-                    >
-                      <div className="flex items-center gap-2 flex-1">
-                         <ContactAvatar
-                           contactId={contact.contact_name_id}
-                           contactName={contact.full_name}
-                           avatarUrl={contact.avatarUrl || null}
-                           size="xs"
-                         />
-                         <div className="flex-1">
-                           <div>{contact.full_name}</div>
-                           <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contact.email}</div>
-                         </div>
-                       </div>
-                      {contact.is_inactive && <span className="text-xs text-gray-400">(Inactive)</span>}
-                    </ContactOptionButton>
-                  ))
-                )}
-              </div>
-              {onAddNew && (
-                <>
-                  <div className="border-t border-gray-200" />
-                  <Button
-                    id="contact-picker-add-new-btn"
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-2 rounded-none text-primary"
-                    onClick={handleAddNew}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add new contact
-                  </Button>
-                </>
-              )}
-            </div>,
-            document.body
+          {isOpen && typeof document !== 'undefined' && (
+            modal ? createPortal(dropdownContent, document.body) : dropdownContent
           )}
         </div>
       </div>

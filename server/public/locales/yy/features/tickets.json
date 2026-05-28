@@ -431,6 +431,23 @@
   },
   "bulk": {
     "bundleTickets": "55555",
+    "actionBar": {
+      "selectedCount_one": "55555 {{count}} 55555",
+      "selectedCount_other": "55555 {{count}} 55555",
+      "move": "55555",
+      "bundle": "55555",
+      "delete": "55555",
+      "clear": "55555",
+      "bundleNeedsTwo": "55555",
+      "assign": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "tags": "55555",
+      "dueDate": "55555",
+      "statusDisabledMultiBoard": "55555",
+      "statusResolvingBoards": "55555",
+      "more": "55555"
+    },
     "moveDialogTitle": "55555",
     "moveDialogDescription": "55555",
     "destinationBoard": "55555",
@@ -536,23 +553,6 @@
       "dueDateRequired": "55555",
       "statusRequired": "55555",
       "priorityRequired": "55555"
-    },
-    "actionBar": {
-      "selectedCount_one": "55555 {{count}} 55555",
-      "selectedCount_other": "55555 {{count}} 55555",
-      "move": "55555",
-      "bundle": "55555",
-      "delete": "55555",
-      "clear": "55555",
-      "bundleNeedsTwo": "55555",
-      "assign": "55555",
-      "status": "55555",
-      "priority": "55555",
-      "tags": "55555",
-      "dueDate": "55555",
-      "statusDisabledMultiBoard": "55555",
-      "statusResolvingBoards": "55555",
-      "more": "55555"
     },
     "assign": {
       "dialogTitle": "55555",

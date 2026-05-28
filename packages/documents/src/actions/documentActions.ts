@@ -3511,7 +3511,7 @@ export const getDocumentsByFolder = withAuth(async (
           trx.raw(`
             CASE
               WHEN d.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(d.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
               ELSE 0
             END as numeric_prefix
           `)
