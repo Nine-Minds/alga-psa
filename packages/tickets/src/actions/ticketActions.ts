@@ -1776,6 +1776,10 @@ export const moveTicketsToBoard = withAuth(async (
     }
   }
 
+  if (movedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
   return { movedIds, failed };
 });
 
