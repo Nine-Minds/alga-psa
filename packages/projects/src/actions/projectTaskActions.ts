@@ -21,15 +21,12 @@ import type {
   ITaskType,
   IUser,
   IUserWithRoles,
-  PendingTag,
   ProjectStatus,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import {
-  captureEntityTagTextSnapshot,
-  createTagsForEntityWithTransaction,
+  bulkApplyTagsToEntities,
   findTagsByEntityIds,
-  publishEntityTagBulkUpdate,
 } from '@alga-psa/tags/actions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -2916,9 +2913,16 @@ export const bulkAddTagsToTasks = withAuth(async (
   failed: Array<{ taskId: string; message: string }>;
 }> => {
   const uniqueIds = Array.from(new Set(taskIds.filter((id) => !!id)));
-  const normalizedTexts = Array.from(
-    new Set(tagTexts.map((t) => t.trim()).filter((t) => t.length > 0)),
-  );
+  // Dedupe case-insensitively (keeping first-seen casing) so it matches the
+  // lower-cased existing-tag and applied-tag comparisons used downstream.
+  const normalizedTextByLower = new Map<string, string>();
+  for (const raw of tagTexts) {
+    const text = raw.trim();
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (!normalizedTextByLower.has(lower)) normalizedTextByLower.set(lower, text);
+  }
+  const normalizedTexts = Array.from(normalizedTextByLower.values());
 
   const updatedIds: string[] = [];
   const failed: Array<{ taskId: string; message: string }> = [];
@@ -2953,70 +2957,100 @@ export const bulkAddTagsToTasks = withAuth(async (
     return { updatedIds, failed };
   }
 
-  const existingByTask = new Map<string, Set<string>>();
+  // Load each task's current tags once (batched) for before/after snapshots
+  // and dedupe — bulkApplyTagsToEntities resolves definitions and applies the
+  // mappings in one pass rather than per task.
+  const existingByTask = new Map<string, string[]>();
   try {
     const existing = await findTagsByEntityIds(validIds, 'project_task');
     for (const tag of existing) {
-      const set = existingByTask.get(tag.tagged_id) ?? new Set<string>();
-      set.add(tag.tag_text.toLowerCase());
-      existingByTask.set(tag.tagged_id, set);
+      const texts = existingByTask.get(tag.tagged_id) ?? [];
+      texts.push(tag.tag_text);
+      existingByTask.set(tag.tagged_id, texts);
     }
   } catch (error) {
     console.warn('[bulkAddTagsToTasks] Failed to load existing tags for dedupe:', error);
   }
 
-  for (const taskId of validIds) {
-    try {
-      const alreadyOnTask = existingByTask.get(taskId) ?? new Set<string>();
-      const newTexts = normalizedTexts.filter((t) => !alreadyOnTask.has(t.toLowerCase()));
-      if (newTexts.length === 0) {
-        updatedIds.push(taskId);
-        continue;
+  const unauthorizedIds = new Set<string>();
+  let appliedByEntity: Record<string, string[]> = {};
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // The global project:update grant above isn't enough: a client can submit
+      // task IDs from projects the caller can't read. Authorize each task's
+      // project (resolved once per distinct project, not per task) the same way
+      // every other task mutation here does, and drop tasks that fail.
+      const taskProjectRows = await trx('project_tasks as pt')
+        .join('project_phases as pp', function joinPhases() {
+          this.on('pt.phase_id', '=', 'pp.phase_id')
+            .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where('pt.tenant', tenant)
+        .whereIn('pt.task_id', validIds)
+        .select<Array<{ task_id: string; project_id: string }>>('pt.task_id', 'pp.project_id');
+      const projectIdByTask = new Map(taskProjectRows.map((row) => [row.task_id, row.project_id]));
+
+      const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+      const projectAllowed = new Map<string, boolean>();
+      const isProjectAllowed = async (projectId: string): Promise<boolean> => {
+        const cached = projectAllowed.get(projectId);
+        if (cached !== undefined) return cached;
+        const project = await ProjectModel.getById(trx, tenant, projectId);
+        const allowed = !!project && (await authorizeProjectRead(project));
+        projectAllowed.set(projectId, allowed);
+        return allowed;
+      };
+
+      const authorizedIds: string[] = [];
+      for (const taskId of validIds) {
+        const projectId = projectIdByTask.get(taskId);
+        if (projectId && (await isProjectAllowed(projectId))) {
+          authorizedIds.push(taskId);
+        } else {
+          unauthorizedIds.add(taskId);
+        }
       }
-      const pendingTags: PendingTag[] = newTexts.map((text) => ({
-        tag_text: text,
-        background_color: null,
-        text_color: null,
-        isNew: true,
+
+      if (authorizedIds.length === 0) {
+        return { appliedByEntity: {} as Record<string, string[]> };
+      }
+
+      const applications = authorizedIds.map((taskId) => ({
+        entityId: taskId,
+        existingTexts: existingByTask.get(taskId) ?? [],
+        newTexts: normalizedTexts,
       }));
+      return bulkApplyTagsToEntities(trx, tenant, 'project_task', applications);
+    });
+    appliedByEntity = result.appliedByEntity;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to add tags to tasks';
+    // The whole batch shares one transaction, so a throw fails every valid task;
+    // keep the not-found entries already collected above.
+    return {
+      updatedIds: [],
+      failed: [...failed, ...validIds.map((taskId) => ({ taskId, message }))],
+    };
+  }
 
-      let createdTexts: string[] = [];
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const previousSnapshot = await captureEntityTagTextSnapshot(
-          trx, tenant, taskId, 'project_task',
-        );
-        const created = await createTagsForEntityWithTransaction(
-          trx, tenant, taskId, 'project_task', pendingTags,
-        );
-        createdTexts = created.map((tag) => tag.tag_text);
-        // createTagsForEntityWithTransaction intentionally suppresses the
-        // per-entity update event; emit it here so search/webhook consumers
-        // see one PROJECT_TASK_UPDATED per task that actually changed.
-        await publishEntityTagBulkUpdate({
-          trx,
-          tenant,
-          taggedId: taskId,
-          taggedType: 'project_task',
-          userId: user.user_id,
-          previousTags: previousSnapshot,
-        });
-      });
-
-      const createdLower = new Set(createdTexts.map((t) => t.toLowerCase()));
-      const dropped = newTexts.filter((t) => !createdLower.has(t.toLowerCase()));
-      if (dropped.length > 0) {
-        failed.push({
-          taskId,
-          message: `Could not add tag(s): ${dropped.join(', ')}`,
-        });
-      } else {
-        updatedIds.push(taskId);
-      }
-    } catch (error: unknown) {
+  for (const taskId of validIds) {
+    if (unauthorizedIds.has(taskId)) {
+      failed.push({ taskId, message: 'Permission denied: Cannot read project' });
+      continue;
+    }
+    const existingLower = new Set((existingByTask.get(taskId) ?? []).map((t) => t.toLowerCase()));
+    const requestedNew = normalizedTexts.filter((t) => !existingLower.has(t.toLowerCase()));
+    const appliedLower = new Set((appliedByEntity[taskId] ?? []).map((t) => t.toLowerCase()));
+    // A tag is "dropped" only when it needed creating but the user lacks
+    // tag:create. Tasks already carrying every requested tag count as updated.
+    const dropped = requestedNew.filter((t) => !appliedLower.has(t.toLowerCase()));
+    if (dropped.length > 0) {
       failed.push({
         taskId,
-        message: error instanceof Error ? error.message : 'Failed to add tags to task',
+        message: `Could not add tag(s): ${dropped.join(', ')}`,
       });
+    } else {
+      updatedIds.push(taskId);
     }
   }
 

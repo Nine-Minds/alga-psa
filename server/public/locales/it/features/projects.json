@@ -258,10 +258,10 @@
     "bulkTasksMovedToPhase": "{{count}} attività spostate in {{phaseName}}",
     "moveTasksTitle": "Sposta attività",
     "confirmMoveTasksMessage": "Sei sicuro di voler spostare {{count}} attività selezionate nella fase \"{{targetPhase}}\"?",
-    "bulkTagsSuccess_one": "Tags added to {{count}} task",
-    "bulkTagsSuccess_other": "Tags added to {{count}} tasks",
-    "bulkTagsPartial": "Tags could not be added to some tasks",
-    "bulkTagsFailure": "Failed to add tags to selected tasks"
+    "bulkTagsSuccess_one": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_other": "Tag aggiunti a {{count}} attività",
+    "bulkTagsPartial": "Impossibile aggiungere i tag ad alcune attività",
+    "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -1457,17 +1457,17 @@
     "assign": "Assegna",
     "delete": "Elimina",
     "clear": "Cancella",
-    "tags": "Tags"
+    "tags": "Tag"
   },
   "bulk": {
     "tags": {
-      "dialogTitle": "Add Tags to Selected Tasks",
-      "message": "Add one or more tags to {{count}} selected task(s). Tags already on a task are skipped.",
-      "placeholder": "Type a tag and press Enter",
-      "submitting": "Adding tags...",
-      "confirm_one": "Add Tags to {{count}} Task",
-      "confirm_other": "Add Tags to {{count}} Tasks",
-      "failedHeading": "Tags could not be added to the following tasks:"
+      "dialogTitle": "Aggiungi tag alle attività selezionate",
+      "message": "Aggiungi uno o più tag a {{count}} attività selezionata/e. I tag già presenti su un'attività vengono ignorati.",
+      "placeholder": "Digita un tag e premi Invio",
+      "submitting": "Aggiunta dei tag...",
+      "confirm_one": "Aggiungi tag a {{count}} attività",
+      "confirm_other": "Aggiungi tag a {{count}} attività",
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
     }
   }
 }

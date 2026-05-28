@@ -258,10 +258,10 @@
     "bulkTasksMovedToPhase": "Przeniesiono {{count}} zadania do {{phaseName}}",
     "moveTasksTitle": "Przenieś zadania",
     "confirmMoveTasksMessage": "Czy na pewno chcesz przenieść {{count}} wybrane zadania do fazy „{{targetPhase}}”?",
-    "bulkTagsSuccess_one": "Tags added to {{count}} task",
-    "bulkTagsSuccess_other": "Tags added to {{count}} tasks",
-    "bulkTagsPartial": "Tags could not be added to some tasks",
-    "bulkTagsFailure": "Failed to add tags to selected tasks"
+    "bulkTagsSuccess_one": "Dodano tagi do {{count}} zadania",
+    "bulkTagsSuccess_other": "Dodano tagi do {{count}} zadań",
+    "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
+    "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -1457,17 +1457,17 @@
     "assign": "Przypisz",
     "delete": "Usuń",
     "clear": "Wyczyść",
-    "tags": "Tags"
+    "tags": "Tagi"
   },
   "bulk": {
     "tags": {
-      "dialogTitle": "Add Tags to Selected Tasks",
-      "message": "Add one or more tags to {{count}} selected task(s). Tags already on a task are skipped.",
-      "placeholder": "Type a tag and press Enter",
-      "submitting": "Adding tags...",
-      "confirm_one": "Add Tags to {{count}} Task",
-      "confirm_other": "Add Tags to {{count}} Tasks",
-      "failedHeading": "Tags could not be added to the following tasks:"
+      "dialogTitle": "Dodaj tagi do wybranych zadań",
+      "message": "Dodaj jeden lub więcej tagów do {{count}} wybranych zadań. Tagi już przypisane do zadania zostaną pominięte.",
+      "placeholder": "Wpisz tag i naciśnij Enter",
+      "submitting": "Dodawanie tagów...",
+      "confirm_one": "Dodaj tagi do {{count}} zadania",
+      "confirm_other": "Dodaj tagi do {{count}} zadań",
+      "failedHeading": "Nie udało się dodać tagów do następujących zadań:"
     }
   }
 }

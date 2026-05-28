@@ -258,10 +258,10 @@
     "bulkTasksMovedToPhase": "{{count}} tâches déplacées vers {{phaseName}}",
     "moveTasksTitle": "Déplacer les tâches",
     "confirmMoveTasksMessage": "Voulez-vous vraiment déplacer {{count}} tâches sélectionnées vers la phase « {{targetPhase}} » ?",
-    "bulkTagsSuccess_one": "Tags added to {{count}} task",
-    "bulkTagsSuccess_other": "Tags added to {{count}} tasks",
-    "bulkTagsPartial": "Tags could not be added to some tasks",
-    "bulkTagsFailure": "Failed to add tags to selected tasks"
+    "bulkTagsSuccess_one": "Étiquettes ajoutées à {{count}} tâche",
+    "bulkTagsSuccess_other": "Étiquettes ajoutées à {{count}} tâches",
+    "bulkTagsPartial": "Impossible d'ajouter des étiquettes à certaines tâches",
+    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -1457,17 +1457,17 @@
     "assign": "Affecter",
     "delete": "Supprimer",
     "clear": "Effacer",
-    "tags": "Tags"
+    "tags": "Étiquettes"
   },
   "bulk": {
     "tags": {
-      "dialogTitle": "Add Tags to Selected Tasks",
-      "message": "Add one or more tags to {{count}} selected task(s). Tags already on a task are skipped.",
-      "placeholder": "Type a tag and press Enter",
-      "submitting": "Adding tags...",
-      "confirm_one": "Add Tags to {{count}} Task",
-      "confirm_other": "Add Tags to {{count}} Tasks",
-      "failedHeading": "Tags could not be added to the following tasks:"
+      "dialogTitle": "Ajouter des étiquettes aux tâches sélectionnées",
+      "message": "Ajoutez une ou plusieurs étiquettes à {{count}} tâche(s) sélectionnée(s). Les étiquettes déjà présentes sur une tâche sont ignorées.",
+      "placeholder": "Saisissez une étiquette et appuyez sur Entrée",
+      "submitting": "Ajout des étiquettes...",
+      "confirm_one": "Ajouter des étiquettes à {{count}} tâche",
+      "confirm_other": "Ajouter des étiquettes à {{count}} tâches",
+      "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :"
     }
   }
 }
