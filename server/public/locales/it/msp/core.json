@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Ti portiamo alla configurazione",
+    "description": "Il tuo workspace richiede una rapida configurazione prima di poter usare la dashboard.",
+    "action": "Continua alla configurazione"
   }
 }

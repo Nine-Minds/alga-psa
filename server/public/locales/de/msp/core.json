@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Weiter zur Einrichtung",
+    "description": "Ihr Arbeitsbereich muss kurz eingerichtet werden, bevor Sie das Dashboard verwenden können.",
+    "action": "Mit der Einrichtung fortfahren"
   }
 }

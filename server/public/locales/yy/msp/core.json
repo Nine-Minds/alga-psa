@@ -322,5 +322,10 @@
       "previous": "55555",
       "next": "55555"
     }
+  },
+  "onboardingRedirect": {
+    "title": "55555",
+    "description": "55555",
+    "action": "55555"
   }
 }

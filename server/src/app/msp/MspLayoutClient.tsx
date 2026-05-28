@@ -9,6 +9,7 @@ import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHog
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { getTenantSettings } from "@alga-psa/tenancy/actions";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
 import { ProductProvider } from "@/context/ProductContext";
@@ -29,6 +30,31 @@ interface Props {
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
+}
+
+function OnboardingRedirectFallback() {
+  const { t } = useTranslation('msp/core');
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-background))] px-6">
+      <div className="max-w-md text-center" role="status" aria-live="polite">
+        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-[rgb(var(--color-border-300))] border-t-[rgb(var(--color-primary-500))]" />
+        <h1 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+          {t('onboardingRedirect.title')}
+        </h1>
+        <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">
+          {t('onboardingRedirect.description')}
+        </p>
+        <a
+          id="msp-onboarding-redirect-fallback-link"
+          href="/msp/onboarding"
+          className="mt-4 inline-flex text-sm font-medium text-[rgb(var(--color-primary-600))] underline-offset-4 hover:underline"
+        >
+          {t('onboardingRedirect.action')}
+        </a>
+      </div>
+    </div>
+  );
 }
 
 export function MspLayoutClient({
@@ -89,13 +115,11 @@ export function MspLayoutClient({
     };
   }, [needsOnboarding, isOnboardingPage, sessionTenant, router]);
 
-  if (shouldForceOnboarding && !isOnboardingPage) {
-    return null;
-  }
-
   const isAlgaDesk = productCode === 'algadesk';
 
-  const content = (
+  const content = shouldForceOnboarding && !isOnboardingPage ? (
+    <OnboardingRedirectFallback />
+  ) : (
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
