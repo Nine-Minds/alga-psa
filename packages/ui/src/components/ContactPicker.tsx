@@ -9,6 +9,7 @@ import { Button } from './Button';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
 import type { IContact } from '@alga-psa/types';
+import { useTranslation } from '../lib/i18n/client';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, ButtonComponent, FormFieldComponent } from '../ui-reflection/types';
@@ -95,6 +96,7 @@ export const ContactPicker = ({
   onAddNew,
   "data-automation-type": dataAutomationType = 'picker',
 }: ContactPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -344,7 +346,7 @@ export const ContactPicker = ({
                 onClick={handleAddNew}
               >
                 <Plus className="h-4 w-4" />
-                Add new contact
+                {t('pickers.addNewContact', { defaultValue: 'Add new contact' })}
               </Button>
             </>
           )}

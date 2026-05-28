@@ -57,6 +57,10 @@
     "noResults": "55555",
     "searchPlaceholder": "55555"
   },
+  "pickers": {
+    "addNewClient": "55555",
+    "addNewContact": "55555"
+  },
   "tagFilter": {
     "placeholder": "55555",
     "filter": "55555",

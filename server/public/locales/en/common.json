@@ -57,6 +57,10 @@
     "noResults": "No results found",
     "searchPlaceholder": "Search..."
   },
+  "pickers": {
+    "addNewClient": "Add new client",
+    "addNewContact": "Add new contact"
+  },
   "tagFilter": {
     "placeholder": "Filter by tags...",
     "filter": "Filter",

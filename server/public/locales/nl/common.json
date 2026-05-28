@@ -1023,6 +1023,10 @@
     "noResults": "Geen resultaten gevonden",
     "searchPlaceholder": "Zoeken..."
   },
+  "pickers": {
+    "addNewClient": "Nieuwe klant toevoegen",
+    "addNewContact": "Nieuwe contactpersoon toevoegen"
+  },
   "tagFilter": {
     "placeholder": "Filter op tags...",
     "filter": "Filteren",

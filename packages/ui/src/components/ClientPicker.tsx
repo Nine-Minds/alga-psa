@@ -13,6 +13,7 @@ import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
 import type { EntityAvatarProps } from './EntityAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -113,6 +114,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   disabled = false,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -423,7 +425,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
               onClick={handleAddNew}
             >
               <Plus className="h-4 w-4" />
-              Add new client
+              {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
             </Button>
           </>
         )}

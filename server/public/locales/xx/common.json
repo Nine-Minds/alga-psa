@@ -57,6 +57,10 @@
     "noResults": "11111",
     "searchPlaceholder": "11111"
   },
+  "pickers": {
+    "addNewClient": "11111",
+    "addNewContact": "11111"
+  },
   "tagFilter": {
     "placeholder": "11111",
     "filter": "11111",

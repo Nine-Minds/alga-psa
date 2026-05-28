@@ -36,10 +36,10 @@
     },
     "conflict": {
       "title": "55555",
-      "message": "55555"
+      "message": "55555 {{binding}} 55555 {{action}} 55555"
     },
     "advisory": {
-      "hostileCombo": "55555"
+      "hostileCombo": "55555 {{binding}} 55555 {{action}} 55555"
     }
   },
   "help": {
@@ -52,7 +52,7 @@
     "placeholder": "55555",
     "placeholderFulltext": "55555",
     "loading": "55555",
-    "resultCount": "55555",
+    "resultCount": "55555 {{count}} 55555",
     "seeAll": "55555",
     "fulltextHint": "55555",
     "fulltextInlineHelp": "55555",
@@ -84,7 +84,7 @@
     "panel": "55555",
     "record": "55555",
     "editor": "55555",
-    "scroll": "Scroll"
+    "scroll": "55555"
   },
   "actions": {
     "global": {
@@ -153,32 +153,32 @@
         "description": "55555"
       },
       "goDashboard": {
-        "label": "Go to dashboard",
-        "description": "Navigate to the dashboard."
+        "label": "55555",
+        "description": "55555"
       },
       "goProjects": {
-        "label": "Go to projects",
-        "description": "Navigate to the projects page."
+        "label": "55555",
+        "description": "55555"
       },
       "goBilling": {
-        "label": "Go to billing",
-        "description": "Navigate to billing."
+        "label": "55555",
+        "description": "55555"
       },
       "goSettings": {
-        "label": "Go to settings",
-        "description": "Navigate to settings."
+        "label": "55555",
+        "description": "55555"
       },
       "goSearch": {
-        "label": "Go to global search",
-        "description": "Focus the global search field."
+        "label": "55555",
+        "description": "55555"
       },
       "goHelp": {
-        "label": "Go to keyboard help",
-        "description": "Open the keyboard shortcuts reference."
+        "label": "55555",
+        "description": "55555"
       },
       "backToParent": {
-        "label": "Back to parent list",
-        "description": "Activate the page back navigation button when one is available."
+        "label": "55555",
+        "description": "55555"
       }
     },
     "assets": {
@@ -267,82 +267,82 @@
     },
     "scroll": {
       "halfDown": {
-        "label": "Scroll half page down",
-        "description": "Scroll down by half a page."
+        "label": "55555",
+        "description": "55555"
       },
       "halfUp": {
-        "label": "Scroll half page up",
-        "description": "Scroll up by half a page."
+        "label": "55555",
+        "description": "55555"
       },
       "fullDown": {
-        "label": "Scroll full page down",
-        "description": "Scroll down by one full page."
+        "label": "55555",
+        "description": "55555"
       },
       "fullUp": {
-        "label": "Scroll full page up",
-        "description": "Scroll up by one full page."
+        "label": "55555",
+        "description": "55555"
       },
       "top": {
-        "label": "Scroll to top",
-        "description": "Scroll to the top of the current page or panel."
+        "label": "55555",
+        "description": "55555"
       },
       "bottom": {
-        "label": "Scroll to bottom",
-        "description": "Scroll to the bottom of the current page or panel."
+        "label": "55555",
+        "description": "55555"
       }
     },
     "focus": {
       "primarySearch": {
-        "label": "Focus page search",
-        "description": "Focus the primary search field on the current page."
+        "label": "55555",
+        "description": "55555"
       }
     },
     "table": {
       "nextRow": {
-        "label": "Next table row",
-        "description": "Move the active row marker to the next selectable table row."
+        "label": "55555",
+        "description": "55555"
       },
       "previousRow": {
-        "label": "Previous table row",
-        "description": "Move the active row marker to the previous selectable table row."
+        "label": "55555",
+        "description": "55555"
       },
       "toggleRow": {
-        "label": "Toggle table row",
-        "description": "Select or deselect the active table row."
+        "label": "55555",
+        "description": "55555"
       },
       "visualRange": {
-        "label": "Visual row range",
-        "description": "Start or stop selecting a contiguous table row range."
+        "label": "55555",
+        "description": "55555"
       },
       "openRow": {
-        "label": "Open table row",
-        "description": "Open the active table row."
+        "label": "55555",
+        "description": "55555"
       }
     },
     "repeat": {
       "lastAction": {
-        "label": "Repeat last action",
-        "description": "Repeat the last Vim-style navigation action."
-      }
-    },
-    "linkhints": {
-      "show": {
-        "label": "Show link hints",
-        "description": "Show keyboard hints for visible links and controls."
-      },
-      "showNewTab": {
-        "label": "Show link hints in new tab",
-        "description": "Show keyboard hints and open links in a new tab when possible."
+        "label": "55555",
+        "description": "55555"
       }
     },
     "macro": {
       "record": {
-        "label": "Record macro",
-        "description": "Start or stop recording a Vim-style navigation macro."
+        "label": "55555",
+        "description": "55555"
       },
       "play": {
-        "label": "Play macro",
-        "description": "Play a recorded Vim-style navigation macro."
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "showNewTab": {
+        "label": "55555",
+        "description": "55555"
       }
     }
   },
