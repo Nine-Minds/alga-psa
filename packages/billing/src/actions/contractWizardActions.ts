@@ -1022,34 +1022,21 @@ export const createClientContractFromWizard = withAuth(async (
         });
       }
 
-      // Mode-specific defaults (and legacy catalog defaults used as fallback) also satisfy pricing.
+      // Mode-specific defaults (already filtered to the contract currency) satisfy pricing.
+      // The legacy service_catalog.default_rate column is untagged (effectively USD-only via the
+      // 20251205130000 migration) and is intentionally NOT treated as covering a non-USD contract.
       filteredFixedServices.forEach((service) => {
-        if (
-          firstPositiveRateInCents(
-            fixedModeDefaultsByServiceId.get(service.service_id),
-            serviceCatalogById.get(service.service_id)?.default_rate
-          ) !== undefined
-        ) {
+        if (firstPositiveRateInCents(fixedModeDefaultsByServiceId.get(service.service_id)) !== undefined) {
           servicesWithCustomRates.add(service.service_id);
         }
       });
       filteredHourlyServices.forEach((service) => {
-        if (
-          firstPositiveRateInCents(
-            hourlyModeDefaultsByServiceId.get(service.service_id),
-            serviceCatalogById.get(service.service_id)?.default_rate
-          ) !== undefined
-        ) {
+        if (firstPositiveRateInCents(hourlyModeDefaultsByServiceId.get(service.service_id)) !== undefined) {
           servicesWithCustomRates.add(service.service_id);
         }
       });
       filteredUsageServices.forEach((service) => {
-        if (
-          firstPositiveRateInCents(
-            usageModeDefaultsByServiceId.get(service.service_id),
-            serviceCatalogById.get(service.service_id)?.default_rate
-          ) !== undefined
-        ) {
+        if (firstPositiveRateInCents(usageModeDefaultsByServiceId.get(service.service_id)) !== undefined) {
           servicesWithCustomRates.add(service.service_id);
         }
       });

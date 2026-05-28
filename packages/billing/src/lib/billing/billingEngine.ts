@@ -3018,6 +3018,8 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
+    const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
       tenant,
@@ -3130,6 +3132,15 @@ export class BillingEngine {
           "time_entries.service_id",
         ).andOn("service_catalog.tenant", "=", "time_entries.tenant");
       })
+      .leftJoin("service_prices as sp", function () {
+        this.on("sp.service_id", "=", "service_catalog.service_id")
+          .andOn("sp.tenant", "=", "service_catalog.tenant")
+          .andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+      })
       .leftJoin("project_ticket_links", function () {
         this.on(
           "time_entries.work_item_id",
@@ -3213,6 +3224,7 @@ export class BillingEngine {
         "service_catalog.service_name",
         "service_catalog.default_rate",
         "service_catalog.tax_rate_id",
+        "sp.rate as currency_rate",
         this.knex.raw(
           "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
         ),
@@ -3259,11 +3271,28 @@ export class BillingEngine {
         // Convert to hours
         const duration = Math.ceil(durationMinutes / 60);
 
-        // Determine rate based on user type if applicable
-        let rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
-        if (!isSystemManagedDefault && serviceConfig && serviceConfig.userTypeRates.has(entry.user_type)) {
-          rate = serviceConfig.userTypeRates.get(entry.user_type) as number;
+        // Resolve rate, preferring overrides over the currency-specific catalog price.
+        // Order: per-entry custom rate → per-user-type rate (contract-line config) → service_prices
+        // row in the contract's currency. We deliberately do NOT fall back to the legacy
+        // service_catalog.default_rate column because it is currency-untagged and would
+        // silently bill a USD-intended amount in a non-USD contract.
+        const userTypeRate =
+          !isSystemManagedDefault &&
+          serviceConfig &&
+          serviceConfig.userTypeRates.has(entry.user_type)
+            ? (serviceConfig.userTypeRates.get(entry.user_type) as number)
+            : undefined;
+        const resolvedRate =
+          entry.custom_rate ??
+          userTypeRate ??
+          (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
+        if (resolvedRate === undefined) {
+          throw new Error(
+            `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
+              `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
+          );
         }
+        const rate = Math.ceil(Number(resolvedRate) || 0);
 
         // Check for overtime if applicable
         let total = Math.round(duration * rate);
@@ -3377,6 +3406,8 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
+    const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
       tenant,
@@ -3480,6 +3511,15 @@ export class BillingEngine {
           "usage_tracking.service_id",
         ).andOn("service_catalog.tenant", "=", "usage_tracking.tenant");
       })
+      .leftJoin("service_prices as sp", function () {
+        this.on("sp.service_id", "=", "service_catalog.service_id")
+          .andOn("sp.tenant", "=", "service_catalog.tenant")
+          .andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+      })
       .where({
         "usage_tracking.client_id": clientId,
         "usage_tracking.tenant": this.tenant,
@@ -3509,6 +3549,7 @@ export class BillingEngine {
         "service_catalog.service_name",
         "service_catalog.default_rate",
         "service_catalog.tax_rate_id",
+        "sp.rate as currency_rate",
       ); // Fetch tax_rate_id
 
     const usageRecords = await usageRecordQuery;
@@ -3530,15 +3571,30 @@ export class BillingEngine {
           quantity = serviceConfig.config.minimum_usage;
         }
 
-        // Determine rate and calculate total
-        let rate = Math.ceil(record.default_rate);
-        let total = Math.ceil(quantity * rate);
-
-        // If service has a custom rate in the configuration, use that
-        if (!isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate) {
-          rate = Math.ceil(serviceConfig.config.custom_rate);
-          total = Math.ceil(quantity * rate);
+        // Determine rate and calculate total.
+        // Order: contract-line configured custom_rate → service_prices row in the contract
+        // currency. The legacy service_catalog.default_rate is intentionally not used here
+        // because it is currency-untagged and would silently mis-price non-USD contracts.
+        const configuredCustomRate =
+          !isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate
+            ? Number(serviceConfig.config.custom_rate)
+            : undefined;
+        const resolvedRate =
+          configuredCustomRate ??
+          (record.currency_rate != null ? Number(record.currency_rate) : undefined);
+        const willUseTieredPricing =
+          !isSystemManagedDefault &&
+          serviceConfig &&
+          serviceConfig.config.enable_tiered_pricing &&
+          serviceConfig.rateTiers.length > 0;
+        if (resolvedRate === undefined && !willUseTieredPricing) {
+          throw new Error(
+            `Missing pricing for usage on service "${record.service_name}" (${record.service_id}) in ${contractCurrency}. ` +
+              `Add a ${contractCurrency} price in the service catalog, set a custom rate on the contract line, or enable tiered pricing.`,
+          );
         }
+        let rate = Math.ceil(resolvedRate ?? 0);
+        let total = Math.ceil(quantity * rate);
 
         // Apply tiered pricing if enabled
         if (
