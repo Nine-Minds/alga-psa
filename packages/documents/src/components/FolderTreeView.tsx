@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { IFolderNode } from '@alga-psa/types';
+import type { DocumentFilters, IFolderNode } from '@alga-psa/types';
 import { getFolderTree, deleteFolder, toggleFolderVisibilityByPath } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ interface FolderTreeViewProps {
   selectedFolder: string | null;
   entityId?: string;
   entityType?: string;
+  filters?: DocumentFilters;
   showVisibilityIndicators?: boolean;
   onFolderDeleted?: () => void;
   isCollapsed?: boolean;
@@ -27,6 +28,7 @@ export default function FolderTreeView({
   selectedFolder,
   entityId,
   entityType,
+  filters,
   showVisibilityIndicators = false,
   onFolderDeleted,
   isCollapsed = false,
@@ -41,7 +43,7 @@ export default function FolderTreeView({
 
   const loadFolderTree = useCallback(async function loadFolderTree() {
     try {
-      const tree = await getFolderTree(entityId ?? null, entityType ?? null);
+      const tree = await getFolderTree(entityId ?? null, entityType ?? null, filters);
       if (isActionPermissionError(tree)) {
         handleError(tree.permissionError);
         return;
@@ -52,7 +54,7 @@ export default function FolderTreeView({
     } finally {
       setLoading(false);
     }
-  }, [entityId, entityType]);
+  }, [entityId, entityType, filters]);
 
   useEffect(() => {
     loadFolderTree();

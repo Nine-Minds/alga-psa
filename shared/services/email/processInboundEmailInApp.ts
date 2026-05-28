@@ -1257,6 +1257,7 @@ export async function processInboundEmailInApp(
       ticketId: params.ticketId,
       emailData,
       scopeLabel: 'reply',
+      clientVisibleAttachments: !matchedSenderIsInternalUser,
     });
     await maybeRewriteCommentWithEmbeddedAttachmentUrls({
       tenantId,
@@ -1608,6 +1609,7 @@ export async function processInboundEmailInApp(
     ticketId: ticketResult.ticket_id,
     emailData,
     scopeLabel: 'new-ticket',
+    clientVisibleAttachments: !matchedSenderIsInternalUser,
   });
   await maybeRewriteCommentWithEmbeddedAttachmentUrls({
     tenantId,

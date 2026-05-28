@@ -21,6 +21,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
+const DOCUMENT_FILTER_ENTITY_TYPES = ['client', 'contact', 'ticket', 'asset', 'project_task', 'contract', 'quote'];
 
 export default function DocumentsPage() {
   const searchParams = useSearchParams();
@@ -52,6 +53,8 @@ export default function DocumentsPage() {
 
   const [filterInputs, setFilterInputs] = useState<DocumentFilterType>({
     entityType: '',
+    entityId: '',
+    entityLabel: '',
     searchTerm: '',
     uploadedBy: '',
     updated_at_start: '',
@@ -65,8 +68,11 @@ export default function DocumentsPage() {
   // Documents.tsx handles its own fetching in folder mode - no need for useDocuments here
   // This avoids duplicate fetching since Documents.tsx calls getDocumentsByFolder internally
 
-  const capitalizeFirstLetter = (string: string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1);
+  const formatEntityTypeLabel = (entityType: string) => {
+    return entityType
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
   };
 
   const handleFiltersChange = (newFilters: DocumentFilterType) => {
@@ -76,6 +82,8 @@ export default function DocumentsPage() {
   const handleClearFilters = () => {
     const clearedFilters: DocumentFilterType = {
       entityType: '',
+      entityId: '',
+      entityLabel: '',
       searchTerm: '',
       uploadedBy: '',
       updated_at_start: '',
@@ -180,9 +188,13 @@ export default function DocumentsPage() {
         }
 
         if (dbEntityTypes && Array.isArray(dbEntityTypes)) {
-          const options = dbEntityTypes.map(et => ({
+          const availableEntityTypes = Array.from(new Set([
+            ...DOCUMENT_FILTER_ENTITY_TYPES,
+            ...dbEntityTypes
+          ]));
+          const options = availableEntityTypes.map(et => ({
             value: et,
-            label: capitalizeFirstLetter(et)
+            label: formatEntityTypeLabel(et)
           }));
           setEntityTypeOptions([
             { value: 'all_entities', label: 'All Entity Types' },

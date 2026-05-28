@@ -25,7 +25,9 @@ import {
     PaginatedDocumentsResponse,
     IFolderNode,
     IFolderStats,
-    DeletionValidationResult
+    DeletionValidationResult,
+    IClient,
+    IContact
 } from '@alga-psa/types';
 import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -54,6 +56,7 @@ import {
   type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 async function loadSharp() {
   try {
@@ -119,6 +122,95 @@ const VALID_DOCUMENT_SORT_FIELDS = new Set(['document_name', 'updated_at', 'file
 
 type SafeDocumentSortField = NonNullable<DocumentFilters['sortBy']>;
 type SafeSortOrder = 'asc' | 'desc';
+type SearchableDocumentAssociationEntityType = Extract<
+  DocumentAssociationEntityType,
+  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote'
+>;
+
+interface DocumentAssociationEntitySearchOption {
+  value: string;
+  label: string;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
+  };
+}
+
+interface DocumentAssociationEntitySearchResponse {
+  options: DocumentAssociationEntitySearchOption[];
+  total: number;
+}
+
+const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociationEntityType>([
+  'client',
+  'contact',
+  'ticket',
+  'asset',
+  'project_task',
+  'contract',
+  'quote',
+]);
+
+export const getDocumentAssociationClientsForPicker = withAuth(async (
+  user,
+  { tenant }
+): Promise<IClient[]> => {
+  if (!await hasPermission(user, 'document', 'read') || !await hasPermission(user, 'client', 'read')) {
+    return [];
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clients = await trx('clients')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('client_name', 'asc');
+
+    const logoUrls = await getClientLogoUrlsBatch(
+      clients.map((client: { client_id: string }) => client.client_id),
+      tenant
+    );
+
+    return clients.map((client: any) => ({
+      ...client,
+      properties: client.properties || {},
+      logoUrl: logoUrls.get(client.client_id) ?? null,
+    })) as IClient[];
+  });
+});
+
+export const getDocumentAssociationContactsForPicker = withAuth(async (
+  user,
+  { tenant }
+): Promise<IContact[]> => {
+  if (!await hasPermission(user, 'document', 'read') || !await hasPermission(user, 'contact', 'read')) {
+    return [];
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const contacts = await trx('contacts as c')
+      .leftJoin('clients as cl', function joinClients() {
+        this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
+      })
+      .select('c.*', 'cl.client_name')
+      .where('c.tenant', tenant)
+      .andWhere('c.is_inactive', false)
+      .orderBy('c.full_name', 'asc');
+
+    const avatarUrls = await getContactAvatarUrlsBatch(
+      contacts.map((contact: { contact_name_id: string }) => contact.contact_name_id),
+      tenant
+    );
+
+    return contacts.map((contact: any) => ({
+      ...contact,
+      avatarUrl: avatarUrls.get(contact.contact_name_id) ?? null,
+    })) as IContact[];
+  });
+});
 
 function normalizeDocumentSortOrder(sortOrder: unknown): SafeSortOrder {
   const normalizedOrder = typeof sortOrder === 'string' ? sortOrder.toLowerCase() : undefined;
@@ -2088,13 +2180,21 @@ export const getAllDocuments = withAuth(async (
                 .andWhere('document_associations.tenant', tenant);
           });
         }
-        if (filters?.entityType) {
-          query = query
-            .leftJoin('document_associations', function() {
-              this.on('documents.document_id', '=', 'document_associations.document_id')
-                  .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-            })
-            .where('document_associations.entity_type', filters.entityType);
+        if (filters?.entityType || filters?.entityId) {
+          query = query.whereExists(function() {
+            this.select('*')
+              .from('document_associations as filter_da')
+              .whereRaw('filter_da.document_id = documents.document_id')
+              .andWhere('filter_da.tenant', tenant);
+
+            if (filters?.entityType) {
+              this.andWhere('filter_da.entity_type', filters.entityType);
+            }
+
+            if (filters?.entityId) {
+              this.andWhere('filter_da.entity_id', filters.entityId);
+            }
+          });
         }
         if (filters?.folder_path !== undefined && !filters.showAllDocuments) {
           if (filters.folder_path === null || filters.folder_path === '') {
@@ -2136,6 +2236,226 @@ export const getAllDocuments = withAuth(async (
     console.error('Error fetching documents:', error);
     throw error;
   }
+});
+
+export const searchDocumentAssociationEntities = withAuth(async (
+  user,
+  { tenant },
+  entityType: SearchableDocumentAssociationEntityType,
+  search: string = '',
+  page: number = 1,
+  limit: number = 10
+): Promise<DocumentAssociationEntitySearchResponse> => {
+  if (!await hasPermission(user, 'document', 'read')) {
+    return { options: [], total: 0 };
+  }
+
+  if (!SEARCHABLE_ASSOCIATION_ENTITY_TYPES.has(entityType)) {
+    return { options: [], total: 0 };
+  }
+
+  const { knex } = await createTenantKnex();
+  const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
+  const safeLimit = Math.min(50, Math.max(1, Number.isFinite(limit) ? limit : 10));
+  const offset = (safePage - 1) * safeLimit;
+  const searchTerm = search.trim();
+  const searchPattern = `%${searchTerm}%`;
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const applySearch = (query: Knex.QueryBuilder, columns: string[]) => {
+      if (!searchTerm) {
+        return query;
+      }
+
+      return query.andWhere(function searchEntity() {
+        for (const column of columns) {
+          this.orWhere(column, 'ilike', searchPattern);
+        }
+      });
+    };
+
+    const countRows = async (query: Knex.QueryBuilder, column: string): Promise<number> => {
+      const row = await query.clone().clearSelect().clearOrder().countDistinct<{ count: string }>(`${column} as count`).first();
+      return Number(row?.count ?? 0);
+    };
+
+    if (entityType === 'client') {
+      let query = trx('clients')
+        .where({ tenant })
+        .select('client_id as value', 'client_name as label')
+        .orderBy('client_name', 'asc');
+      query = applySearch(query, ['client_name']);
+      const total = await countRows(query, 'client_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    if (entityType === 'contact') {
+      let query = trx('contacts as c')
+        .leftJoin('clients as cl', function joinClients() {
+          this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
+        })
+        .where('c.tenant', tenant)
+        .select(
+          'c.contact_name_id as value',
+          trx.raw(`
+            CASE
+              WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+              THEN CONCAT(c.full_name, ' - ', cl.client_name)
+              ELSE c.full_name
+            END as label
+          `)
+        )
+        .orderBy('c.full_name', 'asc');
+      query = applySearch(query, ['c.full_name', 'c.email', 'cl.client_name']);
+      const total = await countRows(query, 'c.contact_name_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    if (entityType === 'ticket') {
+      let query = trx('tickets as t')
+        .leftJoin('clients as cl', function joinClients() {
+          this.on('t.client_id', '=', 'cl.client_id').andOn('t.tenant', '=', 'cl.tenant');
+        })
+        .where('t.tenant', tenant)
+        .select(
+          't.ticket_id as value',
+          trx.raw(`
+            CONCAT(
+              COALESCE(t.ticket_number, 'Ticket'),
+              ' - ',
+              COALESCE(t.title, 'Untitled'),
+              CASE
+                WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+                THEN CONCAT(' - ', cl.client_name)
+                ELSE ''
+              END
+            ) as label
+          `)
+        )
+        .orderBy('t.updated_at', 'desc');
+      query = applySearch(query, ['t.ticket_number', 't.title', 'cl.client_name']);
+      const total = await countRows(query, 't.ticket_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    if (entityType === 'asset') {
+      let query = trx('assets as a')
+        .leftJoin('clients as cl', function joinClients() {
+          this.on('a.client_id', '=', 'cl.client_id').andOn('a.tenant', '=', 'cl.tenant');
+        })
+        .where('a.tenant', tenant)
+        .select(
+          'a.asset_id as value',
+          trx.raw(`
+            CONCAT(
+              COALESCE(a.name, 'Unnamed asset'),
+              CASE
+                WHEN a.serial_number IS NOT NULL AND a.serial_number <> ''
+                THEN CONCAT(' - ', a.serial_number)
+                ELSE ''
+              END,
+              CASE
+                WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+                THEN CONCAT(' - ', cl.client_name)
+                ELSE ''
+              END
+            ) as label
+          `)
+        )
+        .orderBy('a.name', 'asc');
+      query = applySearch(query, ['a.name', 'a.serial_number', 'cl.client_name']);
+      const total = await countRows(query, 'a.asset_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    if (entityType === 'project_task') {
+      let query = trx('project_tasks as pt')
+        .leftJoin('project_phases as pp', function joinPhases() {
+          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .leftJoin('projects as p', function joinProjects() {
+          this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
+        })
+        .leftJoin('clients as cl', function joinClients() {
+          this.on('p.client_id', '=', 'cl.client_id').andOn('p.tenant', '=', 'cl.tenant');
+        })
+        .where('pt.tenant', tenant)
+        .select(
+          'pt.task_id as value',
+          trx.raw(`
+            CONCAT(
+              COALESCE(pt.task_name, 'Untitled task'),
+              CASE
+                WHEN p.project_name IS NOT NULL AND p.project_name <> ''
+                THEN CONCAT(' - ', p.project_name)
+                ELSE ''
+              END,
+              CASE
+                WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+                THEN CONCAT(' - ', cl.client_name)
+                ELSE ''
+              END
+            ) as label
+          `)
+        )
+        .orderBy('pt.updated_at', 'desc');
+      query = applySearch(query, ['pt.task_name', 'p.project_name', 'cl.client_name']);
+      const total = await countRows(query, 'pt.task_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    if (entityType === 'contract') {
+      let query = trx('contracts as c')
+        .leftJoin('client_contracts as cc', function joinClientContracts() {
+          this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
+        })
+        .leftJoin('clients as cl', function joinClients() {
+          this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
+        })
+        .where('c.tenant', tenant)
+        .select(
+          'c.contract_id as value',
+          trx.raw("COALESCE(c.contract_name, 'Unnamed contract') as label")
+        )
+        .orderBy('c.contract_name', 'asc')
+        .distinct('c.contract_id', 'c.contract_name');
+      query = applySearch(query, ['c.contract_name', 'cl.client_name']);
+      const total = await countRows(query, 'c.contract_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
+    let quoteQuery = trx('quotes as q')
+      .leftJoin('clients as cl', function joinClients() {
+        this.on('q.client_id', '=', 'cl.client_id').andOn('q.tenant', '=', 'cl.tenant');
+      })
+      .where('q.tenant', tenant)
+      .select(
+        'q.quote_id as value',
+        trx.raw(`
+          CONCAT(
+            COALESCE(q.quote_number, 'Quote'),
+            ' - ',
+            COALESCE(q.title, 'Untitled quote'),
+            CASE
+              WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+              THEN CONCAT(' - ', cl.client_name)
+              ELSE ''
+            END
+          ) as label
+        `)
+      )
+      .orderBy('q.updated_at', 'desc');
+    quoteQuery = applySearch(quoteQuery, ['q.quote_number', 'q.title', 'cl.client_name']);
+    const total = await countRows(quoteQuery, 'q.quote_id');
+    const rows = await quoteQuery.limit(safeLimit).offset(offset);
+    return { options: rows, total };
+  });
 });
 
 // Create document associations
@@ -2852,7 +3172,8 @@ async function _getFolderTreeInternal(
   user: IUser,
   tenant: string,
   entityId?: string | null,
-  entityType?: string | null
+  entityType?: string | null,
+  filters?: DocumentFilters
 ): Promise<IFolderNode[]> {
   const hasEntityScope = Boolean(entityId && entityType);
 
@@ -2918,7 +3239,7 @@ async function _getFolderTreeInternal(
   const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType, filters);
 
   return tree;
 }
@@ -2927,7 +3248,8 @@ export const getFolderTree = withAuth(async (
   user,
   { tenant },
   entityId?: string | null,
-  entityType?: string | null
+  entityType?: string | null,
+  filters?: DocumentFilters
 ): Promise<IFolderNode[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
@@ -2936,7 +3258,7 @@ export const getFolderTree = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) =>
-    _getFolderTreeInternal(trx, user, tenant, entityId, entityType)
+    _getFolderTreeInternal(trx, user, tenant, entityId, entityType, filters)
   );
 });
 
@@ -3150,13 +3472,21 @@ export const getDocumentsByFolder = withAuth(async (
         endDate.setDate(endDate.getDate() + 1);
         query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
       }
-      if (filters?.entityType) {
-        query = query
-          .leftJoin('document_associations as da', function() {
-            this.on('d.document_id', '=', 'da.document_id')
-                .andOn('da.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .where('da.entity_type', filters.entityType);
+      if (filters?.entityType || filters?.entityId) {
+        query = query.whereExists(function() {
+          this.select('*')
+            .from('document_associations as filter_da')
+            .whereRaw('filter_da.document_id = d.document_id')
+            .andWhere('filter_da.tenant', tenant);
+
+          if (filters?.entityType) {
+            this.andWhere('filter_da.entity_type', filters.entityType);
+          }
+
+          if (filters?.entityId) {
+            this.andWhere('filter_da.entity_id', filters.entityId);
+          }
+        });
       }
       if (filters?.clientVisibility === 'visible') {
         query = query.where('d.is_client_visible', true);
@@ -3813,7 +4143,8 @@ async function enrichFolderTreeWithCounts(
   tenant: string,
   user: IUser,
   entityId?: string | null,
-  entityType?: string | null
+  entityType?: string | null,
+  filters?: DocumentFilters
 ): Promise<void> {
   // Collect all folder paths in the tree (including nested)
   const allPaths: string[] = [];
@@ -3833,6 +4164,11 @@ async function enrichFolderTreeWithCounts(
 
   // Gather candidate documents first, then apply kernel authorization before counting.
   let documentsQuery = knex('documents as d')
+    .leftJoin('document_types as dt', function joinDocumentTypes() {
+      this.on('d.type_id', '=', 'dt.type_id')
+        .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+    })
+    .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
     .where('d.tenant', tenant)
     .whereIn('d.folder_path', allPaths);
 
@@ -3849,12 +4185,112 @@ async function enrichFolderTreeWithCounts(
     // No entity scope: include all documents and rely on kernel decisions for narrowing.
   }
 
+  if (filters?.searchTerm) {
+    documentsQuery = documentsQuery.whereRaw('LOWER(d.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
+  }
+
+  if (filters?.type) {
+    if (filters.type === 'application/pdf') {
+      documentsQuery = documentsQuery.where(function filterPdf() {
+        this.where(function matchPdfType() {
+          this.where('dt.type_name', '=', 'application/pdf')
+            .orWhere('sdt.type_name', '=', 'application/pdf');
+        }).whereNotNull('d.file_id');
+      });
+    } else if (filters.type === 'image') {
+      documentsQuery = documentsQuery.where(function filterImages() {
+        this.where(function matchImageType() {
+          this.where('dt.type_name', 'like', 'image/%')
+            .orWhere('sdt.type_name', 'like', 'image/%');
+        }).whereNotNull('d.file_id');
+      });
+    } else if (filters.type === 'text') {
+      documentsQuery = documentsQuery.where(function filterTextLike() {
+        this.where('dt.type_name', 'like', 'text/%')
+          .orWhere('sdt.type_name', 'like', 'text/%')
+          .orWhere('dt.type_name', '=', 'application/msword')
+          .orWhere('sdt.type_name', '=', 'application/msword')
+          .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+          .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+          .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+          .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+          .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+          .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+          .orWhereNull('d.file_id');
+      });
+    } else if (filters.type === 'application') {
+      documentsQuery = documentsQuery.where(function filterApplications() {
+        this.where(function matchApplicationType() {
+          this.where(function matchDocumentType() {
+            this.where('dt.type_name', 'like', 'application/%')
+              .whereNot('dt.type_name', '=', 'application/pdf')
+              .whereNot('dt.type_name', '=', 'application/msword')
+              .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+              .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+              .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+          }).orWhere(function matchSharedType() {
+            this.where('sdt.type_name', 'like', 'application/%')
+              .whereNot('sdt.type_name', '=', 'application/pdf')
+              .whereNot('sdt.type_name', '=', 'application/msword')
+              .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+              .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+              .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+          });
+        }).whereNotNull('d.file_id');
+      });
+    } else {
+      documentsQuery = documentsQuery.where(function filterTypePrefix() {
+        this.where('dt.type_name', 'like', `${filters.type}%`)
+          .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+      });
+    }
+  }
+
+  if (filters?.uploadedBy) {
+    documentsQuery = documentsQuery.where('d.created_by', filters.uploadedBy);
+  }
+
+  if (filters?.updated_at_start) {
+    documentsQuery = documentsQuery.where('d.updated_at', '>=', filters.updated_at_start);
+  }
+
+  if (filters?.updated_at_end) {
+    const endDate = new Date(filters.updated_at_end);
+    endDate.setDate(endDate.getDate() + 1);
+    documentsQuery = documentsQuery.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
+  }
+
+  if (filters?.entityType || filters?.entityId) {
+    documentsQuery = documentsQuery.whereExists(function filterEntityAssociation() {
+      this.select('*')
+        .from('document_associations as filter_da')
+        .whereRaw('filter_da.document_id = d.document_id')
+        .andWhere('filter_da.tenant', tenant);
+
+      if (filters?.entityType) {
+        this.andWhere('filter_da.entity_type', filters.entityType);
+      }
+
+      if (filters?.entityId) {
+        this.andWhere('filter_da.entity_id', filters.entityId);
+      }
+    });
+  }
+
+  if (filters?.clientVisibility === 'visible') {
+    documentsQuery = documentsQuery.where('d.is_client_visible', true);
+  } else if (filters?.clientVisibility === 'hidden') {
+    documentsQuery = documentsQuery.where(function filterHiddenVisibility() {
+      this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
+    });
+  }
+
   const rows = await documentsQuery.select(
     'd.document_id',
     'd.created_by',
     'd.is_client_visible',
     'd.folder_path'
-  );
+  ).distinct('d.document_id');
   if (rows.length === 0) {
     return;
   }
@@ -3877,14 +4313,17 @@ async function enrichFolderTreeWithCounts(
     countMap.set(folderPath, (countMap.get(folderPath) ?? 0) + 1);
   }
 
-  // Apply counts to nodes recursively
-  function applyCounts(nodeList: IFolderNode[]) {
+  // Apply aggregate counts recursively so collapsed parent folders still show
+  // whether anything under them contains documents.
+  function applyCounts(nodeList: IFolderNode[]): number {
+    let subtreeCount = 0;
     for (const node of nodeList) {
-      node.documentCount = countMap.get(node.path) || 0;
-      if (node.children.length > 0) {
-        applyCounts(node.children);
-      }
+      const directCount = countMap.get(node.path) || 0;
+      const childCount = node.children.length > 0 ? applyCounts(node.children) : 0;
+      node.documentCount = directCount + childCount;
+      subtreeCount += node.documentCount;
     }
+    return subtreeCount;
   }
   applyCounts(nodes);
 }

@@ -6,6 +6,7 @@ export { DocumentEditor } from './DocumentEditor';
 export { CollaborativeEditor } from './CollaborativeEditor';
 
 export { default as DocumentCard } from './DocumentCard';
+export { default as AssociatedEntityPicker } from './AssociatedEntityPicker';
 export { default as DocumentDownload } from './DocumentDownload';
 export { default as DocumentFilters } from './DocumentFilters';
 export { default as DocumentForm } from './DocumentForm';

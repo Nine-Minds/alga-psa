@@ -12,6 +12,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowDown, ArrowUp, Eye } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import AssociatedEntityPicker from './AssociatedEntityPicker';
 
 interface DocumentFiltersProps {
   filters: DocumentFilters;
@@ -120,22 +121,33 @@ export default function DocumentFilters({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {t('documents.filters.entityTypeLabel', 'Associated Entity Type')}
-          </label>
-          <CustomSelect
-            options={entityTypeOptions}
-            value={filters.entityType || 'all_entities'}
-            onValueChange={(value: string) => {
-              if (value === 'all_entities') {
-                onFiltersChange({ ...filters, entityType: '' });
-              } else {
-                onFiltersChange({ ...filters, entityType: value });
-              }
-            }}
-          />
-        </div>
+        <AssociatedEntityPicker
+          id="documents-filters-associated-entity"
+          entityType={filters.entityType || ''}
+          entityId={filters.entityId || ''}
+          selectedEntityLabel={filters.entityLabel}
+          entityTypeOptions={entityTypeOptions}
+          noEntityTypeValue="all_entities"
+          noEntityTypeLabel={t('documents.filters.entityOptions.all', 'All Entities')}
+          entityTypeLabel={t('documents.filters.entityTypeLabel', 'Associated Entity Type')}
+          onEntityTypeChange={(value: string) => {
+            const newFilters = { ...filters, entityType: value };
+            delete newFilters.entityId;
+            delete newFilters.entityLabel;
+            onFiltersChange(newFilters);
+          }}
+          onEntityChange={(value: string, label?: string) => {
+            const newFilters = { ...filters };
+            if (value) {
+              newFilters.entityId = value;
+              newFilters.entityLabel = label;
+            } else {
+              delete newFilters.entityId;
+              delete newFilters.entityLabel;
+            }
+            onFiltersChange(newFilters);
+          }}
+        />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
