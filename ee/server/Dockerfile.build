@@ -1,5 +1,7 @@
-# Start with a base image and install system dependencies
-FROM node:alpine AS base
+# Start with a base image and install system dependencies.
+# Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
+# and broke bundled Vault provider initialization in the blue deployment.
+FROM node:26.1.0-alpine AS base
 RUN apk add --no-cache \
     bash \
     postgresql-client \
@@ -76,7 +78,7 @@ WORKDIR /app
 RUN npm run build:ee
 
 # Final production image with minimal runtime artifacts
-FROM node:alpine
+FROM node:26.1.0-alpine
 RUN apk add --no-cache bash \
     postgresql-client \
     redis \

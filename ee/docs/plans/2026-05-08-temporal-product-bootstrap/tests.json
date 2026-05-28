@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit-test product bootstrap resolution for psa, algadesk, missing product code, and invalid product code.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit-test onboarding seed discovery uses the selected product directory and returns sorted .cjs seed files only.",
+    "implemented": true,
+    "featureIds": ["F001", "F003", "F004"]
+  },
+  {
+    "id": "T003",
+    "description": "Contract-test tenantCreationWorkflow source passes input.productCode into run_onboarding_seeds.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Contract-test Algadesk seed files exclude PSA-only role names and permission resource domains.",
+    "implemented": true,
+    "featureIds": ["F004", "F005"]
+  }
+]

@@ -6,7 +6,7 @@ function read(relPath: string): string {
   return readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
 }
 
-describe('Algadesk knowledge base composition contracts', () => {
+describe('AlgaDesk knowledge base composition contracts', () => {
   it('keeps MSP and portal KB page compositions wired', () => {
     const mspPage = read('src/app/msp/knowledge-base/page.tsx');
     const portalPage = read('src/app/client-portal/knowledge-base/page.tsx');

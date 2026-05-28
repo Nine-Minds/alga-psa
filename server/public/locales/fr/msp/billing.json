@@ -48,7 +48,8 @@
       "servicePeriods": "Périodes de service",
       "usageTracking": "Suivi de l'utilisation",
       "reports": "Rapports",
-      "serviceCatalog": "Catalogue de services",
+      "serviceTypes": "Types de service",
+      "serviceCatalog": "Services",
       "products": "Produits"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "Ce service apparaît dans plusieurs lignes de contrat. Veuillez sélectionner la ligne de contrat sur laquelle facturer.",
       "tooltipNoClient": "Informations client non disponibles. L’utilisation sera acheminée vers le contrat par défaut géré par le système.",
-      "tooltipMultiple": "Ce service apparaît dans plusieurs lignes de contrat. Veuillez sélectionner la ligne de contrat à utiliser. Les lignes de contrat de compartiment sont généralement utilisées en premier jusqu'à épuisement.",
+      "tooltipMultiple": "Ce service apparaît dans plusieurs lignes de contrat. Veuillez sélectionner la ligne de contrat à utiliser. Lorsqu'une seule d'entre elles est une ligne de contrat bucket, elle est sélectionnée par défaut.",
       "tooltipSingle": "Cette utilisation sera facturée au titre de la ligne contractuelle « {{name}} ».",
       "tooltipNone": "Aucune ligne de contrat éligible trouvée pour ce service.",
       "placeholderNoClient": "Utilisation d'un contrat par défaut géré par le système",

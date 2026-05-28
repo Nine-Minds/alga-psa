@@ -27,6 +27,7 @@
     "close": "Close"
   },
   "runList": {
+    "shareTooltip": "Imprimir e exportar",
     "quickRanges": {
       "last24h": "Last 24h",
       "last7d": "Last 7d"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
+    },
+    "print": {
+      "title": "Execuções de workflow",
+      "selectedTitle": "Execuções de workflow selecionadas",
+      "subtitle": "{{count}} execuções",
+      "noRuns": "Nenhuma execução de workflow para imprimir",
+      "columns": {
+        "run": "Execução",
+        "workflow": "Workflow",
+        "version": "Versão",
+        "status": "Status",
+        "started": "Iniciado",
+        "updated": "Atualizado",
+        "duration": "Duração"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir as execuções de workflow."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Open editor",
       "apply": "Apply",
       "cancel": "Cancel"
+    },
+    "askAi": {
+      "ariaLabel": "Pedir ajuda à IA para transformações",
+      "title": "Perguntar à IA",
+      "shortcutHint": "Abrir Quick Ask para obter ajuda com transformações"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "A carregar automação de fluxos de trabalho...",
-    "featureName": "Automação de fluxos de trabalho",
-    "notEnabled": "Esta funcionalidade é experimental e não está ativada para o seu inquilino.",
-    "experimental": "Experimental",
-    "enableHint": "Ative a Automação de fluxos de trabalho em Definições para aceder.",
-    "goToExperimental": "Ir para funcionalidades experimentais",
-    "openSettings": "Abrir definições"
+    "loading": "A carregar automação de fluxos de trabalho..."
   },
   "flow": {
     "designer": {

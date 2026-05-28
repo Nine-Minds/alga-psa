@@ -32,6 +32,7 @@ export type BillingTabValue =
   | 'billing-cycles'
   | 'service-periods'
   | 'products'
+  | 'service-types'
   | 'service-catalog'
   | 'tax-rates'
   | 'usage-tracking'
@@ -137,8 +138,15 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     icon: BarChart3
   },
   {
+    value: 'service-types',
+    label: 'Service Types',
+    labelKey: 'dashboard.tabs.serviceTypes',
+    href: '/msp/billing?tab=service-types',
+    icon: Layers3
+  },
+  {
     value: 'service-catalog',
-    label: 'Service Catalog',
+    label: 'Services',
     labelKey: 'dashboard.tabs.serviceCatalog',
     href: '/msp/billing?tab=service-catalog',
     icon: Package

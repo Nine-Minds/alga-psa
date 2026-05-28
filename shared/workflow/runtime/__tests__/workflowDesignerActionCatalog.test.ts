@@ -239,4 +239,24 @@ describe('workflow designer action catalog', () => {
       tileKind: 'app',
     });
   });
+
+  it('uses explicit module records when provided', () => {
+    const ninjaCatalog = buildWorkflowDesignerActionCatalog(mockActions, {
+      modules: [{
+        groupKey: 'app:ninjaone',
+        label: 'NinjaOne',
+        tileKind: 'app',
+        iconToken: 'ninjaone',
+        defaultActionId: 'slack.send_message',
+        allowedActionIds: ['slack.send_message']
+      }]
+    });
+
+    expect(ninjaCatalog.find((record) => record.groupKey === 'app:ninjaone')).toMatchObject({
+      groupKey: 'app:ninjaone',
+      iconToken: 'ninjaone',
+      allowedActionIds: ['slack.send_message']
+    });
+    expect(ninjaCatalog.find((record) => record.groupKey === 'app:slack')).toBeUndefined();
+  });
 });

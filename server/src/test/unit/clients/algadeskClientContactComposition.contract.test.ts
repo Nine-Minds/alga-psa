@@ -6,7 +6,7 @@ function read(relPath: string): string {
   return readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
 }
 
-describe('Algadesk client/contact composition contracts', () => {
+describe('AlgaDesk client/contact composition contracts', () => {
   it('preserves client CRUD and support context while filtering excluded client surfaces', () => {
     const source = read('../packages/clients/src/components/clients/ClientDetails.tsx');
 
@@ -18,7 +18,7 @@ describe('Algadesk client/contact composition contracts', () => {
     expect(source).toContain("'projects'");
     expect(source).toContain("'service-catalog'");
     expect(source).toContain("'services'");
-    expect(source).toContain('const shouldRenderPsaOnlyClientSurfaces = !isAlgadeskMode;');
+    expect(source).toContain('const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;');
     expect(source).toContain('shouldRenderPsaOnlyClientSurfaces ? renderClientAssets');
   });
 
@@ -33,11 +33,11 @@ describe('Algadesk client/contact composition contracts', () => {
     expect(source).toContain('<ContactNotesPanel');
   });
 
-  it('runs Algadesk contact detail page in product-safe mode', () => {
+  it('runs AlgaDesk contact detail page in product-safe mode', () => {
     const source = read('src/app/msp/contacts/[id]/page.tsx');
 
-    expect(source).toContain("const isAlgadesk = (await getCurrentTenantProduct()) === 'algadesk';");
-    expect(source).toContain('if (!isAlgadesk && tab === \'documents\')');
-    expect(source).toContain('isAlgadeskMode={isAlgadesk}');
+    expect(source).toContain("const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';");
+    expect(source).toContain('if (!isAlgaDesk && tab === \'documents\')');
+    expect(source).toContain('isAlgaDeskMode={isAlgaDesk}');
   });
 });

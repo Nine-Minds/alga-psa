@@ -64,7 +64,7 @@
     "shell": {
       "title": "Skonfiguruj swój system",
       "description": "Skonfigurujmy Twoje środowisko i przygotujmy je do użycia.",
-      "algadeskTitle": "Skonfiguruj Algadesk",
+      "algadeskTitle": "Skonfiguruj AlgaDesk",
       "algadeskDescription": "Skonfiguruj obszar roboczy helpdesku, klientów i domyślne ustawienia zgłoszeń."
     }
   },

@@ -38,7 +38,6 @@ export async function GET(
         'st.id',
         'st.tenant',
         'st.name',
-        'st.billing_method',
         'st.is_active',
         'st.description',
         'st.order_number',

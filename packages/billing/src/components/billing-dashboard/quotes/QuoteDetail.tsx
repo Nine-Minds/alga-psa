@@ -21,6 +21,7 @@ import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteT
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
+import { ArrowLeft } from 'lucide-react';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 
 interface QuoteDetailProps {
@@ -844,7 +845,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     return (
       <Card size="2">
         <Box p="4" className="space-y-4">
-          <Button id="quote-detail-back-error" variant="outline" onClick={onBack}>{t('quoteDetail.actions.backToQuotes', { defaultValue: 'Back to Quotes' })}</Button>
+          <Button id="quote-detail-back-error" variant="soft" size="sm" onClick={onBack} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            {t('quoteDetail.actions.back', { defaultValue: 'Back' })}
+          </Button>
           <Alert variant="destructive">
             <AlertTitle>{t('quoteDetail.title', { defaultValue: 'Quote Detail' })}</AlertTitle>
             <AlertDescription>{error || t('quoteDetail.errors.notFound', { defaultValue: 'Quote not found' })}</AlertDescription>
@@ -857,6 +861,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   return (
     <Card size="2">
       <Box p="4" className="space-y-6">
+        <Button id="quote-detail-back" variant="soft" size="sm" onClick={onBack} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          {t('quoteDetail.actions.back', { defaultValue: 'Back' })}
+        </Button>
+
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">{formatQuoteNumber(quote, t('quoteDetail.labels.templateQuote', { defaultValue: 'Template quote' }))}</div>
@@ -866,7 +875,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button id="quote-detail-back" variant="outline" onClick={onBack}>{t('common.actions.back', { defaultValue: 'Back' })}</Button>
             {renderPrimaryActions()}
             {!quote.is_template ? (
               <>

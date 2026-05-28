@@ -25,7 +25,8 @@
     "teamManagement": "Gestione team",
     "loadingTeam": "Caricamento configurazione team...",
     "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
-    "loadingInteractions": "Caricamento impostazioni interazioni..."
+    "loadingInteractions": "Caricamento impostazioni interazioni...",
+    "keyboardShortcuts": "Scorciatoie da tastiera"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -90,10 +91,6 @@
         "name": "Assistente IA",
         "description": "Abilita Quick Ask e barra laterale Chat basati sull'intelligenza artificiale.",
         "restriction": "Disponibile solo per il tenant di fatturazione principale."
-      },
-      "workflowAutomation": {
-        "name": "Automazione dei flussi di lavoro",
-        "description": "Abilita le funzionalità sperimentali di automazione dei flussi di lavoro nel pannello di controllo e nell'editor."
       }
     },
     "actions": {

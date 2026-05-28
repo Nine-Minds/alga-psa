@@ -48,7 +48,8 @@
       "servicePeriods": "Service Periods",
       "usageTracking": "Usage Tracking",
       "reports": "Reports",
-      "serviceCatalog": "Service Catalog",
+      "serviceTypes": "Service Types",
+      "serviceCatalog": "Services",
       "products": "Products"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "This service appears in multiple contract lines. Please select which contract line to bill against.",
       "tooltipNoClient": "Client information not available. Usage will route to the system-managed default contract.",
-      "tooltipMultiple": "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted.",
+      "tooltipMultiple": "This service appears in multiple contract lines. Please select which contract line to use. When only one of them is a bucket contract line, it is selected by default.",
       "tooltipSingle": "This usage will be billed under the \"{{name}}\" contract line.",
       "tooltipNone": "No eligible contract lines found for this service.",
       "placeholderNoClient": "Using system-managed default contract",

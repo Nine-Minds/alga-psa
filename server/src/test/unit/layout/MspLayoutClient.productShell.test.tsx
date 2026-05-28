@@ -49,7 +49,7 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="psa-default-layout">{children}</div>,
 }));
 
-vi.mock('@/components/layout/AlgadeskMspShell', () => ({
+vi.mock('@/components/layout/AlgaDeskMspShell', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="algadesk-shell">{children}</div>,
 }));
 
@@ -65,7 +65,7 @@ afterEach(() => {
 const mockGetTenantSettings = vi.mocked(getTenantSettings);
 
 describe('MspLayoutClient product shell behavior', () => {
-  it('RT006: renders Algadesk shell for allowed Algadesk MSP routes', () => {
+  it('RT006: renders AlgaDesk shell for allowed AlgaDesk MSP routes', () => {
     render(
       <MspLayoutClient
         session={null}
@@ -98,7 +98,7 @@ describe('MspLayoutClient product shell behavior', () => {
     expect(screen.queryByTestId('algadesk-shell')).not.toBeInTheDocument();
   });
 
-  it('RT006: client fallback redirects Algadesk tenants when onboarding is incomplete', async () => {
+  it('RT006: client fallback redirects AlgaDesk tenants when onboarding is incomplete', async () => {
     mockGetTenantSettings.mockResolvedValue({
       tenant: 'tenant-1',
       onboarding_completed: false,

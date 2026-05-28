@@ -197,6 +197,25 @@
       "client_name": "nome del cliente",
       "location": "posizione",
       "actions": "azioni"
+    },
+    "print": {
+      "title": "Asset",
+      "selectedTitle": "Asset selezionati",
+      "subtitle": "{{count}} asset",
+      "noAssets": "Nessun asset da stampare",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nome",
+        "tag": "Tag",
+        "type": "Tipo",
+        "status": "Stato",
+        "client": "Cliente",
+        "location": "Posizione"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa degli asset."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Errore",
       "notFound": "Risorsa non trovata o non disponi dell'autorizzazione per visualizzarla."
+    },
+    "fields": {
+      "assetTag": "Etichetta dell'asset",
+      "serialNumber": "Numero di serie",
+      "assetType": "Tipo",
+      "client": "Cliente",
+      "status": "Stato",
+      "location": "Posizione"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Modifica risorsa"
   },
   "associatedAssets": {
-    "title": "Beni associati",
+    "title": "Beni",
     "description": "Gestione delle relazioni tra asset padre e figlio con azioni sugli asset collegati",
     "loading": {
       "assets": "Caricamento risorse..."

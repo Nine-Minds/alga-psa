@@ -5,11 +5,11 @@ import {
 } from '@alga-psa/types';
 
 export const PSA_ONBOARDING_STEP_INDEXES = ONBOARDING_WIZARD_STEPS.map((_step, index) => index);
-export const ALGADESK_ONBOARDING_STEP_INDEXES = [0, 1, 2, 3, 5] as const;
+export const ALGA_DESK_ONBOARDING_STEP_INDEXES = [0, 1, 2, 3, 5] as const;
 
 export function getOnboardingWizardStepIndexes(productCode: ProductCode): number[] {
   return productCode === 'algadesk'
-    ? [...ALGADESK_ONBOARDING_STEP_INDEXES]
+    ? [...ALGA_DESK_ONBOARDING_STEP_INDEXES]
     : [...PSA_ONBOARDING_STEP_INDEXES];
 }
 

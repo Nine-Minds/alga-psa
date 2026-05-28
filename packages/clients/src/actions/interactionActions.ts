@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
 
 import { createTenantKnex } from '@alga-psa/db';
@@ -34,6 +34,35 @@ function maybeUserActor(user: any) {
   const userId = user?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+async function publishInteractionSearchEvent(
+  eventType: 'INTERACTION_CREATED' | 'INTERACTION_UPDATED' | 'INTERACTION_DELETED',
+  tenant: string,
+  interactionId: string,
+  options: {
+    clientId?: string | null;
+    contactId?: string | null;
+    userId?: string | null;
+    changedFields?: string[];
+  } = {},
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        interactionId,
+        clientId: options.clientId ?? undefined,
+        contactId: options.contactId ?? undefined,
+        userId: options.userId ?? undefined,
+        changedFields: options.changedFields,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[interactionActions] Failed to publish ${eventType} search event:`, eventError);
+  }
 }
 
 export const addInteraction = withAuth(async (
@@ -110,6 +139,13 @@ export const addInteraction = withAuth(async (
       idempotencyKey: `interaction_logged:${newInteraction.interaction_id}:${occurredAt}`,
     });
 
+    await publishInteractionSearchEvent('INTERACTION_CREATED', tenant, newInteraction.interaction_id, {
+      clientId: newInteraction.client_id,
+      contactId: newInteraction.contact_name_id,
+      userId: newInteraction.user_id,
+      changedFields: ['title', 'notes', 'client_id', 'contact_name_id', 'ticket_id'],
+    });
+
     revalidatePath('/msp/contacts/[id]', 'page')
     revalidatePath('/msp/clients/[id]', 'page')
     return newInteraction;
@@ -171,7 +207,7 @@ export const getRecentInteractions = withAuth(async (
 });
 
 export const updateInteraction = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string,
   updateData: Partial<IInteraction>
@@ -180,6 +216,12 @@ export const updateInteraction = withAuth(async (
     const { knex } = await createTenantKnex();
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+    });
+    await publishInteractionSearchEvent('INTERACTION_UPDATED', tenant, interactionId, {
+      clientId: updatedInteraction.client_id,
+      contactId: updatedInteraction.contact_name_id,
+      userId: user?.user_id,
+      changedFields: Object.keys(updateData),
     });
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
@@ -207,11 +249,19 @@ export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promis
   }
 });
 
-export const deleteInteraction = withAuth(async (_user, { tenant }, interactionId: string): Promise<void> => {
+export const deleteInteraction = withAuth(async (user, { tenant }, interactionId: string): Promise<void> => {
   try {
     const { knex } = await createTenantKnex();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const deletedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existing = await trx('interactions')
+        .where({
+          interaction_id: interactionId,
+          tenant
+        })
+        .select('interaction_id', 'client_id', 'contact_name_id', 'user_id')
+        .first();
+
       // Delete the interaction
       const deletedCount = await trx('interactions')
         .where({
@@ -224,8 +274,16 @@ export const deleteInteraction = withAuth(async (_user, { tenant }, interactionI
         throw new Error('Interaction not found or could not be deleted');
       }
 
-      revalidatePath('/'); // Revalidate to update any cached data
+      return existing;
     });
+
+    await publishInteractionSearchEvent('INTERACTION_DELETED', tenant, interactionId, {
+      clientId: deletedInteraction?.client_id,
+      contactId: deletedInteraction?.contact_name_id,
+      userId: user?.user_id,
+    });
+
+    revalidatePath('/'); // Revalidate to update any cached data
   } catch (error) {
     console.error('Error deleting interaction:', error);
     throw new Error('Failed to delete interaction');

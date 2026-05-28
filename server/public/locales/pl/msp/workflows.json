@@ -27,6 +27,7 @@
     "close": "Zamknij"
   },
   "runList": {
+    "shareTooltip": "Drukuj i eksportuj",
     "quickRanges": {
       "last24h": "Ostatnie 24 godz.",
       "last7d": "Ostatnie 7 dni"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Anulowano {{count}} uruchomień.",
       "bulkSkippedIneligibleCount": "Pominięto {{count}} niekwalifikujących się uruchomień.",
       "bulkActionFailed": "Akcja zbiorcza nie powiodła się"
+    },
+    "print": {
+      "title": "Uruchomienia workflow",
+      "selectedTitle": "Wybrane uruchomienia workflow",
+      "subtitle": "{{count}} uruchomień",
+      "noRuns": "Brak uruchomień workflow do wydruku",
+      "columns": {
+        "run": "Uruchomienie",
+        "workflow": "Workflow",
+        "version": "Wersja",
+        "status": "Status",
+        "started": "Rozpoczęto",
+        "updated": "Zaktualizowano",
+        "duration": "Czas trwania"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania uruchomień workflow."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Otwórz edytor",
       "apply": "Zastosuj",
       "cancel": "Anuluj"
+    },
+    "askAi": {
+      "ariaLabel": "Poproś AI o pomoc dotyczącą transformacji",
+      "title": "Zapytaj AI",
+      "shortcutHint": "Otwórz Quick Ask, aby uzyskać pomoc dotyczącą transformacji"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Ładowanie automatyzacji przepływów pracy...",
-    "featureName": "Automatyzacja przepływów pracy",
-    "notEnabled": "Ta funkcja jest eksperymentalna i nie jest włączona dla Twojego najemcy.",
-    "experimental": "Eksperymentalna",
-    "enableHint": "Włącz automatyzację przepływów pracy w ustawieniach, aby uzyskać dostęp.",
-    "goToExperimental": "Przejdź do funkcji eksperymentalnych",
-    "openSettings": "Otwórz ustawienia"
+    "loading": "Ładowanie automatyzacji przepływów pracy..."
   },
   "flow": {
     "designer": {

@@ -1,0 +1,407 @@
+[
+  {
+    "id": "F001",
+    "description": "Create migration ee/server/migrations/<ts>_create_teams_notification_deliveries.cjs that defines the table with all PRD columns and primary key (tenant, delivery_id).",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_notification_deliveries"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add UNIQUE (tenant, idempotency_key) constraint to teams_notification_deliveries to enable ON CONFLICT DO NOTHING.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_notification_deliveries",
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add CHECK constraint enforcing teams_notification_deliveries.status IN ('skipped','sent','delivered','failed').",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_notification_deliveries"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add CHECK constraint enforcing teams_notification_deliveries.error_code is NULL or in the documented enum set.",
+    "implemented": true,
+    "prdRefs": [
+      "Error code taxonomy"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add indexes (tenant, internal_notification_id) and (tenant, status, created_at DESC) on teams_notification_deliveries.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_notification_deliveries"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Declare teams_notification_deliveries as PARTITION BY RANGE (created_at); create child partitions for current month + next 2 months.",
+    "implemented": true,
+    "prdRefs": [
+      "Retention Strategy"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Run create_distributed_table('teams_notification_deliveries','tenant', colocate_with => 'teams_integrations') when Citus is present; warn-and-skip otherwise.",
+    "implemented": true,
+    "prdRefs": [
+      "Multi-Tenant / Citus Compliance"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Create PL/pgSQL function cleanup_teams_notification_deliveries(retention_interval) that drops partitions older than now() - retention_interval. Default 90 days.",
+    "implemented": true,
+    "prdRefs": [
+      "Retention Strategy"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Create migration ee/server/migrations/<ts>_create_teams_audit_events.cjs with all PRD columns and PK (tenant, event_id).",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add CHECK constraints enforcing teams_audit_events.surface IN ('bot','message_extension','quick_action','tab') and result_status IN ('success','failure').",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add CHECK constraint enforcing teams_audit_events.action_id IN ('assign_ticket','add_note','reply_to_contact','log_time','approval_response','create_ticket_from_message','update_from_message').",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add indexes (tenant, actor_user_id, created_at DESC) and (tenant, target_type, target_id) on teams_audit_events.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Run create_distributed_table on teams_audit_events colocated with teams_integrations.",
+    "implemented": true,
+    "prdRefs": [
+      "Multi-Tenant / Citus Compliance"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Create PL/pgSQL function cleanup_teams_audit_events(retention_interval) (default 365 days). Audit table is NOT partitioned in this PR — function uses range delete.",
+    "implemented": true,
+    "prdRefs": [
+      "Retention Strategy"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Create migration ee/server/migrations/<ts>_create_teams_conversation_references.cjs with PRD columns and PK (tenant, microsoft_user_id, conversation_id).",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_conversation_references"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Run create_distributed_table on teams_conversation_references colocated with teams_integrations.",
+    "implemented": true,
+    "prdRefs": [
+      "Multi-Tenant / Citus Compliance"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement writeTeamsDeliveryRow(input) helper in ee/packages/microsoft-teams/src/lib/notifications/teamsDeliveryRecorder.ts. Computes idempotency_key (SHA-256), inserts with ON CONFLICT DO NOTHING.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'skipped' return path with appropriate skip reason mapped to error_code enum.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'delivered' return path with provider_message_id.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'failed' return path with error_code mapped to enum (graph_throttled, graph_unauthorized, etc.).",
+    "implemented": true,
+    "prdRefs": [
+      "Flow A",
+      "Error code taxonomy"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Map Graph HTTP status codes to error_code enum values: 401/403 -> graph_unauthorized; 404 -> graph_not_found; 429 -> graph_throttled; 5xx -> graph_server_error.",
+    "implemented": true,
+    "prdRefs": [
+      "Error code taxonomy"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Map non-Graph skip reasons to error_code enum: missing addon -> addon_inactive; integration inactive -> integration_inactive; user not mapped -> user_not_mapped; missing package metadata -> package_misconfigured.",
+    "implemented": true,
+    "prdRefs": [
+      "Error code taxonomy"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Capture provider_request_id from Graph response 'request-id' header when present and persist on delivery row.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_notification_deliveries"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Truncate error_message to 1KB before persisting to prevent leaking long customer/Graph payloads.",
+    "implemented": true,
+    "prdRefs": [
+      "Privacy / Security"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement writeTeamsAuditEvent(input) helper in ee/packages/microsoft-teams/src/lib/teams/actions/teamsAuditRecorder.ts. Computes payload_hash (SHA-256 of canonicalized JSON), inserts row.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B",
+      "Privacy / Security"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Canonicalize action payload via stable JSON.stringify with sorted keys before hashing so retried invokes produce the same payload_hash.",
+    "implemented": true,
+    "prdRefs": [
+      "Privacy / Security"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Instrument assign_ticket action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Instrument add_note action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Instrument reply_to_contact action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Instrument log_time action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Instrument approval_response action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Instrument create_ticket_from_message action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Instrument update_from_message action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Resolve actor_user_id (PSA user) and microsoft_user_id (aadObjectId) from Teams turn context at audit recording time.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Map each action's source (bot turn / compose extension / quick action task module) to the correct surface enum value when recording audit events.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model > teams_audit_events"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Implement upsertTeamsConversationReference(turnContext) helper that writes/updates teams_conversation_references on every inbound bot activity.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow C"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Call upsertTeamsConversationReference from the bot adapter's activity handler entry point so all inbound activities trigger capture.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow C"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Implement listTeamsDeliveries server action in teamsObservabilityActions.ts using withAuth + hasPermission('teams_integration','read'). Supports status/category/since filters, cursor pagination, limit cap 200.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow D",
+      "API Surface"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Implement listTeamsAuditEvents server action in teamsObservabilityActions.ts using withAuth + hasPermission('teams_integration','read'). Supports surface/action_id/actor/result filters, cursor pagination.",
+    "implemented": true,
+    "prdRefs": [
+      "Flow D",
+      "API Surface"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Cursor encoding: opaque base64 of (created_at, id) tuple so pagination is stable under inserts. Decode/validate cursor server-side; reject malformed.",
+    "implemented": true,
+    "prdRefs": [
+      "API Surface"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Add 'teams_integration:read' permission to permission seeder if absent. Verify by grepping existing permissions before adding.",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions Q2"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "CRITICAL: Add 'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references' to TENANT_TABLES_DELETION_ORDER in ee/temporal-workflows/src/activities/tenant-deletion-activities.ts BEFORE 'teams_integrations' entry.",
+    "implemented": true,
+    "prdRefs": [
+      "Tenant Deletion Integration"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Verify partitioned table deletion behavior: DELETE FROM teams_notification_deliveries WHERE tenant=? prunes across all partitions (tested in tenant-deletion activity).",
+    "implemented": true,
+    "prdRefs": [
+      "Tenant Deletion Integration"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Update Microsoft profile bindings comment block in tenant-deletion-activities.ts to reflect the three new tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Tenant Deletion Integration"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Rebuild @alga-psa/microsoft-teams package (tsup -> dist) so server picks up new exports and instrumentation.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Grep services/workflow-worker for imports of deliverTeamsNotificationImpl / teamsActionRegistry. If present, document worker rebuild requirement in plan deployment notes.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Export TeamsDeliveryRow and TeamsAuditEventRow TypeScript types from the package public API surface for the server actions to consume.",
+    "implemented": true,
+    "prdRefs": [
+      "API Surface"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Document the new tables, instrumentation helpers, and tenant-deletion registration in a one-line CHANGELOG entry (internal — no marketing).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Validate Citus partition + distribution interaction with a smoke query in the migration: SELECT count(*) FROM pg_dist_partition WHERE logicalrelid='teams_notification_deliveries'::regclass. Log result.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Mirror migrations into ee/server/migrations/citus/ ONLY if there is Citus-specific divergence (e.g., distribution must happen outside a transaction). Otherwise keep single CE-compatible migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  }
+]

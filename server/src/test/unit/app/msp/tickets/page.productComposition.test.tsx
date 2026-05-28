@@ -76,7 +76,7 @@ describe('MSP tickets page product composition', () => {
     getTeamsMock.mockResolvedValue([]);
   });
 
-  it('T008: disables SLA status filter composition for Algadesk tenants', async () => {
+  it('T008: disables SLA status filter composition for AlgaDesk tenants', async () => {
     getCurrentTenantProductMock.mockResolvedValue('algadesk');
 
     const passedProps = await getRenderedTicketsClientProps({
@@ -85,7 +85,7 @@ describe('MSP tickets page product composition', () => {
     });
 
     expect(passedProps.allowSlaStatusFilter).toBe(false);
-    expect(passedProps.useAlgadeskQuickAddForm).toBe(true);
+    expect(passedProps.useAlgaDeskQuickAddForm).toBe(true);
     expect((passedProps.initialFilters as Record<string, unknown>).slaStatusFilter).toBeUndefined();
   });
 
@@ -97,7 +97,7 @@ describe('MSP tickets page product composition', () => {
     });
 
     expect(passedProps.allowSlaStatusFilter).toBe(true);
-    expect(passedProps.useAlgadeskQuickAddForm).toBe(false);
+    expect(passedProps.useAlgaDeskQuickAddForm).toBe(false);
     expect((passedProps.initialFilters as Record<string, unknown>).slaStatusFilter).toBe('breached');
   });
 });

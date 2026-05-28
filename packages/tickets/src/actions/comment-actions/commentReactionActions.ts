@@ -4,6 +4,11 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
+import { publishTicketUpdate } from '../../lib/liveUpdates';
+
+function formatLiveUpdateDisplayName(user: any): string {
+  return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
+}
 
 /**
  * Toggle a reaction on a ticket comment.
@@ -20,21 +25,41 @@ export const toggleCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
+    const comment = await trx('comments')
+      .where({ tenant, comment_id: commentId })
+      .first();
+
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+
     const existing = await trx('comment_reactions')
       .where({ tenant, comment_id: commentId, user_id: userId, emoji })
       .first();
 
+    let added = true;
     if (existing) {
       await trx('comment_reactions')
         .where({ tenant, reaction_id: existing.reaction_id })
         .del();
-      return { added: false };
+      added = false;
+    } else {
+      await trx('comment_reactions')
+        .insert({ tenant, comment_id: commentId, user_id: userId, emoji });
     }
 
-    await trx('comment_reactions')
-      .insert({ tenant, comment_id: commentId, user_id: userId, emoji });
+    await publishTicketUpdate({
+      tenantId: tenant,
+      ticketId: comment.ticket_id,
+      updatedFields: ['comment_reactions'],
+      updatedBy: {
+        userId,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      updatedAt: new Date().toISOString(),
+    });
 
-    return { added: true };
+    return { added };
   });
 });
 

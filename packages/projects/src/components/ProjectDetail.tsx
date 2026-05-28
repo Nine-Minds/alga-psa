@@ -18,7 +18,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import TaskQuickAdd from './TaskQuickAdd';
@@ -26,7 +26,7 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
+import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
@@ -34,16 +34,22 @@ import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHand
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
+import BulkMoveTaskDialog from './BulkMoveTaskDialog';
+import BulkAssignDialog from './BulkAssignDialog';
+import BulkTaskActionBar from './BulkTaskActionBar';
+import { useTaskSelection } from './TaskSelectionContext';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
 import { useKanbanPan } from './useKanbanPan';
 import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
+import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
@@ -59,6 +65,43 @@ const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
+const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
+// Legacy localStorage key previously used by TaskListView; reused for one-time
+// hydration so existing per-project widths survive the move to server prefs.
+const projectListColumnWidthsLegacyKey = (projectId: string) =>
+  `tasklistview-column-sizing:${projectId}`;
+
+// Row density (zoom) presets for the list view, mirroring the tickets table.
+// Indexed by level/10 (0..10); each scales row vertical padding + font size,
+// plus the in-cell tag/picker/avatar sizes so those controls resize with zoom.
+// `[&>td_*]:!text-[Xpx]` forces descendant text to follow the row size.
+// The `row` strings MUST be literal so Tailwind's scanner emits the utilities.
+const PROJECT_LIST_DENSITY_STEP = 10;
+const PROJECT_LIST_DENSITY_DEFAULT = 50; // matches the tickets table default
+interface ProjectListDensityPreset {
+  /** Cell vertical padding + font size (px) for this level. */
+  cellPadding: string;
+  fontPx: number;
+  /** Column width multiplier — fewer columns fit as it grows. */
+  scale: number;
+  tagSize: 'sm' | 'md' | 'lg';
+  pickerSize: 'xs' | 'sm' | 'lg';
+  avatarSize: 'xs' | 'sm' | 'md';
+}
+const PROJECT_LIST_DENSITY_PRESETS: readonly ProjectListDensityPreset[] = [
+  { cellPadding: '2px',  fontPx: 11, scale: 0.79, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '4px',  fontPx: 12, scale: 0.86, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '6px',  fontPx: 12, scale: 0.86, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '8px',  fontPx: 13, scale: 0.93, tagSize: 'sm', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '10px', fontPx: 13, scale: 0.93, tagSize: 'sm', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '12px', fontPx: 14, scale: 1.0,  tagSize: 'md', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '14px', fontPx: 14, scale: 1.0,  tagSize: 'md', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '16px', fontPx: 15, scale: 1.07, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '20px', fontPx: 15, scale: 1.07, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '24px', fontPx: 16, scale: 1.14, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '28px', fontPx: 17, scale: 1.21, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+];
 
 const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
 const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
@@ -66,7 +109,7 @@ const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
 
 // Task type icons for the filter dropdown
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
-  task: CheckSquare,
+  task: ClipboardList,
   bug: Bug,
   feature: Sparkles,
   improvement: TrendingUp,
@@ -168,18 +211,37 @@ export default function ProjectDetail({
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
   type ProjectViewMode = 'kanban' | 'list';
+  // Column widths are scoped per project (each project can show different
+  // columns), so the preference key includes the project id.
+  const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
     { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
+    {
+      key: columnWidthsPrefKey,
+      defaultValue: {} as Record<string, number>,
+      localStorageKey: projectListColumnWidthsLegacyKey(project.project_id),
+      debounceMs: 500,
+    },
   ]);
   const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
+  const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
+  const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
+  const listDensity = useMemo(() => {
+    const index = Math.min(
+      PROJECT_LIST_DENSITY_PRESETS.length - 1,
+      Math.max(0, Math.round((listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT) / PROJECT_LIST_DENSITY_STEP))
+    );
+    return PROJECT_LIST_DENSITY_PRESETS[index];
+  }, [listDensityLevel]);
 
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
@@ -222,6 +284,8 @@ export default function ProjectDetail({
   const [moveConfirmation, setMoveConfirmation] = useState<{
     taskId: string;
     taskName: string;
+    /** When present, this is a bulk move of all these task IDs (taskId is the grabbed one). */
+    taskIds?: string[];
     sourcePhase: IProjectPhase;
     targetPhase: IProjectPhase;
   } | null>(null);
@@ -242,6 +306,13 @@ export default function ProjectDetail({
   // State for the Move Task Dialog
   const [isMoveTaskDialogOpen, setIsMoveTaskDialogOpen] = useState(false);
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
+
+  // Bulk task selection / actions
+  const { selectedTaskIds, clearSelection, setTasksSelected } = useTaskSelection();
+  const [isBulkMoveOpen, setIsBulkMoveOpen] = useState(false);
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [taskToDuplicate, setTaskToDuplicate] = useState<IProjectTask | null>(null);
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
@@ -254,6 +325,10 @@ export default function ProjectDetail({
   const [allProjectTaskTags, setAllProjectTaskTags] = useState<Record<string, ITag[]>>({});
   const [allChecklistItems, setAllChecklistItems] = useState<Record<string, any[]>>({});
   const [allTaskDependencies, setAllTaskDependencies] = useState<Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>>({});
+  // Effective status mappings per phase — the list view renders every phase at
+  // once, and status mapping IDs are phase-specific, so a single phase's
+  // statuses cannot bucket tasks from other phases.
+  const [statusesByPhase, setStatusesByPhase] = useState<Record<string, ProjectStatus[]>>({});
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -361,6 +436,7 @@ export default function ProjectDetail({
   const [selectedTaskTypeFilter, setSelectedTaskTypeFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
   const [primaryAgentOnly, setPrimaryAgentOnly] = useState<boolean>(false);
 
@@ -422,8 +498,8 @@ export default function ProjectDetail({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       tasks = tasks.filter(task => {
         // Check if task is unassigned (no primary assignee)
         const isUnassigned = !task.assigned_to;
@@ -453,12 +529,17 @@ export default function ProjectDetail({
           }
         }
 
+        // If specific teams are selected, match by the task's assigned team
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const phaseStatusLookup = useMemo(
     () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
@@ -476,13 +557,17 @@ export default function ProjectDetail({
     let stale = false;
     const fetchAllTaskData = async () => {
       try {
-        const data = await getProjectTaskData(project.project_id);
+        const [data, phaseStatuses] = await Promise.all([
+          getProjectTaskData(project.project_id),
+          getProjectStatusesByPhase(project.project_id),
+        ]);
         if (stale) return;
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
         setAllChecklistItems(data.checklistItems);
         setAllTaskDependencies(data.taskDependencies);
+        setStatusesByPhase(phaseStatuses);
         setProjectTaskDataLoaded(true);
       } catch (error) {
         if (!stale) handleError(error, 'Failed to load project tasks');
@@ -520,8 +605,8 @@ export default function ProjectDetail({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       filtered = filtered.filter(task => {
         const isUnassigned = !task.assigned_to;
 
@@ -545,12 +630,16 @@ export default function ProjectDetail({
           }
         }
 
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return filtered;
-  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -965,6 +1054,103 @@ export default function ProjectDetail({
     beforeTaskId: string | null,
     afterTaskId: string | null
   ) => {
+    // Bulk move: when the dragged task is part of a multi-selection, move them all
+    if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
+      // Sort selected tasks by current order_key so they land in their existing
+      // relative order. Tasks already in the target phase are repositioned;
+      // cross-phase tasks are moved in.
+      const tasksToMove = allProjectTasks
+        .filter(t => selectedTaskIds.has(t.task_id))
+        .sort((a, b) => {
+          const ka = a.order_key || '';
+          const kb = b.order_key || '';
+          return ka < kb ? -1 : ka > kb ? 1 : 0;
+        });
+      if (tasksToMove.length === 0) return;
+
+      // Don't anchor positioning to tasks that are themselves being moved
+      const safeBefore = beforeTaskId && selectedTaskIds.has(beforeTaskId) ? null : beforeTaskId;
+      const safeAfter = afterTaskId && selectedTaskIds.has(afterTaskId) ? null : afterTaskId;
+
+      let success = 0;
+      let failed = 0;
+      let crossPhaseMoved = 0;
+      // Chain inserts so each subsequent task lands immediately after the
+      // previous one, preserving the relative order at the drop position.
+      let prevBefore: string | null = safeBefore;
+      const statusUpdatedById = new Map<string, IProjectTask>();
+      for (const task of tasksToMove) {
+        try {
+          if (task.phase_id !== newPhaseId) {
+            await moveTaskToPhase(
+              task.task_id,
+              newPhaseId,
+              newStatusMappingId,
+              undefined,
+              prevBefore,
+              safeAfter,
+            );
+            crossPhaseMoved++;
+          } else {
+            const updatedTask = await updateTaskStatus(
+              task.task_id,
+              newStatusMappingId,
+              prevBefore,
+              safeAfter,
+            );
+            statusUpdatedById.set(task.task_id, updatedTask);
+          }
+          prevBefore = task.task_id;
+          success++;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      if (crossPhaseMoved > 0) {
+        // Cross-phase movement changes which list buckets a task belongs to and
+        // can invalidate cached ordering for the target status. Bump the version
+        // so the board reloads with correct grouping/ordering.
+        setAllProjectTasks(prev => prev.map(t => {
+          const u = statusUpdatedById.get(t.task_id);
+          if (u) {
+            return { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key };
+          }
+          if (selectedTaskIds.has(t.task_id) && t.phase_id !== newPhaseId) {
+            return { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId };
+          }
+          return t;
+        }));
+        setStatusVersion(v => v + 1);
+      } else {
+        // Pure same-phase reorder/status change — apply server-returned
+        // order_key/status so the list reflects the exact drop position.
+        const applyUpdate = (taskItem: IProjectTask): IProjectTask => {
+          const u = statusUpdatedById.get(taskItem.task_id);
+          return u
+            ? { ...taskItem, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key }
+            : taskItem;
+        };
+        setProjectTasks(prev => prev.map(applyUpdate));
+        setAllProjectTasks(prev => prev.map(applyUpdate));
+      }
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: success,
+            failed,
+          }),
+        );
+      }
+      return;
+    }
+
     try {
       const task = allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
@@ -995,7 +1181,7 @@ export default function ProjectDetail({
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [allProjectTasks, t]);
+  }, [allProjectTasks, selectedTaskIds, selectedPhase, t]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -1342,7 +1528,16 @@ export default function ProjectDetail({
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
-    if (e.target instanceof HTMLElement) {
+    const isBulkDrag = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1;
+    if (isBulkDrag) {
+      // Dim every selected card so it's clear they all move together
+      document.querySelectorAll('[data-task-id]').forEach((el) => {
+        const id = el.getAttribute('data-task-id');
+        if (id && selectedTaskIds.has(id)) {
+          el.classList.add('opacity-50');
+        }
+      });
+    } else if (e.target instanceof HTMLElement) {
       e.target.classList.add('opacity-50');
     }
     document.body.classList.add('dragging-task');
@@ -1352,6 +1547,9 @@ export default function ProjectDetail({
     if (e.target instanceof HTMLElement) {
       e.target.classList.remove('opacity-50');
     }
+    document.querySelectorAll('[data-task-id]').forEach((el) => {
+      el.classList.remove('opacity-50');
+    });
     document.body.classList.remove('dragging-task');
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
@@ -1364,10 +1562,131 @@ export default function ProjectDetail({
     }
   };
 
+  // Move every selected task into the target status of the current kanban phase.
+  // Selected tasks already in this phase are repositioned at the drop point;
+  // selected tasks from other phases are moved into this phase + target status.
+  const handleBulkKanbanDrop = async (
+    targetStatusId: string,
+    beforeTaskId: string | null,
+    afterTaskId: string | null,
+  ) => {
+    const currentPhaseId = selectedPhase?.phase_id;
+    if (!currentPhaseId) return;
+
+    // Selected tasks across every phase (not just the current board)
+    const allSelected = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
+    if (allSelected.length === 0) return;
+
+    const samePhaseTasks = allSelected
+      .filter(t => t.phase_id === currentPhaseId)
+      .sort((a, b) => {
+        const ka = a.order_key || '';
+        const kb = b.order_key || '';
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+      });
+    const otherPhaseTasks = allSelected.filter(t => t.phase_id !== currentPhaseId);
+
+    try {
+      const statusUpdatedById = new Map<string, IProjectTask>();
+      let movedInCount = 0;
+      let failed = 0;
+
+      // Reposition same-phase tasks at the drop location, grouped consecutively
+      let prevBefore = beforeTaskId;
+      for (const task of samePhaseTasks) {
+        try {
+          const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          statusUpdatedById.set(task.task_id, updatedTask);
+          prevBefore = task.task_id;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      // Move cross-phase tasks into the current phase at the target status
+      for (const task of otherPhaseTasks) {
+        try {
+          await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId);
+          movedInCount++;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      if (otherPhaseTasks.length > 0) {
+        // Cross-phase tasks now belong to this phase. Update the project-wide list
+        // optimistically, then reload the board so they appear with correct
+        // ordering, ticket links, resources, etc.
+        setAllProjectTasks(prev => prev.map(t => {
+          const u = statusUpdatedById.get(t.task_id);
+          if (u) {
+            return { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key };
+          }
+          if (selectedTaskIds.has(t.task_id) && t.phase_id !== currentPhaseId) {
+            return { ...t, phase_id: currentPhaseId, project_status_mapping_id: targetStatusId };
+          }
+          return t;
+        }));
+        setStatusVersion(v => v + 1);
+      } else {
+        // Pure same-phase status change — update in place to avoid a reload flicker
+        const applyUpdate = (t: IProjectTask): IProjectTask => {
+          const u = statusUpdatedById.get(t.task_id);
+          return u
+            ? { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key }
+            : t;
+        };
+        setProjectTasks(prev => prev.map(applyUpdate));
+        setAllProjectTasks(prev => prev.map(applyUpdate));
+
+        setAnimatingTasks(prev => {
+          const next = new Set(prev);
+          statusUpdatedById.forEach((_, id) => next.add(id));
+          return next;
+        });
+        setTimeout(() => {
+          setAnimatingTasks(prev => {
+            const next = new Set(prev);
+            statusUpdatedById.forEach((_, id) => next.delete(id));
+            return next;
+          });
+        }, 500);
+      }
+
+      const total = statusUpdatedById.size + movedInCount;
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: total }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: total,
+            failed,
+          }),
+        );
+      }
+    } catch (error) {
+      handleError(error, 'Failed to move tasks');
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent, targetStatusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => {
     e.preventDefault();
+
+    // Bulk drag: when the dragged task is part of a multi-selection, move them all
+    if (selectedTaskIds.has(draggedTaskId) && selectedTaskIds.size > 1) {
+      // Don't anchor positioning to tasks that are themselves being moved
+      const safeBefore = beforeTaskId && selectedTaskIds.has(beforeTaskId) ? null : beforeTaskId;
+      const safeAfter = afterTaskId && selectedTaskIds.has(afterTaskId) ? null : afterTaskId;
+      await handleBulkKanbanDrop(targetStatusId, safeBefore, safeAfter);
+      return;
+    }
+
     const task = projectTasks.find(t => t.task_id === draggedTaskId);
-    
+
     if (!task) {
       console.error('Task not found');
       return;
@@ -1680,8 +1999,27 @@ export default function ProjectDetail({
     const taskId = plainData;
     const task = projectTasks.find(t => t.task_id === taskId);
     const sourcePhase = projectPhases.find(p => p.phase_id === task?.phase_id);
-    
+
     if (task && sourcePhase && targetPhase.phase_id !== sourcePhase.phase_id) {
+      // Bulk drag: the dragged task is part of a multi-selection. The selection is
+      // project-wide, so include selected tasks from every phase, not just the
+      // currently visible kanban board.
+      if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
+        const bulkTaskIds = allProjectTasks
+          .filter(t => selectedTaskIds.has(t.task_id) && t.phase_id !== targetPhase.phase_id)
+          .map(t => t.task_id);
+        if (bulkTaskIds.length > 0) {
+          setMoveConfirmation({
+            taskId,
+            taskName: task.task_name,
+            taskIds: bulkTaskIds,
+            sourcePhase,
+            targetPhase,
+          });
+        }
+        return;
+      }
+
       setMoveConfirmation({
         taskId,
         taskName: task.task_name,
@@ -1693,31 +2031,95 @@ export default function ProjectDetail({
 
   const handleMoveConfirm = async () => {
     if (!moveConfirmation) return;
-    
+
+    // Bulk move: move every selected task to the target phase
+    if (moveConfirmation.taskIds && moveConfirmation.taskIds.length > 0) {
+      const { taskIds: bulkTaskIds, targetPhase } = moveConfirmation;
+      let success = 0;
+      let failed = 0;
+      const movedById = new Map<string, IProjectTask>();
+
+      for (const id of bulkTaskIds) {
+        try {
+          // Omit the status mapping so moveTaskToPhase performs phase-aware
+          // status remapping — passing the source status can land a task on a
+          // mapping that isn't valid for the target phase's status set.
+          const movedTask = await moveTaskToPhase(id, targetPhase.phase_id);
+          movedById.set(id, movedTask);
+          success++;
+        } catch (error) {
+          console.error(`Failed to move task ${id}:`, error);
+          failed++;
+        }
+      }
+
+      // Moved tasks leave the current kanban board; apply the server-resolved
+      // phase + status mapping so the list view groups them correctly
+      setProjectTasks(prev => prev.filter(t => !movedById.has(t.task_id)));
+      setAllProjectTasks(prev => prev.map(t => {
+        const moved = movedById.get(t.task_id);
+        return moved
+          ? {
+              ...t,
+              phase_id: moved.phase_id,
+              project_status_mapping_id: moved.project_status_mapping_id,
+              order_key: moved.order_key,
+            }
+          : t;
+      }));
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedToPhase', '{{count}} tasks moved to {{phaseName}}', {
+            count: success,
+            phaseName: targetPhase.phase_name,
+          }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: success,
+            failed,
+          }),
+        );
+      }
+      setMoveConfirmation(null);
+      return;
+    }
+
     try {
-      // Get the current task to preserve its status
       const task = projectTasks.find(t => t.task_id === moveConfirmation.taskId);
       if (!task) {
         throw new Error('Task not found');
       }
 
+      // Omit the status mapping so moveTaskToPhase performs phase-aware status
+      // remapping — passing the source status can land the task on a mapping
+      // that isn't valid for the target phase's status set.
       const updatedTask = await moveTaskToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
-        task.project_status_mapping_id  // Pass the current status mapping ID
       );
-      
+
       const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-      
+
       setProjectTasks(prevTasks =>
         prevTasks.map((task): IProjectTask =>
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
         )
       );
-      // Update allProjectTasks for filtered counts
+      // Apply the server-resolved phase + status mapping so the list view
+      // groups the moved task correctly
       setAllProjectTasks(prev => prev.map(t =>
-        t.task_id === updatedTask.task_id ? { ...t, phase_id: moveConfirmation.targetPhase.phase_id } : t
+        t.task_id === updatedTask.task_id
+          ? {
+              ...t,
+              phase_id: updatedTask.phase_id,
+              project_status_mapping_id: updatedTask.project_status_mapping_id,
+              order_key: updatedTask.order_key,
+            }
+          : t
       ));
 
       toast.success(
@@ -1946,6 +2348,37 @@ export default function ProjectDetail({
     }
   };
 
+  // Generic inline-edit handler for the list view (status, priority, type,
+  // due date, hours). Mirrors handleAssigneeChange: spread the existing task,
+  // apply the partial, persist, then sync both task arrays.
+  const handleListTaskUpdate = async (taskId: string, updates: Partial<IProjectTask>) => {
+    try {
+      const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      const updatedTask = await updateTaskWithChecklist(taskId, {
+        ...task,
+        estimated_hours: Number(task.estimated_hours) || 0,
+        actual_hours: Number(task.actual_hours) || 0,
+        checklist_items: task.checklist_items,
+        ...updates,
+      });
+
+      if (updatedTask) {
+        // Inline list edits (status, priority, due date, hours, etc.) never
+        // touch checklist items, so reuse the ones we already have instead of
+        // refetching them on every cell edit.
+        const taskWithChecklist = { ...updatedTask, checklist_items: task.checklist_items ?? [] };
+        setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+        setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update task. Please try again.');
+    }
+  };
+
   const refreshTaskAfterTeamChange = async (taskId: string) => {
     const [updatedTask, resources] = await Promise.all([
       getTaskById(taskId),
@@ -1958,6 +2391,10 @@ export default function ProjectDetail({
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
     setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
     setPhaseTaskResources(prev => ({ ...prev, [taskId]: resources }));
+    // List view + project-wide agent filter read from the project-wide map.
+    // Keep it in sync so team-member additions/removals are reflected without
+    // a page reload.
+    setAllProjectTaskResources(prev => ({ ...prev, [taskId]: resources }));
   };
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
@@ -2237,6 +2674,245 @@ export default function ProjectDetail({
     }
   };
 
+  // Handler for bulk move confirmation
+  const handleBulkMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    const moved: IProjectTask[] = [];
+    const failed: string[] = [];
+
+    for (const taskId of ids) {
+      try {
+        const movedTask = await moveTaskToPhase(taskId, targetPhaseId, targetStatusId);
+        if (movedTask) {
+          moved.push(movedTask);
+        } else {
+          failed.push(taskId);
+        }
+      } catch (error) {
+        console.error(`Failed to move task ${taskId}:`, error);
+        failed.push(taskId);
+      }
+    }
+
+    if (moved.length > 0) {
+      const movedMap = new Map(moved.map(m => [m.task_id, m]));
+      setProjectTasks(prev => prev.flatMap(t => {
+        const m = movedMap.get(t.task_id);
+        if (!m) return [t];
+        // Drop from the current kanban view when moved out of the selected phase
+        if (selectedPhase && m.phase_id !== selectedPhase.phase_id) return [];
+        return [{ ...t, ...m }];
+      }));
+      setAllProjectTasks(prev => prev.map(t => {
+        const m = movedMap.get(t.task_id);
+        return m
+          ? { ...t, phase_id: m.phase_id, project_status_mapping_id: m.project_status_mapping_id }
+          : t;
+      }));
+    }
+
+    if (failed.length === 0) {
+      toast.success(
+        t('projectDetail.bulkMoveSuccess', '{{count}} task(s) moved successfully!', { count: moved.length }),
+      );
+    } else {
+      toast.error(
+        t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+          moved: moved.length,
+          failed: failed.length,
+        }),
+      );
+    }
+
+    clearSelection();
+    setIsBulkMoveOpen(false);
+  };
+
+  // Handler for bulk delete confirmation
+  const handleBulkDeleteConfirm = async () => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    const deleted: string[] = [];
+    const failed: string[] = [];
+
+    for (const taskId of ids) {
+      try {
+        await deleteTaskAction(taskId);
+        deleted.push(taskId);
+      } catch (error) {
+        console.error(`Failed to delete task ${taskId}:`, error);
+        failed.push(taskId);
+      }
+    }
+
+    if (deleted.length > 0) {
+      const deletedSet = new Set(deleted);
+      setProjectTasks(prev => prev.filter(t => !deletedSet.has(t.task_id)));
+      setAllProjectTasks(prev => prev.filter(t => !deletedSet.has(t.task_id)));
+    }
+
+    if (failed.length === 0) {
+      toast.success(
+        t('projectDetail.bulkDeleteSuccess', '{{count}} task(s) deleted successfully!', { count: deleted.length }),
+      );
+    } else {
+      toast.error(
+        t('projectDetail.bulkDeletePartial', 'Deleted {{deleted}} task(s), {{failed}} failed.', {
+          deleted: deleted.length,
+          failed: failed.length,
+        }),
+      );
+    }
+
+    clearSelection();
+    setIsBulkDeleteOpen(false);
+  };
+
+  // Handler for bulk assign confirmation — dispatches to user- or team-assign
+  // based on the dialog's selection.
+  const handleBulkAssignConfirm = async (
+    selection: { kind: 'user'; userId: string | null } | { kind: 'team'; teamId: string },
+  ) => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    let success = 0;
+    let failed = 0;
+
+    if (selection.kind === 'user') {
+      const userId = selection.userId;
+      // Tasks whose team_member resource rows were just wiped — their cached
+      // resources need to be refetched so list-view and the agent filter no
+      // longer count the removed members.
+      const resourcesToRefresh: string[] = [];
+
+      for (const taskId of ids) {
+        const task = projectTasks.find(t => t.task_id === taskId)
+          || allProjectTasks.find(t => t.task_id === taskId);
+        if (!task) {
+          failed++;
+          continue;
+        }
+        try {
+          // A user assignment should become the primary assignee. The UI renders the
+          // team over the user, so any existing team assignment must be removed first.
+          if (task.assigned_team_id) {
+            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            resourcesToRefresh.push(taskId);
+          }
+          const updatedTask = await updateTaskWithChecklist(taskId, {
+            ...task,
+            assigned_to: userId,
+            assigned_team_id: null,
+            estimated_hours: Number(task.estimated_hours) || 0,
+            actual_hours: Number(task.actual_hours) || 0,
+            checklist_items: task.checklist_items,
+          });
+          if (updatedTask) {
+            const checklistItems = await getTaskChecklistItems(taskId);
+            const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
+            setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+            setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+            success++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          console.error(`Failed to assign task ${taskId}:`, error);
+          failed++;
+        }
+      }
+
+      if (resourcesToRefresh.length > 0) {
+        const refreshed = await Promise.all(
+          resourcesToRefresh.map(async (id) => {
+            try {
+              return [id, await getTaskResourcesAction(id)] as const;
+            } catch (error) {
+              console.error(`Failed to refresh resources for task ${id}:`, error);
+              return null;
+            }
+          }),
+        );
+        const updates = refreshed.filter((r): r is readonly [string, ITaskResource[]] => r !== null);
+        if (updates.length > 0) {
+          setPhaseTaskResources(prev => {
+            const next = { ...prev };
+            for (const [id, resources] of updates) next[id] = resources;
+            return next;
+          });
+          setAllProjectTaskResources(prev => {
+            const next = { ...prev };
+            for (const [id, resources] of updates) next[id] = resources;
+            return next;
+          });
+        }
+      }
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkAssignSuccess', '{{count}} task(s) assigned successfully!', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkAssignPartial', 'Assigned {{success}} task(s), {{failed}} failed.', {
+            success,
+            failed,
+          }),
+        );
+      }
+    } else {
+      const teamId = selection.teamId;
+      for (const taskId of ids) {
+        const task = projectTasks.find(t => t.task_id === taskId)
+          || allProjectTasks.find(t => t.task_id === taskId);
+        if (!task) {
+          failed++;
+          continue;
+        }
+        if (task.assigned_team_id === teamId) {
+          // Already assigned to this team — nothing to do, count as success.
+          success++;
+          continue;
+        }
+
+        try {
+          // If a different team is currently assigned, drop it first. Bulk mode
+          // can't surface the per-task keep/remove prompt, so we mirror the
+          // single-user-assign path (which always removes the prior team).
+          if (task.assigned_team_id) {
+            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+          }
+          await assignTeamToProjectTask(taskId, teamId);
+          await refreshTaskAfterTeamChange(taskId);
+          success++;
+        } catch (error) {
+          console.error(`Failed to assign team to task ${taskId}:`, error);
+          failed++;
+        }
+      }
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkAssignTeamSuccess', '{{count}} task(s) assigned to team successfully!', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkAssignTeamPartial', 'Assigned {{success}} task(s) to team, {{failed}} failed.', {
+            success,
+            failed,
+          }),
+        );
+      }
+    }
+
+    clearSelection();
+    setIsBulkAssignOpen(false);
+  };
+
   // Render the sticky header with title, view switcher, search, and filters
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
@@ -2244,10 +2920,22 @@ export default function ProjectDetail({
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
-          {/* Top row: Title + Pin + View Switcher */}
+          {/* Top row: Title + Density + Pin + View Switcher */}
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">{t('projectDetail.taskList', 'Task List')}</h2>
             <div className="flex items-center gap-4">
+              <ViewDensityControl
+                idPrefix="project-task-list-density"
+                value={listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT}
+                onChange={setListDensityLevel}
+                step={PROJECT_LIST_DENSITY_STEP}
+                defaultValue={PROJECT_LIST_DENSITY_DEFAULT}
+                compactLabel={t('projectDetail.spacing.compact', 'Compact')}
+                spaciousLabel={t('projectDetail.spacing.spacious', 'Spacious')}
+                decreaseTitle={t('projectDetail.spacing.decrease', 'Decrease list spacing')}
+                increaseTitle={t('projectDetail.spacing.increase', 'Increase list spacing')}
+                resetTitle={t('projectDetail.spacing.reset', 'Reset list spacing')}
+              />
               <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
                 <Button
                   id="pin-header-toggle-list"
@@ -2339,12 +3027,16 @@ export default function ProjectDetail({
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
               <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
-                <MultiUserPicker
+                <MultiUserAndTeamPicker
                   id="task-agent-filter-list"
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  teams={teams}
+                  teamValues={selectedTeamFilter}
+                  onTeamValuesChange={setSelectedTeamFilter}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
@@ -2388,7 +3080,7 @@ export default function ProjectDetail({
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
                   return {
                     value: t.type_key,
                     label: (
@@ -2418,13 +3110,14 @@ export default function ProjectDetail({
                 setSearchCaseSensitive(false);
                 setSelectedTaskTags([]);
                 setSelectedAgentFilter([]);
+                setSelectedTeamFilter([]);
                 setIncludeUnassignedAgents(false);
                 setPrimaryAgentOnly(false);
                 setSelectedPriorityFilter('all');
                 setSelectedTaskTypeFilter('all');
               }}
-              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
               {t('common:actions.reset', 'Reset')}
@@ -2562,12 +3255,16 @@ export default function ProjectDetail({
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
               <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
-                <MultiUserPicker
+                <MultiUserAndTeamPicker
                   id="task-agent-filter-kanban"
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  teams={teams}
+                  teamValues={selectedTeamFilter}
+                  onTeamValuesChange={setSelectedTeamFilter}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
@@ -2611,7 +3308,7 @@ export default function ProjectDetail({
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
                   return {
                     value: t.type_key,
                     label: (
@@ -2641,13 +3338,14 @@ export default function ProjectDetail({
                 setSearchCaseSensitive(false);
                 setSelectedTaskTags([]);
                 setSelectedAgentFilter([]);
+                setSelectedTeamFilter([]);
                 setIncludeUnassignedAgents(false);
                 setPrimaryAgentOnly(false);
                 setSelectedPriorityFilter('all');
                 setSelectedTaskTypeFilter('all');
               }}
-              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
               {t('common:actions.reset', 'Reset')}
@@ -2696,6 +3394,18 @@ export default function ProjectDetail({
           phases={projectPhases}
           tasks={allProjectTasks}
           statuses={projectStatuses}
+          statusesByPhase={statusesByPhase}
+          columnWidths={listColumnWidths}
+          onColumnWidthsChange={setListColumnWidths}
+          densityFontPx={listDensity.fontPx}
+          densityCellPadding={listDensity.cellPadding}
+          densityScale={listDensity.scale}
+          tagSize={listDensity.tagSize}
+          pickerSize={listDensity.pickerSize}
+          avatarSize={listDensity.avatarSize}
+          priorities={priorities}
+          taskTypes={taskTypes}
+          onTaskUpdate={handleListTaskUpdate}
           taskResources={allProjectTaskResources}
           taskTags={allProjectTaskTags}
           taskDependencies={allTaskDependencies}
@@ -2730,6 +3440,7 @@ export default function ProjectDetail({
           selectedPriorityFilter={selectedPriorityFilter}
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
+          selectedTeamFilter={selectedTeamFilter}
           includeUnassignedAgents={includeUnassignedAgents}
           primaryAgentOnly={primaryAgentOnly}
           searchQuery={searchQuery}
@@ -2916,6 +3627,12 @@ export default function ProjectDetail({
                   <div className={styles.kanbanStatusStripTrack}>
                     {visibleKanbanStatuses.map((status, index) => {
                       const { itemStyle, countStyle } = getStatusStripStyles(status, index);
+                      const stripTaskIds = filteredTasks
+                        .filter(t => t.project_status_mapping_id === status.project_status_mapping_id)
+                        .map(t => t.task_id);
+                      const stripAllSelected = stripTaskIds.length > 0
+                        && stripTaskIds.every(id => selectedTaskIds.has(id));
+                      const stripSomeSelected = stripTaskIds.some(id => selectedTaskIds.has(id));
                       return (
                         <div
                           key={status.project_status_mapping_id}
@@ -2928,6 +3645,17 @@ export default function ProjectDetail({
                           }}
                           title={status.custom_name || status.name}
                         >
+                          {stripTaskIds.length > 0 && (
+                            <Checkbox
+                              id={`select-sticky-status-${status.project_status_mapping_id}`}
+                              checked={stripAllSelected}
+                              indeterminate={stripSomeSelected && !stripAllSelected}
+                              onChange={() => setTasksSelected(stripTaskIds, !stripAllSelected)}
+                              size="sm"
+                              containerClassName="mb-0 flex-shrink-0"
+                              skipRegistration
+                            />
+                          )}
                           <span className={styles.kanbanStatusStripName}>
                             {status.custom_name || status.name}
                           </span>
@@ -3004,16 +3732,31 @@ export default function ProjectDetail({
           isOpen={true}
           onClose={() => setMoveConfirmation(null)}
           onConfirm={handleMoveConfirm}
-          title={t('dialogs.moveTask.title', 'Move Task')}
-          message={t(
-            'projectDetail.confirmMoveTaskMessage',
-            'Are you sure you want to move task "{{taskName}}" from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
-            {
-              taskName: moveConfirmation.taskName,
-              sourcePhase: moveConfirmation.sourcePhase.phase_name,
-              targetPhase: moveConfirmation.targetPhase.phase_name,
-            },
-          )}
+          title={
+            moveConfirmation.taskIds && moveConfirmation.taskIds.length > 1
+              ? t('projectDetail.moveTasksTitle', 'Move Tasks')
+              : t('dialogs.moveTask.title', 'Move Task')
+          }
+          message={
+            moveConfirmation.taskIds && moveConfirmation.taskIds.length > 1
+              ? t(
+                  'projectDetail.confirmMoveTasksMessage',
+                  'Are you sure you want to move {{count}} selected tasks to phase "{{targetPhase}}"?',
+                  {
+                    count: moveConfirmation.taskIds.length,
+                    targetPhase: moveConfirmation.targetPhase.phase_name,
+                  },
+                )
+              : t(
+                  'projectDetail.confirmMoveTaskMessage',
+                  'Are you sure you want to move task "{{taskName}}" from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
+                  {
+                    taskName: moveConfirmation.taskName,
+                    sourcePhase: moveConfirmation.sourcePhase.phase_name,
+                    targetPhase: moveConfirmation.targetPhase.phase_name,
+                  },
+                )
+          }
           confirmLabel={t('common:actions.confirm', 'Confirm')}
           cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
@@ -3095,6 +3838,53 @@ export default function ProjectDetail({
         />
       )}
 
+      {/* Bulk task action bar */}
+      <BulkTaskActionBar
+        onMove={() => setIsBulkMoveOpen(true)}
+        onAssign={() => setIsBulkAssignOpen(true)}
+        onDelete={() => setIsBulkDeleteOpen(true)}
+      />
+
+      {/* Bulk Move Task Dialog */}
+      {isBulkMoveOpen && (
+        <BulkMoveTaskDialog
+          isOpen={isBulkMoveOpen}
+          onClose={() => setIsBulkMoveOpen(false)}
+          taskCount={selectedTaskIds.size}
+          projectTreeData={projectTreeData}
+          onConfirm={handleBulkMoveConfirm}
+        />
+      )}
+
+      {/* Bulk Assign Dialog (users + teams) */}
+      {isBulkAssignOpen && (
+        <BulkAssignDialog
+          isOpen={isBulkAssignOpen}
+          onClose={() => setIsBulkAssignOpen(false)}
+          taskCount={selectedTaskIds.size}
+          users={users}
+          teams={teams}
+          onConfirm={handleBulkAssignConfirm}
+        />
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {isBulkDeleteOpen && (
+        <ConfirmationDialog
+          isOpen={isBulkDeleteOpen}
+          onClose={() => setIsBulkDeleteOpen(false)}
+          onConfirm={handleBulkDeleteConfirm}
+          title={t('projectDetail.bulkDeleteTitle', 'Delete Tasks')}
+          message={t(
+            'projectDetail.bulkDeleteMessage',
+            'Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.',
+            { count: selectedTaskIds.size },
+          )}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
+        />
+      )}
+
       {/* Delete Task Confirmation Dialog */}
       {taskToDelete && (
         <ConfirmationDialog
@@ -3107,6 +3897,9 @@ export default function ProjectDetail({
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
+              // Drop the deleted task from the multi-selection so bulk actions and
+              // selection-aware labels don't keep counting it
+              setTasksSelected([taskToDelete.task_id], false);
               toast.success(
                 t('projectDetail.taskDeletedSuccess', 'Task "{{taskName}}" deleted successfully!', {
                   taskName: taskToDelete.task_name,

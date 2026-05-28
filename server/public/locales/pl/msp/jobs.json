@@ -34,7 +34,24 @@
       "minutesSeconds": "{{minutes}} min {{seconds}} s",
       "hoursMinutes": "{{hours}} godz. {{minutes}} min"
     },
-    "externalId": "Identyfikator: {{id}}..."
+    "externalId": "Identyfikator: {{id}}...",
+    "print": {
+      "title": "Ostatnie zadania",
+      "subtitle": "{{count}} zadań",
+      "noJobs": "Brak zadań do wydruku",
+      "columns": {
+        "jobName": "Nazwa zadania",
+        "runner": "Runner",
+        "status": "Status",
+        "duration": "Czas trwania",
+        "started": "Rozpoczęto",
+        "completed": "Zakończono"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania ostatnich zadań."
+      }
+    }
   },
   "metrics": {
     "labels": {

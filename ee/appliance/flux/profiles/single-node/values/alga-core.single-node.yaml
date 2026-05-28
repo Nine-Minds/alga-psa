@@ -15,11 +15,20 @@ setup:
     enabled: true
     waitTimeoutSeconds: 300
     retryIntervalSeconds: 2
+    lockTimeoutSeconds: 1800
+    lockStaleSeconds: 120
+    lockHeartbeatSeconds: 10
+  waitForBootstrap:
+    image:
+      name: ankane/pgvector
+      tag: latest
+    pullPolicy: IfNotPresent
   image:
     name: ghcr.io/nine-minds/alga-psa-ee
     is_private: false
     credentials: ""
     tag: latest
+  pullPolicy: IfNotPresent
 
 server:
   image:
@@ -27,8 +36,10 @@ server:
     is_private: false
     credentials: ""
     tag: latest
+  pullPolicy: IfNotPresent
   hostNetwork: true
   replicaCount: 1
+  progressDeadlineSeconds: 2400
   service:
     type: ClusterIP
     port: 3000

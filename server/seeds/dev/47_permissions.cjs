@@ -55,12 +55,22 @@ exports.seed = async function(knex) {
         { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows' },
         { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows' },
 
+        // Inbound webhook permissions
+        { resource: 'inbound_webhook', action: 'create', msp: true, client: false, description: 'Create inbound webhooks' },
+        { resource: 'inbound_webhook', action: 'read', msp: true, client: false, description: 'View inbound webhooks and deliveries' },
+        { resource: 'inbound_webhook', action: 'update', msp: true, client: false, description: 'Update inbound webhooks' },
+        { resource: 'inbound_webhook', action: 'delete', msp: true, client: false, description: 'Delete inbound webhooks' },
+        { resource: 'inbound_webhook', action: 'replay', msp: true, client: false, description: 'Replay inbound webhook deliveries' },
+
         // Email permissions
         { resource: 'email', action: 'process', msp: true, client: false, description: 'Process outbound email' },
 
         // Notification permissions
         { resource: 'notification', action: 'read', msp: true, client: false, description: 'Read notifications' },
         { resource: 'notification', action: 'manage', msp: true, client: false, description: 'Manage notifications' },
+
+        // Teams integration permissions
+        { resource: 'teams_integration', action: 'read', msp: true, client: false, description: 'View Teams integration observability' },
         
         // Invoice permissions
         { resource: 'invoice', action: 'create', msp: true, client: false, description: 'Create invoices' },
@@ -83,6 +93,12 @@ exports.seed = async function(knex) {
         { resource: 'project', action: 'read', msp: true, client: false, description: 'View projects' },
         { resource: 'project', action: 'update', msp: true, client: false, description: 'Update projects' },
         { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects' },
+
+        // Report permissions
+        { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports' },
+        { resource: 'reports', action: 'read', msp: true, client: false, description: 'View reports' },
+        { resource: 'reports', action: 'update', msp: true, client: false, description: 'Update reports' },
+        { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports' },
         
         // Project task permissions
         { resource: 'project_task', action: 'create', msp: true, client: false, description: 'Create project tasks' },

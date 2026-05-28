@@ -17,7 +17,7 @@ type NotificationView = 'email' | 'internal';
 const EMAIL_NOTIFICATION_TAB_IDS = ['settings', 'email-templates', 'categories', 'telemetry'] as const;
 const INTERNAL_NOTIFICATION_TAB_IDS = ['categories'] as const;
 
-const ALGADESK_EMAIL_TAB_IDS = ['settings', 'categories', 'telemetry'] as const;
+const ALGA_DESK_EMAIL_TAB_IDS = ['settings', 'categories', 'telemetry'] as const;
 
 export default function NotificationsTab() {
   return <NotificationsTabContent />;
@@ -29,7 +29,7 @@ function NotificationsTabContent() {
   const viewParam = searchParams?.get('view');
   const sectionParam = searchParams?.get('section');
   const { productCode } = useProduct();
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
 
   // Determine initial view based on URL parameter
   const getInitialView = (): NotificationView => {
@@ -41,7 +41,7 @@ function NotificationsTabContent() {
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = sectionParam?.toLowerCase();
     const validTabs: readonly string[] = view === 'email'
-      ? (isAlgadesk ? ALGADESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      ? (isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? 'settings' : 'categories';
 
@@ -68,7 +68,7 @@ function NotificationsTabContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, sectionParam, currentView, currentTab, isAlgadesk]);
+  }, [viewParam, sectionParam, currentView, currentTab, isAlgaDesk]);
 
   // Update URL when view or tab changes
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -143,7 +143,7 @@ function NotificationsTabContent() {
         </Card>
       ),
     },
-    ...(isAlgadesk ? [] : [{
+    ...(isAlgaDesk ? [] : [{
       id: 'email-templates',
       label: t('notifications.emailTabs.emailTemplates'),
       content: (

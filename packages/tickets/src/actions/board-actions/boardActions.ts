@@ -10,6 +10,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -43,6 +44,55 @@ function stripStatusIdsForNewBoard(
   statuses: BoardTicketStatusInput[]
 ): BoardTicketStatusInput[] {
   return statuses.map(({ status_id: _ignoredStatusId, ...status }) => status);
+}
+
+function normalizeBoolean(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
+async function seedBoardTicketStatusesFromStandards(
+  trx: Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  userId: string
+): Promise<number> {
+  const existingStatus = await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .first('status_id');
+
+  if (existingStatus) {
+    return 0;
+  }
+
+  const standardStatuses = await trx('standard_statuses')
+    .where({ tenant, item_type: 'ticket' })
+    .orderBy('display_order', 'asc')
+    .orderBy('name', 'asc');
+
+  if (standardStatuses.length === 0) {
+    return 0;
+  }
+
+  const statusColumns = await trx('statuses').columnInfo();
+  const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
+  const now = new Date().toISOString();
+
+  await trx('statuses').insert(standardStatuses.map((status: any) => ({
+    tenant,
+    board_id: boardId,
+    name: status.name,
+    status_type: 'ticket',
+    order_number: status.display_order,
+    is_closed: normalizeBoolean(status.is_closed),
+    is_default: normalizeBoolean(status.is_default),
+    created_by: userId,
+    ...(hasStatusColumn('item_type') ? { item_type: 'ticket' } : {}),
+    ...(hasStatusColumn('standard_status_id') ? { standard_status_id: status.standard_status_id } : {}),
+    ...(hasStatusColumn('created_at') ? { created_at: now } : {}),
+    ...(hasStatusColumn('updated_at') ? { updated_at: now } : {})
+  })));
+
+  return standardStatuses.length;
 }
 
 export async function copyBoardTicketStatuses(
@@ -221,23 +271,41 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         boardData.priority_type
       );
 
-      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
-        await saveBoardTicketStatusesForBoard(
-          trx,
+	      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
+	        await saveBoardTicketStatusesForBoard(
+	          trx,
           tenant,
           newBoard.board_id,
           user.user_id,
           stripStatusIdsForNewBoard(boardData.ticket_statuses)
-        );
-      } else if (boardData.copy_ticket_statuses_from_board_id) {
-        await copyBoardTicketStatuses(
-          trx,
+	        );
+	      } else if (boardData.copy_ticket_statuses_from_board_id) {
+	        await copyBoardTicketStatuses(
+	          trx,
           tenant,
           boardData.copy_ticket_statuses_from_board_id,
-          newBoard.board_id,
-          user.user_id
-        );
-      }
+	          newBoard.board_id,
+	          user.user_id
+	        );
+	      } else {
+	        await seedBoardTicketStatusesFromStandards(
+	          trx,
+	          tenant,
+	          newBoard.board_id,
+	          user.user_id
+	        );
+	      }
+
+      await publishEvent({
+        eventType: 'BOARD_CREATED',
+        payload: {
+          tenantId: tenant,
+          boardId: newBoard.board_id,
+          userId: user.user_id,
+          changes: { after: newBoard },
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return normalizeBoardLiveTimerSetting(newBoard);
     });
@@ -485,6 +553,16 @@ export const deleteBoard = withAuth(async (
         };
       }
 
+      await publishEvent({
+        eventType: 'BOARD_DELETED',
+        payload: {
+          tenantId: tenant,
+          boardId,
+          userId: user.user_id,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return {
         success: true,
         message: 'Board deleted.'
@@ -507,6 +585,16 @@ export const deleteBoard = withAuth(async (
     await trx('boards')
       .where({ tenant, board_id: boardId })
       .delete();
+
+    await publishEvent({
+      eventType: 'BOARD_DELETED',
+      payload: {
+        tenantId: tenant,
+        boardId,
+        userId: user.user_id,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // 12. If last ITIL board and cleanup confirmed, remove unused ITIL data
     let itilCleanupMessage = '';
@@ -656,6 +744,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
           ticketStatuses
         );
       }
+
+      await publishEvent({
+        eventType: 'BOARD_UPDATED',
+        payload: {
+          tenantId: tenant,
+          boardId,
+          userId: user.user_id,
+          changes: { after: updatedBoard },
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return normalizeBoardLiveTimerSetting(updatedBoard);
     });

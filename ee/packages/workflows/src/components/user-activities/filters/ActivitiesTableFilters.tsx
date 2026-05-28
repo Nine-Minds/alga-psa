@@ -5,6 +5,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityType,
+  IClient,
   IPriority,
   IStatus,
   ITag,
@@ -16,10 +17,11 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { SearchInput } from "@alga-psa/ui/components/SearchInput";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
+import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption } from "@alga-psa/ui/components/TreeSelect";
 import { TagFilter } from "@alga-psa/ui/components";
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, X } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from '../constants';
 
@@ -31,6 +33,7 @@ interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
   priorities?: IPriority[];
+  clients?: IClient[];
   projects?: ProjectWithPhases[];
   boards?: Array<{ board_id?: string; board_name?: string }>;
   ticketStatuses?: IStatus[];
@@ -69,6 +72,7 @@ export function ActivitiesTableFilters({
   filters,
   onChange,
   priorities = [],
+  clients = [],
   projects = [],
   boards = [],
   ticketStatuses = [],
@@ -85,6 +89,8 @@ export function ActivitiesTableFilters({
   const [selectedPriorityId, setSelectedPriorityId] = useState<string>(
     filters.priorityIds?.[0] || 'all'
   );
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const selectedTypes = filters.types || [];
   const hasTickets = selectedTypes.includes(ActivityType.TICKET);
@@ -92,6 +98,8 @@ export function ActivitiesTableFilters({
 
   const isPriorityFilterAvailable =
     selectedTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(selectedTypes[0]);
+  const hasPriorityFilter = isPriorityFilterAvailable && priorities.length > 0;
+  const hasClientFilter = clients.length > 0;
 
   // -------- Handlers -------------------------------------------------------
 
@@ -194,6 +202,19 @@ export function ActivitiesTableFilters({
     delete next.search;
     onChange(next);
   }, [filters, onChange]);
+
+  const handleClientChange = useCallback(
+    (clientId: string | null) => {
+      const next: ActivityFiltersType = { ...filters };
+      if (clientId) {
+        next.clientId = clientId;
+      } else {
+        delete next.clientId;
+      }
+      onChange(next);
+    },
+    [filters, onChange]
+  );
 
   // -------- Ticket board (multi-select) ------------------------------------
 
@@ -426,107 +447,49 @@ export function ActivitiesTableFilters({
   // -------- Render ---------------------------------------------------------
 
   return (
-    <div className="border-b border-border pb-4 mb-4 space-y-3">
-      {/* Row 1: Activity types */}
+    <div className="border-b border-border pb-3 mb-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Label className="text-sm font-semibold whitespace-nowrap">{t('filters.labels.types', { defaultValue: 'Types:' })}</Label>
-        {ACTIVITY_TYPE_OPTIONS.map((option) => (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <Label className="text-sm font-semibold whitespace-nowrap">{t('filters.labels.types', { defaultValue: 'Types:' })}</Label>
+          {ACTIVITY_TYPE_OPTIONS.map((option) => (
+            <Checkbox
+              key={option.value}
+              id={`activity-type-${option.value}`}
+              label={option.label}
+              checked={selectedTypes.includes(option.value)}
+              onChange={() => toggleType(option.value)}
+              containerClassName="mb-0"
+              size="sm"
+            />
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
           <Checkbox
-            key={option.value}
-            id={`activity-type-${option.value}`}
-            label={option.label}
-            checked={selectedTypes.includes(option.value)}
-            onChange={() => toggleType(option.value)}
-            containerClassName="mb-0"
+            id="show-closed"
+            label={t('filters.labels.showClosed', { defaultValue: 'Show closed' })}
+            checked={filters.isClosed}
+            onChange={handleClosedToggle}
+            containerClassName="mb-0 whitespace-nowrap"
             size="sm"
           />
-        ))}
+          <Button
+            id="reset-filters-button"
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="whitespace-nowrap"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            {t('filters.actions.reset', { defaultValue: 'Reset' })}
+          </Button>
+        </div>
       </div>
 
-      {/* Ticket-specific filters */}
-      {hasTickets && (
-        <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2 border-primary-300">
-          <Label className="text-xs font-semibold text-primary-600 self-center whitespace-nowrap">
-            {t('filters.labels.tickets', { defaultValue: 'Tickets:' })}
-          </Label>
-
-          {boardTreeOptions.length > 0 && (
-            <div className="min-w-[150px] max-w-[240px]">
-              <TreeSelect<'board'>
-                options={boardTreeOptions}
-                value=""
-                onValueChange={handleBoardToggle}
-                placeholder={t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
-                multiSelect
-                showReset
-                allowEmpty
-              />
-            </div>
-          )}
-
-          {ticketStatusTreeOptions.length > 0 && (
-            <div className="min-w-[150px] max-w-[240px]">
-              <TreeSelect<'ticketStatus'>
-                options={ticketStatusTreeOptions}
-                value=""
-                onValueChange={handleTicketStatusToggle}
-                placeholder={t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
-                multiSelect
-                showReset
-                allowEmpty
-              />
-            </div>
-          )}
-
-          {uniqueTicketTags.length > 0 && (
-            <TagFilter
-              tags={uniqueTicketTags}
-              selectedTags={selectedTicketTagTexts}
-              onToggleTag={handleTicketTagToggle}
-              onClearTags={() => onChange({ ...filters, ticketTagIds: undefined })}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Project task-specific filters */}
-      {hasProjectTasks && (
-        <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2" style={{ borderColor: 'rgb(var(--color-secondary-500))' }}>
-          <Label className="text-xs font-semibold self-center whitespace-nowrap" style={{ color: 'rgb(var(--color-secondary-500))' }}>
-            {t('filters.labels.tasks', { defaultValue: 'Tasks:' })}
-          </Label>
-
-          {projects.length > 0 && (
-            <div className="min-w-[220px] max-w-[320px]">
-              <TreeSelect<ProjectNodeType>
-                options={projectTreeOptions}
-                value=""
-                onValueChange={handleProjectTreeToggle}
-                placeholder={t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
-                multiSelect
-                showReset
-                allowEmpty
-              />
-            </div>
-          )}
-
-          {uniqueProjectTaskTags.length > 0 && (
-            <TagFilter
-              tags={uniqueProjectTaskTags}
-              selectedTags={selectedProjectTaskTagTexts}
-              onToggleTag={handleProjectTaskTagToggle}
-              onClearTags={() =>
-                onChange({ ...filters, projectTaskTagIds: undefined })
-              }
-            />
-          )}
-        </div>
-      )}
-
-      {/* Shared filters row */}
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-        <div className="min-w-[220px] max-w-[320px] flex-1">
-          <Label htmlFor="activities-search-input" className="text-sm font-semibold mb-1 block">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="min-w-[220px] flex-1 basis-[260px] lg:max-w-[320px]">
+          <Label htmlFor="activities-search-input" className="sr-only">
             {t('filters.labels.search', { defaultValue: 'Search' })}
           </Label>
           <SearchInput
@@ -535,13 +498,48 @@ export function ActivitiesTableFilters({
             onChange={handleSearchChange}
             onClear={handleSearchClear}
             placeholder={t('filters.placeholders.search', { defaultValue: 'Search activities...' })}
-            className="w-full h-10 py-2 text-sm"
+            className="w-full h-9 py-2 text-sm"
           />
         </div>
 
-        {isPriorityFilterAvailable && priorities.length > 0 && (
-          <div className="min-w-[180px]">
-            <Label htmlFor="priority-select" className="text-sm font-semibold mb-1 block">
+        {hasClientFilter && (
+          <div className={`flex items-center gap-1 ${filters.clientId ? 'w-[280px]' : 'w-[160px]'}`}>
+            <Label htmlFor="activities-client-picker" className="sr-only">
+              {t('filters.labels.client', { defaultValue: 'Client' })}
+            </Label>
+            <ClientPicker
+              id="activities-client-picker"
+              clients={clients}
+              selectedClientId={filters.clientId || null}
+              onSelect={handleClientChange}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientClientTypeFilter}
+              onClientTypeFilterChange={setClientClientTypeFilter}
+              placeholder={t('filters.placeholders.allClients', { defaultValue: 'All Clients' })}
+              fitContent={false}
+              className="min-w-0 flex-1"
+              triggerButtonClassName="h-9"
+            />
+            {filters.clientId && (
+              <Button
+                id="clear-client-filter-button"
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleClientChange(null)}
+                aria-label={t('filters.actions.clearClient', { defaultValue: 'Clear client filter' })}
+                className="shrink-0 px-1.5"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+
+        {hasPriorityFilter && (
+          <div className="w-[170px]">
+            <Label htmlFor="priority-select" className="sr-only">
               {t('filters.labels.priority', { defaultValue: 'Priority' })}
             </Label>
             <CustomSelect
@@ -570,8 +568,106 @@ export function ActivitiesTableFilters({
           </div>
         )}
 
-        <div className="min-w-[240px]">
-          <Label className="text-sm font-semibold mb-1 block">{t('filters.labels.dueDate', { defaultValue: 'Due Date' })}</Label>
+
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+          {hasTickets && (
+            <div
+              className="flex flex-wrap items-center gap-2 rounded-md border border-[rgb(var(--color-border-200))] border-l-2 bg-[rgb(var(--color-card))] px-2 py-1"
+              style={{ borderLeftColor: 'rgb(var(--color-primary-500))' }}
+            >
+              <span className="text-xs font-semibold whitespace-nowrap" style={{ color: 'rgb(var(--color-primary-500))' }}>
+                {t('filters.labels.ticketsCompact', { defaultValue: 'Tickets' })}
+              </span>
+
+              {boardTreeOptions.length > 0 && (
+                <div className="w-[135px]">
+                  <TreeSelect<'board'>
+                    options={boardTreeOptions}
+                    value=""
+                    onValueChange={handleBoardToggle}
+                    placeholder={t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
+                    multiSelect
+                    showReset
+                    allowEmpty
+                  />
+                </div>
+              )}
+
+              {ticketStatusTreeOptions.length > 0 && (
+                <div className="w-[135px]">
+                  <TreeSelect<'ticketStatus'>
+                    options={ticketStatusTreeOptions}
+                    value=""
+                    onValueChange={handleTicketStatusToggle}
+                    placeholder={t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
+                    multiSelect
+                    showReset
+                    allowEmpty
+                  />
+                </div>
+              )}
+
+              {uniqueTicketTags.length > 0 && (
+                <TagFilter
+                  id="ticket-tag-filter"
+                  tags={uniqueTicketTags}
+                  selectedTags={selectedTicketTagTexts}
+                  onToggleTag={handleTicketTagToggle}
+                  onClearTags={() => onChange({ ...filters, ticketTagIds: undefined })}
+                  triggerLabel={t('filters.labels.tags', { defaultValue: 'Tags' })}
+                  selectedLabel={t('filters.labels.tagsSelected', { count: selectedTicketTagTexts.length, defaultValue: '{{count}} tags' })}
+                  placeholder={t('filters.placeholders.ticketTags', { defaultValue: 'Filter ticket tags...' })}
+                />
+              )}
+            </div>
+          )}
+
+          {hasProjectTasks && (
+            <div
+              className="flex flex-wrap items-center gap-2 rounded-md border border-[rgb(var(--color-border-200))] border-l-2 bg-[rgb(var(--color-card))] px-2 py-1"
+              style={{ borderLeftColor: 'rgb(var(--color-secondary-500))' }}
+            >
+              <span className="text-xs font-semibold whitespace-nowrap" style={{ color: 'rgb(var(--color-secondary-500))' }}>
+                {t('filters.labels.tasksCompact', { defaultValue: 'Tasks' })}
+              </span>
+
+              {projects.length > 0 && (
+                <div className="w-[190px]">
+                  <TreeSelect<ProjectNodeType>
+                    options={projectTreeOptions}
+                    value=""
+                    onValueChange={handleProjectTreeToggle}
+                    placeholder={t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
+                    multiSelect
+                    showReset
+                    allowEmpty
+                  />
+                </div>
+              )}
+
+              {uniqueProjectTaskTags.length > 0 && (
+                <TagFilter
+                  id="project-task-tag-filter"
+                  tags={uniqueProjectTaskTags}
+                  selectedTags={selectedProjectTaskTagTexts}
+                  onToggleTag={handleProjectTaskTagToggle}
+                  onClearTags={() =>
+                    onChange({ ...filters, projectTaskTagIds: undefined })
+                  }
+                  triggerLabel={t('filters.labels.tags', { defaultValue: 'Tags' })}
+                  selectedLabel={t('filters.labels.tagsSelected', { count: selectedProjectTaskTagTexts.length, defaultValue: '{{count}} tags' })}
+                  placeholder={t('filters.placeholders.projectTaskTags', { defaultValue: 'Filter task tags...' })}
+                />
+              )}
+            </div>
+          )}
+
+        <div className="flex items-center gap-2 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-1">
+          <Label htmlFor="activities-due-date-range-from" className="text-xs font-semibold text-[rgb(var(--color-text-600))] whitespace-nowrap">
+            {t('filters.labels.dueDateShort', { defaultValue: 'Due' })}
+          </Label>
           <StringDateRangePicker
             id="activities-due-date-range"
             value={{
@@ -583,31 +679,12 @@ export function ActivitiesTableFilters({
                 : '',
             }}
             onChange={handleDateRangeChange}
+            containerClassName="space-y-0"
+            rangeClassName="flex gap-1"
+            datePickerClassName="w-[128px]"
+            fromPlaceholder={t('filters.placeholders.fromDateShort', { defaultValue: 'From' })}
+            toPlaceholder={t('filters.placeholders.toDateShort', { defaultValue: 'To' })}
           />
-        </div>
-
-        <div className="flex items-center pb-0.5">
-          <Checkbox
-            id="show-closed"
-            label={t('filters.labels.showClosed', { defaultValue: 'Show closed' })}
-            checked={filters.isClosed}
-            onChange={handleClosedToggle}
-            containerClassName="mb-0"
-            size="sm"
-          />
-        </div>
-
-        <div className="flex items-center pb-0.5 ml-auto">
-          <Button
-            id="reset-filters-button"
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-          >
-            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            {t('filters.actions.reset', { defaultValue: 'Reset' })}
-          </Button>
         </div>
       </div>
     </div>

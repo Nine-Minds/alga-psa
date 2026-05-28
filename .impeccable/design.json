@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-16T00:00:00.000Z",
+  "title": "Design System: Alga PSA",
+  "extensions": {
+    "colorMeta": {
+      "operator-purple": {
+        "role": "primary",
+        "displayName": "Operator Purple",
+        "canonical": "#8a4dea",
+        "tonalRamp": ["#522e8c", "#6036a4", "#6e3dbb", "#7c45d3", "#8a4dea", "#a673f2", "#caa8f9", "#f6f0fe"]
+      },
+      "system-cyan": {
+        "role": "secondary",
+        "displayName": "System Cyan",
+        "canonical": "#40cff9",
+        "tonalRamp": ["#267c95", "#2d91ae", "#33a6c7", "#3abae0", "#40cff9", "#66dffb", "#b3f3fb", "#ecfcfe"]
+      },
+      "attention-amber": {
+        "role": "tertiary",
+        "displayName": "Attention Amber",
+        "canonical": "#ff9c30",
+        "tonalRamp": ["#995e1c", "#b36d21", "#cc7d26", "#e68c2b", "#ff9c30", "#ffb059", "#ffdb99", "#fff6e6"]
+      },
+      "slate-workspace": {
+        "role": "neutral",
+        "displayName": "Slate Workspace",
+        "canonical": "#f8fafc",
+        "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc"]
+      },
+      "sidebar-ink": {
+        "role": "neutral",
+        "displayName": "Sidebar Ink",
+        "canonical": "#0c111d",
+        "tonalRamp": ["#0c111d", "#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#f8fafc"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles and major workspace context only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles, drawer titles, and major panel headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, modal titles, and local object names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default UI copy, table cells, helper text, and client-facing explanations."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, badges, compact metadata, and grouping labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-rest",
+        "value": "none",
+        "purpose": "Default state for cards, tables, side panels, and content sections."
+      },
+      {
+        "name": "subtle-card",
+        "value": "0 1px 2px rgb(15 23 42 / 0.06)",
+        "purpose": "Optional low-risk lift for compact cards on busy workspace surfaces."
+      },
+      {
+        "name": "overlay",
+        "value": "0 10px 24px rgb(15 23 42 / 0.16)",
+        "purpose": "Dropdowns, popovers, menus, and temporary surfaces."
+      },
+      {
+        "name": "dialog",
+        "value": "0 24px 60px rgb(15 23 42 / 0.22)",
+        "purpose": "Dialogs and high-priority overlays that interrupt the workspace."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fast-state",
+        "value": "150ms cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Quick hover, focus, and selected-state feedback."
+      },
+      {
+        "name": "normal-state",
+        "value": "200ms cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Menus, disclosure, sidebar mode changes, and non-blocking transitions."
+      },
+      {
+        "name": "slow-overlay",
+        "value": "300ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Dialog and drawer entrances when motion is not reduced."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action for saving, creating, approving, and moving work forward.",
+      "html": "<button class=\"ds-btn-primary\">Create ticket</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border: 0; border-radius: 6px; background: #8a4dea; color: #f8fafc; font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: #7c45d3; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #f8fafc, 0 0 0 4px #8a4dea; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis toolbar, navigation, and utility action.",
+      "html": "<button class=\"ds-btn-ghost\">Quick Create</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; color: #334155; font: 500 14px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-ghost:hover { background: #ede2fd; color: #6e3dbb; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #8a4dea; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default text entry control for forms, filters, and object editing.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Client name</span><input class=\"ds-input\" placeholder=\"Search clients\" /></label>",
+      "css": ".ds-field { display: grid; gap: 4px; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; } .ds-field-label { font-size: 14px; font-weight: 500; } .ds-input { height: 40px; width: 240px; padding: 8px 12px; border: 1px solid #94a3b8; border-radius: 6px; background: #f8fafc; color: #0f172a; font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; transition: border-color 150ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-input::placeholder { color: #94a3b8; } .ds-input:focus { outline: none; border-color: transparent; box-shadow: 0 0 0 2px #8a4dea; } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Operational Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Flat structural container for grouped content, never decoration by itself.",
+      "html": "<section class=\"ds-card\"><h3 class=\"ds-card-title\">Open tickets</h3><p class=\"ds-card-copy\">12 tickets need triage across 4 clients.</p></section>",
+      "css": ".ds-card { width: 280px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #0f172a; box-shadow: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; } .ds-card-title { margin: 0 0 8px; font-size: 18px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; } .ds-card-copy { margin: 0; color: #64748b; font-size: 14px; line-height: 1.5; } .ds-card:hover { box-shadow: 0 1px 2px rgb(15 23 42 / 0.06); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Compact status or metadata marker with semantic text and full border.",
+      "html": "<span class=\"ds-badge ds-badge-success\">Approved</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 10px; border: 1px solid #e2e8f0; background: #f1f5f9; color: #334155; font: 600 12px/1.33 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; } .ds-badge-success { border-color: #bbf7d0; background: #dcfce7; color: #166534; } .ds-badge-warning { border-color: #fde68a; background: #fef3c7; color: #92400e; } .ds-badge-error { border-color: #fecaca; background: #fee2e2; color: #991b1b; }"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "data-table",
+      "description": "Dense operational table for tickets, clients, billing, projects, and assets.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Ticket</th><th>Status</th><th>Owner</th></tr></thead><tbody><tr><td>#1048 VPN outage</td><td><span class=\"ds-mini-pill\">Open</span></td><td>Avery</td></tr><tr><td>#1049 Invoice review</td><td><span class=\"ds-mini-pill\">Waiting</span></td><td>Sam</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { overflow: hidden; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; } .ds-table { width: 100%; border-collapse: collapse; font-size: 14px; color: #334155; } .ds-table th { padding: 12px 24px; text-align: left; color: #334155; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; background: #f8fafc; } .ds-table td { padding: 12px 24px; border-top: 1px solid #f1f5f9; line-height: 1.5; } .ds-table tbody tr:nth-child(odd) { background: #f8fafc; } .ds-table tbody tr:nth-child(even) { background: #f1f5f9; } .ds-table tbody tr:hover { background: #f6f0fe; } .ds-mini-pill { display: inline-flex; border-radius: 9999px; padding: 1px 8px; border: 1px solid #caa8f9; background: #f6f0fe; color: #6e3dbb; font-size: 12px; font-weight: 600; }"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "refersTo": "sidebar-item",
+      "description": "Primary navigation row for the MSP application shell.",
+      "html": "<a class=\"ds-sidebar-item ds-sidebar-item-active\" href=\"#\"><svg class=\"ds-sidebar-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z\" fill=\"currentColor\"/></svg><span>Dashboard</span></a>",
+      "css": ".ds-sidebar-item { display: flex; align-items: center; gap: 8px; min-width: 220px; padding: 8px; margin: 0 8px; border-radius: 6px; color: #f5f5f5; background: transparent; font: 500 14px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; text-decoration: none; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-sidebar-item:hover { background: #1e293b; } .ds-sidebar-item-active { background: rgb(138 77 234 / 0.2); } .ds-sidebar-icon { width: 20px; height: 20px; color: #94a3b8; } .ds-sidebar-item:focus-visible { outline: none; box-shadow: 0 0 0 2px #8a4dea; }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "custom",
+      "refersTo": "tabs",
+      "description": "Compact local navigation for details, comments, time, documents, and settings sections.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Details</button><button class=\"ds-tab\">Comments</button><button class=\"ds-tab\">Time</button></div>",
+      "css": ".ds-tabs { display: flex; border-bottom: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; } .ds-tab { position: relative; padding: 8px 16px; border: 0; background: transparent; color: #64748b; font-size: 14px; line-height: 1.4; cursor: pointer; transition: color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-tab:hover { color: #334155; } .ds-tab-active { color: #0f172a; font-weight: 600; } .ds-tab-active::after { content: ''; position: absolute; left: 16px; right: 16px; bottom: -1px; height: 2px; border-radius: 9999px; background: #8a4dea; } .ds-tab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #8a4dea; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Modern Workbench",
+    "overview": "Alga PSA should feel like a modern operations workbench: quiet enough for long service days, dense enough for real MSP throughput, and exact enough that users trust every status, total, and action. The visual system uses familiar product UI patterns, crisp semantic tokens, and compact spacing to keep the task in front of the user.\n\nThe system is product-first. It borrows Notion's directness and Twenty.com's clean business-object clarity, then adapts both for ticket queues, billing approvals, project status, automation, assets, and client-facing transparency. The /msp area can be denser and more operator-focused. The /client area should translate the same model into calmer service visibility.\n\nThis system rejects dated enterprise MSP software, especially the heavy clutter associated with ConnectWise. It also rejects generic AI-generated SaaS UI: purposeless cards, decorative gradients, vague empty states, and elements placed without thought are forbidden.",
+    "keyCharacteristics": [
+      "Quiet, dense, and exact.",
+      "Restrained product color with Operator Purple used for action and selection.",
+      "Tonal layering first, with lift reserved for interaction.",
+      "Systematic component vocabulary across MSP and client surfaces.",
+      "Strong keyboard, focus, and status communication for operational confidence."
+    ],
+    "rules": [
+      {
+        "name": "The Action Rarity Rule",
+        "body": "Operator Purple is for action, active state, focus, or selection. If it appears only to decorate, remove it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Color Rule",
+        "body": "Success, warning, error, and info states must include iconography, labels, or text. Color alone is never sufficient.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Decorative Gradient Rule",
+        "body": "Gradients are prohibited unless they explain a real state or are part of tenant-provided branding in a constrained client portal context.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Tool Rule",
+        "body": "Use one system sans family for product UI. Do not introduce display fonts into buttons, labels, tables, or data-heavy surfaces.",
+        "section": "typography"
+      },
+      {
+        "name": "The Density Needs Contrast Rule",
+        "body": "Dense screens need weight, spacing, and muted text contrast. Do not make every label the same size and weight.",
+        "section": "typography"
+      },
+      {
+        "name": "The Earned Lift Rule",
+        "body": "A surface earns a shadow only when it floats above other content, appears temporarily, or responds to interaction.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flat Workbench Rule",
+        "body": "Default work areas stay flat. Use borders, spacing, and hierarchy before adding shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep MSP operator screens dense, but use hierarchy so priority, ownership, status, and next action are obvious.",
+      "Do use Operator Purple for primary action, selected state, focus, and active navigation.",
+      "Do use Slate Workspace and Slate Panel to separate areas before adding decorative effects.",
+      "Do make every status readable without color: include text, iconography, or both.",
+      "Do keep /client surfaces calmer than /msp surfaces while preserving the same component vocabulary.",
+      "Do use skeleton states for content loading and reserve spinners for short, isolated actions."
+    ],
+    "donts": [
+      "Don't make Alga PSA feel like dated enterprise MSP software, especially the heavy clutter associated with ConnectWise.",
+      "Don't make screens feel AI-generated with decorative gradients, purposeless cards, vague empty states, or elements placed without thought.",
+      "Don't place elements without a task, state, or orientation purpose. Purpose before presence is mandatory.",
+      "Don't use side-stripe accent borders on cards, list items, callouts, or alerts. Use a full border, tint, icon, or clearer copy instead.",
+      "Don't use gradient text.",
+      "Don't use glassmorphism as a default surface treatment.",
+      "Don't create low-density dashboards that look polished but fail to support real MSP throughput.",
+      "Don't use consumer-style gloss for operational, financial, or service-delivery workflows."
+    ]
+  }
+}

@@ -74,7 +74,7 @@
     "addProject": "Projekt hinzufügen",
     "createFromTemplate": "Aus Vorlage erstellen",
     "openMenu": "Menü öffnen",
-    "searchPlaceholder": "Projekte suchen",
+    "searchPlaceholder": "Projekte, Aufgaben und Kommentare suchen",
     "statusPlaceholder": "Status auswählen",
     "contactPlaceholder": "Nach Kontakt filtern",
     "managerPlaceholder": "Alle Verantwortlichen",
@@ -103,6 +103,8 @@
       "created": "Erstellt",
       "projectManager": "Projektmanager",
       "tags": "Tags",
+      "priority": "Priorität",
+      "taskType": "Typ",
       "actions": "Aktionen"
     },
     "unknownUser": "Unbekannt"
@@ -240,7 +242,22 @@
     "dueLabel": "Fällig",
     "noDueDate": "Kein Fälligkeitsdatum",
     "hideTags": "Tags ausblenden",
-    "criticalPath": "Kritischer Pfad"
+    "criticalPath": "Kritischer Pfad",
+    "selectTaskAria": "Aufgabe {{taskName}} auswählen",
+    "bulkMoveSuccess": "{{count}} Aufgabe(n) erfolgreich verschoben!",
+    "bulkMovePartial": "{{moved}} Aufgabe(n) verschoben, {{failed}} fehlgeschlagen.",
+    "bulkDeleteSuccess": "{{count}} Aufgabe(n) erfolgreich gelöscht!",
+    "bulkDeletePartial": "{{deleted}} Aufgabe(n) gelöscht, {{failed}} fehlgeschlagen.",
+    "bulkAssignSuccess": "{{count}} Aufgabe(n) erfolgreich zugewiesen!",
+    "bulkAssignPartial": "{{success}} Aufgabe(n) zugewiesen, {{failed}} fehlgeschlagen.",
+    "bulkAssignTeamSuccess": "{{count}} Aufgabe(n) erfolgreich einem Team zugewiesen!",
+    "bulkAssignTeamPartial": "{{success}} Aufgabe(n) einem Team zugewiesen, {{failed}} fehlgeschlagen.",
+    "bulkDeleteTitle": "Aufgaben löschen",
+    "bulkDeleteMessage": "Möchten Sie {{count}} ausgewählte Aufgabe(n) wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "bulkTasksMovedSuccess": "{{count}} Aufgaben verschoben",
+    "bulkTasksMovedToPhase": "{{count}} Aufgaben nach {{phaseName}} verschoben",
+    "moveTasksTitle": "Aufgaben verschieben",
+    "confirmMoveTasksMessage": "Möchten Sie {{count}} ausgewählte Aufgaben wirklich in die Phase „{{targetPhase}}“ verschieben?"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -519,7 +536,9 @@
       "tags": "Tags",
       "createdAt": "Erstellt am",
       "updatedAt": "Aktualisiert am"
-    }
+    },
+    "exportSelected": "{{count}} ausgewählte exportieren",
+    "selectedTasksNotice": "{{count}} ausgewählte Aufgabe{{plural}} werden exportiert."
   },
   "import": {
     "title": "Phasen und Aufgaben importieren",
@@ -709,6 +728,19 @@
       "tasks": "Aufgaben",
       "badgeCount": "{{count}} Aufgabe",
       "badgeCount_other": "{{count}} Aufgaben"
+    },
+    "bulkMoveTask": {
+      "title": "Aufgaben verschieben",
+      "message": "{{count}} ausgewählte Aufgabe(n) in eine neue Phase/einen neuen Status verschieben:",
+      "confirm": "Aufgaben verschieben"
+    },
+    "bulkAssign": {
+      "title": "Aufgaben zuweisen",
+      "message": "{{count}} ausgewählte Aufgabe(n) zuweisen an:",
+      "unassigned": "Nicht zugewiesen",
+      "assigning": "Wird zugewiesen...",
+      "confirm": "Aufgaben zuweisen",
+      "teamReplaceNotice": "Aufgaben, die bereits einem anderen Team zugewiesen sind, werden auf das neue Team umgestellt."
     }
   },
   "filters": {
@@ -1268,7 +1300,8 @@
     "templateCreatedSuccess": "Vorlage erfolgreich erstellt",
     "notAvailable": "K. A.",
     "saveAsTemplate": "Als Vorlage speichern",
-    "materials": "Materialien"
+    "materials": "Materialien",
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "projectPhases": {
     "addTask": "Aufgabe hinzufügen",
@@ -1382,5 +1415,43 @@
     "unknownTask": "Unbekannte Aufgabe",
     "blocks": "Blockiert"
   },
-  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen."
+  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projektaufgaben",
+      "subtitle": "{{count}} Aufgaben",
+      "noTasks": "Keine Projektaufgaben zum Drucken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Aufgabe",
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "hours": "Stunden"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Projektaufgaben enthaltenen Spalten."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "estimatedHours": "Geschätzte Stunden",
+        "wbsCode": "PSP-Code",
+        "description": "Beschreibung"
+      },
+      "subtitleSelected": "{{count}} ausgewählte Aufgaben"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} ausgewählt",
+    "move": "Verschieben",
+    "assign": "Zuweisen",
+    "delete": "Löschen",
+    "clear": "Zurücksetzen"
+  }
 }

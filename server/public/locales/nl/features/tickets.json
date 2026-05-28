@@ -12,7 +12,7 @@
     "allOpen": "Alle open tickets",
     "allClosed": "Alle gesloten tickets",
     "allPriorities": "Alle prioriteiten",
-    "search": "Tickets zoeken...",
+    "search": "Tickets en opmerkingen zoeken...",
     "category": "Filter op categorie",
     "clearFilters": "Filters wissen",
     "assignee": "Toegewezene",
@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Ticketdashboard",
     "addTicket": "Ticket toevoegen",
+    "shareTooltip": "Afdrukken, importeren en exporteren",
     "exportCsv": "Exporteren naar CSV",
     "bundledToggle": "Gebundeld",
     "exportSelectedTooltip_one": "Exporteer {{count}} geselecteerd ticket naar CSV",
@@ -393,12 +394,42 @@
       "decrease": "Afstand ticketlijst verkleinen",
       "increase": "Afstand ticketlijst vergroten",
       "reset": "Afstand ticketlijst herstellen"
-    }
+    },
+    "print": {
+      "action": "Afdrukken",
+      "selectedAction_one": "Geselecteerde afdrukken ({{count}})",
+      "selectedAction_other": "Geselecteerde afdrukken ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Geselecteerde tickets ({{count}})",
+      "selectedTitle_other": "Geselecteerde tickets ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Geen tickets om af te drukken",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titel",
+        "client": "Klant",
+        "status": "Status",
+        "priority": "Prioriteit",
+        "assigned": "Toegewezen",
+        "dueDate": "Vervaldatum"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Geen vervaldatum",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "selectedTitle": "Afdrukopties ({{count}} geselecteerd)",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van tickets."
+      }
+    },
+    "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
+    "exportAction": "CSV exporteren",
+    "importAction": "CSV importeren"
   },
   "bulk": {
-    "moveToBoard": "Verplaatsen naar bord",
-    "deleteSelected_one": "Geselecteerde verwijderen ({{count}})",
-    "deleteSelected_other": "Geselecteerde verwijderen ({{count}})",
     "bundleTickets": "Tickets bundelen",
     "moveDialogTitle": "Geselecteerde tickets verplaatsen",
     "moveDialogDescription": "Selecteer een bestemmingsbord en status en bevestig het verplaatsen van de geselecteerde tickets.",
@@ -499,7 +530,98 @@
     },
     "auth": {
       "moveRequired": "Je moet zijn ingelogd om tickets te verplaatsen",
-      "deleteRequired": "Je moet zijn ingelogd om tickets te verwijderen"
+      "deleteRequired": "Je moet zijn ingelogd om tickets te verwijderen",
+      "assignRequired": "Je moet ingelogd zijn om tickets toe te wijzen",
+      "tagsRequired": "Je moet ingelogd zijn om tags toe te voegen",
+      "dueDateRequired": "Je moet ingelogd zijn om tickets bij te werken",
+      "statusRequired": "Je moet ingelogd zijn om tickets bij te werken",
+      "priorityRequired": "Je moet ingelogd zijn om tickets bij te werken"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} geselecteerd",
+      "selectedCount_other": "{{count}} geselecteerd",
+      "move": "Verplaatsen naar bord",
+      "bundle": "Bundelen",
+      "delete": "Verwijderen",
+      "clear": "Selectie wissen",
+      "bundleNeedsTwo": "Selecteer minstens 2 tickets om te bundelen",
+      "assign": "Toewijzen",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "tags": "Tags",
+      "dueDate": "Vervaldatum",
+      "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
+      "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
+      "more": "Meer"
+    },
+    "assign": {
+      "dialogTitle": "Geselecteerde tickets toewijzen",
+      "message": "{{count}} geselecteerde ticket(s) toewijzen aan:",
+      "unassigned": "Niet toegewezen",
+      "teamHint": "De teamleider wordt de primaire toegewezene; overige teamleden worden als extra agenten toegevoegd.",
+      "confirm_one": "{{count}} ticket toewijzen",
+      "confirm_other": "{{count}} tickets toewijzen",
+      "submitting": "Toewijzen...",
+      "success_one": "{{count}} ticket toegewezen",
+      "success_other": "{{count}} tickets toegewezen",
+      "partialFailure": "Sommige tickets konden niet worden toegewezen",
+      "failure": "Toewijzen van geselecteerde tickets is mislukt",
+      "failedHeading": "De volgende tickets konden niet worden toegewezen:"
+    },
+    "tags": {
+      "dialogTitle": "Tags toevoegen aan geselecteerde tickets",
+      "message": "Voeg een of meer tags toe aan {{count}} ticket(s). Bestaande tags worden overgeslagen.",
+      "placeholder": "Typ een tag en druk op Enter",
+      "confirm_one": "Tags toevoegen aan {{count}} ticket",
+      "confirm_other": "Tags toevoegen aan {{count}} tickets",
+      "submitting": "Tags toevoegen...",
+      "success_one": "Tags toegevoegd aan {{count}} ticket",
+      "success_other": "Tags toegevoegd aan {{count}} tickets",
+      "partialFailure": "Tags konden niet bij alle tickets worden toegevoegd",
+      "failure": "Toevoegen van tags is mislukt",
+      "failedHeading": "Tags konden niet worden toegevoegd aan de volgende tickets:"
+    },
+    "dueDate": {
+      "dialogTitle": "Vervaldatum instellen voor geselecteerde tickets",
+      "message": "Stel de vervaldatum in of verwijder deze op {{count}} ticket(s).",
+      "modeSet": "Instellen op",
+      "modeClear": "Vervaldatum verwijderen",
+      "placeholder": "Kies een datum",
+      "confirm_one": "{{count}} ticket bijwerken",
+      "confirm_other": "{{count}} tickets bijwerken",
+      "submitting": "Bezig met bijwerken...",
+      "success_one": "Vervaldatum bijgewerkt op {{count}} ticket",
+      "success_other": "Vervaldatum bijgewerkt op {{count}} tickets",
+      "partialFailure": "Vervaldatum kon niet bij alle tickets worden bijgewerkt",
+      "failure": "Bijwerken van vervaldatum is mislukt",
+      "failedHeading": "Vervaldatum kon niet worden bijgewerkt bij de volgende tickets:"
+    },
+    "status": {
+      "dialogTitle": "Status wijzigen voor geselecteerde tickets",
+      "message": "Stel de status in voor {{count}} ticket(s):",
+      "placeholder": "Selecteer een status",
+      "loading": "Statussen laden...",
+      "confirm_one": "{{count}} ticket bijwerken",
+      "confirm_other": "{{count}} tickets bijwerken",
+      "submitting": "Bezig met bijwerken...",
+      "success_one": "Status bijgewerkt op {{count}} ticket",
+      "success_other": "Status bijgewerkt op {{count}} tickets",
+      "partialFailure": "Status kon niet bij alle tickets worden bijgewerkt",
+      "failure": "Bijwerken van status is mislukt",
+      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:"
+    },
+    "priority": {
+      "dialogTitle": "Prioriteit wijzigen voor geselecteerde tickets",
+      "message": "Stel de prioriteit in voor {{count}} ticket(s):",
+      "placeholder": "Selecteer een prioriteit",
+      "confirm_one": "{{count}} ticket bijwerken",
+      "confirm_other": "{{count}} tickets bijwerken",
+      "submitting": "Bezig met bijwerken...",
+      "success_one": "Prioriteit bijgewerkt op {{count}} ticket",
+      "success_other": "Prioriteit bijgewerkt op {{count}} tickets",
+      "partialFailure": "Prioriteit kon niet bij alle tickets worden bijgewerkt",
+      "failure": "Bijwerken van prioriteit is mislukt",
+      "failedHeading": "Prioriteit kon niet worden bijgewerkt bij de volgende tickets:"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "uur",
       "hrs": "uur",
       "min": "min"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} is aan het bewerken",
+      "multiple_one": "{{name}} en {{count}} andere persoon zijn aan het bewerken",
+      "multiple_other": "{{name}} en {{count}} andere personen zijn aan het bewerken"
+    },
+    "remoteFieldUpdated": "{{name}} heeft {{field}} bijgewerkt",
+    "connection": {
+      "reconnecting": "Live-updates offline - opnieuw verbinden...",
+      "unavailable": "Live-updates niet beschikbaar"
     }
   }
 }

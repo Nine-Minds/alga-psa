@@ -1,0 +1,356 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: `diffTicketFields` returns only changed field names; ignores unchanged fields; handles null↔value transitions; handles JSONB column equality (per CLAUDE.md JSONB rule).",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: `publishTicketUpdate` writes JSON to the correct Redis channel `<prefix>ticket-updates:<tenant>:<ticketId>` with the expected payload shape.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: `publishTicketUpdate` swallows Redis errors (logs, does not throw); caller's update transaction is unaffected.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: a successful `updateTicketWithCache` call results in exactly one Redis publish on the matching channel containing only the fields that actually changed.",
+    "implemented": true,
+    "featureIds": ["F003", "F002"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: a failed `updateTicketWithCache` (validation error / permission error) results in zero Redis publishes.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: bundled-parent ticket sync-propagation publishes one message per affected child on the child's channel.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: when `LIVE_TICKET_UPDATES_DISABLED=1`, `updateTicketWithCache` succeeds with zero Redis publishes.",
+    "implemented": true,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: `/api/tickets/:id/live-token` returns 401 when unauthenticated.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: `/api/tickets/:id/live-token` returns 403 when the user lacks read access (e.g., board not visible to client-portal user).",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: `/api/tickets/:id/live-token` returns a JWT whose claims include `{tenantId, userId, ticketId}` and `exp - iat ≤ 5 min`.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: JWT signed with the wrong secret is rejected by `tenantValidation.js` JWT verification.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: expired JWT is rejected by `tenantValidation.js`.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: JWT for tenant X presented to room `ticket:Y:abc` is rejected.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: JWT for ticket A presented to room `ticket:T:B` is rejected.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: `parseTicketRoom('ticket:tenant1:abc-123')` returns `{tenantId:'tenant1', ticketId:'abc-123'}`; malformed names return null.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: `validateDocumentRoomAccess` continues to bypass `notifications:` rooms unchanged after the ticket-room addition (regression).",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: `validateDocumentRoomAccess` continues to handle `document:` rooms unchanged (regression).",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T018",
+    "description": "Integration (Hocuspocus): a Redis publish to `<prefix>ticket-updates:T:1` triggers a stateless broadcast in room `ticket:T:1`; clients connected to that room receive the message.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T019",
+    "description": "Integration (Hocuspocus): a Redis publish for a room with no connected clients is a no-op (no error, no leak).",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T020",
+    "description": "Integration (Hocuspocus): killing the Redis subscriber connection and reconnecting resumes pattern subscription without restart.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T021",
+    "description": "Direct WebSocket probe: connecting with a token for tenant X to room `ticket:Y:*` is rejected at handshake.",
+    "implemented": true,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T022",
+    "description": "Component: `PresenceBar` renders one avatar per unique `userId`, deduping multi-tab.",
+    "implemented": true,
+    "featureIds": ["F021", "F011"]
+  },
+  {
+    "id": "T023",
+    "description": "Component: `PresenceBar` shows tooltip with display name on hover.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T024",
+    "description": "Component: documents `CollaborativeEditor` still renders presence correctly after the lift (regression).",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T025",
+    "description": "Component: `FieldConflictBanner` shows remote value, author display name, and relative timestamp; both buttons are accessible (correct ARIA, focus on Keep yours by default).",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T026",
+    "description": "Hook: `useTicketLive` requests a token, opens a provider, transitions `connectionStatus` connecting → connected on successful WS handshake.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T027",
+    "description": "Hook: `useTicketLive` JWT refresh fires at ~80% of TTL; updated token is passed to the provider.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T028",
+    "description": "Hook: refresh-endpoint failure transitions `connectionStatus` to `unavailable` and stops further auto-retries.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T029",
+    "description": "Hook: WS disconnect triggers exponential reconnect (1s, 2s, 4s, 8s, 16s caps at 30s).",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T030",
+    "description": "Hook: after 5 failed reconnect attempts, `connectionStatus` becomes `unavailable` and no further retries fire.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T031",
+    "description": "Hook: successful reconnect after a drop fires exactly one ticket refetch.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T032",
+    "description": "Hook: `setEditingField('status_id')` updates awareness; `setEditingField(null)` clears it.",
+    "implemented": true,
+    "featureIds": ["F013", "F029"]
+  },
+  {
+    "id": "T033",
+    "description": "Component: connection-status indicator hidden when connected; shows 'Live updates offline — reconnecting…' when reconnecting; shows 'Live updates unavailable' when permanently failed.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T034",
+    "description": "Component (TicketDetails remote-update routing): no-overlap path → silent refetch; field highlights ~600ms; no toast.",
+    "implemented": true,
+    "featureIds": ["F022", "F023"]
+  },
+  {
+    "id": "T035",
+    "description": "Component: 5 update messages within 200ms collapse into a single refetch (debounce).",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T036",
+    "description": "Component: non-overlap with unsaved local change → toast '{Name} updated {field}'; local pending change preserved.",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T037",
+    "description": "Component: same-field overlap with unsaved local change → field freezes, banner appears with remote value/author/timestamp.",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T038",
+    "description": "Component: Keep yours → banner clears, field unfreezes, local pending value retained, no immediate save fired.",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T039",
+    "description": "Component: Take theirs → banner clears, field unfreezes, local pending value dropped, field shows remote value (verified after refetch).",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T040",
+    "description": "Component: focusing status dropdown sets `awareness.editingField='status_id'`; blurring clears it.",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T041",
+    "description": "Component: when remote awareness has `editingField='priority_id'`, the priority field on this client renders dimmed with '{Name} is editing' caption.",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T042",
+    "description": "Component: indicator clears within ~2s after the remote user blurs the field.",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T043",
+    "description": "Component: A and B both focused on status simultaneously — each sees the other's indicator; neither field is hard-locked (still selectable).",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T058",
+    "description": "Component: focusing the title input sets `awareness.editingField='title'`; on a remote client, title shows a caption pill next to the input (no dim); pill clears on blur.",
+    "implemented": true,
+    "featureIds": ["F029", "F034"]
+  },
+  {
+    "id": "T059",
+    "description": "E2E: B saves a title change; A sees the new title within ~500ms without reload (verifies title flows through the same save-time broadcast as dropdown fields).",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F022", "F023"]
+  },
+  {
+    "id": "T044",
+    "description": "Component: refetch returning 403 after a remote-update message redirects away from the ticket page.",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T045",
+    "description": "Component: with feature flag `live-ticket-updates` off, `useTicketLive` does not mount, no token request fires, no presence renders, ticket page behaves identically to today.",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T046",
+    "description": "E2E: two browsers, two users, one ticket — B saves status; A's status updates within 500ms without reload; A's other unsaved fields preserved.",
+    "implemented": true,
+    "featureIds": ["F003", "F009", "F022", "F023"]
+  },
+  {
+    "id": "T047",
+    "description": "E2E: kill the Hocuspocus container; ticket page still loads; saves still work; offline indicator visible; bring container back; reconnect within ~30s; indicator clears; one refetch fires.",
+    "implemented": true,
+    "featureIds": ["F010", "F015", "F016", "F020"]
+  },
+  {
+    "id": "T048",
+    "description": "E2E: A focuses status; B sees indicator; A blurs; indicator clears.",
+    "implemented": true,
+    "featureIds": ["F029", "F030"]
+  },
+  {
+    "id": "T049",
+    "description": "E2E: A has unsaved status='On Hold'; B saves status='Resolved'; A sees conflict banner; A clicks Take theirs → field shows 'Resolved'; A's other unsaved fields untouched.",
+    "implemented": true,
+    "featureIds": ["F022", "F026", "F028"]
+  },
+  {
+    "id": "T050",
+    "description": "E2E: A has unsaved status='On Hold'; B saves priority='High'; A sees toast '{B's name} updated priority'; status field still shows A's pending 'On Hold'; priority shows 'High'.",
+    "implemented": true,
+    "featureIds": ["F022", "F025"]
+  },
+  {
+    "id": "T051",
+    "description": "E2E: One user opens the ticket in two tabs; presence shows that user once.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T052",
+    "description": "E2E (regression): all existing ticket Playwright tests pass unchanged with the live layer enabled.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T053",
+    "description": "E2E (regression): all existing ticket Playwright tests pass unchanged with the feature flag off.",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T054",
+    "description": "Security: a user from tenant X cannot enumerate or join `ticket:Y:*` rooms via direct WS probe even with a token (T021 verifies tenant; this verifies they can't substitute another ticketId within their own tenant either if access is missing).",
+    "implemented": true,
+    "featureIds": ["F006", "F008"]
+  },
+  {
+    "id": "T055",
+    "description": "Security: presence awareness payload contains only userId, displayName, avatarUrl, color, editingField — no email, no role, no permissions snapshot.",
+    "implemented": true,
+    "featureIds": ["F005", "F013"]
+  },
+  {
+    "id": "T056",
+    "description": "Security: Redis broadcast payload contains only field names + author metadata + timestamp — no field values. Inspect channel during T046.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T057",
+    "description": "Performance smoke: in dev, save → remote-client-applied latency P95 ≤ 500ms over 50 saves (manual stopwatch acceptable; not a CI gate).",
+    "implemented": true,
+    "featureIds": ["F003", "F009", "F023"]
+  }
+]

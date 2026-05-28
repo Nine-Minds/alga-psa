@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Strona klientów",
     "description": "Główna strona zarządzania klientami z wyszukiwaniem, filtrami i widokiem siatki/listy klientów",
-    "searchPlaceholder": "Szukaj klientów",
+    "searchPlaceholder": "Szukaj klientów, notatek, dokumentów i interakcji",
     "createClient": "Utwórz klienta",
     "createClientShort": "+ Utwórz klienta",
     "allClients": "Wszyscy klienci",
@@ -133,6 +133,30 @@
     "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć.",
     "singleInactiveWithContactsSuccess_one": "{{name}} i {{count}} kontakt zostały pomyślnie dezaktywowane.",
     "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych.",
+    "clientTypes": {
+      "company": "Firma",
+      "individual": "Osoba"
+    },
+    "print": {
+      "title": "Klienci",
+      "selectedTitle": "Wybrani klienci",
+      "subtitle": "{{count}} klientów",
+      "noClients": "Brak klientów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Klient",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adres",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania klientów."
+      }
+    },
+    "shareTooltip": "Drukuj, importuj i eksportuj"
+    ,
     "defaultClientDeleteError": "Nie można usunąć domyślnego klienta. Najpierw ustaw innego klienta jako domyślnego w Ustawieniach ogólnych.",
     "clientNotFound": "Nie znaleziono klienta.",
     "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów."
@@ -220,6 +244,12 @@
     "inboundDomainAddFailed": "Nie udało się dodać domeny",
     "inboundDomainRemoved": "Usunięto przychodzącą domenę e-mail",
     "inboundDomainRemoveFailed": "Nie udało się usunąć domeny",
+    "fields": {
+      "accountManager": "Opiekun klienta",
+      "url": "URL",
+      "status": "Status"
+    }
+    ,
     "deactivateClientDescription": "Dezaktywuje rekord bez usuwania jego danych.",
     "deactivateClientOnlyDescription": "Dezaktywuj klienta, ale pozostaw jego kontakty aktywne."
   },
@@ -598,10 +628,10 @@
     "scenarios": {
       "description": "Te przykłady ilustrują, jak ujednoznacznienie linii umowy działa w typowych scenariuszach dla tego klienta.",
       "scenario1Description": "Kiedy usługa pojawia się zarówno w wierszu kontraktu zbiorczego, jak i w wierszu standardowego kontraktu dla tego klienta:",
-      "scenario1Item1": "Domyślnie priorytet ma linia kontraktu kubełkowego",
-      "scenario1Item2": "Wpisy czasowe i wykorzystanie będą rozliczane w oparciu o linię kontraktu segmentowego aż do jej wyczerpania",
-      "scenario1Item3": "Po wyczerpaniu się zasobnika automatycznie zostanie użyta standardowa linia kontraktu",
-      "scenario1Item4": "Użytkownicy mogą ręcznie pominąć to zachowanie, jawnie wybierając linię kontraktu podczas wprowadzania czasu",
+      "scenario1Item1": "Linia kontraktu kubełkowego jest wybierana domyślnie",
+      "scenario1Item2": "Wpisy czasowe i wykorzystanie zużywają wliczoną pulę kubełka, a następnie kontynuują rozliczanie na tej samej linii kontraktu kubełkowego jako przekroczenie według skonfigurowanej stawki za przekroczenie",
+      "scenario1Item3": "Rozliczanie nie przełącza się automatycznie na standardową linię kontraktu po wyczerpaniu kubełka",
+      "scenario1Item4": "Użytkownicy mogą ręcznie zastąpić to domyślne zachowanie, wybierając inną linię kontraktu podczas wprowadzania czasu",
       "scenario1Title": "Scenariusz 1: Plan segmentowy + plan standardowy",
       "scenario2Description": "Gdy usługa pojawia się w wielu standardowych pozycjach umowy dla tego klienta:",
       "scenario2Item1": "Podczas wprowadzania czasu użytkownicy zostaną poproszeni o wybranie linii umowy, z której będą rozliczani",

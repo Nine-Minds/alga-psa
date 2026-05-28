@@ -19,6 +19,7 @@ export class WorkflowDesignerPage {
   readonly payloadSchemaAdvancedToggle: Locator;
   readonly payloadSchemaInput: Locator;
   readonly triggerTypeInput: Locator;
+  readonly triggerEventCategoryInput: Locator;
   readonly triggerInput: Locator;
   readonly oneTimeRunAtInput: Locator;
   readonly recurringCronInput: Locator;
@@ -40,7 +41,7 @@ export class WorkflowDesignerPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.header = page.getByRole('heading', { name: /Workflow (Editor|Designer)/ });
+    this.header = page.getByRole('heading', { name: /Workflow (Editor|Designer|Automation)/ });
     this.listHeader = page.getByRole('heading', { name: 'Workflow Editor' });
     this.workflowsTab = page.getByRole('tab', { name: 'Workflows' });
     this.designerTab = page.getByRole('tab', { name: 'Designer' });
@@ -59,6 +60,7 @@ export class WorkflowDesignerPage {
     this.payloadSchemaAdvancedToggle = page.locator('#workflow-designer-schema-advanced');
     this.payloadSchemaInput = page.locator('#workflow-designer-schema');
     this.triggerTypeInput = page.locator('#workflow-designer-trigger-type[role="combobox"]');
+    this.triggerEventCategoryInput = page.locator('#workflow-designer-trigger-event-category[role="combobox"]');
     // Trigger is now a SearchableSelect (combobox), use the button with role="combobox"
     this.triggerInput = page.locator('#workflow-designer-trigger-event[role="combobox"]');
     this.oneTimeRunAtInput = page.locator('#workflow-designer-trigger-run-at');
@@ -96,8 +98,11 @@ export class WorkflowDesignerPage {
       } catch (error) {
         lastError = error;
         const message = error instanceof Error ? error.message : String(error);
-        const isConnectionRefused = message.includes('ERR_CONNECTION_REFUSED') || message.includes('ECONNREFUSED');
-        if (!isConnectionRefused) throw error;
+        const isStartupRace =
+          message.includes('ERR_CONNECTION_REFUSED') ||
+          message.includes('ECONNREFUSED') ||
+          message.includes('net::ERR_ABORTED');
+        if (!isStartupRace) throw error;
         await this.page.waitForTimeout(1000);
       }
     }
@@ -106,9 +111,11 @@ export class WorkflowDesignerPage {
   }
 
   async waitForLoaded(): Promise<void> {
-    await expect(this.header).toBeVisible({ timeout: 30_000 });
     await expect.poll(
       async () => {
+        if (await this.header.isVisible().catch(() => false)) {
+          return true;
+        }
         for (const candidate of this.getCreateWorkflowButtonCandidates()) {
           if (await candidate.isVisible()) {
             return true;
@@ -146,7 +153,7 @@ export class WorkflowDesignerPage {
   }
 
   async clickNewWorkflow(): Promise<void> {
-    await this.waitForLoaded();
+    await this.waitForReady();
 
     let createButton: Locator | null = null;
     for (const candidate of this.getCreateWorkflowButtonCandidates()) {
@@ -224,20 +231,34 @@ export class WorkflowDesignerPage {
   async selectPayloadSchemaRef(schemaRef: string): Promise<void> {
     await expect(this.payloadSchemaSelectButton).toBeVisible({ timeout: 60_000 });
     await this.payloadSchemaSelectButton.click();
-    const searchInput = this.page
-      .locator('#workflow-designer-schema-ref-select-search')
-      .or(this.page.getByPlaceholder(/search select schema/i));
-    // SearchableSelect uses `id="<select-id>-search"`; in overlay mode, the input is portalled.
-    await expect(searchInput.first()).toBeVisible({ timeout: 30_000 });
-    await searchInput.fill(schemaRef);
-
-    // Prefer keyboard selection to avoid occasional "option is outside viewport" issues with portalled overlays.
     const option = this.page.getByRole('option', {
       name: new RegExp(schemaRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     }).first();
+    const optionVisible = await option
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+
+    if (!optionVisible) {
+      const searchInput = this.page
+        .locator('#workflow-designer-schema-ref-select-search')
+        .or(this.page.getByPlaceholder(/search select schema/i));
+      const searchInputVisible = await searchInput
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false);
+
+      if (searchInputVisible) {
+        await searchInput.first().fill(schemaRef);
+      } else {
+        const expandedCombobox = this.page.locator('[role="combobox"][aria-expanded="true"]').last();
+        await expect(expandedCombobox).toBeVisible({ timeout: 30_000 });
+        await expandedCombobox.focus();
+        await this.page.keyboard.type(schemaRef);
+      }
+    }
+
     await expect(option).toBeVisible({ timeout: 30_000 });
-    await searchInput.first().focus();
-    await this.page.keyboard.press('Enter');
+    await option.click();
   }
 
   async setPayloadSchemaRefAdvanced(schemaRef: string): Promise<void> {
@@ -305,8 +326,40 @@ export class WorkflowDesignerPage {
     await this.page.getByRole('option', { name: triggerType, exact: true }).click();
   }
 
-  async selectTriggerEvent(eventName: string): Promise<void> {
+  private inferTriggerEventCategory(eventName: string): string | null {
+    if (eventName.startsWith('TICKET_')) return 'Tickets';
+    if (eventName.startsWith('PROJECT_')) return 'Projects';
+    if (eventName.includes('EMAIL')) return 'Email Processing';
+    if (eventName === 'CUSTOM_EVENT' || eventName.startsWith('CUSTOM_')) return 'Testing';
+    if (eventName.startsWith('INVOICE_') || eventName.startsWith('PAYMENT_')) return 'Billing';
+    return null;
+  }
+
+  async selectTriggerEvent(eventName: string, eventCategory?: string): Promise<void> {
+    const triggerVisible = await this.triggerInput
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+    const triggerEnabled = triggerVisible
+      ? await this.triggerInput.isEnabled().catch(() => false)
+      : false;
+
+    if (!triggerVisible || !triggerEnabled) {
+      await this.selectTriggerType('Event');
+    }
+
+    if (!(await this.triggerInput.isEnabled().catch(() => false))) {
+      const categoryName = eventCategory ?? this.inferTriggerEventCategory(eventName);
+      if (!categoryName) {
+        throw new Error(`Trigger event "${eventName}" requires an explicit event category in the Playwright helper.`);
+      }
+
+      await expect(this.triggerEventCategoryInput).toBeVisible({ timeout: 60_000 });
+      await this.triggerEventCategoryInput.click();
+      await this.page.getByRole('option', { name: new RegExp(`^${categoryName}$`, 'i') }).click();
+    }
+
     await expect(this.triggerInput).toBeVisible({ timeout: 60_000 });
+    await expect(this.triggerInput).toBeEnabled({ timeout: 60_000 });
     await this.triggerInput.click();
     const searchInput = this.page.locator('#workflow-designer-trigger-event-search');
     if (await searchInput.isVisible()) {

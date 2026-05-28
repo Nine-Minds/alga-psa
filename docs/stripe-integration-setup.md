@@ -67,12 +67,10 @@ This creates 6 tables:
 
 #### 3.2 Copy Product IDs
 After creating the product:
-1. Copy the **Product ID** (starts with `prod_`)
-2. Click on the price and copy the **Price ID** (starts with `price_`)
+1. Click on the price and copy the **Price ID** (starts with `price_`)
 3. Add to `server/.env`:
    ```bash
-   STRIPE_LICENSE_PRODUCT_ID=prod_...
-   STRIPE_LICENSE_PRICE_ID=price_...
+   STRIPE_PRO_PRICE_ID=price_...
    ```
 
 ### 4. Webhook Configuration

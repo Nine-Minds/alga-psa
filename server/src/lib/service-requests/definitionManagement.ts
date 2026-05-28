@@ -6,6 +6,7 @@ import {
 } from './definitionLifecycle';
 import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
+import { publishServiceRequestDefinitionSearchEvent } from './searchEvents';
 
 export interface ServiceRequestDefinitionManagementRow {
   tenant: string;
@@ -231,6 +232,17 @@ export async function createBlankServiceRequestDefinition({
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
 
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
+
   return created;
 }
 
@@ -267,6 +279,17 @@ export async function createServiceRequestDefinitionFromTemplate({
       updated_by: createdBy,
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
 
   return created;
 }
@@ -311,6 +334,17 @@ export async function duplicateServiceRequestDefinition({
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
 
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
+
   return created;
 }
 
@@ -321,7 +355,7 @@ export async function saveServiceRequestDefinitionDraft({
   updatedBy = null,
   updates,
 }: SaveDraftDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
-  return knex.transaction(async (trx) => {
+  const saved = await knex.transaction(async (trx) => {
     const existing = (await trx('service_request_definitions')
       .where({ tenant, definition_id: definitionId })
       .first()) as ServiceRequestDefinitionSourceRow | undefined;
@@ -377,6 +411,19 @@ export async function saveServiceRequestDefinitionDraft({
 
     return saved;
   });
+
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: updatedBy,
+      lifecycleState: saved.lifecycle_state,
+      changedFields: Object.keys(updates),
+    },
+  );
+
+  return saved;
 }
 
 export async function searchServiceCatalogForLinking(
@@ -448,6 +495,16 @@ export async function archiveServiceRequestDefinitionFromManagement(
   archivedBy?: string | null
 ): Promise<void> {
   await archiveServiceRequestDefinition(knex, tenant, definitionId, archivedBy);
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: archivedBy,
+      lifecycleState: 'archived',
+      changedFields: ['lifecycle_state'],
+    },
+  );
 }
 
 export async function unarchiveServiceRequestDefinitionFromManagement(
@@ -457,4 +514,48 @@ export async function unarchiveServiceRequestDefinitionFromManagement(
   updatedBy?: string | null
 ): Promise<void> {
   await unarchiveServiceRequestDefinition(knex, tenant, definitionId, updatedBy);
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: updatedBy,
+      lifecycleState: 'draft',
+      changedFields: ['lifecycle_state', 'published_at'],
+    },
+  );
+}
+
+export async function deleteServiceRequestDefinitionFromManagement(
+  knex: Knex,
+  tenant: string,
+  definitionId: string,
+  deletedBy?: string | null
+): Promise<boolean> {
+  const existing = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .select('lifecycle_state')
+    .first<{ lifecycle_state: string }>();
+
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .delete();
+
+  if (deleted > 0) {
+    await publishServiceRequestDefinitionSearchEvent(
+      'SERVICE_REQUEST_DEFINITION_DELETED',
+      tenant,
+      definitionId,
+      {
+        userId: deletedBy,
+        lifecycleState: existing.lifecycle_state,
+      },
+    );
+  }
+
+  return deleted > 0;
 }

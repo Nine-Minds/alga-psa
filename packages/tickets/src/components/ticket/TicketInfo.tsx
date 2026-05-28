@@ -24,7 +24,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -39,11 +39,14 @@ import type { SlaTimerStatus } from '@alga-psa/types';
 import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
+import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TicketLiveConflictState } from './ticketLiveFields';
+import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 
 interface TicketInfoProps {
@@ -89,8 +92,17 @@ interface TicketInfoProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   onOpenEmailNotificationLogs?: () => void;
+  onOpenActivityLog?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
   hideSlaStatus?: boolean;
+  onLiveDirtyFieldsChange?: (fields: string[]) => void;
+  liveHighlightedFields?: string[];
+  liveFrozenFields?: string[];
+  liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
+  onKeepLiveConflict?: (field: string) => void;
+  onTakeLiveConflict?: (field: string) => void;
+  liveEditingUsers?: Partial<Record<string, string[]>>;
+  onLiveEditingFieldChange?: (field: string | null) => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -127,8 +139,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
   onOpenEmailNotificationLogs,
+  onOpenActivityLog,
   titleRef,
   hideSlaStatus = false,
+  onLiveDirtyFieldsChange,
+  liveHighlightedFields = [],
+  liveFrozenFields = [],
+  liveFieldConflicts = {},
+  onKeepLiveConflict,
+  onTakeLiveConflict,
+  liveEditingUsers = {},
+  onLiveEditingFieldChange,
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
@@ -158,6 +179,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
   const [pendingTeamRemoval, setPendingTeamRemoval] = useState(false);
+  const highlightedFieldSet = useMemo(() => new Set(liveHighlightedFields), [liveHighlightedFields]);
+  const frozenFieldSet = useMemo(() => new Set(liveFrozenFields), [liveFrozenFields]);
 
   // Capture original ticket values when form is initialized
   const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
@@ -279,6 +302,37 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       setIsFormInitialized(true);
     }
   }, [ticket, isFormInitialized]);
+
+  useEffect(() => {
+    const dirtyFields = new Set<string>();
+
+    for (const field of Object.keys(pendingChanges)) {
+      dirtyFields.add(field);
+    }
+
+    for (const field of Object.keys(pendingItilChanges)) {
+      dirtyFields.add(field);
+    }
+
+    if (isEditingTitle && titleValue !== ticket.title) {
+      dirtyFields.add('title');
+    }
+
+    onLiveDirtyFieldsChange?.(Array.from(dirtyFields));
+  }, [
+    isEditingTitle,
+    onLiveDirtyFieldsChange,
+    pendingChanges,
+    pendingItilChanges,
+    ticket.title,
+    titleValue,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      onLiveDirtyFieldsChange?.([]);
+    };
+  }, [onLiveDirtyFieldsChange]);
 
   // Track loading state for board config
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
@@ -555,8 +609,187 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   }, [ticket.board_id]); // Re-fetch when board changes
 
   useEffect(() => {
+    if (isEditingTitle && titleValue !== ticket.title) {
+      return;
+    }
+
     setTitleValue(ticket.title);
-  }, [ticket.title]);
+  }, [isEditingTitle, ticket.title, titleValue]);
+
+  const isFieldHighlighted = useCallback((field: string) => highlightedFieldSet.has(field), [highlightedFieldSet]);
+
+  const isFieldFrozen = useCallback((field: string) => {
+    return frozenFieldSet.has(field) || Boolean(liveFieldConflicts[field]);
+  }, [frozenFieldSet, liveFieldConflicts]);
+
+  const getFieldContainerClassName = useCallback((field: string) => {
+    const classes = ['rounded-lg transition-colors duration-[600ms]'];
+
+    if (isFieldHighlighted(field)) {
+      classes.push('bg-sky-50 ring-1 ring-sky-200 px-3 py-2');
+    }
+
+    if (isFieldFrozen(field)) {
+      classes.push('opacity-80');
+    }
+
+    return classes.join(' ');
+  }, [isFieldFrozen, isFieldHighlighted]);
+
+  const getEditingUsersForField = useCallback((field: string) => liveEditingUsers[field] ?? [], [liveEditingUsers]);
+
+  const getEditingCaption = useCallback((field: string) => {
+    const editingUsers = getEditingUsersForField(field);
+    if (editingUsers.length === 0) {
+      return null;
+    }
+
+    if (editingUsers.length === 1) {
+      return t('liveUpdates.editing.single', '{{name}} is editing')
+        .replace('{{name}}', editingUsers[0]);
+    }
+
+    return t(
+      editingUsers.length === 2 ? 'liveUpdates.editing.multiple_one' : 'liveUpdates.editing.multiple_other',
+      editingUsers.length === 2
+        ? '{{name}} and {{count}} other are editing'
+        : '{{name}} and {{count}} others are editing'
+    )
+      .replace('{{name}}', editingUsers[0])
+      .replace('{{count}}', String(editingUsers.length - 1));
+  }, [getEditingUsersForField, t]);
+
+  const isFieldRemotelyEdited = useCallback((field: string) => {
+    return getEditingUsersForField(field).length > 0;
+  }, [getEditingUsersForField]);
+
+  const createEditingFieldHandlers = useCallback((field: string) => ({
+    onFocusCapture: () => {
+      onLiveEditingFieldChange?.(field);
+    },
+    onBlurCapture: (event: React.FocusEvent<HTMLElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        onLiveEditingFieldChange?.(null);
+      }
+    },
+  }), [onLiveEditingFieldChange]);
+
+  const clearPendingChangeFields = useCallback((fields: string[]) => {
+    setPendingChanges((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const field of fields) {
+        if (field in next) {
+          changed = true;
+          delete (next as Partial<ITicket>)[field as keyof ITicket];
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const handleKeepLiveConflict = useCallback((field: string) => {
+    onKeepLiveConflict?.(field);
+  }, [onKeepLiveConflict]);
+
+  const handleTakeLiveConflict = useCallback((field: string) => {
+    switch (field) {
+      case 'title':
+        setTitleValue(ticket.title);
+        setIsEditingTitle(false);
+        break;
+      case 'status_id':
+      case 'assigned_to':
+      case 'priority_id':
+      case 'response_state':
+      case 'due_date':
+        clearPendingChangeFields([field]);
+        break;
+      case 'board_id':
+        clearPendingChangeFields(['board_id', 'status_id', 'category_id', 'subcategory_id']);
+        setPendingBoardConfig(null);
+        setPendingCategories(null);
+        break;
+      case 'category_id':
+        clearPendingChangeFields(['category_id', 'subcategory_id']);
+        break;
+      case 'itil_impact':
+      case 'itil_urgency':
+        setPendingItilChanges((prev) => {
+          if (!(field in prev)) {
+            return prev;
+          }
+
+          const next = { ...prev };
+          delete next[field];
+          return next;
+        });
+        break;
+      default:
+        clearPendingChangeFields([field]);
+        break;
+    }
+
+    if (field === 'assigned_to') {
+      setPendingTeamId(null);
+      setPendingTeamRemoval(false);
+    }
+
+    onTakeLiveConflict?.(field);
+  }, [clearPendingChangeFields, onTakeLiveConflict, ticket.title]);
+
+  // If we don't have users data but have agentOptions, convert agentOptions to users format
+  const usersList: IUserWithRoles[] = users.length > 0
+    ? users
+    : agentOptions.map((agent): IUserWithRoles => ({
+        user_id: agent.value,
+        username: agent.value,
+        first_name: agent.label.split(' ')[0] || '',
+        last_name: agent.label.split(' ').slice(1).join(' ') || '',
+        email: '',
+        hashed_password: '',
+        is_inactive: false,
+        tenant: '',
+        user_type: 'internal',
+        roles: []
+      }));
+
+  const getConflictRemoteValue = useCallback((field: string): React.ReactNode => {
+    switch (field) {
+      case 'title':
+        return ticket.title || t('properties.notAvailable', 'N/A');
+      case 'status_id':
+        return boardScopedStatusOptions.find((option) => option.value === ticket.status_id)?.label
+          ?? ticket.status_name
+          ?? t('properties.notAvailable', 'N/A');
+      case 'assigned_to':
+        return usersList.find((user) => user.user_id === ticket.assigned_to)
+          ? `${usersList.find((user) => user.user_id === ticket.assigned_to)?.first_name ?? ''} ${usersList.find((user) => user.user_id === ticket.assigned_to)?.last_name ?? ''}`.trim()
+          : t('info.notAssigned', 'Not assigned');
+      case 'board_id':
+        return boardOptions.find((option) => option.value === ticket.board_id)?.label ?? t('properties.notAvailable', 'N/A');
+      case 'category_id': {
+        const categoryLookup = effectiveCategories.find((category) => category.category_id === ticket.subcategory_id)
+          ?? effectiveCategories.find((category) => category.category_id === ticket.category_id);
+        return categoryLookup?.category_name ?? t('properties.notAvailable', 'N/A');
+      }
+      case 'priority_id':
+        return priorityOptions.find((option) => option.value === ticket.priority_id)?.label ?? t('properties.notAvailable', 'N/A');
+      case 'response_state':
+        return ticket.response_state ?? t('properties.notAvailable', 'N/A');
+      case 'due_date':
+        return ticket.due_date ?? t('properties.notAvailable', 'N/A');
+      case 'itil_impact':
+        return ticket.itil_impact ? `${ticket.itil_impact} - ${t(`itil.level.${ticket.itil_impact}` as const, ItilLabels.impact[ticket.itil_impact])}` : t('properties.notAvailable', 'N/A');
+      case 'itil_urgency':
+        return ticket.itil_urgency ? `${ticket.itil_urgency} - ${t(`itil.level.${ticket.itil_urgency}` as const, ItilLabels.urgency[ticket.itil_urgency])}` : t('properties.notAvailable', 'N/A');
+      default:
+        return t('properties.notAvailable', 'N/A');
+    }
+  }, [boardOptions, boardScopedStatusOptions, effectiveCategories, priorityOptions, t, ticket, usersList]);
+  const hasActiveLiveConflict = Object.keys(liveFieldConflicts).length > 0;
 
   // Handler for title save (saves immediately when checkmark is clicked)
   const handleTitleSubmit = useCallback(() => {
@@ -623,7 +856,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Handler for saving all pending changes
   const handleSaveChanges = useCallback(async () => {
-    if (!hasUnsavedChanges || requiresDestinationStatusSelection) return;
+    if (!hasUnsavedChanges || requiresDestinationStatusSelection || hasActiveLiveConflict) return;
 
     setIsSaving(true);
     try {
@@ -717,7 +950,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, requiresDestinationStatusSelection, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, pendingTeamRemoval, onAssignTeam, onRemoveTeamAssignment, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
+  }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
+
+  usePageSaveShortcut(handleSaveChanges, {
+    enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict,
+  });
 
   // Handler for discarding all pending changes
   const discardNonDescriptionChanges = useCallback(() => {
@@ -874,81 +1111,96 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       ticket.sla_resolution_at, ticket.sla_resolution_due_at, ticket.sla_paused_at,
       ticket.sla_started_at, ticket.entered_at]);
 
-  // If we don't have users data but have agentOptions, convert agentOptions to users format
-  const usersList: IUserWithRoles[] = users.length > 0
-    ? users
-    : agentOptions.map((agent): IUserWithRoles => ({
-        user_id: agent.value,
-        username: agent.value,
-        first_name: agent.label.split(' ')[0] || '',
-        last_name: agent.label.split(' ').slice(1).join(' ') || '',
-        email: '',
-        hashed_password: '',
-        is_inactive: false,
-        tenant: '',
-        user_type: 'internal',
-        roles: []
-      }));
-
   return (
     <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>
       <div className={`${styles['card']}`}>
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-4 min-w-0">
-            {isEditingTitle ? (
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Input
-                  id={`${id}-title-input`}
-                  type="text"
-                  value={titleValue}
-                  onChange={(e) => setTitleValue(e.target.value)}
-                  onKeyDown={handleTitleKeyDown}
-                  autoFocus
-                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  containerClassName="mb-0 flex-1"
-                  style={{minWidth: '300px', width: '100%'}}
-                />
-                <Button
-                  id={`${id}-save-title-btn`}
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleTitleSubmit}
-                  className="flex-shrink-0"
-                  title={t('info.saveTitle', 'Save title')}
-                >
-                  <Check className="w-4 h-4" />
-                </Button>
-                <Button
-                  id={`${id}-cancel-title-btn`}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleTitleCancel}
-                  className="flex-shrink-0"
-                  title={t('actions.cancel', 'Cancel')}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+          <div
+            className={`mb-4 min-w-0 ${getFieldContainerClassName('title')}`}
+            data-live-field="title"
+            data-live-highlighted={isFieldHighlighted('title') ? 'true' : undefined}
+            data-live-conflict={liveFieldConflicts.title ? 'true' : undefined}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Input
+                    id={`${id}-title-input`}
+                    type="text"
+                    value={titleValue}
+                    onChange={(e) => setTitleValue(e.target.value)}
+                    onKeyDown={handleTitleKeyDown}
+                    onFocus={() => onLiveEditingFieldChange?.('title')}
+                    onBlur={() => onLiveEditingFieldChange?.(null)}
+                    autoFocus
+                    disabled={isFieldFrozen('title')}
+                    className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    containerClassName="mb-0 flex-1"
+                    style={{ minWidth: '300px', width: '100%' }}
+                  />
+                  <Button
+                    id={`${id}-save-title-btn`}
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={handleTitleSubmit}
+                    className="flex-shrink-0"
+                    title={t('info.saveTitle', 'Save title')}
+                    disabled={isFieldFrozen('title')}
+                  >
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    id={`${id}-cancel-title-btn`}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleTitleCancel}
+                    className="flex-shrink-0"
+                    title={t('actions.cancel', 'Cancel')}
+                    disabled={isFieldFrozen('title')}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <h1
+                    ref={titleRef}
+                    className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
+                    style={{ overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                  >
+                    {ticket.title}
+                  </h1>
+                  <button
+                    onClick={() => setIsEditingTitle(true)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 flex-shrink-0"
+                    title={t('info.editTitle', 'Edit title')}
+                    disabled={isFieldFrozen('title')}
+                  >
+                    <Pencil className="w-4 h-4 text-gray-500" />
+                  </button>
+                </>
+              )}
+            </div>
+            {getEditingCaption('title') ? (
+              <div
+                className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                data-live-editing="true"
+                data-testid={`${id}-title-editing-pill`}
+              >
+                {getEditingCaption('title')}
               </div>
-            ) : (
-              <>
-                <h1
-                  ref={titleRef}
-                  className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
-                  style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}
-                >
-                  {ticket.title}
-                </h1>
-                <button
-                  onClick={() => setIsEditingTitle(true)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 flex-shrink-0"
-                  title={t('info.editTitle', 'Edit title')}
-                >
-                  <Pencil className="w-4 h-4 text-gray-500" />
-                </button>
-              </>
-            )}
+            ) : null}
+            {liveFieldConflicts.title ? (
+              <FieldConflictBanner
+                remoteAuthor={liveFieldConflicts.title.updatedBy.displayName}
+                remoteAt={liveFieldConflicts.title.updatedAt}
+                remoteValue={getConflictRemoteValue('title')}
+                onKeepYours={() => handleKeepLiveConflict('title')}
+                onTakeTheirs={() => handleTakeLiveConflict('title')}
+              />
+            ) : null}
           </div>
           {/* Unsaved changes alert banner */}
           {hasUnsavedChanges && (
@@ -970,25 +1222,55 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             {/* Row 1: Status + Assigned To */}
-            <div>
+            <div
+              className={getFieldContainerClassName('status_id')}
+              data-live-field="status_id"
+              data-live-highlighted={isFieldHighlighted('status_id') ? 'true' : undefined}
+              data-live-conflict={liveFieldConflicts.status_id ? 'true' : undefined}
+              data-live-editing={isFieldRemotelyEdited('status_id') ? 'true' : undefined}
+              {...createEditingFieldHandlers('status_id')}
+            >
               <h5 className="font-bold mb-2">{t('fields.status', 'Status')}</h5>
-              <CustomSelect
-                value={pendingStatusValue}
-                options={boardScopedStatusOptions}
-                onValueChange={(value) => handlePendingChange('status_id', value)}
-                customStyles={customStyles}
-                className="!w-fit"
-                disabled={workflowLocked || !effectiveBoardId || isLoadingStatusOptions}
-              />
+              <div className={`transition-opacity ${isFieldRemotelyEdited('status_id') ? 'opacity-60' : ''}`}>
+                <CustomSelect
+                  value={pendingStatusValue}
+                  options={boardScopedStatusOptions}
+                  onValueChange={(value) => handlePendingChange('status_id', value)}
+                  customStyles={customStyles}
+                  className="!w-fit"
+                  disabled={workflowLocked || !effectiveBoardId || isLoadingStatusOptions || isFieldFrozen('status_id')}
+                />
+              </div>
+              {getEditingCaption('status_id') ? (
+                <p className="mt-2 text-xs text-slate-500" data-testid={`${id}-status-editing-indicator`}>
+                  {getEditingCaption('status_id')}
+                </p>
+              ) : null}
               {requiresDestinationStatusSelection && (
                 <p className="mt-2 text-sm text-amber-700">
                   {t('info.selectStatusForNewBoard', 'Select a status for the new board before saving.')}
                 </p>
               )}
+              {liveFieldConflicts.status_id ? (
+                <FieldConflictBanner
+                  remoteAuthor={liveFieldConflicts.status_id.updatedBy.displayName}
+                  remoteAt={liveFieldConflicts.status_id.updatedAt}
+                  remoteValue={getConflictRemoteValue('status_id')}
+                  onKeepYours={() => handleKeepLiveConflict('status_id')}
+                  onTakeTheirs={() => handleTakeLiveConflict('status_id')}
+                />
+              ) : null}
             </div>
-            <div>
+            <div
+              className={getFieldContainerClassName('assigned_to')}
+              data-live-field="assigned_to"
+              data-live-highlighted={isFieldHighlighted('assigned_to') ? 'true' : undefined}
+              data-live-conflict={liveFieldConflicts.assigned_to ? 'true' : undefined}
+              data-live-editing={isFieldRemotelyEdited('assigned_to') ? 'true' : undefined}
+              {...createEditingFieldHandlers('assigned_to')}
+            >
               <h5 className="font-bold mb-2">{t('fields.assignedTo', 'Assigned To')}</h5>
-              <div className="flex items-center gap-1.5">
+              <div className={`flex items-center gap-1.5 transition-opacity ${isFieldRemotelyEdited('assigned_to') ? 'opacity-60' : ''}`}>
                 <UserAndTeamPicker
                   value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
                   onValueChange={(value) => {
@@ -1020,7 +1302,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   size="sm"
                   className="!w-fit"
                   placeholder={t('info.notAssigned', 'Not assigned')}
-                  disabled={workflowLocked}
+                  disabled={workflowLocked || isFieldFrozen('assigned_to')}
                 />
                 {(() => {
                   // Use pending team if set, otherwise saved team — but respect pending removal
@@ -1063,36 +1345,77 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   </Tooltip>
                 )}
               </div>
+              {getEditingCaption('assigned_to') ? (
+                <p className="mt-2 text-xs text-slate-500">{getEditingCaption('assigned_to')}</p>
+              ) : null}
+              {liveFieldConflicts.assigned_to ? (
+                <FieldConflictBanner
+                  remoteAuthor={liveFieldConflicts.assigned_to.updatedBy.displayName}
+                  remoteAt={liveFieldConflicts.assigned_to.updatedAt}
+                  remoteValue={getConflictRemoteValue('assigned_to')}
+                  onKeepYours={() => handleKeepLiveConflict('assigned_to')}
+                  onTakeTheirs={() => handleTakeLiveConflict('assigned_to')}
+                />
+              ) : null}
             </div>
 
             {/* Row 2: Board + Category */}
-            <div>
+            <div
+              className={getFieldContainerClassName('board_id')}
+              data-live-field="board_id"
+              data-live-highlighted={isFieldHighlighted('board_id') ? 'true' : undefined}
+              data-live-conflict={liveFieldConflicts.board_id ? 'true' : undefined}
+              data-live-editing={isFieldRemotelyEdited('board_id') ? 'true' : undefined}
+              {...createEditingFieldHandlers('board_id')}
+            >
               <h5 className="font-bold mb-2">{t('info.board', 'Board')}</h5>
-              <CustomSelect
-                value={effectiveBoardId || ''}
-                options={boardOptions}
-                onValueChange={(value) => {
-                  handlePendingChange('board_id', value);
-                  if (value && value !== originalTicketValues.board_id) {
-                    handlePendingChange('status_id', null);
-                  } else {
-                    handlePendingChange('status_id', originalTicketValues.status_id ?? null);
-                  }
-                  handlePendingChange('category_id', null);
-                  handlePendingChange('subcategory_id', null);
-                }}
-                customStyles={customStyles}
-                className="!w-fit"
-              />
+              <div className={`transition-opacity ${isFieldRemotelyEdited('board_id') ? 'opacity-60' : ''}`}>
+                <CustomSelect
+                  value={effectiveBoardId || ''}
+                  options={boardOptions}
+                  onValueChange={(value) => {
+                    handlePendingChange('board_id', value);
+                    if (value && value !== originalTicketValues.board_id) {
+                      handlePendingChange('status_id', null);
+                    } else {
+                      handlePendingChange('status_id', originalTicketValues.status_id ?? null);
+                    }
+                    handlePendingChange('category_id', null);
+                    handlePendingChange('subcategory_id', null);
+                  }}
+                  customStyles={customStyles}
+                  className="!w-fit"
+                  disabled={isFieldFrozen('board_id')}
+                />
+              </div>
+              {getEditingCaption('board_id') ? (
+                <p className="mt-2 text-xs text-slate-500">{getEditingCaption('board_id')}</p>
+              ) : null}
+              {liveFieldConflicts.board_id ? (
+                <FieldConflictBanner
+                  remoteAuthor={liveFieldConflicts.board_id.updatedBy.displayName}
+                  remoteAt={liveFieldConflicts.board_id.updatedAt}
+                  remoteValue={getConflictRemoteValue('board_id')}
+                  onKeepYours={() => handleKeepLiveConflict('board_id')}
+                  onTakeTheirs={() => handleTakeLiveConflict('board_id')}
+                />
+              ) : null}
             </div>
             {effectiveBoardConfig.category_type && (
-              <div>
+              <div
+                className={getFieldContainerClassName('category_id')}
+                data-live-field="category_id"
+                data-live-highlighted={isFieldHighlighted('category_id') ? 'true' : undefined}
+                data-live-conflict={liveFieldConflicts.category_id ? 'true' : undefined}
+                data-live-editing={isFieldRemotelyEdited('category_id') ? 'true' : undefined}
+                {...createEditingFieldHandlers('category_id')}
+              >
                 <h5 className="font-bold mb-2">
                   {effectiveBoardConfig.category_type === 'custom'
                     ? t('fields.category', 'Category')
                     : t('info.itilCategory', 'ITIL Category')}
                 </h5>
-                <div className="w-fit">
+                <div className={`w-fit transition-opacity ${isFieldRemotelyEdited('category_id') ? 'opacity-60' : ''}`}>
                   {isLoadingBoardConfig ? (
                     <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
                       {t('info.loadingBoardConfig', 'Loading...')}
@@ -1110,6 +1433,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     />
                   )}
                 </div>
+                {getEditingCaption('category_id') ? (
+                  <p className="mt-2 text-xs text-slate-500">{getEditingCaption('category_id')}</p>
+                ) : null}
+                {liveFieldConflicts.category_id ? (
+                  <FieldConflictBanner
+                    remoteAuthor={liveFieldConflicts.category_id.updatedBy.displayName}
+                    remoteAt={liveFieldConflicts.category_id.updatedAt}
+                    remoteValue={getConflictRemoteValue('category_id')}
+                    onKeepYours={() => handleKeepLiveConflict('category_id')}
+                    onTakeTheirs={() => handleTakeLiveConflict('category_id')}
+                  />
+                ) : null}
               </div>
             )}
             <QuickAddCategory
@@ -1150,9 +1485,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div className="col-span-2 transition-all duration-200 ease-in-out">
               {effectiveBoardConfig.priority_type === 'itil' ? (
                 <div className="grid grid-cols-2 gap-4 transition-opacity duration-200 ease-in-out">
-                  <div>
+                  <div
+                    className={getFieldContainerClassName('itil_impact')}
+                    data-live-field="itil_impact"
+                    data-live-highlighted={isFieldHighlighted('itil_impact') ? 'true' : undefined}
+                    data-live-conflict={liveFieldConflicts.itil_impact ? 'true' : undefined}
+                    data-live-editing={isFieldRemotelyEdited('itil_impact') ? 'true' : undefined}
+                    {...createEditingFieldHandlers('itil_impact')}
+                  >
                     <h5 className="font-bold mb-2">{t('itil.impact', 'Impact')}</h5>
-                    <div className="w-fit">
+                    <div className={`w-fit transition-opacity ${isFieldRemotelyEdited('itil_impact') ? 'opacity-60' : ''}`}>
                       <CustomSelect
                         options={[
                           { value: '1', label: '1 - High (Critical business function affected)' },
@@ -1164,12 +1506,32 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         value={effectiveItilImpact?.toString() || null}
                         onValueChange={(value) => handleLocalItilFieldChange('itil_impact', Number(value))}
                         placeholder={t('itil.selectImpact', 'Select Impact')}
+                        disabled={isFieldFrozen('itil_impact')}
                       />
                     </div>
+                    {getEditingCaption('itil_impact') ? (
+                      <p className="mt-2 text-xs text-slate-500">{getEditingCaption('itil_impact')}</p>
+                    ) : null}
+                    {liveFieldConflicts.itil_impact ? (
+                      <FieldConflictBanner
+                        remoteAuthor={liveFieldConflicts.itil_impact.updatedBy.displayName}
+                        remoteAt={liveFieldConflicts.itil_impact.updatedAt}
+                        remoteValue={getConflictRemoteValue('itil_impact')}
+                        onKeepYours={() => handleKeepLiveConflict('itil_impact')}
+                        onTakeTheirs={() => handleTakeLiveConflict('itil_impact')}
+                      />
+                    ) : null}
                   </div>
-                  <div>
+                  <div
+                    className={getFieldContainerClassName('itil_urgency')}
+                    data-live-field="itil_urgency"
+                    data-live-highlighted={isFieldHighlighted('itil_urgency') ? 'true' : undefined}
+                    data-live-conflict={liveFieldConflicts.itil_urgency ? 'true' : undefined}
+                    data-live-editing={isFieldRemotelyEdited('itil_urgency') ? 'true' : undefined}
+                    {...createEditingFieldHandlers('itil_urgency')}
+                  >
                     <h5 className="font-bold mb-2">{t('itil.urgency', 'Urgency')}</h5>
-                    <div className="w-fit">
+                    <div className={`w-fit transition-opacity ${isFieldRemotelyEdited('itil_urgency') ? 'opacity-60' : ''}`}>
                       <CustomSelect
                         options={[
                           { value: '1', label: '1 - High (Work cannot continue)' },
@@ -1181,8 +1543,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         value={effectiveItilUrgency?.toString() || null}
                         onValueChange={(value) => handleLocalItilFieldChange('itil_urgency', Number(value))}
                         placeholder={t('itil.selectUrgency', 'Select Urgency')}
+                        disabled={isFieldFrozen('itil_urgency')}
                       />
                     </div>
+                    {getEditingCaption('itil_urgency') ? (
+                      <p className="mt-2 text-xs text-slate-500">{getEditingCaption('itil_urgency')}</p>
+                    ) : null}
+                    {liveFieldConflicts.itil_urgency ? (
+                      <FieldConflictBanner
+                        remoteAuthor={liveFieldConflicts.itil_urgency.updatedBy.displayName}
+                        remoteAt={liveFieldConflicts.itil_urgency.updatedAt}
+                        remoteValue={getConflictRemoteValue('itil_urgency')}
+                        onKeepYours={() => handleKeepLiveConflict('itil_urgency')}
+                        onTakeTheirs={() => handleTakeLiveConflict('itil_urgency')}
+                      />
+                    ) : null}
                   </div>
                   {/* Calculated ITIL Priority Badge */}
                   {calculatedItilPriority && (
@@ -1279,31 +1654,73 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="transition-opacity duration-200 ease-in-out">
+                <div
+                  className={`${getFieldContainerClassName('priority_id')} transition-opacity duration-200 ease-in-out`}
+                  data-live-field="priority_id"
+                  data-live-highlighted={isFieldHighlighted('priority_id') ? 'true' : undefined}
+                  data-live-conflict={liveFieldConflicts.priority_id ? 'true' : undefined}
+                  data-live-editing={isFieldRemotelyEdited('priority_id') ? 'true' : undefined}
+                  {...createEditingFieldHandlers('priority_id')}
+                >
                   <h5 className="font-bold mb-2">{t('fields.priority', 'Priority')}</h5>
-                  <PrioritySelect
-                    value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
-                    options={priorityOptions}
-                    onValueChange={(value) => handlePendingChange('priority_id', value)}
-                    customStyles={customStyles}
-                    className="!w-fit"
-                    disabled={workflowLocked}
-                  />
+                  <div className={`transition-opacity ${isFieldRemotelyEdited('priority_id') ? 'opacity-60' : ''}`}>
+                    <PrioritySelect
+                      value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
+                      options={priorityOptions}
+                      onValueChange={(value) => handlePendingChange('priority_id', value)}
+                      customStyles={customStyles}
+                      className="!w-fit"
+                      disabled={workflowLocked || isFieldFrozen('priority_id')}
+                    />
+                  </div>
+                  {getEditingCaption('priority_id') ? (
+                    <p className="mt-2 text-xs text-slate-500" data-testid={`${id}-priority-editing-indicator`}>
+                      {getEditingCaption('priority_id')}
+                    </p>
+                  ) : null}
+                  {liveFieldConflicts.priority_id ? (
+                    <FieldConflictBanner
+                      remoteAuthor={liveFieldConflicts.priority_id.updatedBy.displayName}
+                      remoteAt={liveFieldConflicts.priority_id.updatedAt}
+                      remoteValue={getConflictRemoteValue('priority_id')}
+                      onKeepYours={() => handleKeepLiveConflict('priority_id')}
+                      onTakeTheirs={() => handleTakeLiveConflict('priority_id')}
+                    />
+                  ) : null}
                 </div>
               )}
             </div>
 
             {/* Row 4: Response State + Due Date (future SLA area) */}
             {responseStateTrackingEnabled && (
-              <div>
+              <div
+                className={getFieldContainerClassName('response_state')}
+                data-live-field="response_state"
+                data-live-highlighted={isFieldHighlighted('response_state') ? 'true' : undefined}
+                data-live-conflict={liveFieldConflicts.response_state ? 'true' : undefined}
+              >
                 <ResponseStateDisplay
                   value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
                   onValueChange={(value) => handlePendingChange('response_state', value)}
-                  editable={true}
+                  editable={!isFieldFrozen('response_state')}
                 />
+                {liveFieldConflicts.response_state ? (
+                  <FieldConflictBanner
+                    remoteAuthor={liveFieldConflicts.response_state.updatedBy.displayName}
+                    remoteAt={liveFieldConflicts.response_state.updatedAt}
+                    remoteValue={getConflictRemoteValue('response_state')}
+                    onKeepYours={() => handleKeepLiveConflict('response_state')}
+                    onTakeTheirs={() => handleTakeLiveConflict('response_state')}
+                  />
+                ) : null}
               </div>
             )}
-            <div>
+            <div
+              className={getFieldContainerClassName('due_date')}
+              data-live-field="due_date"
+              data-live-highlighted={isFieldHighlighted('due_date') ? 'true' : undefined}
+              data-live-conflict={liveFieldConflicts.due_date ? 'true' : undefined}
+            >
               <h5 className="font-bold mb-2">{t('fields.dueDate', 'Due Date')}</h5>
               {(() => {
                 const effectiveDueDate = pendingChanges.due_date !== undefined
@@ -1363,6 +1780,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           onChange={handleDateChange}
                           placeholder={t('quickAdd.selectDate', 'Select date')}
                           label={t('fields.dueDate', 'Due Date')}
+                          disabled={isFieldFrozen('due_date')}
                         />
                       </div>
                       <div className="w-fit">
@@ -1371,7 +1789,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           value={effectiveDueDate && !isMidnight ? existingTime : undefined}
                           onChange={handleTimeChange}
                           placeholder={t('quickAdd.timePlaceholder', 'Time')}
-                          disabled={!effectiveDueDate}
+                          disabled={!effectiveDueDate || isFieldFrozen('due_date')}
                         />
                       </div>
                       {effectiveDueDate && (
@@ -1383,6 +1801,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           onClick={() => handlePendingChange('due_date', null)}
                           className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] px-2"
                           title={t('info.clearDueDate', 'Clear due date')}
+                          disabled={isFieldFrozen('due_date')}
                         >
                           ✕
                         </Button>
@@ -1400,6 +1819,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   </>
                 );
               })()}
+              {liveFieldConflicts.due_date ? (
+                <FieldConflictBanner
+                  remoteAuthor={liveFieldConflicts.due_date.updatedBy.displayName}
+                  remoteAt={liveFieldConflicts.due_date.updatedAt}
+                  remoteValue={getConflictRemoteValue('due_date')}
+                  onKeepYours={() => handleKeepLiveConflict('due_date')}
+                  onTakeTheirs={() => handleTakeLiveConflict('due_date')}
+                />
+              ) : null}
             </div>
 
             {/* Row 5: SLA Status */}
@@ -1545,6 +1973,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </Button>
               </Tooltip>
             ) : null}
+            {ticket.ticket_id && onOpenActivityLog ? (
+              <Tooltip content={t('info.openActivityLog', 'View activity log')}>
+                <Button
+                  id="ticket-activity-log-button"
+                  type="button"
+                  variant="soft"
+                  size="icon"
+                  onClick={onOpenActivityLog}
+                  aria-label={t('info.openActivityLog', 'View activity log')}
+                  className="h-9 w-9"
+                >
+                  <History className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            ) : null}
             <div className="flex-1" />
             <Button
               id={`${id}-cancel-btn`}
@@ -1559,7 +2002,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               id={`${id}-save-changes-btn`}
               type="button"
               onClick={handleSaveChanges}
-              disabled={isSaving || requiresDestinationStatusSelection}
+              disabled={isSaving || requiresDestinationStatusSelection || hasActiveLiveConflict}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
                 {isSaving
@@ -1571,6 +2014,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
           </div>
+          {hasActiveLiveConflict ? (
+            <p className="mt-2 text-sm text-amber-700">
+              {t('info.resolveLiveConflict', 'Resolve live update conflicts before saving your changes.')}
+            </p>
+          ) : null}
 
           {/* Cancel confirmation dialog */}
           <ConfirmationDialog

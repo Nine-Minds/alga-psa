@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "55555",
     "addTicket": "55555",
+    "shareTooltip": "55555",
     "exportCsv": "55555",
     "bundledToggle": "55555",
     "exportSelectedTooltip_one": "55555 {{count}} 55555",
@@ -393,12 +394,42 @@
       "decrease": "55555",
       "increase": "55555",
       "reset": "55555"
-    }
+    },
+    "print": {
+      "action": "55555",
+      "selectedAction_one": "55555 {{count}} 55555",
+      "selectedAction_other": "55555 {{count}} 55555",
+      "title": "55555",
+      "selectedTitle_one": "55555 {{count}} 55555",
+      "selectedTitle_other": "55555 {{count}} 55555",
+      "subtitle_one": "55555 {{count}} 55555",
+      "subtitle_other": "55555 {{count}} 55555",
+      "noTickets": "55555",
+      "columns": {
+        "ticket": "55555",
+        "title": "55555",
+        "client": "55555",
+        "status": "55555",
+        "priority": "55555",
+        "assigned": "55555",
+        "dueDate": "55555"
+      },
+      "emptyValue": "55555",
+      "noDueDate": "55555",
+      "values": {
+        "hasSla": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "selectedTitle": "55555 {{count}} 55555",
+        "description": "55555"
+      }
+    },
+    "exportSelectedAction": "55555 {{count}} 55555",
+    "exportAction": "55555",
+    "importAction": "55555"
   },
   "bulk": {
-    "moveToBoard": "55555",
-    "deleteSelected_one": "55555 {{count}} 55555",
-    "deleteSelected_other": "55555 {{count}} 55555",
     "bundleTickets": "55555",
     "moveDialogTitle": "55555",
     "moveDialogDescription": "55555",
@@ -499,7 +530,98 @@
     },
     "auth": {
       "moveRequired": "55555",
-      "deleteRequired": "55555"
+      "deleteRequired": "55555",
+      "assignRequired": "55555",
+      "tagsRequired": "55555",
+      "dueDateRequired": "55555",
+      "statusRequired": "55555",
+      "priorityRequired": "55555"
+    },
+    "actionBar": {
+      "selectedCount_one": "55555 {{count}} 55555",
+      "selectedCount_other": "55555 {{count}} 55555",
+      "move": "55555",
+      "bundle": "55555",
+      "delete": "55555",
+      "clear": "55555",
+      "bundleNeedsTwo": "55555",
+      "assign": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "tags": "55555",
+      "dueDate": "55555",
+      "statusDisabledMultiBoard": "55555",
+      "statusResolvingBoards": "55555",
+      "more": "55555"
+    },
+    "assign": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "unassigned": "55555",
+      "teamHint": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "tags": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "dueDate": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "modeSet": "55555",
+      "modeClear": "55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "status": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "loading": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "priority": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "55555",
       "hrs": "55555",
       "min": "55555"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "55555 {{name}} 55555",
+      "multiple_one": "55555 {{name}} 55555 {{count}} 55555",
+      "multiple_other": "55555 {{name}} 55555 {{count}} 55555"
+    },
+    "remoteFieldUpdated": "55555 {{name}} 55555 {{field}} 55555",
+    "connection": {
+      "reconnecting": "55555",
+      "unavailable": "55555"
     }
   }
 }

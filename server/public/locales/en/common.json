@@ -40,7 +40,14 @@
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "print": "Print",
+    "printSelected_one": "Print selected ({{count}})",
+    "printSelected_other": "Print selected ({{count}})",
+    "printOptions": "Print options",
+    "resetPrintOptions": "Reset print options",
+    "share": "Share",
+    "done": "Done"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -325,6 +332,13 @@
         "description": "Click \"Add Location\" to get started"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} reply",
+    "replies_other": "{{count}} replies",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "showInDrawer": "Show in drawer"
   },
   "pagination": {
     "previous": "Previous",
@@ -1123,6 +1137,18 @@
   "feedback": {
     "providePlaceholder": "Please provide feedback"
   },
+  "presence": {
+    "noOneElseEditing": "No one else is editing",
+    "conflict": {
+      "changedField": "{{author}} just changed this field {{time}}.",
+      "remoteValue": "Remote value:",
+      "keepYours": "Keep yours",
+      "takeTheirs": "Take theirs"
+    }
+  },
+  "labels": {
+    "printColumns": "Print columns"
+  },
   "deleteEntity": {
     "checkingDependenciesTitle": "Checking Dependencies",
     "deleteTitle": "Delete {{entityName}}",
@@ -1143,5 +1169,12 @@
         "warning": "Archived records are hidden from default views."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} column hidden due to limited space.",
+    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "showAll": "Show all",
+    "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
+    "showLess": "Show less"
   }
 }

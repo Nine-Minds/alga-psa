@@ -594,28 +594,65 @@ async function sendNotificationIfEnabled(
 }
 
 /**
- * Format changes record into a readable string
+ * HTML-escape a string for safe interpolation into the email body.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
+const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
+const CHANGE_SECTION_STYLE = 'margin:0 0 14px 0;padding:0 0 12px 0;border-bottom:1px solid rgba(146,64,14,0.15);';
+const CHANGE_SECTION_LAST_STYLE = 'margin:0;padding:0;';
+const CHANGE_SECTION_HEADER_STYLE = 'font-size:13px;color:#92400e;font-weight:600;margin:0 0 8px 0;';
+const CHANGE_SECTION_TIMESTAMP_STYLE = 'color:#9a6c1f;font-weight:500;';
+
+/**
+ * Render a single field change (old → new) as an HTML <li>.
+ */
+function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
+  if (oldValue === null) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+}
+
+/**
+ * Format changes record into an HTML fragment for use in the "Changes Made" email box.
  */
 async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
-  const formattedChanges = await Promise.all(
+  const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
-      // Handle structured change objects with old/new values
+      const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
-          return `${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
+          return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
         const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
-        return `${formatFieldName(field)}: ${resolvedValue}`;
+        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
-      return `${formatFieldName(field)}: ${resolvedValue}`;
+      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
     })
   );
-  return formattedChanges.join('\n');
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
 }
 
 /**
@@ -942,10 +979,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       const descriptionComment = await db('comments')
         .select('note')
         .where({ ticket_id: ticket.ticket_id, tenant: tenantId })
-        .orderBy([
-          { column: 'is_initial_description', order: 'desc' },
-          { column: 'created_at', order: 'asc' }
-        ])
+        .orderBy('created_at', 'asc')
         .first();
       if (descriptionComment?.note) {
         rawDescription = safeString(descriptionComment.note);
@@ -1426,7 +1460,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 }
 
 /**
- * Format multiple accumulated changes into a readable string
+ * Format multiple accumulated changes into an HTML fragment.
+ * Each updater gets a header (name · timestamp) followed by a list of field changes.
  */
 async function formatAccumulatedChanges(
   db: any,
@@ -1436,12 +1471,16 @@ async function formatAccumulatedChanges(
 ): Promise<string> {
   const formattedSections: string[] = [];
 
-  for (const changeSet of accumulatedChanges) {
-    // Get updater's name
-    const updater = await db('users')
-      .where({ user_id: changeSet.userId, tenant: tenantId })
-      .first();
-    const updaterName = updater ? `${updater.first_name} ${updater.last_name}` : changeSet.userId;
+  for (let i = 0; i < accumulatedChanges.length; i += 1) {
+    const changeSet = accumulatedChanges[i];
+    const updater = changeSet.userId
+      ? await db('users')
+          .where({ user_id: changeSet.userId, tenant: tenantId })
+          .first()
+      : null;
+    const updaterName = updater
+      ? `${updater.first_name} ${updater.last_name}`
+      : (changeSet.userId || 'System');
 
     const timestamp = new Date(changeSet.timestamp).toLocaleString('en-US', {
       month: 'short',
@@ -1453,25 +1492,30 @@ async function formatAccumulatedChanges(
       timeZoneName: 'short'
     });
 
-    const formattedChanges = await Promise.all(
+    const items = await Promise.all(
       Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
+        const fieldLabel = formatFieldName(field);
         if (typeof value === 'object' && value !== null) {
           const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
           if (oldVal !== undefined && newVal !== undefined) {
             const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
             const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
-            return `  • ${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
+            return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
           }
         }
         const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
-        return `  • ${formatFieldName(field)}: ${resolvedValue}`;
+        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
       })
     );
 
-    formattedSections.push(`${updaterName} (${timestamp}):\n${formattedChanges.join('\n')}`);
+    const isLast = i === accumulatedChanges.length - 1;
+    const sectionStyle = isLast ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
+    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(updaterName)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(timestamp)}</span></div>`;
+    const list = items.length > 0 ? `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>` : '';
+    formattedSections.push(`<div style="${sectionStyle}">${header}${list}</div>`);
   }
 
-  return formattedSections.join('\n\n');
+  return formattedSections.join('');
 }
 
 /**
@@ -1631,6 +1675,30 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     // Format all accumulated changes
     const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone);
 
+    // Resolve display name for the "Updated By" row from the set of accumulated updaters.
+    const uniqueUpdaterIds = Array.from(
+      new Set(
+        accumulatedChanges
+          .map((c) => c.userId)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    let updatedByDisplay = 'System';
+    if (uniqueUpdaterIds.length > 0) {
+      const updaterRows = await db('users')
+        .whereIn('user_id', uniqueUpdaterIds)
+        .andWhere({ tenant: tenantId })
+        .select('user_id', 'first_name', 'last_name');
+      const idToName = new Map<string, string>(
+        updaterRows.map((u: { user_id: string; first_name: string; last_name: string }) => [
+          u.user_id,
+          `${u.first_name} ${u.last_name}`,
+        ])
+      );
+      const orderedNames = uniqueUpdaterIds.map((id) => idToName.get(id) || id);
+      updatedByDisplay = orderedNames.join(', ');
+    }
+
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
     const baseTicketContext = {
@@ -1656,6 +1724,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      updatedBy: updatedByDisplay,
       updateCount: accumulatedChanges.length,
     };
 
@@ -2224,11 +2293,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
     let commentAuthorEmail = '';
+    let commentClosesTicket = false;
 
     if (payload.comment?.id) {
       const commentAuthor = await db('comments as cm')
         .select(
           'cm.user_id as comment_user_id',
+          'cm.metadata as comment_metadata',
           'cu.contact_id as comment_contact_id',
           'cu.email as comment_user_email',
           'cc.email as comment_contact_email'
@@ -2247,6 +2318,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         })
         .first<{
           comment_user_id?: string | null;
+          comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
           comment_contact_email?: string | null;
@@ -2258,7 +2330,22 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
           safeString(commentAuthor.comment_contact_email);
+        commentClosesTicket = commentAuthor.comment_metadata?.closes_ticket === true;
       }
+    }
+
+    // When the caller knows the comment is paired with an immediate close
+    // (UI sets metadata.closes_ticket=true at insert), suppress the comment
+    // email — the ticket-closed email carries the resolution body. This is
+    // deterministic: no race with the close event, no per-message sleep.
+    // Resolution comments that are NOT paired with a close (no flag set)
+    // still send their email as normal.
+    if (commentClosesTicket) {
+      logger.info('[TicketEmailSubscriber] Skipping comment email; comment is paired with an immediate ticket close', {
+        ticketId: payload.ticketId,
+        commentId: payload.comment?.id,
+      });
+      return;
     }
 
     if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {

@@ -121,6 +121,24 @@ require_command() {
   fi
 }
 
+require_flux_v2_cli() {
+  require_command flux
+
+  if ! flux install --help 2>&1 | grep -q -- '--kubeconfig'; then
+    cat >&2 <<'EOF'
+Unsupported Flux CLI found: this bootstrap requires the Flux v2 CLI with --kubeconfig support.
+
+Install Flux v2 and make sure it appears first on PATH:
+  macOS: brew install fluxcd/tap/flux
+  Linux: https://fluxcd.io/flux/installation/
+
+Verify with:
+  flux version --client
+EOF
+    exit 1
+  fi
+}
+
 is_interactive() {
   [ -t 0 ]
 }
@@ -437,9 +455,33 @@ EOF
   fi
 }
 
+normalize_git_url_for_flux() {
+  local url="$1"
+
+  if [[ "$url" == *://* ]]; then
+    printf '%s\n' "$url"
+    return 0
+  fi
+
+  if [[ "$url" =~ ^([^@[:space:]/]+@[^:[:space:]/]+):(.+)$ ]]; then
+    if [[ "${BASH_REMATCH[1]}" == git@github.com ]]; then
+      printf 'https://github.com/%s\n' "${BASH_REMATCH[2]}"
+    else
+      printf 'ssh://%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    fi
+    return 0
+  fi
+
+  printf '%s\n' "$url"
+}
+
 resolve_repo_defaults() {
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
+  fi
+
+  if [ -n "$REPO_URL" ]; then
+    REPO_URL="$(normalize_git_url_for_flux "$REPO_URL")"
   fi
 
   if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
@@ -1500,7 +1542,7 @@ require_command git
 require_command jq
 require_command curl
 require_command kubectl
-require_command flux
+require_flux_v2_cli
 require_command python3
 require_command talosctl
 

@@ -54,6 +54,12 @@
       "notification": "Benachrichtigung",
       "unknown": "Unbekannt",
       "activity": "Aktivität"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Aktivitäten enthaltenen Spalten."
+      }
     }
   },
   "card": {

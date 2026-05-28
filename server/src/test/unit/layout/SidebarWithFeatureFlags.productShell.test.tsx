@@ -45,7 +45,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     useProduct.mockReturnValue({ productCode: 'psa' });
   });
 
-  it('T005: Algadesk shell keeps only allowed nav and uses Algadesk branding labels', async () => {
+  it('T005: AlgaDesk shell keeps only allowed nav and uses AlgaDesk branding labels', async () => {
     useProduct.mockReturnValue({ productCode: 'algadesk' });
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
@@ -66,8 +66,8 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(names).not.toContain('Billing');
     expect(names).not.toContain('Projects');
     expect(names).not.toContain('Assets');
-    expect(latestProps.appDisplayName).toBe('Algadesk');
-    expect(latestProps.appLogoAlt).toBe('Algadesk Logo');
+    expect(latestProps.appDisplayName).toBe('AlgaDesk');
+    expect(latestProps.appLogoAlt).toBe('AlgaDesk Logo');
   });
 
   it('T005: PSA shell remains unchanged and uses AlgaPSA branding labels', async () => {

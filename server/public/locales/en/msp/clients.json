@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Clients Page",
     "description": "Main clients management page with search, filters, and client grid/list view",
-    "searchPlaceholder": "Search clients",
+    "searchPlaceholder": "Search clients, notes, documents, and interactions",
     "createClient": "Create Client",
     "createClientShort": "+ Create Client",
     "allClients": "All Clients",
@@ -133,6 +133,30 @@
       "bucketUsageRecords": "bucket usage records"
     },
     "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
+    "clientTypes": {
+      "company": "Company",
+      "individual": "Individual"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Selected Clients",
+      "subtitle": "{{count}} clients",
+      "noClients": "No clients to print",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Phone",
+        "address": "Address",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing clients."
+      }
+    },
+    "shareTooltip": "Print, import and export"
+    ,
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
     "deletePermissionDenied": "Permission denied: Cannot delete clients."
@@ -220,6 +244,12 @@
       "label": "Status",
       "helper": "Set client status as active or inactive"
     },
+    "fields": {
+      "accountManager": "Account Manager",
+      "url": "URL",
+      "status": "Status"
+    }
+    ,
     "deactivateClientDescription": "Deactivates the record without deleting its data.",
     "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active."
   },
@@ -598,10 +628,10 @@
     "scenarios": {
       "description": "These examples illustrate how contract line disambiguation works in common scenarios for this client.",
       "scenario1Description": "When a service appears in both a bucket contract line and a standard contract line for this client:",
-      "scenario1Item1": "The bucket contract line is given priority by default",
-      "scenario1Item2": "Time entries and usage will be billed against the bucket contract line until it's depleted",
-      "scenario1Item3": "After the bucket is depleted, the standard contract line will be used automatically",
-      "scenario1Item4": "Users can manually override this behavior by explicitly selecting a contract line during time entry",
+      "scenario1Item1": "The bucket contract line is selected by default",
+      "scenario1Item2": "Time entries and usage consume the bucket's included amount, then continue on the same bucket contract line as overage at its configured overage rate",
+      "scenario1Item3": "Billing does not switch to the standard contract line automatically when the bucket is depleted",
+      "scenario1Item4": "Users can manually override this default by selecting a different contract line during time entry",
       "scenario1Title": "Scenario 1: Bucket Plan + Standard Plan",
       "scenario2Description": "When a service appears in multiple standard contract lines for this client:",
       "scenario2Item1": "Users will be prompted to select which contract line to bill against during time entry",

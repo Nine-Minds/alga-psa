@@ -373,10 +373,20 @@ const filterReferenceFieldOptions = (
     (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.UNKNOWN
   );
 
-  if (exact.length > 0) return exact;
-  if (coercible.length > 0) return coercible;
-
-  return unknown.length > 0 ? unknown : options;
+  // Always surface UNKNOWN-typed options (`any`/permissive sources like inbound
+  // webhook body, step output objects). They serve as an escape hatch when the
+  // target type can't be matched precisely — the user gets the option with a
+  // compatibility badge instead of having no path at all.
+  const visible: ReferenceFieldOption[] = [];
+  const seen = new Set<string>();
+  for (const option of [...exact, ...coercible, ...unknown]) {
+    if (!seen.has(option.value)) {
+      seen.add(option.value);
+      visible.push(option);
+    }
+  }
+  if (visible.length > 0) return visible;
+  return options;
 };
 
 export const ReferenceScopeSelector: React.FC<{

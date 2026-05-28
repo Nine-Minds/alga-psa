@@ -40,7 +40,14 @@
     "duplicate": "Duplikuj",
     "openMenu": "Otwórz menu",
     "confirmDeletion": "Potwierdź usunięcie",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "print": "Drukuj",
+    "printSelected_one": "Drukuj zaznaczone ({{count}})",
+    "printSelected_other": "Drukuj zaznaczone ({{count}})",
+    "printOptions": "Opcje drukowania",
+    "resetPrintOptions": "Resetuj opcje drukowania",
+    "share": "Udostępnij",
+    "done": "Gotowe"
   },
   "status": {
     "loading": "Ładowanie...",
@@ -311,6 +318,13 @@
         "description": "Kliknij „Dodaj lokalizację”, aby rozpocząć"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} odpowiedź",
+    "replies_other": "{{count}} odpowiedzi",
+    "collapse": "Zwiń",
+    "expand": "Rozwiń",
+    "showInDrawer": "Pokaż w panelu"
   },
   "pagination": {
     "previous": "Poprzednia",
@@ -1123,6 +1137,18 @@
   "feedback": {
     "providePlaceholder": "Prosimy o przekazanie opinii"
   },
+  "presence": {
+    "noOneElseEditing": "Nikt inny nie edytuje",
+    "conflict": {
+      "changedField": "{{author}} właśnie zmienił(a) to pole {{time}}.",
+      "remoteValue": "Wartość zdalna:",
+      "keepYours": "Zachowaj swoje",
+      "takeTheirs": "Użyj zdalnej"
+    }
+  },
+  "labels": {
+    "printColumns": "Kolumny wydruku"
+  },
   "deleteEntity": {
     "checkingDependenciesTitle": "Sprawdzanie zależności",
     "deleteTitle": "Usuń {{entityName}}",
@@ -1143,5 +1169,12 @@
         "warning": "Zarchiwizowane rekordy są ukryte w widokach domyślnych."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "Ukryto {{count}} kolumnę z powodu ograniczonego miejsca.",
+    "columnsHidden_other": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca.",
+    "showAll": "Pokaż wszystko",
+    "showingAllColumns": "Wyświetlane są wszystkie kolumny; przewiń w poziomie, aby je zobaczyć.",
+    "showLess": "Pokaż mniej"
   }
 }

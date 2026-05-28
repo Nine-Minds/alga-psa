@@ -661,7 +661,7 @@ export async function handlePolicyChange(
 
     try {
       const backend = await SlaBackendFactory.getBackend();
-      await backend.cancelSla(ticketId);
+      await backend.cancelSla(tenant, ticketId);
     } catch (error) {
       console.warn('Failed to cancel SLA backend on policy clear:', error);
     }
@@ -735,7 +735,7 @@ export async function handlePolicyChange(
 
   try {
     const backend = await SlaBackendFactory.getBackend();
-    await backend.cancelSla(ticketId);
+    await backend.cancelSla(tenant, ticketId);
     await backend.startSlaTracking(ticketId, policy.sla_policy_id, [target], schedule);
   } catch (error) {
     console.warn('Failed to restart SLA backend on policy change:', error);

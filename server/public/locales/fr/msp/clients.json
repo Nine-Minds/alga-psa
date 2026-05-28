@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Page Clients",
     "description": "Page principale de gestion des clients avec recherche, filtres et vue grille/liste des clients",
-    "searchPlaceholder": "Rechercher des clients",
+    "searchPlaceholder": "Rechercher des clients, notes, documents et interactions",
     "createClient": "Créer un client",
     "createClientShort": "+ Créer un client",
     "allClients": "Tous les clients",
@@ -133,6 +133,30 @@
     "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
     "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
     "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès.",
+    "clientTypes": {
+      "company": "Entreprise",
+      "individual": "Particulier"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Clients sélectionnés",
+      "subtitle": "{{count}} clients",
+      "noClients": "Aucun client à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "status": "Statut"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des clients."
+      }
+    },
+    "shareTooltip": "Imprimer, importer et exporter"
+    ,
     "defaultClientDeleteError": "Impossible de supprimer le client par défaut. Définissez d’abord un autre client comme client par défaut dans les paramètres généraux.",
     "clientNotFound": "Client introuvable.",
     "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
@@ -220,6 +244,12 @@
     "inboundDomainAddFailed": "Échec de l'ajout du domaine",
     "inboundDomainRemoved": "Domaine de courrier entrant supprimé",
     "inboundDomainRemoveFailed": "Échec de la suppression du domaine",
+    "fields": {
+      "accountManager": "Responsable de compte",
+      "url": "URL",
+      "status": "Statut"
+    }
+    ,
     "deactivateClientDescription": "Désactive l’enregistrement sans supprimer ses données.",
     "deactivateClientOnlyDescription": "Désactive le client, mais laisse ses contacts actifs."
   },
@@ -598,10 +628,10 @@
     "scenarios": {
       "description": "Ces exemples illustrent le fonctionnement de la levée d'ambiguïté des lignes de contrat dans des scénarios courants pour ce client.",
       "scenario1Description": "Lorsqu'un service apparaît à la fois dans une ligne de contrat groupé et dans une ligne de contrat standard pour ce client :",
-      "scenario1Item1": "La ligne du contrat bucket est prioritaire par défaut",
-      "scenario1Item2": "Les entrées de temps et l'utilisation seront facturées sur la ligne du contrat de compartiment jusqu'à ce qu'elle soit épuisée.",
-      "scenario1Item3": "Une fois le bucket épuisé, la ligne de contrat standard sera utilisée automatiquement",
-      "scenario1Item4": "Les utilisateurs peuvent remplacer manuellement ce comportement en sélectionnant explicitement une ligne de contrat lors de la saisie des temps.",
+      "scenario1Item1": "La ligne de contrat bucket est sélectionnée par défaut",
+      "scenario1Item2": "Les entrées de temps et l'utilisation consomment la quantité incluse dans le bucket, puis continuent sur la même ligne de contrat bucket en tant que dépassement au tarif de dépassement configuré",
+      "scenario1Item3": "La facturation ne bascule pas automatiquement vers la ligne de contrat standard lorsque le bucket est épuisé",
+      "scenario1Item4": "Les utilisateurs peuvent remplacer manuellement ce comportement par défaut en sélectionnant une autre ligne de contrat lors de la saisie des temps",
       "scenario1Title": "Scénario 1 : Plan bucket + Plan standard",
       "scenario2Description": "Lorsqu'un service apparaît dans plusieurs lignes de contrat standard pour ce client :",
       "scenario2Item1": "Les utilisateurs seront invités à sélectionner la ligne de contrat sur laquelle facturer lors de la saisie du temps.",

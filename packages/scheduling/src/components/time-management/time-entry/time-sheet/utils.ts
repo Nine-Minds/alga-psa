@@ -150,3 +150,31 @@ function formatTime24(date: Date): string {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
 }
+
+type TimeEntryDateSource = {
+  entry_id?: string | null;
+  start_time: string;
+  work_date?: string | Date | null;
+};
+
+export function getTimeEntryWorkDate(entry: TimeEntryDateSource): string {
+  const workDateValue = entry.work_date;
+  if (typeof workDateValue === 'string') {
+    const trimmedValue = workDateValue.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmedValue)) {
+      return trimmedValue.slice(0, 10);
+    }
+  }
+
+  if (workDateValue instanceof Date && !Number.isNaN(workDateValue.getTime())) {
+    return workDateValue.toISOString().slice(0, 10);
+  }
+
+  throw new Error(
+    `Time entry ${entry.entry_id ?? '(unsaved)'} is missing work_date; persisted time entries must be migrated before display grouping.`,
+  );
+}
+
+export function isTimeEntryOnWorkDate(entry: TimeEntryDateSource, dateKey: string): boolean {
+  return getTimeEntryWorkDate(entry) === dateKey;
+}

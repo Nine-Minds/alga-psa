@@ -11,24 +11,21 @@ export type TeamsDeepLinkDestination =
 export type TeamsDeepLinkSurface = 'tab' | 'notification' | 'bot' | 'message_extension';
 
 function buildTeamsTabWebUrl(baseUrl: string, destination: TeamsDeepLinkDestination): string {
-  // Build a Teams-tab URL with query params that resolveTeamsTabDestination()
-  // can read server-side. Using the tab URL (instead of the raw PSA URL)
-  // ensures the destination context survives regardless of how Teams delivers
-  // the deep link to the tab page.
-  const tabBase = `${baseUrl}/teams/tab`;
+  // Keep Teams tab context for in-Teams routing, but let browser fallback opens
+  // land on actual PSA pages instead of the Teams tab shell.
   switch (destination.type) {
     case 'my_work':
-      return tabBase;
+      return `${baseUrl}/msp/dashboard`;
     case 'ticket':
-      return `${tabBase}?page=ticket&ticketId=${encodeURIComponent(destination.ticketId)}`;
+      return `${baseUrl}/msp/tickets/${destination.ticketId}`;
     case 'project_task':
-      return `${tabBase}?page=project_task&projectId=${encodeURIComponent(destination.projectId)}&taskId=${encodeURIComponent(destination.taskId)}`;
+      return `${baseUrl}/msp/projects/${destination.projectId}/tasks/${destination.taskId}`;
     case 'approval':
-      return `${tabBase}?page=approval&approvalId=${encodeURIComponent(destination.approvalId)}`;
+      return `${baseUrl}/msp/time-sheet-approvals?approvalId=${encodeURIComponent(destination.approvalId)}`;
     case 'time_entry':
-      return `${tabBase}?page=time_entry&entryId=${encodeURIComponent(destination.entryId)}`;
+      return `${baseUrl}/msp/time-entry?entryId=${encodeURIComponent(destination.entryId)}`;
     case 'contact':
-      return `${tabBase}?page=contact&contactId=${encodeURIComponent(destination.contactId)}`;
+      return `${baseUrl}/msp/contacts/${destination.contactId}`;
     default: {
       const exhaustive: never = destination;
       throw new Error(`Unsupported Teams deep-link destination: ${(exhaustive as any).type}`);
@@ -90,6 +87,10 @@ function resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl: string): TeamsDeepLin
   }
 
   if (segments[1] === 'projects' && segments[2]) {
+    if (segments[3] === 'tasks' && segments[4]) {
+      return { type: 'project_task', projectId: segments[2], taskId: segments[4] };
+    }
+
     const taskId = parsed.searchParams.get('taskId')?.trim();
     return taskId ? { type: 'project_task', projectId: segments[2], taskId } : { type: 'my_work' };
   }

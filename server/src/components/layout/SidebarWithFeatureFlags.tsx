@@ -59,7 +59,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -129,8 +129,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
-      appDisplayName={isAlgadesk ? 'AlgaDesk' : 'AlgaPSA'}
-      appLogoAlt={isAlgadesk ? 'AlgaDesk Logo' : 'AlgaPSA Logo'}
+      appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
+      appLogoAlt={isAlgaDesk ? 'AlgaDesk Logo' : 'AlgaPSA Logo'}
       settingsSectionsOverride={settingsSections}
     />
   );

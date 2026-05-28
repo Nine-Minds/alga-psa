@@ -1,4 +1,4 @@
-export type AlgadeskSettingsSurface =
+export type AlgaDeskSettingsSurface =
   | 'general'
   | 'users'
   | 'teams'
@@ -9,7 +9,7 @@ export type AlgadeskSettingsSurface =
   | 'profile'
   | 'security';
 
-export const ALGADESK_SETTINGS_SURFACES: AlgadeskSettingsSurface[] = [
+export const ALGA_DESK_SETTINGS_SURFACES: AlgaDeskSettingsSurface[] = [
   'general',
   'users',
   'teams',

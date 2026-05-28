@@ -436,10 +436,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     updateContractViewParam(value);
   }, [updateContractViewParam]);
 
-  const contractsListUrl = useMemo(() => {
-    const targetSubtab = contract?.is_template ? 'templates' : 'client-contracts';
-    return `/msp/billing?tab=contracts&subtab=${targetSubtab}`;
-  }, [contract?.is_template]);
+  const contractsListUrl = useMemo(() => (
+    contract?.is_template
+      ? '/msp/billing?tab=contract-templates'
+      : '/msp/billing?tab=client-contracts'
+  ), [contract?.is_template]);
 
   // Track if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -621,10 +622,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setIsDeleting(true);
     try {
       await deleteContract(detailContractId);
-      const params = new URLSearchParams();
-      params.set('tab', 'contracts');
-      params.set('subtab', 'client-contracts');
-      router.push(`/msp/billing?${params.toString()}`);
+      router.push('/msp/billing?tab=client-contracts');
     } catch (err) {
       console.error('Error deleting contract:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete contract');

@@ -30,6 +30,11 @@
       "types": "./dist/lib/index.d.ts",
       "import": "./dist/lib/index.mjs",
       "require": "./dist/lib/index.js"
+    },
+    "./lib/liveUpdates": {
+      "types": "./dist/lib/liveUpdates.d.ts",
+      "import": "./dist/lib/liveUpdates.mjs",
+      "require": "./dist/lib/liveUpdates.js"
     }
   },
   "scripts": {
@@ -40,6 +45,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/tags": "*",

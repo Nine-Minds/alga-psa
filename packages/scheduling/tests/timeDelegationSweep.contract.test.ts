@@ -13,9 +13,10 @@ describe('time/delegation narrowing sweep contracts', () => {
     expect(delegationSource).toContain("type: 'time_entry'");
     expect(delegationSource).toContain("action: 'read'");
     expect(delegationSource).toContain("action: 'approve'");
-    expect(delegationSource).toContain('function buildTimesheetNotSelfApproverGuard(');
     expect(delegationSource).toContain('async function resolveBundleRulesOrThrow(');
-    expect(delegationSource).toContain("code: 'timesheet_not_self_approver_denied'");
+    expect(delegationSource).toContain('new BuiltinAuthorizationKernelProvider()');
+    expect(delegationSource).not.toContain('function buildTimesheetNotSelfApproverGuard(');
+    expect(delegationSource).not.toContain("code: 'timesheet_not_self_approver_denied'");
     expect(delegationSource).toContain('const managedUserIds = canReadAll ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);');
     expect(delegationSource).toContain("resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot access other users time sheets')");
     expect(delegationSource).toContain("resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions')");

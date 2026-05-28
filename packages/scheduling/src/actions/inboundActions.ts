@@ -1,0 +1,249 @@
+import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, withTransaction } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
+
+interface CreateTimeEntryMappedValues extends Record<string, unknown> {
+  user_id: string;
+  work_item_type: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
+  work_item_id?: string;
+  service_id: string;
+  start_time: string;
+  duration_minutes: number;
+  notes?: string;
+  is_billable?: boolean;
+  tax_region?: string;
+  external_id?: string;
+}
+
+const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues> = {
+  name: 'createTimeEntry',
+  entityType: 'time_entry',
+  displayName: 'Create Time Entry',
+  description: 'Create a time entry from an inbound webhook payload.',
+  targetFields: [
+    { name: 'user_id', type: 'ref', required: true, refEntityType: 'user', description: 'User to log time for' },
+    {
+      name: 'work_item_type',
+      type: 'enum',
+      required: true,
+      description: 'Work item type',
+      enumValues: ['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction'],
+    },
+    { name: 'work_item_id', type: 'ref', required: false, refEntityType: 'work_item', description: 'Work item ID' },
+    { name: 'service_id', type: 'ref', required: true, refEntityType: 'service', description: 'Service ID' },
+    { name: 'start_time', type: 'string', required: true, description: 'Start timestamp' },
+    { name: 'duration_minutes', type: 'int', required: true, description: 'Duration in minutes' },
+    { name: 'notes', type: 'string', required: false, description: 'Time entry notes' },
+    { name: 'is_billable', type: 'boolean', required: false, description: 'Whether the entry is billable' },
+    { name: 'tax_region', type: 'string', required: false, description: 'Tax region' },
+    { name: 'external_id', type: 'string', required: false, description: 'External time entry identifier to map' },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const timeEntry = await withTransaction(knex, async (trx) => {
+      const startTime = new Date(mappedValues.start_time);
+      if (Number.isNaN(startTime.getTime())) {
+        throw new Error('VALIDATION_ERROR: start_time must be a valid timestamp');
+      }
+
+      if (mappedValues.duration_minutes <= 0) {
+        throw new Error('VALIDATION_ERROR: duration_minutes must be greater than zero');
+      }
+
+      const endTime = new Date(startTime.getTime() + mappedValues.duration_minutes * 60_000);
+      await assertTimeEntryReferences({
+        trx,
+        tenant: ctx.tenant,
+        userId: mappedValues.user_id,
+        serviceId: mappedValues.service_id,
+        workItemType: mappedValues.work_item_type,
+        workItemId: mappedValues.work_item_id,
+      });
+
+      const workTimezone = await resolveUserTimeZone(trx, ctx.tenant, mappedValues.user_id);
+      const { work_date, work_timezone } = computeWorkDateFields(startTime, workTimezone);
+      const timeSheetId = await getOrCreateTimeSheetForWorkDate(trx, ctx.tenant, mappedValues.user_id, work_date);
+      const billableDuration = mappedValues.is_billable === false ? 0 : mappedValues.duration_minutes;
+
+      const [created] = await trx('time_entries')
+        .insert({
+          tenant: ctx.tenant,
+          user_id: mappedValues.user_id,
+          work_item_id: mappedValues.work_item_id ?? null,
+          work_item_type: mappedValues.work_item_type,
+          service_id: mappedValues.service_id,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          work_date,
+          work_timezone,
+          billable_duration: billableDuration,
+          notes: mappedValues.notes ?? '',
+          time_sheet_id: timeSheetId,
+          approval_status: 'DRAFT',
+          tax_region: mappedValues.tax_region ?? null,
+          invoiced: false,
+          created_by: mappedValues.user_id,
+          updated_by: mappedValues.user_id,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now(),
+        })
+        .returning(['entry_id', 'work_item_id', 'work_item_type', 'billable_duration', 'created_at']);
+
+      if (mappedValues.external_id) {
+        await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'time_entry', created.entry_id, mappedValues.external_id, {
+          knex: trx,
+          metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+        });
+      }
+
+      return created;
+    });
+
+    await publishEvent({
+      eventType: 'TIME_ENTRY_CREATED',
+      payload: {
+        tenantId: ctx.tenant,
+        timeEntryId: timeEntry.entry_id,
+        userId: mappedValues.user_id,
+        workItemId: timeEntry.work_item_id,
+        workItemType: timeEntry.work_item_type,
+        duration: mappedValues.duration_minutes,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return {
+      success: true,
+      entityType: 'time_entry',
+      entityId: timeEntry.entry_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        billable_duration: timeEntry.billable_duration,
+        work_item_type: timeEntry.work_item_type,
+      },
+    };
+  },
+};
+
+registerAction(createTimeEntryAction);
+
+export const timeEntryInboundActions = [createTimeEntryAction];
+
+async function assertTimeEntryReferences(args: {
+  trx: any;
+  tenant: string;
+  userId: string;
+  serviceId: string;
+  workItemType: CreateTimeEntryMappedValues['work_item_type'];
+  workItemId?: string;
+}): Promise<void> {
+  const user = await args.trx('users').where({ tenant: args.tenant, user_id: args.userId }).first('user_id');
+  if (!user) {
+    throw new Error(`VALIDATION_ERROR: user_id "${args.userId}" does not exist`);
+  }
+
+  const service = await args.trx('service_catalog')
+    .where({ tenant: args.tenant, service_id: args.serviceId })
+    .first('service_id');
+  if (!service) {
+    throw new Error(`VALIDATION_ERROR: service_id "${args.serviceId}" does not exist`);
+  }
+
+  if (args.workItemType === 'ad_hoc') {
+    return;
+  }
+
+  if (!args.workItemId) {
+    throw new Error(`VALIDATION_ERROR: work_item_id is required when work_item_type is ${args.workItemType}`);
+  }
+
+  const workItemTable = workItemTableForType(args.workItemType);
+  if (!workItemTable) {
+    return;
+  }
+
+  if (args.workItemType === 'ticket') {
+    const ticket = await args.trx('tickets')
+      .where({ tenant: args.tenant, ticket_id: args.workItemId })
+      .first('ticket_id', 'master_ticket_id');
+    if (!ticket) {
+      throw new Error(`VALIDATION_ERROR: ticket work_item_id "${args.workItemId}" does not exist`);
+    }
+    if (ticket.master_ticket_id) {
+      throw new Error(
+        'VALIDATION_ERROR: this ticket is bundled; time entries must be added on the master ticket.',
+      );
+    }
+    return;
+  }
+
+  const workItem = await args.trx(workItemTable.table)
+    .where({ tenant: args.tenant, [workItemTable.idColumn]: args.workItemId })
+    .first(workItemTable.idColumn);
+  if (!workItem) {
+    throw new Error(`VALIDATION_ERROR: ${args.workItemType} work_item_id "${args.workItemId}" does not exist`);
+  }
+}
+
+function workItemTableForType(
+  workItemType: CreateTimeEntryMappedValues['work_item_type'],
+): { table: string; idColumn: string } | null {
+  switch (workItemType) {
+    case 'ticket':
+      return { table: 'tickets', idColumn: 'ticket_id' };
+    case 'project_task':
+      return { table: 'project_tasks', idColumn: 'task_id' };
+    case 'interaction':
+      return { table: 'interactions', idColumn: 'interaction_id' };
+    case 'non_billable_category':
+      return null;
+    case 'ad_hoc':
+      return null;
+    default:
+      return null;
+  }
+}
+
+async function getOrCreateTimeSheetForWorkDate(
+  trx: any,
+  tenant: string,
+  userId: string,
+  workDate: string,
+): Promise<string> {
+  const period = await trx('time_periods')
+    .where({ tenant })
+    .where('start_date', '<=', workDate)
+    .where('end_date', '>', workDate)
+    .first('period_id');
+
+  if (!period) {
+    throw new Error(`VALIDATION_ERROR: no time period found for work_date "${workDate}"`);
+  }
+
+  const existing = await trx('time_sheets')
+    .where({
+      tenant,
+      period_id: period.period_id,
+      user_id: userId,
+    })
+    .first('id');
+
+  if (existing) {
+    return existing.id;
+  }
+
+  const [created] = await trx('time_sheets')
+    .insert({
+      tenant,
+      period_id: period.period_id,
+      user_id: userId,
+      approval_status: 'DRAFT',
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    })
+    .returning('id');
+
+  return created.id;
+}

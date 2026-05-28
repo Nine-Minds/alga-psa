@@ -82,6 +82,11 @@ export type TicketComment = {
   optimistic?: boolean;
   reactions?: AggregatedReaction[];
   reaction_user_names?: Record<string, string>;
+  // Threading (web feature parity; surfaced via v1 contract). Absent on legacy
+  // rows and system events — the grouping util falls back to comment_id.
+  thread_id?: string | null;
+  parent_comment_id?: string | null;
+  deleted_at?: string | null;
 };
 
 export type TicketStatus = {
@@ -185,6 +190,7 @@ export function addTicketComment(
     comment_text: string;
     is_internal: boolean;
     is_resolution?: boolean;
+    parent_comment_id?: string;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -199,6 +205,7 @@ export function addTicketComment(
       comment_text: params.comment_text,
       is_internal: params.is_internal,
       ...(params.is_resolution ? { is_resolution: true } : {}),
+      ...(params.parent_comment_id ? { parent_comment_id: params.parent_comment_id } : {}),
     },
   });
 }

@@ -36,7 +36,7 @@ function walkTsFiles(dir: string): string[] {
   return out;
 }
 
-describe('Algadesk composition dependency guard', () => {
+describe('AlgaDesk composition dependency guard', () => {
   it('T004/F043-F050: package exists with constrained dependency surface', () => {
     const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
       name: string;

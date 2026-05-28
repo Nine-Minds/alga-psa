@@ -322,6 +322,9 @@ describe('BillingEngine end-exclusive query boundaries', () => {
             service_id: 'service-1',
             service_name: 'Software Development',
             default_rate: 15000,
+            // Joined from service_prices for the contract's currency; required since the
+            // engine no longer falls back to the untagged service_catalog.default_rate.
+            currency_rate: 15000,
             tax_rate_id: null,
             start_time: new Date('2026-02-13T10:00:00.000Z'),
             end_time: new Date('2026-02-13T11:00:00.000Z'),

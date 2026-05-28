@@ -68,7 +68,7 @@ export function TicketDetails({
   const { t, i18n } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
-  const isAlgadeskPortal = productCode === 'algadesk';
+  const isAlgaDeskPortal = productCode === 'algadesk';
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
@@ -170,7 +170,7 @@ export function TicketDetails({
   // Fetch appointment requests for this ticket
   useEffect(() => {
     const fetchAppointments = async () => {
-      if (isAlgadeskPortal) {
+      if (isAlgaDeskPortal) {
         setAppointments([]);
         setAppointmentsLoading(false);
         return;
@@ -210,7 +210,7 @@ export function TicketDetails({
     };
 
     fetchAppointments();
-  }, [ticketId, isOpen, asStandalone, isAlgadeskPortal]);
+  }, [ticketId, isOpen, asStandalone, isAlgaDeskPortal]);
 
   // Fetch current user on mount (for comment authorship)
   useEffect(() => {
@@ -821,17 +821,17 @@ export function TicketDetails({
                     setDocuments(docs);
                   }}
                   getFoldersFn={getClientFolders}
-                  forceUploadToRoot={isAlgadeskPortal}
-                  allowDocumentSharing={!isAlgadeskPortal}
-                  allowLinkExistingDocuments={!isAlgadeskPortal}
-                  allowBlockDocuments={!isAlgadeskPortal}
+                  forceUploadToRoot={isAlgaDeskPortal}
+                  allowDocumentSharing={!isAlgaDeskPortal}
+                  allowLinkExistingDocuments={!isAlgaDeskPortal}
+                  allowBlockDocuments={!isAlgaDeskPortal}
                 />
               </Card>
             </div>
           )}
 
           {/* Appointment Requests Section */}
-          {!isAlgadeskPortal && ticket.ticket_id && (
+          {!isAlgaDeskPortal && ticket.ticket_id && (
             <div>
               <TicketAppointmentRequests
                 ticketId={ticket.ticket_id}

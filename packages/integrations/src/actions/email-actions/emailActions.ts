@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -392,6 +393,17 @@ export const createCommentFromEmail = withAuth(async (
         .where({ ticket_id: commentData.ticket_id, tenant })
         .update({ response_state: 'awaiting_client' });
     }
+
+    await publishTicketUpdate({
+      tenantId: tenant,
+      ticketId: commentData.ticket_id,
+      updatedFields: ['comments', 'response_state'],
+      updatedBy: {
+        userId: commentData.author_id ?? 'email',
+        displayName: 'Email',
+      },
+      updatedAt: new Date().toISOString(),
+    });
 
     return comment.comment_id;
   });

@@ -3,6 +3,8 @@ import { TenantEntity } from '.';
 export interface IProjectTaskComment extends TenantEntity {
   taskCommentId: string;
   taskId: string;  // REQUIRED - always present
+  threadId?: string;
+  parentCommentId?: string | null;
   userId: string;
   authorType: 'internal';  // Always 'internal'
 
@@ -12,6 +14,7 @@ export interface IProjectTaskComment extends TenantEntity {
   createdAt: string;
   updatedAt?: string;
   editedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface IProjectTaskCommentWithUser extends IProjectTaskComment {

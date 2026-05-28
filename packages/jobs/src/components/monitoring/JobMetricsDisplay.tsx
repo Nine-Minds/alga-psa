@@ -16,17 +16,11 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     : 0;
 
   const isMixedRunners = metrics.byRunner && metrics.byRunner.pgboss > 0 && metrics.byRunner.temporal > 0;
-  
-  let totalLabel = t('metrics.labels.totalJobs', { defaultValue: 'Total Jobs' });
-  if (metrics.byRunner && !isMixedRunners) {
-    if (metrics.byRunner.pgboss > 0) totalLabel = t('metrics.labels.totalJobsPgBoss', { defaultValue: 'Total Jobs (PG Boss)' });
-    if (metrics.byRunner.temporal > 0) totalLabel = t('metrics.labels.totalJobsTemporal', { defaultValue: 'Total Jobs (Temporal)' });
-  }
 
   const metricsData = [
     {
       id: 'total-jobs-metric',
-      label: totalLabel,
+      label: t('metrics.labels.totalJobs', { defaultValue: 'Total Jobs' }),
       value: metrics.total,
       icon: ListChecks,
       color: 'text-[rgb(var(--color-text-700))]',

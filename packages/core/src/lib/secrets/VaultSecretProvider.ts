@@ -71,7 +71,6 @@ export class VaultSecretProvider implements ISecretProvider {
     }
 
     try {
-      logger.debug(`VaultSecretProvider: Reading secret at path: ${secretPath}, key: ${secretName}`);
       const response = await this.client.read(secretPath);
 
       // Check if data and the specific secret name exist
@@ -85,7 +84,6 @@ export class VaultSecretProvider implements ISecretProvider {
           return undefined;
         }
       } else {
-        logger.debug(`VaultSecretProvider: Secret key '${secretName}' not found at path '${secretPath}'.`);
         return undefined;
       }
     } catch (error: unknown) {

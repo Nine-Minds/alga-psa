@@ -27,6 +27,7 @@
     "close": "Fermer"
   },
   "runList": {
+    "shareTooltip": "Imprimer et exporter",
     "quickRanges": {
       "last24h": "Dernières 24 h",
       "last7d": "7 derniers jours"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "{{count}} exécution(s) annulée(s).",
       "bulkSkippedIneligibleCount": "{{count}} exécution(s) non éligible(s) ignorée(s).",
       "bulkActionFailed": "Échec de l’action groupée"
+    },
+    "print": {
+      "title": "Exécutions de workflow",
+      "selectedTitle": "Exécutions sélectionnées",
+      "subtitle": "{{count}} exécutions",
+      "noRuns": "Aucune exécution de workflow à imprimer",
+      "columns": {
+        "run": "Exécution",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Statut",
+        "started": "Démarré",
+        "updated": "Mis à jour",
+        "duration": "Durée"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des exécutions de workflow."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Ouvrir l’éditeur",
       "apply": "Appliquer",
       "cancel": "Annuler"
+    },
+    "askAi": {
+      "ariaLabel": "Demander de l’aide à l’IA pour les transformations",
+      "title": "Demander à l’IA",
+      "shortcutHint": "Ouvrir Quick Ask pour l’aide sur les transformations"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Chargement de l'automatisation des workflows...",
-    "featureName": "Automatisation des workflows",
-    "notEnabled": "Cette fonctionnalité est expérimentale et n'est pas activée pour votre locataire.",
-    "experimental": "Expérimental",
-    "enableHint": "Activez l'automatisation des workflows dans les paramètres pour y accéder.",
-    "goToExperimental": "Accéder aux fonctionnalités expérimentales",
-    "openSettings": "Ouvrir les paramètres"
+    "loading": "Chargement de l'automatisation des workflows..."
   },
   "flow": {
     "designer": {

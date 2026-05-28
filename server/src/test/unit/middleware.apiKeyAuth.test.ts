@@ -27,6 +27,10 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/workflow-definitions/workflow-123/audit/export')).toBe(true);
   });
 
+  it('allows ticket live token APIs to use MSP session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
+  });
+
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);

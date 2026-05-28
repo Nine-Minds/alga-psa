@@ -12,7 +12,7 @@
     "allOpen": "All Open Tickets",
     "allClosed": "All Closed Tickets",
     "allPriorities": "All Priorities",
-    "search": "Search tickets...",
+    "search": "Search tickets and comments...",
     "category": "Filter by category",
     "clearFilters": "Clear filters",
     "assignee": "Assignee",
@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Ticketing Dashboard",
     "addTicket": "Add Ticket",
+    "shareTooltip": "Print, import and export",
     "exportCsv": "Export CSV",
     "bundledToggle": "Bundled",
     "exportSelectedTooltip_one": "Export {{count}} selected ticket to CSV",
@@ -393,13 +394,60 @@
       "decrease": "Decrease ticket list spacing",
       "increase": "Increase ticket list spacing",
       "reset": "Reset ticket list spacing"
-    }
+    },
+    "print": {
+      "action": "Print",
+      "selectedAction_one": "Print selected ({{count}})",
+      "selectedAction_other": "Print selected ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Selected Tickets ({{count}})",
+      "selectedTitle_other": "Selected Tickets ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "No tickets to print",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Title",
+        "client": "Client",
+        "status": "Status",
+        "priority": "Priority",
+        "assigned": "Assigned",
+        "dueDate": "Due Date"
+      },
+      "emptyValue": "—",
+      "noDueDate": "No due date",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "selectedTitle": "Print options ({{count}} selected)",
+        "description": "Choose which columns to include when printing tickets."
+      }
+    },
+    "exportSelectedAction": "Export selected ({{count}})",
+    "exportAction": "Export CSV",
+    "importAction": "Import CSV"
   },
   "bulk": {
-    "moveToBoard": "Move to Board",
-    "deleteSelected_one": "Delete Selected ({{count}})",
-    "deleteSelected_other": "Delete Selected ({{count}})",
     "bundleTickets": "Bundle Tickets",
+    "actionBar": {
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "move": "Move to Board",
+      "bundle": "Bundle",
+      "delete": "Delete",
+      "clear": "Clear",
+      "bundleNeedsTwo": "Select at least 2 tickets to bundle",
+      "assign": "Assign",
+      "status": "Status",
+      "priority": "Priority",
+      "tags": "Tags",
+      "dueDate": "Due Date",
+      "statusDisabledMultiBoard": "Selected tickets are on different boards",
+      "statusResolvingBoards": "Checking the boards of selected tickets…",
+      "more": "More"
+    },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
     "destinationBoard": "Destination Board",
@@ -499,7 +547,81 @@
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
-      "deleteRequired": "You must be logged in to delete tickets"
+      "deleteRequired": "You must be logged in to delete tickets",
+      "assignRequired": "You must be logged in to reassign tickets",
+      "tagsRequired": "You must be logged in to add tags",
+      "dueDateRequired": "You must be logged in to update tickets",
+      "statusRequired": "You must be logged in to update tickets",
+      "priorityRequired": "You must be logged in to update tickets"
+    },
+    "assign": {
+      "dialogTitle": "Assign Selected Tickets",
+      "message": "Reassign {{count}} selected ticket(s) to:",
+      "unassigned": "Not assigned",
+      "teamHint": "The team lead becomes the primary assignee; other team members are added as additional agents.",
+      "confirm_one": "Reassign {{count}} Ticket",
+      "confirm_other": "Reassign {{count}} Tickets",
+      "submitting": "Reassigning...",
+      "success_one": "{{count}} ticket reassigned",
+      "success_other": "{{count}} tickets reassigned",
+      "partialFailure": "Some tickets could not be reassigned",
+      "failure": "Failed to reassign selected tickets",
+      "failedHeading": "The following tickets could not be reassigned:"
+    },
+    "tags": {
+      "dialogTitle": "Add Tags to Selected Tickets",
+      "message": "Add one or more tags to {{count}} selected ticket(s). Tags already on a ticket are skipped.",
+      "placeholder": "Type a tag and press Enter",
+      "confirm_one": "Add Tags to {{count}} Ticket",
+      "confirm_other": "Add Tags to {{count}} Tickets",
+      "submitting": "Adding tags...",
+      "success_one": "Tags added to {{count}} ticket",
+      "success_other": "Tags added to {{count}} tickets",
+      "partialFailure": "Tags could not be added to some tickets",
+      "failure": "Failed to add tags to selected tickets",
+      "failedHeading": "Tags could not be added to the following tickets:"
+    },
+    "dueDate": {
+      "dialogTitle": "Set Due Date for Selected Tickets",
+      "message": "Set or clear the due date on {{count}} selected ticket(s).",
+      "modeSet": "Set to",
+      "modeClear": "Clear due date",
+      "placeholder": "Pick a date",
+      "confirm_one": "Update {{count}} Ticket",
+      "confirm_other": "Update {{count}} Tickets",
+      "submitting": "Updating...",
+      "success_one": "Due date updated on {{count}} ticket",
+      "success_other": "Due date updated on {{count}} tickets",
+      "partialFailure": "Due date could not be updated on some tickets",
+      "failure": "Failed to update due date on selected tickets",
+      "failedHeading": "Due date could not be updated on the following tickets:"
+    },
+    "status": {
+      "dialogTitle": "Change Status for Selected Tickets",
+      "message": "Set the status for {{count}} selected ticket(s):",
+      "placeholder": "Select a status",
+      "loading": "Loading statuses...",
+      "confirm_one": "Update {{count}} Ticket",
+      "confirm_other": "Update {{count}} Tickets",
+      "submitting": "Updating...",
+      "success_one": "Status updated on {{count}} ticket",
+      "success_other": "Status updated on {{count}} tickets",
+      "partialFailure": "Status could not be updated on some tickets",
+      "failure": "Failed to update status on selected tickets",
+      "failedHeading": "Status could not be updated on the following tickets:"
+    },
+    "priority": {
+      "dialogTitle": "Change Priority for Selected Tickets",
+      "message": "Set the priority for {{count}} selected ticket(s):",
+      "placeholder": "Select a priority",
+      "confirm_one": "Update {{count}} Ticket",
+      "confirm_other": "Update {{count}} Tickets",
+      "submitting": "Updating...",
+      "success_one": "Priority updated on {{count}} ticket",
+      "success_other": "Priority updated on {{count}} tickets",
+      "partialFailure": "Priority could not be updated on some tickets",
+      "failure": "Failed to update priority on selected tickets",
+      "failedHeading": "Priority could not be updated on the following tickets:"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "hr",
       "hrs": "hrs",
       "min": "min"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} is editing",
+      "multiple_one": "{{name}} and {{count}} other are editing",
+      "multiple_other": "{{name}} and {{count}} others are editing"
+    },
+    "remoteFieldUpdated": "{{name}} updated {{field}}",
+    "connection": {
+      "reconnecting": "Live updates offline - reconnecting...",
+      "unavailable": "Live updates unavailable"
     }
   }
 }

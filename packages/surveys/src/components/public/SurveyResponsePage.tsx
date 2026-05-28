@@ -9,6 +9,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { submitSurveyResponse } from '@alga-psa/surveys/actions/surveyResponseActions';
 import type { SurveyInvitationView } from '@alga-psa/surveys/actions/surveyResponseActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
 import { RatingButton, RatingDisplay, type RatingType } from '../shared/RatingDisplay';
 
 interface SurveyResponsePageProps {
@@ -89,7 +90,12 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
           <CardDescription>{invitation.template.promptText}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p>{t('response.submittedMessage', { defaultValue: '{{thankYouText}}', thankYouText: thankYouMessage })}</p>
+          <p>
+            {interpolateFallback(
+              t('response.submittedMessage', { defaultValue: '{{thankYouText}}', thankYouText: thankYouMessage }),
+              { thankYouText: thankYouMessage }
+            )}
+          </p>
           <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-4">
             <span className="text-sm font-medium text-gray-600">
               {t('response.ratingSubmitted', { defaultValue: 'Feedback submitted' })}:
@@ -135,10 +141,13 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
 
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              {t('response.ratingAssistive', {
-                defaultValue: 'Select a score from 1 to {{scale}}',
-                scale: ratingScale,
-              })}
+              {interpolateFallback(
+                t('response.ratingAssistive', {
+                  defaultValue: 'Select a score from 1 to {{scale}}',
+                  scale: ratingScale,
+                }),
+                { scale: ratingScale }
+              )}
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               {ratingOptions.map(({ rating, label }) => {

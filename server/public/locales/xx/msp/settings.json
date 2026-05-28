@@ -25,7 +25,8 @@
     "teamManagement": "11111",
     "loadingTeam": "11111",
     "loadingExperimental": "11111",
-    "loadingInteractions": "11111"
+    "loadingInteractions": "11111",
+    "keyboardShortcuts": "11111"
   },
   "unsavedChanges": {
     "title": "11111",
@@ -90,10 +91,6 @@
         "name": "11111",
         "description": "11111",
         "restriction": "11111"
-      },
-      "workflowAutomation": {
-        "name": "11111",
-        "description": "11111"
       }
     },
     "actions": {

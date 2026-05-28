@@ -56,6 +56,17 @@ data:
       PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@"
     }
 
+    createdb_admin() {
+      local database="$1"
+      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      local pg_password
+
+      pg_password="$(get_admin_password)"
+      PGPASSWORD="${pg_password}" createdb -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" "${database}"
+    }
+
     psql_quiet() {
       local database="$1"
       shift
@@ -66,6 +77,65 @@ data:
 
       pg_password="$(get_admin_password)"
       PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@" 2>&1
+    }
+
+    ensure_bootstrap_lock_table() {
+      psql_admin postgres <<'SQL'
+    CREATE TABLE IF NOT EXISTS public.alga_appliance_bootstrap_lock (
+      id integer PRIMARY KEY,
+      holder text NOT NULL,
+      heartbeat_at timestamptz NOT NULL DEFAULT now()
+    );
+    SQL
+    }
+
+    acquire_bootstrap_lock() {
+      local started_at
+      local now
+      local timeout_seconds="${BOOTSTRAP_LOCK_TIMEOUT_SECONDS:-1800}"
+      local stale_seconds="${BOOTSTRAP_LOCK_STALE_SECONDS:-120}"
+      local heartbeat_seconds="${BOOTSTRAP_LOCK_HEARTBEAT_SECONDS:-10}"
+      local retry_seconds="${BOOTSTRAP_WAIT_RETRY_SECONDS:-2}"
+      local acquired
+
+      BOOTSTRAP_LOCK_HOLDER="${HOSTNAME:-bootstrap}-$$-$(date +%s)"
+      started_at="$(date +%s)"
+      ensure_bootstrap_lock_table
+
+      while true; do
+        acquired="$(psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -v stale_seconds="${stale_seconds}" -Atqc "WITH stale AS (DELETE FROM public.alga_appliance_bootstrap_lock WHERE id = 1 AND heartbeat_at < now() - (:'stale_seconds' || ' seconds')::interval RETURNING 1), inserted AS (INSERT INTO public.alga_appliance_bootstrap_lock (id, holder, heartbeat_at) VALUES (1, :'holder', now()) ON CONFLICT DO NOTHING RETURNING 1) SELECT EXISTS (SELECT 1 FROM inserted);")"
+        if echo "${acquired}" | grep -q '^t$'; then
+          log "Acquired appliance bootstrap lock (${BOOTSTRAP_LOCK_HOLDER})"
+          (
+            while true; do
+              sleep "${heartbeat_seconds}"
+              psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -c "UPDATE public.alga_appliance_bootstrap_lock SET heartbeat_at = now() WHERE id = 1 AND holder = :'holder';" >/dev/null || true
+            done
+          ) &
+          BOOTSTRAP_LOCK_HEARTBEAT_PID="$!"
+          trap release_bootstrap_lock EXIT INT TERM
+          return 0
+        fi
+
+        now="$(date +%s)"
+        if [ $((now - started_at)) -ge "${timeout_seconds}" ]; then
+          log "ERROR: Timed out waiting for another appliance bootstrap attempt to finish after ${timeout_seconds}s"
+          exit 1
+        fi
+
+        log "Another appliance bootstrap attempt is active; waiting for lock"
+        sleep "${retry_seconds}"
+      done
+    }
+
+    release_bootstrap_lock() {
+      if [ -n "${BOOTSTRAP_LOCK_HEARTBEAT_PID:-}" ]; then
+        kill "${BOOTSTRAP_LOCK_HEARTBEAT_PID}" 2>/dev/null || true
+      fi
+      if [ -n "${BOOTSTRAP_LOCK_HOLDER:-}" ]; then
+        psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -c "DELETE FROM public.alga_appliance_bootstrap_lock WHERE id = 1 AND holder = :'holder';" >/dev/null || true
+        log "Released appliance bootstrap lock (${BOOTSTRAP_LOCK_HOLDER})"
+      fi
     }
 
     wait_for_postgres() {
@@ -164,13 +234,41 @@ data:
 
     ensure_database() {
       local db_name="$1"
-      psql_admin postgres -v db_name="${db_name}" <<'SQL'
-    SELECT CASE
-      WHEN EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name')
-        THEN NULL
-      ELSE format('CREATE DATABASE %I', :'db_name')
-    END \gexec
-    SQL
+      local output
+
+      if database_exists "${db_name}"; then
+        log "Database ${db_name} already exists"
+        return 0
+      fi
+
+      if output="$(createdb_admin "${db_name}" 2>&1)"; then
+        log "Created database ${db_name}"
+        return 0
+      fi
+
+      if database_exists "${db_name}"; then
+        log "Database ${db_name} was created by another bootstrap attempt"
+        return 0
+      fi
+
+      log "ERROR: Failed to create database ${db_name}"
+      log "ERROR: ${output}"
+      exit 1
+    }
+
+    clear_stale_knex_migration_lock() {
+      local db_name="${DB_NAME_SERVER:-server}"
+      local locked_count
+
+      if ! psql_quiet "${db_name}" -Atqc "SELECT to_regclass('public.knex_migrations_lock') IS NOT NULL;" | grep -q '^t$'; then
+        return 0
+      fi
+
+      locked_count="$(psql_quiet "${db_name}" -Atqc "SELECT COUNT(*) FROM knex_migrations_lock WHERE is_locked = 1;" | tr -d '[:space:]')"
+      if [ "${locked_count:-0}" -gt 0 ]; then
+        log "Clearing stale Knex migration lock before appliance-owned migration run"
+        psql_admin "${db_name}" -c "UPDATE knex_migrations_lock SET is_locked = 0 WHERE is_locked = 1;"
+      fi
     }
 
     ensure_role() {
@@ -233,6 +331,7 @@ data:
     }
 
     wait_for_postgres
+    acquire_bootstrap_lock
     preflight_database_state
 
     log "Creating appliance databases and roles"
@@ -263,6 +362,8 @@ data:
 
       log "Granting necessary permissions"
       PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'GRANT ALL ON SCHEMA public TO postgres;'
+
+      clear_stale_knex_migration_lock
 
       log "Running migrations"
       NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose

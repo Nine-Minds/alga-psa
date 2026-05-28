@@ -6,7 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
-import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
+import type { IInvoiceAnnotation, IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
 import {
@@ -15,6 +15,7 @@ import {
   getResolvedInvoiceTemplateId,
   type InvoicePurchaseOrderSummary
 } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
@@ -71,8 +72,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
+  const [invoiceAnnotations, setInvoiceAnnotations] = useState<IInvoiceAnnotation[]>([]);
   const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
   const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
+  const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
@@ -201,6 +204,60 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     };
 
     void loadSourceQuote();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [invoiceId]);
+
+  useEffect(() => {
+    if (!detailedInvoiceData || typeof window === 'undefined') {
+      return;
+    }
+
+    const anchorId = window.location.hash.slice(1);
+    if (!anchorId.startsWith('item-') && !anchorId.startsWith('annotation-')) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(anchorId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedAnchor(anchorId);
+    });
+    const timeout = window.setTimeout(() => setHighlightedAnchor(null), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [detailedInvoiceData, invoiceAnnotations]);
+
+  useEffect(() => {
+    if (!invoiceId || typeof window === 'undefined') {
+      setInvoiceAnnotations([]);
+      return;
+    }
+
+    const anchorId = window.location.hash.slice(1);
+    if (!anchorId.startsWith('annotation-')) {
+      setInvoiceAnnotations([]);
+      return;
+    }
+
+    let isMounted = true;
+    getInvoiceAnnotations(invoiceId)
+      .then((annotations) => {
+        if (isMounted) {
+          setInvoiceAnnotations(annotations);
+        }
+      })
+      .catch((annotationError) => {
+        console.error(`Error fetching annotations for invoice ${invoiceId}:`, annotationError);
+        if (isMounted) {
+          setInvoiceAnnotations([]);
+        }
+      });
 
     return () => {
       isMounted = false;
@@ -434,6 +491,42 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             </div>
 
             <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
+              <div className="space-y-1">
+                {detailedInvoiceData.items.map((item) => {
+                  const anchorId = `item-${item.id}`;
+                  const isHighlighted = highlightedAnchor === anchorId;
+                  return (
+                    <div
+                      key={anchorId}
+                      id={anchorId}
+                      className={`scroll-mt-24 rounded px-2 py-1 text-xs ${
+                        isHighlighted
+                          ? 'search-highlight mb-2 border border-yellow-400 bg-yellow-50 text-yellow-900'
+                          : 'sr-only'
+                      }`}
+                    >
+                      {item.description}
+                    </div>
+                  );
+                })}
+                {invoiceAnnotations.map((annotation) => {
+                  const anchorId = `annotation-${annotation.annotation_id}`;
+                  const isHighlighted = highlightedAnchor === anchorId;
+                  return (
+                    <div
+                      key={anchorId}
+                      id={anchorId}
+                      className={`scroll-mt-24 rounded px-2 py-1 text-xs ${
+                        isHighlighted
+                          ? 'search-highlight mb-2 border border-yellow-400 bg-yellow-50 text-yellow-900'
+                          : 'sr-only'
+                      }`}
+                    >
+                      {annotation.content}
+                    </div>
+                  );
+                })}
+              </div>
               <div
                 style={{
                   zoom: scale,

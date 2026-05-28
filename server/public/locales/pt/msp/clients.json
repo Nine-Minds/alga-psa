@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Clients Page",
     "description": "Main clients management page with search, filters, and client grid/list view",
-    "searchPlaceholder": "Search clients",
+    "searchPlaceholder": "Search clients, notes, documents, and interactions",
     "createClient": "Create Client",
     "createClientShort": "+ Create Client",
     "allClients": "All Clients",
@@ -133,6 +133,30 @@
     "singleInactiveSuccess": "{{name}} foi marcado como inativo com sucesso.",
     "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contato foram desativados com sucesso.",
     "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatos foram desativados com sucesso.",
+    "clientTypes": {
+      "company": "Empresa",
+      "individual": "Pessoa"
+    },
+    "print": {
+      "title": "Clientes",
+      "selectedTitle": "Clientes selecionados",
+      "subtitle": "{{count}} clientes",
+      "noClients": "Nenhum cliente para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Cliente",
+        "type": "Tipo",
+        "phone": "Telefone",
+        "address": "Endereço",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir os clientes."
+      }
+    },
+    "shareTooltip": "Imprimir, importar e exportar"
+    ,
     "defaultClientDeleteError": "Não é possível excluir o cliente padrão. Primeiro defina outro cliente como padrão em Configurações gerais.",
     "clientNotFound": "Cliente não encontrado.",
     "deletePermissionDenied": "Permissão negada: não é possível excluir clientes."
@@ -220,6 +244,12 @@
     "inboundDomainAddFailed": "Falha ao adicionar o domínio",
     "inboundDomainRemoved": "Domínio de e-mail de entrada removido",
     "inboundDomainRemoveFailed": "Falha ao remover o domínio",
+    "fields": {
+      "accountManager": "Gerente de conta",
+      "url": "URL",
+      "status": "Status"
+    }
+    ,
     "deactivateClientDescription": "Desativa o registro sem excluir seus dados.",
     "deactivateClientOnlyDescription": "Desative o cliente, mas mantenha seus contatos ativos."
   },
@@ -598,10 +628,10 @@
     "scenarios": {
       "description": "These examples illustrate how contract line disambiguation works in common scenarios for this client.",
       "scenario1Description": "When a service appears in both a bucket contract line and a standard contract line for this client:",
-      "scenario1Item1": "The bucket contract line is given priority by default",
-      "scenario1Item2": "Time entries and usage will be billed against the bucket contract line until it's depleted",
-      "scenario1Item3": "After the bucket is depleted, the standard contract line will be used automatically",
-      "scenario1Item4": "Users can manually override this behavior by explicitly selecting a contract line during time entry",
+      "scenario1Item1": "A linha de contrato do bucket é selecionada por padrão",
+      "scenario1Item2": "As entradas de tempo e o uso consomem a quantidade incluída no bucket e, em seguida, continuam na mesma linha de contrato do bucket como excedente à taxa de excedente configurada",
+      "scenario1Item3": "A faturação não muda automaticamente para a linha de contrato padrão quando o bucket é esgotado",
+      "scenario1Item4": "Os utilizadores podem substituir manualmente este padrão selecionando uma linha de contrato diferente durante a introdução do tempo",
       "scenario1Title": "Scenario 1: Bucket Plan + Standard Plan",
       "scenario2Description": "When a service appears in multiple standard contract lines for this client:",
       "scenario2Item1": "Users will be prompted to select which contract line to bill against during time entry",

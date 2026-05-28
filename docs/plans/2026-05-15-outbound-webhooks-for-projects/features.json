@@ -1,0 +1,50 @@
+[
+  {
+    "id": "F001",
+    "description": "PRECONDITION (already implemented, verification-only — do NOT rebuild): Phase 0 single-source consolidation. server/src/lib/webhooks/payloadFields.ts is the canonical home for WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY, WEBHOOK_TICKET_PAYLOAD_FIELDS, WebhookPayloadEntity, SupportedPayloadField, ALWAYS_INCLUDED_KEYS_BY_ENTITY (strict `as const satisfies Record<WebhookPayloadEntity, readonly string[]>`), payloadFieldsByEntitySchema, webhookEntityForEventType, and the projection helper. webhookSchemas.ts barrel re-exports for back-compat; webhookPayloadFields.ts deleted; OpenAPI route generates the per-entity schema from the registry. Loop action: verify workspace type-check + existing webhook tests pass, then this lands as its own standalone commit before any Phase 1 work.",
+    "implemented": true,
+    "prdRefs": ["7", "11"]
+  },
+  {
+    "id": "F002",
+    "description": "Rename projection helper `projectWebhookPayload` -> `applyPayloadAllowlist` across server/src/lib/webhooks/payloadFields.ts and all callers (webhookSubscriber.ts, integration test mocks, payloadFields.test.ts). Add an optional 4th argument `extraAlwaysIncluded?: string[]` that is unioned into the always-included key set (additive, no behavior change for existing ticket callers). One mechanical, isolated commit; all existing webhook tests stay green.",
+    "implemented": true,
+    "prdRefs": ["6", "7"]
+  },
+  {
+    "id": "F003",
+    "description": "New internal event PROJECT_TASK_UPDATED. In packages/event-schemas/src/schemas/eventBusSchema.ts: add 'PROJECT_TASK_UPDATED' to the event-type enum, define projectTaskUpdatedEventPayloadSchema { tenantId, projectId, projectTaskId, phaseId, userId?, occurredAt?, changes?: Record<string,{previous,new}> }, register it in the EventSchemas map and export the inferred type. In packages/projects/src/actions/projectTaskActions.ts: emit it from `updateTaskWithChecklist` ONLY, reusing the existing field-change diff, when >=1 tracked field changed. The other five task-mutation entry points intentionally do not emit it.",
+    "implemented": true,
+    "prdRefs": ["5", "7", "8"]
+  },
+  {
+    "id": "F008",
+    "description": "Tag-change webhook emission for project tasks + tickets (parity). In packages/tags/src/actions/tagActions.ts, on INTERACTIVE single-entity tag mutations ONLY (createTag :101, deleteTag :335, and the post-creation TagManager onChange path) and NOT the bulk createTagsForEntity :534 / createTagsForEntityWithTransaction :571 used at entity-creation time: when the entity's tag set actually changes, if tagged_type==='project_task' resolve {projectId, phaseId} from the task row and publishEvent PROJECT_TASK_UPDATED with changes:{tags:{previous,new}}; if tagged_type==='ticket' publishEvent TICKET_UPDATED with changes:{tags:{previous,new}}. No new public event types — these surface as the EXISTING project.task.updated / ticket.updated deliveries with a changes.tags diff (ticket webhook builder already attaches changes on TICKET_UPDATED at webhookTicketPayload.ts:143; F005 does the same for project tasks). CRITICAL: must not double-fire on entity creation (createTagsForEntity at TaskForm.tsx:910 runs immediately after PROJECT_TASK_CREATED). No-op tag writes emit nothing. Project side depends on F003; ticket side uses existing TICKET_UPDATED.",
+    "implemented": true,
+    "prdRefs": ["3", "5", "6", "7", "10"]
+  },
+  {
+    "id": "F004",
+    "description": "Project webhook metadata registration (single 'project' entity). (a) webhookActions.ts: append the 10 project/task public events to SUPPORTED_WEBHOOK_EVENTS. (b) webhookSchemas.ts: reconcile the public event enum to include all 10, KEEPING 'project.completed' and 'project.task.completed' as deprecated accepted aliases (no enum removal); document the alias. (c) payloadFields.ts: add the combined 'project' entry to WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY (project scalar fields + task-only fields + 'changes','phases','task_counts'; NO project-level 'tags'; 'tags' listed once for task coverage) and add `project: ['project_id']` to ALWAYS_INCLUDED_KEYS_BY_ENTITY keeping the strict satisfies type. Auto-extends validator + OpenAPI docs.",
+    "implemented": true,
+    "prdRefs": ["5", "6", "7", "8"]
+  },
+  {
+    "id": "F005",
+    "description": "Project event map + payload builders (pure new code, no callers yet). New webhookProjectEventMap.ts: ProjectWebhookPublicEvent/ProjectWebhookInternalEvent unions, PROJECT_INTERNAL_TO_PUBLIC map with deprecated-alias resolution, publicEventsForProject(), isProjectTaskEvent(). New webhookProjectPayload.ts: ProjectWebhookPayload (no tags) and ProjectTaskWebhookPayload (tags via 'project_task') types; buildProjectWebhookPayload (joins projects->clients/statuses/contacts/users, previous_status_* for status_changed, changes for updated); buildProjectTaskWebhookPayload (joins project_tasks->project_phases->projects->clients/statuses/users); 60s/256-LRU caches; uncached opt-in helpers fetchProjectPhasesForWebhook and fetchProjectTaskCountsForWebhook.",
+    "implemented": true,
+    "prdRefs": ["5", "7", "8"]
+  },
+  {
+    "id": "F006",
+    "description": "Project webhook subscriber, going live. New server/src/lib/eventBus/subscribers/projectWebhookSubscriber.ts: WEBHOOK_PROJECT_EVENT_TYPES, register/unregister fns, handleProjectEvent with toProjectWebhookSourceEvent type guard, branch on isProjectTaskEvent (project-level: buildProjectWebhookPayload, entity-id filter on projectId; task-level: buildProjectTaskWebhookPayload, filter on projectTaskId, applyPayloadAllowlist(..., extraAlwaysIncluded:['task_id'])), opt-in phases/task_counts fetched once per event batched outside the per-subscriber loop. Register the subscriber in server/src/lib/eventBus/subscribers/index.ts (this is the activation point).",
+    "implemented": true,
+    "prdRefs": ["4", "6", "7", "10"]
+  },
+  {
+    "id": "F007",
+    "description": "Test suite for project webhooks (unit + integration), one commit. Unit under server/src/lib/eventBus/subscribers/webhook/__tests__/: project payload shape/url/cache/projection, previous_status_* resolution, phases/task_counts opt-in gating, task payload with task_id surviving projection and project_task tags, event-map mapping incl. deprecated aliases. Integration: extend webhookDelivery.entityIdFilter.test.ts and webhookDelivery.tenantIsolation.test.ts with a project.created end-to-end fixture (create webhook -> mutate project -> assert HTTP delivery + webhook_deliveries row + correct projection). Full webhook suite + workspace type-check green.",
+    "implemented": true,
+    "prdRefs": ["10"]
+  }
+]

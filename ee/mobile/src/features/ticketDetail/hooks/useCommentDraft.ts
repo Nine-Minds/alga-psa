@@ -213,6 +213,98 @@ export function useCommentDraft(
     [client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, session, showToast, ticketId],
   );
 
+  // Lean reply path: optimistic insert nested under the parent, POST with
+  // parent_comment_id, reconcile, refresh. No draft persistence / resolution /
+  // close-status (replies don't carry those). is_internal is sent as false; the
+  // server ignores it for replies and inherits the thread root's visibility.
+  const submitReply = useCallback(
+    async ({
+      parentCommentId,
+      serializedDraft,
+      text,
+    }: {
+      parentCommentId: string;
+      serializedDraft: string;
+      text: string;
+    }): Promise<boolean> => {
+      if (!client || !session) return false;
+
+      const trimmedText = text.trim();
+      if (!trimmedText) return false;
+      if (trimmedText.length > MAX_COMMENT_LENGTH) return false;
+      if (isOffline) {
+        showToast({ message: t("comments.offlineToast"), tone: "info" });
+        return false;
+      }
+
+      const optimisticId = `optimistic-reply-${Date.now()}`;
+      let parentThreadKey: string | null | undefined;
+      setComments((prev) => {
+        const parent = prev.find((c) => c.comment_id === parentCommentId);
+        parentThreadKey = parent?.thread_id ?? parent?.comment_id ?? parentCommentId;
+        const optimisticReply: TicketComment = {
+          comment_id: optimisticId,
+          comment_text: serializedDraft,
+          parent_comment_id: parentCommentId,
+          thread_id: parentThreadKey,
+          created_at: new Date().toISOString(),
+          created_by: session.user?.id ?? null,
+          created_by_name: session.user?.name ?? session.user?.email ?? "You",
+          optimistic: true,
+        };
+        return [...prev, optimisticReply];
+      });
+
+      try {
+        const auditHeaders = await getClientMetadataHeaders();
+        const result = await addTicketComment(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          comment_text: serializedDraft,
+          is_internal: false,
+          parent_comment_id: parentCommentId,
+          auditHeaders,
+        });
+        if (!result.ok) {
+          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+          const msg =
+            result.error.kind === "permission"
+              ? t("comments.errors.permission")
+              : result.error.kind === "validation"
+                ? (getApiErrorMessage(result.error.body) ?? t("comments.errors.validation"))
+                : t("comments.errors.generic");
+          showToast({ message: t("comments.commentNotSent"), tone: "error" });
+          setCommentSendError(msg);
+          return false;
+        }
+
+        setComments((prev) =>
+          prev.map((c) => {
+            if (c.comment_id !== optimisticId) return c;
+            return {
+              ...c,
+              ...result.data.data,
+              parent_comment_id: result.data.data.parent_comment_id ?? c.parent_comment_id,
+              thread_id: result.data.data.thread_id ?? c.thread_id,
+              created_by_name: result.data.data.created_by_name ?? c.created_by_name,
+              comment_text: result.data.data.comment_text ?? c.comment_text,
+              optimistic: false,
+            };
+          }),
+        );
+        invalidateTicketsListCache();
+        await fetchComments();
+        showToast({ message: t("comments.commentSent"), tone: "success" });
+        return true;
+      } catch {
+        setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+        showToast({ message: t("comments.commentNotSent"), tone: "error" });
+        return false;
+      }
+    },
+    [client, fetchComments, isOffline, session, showToast, t, ticketId, setComments],
+  );
+
   const sendComment = async () => {
     if (!client || !session) return;
     const originalDraft = commentDraft;
@@ -257,5 +349,6 @@ export function useCommentDraft(
     commentEditorRef,
     sendComment,
     submitCommentPayload,
+    submitReply,
   };
 }

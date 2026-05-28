@@ -145,6 +145,59 @@ describe('readAssistantContentFromSse()', () => {
     });
   });
 
+  it('invokes callbacks for auto-executed tool and continuation events', async () => {
+    const sse = createControlledSseResponse();
+    const executedTools: Array<Record<string, unknown>> = [];
+    const continuations: Array<Record<string, unknown>> = [];
+
+    const readPromise = readAssistantContentFromSse(sse.response, {
+      onToolExecuted: (event) => {
+        executedTools.push(event as unknown as Record<string, unknown>);
+      },
+      onContinuationAvailable: (event) => {
+        continuations.push(event as unknown as Record<string, unknown>);
+      },
+    });
+
+    sse.send(
+      `data: ${JSON.stringify({
+        type: 'tool_executed',
+        function: {
+          id: 'search_business_data',
+          displayName: 'Search business data',
+          approvalRequired: false,
+          arguments: { method: 'SEARCH', path: 'business data: laptops' },
+        },
+        assistantPreview: 'Searching business data.',
+        functionCall: {
+          name: 'search_business_data',
+          arguments: { query: 'laptops' },
+          toolCallId: 'tool-search-1',
+        },
+        nextMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+      })}\n\n`,
+    );
+    sse.send(
+      `data: ${JSON.stringify({
+        type: 'continuation_available',
+        reason: 'Reached the tool limit.',
+        nextMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+      })}\n\n`,
+    );
+    sse.send('data: {"type":"done","done":true}\n\n');
+    sse.close();
+
+    await expect(readPromise).resolves.toEqual({ content: '', doneReceived: true });
+    expect(executedTools).toHaveLength(1);
+    expect(executedTools[0]).toMatchObject({
+      type: 'tool_executed',
+      functionCall: { name: 'search_business_data', toolCallId: 'tool-search-1' },
+    });
+    expect(continuations).toEqual([
+      expect.objectContaining({ type: 'continuation_available', reason: 'Reached the tool limit.' }),
+    ]);
+  });
+
   it('returns doneReceived=true when a typed done event arrives', async () => {
     const sse = createControlledSseResponse();
 

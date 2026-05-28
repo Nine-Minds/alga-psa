@@ -5,9 +5,10 @@ import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/type
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Download, Edit2, Save } from 'lucide-react';
+import { Download, Edit2, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from '@alga-psa/tags/components';
@@ -15,6 +16,8 @@ import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 import ProjectTaskExportDialog from './ProjectTaskExportDialog';
+import { useTaskShareActions } from './TaskShareActionsContext';
+import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectInfoProps {
@@ -50,6 +53,8 @@ export default function ProjectInfo({
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const { openDrawer, closeDrawer } = useDrawer();
+  const { selectedTaskIds } = useTaskSelection();
+  const selectedTaskCount = selectedTaskIds.size;
 
   const [currentProject, setCurrentProject] = useState(project);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -158,8 +163,11 @@ export default function ProjectInfo({
             onClick={() => setShowExportDialog(true)}
           >
             <Download className="h-4 w-4 mr-2" />
-            {t('export.exportTasks', 'Export Tasks')}
+            {selectedTaskCount > 0
+              ? t('export.exportSelected', 'Export {{count}} Selected', { count: selectedTaskCount })
+              : t('export.exportTasks', 'Export Tasks')}
           </Button>
+          <ProjectTasksShareMenu />
           <Button
             id="project-materials-button"
             variant="outline"
@@ -250,7 +258,45 @@ export default function ProjectInfo({
         onClose={() => setShowExportDialog(false)}
         projectId={currentProject.project_id}
         phases={phases}
+        selectedTaskIds={selectedTaskIds}
       />
     </div>
+  );
+}
+
+function ProjectTasksShareMenu() {
+  const { t } = useTranslation('features/projects');
+  const { t: tCommon } = useTranslation('common');
+  const { registration } = useTaskShareActions();
+  const { selectedTaskIds } = useTaskSelection();
+  const selectedTaskCount = selectedTaskIds.size;
+
+  if (!registration) return null;
+
+  const actions: ShareAction[] = [
+    {
+      id: 'project-tasks-share-print',
+      icon: Printer,
+      label: selectedTaskCount > 0
+        ? tCommon('actions.printSelected', { defaultValue: 'Print selected ({{count}})', count: selectedTaskCount })
+        : tCommon('actions.print', { defaultValue: 'Print' }),
+      onSelect: () => { void registration.triggerPrint(); },
+      disabled: registration.isPrinting,
+    },
+    {
+      id: 'project-tasks-share-print-options',
+      icon: Settings2,
+      label: tCommon('actions.printOptions', { defaultValue: 'Print options' }),
+      onSelect: () => registration.openPrintOptions(),
+    },
+  ];
+
+  return (
+    <ShareActionsMenu
+      id="project-tasks-share-actions"
+      triggerSize="sm"
+      tooltip={t('projectInfo.shareTooltip', { defaultValue: 'Print project tasks' })}
+      actions={actions}
+    />
   );
 }

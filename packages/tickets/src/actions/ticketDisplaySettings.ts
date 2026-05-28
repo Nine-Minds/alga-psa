@@ -17,8 +17,7 @@ export type TicketListColumnKey =
   | 'due_date'
   | 'created'
   | 'created_by'
-  | 'tags'
-  | 'actions';
+  | 'tags';
 
 export type TicketListSettings = {
   columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
@@ -60,7 +59,6 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
           created: display?.list?.columnVisibility?.created ?? true,
           created_by: display?.list?.columnVisibility?.created_by ?? true,
           tags: display?.list?.columnVisibility?.tags ?? true,
-          actions: display?.list?.columnVisibility?.actions ?? true,
         },
         tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? false,
       },
@@ -85,7 +83,6 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
           created: true,
           created_by: true,
           tags: true,
-          actions: true,
         },
         tagsInlineUnderTitle: false,
       },

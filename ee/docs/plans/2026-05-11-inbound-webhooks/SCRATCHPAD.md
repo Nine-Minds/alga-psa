@@ -1,0 +1,951 @@
+# Scratchpad — Inbound Webhooks
+
+- Plan slug: `2026-05-11-inbound-webhooks`
+- Created: `2026-05-11`
+
+## What This Is
+
+Working memory for inbound webhook implementation. Capture discoveries, decisions, and gotchas as we go.
+
+## Decisions
+
+- (2026-05-11) **No source presets in v1.** Ship generic configurable webhooks only. Per-source presets deferred to v2 once we see actual payload shapes in production.
+- (2026-05-11) **Action registry pattern, not hardcoded action list.** Core registry in `server/src/lib/inboundWebhooks/actions/registry.ts`; each `@alga-psa/*` package contributes via its own `inboundActions.ts`. v1 ships 13 actions across 8 entity types: tickets (4), clients (2), contacts (1), assets (1 with RMM/non-RMM branches), invoices (2), time entries (1), project tasks (2), cross-cutting tag (1).
+- (2026-05-11) **External-ID lookup uses existing `tenant_external_entity_mappings`.** No new `external_ref` columns are added to entity tables. `integration_type` is set to the webhook slug to namespace mappings per user-defined webhook.
+- (2026-05-11) **Asset upsert reuses `ingestNormalizedRmmDeviceSnapshot`** when payload is RMM-shaped — same pipeline used by Tanium, NinjaOne, Tactical RMM. Generic asset upsert path for non-device payloads.
+- (2026-05-11) **Reuse workflow editor's JSONata expression authoring** (`ExpressionTextArea`, `useExpressionAutocomplete`, expression-authoring path discovery). New context adapter introspects the captured sample payload. This avoids building a separate mapping UI.
+- (2026-05-11) **Workflow handler receives a normalized envelope + raw body.** Envelope: `{source, body, headers, verified, delivery_id, idempotency_key, received_at}`. Since v1 has no per-source normalizers, the envelope is "identity normalization" — body is the parsed JSON as received.
+- (2026-05-11) **Settings page becomes tabbed** (Inbound | Outbound). Existing `AdminWebhooksSetup.tsx` (outbound) gets factored into the Outbound tab; no behavior changes to outbound.
+- (2026-05-11) **Feature flag** `inbound_webhooks_enabled` (PostHog) gates both the Settings tab and the `/api/inbound/*` route. Default off; enable per-tenant for early adopters.
+- (2026-05-11) **Replay re-evaluates with CURRENT config.** Simpler than snapshotting mapping per delivery. Document this in the UI so users know what to expect.
+- (2026-05-11) **Bundled integrations stay as-is in v1.** NinjaOne / Tactical RMM / Tanium / Xero / QBO / Entra continue to use their existing code paths. Consolidation under the generic system is a v2+ candidate.
+
+## Discoveries / Constraints
+
+- (2026-05-11) **F001 implemented** in `server/migrations/20260511100000_create_inbound_webhooks_table.cjs`. The table uses composite PK `(tenant, inbound_webhook_id)`, unique `(tenant, slug)`, Citus distribution by `tenant`, and keeps auth secrets indirect through `auth_config` (vault path/config metadata). Added `sample_capture_expires_at` and `rate_limit_per_minute` now because later capture/rate-limit features need persistent state.
+- (2026-05-11) **F002 implemented** in `server/migrations/20260511101000_create_inbound_webhook_deliveries_table.cjs`. The table uses composite PK `(tenant, delivery_id)`, indexes webhook/date, status/date, idempotency-window lookup, and replay links. `inbound_webhook_id` is nullable so rejected requests for unknown/disabled slugs can still be logged with limited detail without revealing config existence.
+- (2026-05-11) **F003 implemented** in `server/src/lib/inboundWebhooks/reservedIntegrationTypes.ts`. Decision: reject reserved slugs rather than prefixing user slugs. The reserved set includes observed mapping values (`ninjaone`, `tacticalrmm`, `tanium`, `xero`, `xero_csv`, `quickbooks_online`, `quickbooks_csv`) plus PRD aliases (`tactical_rmm`, `qbo`, `entra`, Microsoft/Google aliases) to prevent future bundled integration collisions.
+- (2026-05-11) **F004 implemented** in `server/src/lib/inboundWebhooks/externalEntityMappings.ts`. `lookupAlgaEntityByExternalId` queries `tenant_external_entity_mappings` with `tenant_id`, `integration_type = webhookSlug`, `alga_entity_type`, and `external_entity_id`; no entity tables get external-ref columns. The helper accepts an optional Knex instance for future transactional action handlers.
+- (2026-05-11) **F005 implemented** in `server/src/lib/inboundWebhooks/externalEntityMappings.ts`. `writeEntityMapping` upserts by `(tenant_id, integration_type, alga_entity_type, alga_entity_id)`, checks first for external ID collisions in the same realm, sets `sync_status='synced'`, and accepts an optional Knex instance for transactional create actions.
+- (2026-05-11) **F006 implemented** in `server/migrations/20260511102000_add_inbound_webhook_permissions.cjs` and `server/seeds/dev/47_permissions.cjs`. Added `inbound_webhook` actions `create/read/update/delete/replay` as MSP-only permissions and backfilled them onto existing MSP Admin roles. The migration intentionally does not grant Manager/Technician roles by default, matching T007.
+- (2026-05-11) **F007 implemented** in `packages/core/src/lib/featureFlagRuntime.ts` and `server/src/lib/inboundWebhooks/featureFlag.ts`. `inbound_webhooks_enabled` defaults to `false` when PostHog is unavailable; later UI and receiver-route gates should call `isInboundWebhooksEnabled({ tenantId, userId })`.
+- (2026-05-11) **F010 implemented** in `server/src/lib/inboundWebhooks/types.ts`. Added discriminated auth config unions, handler config unions, idempotency source types, runtime config/delivery shapes, and `WorkflowWebhookEnvelope`. Runtime-facing types use camelCase; DB mapping functions will translate from snake_case rows.
+- (2026-05-11) **F011 implemented** in `server/src/lib/inboundWebhooks/schemas.ts`. Input schemas are snake_case to match server/API payloads, use discriminated unions for `auth_config` and `handler_config`, enforce matching top-level `auth_type`/`handler_type`, validate URL-safe lowercase slugs, and reject reserved integration slugs through F003 helper.
+- (2026-05-11) **F012 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `listInboundWebhooks` is wrapped in `withAuth`, checks `inbound_webhook:read`, queries `inbound_webhooks` with `where({ tenant })`, orders by update time/name, maps snake_case DB rows to camelCase runtime types, and redacts any raw auth secret/token fields by returning only vault paths/config metadata.
+- (2026-05-11) **F013 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundWebhook(id)` uses the same auth/permission/mapping path as list and scopes lookup by both `tenant` and `inbound_webhook_id`, so missing or cross-tenant IDs return `null`.
+- (2026-05-11) **F014 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `upsertInboundWebhook` validates input with F011 schemas, checks `inbound_webhook:create/update`, enforces `(tenant, slug)` uniqueness before DB write, writes HMAC/Bearer/path-token secrets to tenant secret storage, returns the generated/provided secret once, and stores only vault path metadata in `auth_config`.
+- (2026-05-11) **F015 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `deleteInboundWebhook` checks `inbound_webhook:delete`, fetches by `(tenant, inbound_webhook_id)`, deletes the config row, and deletes the associated HMAC/Bearer/path-token tenant secret. Delivery rows are retained with nullable `inbound_webhook_id` per the F002 migration rather than cascaded.
+- (2026-05-11) **F016 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `rotateInboundWebhookSecret` checks `inbound_webhook:update`, rejects IP allowlist configs, writes a new generated secret/token to the existing or generated tenant-secret vault path, updates `auth_config` metadata if needed, and returns the new value once.
+- (2026-05-11) **F017 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `setInboundWebhookActiveState` checks `inbound_webhook:update`, updates `is_active` by `(tenant, inbound_webhook_id)`, clears `auto_disabled_at` when re-enabling, and returns the redacted config view.
+- (2026-05-11) **F018 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `listInboundDeliveries(filter, page, limit)` checks `inbound_webhook:read`, filters by tenant plus optional webhook/status/date range, paginates with a 100-row cap, and maps rows to camelCase delivery views.
+- (2026-05-11) **F019 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundDelivery(id)` checks `inbound_webhook:read`, scopes by `(tenant, delivery_id)`, and returns `null` for missing/cross-tenant deliveries.
+- (2026-05-11) **F020 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `replayInboundDelivery` requires `inbound_webhook:replay`, loads the original delivery and current webhook config by tenant, creates a new linked delivery row (`is_replay=true`, `replayed_from=<original_id>`), and dispatches through the shared current-config dispatcher in `server/src/lib/inboundWebhooks/dispatcher.ts`.
+- (2026-05-11) **F021 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `captureSamplePayload(id)` checks `inbound_webhook:update`, scopes by `(tenant, inbound_webhook_id)`, and sets `sample_capture_expires_at` to now + 5 minutes.
+- (2026-05-11) **F022 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `clearSamplePayload(id)` checks `inbound_webhook:update`, scopes by `(tenant, inbound_webhook_id)`, clears both `sample_payload` and `sample_capture_expires_at`, and returns the redacted config.
+- (2026-05-11) **F023 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `sendInboundWebhookTest` requires update permission, creates an auth-verified synthetic delivery with caller-provided body/headers, and dispatches in-process through the same `dispatchInboundWebhookHandler` path as receiver/replay.
+- (2026-05-11) **F050 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. Added `registerAction`, `getAction`, `listActions`, duplicate-name rejection, deterministic list ordering by entity/name, and a test-only clear helper.
+- (2026-05-11) **F051 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionDefinition` includes `{ name, entityType, displayName, description, targetFields, handle(ctx, mappedValues) }` and returns a structured `InboundActionResult`.
+- (2026-05-11) **F052 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionTargetField` includes `{ name, type, required, description, enumValues?, refEntityType? }`; `refEntityType` is an additive helper for PRD `ref-to-entity` fields.
+- (2026-05-11) **F053 implemented** in `server/src/lib/inboundWebhooks/actions/bootstrap.ts` and `initializeApp`. Bootstrap currently imports `@alga-psa/tickets/actions/inboundActions`; add future package action modules here as they land. `registerAction` was made generic so package actions can keep typed mapped-value payloads.
+- (2026-05-11) **F054 implemented** in `server/src/lib/inboundWebhooks/actions/mappingEvaluator.ts`. `evaluateFieldMapping` evaluates each mapped target field using the existing workflow JSONata runtime (`@alga-psa/workflows/runtime/expressionEngine`) with both `body` and `payload` bound to the inbound request body.
+- (2026-05-11) **F055 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts` and the receiver/replay/test outcome paths. The dispatcher validates required fields and primitive target field types after JSONata evaluation; errors are caught by callers and persisted to `handler_outcome.error` with `dispatch_status='failed'`.
+- (2026-05-11) **F056 verified/implemented** through the existing direct-action dispatcher plus action return contracts. Ticket/client/invoice `*ByExternalId` lookup misses return `success:false` with `lookup_miss` messages, and `dispatchInboundWebhookHandler` converts any unsuccessful action result into an exception so the receiver/replay/test callers persist `dispatch_status='failed'` rather than silently no-oping.
+- (2026-05-11) **F060 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts`. Workflow handlers now call the existing `launchPublishedWorkflowRun` entrypoint with the normalized webhook envelope as the workflow payload, `triggerType='event'`, event type `INBOUND_WEBHOOK_RECEIVED`, and a delivery-scoped trigger/execution key. Envelope headers are filtered through the inbound header filter before being passed to workflow context.
+- (2026-05-11) **F062 implemented** via the existing `inbound_webhook_deliveries.handler_outcome` JSONB field rather than a dedicated column, matching the PRD data model. Successful workflow dispatch returns `{ workflow_id, workflow_run_id, workflow_version, envelope }`, and receiver/replay/test callers persist it on the delivery row when setting `dispatch_status='dispatched'`.
+- (2026-05-11) **F063 implemented** by the dispatcher/request-processor boundary. `launchPublishedWorkflowRun` errors propagate to the inbound request/replay/test callers and are persisted as failed deliveries with `handler_outcome.error`; once launch returns a `workflow_run_id`, later workflow execution failures are contained in `workflow_runs` and do not mutate the already-dispatched inbound delivery.
+- (2026-05-11) **F1010 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `createTicket` registers itself with the inbound action registry, uses shared `TicketModel.createTicketWithRetry`, supports optional asset association, and writes `tenant_external_entity_mappings` when `external_id` is mapped.
+- (2026-05-11) **F1011 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `updateTicketByExternalId` resolves tickets through `tenant_external_entity_mappings` using `integration_type=<webhookSlug>`, updates status/priority/assignment/board and related ticket fields through shared `TicketModel.updateTicket`, and returns `success:false` with `lookup_miss` wording when no mapping exists.
+- (2026-05-11) **F1012 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `addTicketCommentByExternalId` resolves mapped tickets through `tenant_external_entity_mappings`, appends comments through shared `TicketModel.createComment`, supports internal/resolution/contact-author fields, and records inbound webhook metadata on the comment.
+- (2026-05-11) **F1013 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `changeTicketStatusByExternalId` resolves mapped tickets by external ID and calls shared `TicketModel.updateTicket`, so status/board compatibility validation is reused.
+- (2026-05-11) **F1020 implemented** in `packages/clients/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `upsertClientByExternalId` resolves existing clients via `tenant_external_entity_mappings`, updates tenant-scoped client rows when mapped, creates clients when absent, and writes a mapping row for newly created clients.
+- (2026-05-11) **F1021 implemented** in `packages/clients/src/actions/inboundActions.ts`. `setClientActiveByExternalId` resolves a mapped client and updates `is_inactive` from the mapped `active` boolean; lookup misses return `success:false` with `lookup_miss` wording for delivery failure recording.
+- (2026-05-11) **F1030 implemented** in `packages/clients/src/actions/inboundActions.ts`. `upsertContactByExternalId` uses shared `ContactModel.createContact/updateContact`, writes contact mappings on create, and requires either direct `client_id` or resolvable `client_external_id` when creating a new contact.
+- (2026-05-11) **F1040 implemented** in `packages/assets/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `upsertAssetByExternalId` detects mapped `rmm_snapshot` objects, forces `provider/integrationId/externalDeviceId` to the user webhook namespace, resolves optional client linkage, and delegates to `ingestNormalizedRmmDeviceSnapshot`.
+- (2026-05-11) **F1041 implemented** in `packages/assets/src/actions/inboundActions.ts`. When no `rmm_snapshot` is mapped, `upsertAssetByExternalId` performs a plain tenant-scoped upsert against `assets`, resolves existing rows through `tenant_external_entity_mappings`, and writes a mapping row on create.
+- (2026-05-11) **F1050 implemented** in `packages/billing/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `markInvoicePaidByExternalId` resolves invoices through `tenant_external_entity_mappings`, sets `status='paid'`, and records payment metadata in `custom_fields`.
+- (2026-05-11) **F1051 implemented** in `packages/billing/src/actions/inboundActions.ts`. `updateInvoiceStatusByExternalId` validates status through the action enum field and updates mapped invoices through the same tenant-scoped invoice helper.
+- (2026-05-11) **F1052 implemented** in `packages/billing/src/actions/inboundActions.ts`. The shared invoice update helper returns the existing invoice without writing when the current status already equals the target status, making mark-paid idempotent.
+- (2026-05-11) **F1060 implemented** in `packages/scheduling/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `createTimeEntry` accepts mapped user/work item/service/start/duration/billable fields, validates tenant-scoped references, computes `work_date` from the mapped user's timezone, creates or reuses the matching draft time sheet, inserts a `time_entries` row, publishes the standard `TIME_ENTRY_CREATED` event, and writes a `tenant_external_entity_mappings` row when `external_id` is mapped.
+- (2026-05-11) **F1070 implemented** in `packages/projects/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `createProjectTask` resolves its parent project from either direct `project_id` or a webhook-scoped `project_external_id` mapping, defaults to the first project phase and first effective task status mapping when omitted, creates through `ProjectTaskModel.addTask` to preserve WBS/order behavior, and writes a `project_task` mapping when `external_id` is mapped.
+- (2026-05-11) **F1071 implemented** in `packages/projects/src/actions/inboundActions.ts`. `updateProjectTaskStatusByExternalId` resolves the project task via `tenant_external_entity_mappings`, validates the target `project_status_mapping_id` against the task's project, updates through `ProjectTaskModel.updateTaskStatus`, and returns `success:false` with `lookup_miss` wording when the external task ID is unmapped or stale.
+- (2026-05-11) **F1080 implemented** in `packages/tags/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `addTagToEntityByExternalId` resolves the target through `tenant_external_entity_mappings`, gets/creates a `tag_definitions` row, idempotently inserts `tag_mappings`, and returns `lookup_miss` when the external entity is unmapped. V1 is limited to the entity types currently supported by the tag model (`client`, `contact`, `ticket`, `project`, `project_task`); unsupported entity types fail with a clear validation error.
+- (2026-05-11) **F061 implemented** in `server/src/lib/inboundWebhooks/workflowEnvelope.ts`. `buildWorkflowWebhookEnvelope` returns the documented shape `{source, body, headers, verified, delivery_id, idempotency_key, received_at}` and normalizes `received_at` to ISO string.
+- (2026-05-11) **F070 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts` and exported from `adapters/index.ts`. The adapter exposes context roots/path options for captured webhook payloads. Also corrected `evaluateFieldMapping` to evaluate JSONata directly against the request body, matching PRD examples like `alert.message`.
+- (2026-05-11) **F071 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts`. The adapter infers schema nodes recursively from captured samples, supports nested objects/arrays/primitives/nulls, and builds path options via existing `buildPathOptionsFromContextRoots`.
+- (2026-05-11) **F072 implemented** in `server/src/components/settings/security/inbound/InboundWebhookMappingField.tsx`. The new client component wraps the existing EE workflow-designer `ExpressionTextArea`, feeds it autocomplete options from the webhook payload context adapter, and exposes a compact prop API for the upcoming inbound direct-action field rows.
+- (2026-05-11) **F080 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The Settings webhook panel is now a tabbed shell with `Inbound` and `Outbound` tabs; the existing outbound implementation was moved intact into `OutboundWebhooksSetup`, and the inbound tab has a translated placeholder until the list view lands in F081. Also widened the shared `TabsTrigger` prop type so interactive tab IDs compile.
+- (2026-05-11) **F081 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. `InboundWebhooksListView` loads tenant-scoped inbound configs via `listInboundWebhooks`, fetches the latest delivery per webhook for the last-delivery column, derives receiver URLs from the existing tenant portal slug helper, and renders a DataTable with name/URL, handler, last delivery, active state, and row action menu.
+- (2026-05-11) **F082 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Added an inbound create/edit dialog shell with an Identity section for name, URL-safe slug, and description; the New button and row Edit action open the dialog, with all new labels localized and interactive controls carrying stable IDs. Save remains disabled until the auth/handler sections land.
+- (2026-05-11) **F083 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The inbound dialog now includes an Auth section with a method dropdown and conditional fields for HMAC signature header, bearer token, IP/CIDR allowlist, and path-token query parameter/token. Existing configs hydrate non-secret auth metadata, while secret fields stay blank for later one-time-display/rotate flows.
+- (2026-05-11) **F084 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Added the inbound one-time secret modal with copy/download/close controls and localized warning copy. The modal is state-driven and ready for the eventual create/rotate save paths to reveal generated HMAC/Bearer/path-token secrets exactly once.
+- (2026-05-11) **F085 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The inbound dialog now has an Idempotency section with a source dropdown (`header` or `jsonata`), conditional label/placeholder for the key source value, and a duplicate-window seconds input defaulting to 24 hours.
+- (2026-05-11) **F086 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The inbound dialog now has a Handler section with a direct-action/workflow selector and conditional panels. Direct-action registry selection, mapping rows, and workflow picker remain separate follow-on UI items.
+- (2026-05-11) **F087 implemented** with `listInboundWebhookActions` in `server/src/lib/actions/inboundWebhookActions.ts` and the inbound dialog action selector. The server action bootstraps the registry, checks `inbound_webhook:read`, returns serializable action metadata/target fields without `handle()`, and the UI populates the direct-action dropdown from that live registry response.
+- (2026-05-11) **F088 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Selecting a direct action now renders every declared target field as a row with required/type metadata and an `InboundWebhookMappingField`, which wraps the reused workflow-designer `ExpressionTextArea` and sample-payload autocomplete.
+- (2026-05-11) **F089 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Added a sample payload capture panel with saved-webhook gating, capture-window/sample status text, and a button that calls `captureSamplePayload` then refreshes local config state. New webhooks show create-first guidance because the receiver URL does not exist until save.
+- (2026-05-11) **F090 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` plus a small focus callback extension to the reused `ExpressionTextArea`. Direct-action mappings now show a side panel of captured sample paths generated by `buildWebhookPayloadExpressionPathOptions`; clicking a path inserts it into the focused target-field mapping.
+- (2026-05-11) **F091 implemented** with `listInboundWorkflowOptions` in `server/src/lib/actions/inboundWebhookActions.ts` and the workflow handler branch in `AdminWebhooksSetup.tsx`. The UI now lists visible tenant workflow definitions in a dropdown and shows the documented normalized envelope shape the workflow receives.
+- (2026-05-11) **F092 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The inbound dialog now includes an active-state switch; saved webhooks persist through `setInboundWebhookActiveState`, unsaved forms keep local state, and an auto-disable banner renders when `autoDisabledAt` is set.
+- (2026-05-11) **F093 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Saved inbound webhook dialogs now load `listInboundDeliveries({ inboundWebhookId })` and render a paginated delivery table with received time, dispatch status, response status, and duration.
+- (2026-05-11) **F094 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Delivery rows now expose a View action that opens a right-side drawer with request headers/body, response body/status, duration, dispatch status, and handler outcome/error details.
+- (2026-05-11) **F095 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The delivery detail drawer now includes a Replay action that calls `replayInboundDelivery`, updates the drawer to the replayed delivery, and refreshes the paginated delivery log for the current webhook.
+- (2026-05-11) **F096 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Saved webhook dialogs now include a Send Test flow with JSON body and header-line editors; it parses the inputs, calls `sendInboundWebhookTest`, refreshes deliveries, and opens the resulting delivery detail.
+- (2026-05-11) **F097 implemented/verified** by scanning the inbound UI additions in `AdminWebhooksSetup.tsx` and `server/src/components/settings/security/inbound/`. User-facing labels, button text, helper copy, status text, and placeholders are routed through `t('security.webhooks.inbound...')` locale keys. Server-provided action/workflow names and JSON contract property names remain data/technical identifiers rather than hardcoded UI copy.
+- (2026-05-11) **F098 implemented/verified** by scanning the inbound tab/dialog/drawer UI controls. New interactive controls (tabs, buttons, selects, inputs, switches, text areas, tables, row menu items, path buttons, dialogs, and drawer) all have stable kebab-case `id` attributes.
+- (2026-05-11) **F100 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The Settings Webhooks shell now uses `useFeatureFlag('inbound_webhooks_enabled', { defaultValue:false })`, defaults to the existing Outbound tab, and only renders the Inbound tab/content when the flag is enabled.
+- (2026-05-11) **F101 implemented** in `server/src/lib/inboundWebhooks/requestProcessor.ts`. The receiver route resolves the tenant slug first, evaluates `inbound_webhooks_enabled` with the actual tenant ID, and returns a bare `404` before config lookup/dispatch when disabled.
+- (2026-05-11) **F102 implemented/verified** in `server/src/lib/actions/inboundWebhookActions.ts`. Every exported inbound webhook server action is wrapped in `withAuth` and calls `assertInboundWebhookPermission` with the appropriate `read/create/update/delete/replay` action before querying or mutating tenant data.
+- (2026-05-11) **F200 implemented** in `server/src/app/api/v1/inbound-webhooks/route.ts`. `GET /api/v1/inbound-webhooks` calls the tenant-scoped `listInboundWebhooks` server action and returns `{ data }`, with errors flowing through the existing API error middleware.
+- (2026-05-11) **F201 implemented** in `server/src/app/api/v1/inbound-webhooks/route.ts`. `POST /api/v1/inbound-webhooks` parses JSON input, delegates creation to `upsertInboundWebhook`, returns `201` with the redacted config plus one-time secret, and reuses the server action's `withAuth`/permission/secret-vault behavior.
+- (2026-05-11) **F202 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/route.ts`. `GET`, `PUT`, and `DELETE` delegate to the existing server actions, return 404 on missing configs for GET, force the path id into update payloads, and return `204` on delete while preserving centralized auth and tenant scoping.
+- (2026-05-11) **F203 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/rotate-secret/route.ts`. The endpoint calls `rotateInboundWebhookSecret` and returns the redacted config plus one-time replacement secret, preserving the server action's IP-allowlist rejection and vault update behavior.
+- (2026-05-11) **F204 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/test/route.ts`. `POST /test` accepts the synthetic body/headers payload, delegates to `sendInboundWebhookTest`, and returns the created delivery with `202` after in-process dispatch records its outcome.
+- (2026-05-11) **F205 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/capture-sample/route.ts`. `POST` enables a five-minute capture window via `captureSamplePayload`; `DELETE` clears both saved sample and capture state via `clearSamplePayload`.
+- (2026-05-11) **F206 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/route.ts`. The route lists deliveries through `listInboundDeliveries`, forces the path webhook id into the filter, supports `page`, `limit`, `status`, `date_from/dateFrom`, and `date_to/dateTo`, and returns pagination metadata.
+- (2026-05-11) **F207 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/route.ts`. The detail endpoint delegates to `getInboundDelivery` and returns 404 unless the tenant-scoped delivery belongs to the webhook id in the URL.
+- (2026-05-11) **F208 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/replay/route.ts`. Replay first verifies the tenant-scoped delivery belongs to the URL webhook, then calls `replayInboundDelivery` and returns the new linked delivery with `202`.
+- (2026-05-11) **F209 implemented** in `server/src/app/api/v1/inbound-webhooks/actions/route.ts`. `GET /actions` returns `listInboundWebhookActions()` so SDK clients get the same registered action definitions and target field schemas as the Settings UI.
+- (2026-05-11) **F210 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts` and registered from `server/src/lib/api/openapi/index.ts`. The file registers all `/api/v1/inbound-webhooks/*` management and action-discovery paths with auth/RBAC metadata; named component schemas remain split into the later F212-F218 items.
+- (2026-05-11) **F211 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. The templated receiver endpoint `/api/inbound/{tenantSlug}/{webhookSlug}` is documented with tenant/webhook params, configurable signature/idempotency headers, generic JSON body, feature-flag metadata, and 200/401/404/429/5xx response surface.
+- (2026-05-11) **F212 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named component `InboundWebhookConfig` using the camelCase runtime/server-action response shape with redacted auth metadata, handler/idempotency fields, sample capture state, rate limit, active state, and timestamps.
+- (2026-05-11) **F213 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookCreateInput` and `InboundWebhookUpdateInput` components using the snake_case API/server-action payload shape; POST uses create and PUT uses update.
+- (2026-05-11) **F214 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookAuthConfig` as an `auth_type` discriminated union covering HMAC, Bearer, IP allowlist, and path-token configs, including one-time create fields and stored vault-path metadata.
+- (2026-05-11) **F215 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookHandlerConfig` as a `handler_type` discriminated union for direct actions (`action` plus JSONata `field_mapping`) and workflow triggers (`workflow_id`).
+- (2026-05-11) **F216 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookDelivery` with persisted request/response fields, auth/dispatch statuses, handler outcome, replay linkage, duration, and timestamps.
+- (2026-05-11) **F217 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundActionTargetField` and `InboundActionDefinition` components and wired the action discovery response to `InboundActionDefinition[]`.
+- (2026-05-11) **F218 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `WorkflowWebhookEnvelope` documenting the workflow `context.input` payload: source slug, parsed body, filtered headers, verified flag, delivery id, idempotency key, and received timestamp.
+- (2026-05-11) **F220 implemented** by running the OpenAPI generator from the `sdk` workspace for both CE and EE editions. This regenerated `alga-openapi.{ce,ee}.{json,yaml}` plus the CE alias `alga-openapi.{json,yaml}`; the CE YAML now contains the `/api/v1/inbound-webhooks/*` management paths, `/api/inbound/{tenantSlug}/{webhookSlug}`, and inbound webhook components.
+- (2026-05-11) **F221 implemented** in `server/src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts`. The contract test builds the CE OpenAPI document and asserts every management route has the expected method, API-key security, tenant-scoped inbound RBAC metadata, path params, request schema refs, and response schema refs.
+- (2026-05-11) **F222 implemented** in `server/src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts`. Added action discovery assertions for `/api/v1/inbound-webhooks/actions`, including response data as `InboundActionDefinition[]` and component shape coverage for `InboundActionDefinition` plus `InboundActionTargetField`.
+- (2026-05-11) **F223 implemented/verified** across `server/src/app/api/v1/inbound-webhooks/**/route.ts`. Every REST handler imports and delegates to `server/src/lib/actions/inboundWebhookActions.ts`; none imports `withAuth`, `hasPermission`, or tenant DB helpers directly, so the API surface shares the existing server-action auth/permission path.
+- (2026-05-11) **T001 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration contract verifies `inbound_webhooks` has `tenant`, `inbound_webhook_id`, composite PK `(tenant, inbound_webhook_id)`, tenant-scoped uniqueness/indexes, and Citus distribution on `tenant`.
+- (2026-05-11) **T002 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration contract verifies `inbound_webhook_deliveries` has composite PK `(tenant, delivery_id)`, tenant-scoped webhook and replay foreign keys, idempotency index, and Citus distribution on `tenant`.
+- (2026-05-11) **T003 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration contract verifies slug uniqueness is `(tenant, slug)` via `inbound_webhooks_tenant_slug_unique` and rejects global slug-only unique constraints.
+- (2026-05-11) **T004 implemented** in `server/src/test/unit/inboundWebhooks/externalEntityMappings.test.ts`. Unit test calls `lookupAlgaEntityByExternalId` with a fake Knex builder and verifies it queries `tenant_external_entity_mappings` with `tenant_id`, `integration_type=<webhookSlug>`, `alga_entity_type`, and `external_entity_id` filters.
+- (2026-05-11) **T004a implemented** in `server/src/test/unit/inboundWebhooks/externalEntityMappings.test.ts`. Unit test verifies `writeEntityMapping` treats an existing mapping to the same Alga entity as idempotent, checks the same external-id collision lookup, and upserts on `(tenant_id, integration_type, alga_entity_type, alga_entity_id)`.
+- (2026-05-11) **T004b implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Schema test verifies `inboundWebhookUpsertInputSchema` rejects reserved bundled integration slugs such as `ninjaone`, preventing user webhooks from polluting bundled integration mapping namespaces.
+- (2026-05-11) **T005 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration guard verifies inbound webhook migrations use table-existence checks, Citus distribution guards, `CREATE INDEX IF NOT EXISTS` for delivery indexes, and safe `dropTableIfExists` down migrations so re-running is safe.
+- (2026-05-11) **T006 implemented** in `server/src/test/unit/migrations/inboundWebhookPermissions.test.ts`. Source-level permission contract verifies the inbound webhook action set (`create/read/update/delete/replay`) is present in the migration and dev seed as MSP-only permissions, and that the migration grants them to the MSP Admin role through `role_permissions`.
+- (2026-05-11) **T007 implemented** in `server/src/test/unit/migrations/inboundWebhookPermissions.test.ts`. Source-level permission contract verifies the inbound webhook migration grants only through the MSP Admin role lookup and does not add default role-permission inserts for Manager, Technician, Client, or client-portal roles.
+- (2026-05-11) **T010 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies `inboundWebhookUpsertInputSchema` rejects unsupported `auth_type` values before configs can be persisted.
+- (2026-05-11) **T011 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies HMAC auth configs must include a non-empty `signature_header`, preventing un-verifiable HMAC webhook configs.
+- (2026-05-11) **T012 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies direct-action handler configs must include a non-empty `action` name before field mappings are accepted.
+- (2026-05-11) **T013 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies workflow handler configs must include a `workflow_id` when `handler_type='workflow'`.
+- (2026-05-11) **T014 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies webhook slugs reject uppercase, spaces, punctuation, and other URL-unsafe characters via the URL-safe lowercase slug rule.
+- (2026-05-11) **T020 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked `withAuth`, RBAC, and Knex verify `listInboundWebhooks` creates a tenant-scoped Knex instance, checks `inbound_webhook:read`, applies `where({ tenant })`, and maps only rows for the current tenant.
+- (2026-05-11) **T021 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked upsert path verifies `upsertInboundWebhook` checks `(tenant, slug)` for collisions, rejects duplicate slugs in the same tenant, and stops before writing secrets or inserting rows.
+- (2026-05-11) **T022 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked create path verifies `upsertInboundWebhook` scopes slug collision checks by current tenant, allowing a webhook slug already used by another tenant to be inserted for `tenant-a`.
+- (2026-05-11) **T023 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked create path verifies HMAC secrets are written via tenant secret storage, inserted DB `auth_config` stores only `secret_vault_path` metadata, and the returned secret is one-time.
+- (2026-05-11) **T024 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked `getInboundWebhook` lookup verifies raw secret fields present in DB `auth_config` are redacted from the returned config view.
+- (2026-05-11) **T025 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked rotation verifies `rotateInboundWebhookSecret` checks `inbound_webhook:update`, overwrites the existing tenant-secret vault path with the newly returned one-time secret, updates only vault metadata in `auth_config`, and does not leak the new secret through the webhook config response.
+- (2026-05-11) **T026 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Decision confirmed: delivery rows are retained after webhook deletion. The migration FK uses `ON DELETE SET NULL`, and the server-action test verifies `deleteInboundWebhook` deletes only the tenant-scoped config row, deletes the stored auth secret, and never deletes `inbound_webhook_deliveries`.
+- (2026-05-11) **T027 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Permission-denial test sets `hasPermission=false` and verifies `listInboundWebhooks` throws `Forbidden: inbound_webhook:read permission required` before querying webhook tables.
+- (2026-05-11) **T028 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Runtime test verifies `getInboundWebhook`, `upsertInboundWebhook`, and `deleteInboundWebhook` all consume the tenant supplied by `withAuth`, call `createTenantKnex('tenant-a')`, and scope their lookup/insert/delete payloads by that tenant.
+- (2026-05-11) **T030 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Receiver test keeps the real HMAC verifier, mocks tenant/db/rate-limit/delivery/dispatch seams, sends a correctly signed `POST /api/inbound/<tenant>/<slug>` request, and verifies `200` with `{delivery_id}`, verified delivery creation, dispatch, and delivery outcome persistence.
+- (2026-05-11) **T031 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Invalid HMAC receiver test verifies a bodyless `401`, a single rejected-auth delivery with `auth_status='rejected_signature'` and no request body, and no dispatch/outcome update.
+- (2026-05-11) **T032 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Mismatched HMAC header-name test signs the body correctly but sends it in `X-Wrong-Signature`; because the config expects `X-Signature`, the receiver returns a bodyless `401`, logs `rejected_signature`, and skips dispatch.
+- (2026-05-11) **T033 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Bearer-auth receiver test swaps in a bearer webhook config, reads the mocked tenant-secret token through the real verifier, and verifies a valid `Authorization: Bearer ...` request creates a verified delivery, dispatches, and returns `200 {delivery_id}`.
+- (2026-05-11) **T034 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Bad Bearer token test verifies a bodyless `401`, rejected-auth delivery metadata with `auth_status='rejected_bearer'`, no persisted request body, and no dispatch.
+- (2026-05-11) **T035 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. IP allowlist success test uses the real CIDR matcher with `X-Forwarded-For`, verifies the first forwarded IP is accepted, no tenant secret is read, and a verified delivery dispatches.
+- (2026-05-11) **T036 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. IP allowlist rejection test verifies a request from outside the configured CIDR returns a bodyless `401`, logs `auth_status='rejected_ip'` with no request body, and skips dispatch.
+- (2026-05-11) **T037 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Path-token success test uses the real verifier with the configured `token` query parameter, verifies tenant-secret lookup by vault path, and confirms a valid token creates a verified delivery and dispatches.
+- (2026-05-11) **T038 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Invalid path-token test verifies a mismatched `?token=` returns a bodyless `401`, logs `auth_status='rejected_no_auth'` with no request body, and skips dispatch.
+- (2026-05-11) **T039 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Unknown tenant-slug test verifies the receiver returns the same bodyless `401` shape used for auth failures and stops before feature-flag lookup, tenant context, config lookup, delivery persistence, or dispatch.
+- (2026-05-11) **T040 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Unknown webhook-slug test under a valid tenant verifies the receiver returns the same bodyless `401`, persists a limited rejected-auth delivery with `inbound_webhook_id=null`, omits request body, and skips dispatch.
+- (2026-05-11) **T041 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Disabled webhook test verifies `is_active=false` short-circuits before secret lookup/auth verification, returns the same bodyless `401`, logs limited rejected-auth metadata against the webhook id, and skips dispatch.
+- (2026-05-11) **T042 implemented** in `server/src/test/unit/inboundWebhooks/authVerifier.test.ts`. HMAC verifier test mutates one byte of an otherwise valid same-length signature and spies on `crypto.timingSafeEqual`, proving the HMAC path still performs timing-safe comparison with equal-length buffers instead of early-returning on byte mismatch.
+- (2026-05-11) **T043 implemented** in `server/src/test/unit/inboundWebhooks/authVerifier.test.ts`. Bearer verifier test supplies a same-length wrong token, spies on `crypto.timingSafeEqual`, and verifies the bearer path rejects with `rejected_bearer` only after timing-safe comparison with equal-length buffers.
+- (2026-05-11) **T044 implemented** in `server/src/test/unit/inboundWebhooks/headerFilter.test.ts`. Header-filter test verifies persisted inbound headers strip `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key` while preserving safe lowercase headers like `content-type` and `x-request-id`.
+- (2026-05-11) **T050 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Header-source idempotency test verifies configured header names are extracted case-insensitively from both `Headers` and plain record inputs, trim whitespace, and use the first value when a header array is supplied.
+- (2026-05-11) **T051 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. JSONata-source idempotency test evaluates `alert.id` against the parsed request body using the real workflow expression runtime and trims the resulting key.
+- (2026-05-11) **T052 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Duplicate idempotency receiver test verifies a duplicate key within the configured 24h window returns `200` with the original `delivery_id`, creates a new delivery row marked `dispatch_status='duplicate'`, records `handler_outcome.duplicate_of`, and does not dispatch.
+- (2026-05-11) **T053 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Duplicate lookup test freezes time, verifies the query applies `received_at >= now - windowSeconds` plus tenant/webhook/key/status filters, and returns `null` when no in-window row exists so the receiver can fresh-dispatch the same key after expiry.
+- (2026-05-11) **T054 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Decision locked: if an idempotency source is configured but yields no key, the receiver accepts and dispatches once with `idempotency_key=null` rather than rejecting the request; dedupe lookup receives `null` and returns no duplicate.
+- (2026-05-11) **T055 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Duplicate lookup is explicitly scoped by `inbound_webhook_id` along with tenant and idempotency key, so two webhook configs can receive the same external idempotency key without deduping each other.
+- (2026-05-11) **T060 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Verified requests now have a test asserting `createInboundDelivery` receives `authStatus='verified'` plus the parsed body and is invoked before `dispatchInboundWebhookHandler`, preserving visible failed-dispatch rows.
+- (2026-05-11) **T061 implemented** in `server/src/test/unit/inboundWebhooks/deliveryPersistence.test.ts`. Rejected-auth persistence now asserts a row is still inserted with tenant/webhook metadata and response status, while `request_body` is forced to `null` and sensitive headers are filtered.
+- (2026-05-11) **T062 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Dispatch exceptions now have regression coverage: the receiver returns `500 {delivery_id, error:'dispatch_failed'}` and updates the existing verified delivery to `dispatch_status='failed'` with the exception message in `handler_outcome.error`.
+- (2026-05-11) **T070 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Over-limit requests now assert `checkInboundWebhookRateLimit(tenant, webhookId)` is enforced after auth/JSON parse, return `429` with `retry-after`, persist a failed verified delivery, and skip dispatch.
+- (2026-05-11) **T071 implemented** in `server/src/test/unit/inboundWebhooks/rateLimitConfig.test.ts`. Rate-limit isolation by webhook is covered by asserting the shared token bucket is called with namespace `webhook-in`, the tenant ID, and each webhook ID as a distinct bucket dimension.
+- (2026-05-11) **T072 implemented** in `server/src/test/unit/inboundWebhooks/rateLimitConfig.test.ts`. Rate-limit isolation by tenant is covered by asserting the same webhook ID under two tenants calls the shared token bucket with different tenant dimensions.
+- (2026-05-11) **T080 implemented** in `server/src/test/unit/inboundWebhooks/sampleCapture.test.ts`. Sample capture now has direct coverage for the atomic conditional update that stores the verified body only when capture is active and `sample_payload` is still null, then clears `sample_capture_expires_at`.
+- (2026-05-11) **T081 implemented** in `server/src/test/unit/inboundWebhooks/sampleCapture.test.ts`. Expired/otherwise non-matching capture windows now return `false` when the conditional update affects zero rows, which prevents late requests from overwriting an existing captured sample.
+- (2026-05-11) **T082 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. `clearSamplePayload` now has server-action coverage for `inbound_webhook:update` permission, tenant-scoped update by webhook id, and clearing both `sample_payload` and `sample_capture_expires_at`.
+- (2026-05-11) **T090 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Registry ordering is now locked: `registerAction` stores definitions and `listActions()` returns a deterministic flat list grouped by `entityType` ordering and then action name.
+- (2026-05-11) **T091 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Duplicate action registration now has explicit coverage and must throw `Inbound action "<name>" is already registered`, matching the registry's fail-fast behavior.
+- (2026-05-11) **T092 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Added a source-level bootstrap contract that requires all seven v1 package contribution imports (tickets, clients/contacts, assets, billing, scheduling, projects, tags), plus bootstrap calls from app initialization and action discovery before `listActions()`.
+- (2026-05-11) **T093 implemented** in `server/src/test/unit/inboundWebhooks/mappingEvaluator.test.ts`. JSONata field mapping now has direct coverage against the raw request body, preserving PRD-style expressions like `alert.message` instead of requiring a wrapper object.
+- (2026-05-11) **T094 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts`, `requestProcessor.ts`, and `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Mapping/evaluation failures are now classified as `InboundWebhookMappingError` and recorded as failed deliveries with `response_status=400` / `error='mapping_failed'` instead of surfacing as internal 500 dispatch failures.
+- (2026-05-11) **T095 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Missing required mapped fields now have explicit delivery coverage: the request processor records a failed delivery with the dispatcher-provided field/action error and returns `400` with `error='mapping_failed'`.
+- (2026-05-11) **T096 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. External-ID lookup misses now have receiver-level delivery coverage: action lookup-miss errors are persisted to `handler_outcome.error` with `dispatch_status='failed'`, preserving the `lookup_miss` reason for debugging.
+- (2026-05-11) **T1010 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. The test imports the ticket package's inbound action contribution, retrieves `createTicket` from the registry, and verifies mapped fields plus webhook metadata are passed to `TicketModel.createTicketWithRetry` with the current tenant and transaction.
+- (2026-05-11) **T1011 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. The `createTicket` action now has coverage for optional mapped `external_id`, asserting it writes a `ticket` mapping through `writeEntityMapping` with `integration_type=<webhookSlug>` and delivery metadata inside the transaction.
+- (2026-05-11) **T1012 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Successful direct-action delivery updates now assert the `createTicket` dispatch outcome is persisted to `handler_outcome` with `entity_type='ticket'`, `entity_id=<ticket_id>`, and ticket number metadata.
+- (2026-05-11) **T1013 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `updateTicketByExternalId` now has coverage for resolving the ticket through `tenant_external_entity_mappings` via `lookupAlgaEntityByExternalId` and applying mapped status, priority, and assignee fields through `TicketModel.updateTicket` with the current tenant.
+- (2026-05-11) **T1014 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `updateTicketByExternalId` now returns a structured `success:false` `lookup_miss` result and skips `TicketModel.updateTicket` when the webhook-scoped external ID mapping is absent; T096 covers conversion of this failure class into a failed delivery row.
+- (2026-05-11) **T1015 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `addTicketCommentByExternalId` now has coverage for resolving the mapped ticket, building the comment payload with internal/webhook metadata, and calling `TicketModel.createComment` with tenant and transaction scope.
+- (2026-05-11) **T1016 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `changeTicketStatusByExternalId` now has coverage for calling `TicketModel.updateTicket` with mapped status/board fields and propagating model validation errors for invalid statuses; request-processor failure persistence is covered by T062/T096.
+- (2026-05-11) **T1020 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertClientByExternalId` now has coverage for the no-existing-mapping create path: tenant-scoped `clients` insert, default active/company payload normalization, and `writeEntityMapping` with webhook slug plus delivery metadata.
+- (2026-05-11) **T1021 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertClientByExternalId` now has coverage for the mapped update path: lookup by webhook-scoped external ID, tenant-scoped `clients` update, property merging, and no duplicate mapping write.
+- (2026-05-11) **T1022 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `setClientActiveByExternalId` now has coverage for resolving the mapped client, updating `clients.is_inactive` from the mapped `active` flag, and returning active-state metadata.
+- (2026-05-11) **T1030 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertContactByExternalId` now has coverage for creating a contact with direct client linkage, writing the webhook-scoped contact mapping, and updating an existing mapped contact through `ContactModel.updateContact`.
+- (2026-05-11) **T1031 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertContactByExternalId` now rejects contact creation when neither `client_id` nor a resolvable webhook-scoped `client_external_id` is available, and the test verifies no contact or mapping write occurs.
+- (2026-05-11) **T1040 implemented** in `server/src/test/unit/inboundWebhooks/assetInboundActions.test.ts`. `upsertAssetByExternalId` now has coverage for RMM-shaped payloads delegating to `ingestNormalizedRmmDeviceSnapshot`, resolving client linkage via webhook-scoped external ID, and stamping provider/integration/device identifiers to the user webhook namespace.
+- (2026-05-11) **T1041 implemented** in `server/src/test/unit/inboundWebhooks/assetInboundActions.test.ts`. The RMM asset path now has regression coverage that a normalized device snapshot shaped like bundled RMM ingestion input preserves lifecycle, asset, extension, and metadata fields while only provider/integration/device namespace values are rewritten for the user webhook.
+- (2026-05-11) **T1042 implemented** in `server/src/test/unit/inboundWebhooks/assetInboundActions.test.ts`. The non-RMM asset path now has coverage for tenant-scoped plain `assets` insert payloads, skipping shared RMM ingestion, and writing a webhook-scoped asset mapping row for later external-ID updates.
+- (2026-05-11) **T1050 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has coverage for resolving the invoice via webhook-scoped external mapping, updating status to `paid`, merging payment metadata into `custom_fields`, and returning paid status metadata.
+- (2026-05-11) **T1051 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has lookup-miss coverage: absent webhook-scoped invoice mapping returns `success:false` with a `lookup_miss` message and skips invoice reads/updates.
+- (2026-05-11) **T1052 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has idempotency coverage for invoices already in `paid` status: the action returns success from the current row and skips duplicate status/custom-field updates.
+- (2026-05-11) **T1053 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `updateInvoiceStatusByExternalId` now has coverage for resolving a mapped invoice, applying a mapped non-paid status, and recording inbound delivery metadata in `custom_fields`.
+- (2026-05-11) **T1060 implemented** in `server/src/test/unit/inboundWebhooks/timeEntryInboundActions.test.ts`. `createTimeEntry` now has coverage for tenant-scoped reference checks, work-date/time-sheet resolution, creating a billable `time_entries` row, writing optional external mappings, and publishing `TIME_ENTRY_CREATED`.
+- (2026-05-11) **T1070 implemented** in `server/src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts`. `createProjectTask` now has coverage for resolving a parent project through `tenant_external_entity_mappings`, validating project/phase/status mapping scope, creating through `ProjectTaskModel.addTask`, and writing a `project_task` external mapping.
+- (2026-05-11) **T1071 implemented** in `server/src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts`. `updateProjectTaskStatusByExternalId` now covers webhook-scoped task lookup through `tenant_external_entity_mappings`, tenant-aware task/project resolution, target status validation, and the shared `ProjectTaskModel.updateTaskStatus` call.
+- (2026-05-11) **T1080 implemented** in `server/src/test/unit/inboundWebhooks/tagInboundActions.test.ts`. `addTagToEntityByExternalId` now covers resolving a mapped ticket, verifying the ticket still exists, getting/creating the tag definition, and inserting a tenant-scoped `tag_mappings` row.
+- (2026-05-11) **T1081 implemented** in `server/src/test/unit/inboundWebhooks/tagInboundActions.test.ts`. The tag action now also covers `entity_type='client'`, verifying the client table/id-column mapping and default tag color handling before inserting `tag_mappings`.
+- (2026-05-11) **T1082 implemented** in `server/src/test/unit/inboundWebhooks/tagInboundActions.test.ts`. Unsupported tag entity types now have explicit validation coverage, including an assertion that the action rejects before creating a tenant Knex instance or attempting external-ID lookup.
+- (2026-05-11) **T110 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow handler dispatch now has coverage for launching `launchPublishedWorkflowRun` with the normalized inbound envelope, event trigger metadata, delivery-scoped execution keys, and the workflow run outcome returned to delivery persistence.
+- (2026-05-11) **T111 implemented** in `server/src/test/unit/inboundWebhooks/workflowEnvelope.test.ts`. The workflow envelope builder now has deterministic coverage for the exact documented fields: source, body, headers, verified, delivery_id, idempotency_key, and ISO received_at.
+- (2026-05-11) **T112 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow dispatch now verifies sensitive inbound headers (`Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`) are filtered before the envelope is passed to `launchPublishedWorkflowRun`.
+- (2026-05-11) **T113 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. The receiver path now verifies a successful workflow dispatch outcome, including `workflow_run_id`, is persisted into `handlerOutcome` when the delivery is marked `dispatched`.
+- (2026-05-11) **T114 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Workflow trigger errors now have receiver-path coverage showing the delivery is updated to `dispatchStatus='failed'` with the engine error message in `handlerOutcome`.
+- (2026-05-11) **T115 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow dispatch now has launch-boundary coverage showing once `launchPublishedWorkflowRun` returns a run id/version, dispatch resolves with the workflow outcome and does not wait for or observe later workflow completion/failure.
+- (2026-05-11) **T120 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. The webhook payload context adapter now has contract coverage for turning a captured sample body into deterministic top-level expression roots and nested path options such as `alert.id` / `device.hostname`.
+- (2026-05-11) **T121 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. Captured webhook sample inference now covers nested objects, arrays, array-item path segments, and primitive type classification for integer/number/boolean/string fields.
+- (2026-05-11) **T122 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. Adapter edge-case coverage now verifies null bodies produce a minimal `value` root, array bodies expose `value[]` paths, and empty object samples return empty roots/options without throwing.
+- (2026-05-11) **T123 implemented** in `server/src/test/unit/inboundWebhooks/InboundWebhookMappingField.test.ts`. The inbound mapping field now exposes and tests the helper that converts captured-sample adapter paths into `ExpressionTextArea` `fieldOptions`, ensuring autocomplete receives paths and type hints from the webhook payload context adapter.
+- (2026-05-11) **T130 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The Settings webhooks shell now has source-level UI contract coverage for the tab container, inbound/outbound tab trigger IDs, tab values, and the inbound/outbound tab panel components.
+- (2026-05-11) **T131 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Outbound regression coverage now verifies the outbound tab still mounts `OutboundWebhooksSetup` and that the existing outbound list/save/delete/test/rotate/retry/delivery/stat action paths remain wired in the refactored component.
+- (2026-05-11) **T132 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The inbound list view now has contract coverage for the required table shape: name/receiver URL, handler, last delivery, active state, and DataTable binding to inbound webhook rows.
+- (2026-05-11) **T133 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The inbound create/edit dialog now has contract coverage for the Identity section title/help and stable inputs for name, URL-safe slug normalization, and description.
+- (2026-05-11) **T134 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Auth-section UI coverage now verifies the HMAC auth option and conditional signature-header input are present with stable IDs and state wiring.
+- (2026-05-11) **T135 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Auth-section UI coverage now verifies the Bearer option renders a password token field, uses the saved-secret placeholder for existing configs, and writes back to `identityForm.bearerToken`.
+- (2026-05-11) **T136 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Auth-section UI coverage now verifies the IP allowlist option renders the CIDR textarea with stable ID, translated labels/placeholders, and `identityForm.ipCidrs` state wiring.
+- (2026-05-11) **T137 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. While adding coverage, a real UI gap was found: inbound create/update save was still disabled. The dialog now builds the snake_case upsert payload, calls `upsertInboundWebhook`, updates local list state, and displays the returned one-time secret only in `revealedInboundSecret`, which is cleared on modal close.
+- (2026-05-11) **T138 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Saved non-IP inbound webhook configs now show a rotate-secret button that calls `rotateInboundWebhookSecret` and reuses the one-time secret modal for the replacement secret.
+- (2026-05-11) **T139 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Idempotency-section UI coverage now verifies the header/jsonata source dropdown, value input label/placeholder switch, and duplicate-window seconds input are present and state-backed.
+- (2026-05-11) **T140 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Handler-section UI coverage now verifies the handler type selector exposes direct-action/workflow options, updates `identityForm.handlerType`, and conditionally renders the direct-action or workflow panel.
+- (2026-05-11) **T141 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Direct-action dropdown coverage now verifies actions are loaded from `listInboundWebhookActions`, mapped into selector options by registry name/display metadata, and rendered through the `inbound-webhook-direct-action` select.
+- (2026-05-11) **T142 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Direct-action mapping coverage now verifies selected action definitions drive target-field rows, each row uses a stable `inbound-webhook-mapping-*` ID, and mappings are edited through the reused `InboundWebhookMappingField` with captured sample context.
+- (2026-05-11) **T143 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Workflow selector coverage now verifies tenant workflows are loaded through `listInboundWorkflowOptions`, mapped into select options with workflow IDs/names, and rendered by the `inbound-webhook-workflow` select.
+- (2026-05-11) **T144 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Workflow handler UI coverage now verifies the envelope info card includes the documented `source`, `body`, `headers`, `verified`, `delivery_id`, `idempotency_key`, and `received_at` fields.
+- (2026-05-11) **T145 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-capture UI coverage now verifies the capture button is saved-webhook gated, calls `captureSamplePayload`, writes returned capture/sample state into the dialog form, and shows the active capture window status.
+- (2026-05-11) **T146 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-tree UI coverage now verifies captured payloads are converted through `buildWebhookPayloadExpressionPathOptions`, empty state is handled, and path buttons render stable IDs plus the path text.
+- (2026-05-11) **T147 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-tree insertion coverage now verifies mapping fields set the focused target, path buttons are disabled until a field is focused, and clicking a path writes it into `identityForm.fieldMapping[focusedMappingField]`.
+- (2026-05-11) **T148 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Active-toggle UI coverage now verifies saved configs call `setInboundWebhookActiveState`, update `isActive` plus `autoDisabledAt` from the persisted result, and wire the `inbound-webhook-active` switch to that handler.
+- (2026-05-11) **T149 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Auto-disable banner coverage now verifies the dialog renders translated warning copy when `identityForm.autoDisabledAt` is set and formats the disabled timestamp for display.
+- (2026-05-11) **T160 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. While adding coverage, a real UI gap was found: the delivery dialog paginated by webhook but lacked a dispatch-status filter. Added `inbound-webhook-delivery-status-filter`, status state, and query wiring so `listInboundDeliveries` receives both `inboundWebhookId` and optional `status`.
+- (2026-05-11) **T161 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Delivery-detail drawer coverage now verifies selected delivery data drives response status, duration, handler error, filtered headers, request body, response body, and formatted JSON sections.
+- (2026-05-11) **T162 implemented** in `server/src/test/unit/inboundWebhooks/deliveryPersistence.test.ts`. Replay persistence coverage now verifies `createInboundDelivery` writes `is_replay=true` and `replayed_from=<original delivery>` when replay callers create the linked delivery row.
+- (2026-05-11) **T163 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts`. Replay source coverage now verifies `replayInboundDelivery` fetches the current active webhook config by tenant/webhook ID and passes that current row into `dispatchAndRecordOutcome`, so mapping/config changes are reflected on replay.
+- (2026-05-11) **T164 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts`. Replay linkage source coverage now verifies `replayInboundDelivery` creates the replay row with `isReplay: true`, `replayedFrom: original.delivery_id`, and returns the newly fetched replay delivery.
+- (2026-05-11) **T165 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Synthetic-test UI coverage now verifies the dialog exposes custom JSON body and header editors, parses both, calls `sendInboundWebhookTest` for in-process dispatch, and opens the resulting delivery detail.
+- (2026-05-11) **T170 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Inbound UI i18n coverage now scans the inbound component region for direct JSX English text nodes and verifies the component uses the `msp/profile` translation namespace plus inbound translation keys.
+- (2026-05-11) **T171 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. UI reflection coverage now scans inbound static IDs for kebab-case form and verifies dynamic mapping, sample-path, and delivery-view IDs are generated from kebab-case prefixes.
+- (2026-05-11) **T180 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Settings feature-flag coverage now verifies `inbound_webhooks_enabled` defaults off, the active tab falls back to outbound if disabled, and inbound tab/content are only rendered behind the flag.
+- (2026-05-11) **T181 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Receiver feature-flag coverage now verifies a disabled `inbound_webhooks_enabled` flag returns a bodyless 404 after tenant resolution and before tenant context, webhook lookup, delivery persistence, or dispatch.
+- (2026-05-11) **T182 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. The receiver now has tenant-specific flag coverage: tenant A can proceed through `runWithTenant` and dispatch while tenant B, in the same mocked scenario, receives a bodyless 404 and never reaches lookup, delivery creation, or dispatch.
+- (2026-05-11) **T190 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts`. Added a source contract that enumerates every `inbound_webhooks` table access in server actions plus receiver config lookup, requires tenant-scoped `where` clauses on read/update/delete paths, and verifies create paths insert the tenant key.
+- (2026-05-11) **T191 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts`. Extended the source contract to enumerate delivery table access in server actions, delivery persistence, and idempotency helpers; inserts must include `tenant`, direct lookups/updates must filter by tenant, and paginated list queries must flow through the shared `applyFilters` tenant guard.
+- (2026-05-11) **T192 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Added a mocked `getInboundDelivery` cross-tenant test: a tenant-B delivery row is not returned to the tenant-A auth context because the action queries by `{ tenant: 'tenant-a', delivery_id }`.
+- (2026-05-11) **T193 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Tightened the mocked config lookup harness to honor `where` criteria and added a cross-tenant `getInboundWebhook` test proving tenant-A cannot read a tenant-B webhook config with the same requested id.
+- (2026-05-11) **T200 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Added an executable acceptance-path contract for HMAC create-ticket webhooks: a signed JSON request reaches the direct-action dispatcher, returns `{delivery_id}`, and persists a `createTicket` handler outcome with the created ticket id/number for the Settings delivery UI to display.
+- (2026-05-11) **T201 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Added a workflow-handler acceptance contract verifying the dispatcher launches the published workflow with `execute=true`, delivery-scoped trigger/execution keys, and returns `workflow_run_id`/version so delivery logs can link users to the visible workflow run.
+- (2026-05-11) **T202 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Added a replay acceptance-path test: a failed original delivery is loaded from the log, replay creates a linked delivery with current webhook mapping, dispatch succeeds, and the returned delivery is marked `isReplay=true` with `replayedFrom` pointing to the failed original.
+- (2026-05-11) **T300 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `GET /api/v1/inbound-webhooks` route test verifies a 200 response with `{ data }` and confirms the route delegates to `listInboundWebhooks()`, preserving the tenant-scoped server-action path covered by T020/T190.
+- (2026-05-11) **T301 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `POST /api/v1/inbound-webhooks` route test verifies create requests delegate the parsed JSON body to `upsertInboundWebhook`, return `201`, and expose the returned secret only as the one-time `secret` response field.
+- (2026-05-11) **T302 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `GET /api/v1/inbound-webhooks/{id}` route test verifies lookup by path id, 200 `{ data }` response shape, and that raw secret material is absent from the returned config.
+- (2026-05-11) **T303 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `PUT /api/v1/inbound-webhooks/{id}` route test verifies the parsed body is persisted through `upsertInboundWebhook` with the URL path id overriding any body id and that updates return `{ data, secret:null }`.
+- (2026-05-11) **T304 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `DELETE /api/v1/inbound-webhooks/{id}` route test verifies deletion delegates to `deleteInboundWebhook(id)` and returns an empty `204` response.
+- (2026-05-11) **T305 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The rotate-secret route test verifies `POST /api/v1/inbound-webhooks/{id}/rotate-secret` delegates to `rotateInboundWebhookSecret(id)` and returns the replacement as the one-time `secret` response field.
+- (2026-05-11) **T306 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The synthetic test route verifies `POST /api/v1/inbound-webhooks/{id}/test` parses `{body, headers}`, calls `sendInboundWebhookTest(id, input)`, and returns the created delivery with `202`.
+- (2026-05-11) **T307-T313 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. Added REST route coverage for capture enable/clear, delivery pagination/filtering, delivery detail ownership check, replay creation/linkage, and action discovery output. These tests verify the route layer delegates to the existing server actions without introducing a parallel auth or data access path.
+- (2026-05-11) **T320-T328 implemented** in `server/src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts`. Added generated CE/EE YAML checks for inbound webhook paths, receiver endpoint header/response documentation, config/auth/handler/envelope component assertions, and explicit management/action-discovery schema reference checks.
+- (2026-05-11) **T329 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. Added an authorization-failure route test that lets the mocked server action throw a `403` and verifies the REST layer returns that error instead of bypassing or replacing the server-action permission path.
+- (2026-05-11) **T330 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.source.contract.test.ts`. Added a source contract asserting every inbound webhook REST route imports `@/lib/actions/inboundWebhookActions` and avoids direct DB/auth/RBAC imports, preserving tenant scoping parity with the server actions.
+- (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
+- (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
+- (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
+- (2026-05-11) **F040 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `findDuplicateInboundDelivery` checks `(tenant, inbound_webhook_id, idempotency_key)` within the configured window and only treats `pending`, `dispatched`, or prior `duplicate` rows as dedup hits.
+- (2026-05-11) **F041 implemented** in `server/src/lib/inboundWebhooks/deliveryPersistence.ts`. `createInboundDelivery` inserts tenant-scoped rows before dispatch, filters persisted headers through F043, stores request bodies only for `auth_status='verified'`, and supports replay linkage fields.
+- (2026-05-11) **F033 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. HMAC-SHA256 verification uses configurable signature header names, supports `sha256=<hex>` or raw hex signatures, reads secrets from tenant secret storage, and compares with padded `crypto.timingSafeEqual`.
+- (2026-05-11) **F034 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. Bearer auth reads `Authorization: Bearer <token>`, loads the tenant secret by vault path metadata, and uses the same timing-safe comparison helper.
+- (2026-05-11) **F035 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. IP allowlist auth supports exact IP strings and IPv4 CIDR ranges without adding a new dependency. IPv6 is currently exact-match only; add a CIDR library if IPv6 CIDR support becomes required.
+- (2026-05-11) **F036 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. Path-token auth reads the configured query parameter (default `token`), loads the tenant token secret, and compares with the timing-safe helper.
+- (2026-05-11) **F037 implemented** in `server/src/lib/inboundWebhooks/responses.ts`. `unauthorizedInboundWebhookResponse()` returns a bodyless `401` `NextResponse` to reuse for unknown tenant, unknown webhook, disabled webhook, and bad auth cases.
+- (2026-05-11) **F031 implemented** in `server/src/lib/inboundWebhooks/tenantResolver.ts`. Uses existing `@alga-psa/db.getTenantIdBySlug` and caches positive/negative lookups for 60 seconds; tenant slugs are the existing 12-hex portal slug format derived from tenant UUIDs.
+- (2026-05-11) **F032 implemented** in `server/src/lib/inboundWebhooks/configLookup.ts`. `lookupInboundWebhookBySlug(knex, tenant, webhookSlug)` queries `inbound_webhooks` with both `tenant` and `slug`, returning only receiver-needed fields; backed by F001 unique `(tenant, slug)` index.
+- (2026-05-11) **F044 implemented** in `server/src/lib/inboundWebhooks/sampleCapture.ts`. `captureInboundWebhookSampleIfRequested` stores the first verified body only while `sample_capture_expires_at > now`, clears the capture window after storing, and leaves existing samples untouched until the admin explicitly re-captures/clears.
+- (2026-05-11) **F042 implemented** in `server/src/lib/inboundWebhooks/rateLimitConfig.ts`. Inbound webhooks use the shared Redis token bucket with a distinct `webhook-in` namespace, default to 600/min, and load per-webhook overrides from `inbound_webhooks.rate_limit_per_minute` scoped by tenant and webhook id.
+- (2026-05-11) **F030 implemented** with `server/src/app/api/inbound/[tenantSlug]/[webhookSlug]/route.ts` plus shared `server/src/lib/inboundWebhooks/requestProcessor.ts`. The route supports POST/PUT/PATCH, gates on the inbound feature flag, resolves tenant slug, verifies auth, applies rate limit/idempotency, persists deliveries before dispatch, captures samples, and dispatches direct actions through the registry. Workflow dispatch still remains a later feature (F060).
+- (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
+  - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
+  - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
+  - **Tactical RMM** (CE+EE) — `packages/integrations/src/lib/rmm/tacticalrmm/`. Has webhook secret support (`tacticalrmm_webhook_secret`).
+  - **Xero, QBO** (EE accounting) — outbound only currently.
+  - **Entra ID** (EE) — bidirectional user/group sync; Direct mode + CIPP mode.
+  - **Microsoft Graph / Teams, Google** — OAuth integrations for calendar/messaging.
+- (2026-05-11) **`tenant_external_entity_mappings`** is the canonical external-ID-to-Alga-entity lookup table. Created in `server/migrations/20250502173321_create_tenant_external_entity_mappings.cjs`. Schema: `(tenant_id, integration_type, alga_entity_type, alga_entity_id, external_entity_id, external_realm_id, sync_status, last_synced_at, metadata)`. Two unique constraints enforce one-to-one mapping. **The plan uses this instead of adding `external_ref` columns to individual entity tables.**
+- (2026-05-11) **`@alga-psa/integrations/lib/rmm/sharedAssetIngestionService`** exports `ingestNormalizedRmmDeviceSnapshot` — the shared device normalization path used by all RMM integrations. The inbound webhook asset action delegates here for RMM-shaped payloads.
+- (2026-05-11) **Domain entity surface is large** — 60+ mutable entities across `packages/*/src/actions/`. v1 covers the high-leverage subset (tickets, clients, contacts, assets, invoices, time entries, project tasks, tags). Registry pattern means more can be added per package without touching inbound webhook core.
+- (2026-05-11) Outbound webhook system at `server/src/lib/webhooks/` is mature: signing (`X-Alga-Signature` v1), Redis queue, retries, auto-disable, SSRF guards, per-webhook rate limits. Most of this is dispatch-side and not directly reusable for inbound, but the **delivery log + replay** pattern is the right shape to copy.
+- (2026-05-11) **OpenAPI infrastructure is in place:**
+  - Central registry: `server/src/lib/api/openapi/registry.ts`
+  - Per-area route files: `server/src/lib/api/openapi/routes/*.ts` — outbound webhooks already registered at `routes/webhooks.ts` (model for inbound).
+  - Generator: `sdk/scripts/generate-openapi.ts` → outputs `sdk/docs/openapi/alga-openapi.{ce,ee}.{yaml,json}`.
+  - Contract test pattern: `server/src/test/unit/api/projectTasksOpenApi.contract.test.ts`.
+  - Outbound webhook v1 API: `/api/v1/webhooks`, `/[id]`, `/test`, `/verify`, `/templates`, `/events`, `/analytics`, `/[id]/health`. Mirror this surface for inbound.
+- (2026-05-11) Existing Settings UI for outbound: `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Uses DataTable, Dialog, DropdownMenu primitives from `@alga-psa/ui`. Already i18n-ready.
+- (2026-05-11) Workflow editor's expression infra is rich:
+  - `ee/server/src/components/workflow-designer/expression-editor/ExpressionEditor.tsx` — Monaco-based JSONata editor with completion, hover, diagnostics, signature help.
+  - `ee/server/src/components/workflow-designer/mapping/ExpressionTextArea.tsx` — single-line mapping editor (probably the right entry point for per-field rows).
+  - `shared/workflow/expression-authoring/` — `pathDiscovery.ts`, `pathValidation.ts`, `validation.ts`, `context.ts`, adapters for workflow/invoice contexts.
+  - `shared/workflow/runtime/expressionEngine.ts` — JSONata runtime evaluator. Use at request time to evaluate field mappings.
+- (2026-05-11) Context adapter pattern: see `shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts` for a model of what `webhookPayloadContextAdapter.ts` should look like.
+- (2026-05-11) CitusDB multi-tenant rules from CLAUDE.md:
+  - All queries WHERE on `tenant`
+  - JOIN conditions include `tenant`
+  - Composite PKs include `tenant`
+  - `app.current_tenant` doesn't propagate to all shards — use `withAuth` / `runWithTenant`
+- (2026-05-11) Migrations split: CE migrations in `server/migrations/`, EE in `ee/server/migrations/`. Inbound webhooks are CE (community-edition feature).
+- (2026-05-11) Authentication wrapper: `withAuth` from `@alga-psa/auth` is the canonical pattern. Sets tenant context via AsyncLocalStorage.
+- (2026-05-11) UI reflection: every interactive element needs a kebab-case `id` attribute (e.g. `id="inbound-webhook-create-button"`). Mandatory per CLAUDE.md.
+
+## Commands / Runbooks
+
+- (2026-05-11) Find workflow trigger entrypoint:
+  - `grep -rn "startWorkflow\|triggerWorkflow\|emit.*workflow" shared/workflow/runtime/ shared/workflow/services/`
+  - Check `services/workflow-worker/` for the bus consumer.
+- (2026-05-11) Test inbound endpoint locally:
+  - `curl -X POST http://localhost:3000/api/inbound/<tenant>/<slug> -H "X-Signature: ..." -d '{...}'`
+- (2026-05-11) Run migrations after changes:
+  - `npm run migrate`
+- (2026-05-11) Reset feature flag in PostHog UI or via API for testing.
+- (2026-05-11) Type check after F014:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F015:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F016:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F017:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F018:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F019:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F021:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F022:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F050:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F054:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F061:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F070:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F043:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F038:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F040:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F041:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F033:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F037:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F031:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F032:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F044:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F042:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F030:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F020/F023 dispatcher work:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1010:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F053:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1011:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1012:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1013:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1020/F1021 client actions:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1030:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1040/F1041 asset actions:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1050/F1051/F1052 invoice actions:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1060:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1070:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1071:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1080:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F060:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F072:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F080:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F081:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F082:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F083:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F084:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F085:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F086:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F087:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F088:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F089:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F090:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F091:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F092:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F093:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F094:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F095:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F096:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F100:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F101:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F200:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F201:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F202:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F203:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F204:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F205:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F206:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F207:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F208:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F209:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F210:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F211:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F212:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F213:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F214:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F215:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F216:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F217:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F218:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) OpenAPI generation after F220:
+  - `node sdk/scripts/generate-openapi.ts` (failed: TypeScript ESM directory import without the repo loader)
+  - `npm run openapi:generate --workspace=sdk -- --edition ce && npm run openapi:generate --workspace=sdk -- --edition ee` (failed: npm matched nested SDK workspaces without that script)
+  - `(cd sdk && npm run openapi:generate -- --edition ce && npm run openapi:generate -- --edition ee)`
+- (2026-05-11) Test/typecheck after F221:
+  - `(cd server && npm run test -- src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after F222:
+  - `(cd server && npm run test -- src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Audit after F223:
+  - `rg -n "from '@/lib/actions/inboundWebhookActions'|withAuth|hasPermission|createTenantKnex" server/src/app/api/v1/inbound-webhooks -g'route.ts'`
+  - `find server/src/app/api/v1/inbound-webhooks -name route.ts -print | sort`
+- (2026-05-11) Test/typecheck after T001:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T002:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T003:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T004:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/externalEntityMappings.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T004a:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/externalEntityMappings.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T004b:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T005:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T006:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookPermissions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T007:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookPermissions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T010:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T011:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T012:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T013:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T014:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T020:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T021:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T022:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T023:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T024:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T025:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T026:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T027:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T028:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T030:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T031:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T032:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T033:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T034:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T035:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T036:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T037:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T038:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T039:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T040:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T041:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T042:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/authVerifier.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T043:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/authVerifier.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T044:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/headerFilter.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T050:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T051:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T052:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T053:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T054:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T055:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T060:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T061:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/deliveryPersistence.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T062:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T070:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T071:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/rateLimitConfig.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T072:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/rateLimitConfig.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T080:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/sampleCapture.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T081:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/sampleCapture.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T082:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T090:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T091:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T092:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T093:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/mappingEvaluator.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T094:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T095:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T096:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1010:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1011:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1012:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1013:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1014:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1015:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1016:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1020:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1021:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1022:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1030:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1031:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1040:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/assetInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1041:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/assetInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1042:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/assetInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1050:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1051:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1052:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1053:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1060:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/timeEntryInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1070:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1071:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1080:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/tagInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1081:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/tagInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1082:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/tagInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T110:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T111:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowEnvelope.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T112:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T113:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T114:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T115:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T120:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T121:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T122:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T123:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/InboundWebhookMappingField.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T130:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T131:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T132:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T133:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T134:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T135:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T136:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T137:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T138:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T139:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T140:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T141:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T142:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T143:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T144:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T145:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T146:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T147:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T148:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T149:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T160:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T161:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T162:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/deliveryPersistence.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T163:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T164:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T165:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T170:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T171:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T180:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T181:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T182:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T190:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T191:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T192:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T193:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T200:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T201:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T202:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T300:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T301:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T302:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T303:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T304:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T305:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T306:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T307-T313:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T320-T330:
+  - `(cd server && npm run test -- src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+
+## Links / References
+
+- PRD: `./PRD.md`
+- Features: `./features.json`
+- Tests: `./tests.json`
+- Commit groups (for /loop): `./COMMIT_GROUPS.md`
+- Outbound webhook system: `server/src/lib/webhooks/`
+- Outbound subscriber: `server/src/lib/eventBus/subscribers/webhookSubscriber.ts`
+- Outbound UI: `server/src/components/settings/security/AdminWebhooksSetup.tsx`
+- Outbound migrations: `server/migrations/20260505140000_create_webhook_tables.cjs`
+- OpenAPI registry: `server/src/lib/api/openapi/registry.ts`
+- OpenAPI route file (outbound, model for inbound): `server/src/lib/api/openapi/routes/webhooks.ts`
+- OpenAPI generator: `sdk/scripts/generate-openapi.ts`
+- OpenAPI output: `sdk/docs/openapi/alga-openapi.{ce,ee}.{yaml,json}`
+- Contract test pattern: `server/src/test/unit/api/projectTasksOpenApi.contract.test.ts`
+- Workflow expression editor: `ee/server/src/components/workflow-designer/expression-editor/`
+- Workflow mapping components: `ee/server/src/components/workflow-designer/mapping/`
+- Expression-authoring core: `shared/workflow/expression-authoring/`
+- JSONata runtime: `shared/workflow/runtime/expressionEngine.ts`
+- Server action auth pattern: CLAUDE.md → "Server Action Authentication Pattern"
+- Citus multi-tenant rules: CLAUDE.md → "Critical Multi-Tenant Rules (CitusDB)"
+
+## Open Questions
+
+- **Workflow trigger entrypoint:** Does the engine expose a synchronous `startWorkflow(workflowId, input)` API, or must inbound dispatch via event bus? Reference NinjaOne `alertProcessor.ts` — it may already invoke workflows and would show the pattern. Spike during F060.
+- **Tenant slug source:** Tenants need a URL-safe identifier for `/api/inbound/[tenantSlug]/...`. Does an appropriate column exist (e.g. `tenants.url_slug`)? If not, add one in a prerequisite migration.
+- **Reserved integration_type collision:** Bundled integrations write to `tenant_external_entity_mappings` with `integration_type` like `'ninjaone'`, `'tactical_rmm'`, `'tanium'`, `'xero'`, `'qbo'`, `'entra'`. User webhook slugs must not collide. Solutions: (a) maintain a reserved-name list and reject; (b) prefix user slugs with `user:` namespace; (c) use a separate column `integration_source` (system vs user). Decide before F003. Lean toward (a) — explicit reject with clear error.
+- **Bootstrap action loading:** Server start must load all package action contributions before first inbound request. Static imports from `server/src/lib/inboundWebhooks/actions/bootstrap.ts` is simplest; dynamic discovery supports plugins later but adds complexity.
+- **Missing idempotency key behavior:** When idempotency_source is configured but the request doesn't include the key — accept (single dispatch, no dedup) or reject (400)? Lean toward accept-with-warning logged.
+- **Sample payload PII:** Captured samples may contain sensitive data. Plan: mark as sensitive, restrict access to webhook owner, no auto-redaction in v1. Revisit if security raises concerns.
+- **Replay against changed config:** Documented behavior is "uses current config." Should the delivery detail show a banner if the mapping changed since the original delivery? Nice-to-have, not v1.
+- **Delivery retention:** PRD says 30 days for raw body. Confirm with ops/legal that this is acceptable for financial/device data.
+- **Rate limit defaults:** 600/min per webhook is a guess. Review against expected RMM alert volumes.
+- **`upsertContactByExternalId` client linkage:** Should the action require a `client_external_id` mapped (with lookup) or accept `client_id` directly, or both? Confirm at design time.
+- **Consolidation with bundled integrations (v2 candidate):** Should NinjaOne / Tactical RMM eventually consume the same user-configurable webhook plumbing with their secrets/normalizers preset? Out of scope for v1.

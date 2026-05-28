@@ -25,7 +25,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     const user = await getCurrentUser();
     const productCode = await getCurrentTenantProduct();
     const allowSlaStatusFilter = productCode === 'psa';
-    const useAlgadeskQuickAddForm = productCode === 'algadesk';
+    const useAlgaDeskQuickAddForm = productCode === 'algadesk';
     if (!user) {
       // In dev, redirect unauthenticated users to login
       // This avoids rendering a 200 with an error message
@@ -222,7 +222,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           initialTeams={teams}
           canUpdateTickets={canUpdateTickets}
           allowSlaStatusFilter={allowSlaStatusFilter}
-          useAlgadeskQuickAddForm={useAlgadeskQuickAddForm}
+          useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         />
       </div>
     );

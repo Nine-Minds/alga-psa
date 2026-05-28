@@ -241,7 +241,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       }}
       title={t('quickAdd.title', 'Add New Project')}
       className="max-w-[600px]"
-      disableFocusTrap
       footer={footer}
     >
       <DialogContent>

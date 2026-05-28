@@ -3,6 +3,71 @@
  * Maps template names to realistic placeholder values for all known {{variables}}.
  */
 
+// Inline styles mirror the runtime renderers in ticketEmailSubscriber.ts /
+// projectEmailSubscriber.ts so the preview matches what real recipients see.
+const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
+const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
+const CHANGE_SECTION_STYLE = 'margin:0 0 14px 0;padding:0 0 12px 0;border-bottom:1px solid rgba(146,64,14,0.15);';
+const CHANGE_SECTION_LAST_STYLE = 'margin:0;padding:0;';
+const CHANGE_SECTION_HEADER_STYLE = 'font-size:13px;color:#92400e;font-weight:600;margin:0 0 8px 0;';
+const CHANGE_SECTION_TIMESTAMP_STYLE = 'color:#9a6c1f;font-weight:500;';
+
+function renderSampleChangeItem(field: string, oldValue: string | null, newValue: string): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${field}</div>`;
+  if (oldValue === null) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${newValue}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${oldValue}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${newValue}</div></li>`;
+}
+
+function renderSampleChangeSection(
+  updater: string,
+  timestamp: string,
+  items: string[],
+  isLast: boolean,
+): string {
+  const sectionStyle = isLast ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
+  const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${updater} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${timestamp}</span></div>`;
+  const list = `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
+  return `<div style="${sectionStyle}">${header}${list}</div>`;
+}
+
+const SAMPLE_TICKET_CHANGES_HTML = [
+  renderSampleChangeSection(
+    'John Doe',
+    'May 12, 2026, 3:04 PM EDT',
+    [
+      renderSampleChangeItem('Title', 'Printer offline on 3rd floor', 'Printer not working on 3rd floor — toner replacement needed'),
+      renderSampleChangeItem('Priority', 'Medium', 'High'),
+    ],
+    false,
+  ),
+  renderSampleChangeSection(
+    'Jane Smith',
+    'May 12, 2026, 3:09 PM EDT',
+    [
+      renderSampleChangeItem('Status', 'New', 'In Progress'),
+      renderSampleChangeItem('Assigned To', 'Unassigned', 'Jane Smith'),
+    ],
+    true,
+  ),
+].join('');
+
+const SAMPLE_PROJECT_CHANGES_HTML = renderSampleChangeSection(
+  'John Doe',
+  'May 12, 2026, 3:04 PM EDT',
+  [
+    renderSampleChangeItem('Project Name', 'Q2 Rollout', 'Q2 Rollout — Phase 1'),
+    renderSampleChangeItem('Status', 'Planning', 'In Progress'),
+    renderSampleChangeItem('End Date', 'Jun 30, 2026', 'Jul 15, 2026'),
+  ],
+  true,
+);
+
 const TEMPLATE_SAMPLE_DATA: Record<string, Record<string, string>> = {
   'password-reset': {
     userName: 'John Doe',
@@ -88,8 +153,53 @@ const TEMPLATE_SAMPLE_DATA: Record<string, Record<string, string>> = {
   },
   'ticket-updated': {
     body: '<p>Ticket TCK-1234 has been updated.</p>',
+    'ticket.id': 'TCK-1234',
     'ticket.ticketNumber': 'TCK-1234',
     'ticket.title': 'Printer not working on 3rd floor',
+    'ticket.description': 'Toner is jammed and red error light is on. Floor manager has been notified.',
+    'ticket.priority': 'High',
+    'ticket.priorityColor': '#dc2626',
+    'ticket.status': 'In Progress',
+    'ticket.metaLine': 'Ticket #TCK-1234 · High Priority · In Progress',
+    'ticket.clientName': 'Acme Corporation',
+    'ticket.updatedBy': 'John Doe',
+    'ticket.assignedToName': 'Jane Smith',
+    'ticket.assignedToEmail': 'jane.smith@example.com',
+    'ticket.assignedDetails': 'Jane Smith (jane.smith@example.com)',
+    'ticket.requesterName': 'John Doe',
+    'ticket.requesterEmail': 'john.doe@acme.com',
+    'ticket.requesterPhone': '+1 (555) 010-1234',
+    'ticket.requesterContact': 'john.doe@acme.com · +1 (555) 010-1234',
+    'ticket.requesterDetails': 'John Doe · john.doe@acme.com · +1 (555) 010-1234',
+    'ticket.board': 'Help Desk',
+    'ticket.category': 'Hardware',
+    'ticket.subcategory': 'Printer',
+    'ticket.categoryDetails': 'Hardware / Printer',
+    'ticket.locationSummary': 'Acme HQ • 100 Main St, Springfield, IL 62701 US',
+    'ticket.url': 'https://app.example.com/msp/tickets/sample-ticket-id',
+    'ticket.changes': SAMPLE_TICKET_CHANGES_HTML,
+    currentYear: String(new Date().getFullYear()),
+    companyName: 'Alga PSA',
+  },
+  'project-updated': {
+    'project.id': 'PRJ-0042',
+    'project.name': 'Q2 Rollout',
+    'project.status': 'In Progress',
+    'project.updatedBy': 'John Doe',
+    'project.url': 'https://app.example.com/msp/projects/sample-project-id',
+    'project.changes': SAMPLE_PROJECT_CHANGES_HTML,
+    currentYear: String(new Date().getFullYear()),
+    companyName: 'Alga PSA',
+  },
+  'project-closed': {
+    'project.id': 'PRJ-0042',
+    'project.name': 'Q2 Rollout',
+    'project.status': 'Closed',
+    'project.closedBy': 'John Doe',
+    'project.url': 'https://app.example.com/msp/projects/sample-project-id',
+    'project.changes': SAMPLE_PROJECT_CHANGES_HTML,
+    currentYear: String(new Date().getFullYear()),
+    companyName: 'Alga PSA',
   },
   'ticket-closed': {
     body: '<p>Your ticket has been closed.</p><p>Resolution: Resolved</p>',
@@ -147,7 +257,8 @@ export function getTemplateSampleData(templateName: string): Record<string, stri
  */
 export function extractVariablesFromTemplate(content: string): Record<string, string> {
   const variables: Record<string, string> = {};
-  const regex = /\{\{([^}]+)\}\}/g;
+  // Match both {{var}} and {{{var}}} (raw-HTML form).
+  const regex = /\{{2,3}([^{}]+)\}{2,3}/g;
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(content)) !== null) {

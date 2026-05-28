@@ -12,7 +12,7 @@
     "allOpen": "Tutti i ticket aperti",
     "allClosed": "Tutti i ticket chiusi",
     "allPriorities": "Tutte le priorità",
-    "search": "Cerca ticket...",
+    "search": "Cerca ticket e commenti...",
     "category": "Filtra per categoria",
     "clearFilters": "Pulisci filtri",
     "assignee": "Assegnatario",
@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Cruscotto ticket",
     "addTicket": "Aggiungi ticket",
+    "shareTooltip": "Stampa, importa ed esporta",
     "exportCsv": "Esporta CSV",
     "bundledToggle": "Raggruppati",
     "exportSelectedTooltip_one": "Esporta {{count}} ticket selezionato in CSV",
@@ -393,12 +394,42 @@
       "decrease": "Riduci spaziatura elenco ticket",
       "increase": "Aumenta spaziatura elenco ticket",
       "reset": "Reimposta spaziatura elenco ticket"
-    }
+    },
+    "print": {
+      "action": "Stampa",
+      "selectedAction_one": "Stampa selezionato ({{count}})",
+      "selectedAction_other": "Stampa selezionati ({{count}})",
+      "title": "Ticket",
+      "selectedTitle_one": "Ticket selezionati ({{count}})",
+      "selectedTitle_other": "Ticket selezionati ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} ticket",
+      "noTickets": "Nessun ticket da stampare",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titolo",
+        "client": "Cliente",
+        "status": "Stato",
+        "priority": "Priorità",
+        "assigned": "Assegnato",
+        "dueDate": "Data di scadenza"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Nessuna data di scadenza",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "selectedTitle": "Opzioni di stampa ({{count}} selezionati)",
+        "description": "Scegli quali colonne includere durante la stampa dei ticket."
+      }
+    },
+    "exportSelectedAction": "Esporta selezionati ({{count}})",
+    "exportAction": "Esporta CSV",
+    "importAction": "Importa CSV"
   },
   "bulk": {
-    "moveToBoard": "Sposta su canale",
-    "deleteSelected_one": "Elimina selezionati ({{count}})",
-    "deleteSelected_other": "Elimina selezionati ({{count}})",
     "bundleTickets": "Raggruppa ticket",
     "moveDialogTitle": "Sposta i ticket selezionati",
     "moveDialogDescription": "Seleziona un canale e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
@@ -499,7 +530,98 @@
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",
-      "deleteRequired": "Devi aver effettuato l'accesso per eliminare i ticket"
+      "deleteRequired": "Devi aver effettuato l'accesso per eliminare i ticket",
+      "assignRequired": "Devi accedere per riassegnare i ticket",
+      "tagsRequired": "Devi accedere per aggiungere tag",
+      "dueDateRequired": "Devi accedere per aggiornare i ticket",
+      "statusRequired": "Devi accedere per aggiornare i ticket",
+      "priorityRequired": "Devi accedere per aggiornare i ticket"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} selezionato",
+      "selectedCount_other": "{{count}} selezionati",
+      "move": "Sposta su canale",
+      "bundle": "Raggruppa",
+      "delete": "Elimina",
+      "clear": "Annulla selezione",
+      "bundleNeedsTwo": "Seleziona almeno 2 ticket per raggruppare",
+      "assign": "Assegna",
+      "status": "Stato",
+      "priority": "Priorità",
+      "tags": "Tag",
+      "dueDate": "Scadenza",
+      "statusDisabledMultiBoard": "I ticket selezionati sono su canali diversi",
+      "statusResolvingBoards": "Verifica dei canali dei ticket selezionati…",
+      "more": "Altro"
+    },
+    "assign": {
+      "dialogTitle": "Assegna ticket selezionati",
+      "message": "Riassegna {{count}} ticket selezionato/i a:",
+      "unassigned": "Non assegnato",
+      "teamHint": "Il responsabile del team diventa l’assegnatario principale; gli altri membri sono aggiunti come agenti aggiuntivi.",
+      "confirm_one": "Riassegna {{count}} ticket",
+      "confirm_other": "Riassegna {{count}} ticket",
+      "submitting": "Riassegnazione...",
+      "success_one": "{{count}} ticket riassegnato",
+      "success_other": "{{count}} ticket riassegnati",
+      "partialFailure": "Alcuni ticket non sono stati riassegnati",
+      "failure": "Impossibile riassegnare i ticket selezionati",
+      "failedHeading": "I seguenti ticket non sono stati riassegnati:"
+    },
+    "tags": {
+      "dialogTitle": "Aggiungi tag ai ticket selezionati",
+      "message": "Aggiungi uno o più tag a {{count}} ticket. I tag già presenti vengono ignorati.",
+      "placeholder": "Digita un tag e premi Invio",
+      "confirm_one": "Aggiungi tag a {{count}} ticket",
+      "confirm_other": "Aggiungi tag a {{count}} ticket",
+      "submitting": "Aggiunta tag...",
+      "success_one": "Tag aggiunti a {{count}} ticket",
+      "success_other": "Tag aggiunti a {{count}} ticket",
+      "partialFailure": "Tag non aggiunti su alcuni ticket",
+      "failure": "Impossibile aggiungere i tag",
+      "failedHeading": "Tag non aggiunti ai seguenti ticket:"
+    },
+    "dueDate": {
+      "dialogTitle": "Imposta scadenza per i ticket selezionati",
+      "message": "Imposta o rimuovi la scadenza su {{count}} ticket.",
+      "modeSet": "Imposta a",
+      "modeClear": "Rimuovi scadenza",
+      "placeholder": "Scegli una data",
+      "confirm_one": "Aggiorna {{count}} ticket",
+      "confirm_other": "Aggiorna {{count}} ticket",
+      "submitting": "Aggiornamento...",
+      "success_one": "Scadenza aggiornata su {{count}} ticket",
+      "success_other": "Scadenza aggiornata su {{count}} ticket",
+      "partialFailure": "Scadenza non aggiornata su alcuni ticket",
+      "failure": "Impossibile aggiornare la scadenza",
+      "failedHeading": "Scadenza non aggiornata sui seguenti ticket:"
+    },
+    "status": {
+      "dialogTitle": "Cambia stato dei ticket selezionati",
+      "message": "Imposta lo stato per {{count}} ticket:",
+      "placeholder": "Seleziona uno stato",
+      "loading": "Caricamento stati...",
+      "confirm_one": "Aggiorna {{count}} ticket",
+      "confirm_other": "Aggiorna {{count}} ticket",
+      "submitting": "Aggiornamento...",
+      "success_one": "Stato aggiornato su {{count}} ticket",
+      "success_other": "Stato aggiornato su {{count}} ticket",
+      "partialFailure": "Stato non aggiornato su alcuni ticket",
+      "failure": "Impossibile aggiornare lo stato",
+      "failedHeading": "Stato non aggiornato sui seguenti ticket:"
+    },
+    "priority": {
+      "dialogTitle": "Cambia priorità dei ticket selezionati",
+      "message": "Imposta la priorità per {{count}} ticket:",
+      "placeholder": "Seleziona una priorità",
+      "confirm_one": "Aggiorna {{count}} ticket",
+      "confirm_other": "Aggiorna {{count}} ticket",
+      "submitting": "Aggiornamento...",
+      "success_one": "Priorità aggiornata su {{count}} ticket",
+      "success_other": "Priorità aggiornata su {{count}} ticket",
+      "partialFailure": "Priorità non aggiornata su alcuni ticket",
+      "failure": "Impossibile aggiornare la priorità",
+      "failedHeading": "Priorità non aggiornata sui seguenti ticket:"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "h",
       "hrs": "h",
       "min": "min"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} sta modificando",
+      "multiple_one": "{{name}} e {{count}} altra persona stanno modificando",
+      "multiple_other": "{{name}} e {{count}} altre persone stanno modificando"
+    },
+    "remoteFieldUpdated": "{{name}} ha aggiornato {{field}}",
+    "connection": {
+      "reconnecting": "Aggiornamenti in tempo reale offline - riconnessione...",
+      "unavailable": "Aggiornamenti in tempo reale non disponibili"
     }
   }
 }

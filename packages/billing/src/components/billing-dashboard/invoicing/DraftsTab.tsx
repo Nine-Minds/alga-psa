@@ -27,6 +27,7 @@ import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface DraftsTabProps {
   onRefreshNeeded: () => void;
@@ -168,15 +169,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }
   };
 
-  const handleSelectInvoice = (invoiceId: string, checked: boolean) => {
-    const nextSelection = new Set(selectedInvoices);
-    if (checked) {
-      nextSelection.add(invoiceId);
-    } else {
-      nextSelection.delete(invoiceId);
-    }
-    setSelectedInvoices(nextSelection);
-  };
+  const rangeSelect = useRangeSelection<DbInvoiceViewModel>({
+    items: filteredInvoices,
+    getId: (invoice) => invoice.invoice_id,
+    selectedIds: selectedInvoices,
+    onSelectedIdsChange: setSelectedInvoices,
+  });
 
   const handleInvoiceSelect = (invoice: DbInvoiceViewModel) => {
     if (selectedInvoiceId === invoice.invoice_id) {
@@ -288,8 +286,18 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox
             id={`draft-${record.invoice_id}`}
-            checked={selectedInvoices.has(record.invoice_id)}
-            onChange={(e) => handleSelectInvoice(record.invoice_id, (e.target as HTMLInputElement).checked)}
+            checked={rangeSelect.isSelected(record.invoice_id)}
+            onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              const isChecked = rangeSelect.isSelected(record.invoice_id);
+              rangeSelect.handleSelect(record.invoice_id, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
+            }}
+            onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
         </div>
       ),

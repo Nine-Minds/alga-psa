@@ -29,6 +29,7 @@ import { InternalNotificationPreferences } from '@alga-psa/notifications/compone
 import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
 import { SessionManagement } from '@alga-psa/auth/components';
 import ApiKeysSetup from './ApiKeysSetup';
+import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShortcutsPanel';
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
@@ -89,8 +90,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/profile');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const { isAlgadesk } = useProduct();
-  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgadesk;
+  const { isAlgaDesk } = useProduct();
+  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgaDesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -575,6 +576,11 @@ export default function UserProfile({ userId }: UserProfileProps) {
           </CardContent>
         </Card>
       ),
+    },
+    {
+      id: 'keyboard-shortcuts',
+      label: t('profile.tabs.keyboardShortcuts', { defaultValue: 'Keyboard Shortcuts' }),
+      content: <KeyboardShortcutsPanel />,
     },
     ...(isCalendarTabAvailable ? [{
       id: 'calendar',

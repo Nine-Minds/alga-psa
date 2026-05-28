@@ -27,6 +27,7 @@
     "close": "Schließen"
   },
   "runList": {
+    "shareTooltip": "Drucken und exportieren",
     "quickRanges": {
       "last24h": "Letzte 24 Std.",
       "last7d": "Letzte 7 Tage"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "{{count}} Ausführung(en) abgebrochen.",
       "bulkSkippedIneligibleCount": "{{count}} nicht zulässige Ausführung(en) übersprungen.",
       "bulkActionFailed": "Massenaktion fehlgeschlagen"
+    },
+    "print": {
+      "title": "Workflow-Läufe",
+      "selectedTitle": "Ausgewählte Workflow-Läufe",
+      "subtitle": "{{count}} Läufe",
+      "noRuns": "Keine Workflow-Läufe zum Drucken",
+      "columns": {
+        "run": "Lauf",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "started": "Gestartet",
+        "updated": "Aktualisiert",
+        "duration": "Dauer"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Workflow-Läufen enthaltenen Spalten."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Editor öffnen",
       "apply": "Anwenden",
       "cancel": "Abbrechen"
+    },
+    "askAi": {
+      "ariaLabel": "KI um Transformationshilfe bitten",
+      "title": "KI fragen",
+      "shortcutHint": "Quick Ask für Transformationshilfe öffnen"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Workflow-Automatisierung wird geladen...",
-    "featureName": "Workflow-Automatisierung",
-    "notEnabled": "Diese Funktion ist experimentell und für Ihren Mandanten nicht aktiviert.",
-    "experimental": "Experimentell",
-    "enableHint": "Aktivieren Sie die Workflow-Automatisierung in den Einstellungen, um darauf zuzugreifen.",
-    "goToExperimental": "Zu experimentellen Funktionen",
-    "openSettings": "Einstellungen öffnen"
+    "loading": "Workflow-Automatisierung wird geladen..."
   },
   "flow": {
     "designer": {

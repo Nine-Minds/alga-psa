@@ -40,7 +40,14 @@
     "duplicate": "Dupliquer",
     "openMenu": "Ouvrir le menu",
     "confirmDeletion": "Confirmer la suppression",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "print": "Imprimer",
+    "printSelected_one": "Imprimer la sélection ({{count}})",
+    "printSelected_other": "Imprimer la sélection ({{count}})",
+    "printOptions": "Options d’impression",
+    "resetPrintOptions": "Réinitialiser les options d’impression",
+    "share": "Partager",
+    "done": "Terminé"
   },
   "status": {
     "loading": "Chargement...",
@@ -267,6 +274,13 @@
         "description": "Cliquez sur \"Ajouter un emplacement\" pour commencer"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} réponse",
+    "replies_other": "{{count}} réponses",
+    "collapse": "Réduire",
+    "expand": "Développer",
+    "showInDrawer": "Afficher dans le panneau"
   },
   "pagination": {
     "previous": "Précédent",
@@ -1123,6 +1137,18 @@
   "feedback": {
     "providePlaceholder": "Veuillez fournir un commentaire"
   },
+  "presence": {
+    "noOneElseEditing": "Personne d’autre ne modifie",
+    "conflict": {
+      "changedField": "{{author}} vient de modifier ce champ {{time}}.",
+      "remoteValue": "Valeur distante :",
+      "keepYours": "Conserver la vôtre",
+      "takeTheirs": "Utiliser la distante"
+    }
+  },
+  "labels": {
+    "printColumns": "Colonnes à imprimer"
+  },
   "deleteEntity": {
     "checkingDependenciesTitle": "Vérification des dépendances",
     "deleteTitle": "Supprimer {{entityName}}",
@@ -1143,5 +1169,12 @@
         "warning": "Les enregistrements archivés sont masqués dans les vues par défaut."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} colonne masquée faute de place.",
+    "columnsHidden_other": "{{count}} colonnes masquées faute de place.",
+    "showAll": "Tout afficher",
+    "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
+    "showLess": "Afficher moins"
   }
 }

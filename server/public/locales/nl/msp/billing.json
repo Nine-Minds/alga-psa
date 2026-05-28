@@ -48,7 +48,8 @@
       "servicePeriods": "Serviceperioden",
       "usageTracking": "Gebruik volgen",
       "reports": "Rapporten",
-      "serviceCatalog": "Servicecatalogus",
+      "serviceTypes": "Servicetypen",
+      "serviceCatalog": "Diensten",
       "products": "Producten"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "Deze service komt voor in meerdere contractregels. Selecteer op welke contractregel u wilt factureren.",
       "tooltipNoClient": "Klantgegevens niet beschikbaar. Het gebruik wordt doorgestuurd naar het door het systeem beheerde standaardcontract.",
-      "tooltipMultiple": "Deze service komt voor in meerdere contractregels. Selecteer welke contractregel u wilt gebruiken. Bucketcontractregels worden doorgaans als eerste gebruikt totdat ze op zijn.",
+      "tooltipMultiple": "Deze service komt voor in meerdere contractregels. Selecteer welke contractregel u wilt gebruiken. Wanneer slechts één daarvan een bucketcontractregel is, wordt deze standaard geselecteerd.",
       "tooltipSingle": "Dit verbruik wordt gefactureerd onder de contractregel '{{name}}'.",
       "tooltipNone": "Er zijn geen geschikte contractregels gevonden voor deze service.",
       "placeholderNoClient": "Door het systeem beheerd standaardcontract gebruiken",

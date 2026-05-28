@@ -197,6 +197,25 @@
       "client_name": "11111",
       "location": "11111",
       "actions": "11111"
+    },
+    "print": {
+      "title": "11111",
+      "selectedTitle": "11111",
+      "subtitle": "11111 {{count}} 11111",
+      "noAssets": "11111",
+      "emptyValue": "11111",
+      "columns": {
+        "name": "11111",
+        "tag": "11111",
+        "type": "11111",
+        "status": "11111",
+        "client": "11111",
+        "location": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "11111",
       "notFound": "11111"
+    },
+    "fields": {
+      "assetTag": "11111",
+      "serialNumber": "11111",
+      "assetType": "11111",
+      "client": "11111",
+      "status": "11111",
+      "location": "11111"
     }
   },
   "assetDetails": {

@@ -12,7 +12,7 @@
     "allOpen": "Wszystkie otwarte zgłoszenia",
     "allClosed": "Wszystkie zamknięte zgłoszenia",
     "allPriorities": "Wszystkie priorytety",
-    "search": "Szukaj zgłoszeń...",
+    "search": "Szukaj zgłoszeń i komentarzy...",
     "category": "Filtruj według kategorii",
     "clearFilters": "Wyczyść filtry",
     "assignee": "Przypisany do",
@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Panel zgłoszeń",
     "addTicket": "Dodaj zgłoszenie",
+    "shareTooltip": "Drukuj, importuj i eksportuj",
     "exportCsv": "Eksportuj CSV",
     "bundledToggle": "Zgrupowane",
     "exportSelectedTooltip_one": "Eksportuj {{count}} wybrane zgłoszenie do CSV",
@@ -393,12 +394,42 @@
       "decrease": "Zmniejsz odstępy na liście zgłoszeń",
       "increase": "Zwiększ odstępy na liście zgłoszeń",
       "reset": "Resetuj odstępy na liście zgłoszeń"
-    }
+    },
+    "print": {
+      "action": "Drukuj",
+      "selectedAction_one": "Drukuj zaznaczone ({{count}})",
+      "selectedAction_other": "Drukuj zaznaczone ({{count}})",
+      "title": "Zgłoszenia",
+      "selectedTitle_one": "Zaznaczone zgłoszenia ({{count}})",
+      "selectedTitle_other": "Zaznaczone zgłoszenia ({{count}})",
+      "subtitle_one": "{{count}} zgłoszenie",
+      "subtitle_other": "{{count}} zgłoszeń",
+      "noTickets": "Brak zgłoszeń do wydruku",
+      "columns": {
+        "ticket": "Zgłoszenie",
+        "title": "Tytuł",
+        "client": "Klient",
+        "status": "Status",
+        "priority": "Priorytet",
+        "assigned": "Przypisane do",
+        "dueDate": "Termin"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Brak terminu",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "selectedTitle": "Opcje drukowania ({{count}} zaznaczonych)",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania zgłoszeń."
+      }
+    },
+    "exportSelectedAction": "Eksportuj zaznaczone ({{count}})",
+    "exportAction": "Eksportuj CSV",
+    "importAction": "Importuj CSV"
   },
   "bulk": {
-    "moveToBoard": "Przenieś do tablicy",
-    "deleteSelected_one": "Usuń zaznaczone ({{count}})",
-    "deleteSelected_other": "Usuń zaznaczone ({{count}})",
     "bundleTickets": "Połącz zgłoszenia",
     "moveDialogTitle": "Przenieś zaznaczone zgłoszenia",
     "moveDialogDescription": "Wybierz tablicę docelową i status, a następnie potwierdź przeniesienie zaznaczonych zgłoszeń.",
@@ -499,7 +530,98 @@
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
-      "deleteRequired": "Musisz być zalogowany, aby usuwać zgłoszenia"
+      "deleteRequired": "Musisz być zalogowany, aby usuwać zgłoszenia",
+      "assignRequired": "Musisz być zalogowany, aby ponownie przypisać zgłoszenia",
+      "tagsRequired": "Musisz być zalogowany, aby dodać tagi",
+      "dueDateRequired": "Musisz być zalogowany, aby aktualizować zgłoszenia",
+      "statusRequired": "Musisz być zalogowany, aby aktualizować zgłoszenia",
+      "priorityRequired": "Musisz być zalogowany, aby aktualizować zgłoszenia"
+    },
+    "actionBar": {
+      "selectedCount_one": "Zaznaczono {{count}}",
+      "selectedCount_other": "Zaznaczono {{count}}",
+      "move": "Przenieś do tablicy",
+      "bundle": "Połącz",
+      "delete": "Usuń",
+      "clear": "Wyczyść zaznaczenie",
+      "bundleNeedsTwo": "Zaznacz co najmniej 2 zgłoszenia, aby je połączyć",
+      "assign": "Przypisz",
+      "status": "Status",
+      "priority": "Priorytet",
+      "tags": "Tagi",
+      "dueDate": "Termin",
+      "statusDisabledMultiBoard": "Wybrane zgłoszenia są na różnych tablicach",
+      "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
+      "more": "Więcej"
+    },
+    "assign": {
+      "dialogTitle": "Przypisz wybrane zgłoszenia",
+      "message": "Ponownie przypisz {{count}} wybranych zgłoszeń do:",
+      "unassigned": "Nieprzypisane",
+      "teamHint": "Lider zespołu staje się głównym przypisanym; pozostali członkowie zespołu są dodawani jako dodatkowi agenci.",
+      "confirm_one": "Ponownie przypisz {{count}} zgłoszenie",
+      "confirm_other": "Ponownie przypisz {{count}} zgłoszenia",
+      "submitting": "Przypisywanie...",
+      "success_one": "{{count}} zgłoszenie ponownie przypisane",
+      "success_other": "{{count}} zgłoszeń ponownie przypisanych",
+      "partialFailure": "Niektórych zgłoszeń nie udało się ponownie przypisać",
+      "failure": "Nie udało się ponownie przypisać wybranych zgłoszeń",
+      "failedHeading": "Następujących zgłoszeń nie udało się ponownie przypisać:"
+    },
+    "tags": {
+      "dialogTitle": "Dodaj tagi do wybranych zgłoszeń",
+      "message": "Dodaj jeden lub więcej tagów do {{count}} wybranych zgłoszeń. Tagi już obecne są pomijane.",
+      "placeholder": "Wpisz tag i naciśnij Enter",
+      "confirm_one": "Dodaj tagi do {{count}} zgłoszenia",
+      "confirm_other": "Dodaj tagi do {{count}} zgłoszeń",
+      "submitting": "Dodawanie tagów...",
+      "success_one": "Tagi dodane do {{count}} zgłoszenia",
+      "success_other": "Tagi dodane do {{count}} zgłoszeń",
+      "partialFailure": "Tagi nie zostały dodane do wszystkich zgłoszeń",
+      "failure": "Nie udało się dodać tagów",
+      "failedHeading": "Tagi nie zostały dodane do następujących zgłoszeń:"
+    },
+    "dueDate": {
+      "dialogTitle": "Ustaw termin dla wybranych zgłoszeń",
+      "message": "Ustaw lub wyczyść termin dla {{count}} wybranych zgłoszeń.",
+      "modeSet": "Ustaw na",
+      "modeClear": "Wyczyść termin",
+      "placeholder": "Wybierz datę",
+      "confirm_one": "Zaktualizuj {{count}} zgłoszenie",
+      "confirm_other": "Zaktualizuj {{count}} zgłoszeń",
+      "submitting": "Aktualizowanie...",
+      "success_one": "Termin zaktualizowany w {{count}} zgłoszeniu",
+      "success_other": "Termin zaktualizowany w {{count}} zgłoszeniach",
+      "partialFailure": "Termin nie został zaktualizowany w niektórych zgłoszeniach",
+      "failure": "Nie udało się zaktualizować terminu",
+      "failedHeading": "Termin nie został zaktualizowany w następujących zgłoszeniach:"
+    },
+    "status": {
+      "dialogTitle": "Zmień status wybranych zgłoszeń",
+      "message": "Ustaw status dla {{count}} wybranych zgłoszeń:",
+      "placeholder": "Wybierz status",
+      "loading": "Ładowanie statusów...",
+      "confirm_one": "Zaktualizuj {{count}} zgłoszenie",
+      "confirm_other": "Zaktualizuj {{count}} zgłoszeń",
+      "submitting": "Aktualizowanie...",
+      "success_one": "Status zaktualizowany w {{count}} zgłoszeniu",
+      "success_other": "Status zaktualizowany w {{count}} zgłoszeniach",
+      "partialFailure": "Status nie został zaktualizowany w niektórych zgłoszeniach",
+      "failure": "Nie udało się zaktualizować statusu",
+      "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:"
+    },
+    "priority": {
+      "dialogTitle": "Zmień priorytet wybranych zgłoszeń",
+      "message": "Ustaw priorytet dla {{count}} wybranych zgłoszeń:",
+      "placeholder": "Wybierz priorytet",
+      "confirm_one": "Zaktualizuj {{count}} zgłoszenie",
+      "confirm_other": "Zaktualizuj {{count}} zgłoszeń",
+      "submitting": "Aktualizowanie...",
+      "success_one": "Priorytet zaktualizowany w {{count}} zgłoszeniu",
+      "success_other": "Priorytet zaktualizowany w {{count}} zgłoszeniach",
+      "partialFailure": "Priorytet nie został zaktualizowany w niektórych zgłoszeniach",
+      "failure": "Nie udało się zaktualizować priorytetu",
+      "failedHeading": "Priorytet nie został zaktualizowany w następujących zgłoszeniach:"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "godz.",
       "hrs": "godz.",
       "min": "min"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} edytuje",
+      "multiple_one": "{{name}} i {{count}} inna osoba edytują",
+      "multiple_other": "{{name}} i {{count}} innych osób edytują"
+    },
+    "remoteFieldUpdated": "{{name}} zaktualizował(a) {{field}}",
+    "connection": {
+      "reconnecting": "Aktualizacje na żywo offline - ponowne łączenie...",
+      "unavailable": "Aktualizacje na żywo niedostępne"
     }
   }
 }

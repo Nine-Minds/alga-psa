@@ -54,6 +54,12 @@
       "notification": "Powiadomienie",
       "unknown": "Nieznany",
       "activity": "Aktywność"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania aktywności."
+      }
     }
   },
   "card": {

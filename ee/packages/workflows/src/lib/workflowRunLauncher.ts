@@ -16,6 +16,11 @@ import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
 import { WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION } from './workflowRuntimeV2Semantics';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
+
+const isTemporalPollingEnabled = (): boolean => !['false', '0', 'no'].includes(
+  String(process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING ?? 'true').toLowerCase(),
+);
+
 const hashDefinition = (definition: unknown): string | null => {
   try {
     return createHash('sha256').update(JSON.stringify(definition ?? null)).digest('hex');
@@ -198,6 +203,7 @@ export async function launchPublishedWorkflowRun(
   }
 
   const runtime = new WorkflowRuntimeV2();
+  const runEngine = isTemporalPollingEnabled() ? 'temporal' : 'db';
   let runId: string;
 
   try {
@@ -214,7 +220,7 @@ export async function launchPublishedWorkflowRun(
       triggerMappingApplied: Boolean(request.triggerMappingApplied),
       definitionHash,
       runtimeSemanticsVersion: WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION,
-      engine: 'temporal'
+      engine: runEngine
     });
   } catch (error) {
     if (!request.triggerFireKey || !isTriggerFireKeyDuplicateError(error)) {
@@ -232,7 +238,7 @@ export async function launchPublishedWorkflowRun(
     };
   }
 
-  if (request.execute !== false) {
+  if (request.execute !== false && runEngine === 'temporal') {
     const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
     try {
       const temporalStart = await startWorkflowRuntimeV2TemporalRun({

@@ -49,7 +49,7 @@ interface ContractLineDialogProps {
   editingPlan?: IContractLinePreset | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
+  allServiceTypes: { id: string; name: string; is_standard: boolean }[];
 }
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {

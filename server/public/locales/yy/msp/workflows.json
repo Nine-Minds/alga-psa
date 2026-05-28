@@ -27,6 +27,7 @@
     "close": "55555"
   },
   "runList": {
+    "shareTooltip": "55555",
     "quickRanges": {
       "last24h": "55555",
       "last7d": "55555"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "55555 {{count}} 55555",
       "bulkSkippedIneligibleCount": "55555 {{count}} 55555",
       "bulkActionFailed": "55555"
+    },
+    "print": {
+      "title": "55555",
+      "selectedTitle": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noRuns": "55555",
+      "columns": {
+        "run": "55555",
+        "workflow": "55555",
+        "version": "55555",
+        "status": "55555",
+        "started": "55555",
+        "updated": "55555",
+        "duration": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      }
     }
   },
   "runDetails": {
@@ -1340,6 +1360,11 @@
     "addItem": "55555",
     "fill": "55555",
     "clearValues": "55555",
+    "askAi": {
+      "ariaLabel": "55555",
+      "title": "55555",
+      "shortcutHint": "55555"
+    },
     "applySuggestions": "55555 {{count}} 55555",
     "applySuggestionTitle": "55555 {{sourcePath}} 55555",
     "fuzzySuffix": "55555",
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "55555",
-    "featureName": "55555",
-    "notEnabled": "55555",
-    "experimental": "55555",
-    "enableHint": "55555",
-    "goToExperimental": "55555",
-    "openSettings": "55555"
+    "loading": "55555"
   },
   "flow": {
     "designer": {

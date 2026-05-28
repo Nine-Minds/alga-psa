@@ -11,12 +11,18 @@ import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getEventBus } from 'server/src/lib/eventBus';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
-import { ServerEventPublisher } from '@alga-psa/event-bus';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  buildCuratedTicketDiffWithLabels,
+  hasCuratedChanges,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
@@ -453,6 +459,27 @@ export class TicketService extends BaseService<ITicket> {
         entity_type: 'ticket',
         tenant: context.tenant,
       });
+
+      // Activity-timeline entry for the document attachment. Stored inside
+      // the same transaction so the timeline row never appears unless the
+      // document and its association were also persisted.
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          document_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        },
+      });
     });
 
     const createdDocument = await this.getDocumentById(documentId, context);
@@ -538,6 +565,22 @@ export class TicketService extends BaseService<ITicket> {
           .where({ document_id: documentId, tenant: context.tenant })
           .del();
       }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_REMOVED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          association_id: doc.association_id,
+        },
+      });
     });
   }
 
@@ -773,7 +816,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      return withTransaction(knex, async (trx) => {
+      const fullTicket = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -806,17 +849,17 @@ export class TicketService extends BaseService<ITicket> {
           ticket_origin: TICKET_ORIGINS.API,
         };
 
-        // Create adapters for API service context
-        const eventPublisher = new ServerEventPublisher();
+        // Publish after the transaction commits so notification subscribers can
+        // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
-        // Use shared TicketModel with retry logic, events, and analytics
+        // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
           context.tenant,
           trx,
           {}, // validation options
-          eventPublisher,
+          undefined,
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -841,8 +884,46 @@ export class TicketService extends BaseService<ITicket> {
           (fullTicket as any).tags = data.tags;
         }
 
+        // Activity-timeline row for REST API ticket creation.
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: ticketResult.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.CREATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: ticketResult.ticket_id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.API,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          details: {
+            title: fullTicket.title,
+            board_id: fullTicket.board_id,
+            status_id: fullTicket.status_id,
+            priority_id: fullTicket.priority_id,
+            assigned_to: fullTicket.assigned_to,
+            client_id: fullTicket.client_id,
+            ticket_origin: TICKET_ORIGINS.API,
+          },
+        });
+
         return fullTicket as ITicket;
       });
+
+      await this.safePublishEvent('TICKET_CREATED', context, {
+        ticketId: fullTicket.ticket_id,
+        userId: context.userId,
+        createdByUserId: context.userId,
+        createdAt: fullTicket.entered_at
+          ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+          : new Date().toISOString(),
+        source: 'api',
+        board_id: fullTicket.board_id,
+        priority_id: fullTicket.priority_id,
+        client_id: fullTicket.client_id,
+      });
+
+      return fullTicket;
     }
 
 
@@ -982,6 +1063,46 @@ export class TicketService extends BaseService<ITicket> {
         changes: structuredChanges,
       });
 
+      // Activity-timeline row for REST API updates. Uses curated diff so
+      // only user-meaningful field changes produce a timeline entry; no-op
+      // updates result in no row.
+      const curated = await buildCuratedTicketDiffWithLabels(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as Record<string, unknown>,
+      );
+      if (hasCuratedChanges(curated)) {
+        const changedKeys = Object.keys(curated);
+        let activityEventType: string = TICKET_ACTIVITY_EVENT.UPDATED;
+        if (changedKeys.length === 1) {
+          const key = changedKeys[0];
+          if (key === 'status_id') activityEventType = TICKET_ACTIVITY_EVENT.STATUS_CHANGED;
+          else if (key === 'priority_id') activityEventType = TICKET_ACTIVITY_EVENT.PRIORITY_CHANGED;
+          else if (key === 'assigned_to') {
+            activityEventType =
+              (cleanedData as Record<string, unknown>).assigned_to == null
+                ? TICKET_ACTIVITY_EVENT.UNASSIGNED
+                : TICKET_ACTIVITY_EVENT.ASSIGNED;
+          } else if (key === 'board_id') activityEventType = TICKET_ACTIVITY_EVENT.BOARD_MOVED;
+          else if (key === 'response_state') activityEventType = TICKET_ACTIVITY_EVENT.RESPONSE_STATE_CHANGED;
+        }
+
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          eventType: activityEventType,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          changes: curated,
+        });
+      }
+
       return this.withDescriptionHtml(ticket as ITicket);
     });
   }
@@ -999,7 +1120,7 @@ export class TicketService extends BaseService<ITicket> {
   async createFromAsset(data: CreateTicketFromAssetData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
       const asset = await trx('assets')
         .where({ asset_id: data.asset_id, tenant: context.tenant })
@@ -1022,8 +1143,8 @@ export class TicketService extends BaseService<ITicket> {
         ]);
       }
 
-      // Create adapters for API service context
-      const eventPublisher = new ServerEventPublisher();
+      // Publish after the transaction commits so notification subscribers can
+      // read the newly-created ticket on their own connections.
       const analyticsTracker = new ServerAnalyticsTracker();
 
       // Use shared TicketModel for asset ticket creation
@@ -1040,7 +1161,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        eventPublisher,
+        undefined,
         analyticsTracker
       );
 
@@ -1063,6 +1184,21 @@ export class TicketService extends BaseService<ITicket> {
 
       return fullTicket as ITicket;
     });
+
+    await this.safePublishEvent('TICKET_CREATED', context, {
+      ticketId: fullTicket.ticket_id,
+      userId: context.userId,
+      createdByUserId: context.userId,
+      createdAt: fullTicket.entered_at
+        ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+        : new Date().toISOString(),
+      source: 'api',
+      board_id: fullTicket.board_id,
+      priority_id: fullTicket.priority_id,
+      client_id: fullTicket.client_id,
+    });
+
+    return fullTicket;
   }
 
   /**
@@ -1162,9 +1298,16 @@ export class TicketService extends BaseService<ITicket> {
           created_by_name: comment.created_by_name || comment.author_contact_name || null,
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
+          // Threading fields (mobile threaded comments) — explicitly enumerated
+          // here since the compact branch does not spread the raw row.
+          thread_id: comment.thread_id ?? null,
+          parent_comment_id: comment.parent_comment_id ?? null,
+          deleted_at: comment.deleted_at ?? null,
         };
       }
 
+      // Full branch: select('tc.*') above means ...comment already carries
+      // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
         comment_text: comment.note,
@@ -1192,7 +1335,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
       const ticket = await trx('tickets')
         .where({ ticket_id: ticketId, tenant: context.tenant })
@@ -1202,20 +1345,109 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
+      const apiNowIso = new Date().toISOString();
+      const apiParentCommentId = data.parent_comment_id || null;
+      const apiIsReply = Boolean(apiParentCommentId);
+
+      let apiCommentId: string;
+      let apiThreadId: string;
+      let apiIsInternal: boolean;
+
+      if (apiIsReply) {
+        // Reply: attach to the parent's existing thread and inherit its
+        // visibility. Mirrors Comment.insert's parent/thread invariant — the
+        // native composer never sends is_internal for replies, so the
+        // schema-defaulted false is intentionally ignored here and the thread
+        // root's visibility is inherited instead.
+        const parent = await trx('comments as parent')
+          .join('comment_threads as thread', function () {
+            this.on('parent.tenant', 'thread.tenant')
+              .andOn('parent.thread_id', 'thread.thread_id');
+          })
+          .select(
+            'parent.ticket_id',
+            'parent.thread_id',
+            'parent.deleted_at',
+            'thread.is_internal as thread_is_internal'
+          )
+          .where('parent.tenant', context.tenant)
+          .where('parent.comment_id', apiParentCommentId)
+          .first();
+
+        if (!parent) {
+          throw new NotFoundError('Parent comment not found');
+        }
+        if (parent.ticket_id !== ticketId) {
+          throw new ValidationError('Parent comment must belong to the same ticket');
+        }
+        if (parent.deleted_at) {
+          throw new ValidationError('Cannot reply to a deleted comment');
+        }
+
+        const replyIds = await trx.raw('SELECT gen_random_uuid() AS comment_id');
+        const replyGeneratedId = replyIds.rows?.[0]?.comment_id as string | undefined;
+        if (!replyGeneratedId) {
+          throw new Error('Failed to generate comment identifier');
+        }
+
+        apiCommentId = replyGeneratedId;
+        apiThreadId = parent.thread_id;
+        apiIsInternal = Boolean(parent.thread_is_internal);
+      } else {
+        // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
+        const apiCommentIds = await trx.raw(
+          'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+        );
+        const apiGeneratedIds = apiCommentIds.rows?.[0] as
+          | { comment_id: string; thread_id: string }
+          | undefined;
+        if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
+          throw new Error('Failed to generate comment/thread identifiers');
+        }
+
+        apiCommentId = apiGeneratedIds.comment_id;
+        apiThreadId = apiGeneratedIds.thread_id;
+        apiIsInternal = data.is_internal || false;
+
+        await trx('comment_threads').insert({
+          tenant: context.tenant,
+          thread_id: apiThreadId,
+          ticket_id: ticketId,
+          project_task_id: null,
+          root_comment_id: apiCommentId,
+          is_internal: apiIsInternal,
+          reply_count: 0,
+          last_activity_at: apiNowIso,
+          created_at: apiNowIso,
+          created_by: context.userId || null,
+        });
+      }
+
       const commentData = {
-        comment_id: knex.raw('gen_random_uuid()'),
+        comment_id: apiCommentId,
+        thread_id: apiThreadId,
+        parent_comment_id: apiParentCommentId,
         ticket_id: ticketId,
         note: data.comment_text,
-        is_internal: data.is_internal || false,
+        is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
         tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()'),
+        created_at: apiNowIso,
+        updated_at: apiNowIso,
         metadata: data.metadata,
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
+
+      if (apiIsReply) {
+        await trx('comment_threads')
+          .where({ tenant: context.tenant, thread_id: apiThreadId })
+          .update({
+            reply_count: trx.raw('reply_count + 1'),
+            last_activity_at: apiNowIso,
+          });
+      }
 
       if (!comment.is_internal) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
@@ -1237,20 +1469,8 @@ export class TicketService extends BaseService<ITicket> {
 
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
-      // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
-        ticketId: ticketId,
-        userId: context.userId,
-        comment: {
-          id: comment.comment_id,
-          content: comment.note,
-          author: authorName,
-          isInternal: comment.is_internal
-        }
-      });
-
       // Map database fields to API response format
-      return {
+      const response = {
         ...comment,
         comment_text: comment.note,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -1259,7 +1479,27 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_name: null,
         author_contact_email: null
       };
+
+      return {
+        response,
+        eventPayload: {
+          ticketId: ticketId,
+          userId: context.userId,
+          comment: {
+            id: comment.comment_id,
+            content: comment.note,
+            author: authorName,
+            isInternal: comment.is_internal
+          }
+        }
+      };
     });
+
+    // Publish after the transaction commits so email and in-app notification
+    // subscribers can load the ticket/comment rows reliably.
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+
+    return result.response;
   }
 
   /**

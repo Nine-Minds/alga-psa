@@ -76,6 +76,10 @@ const mergeSchemaMetadata = (wrapper: JsonSchema, resolved: JsonSchema): JsonSch
   'x-workflow-editor': resolved['x-workflow-editor'] ?? wrapper['x-workflow-editor'],
 });
 
+const isNullSchema = (schema: JsonSchema): boolean =>
+  schema.type === 'null' ||
+  (Array.isArray(schema.type) && schema.type.length === 1 && schema.type[0] === 'null');
+
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   if (schema.$ref && root?.definitions) {
     const refKey = schema.$ref.replace('#/definitions/', '');
@@ -84,18 +88,18 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   }
 
   if (schema.anyOf?.length) {
-    const nonNullVariant = schema.anyOf.find(
-      (variant) =>
-        variant.type !== 'null' &&
-        !(Array.isArray(variant.type) && variant.type.length === 1 && variant.type[0] === 'null')
-    );
-    if (nonNullVariant) {
-      const resolved = resolveSchema(nonNullVariant, root);
-      const merged = mergeSchemaMetadata(schema, resolved);
+    const nonNullVariants = schema.anyOf.filter((variant) => !isNullSchema(variant));
+    const hasNullVariant = schema.anyOf.some(isNullSchema);
+
+    if (nonNullVariants.length === 1 && hasNullVariant) {
+      const resolved = resolveSchema(nonNullVariants[0], root);
+      const mergedWithoutCombinators = { ...mergeSchemaMetadata(schema, resolved) };
+      delete mergedWithoutCombinators.anyOf;
+      delete mergedWithoutCombinators.oneOf;
       return {
-        ...merged,
+        ...mergedWithoutCombinators,
         type: Array.isArray(resolved.type)
-          ? resolved.type
+          ? Array.from(new Set([...resolved.type, 'null']))
           : resolved.type
             ? [resolved.type, 'null']
             : ['null'],
@@ -106,8 +110,21 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   return schema;
 };
 
-const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
-  if (!schema?.type) return undefined;
+const normalizeSchemaType = (schema?: JsonSchema, root?: JsonSchema): string | undefined => {
+  if (!schema) return undefined;
+
+  const unionVariants = schema.anyOf ?? schema.oneOf;
+  if (unionVariants?.length) {
+    const unionTypes = unionVariants
+      .map((variant) => normalizeSchemaType(resolveSchema(variant, root), root))
+      .filter((value): value is string => Boolean(value));
+    const uniqueTypes = Array.from(new Set(unionTypes));
+    if (uniqueTypes.length > 0) {
+      return uniqueTypes.join(' | ');
+    }
+  }
+
+  if (!schema.type) return undefined;
   if (Array.isArray(schema.type)) {
     return schema.type.find((value) => value !== 'null') ?? schema.type[0];
   }
@@ -199,7 +216,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
   const requiredFields = resolved.required ?? [];
   return Object.entries(resolved.properties).map(([name, propSchema]) => {
     const resolvedProp = resolveSchema(propSchema, root);
-    const type = normalizeSchemaType(resolvedProp) ?? 'string';
+    const type = normalizeSchemaType(resolvedProp, root) ?? 'string';
     const isFieldRequired = requiredFields.includes(name);
     const rawResolved = resolvedProp as {
       format?: string;
@@ -226,7 +243,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
     } else if (type === 'array' && resolvedProp.items) {
       const itemSchema = resolveSchema(resolvedProp.items, root);
       itemType =
-        normalizeSchemaType(itemSchema) ??
+        normalizeSchemaType(itemSchema, root) ??
         (itemSchema.properties ? 'object' : 'unknown');
       itemEditor = resolveWorkflowSchemaFieldEditor(itemSchema);
       if (itemSchema.properties) {

@@ -23,6 +23,7 @@ import {
   isWorkflowTimeTrigger,
   resolveActionCallOutputSchema,
   buildWorkflowDesignerActionCatalog,
+  getWorkflowIntegrationModuleRegistry,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -203,6 +204,30 @@ const loadAvailableWorkflowDesignerAppKeys = async (
   }
 
   return availableKeys;
+};
+
+const loadAvailableFirstPartyIntegrationAppKeys = async (
+  knex: Knex,
+  tenantId: string | null | undefined
+): Promise<Set<string>> => {
+  if (!tenantId) return new Set();
+  const available = new Set<string>();
+  const registry = getWorkflowIntegrationModuleRegistry();
+  for (const module of registry.list()) {
+    if (!module.availabilityKey) continue;
+    if (module.availabilityKey === 'rmm:ninjaone') {
+      const row = await knex('rmm_integrations')
+        .where({
+          tenant: tenantId,
+          provider: 'ninjaone',
+          is_active: true
+        })
+        .whereNotNull('connected_at')
+        .first();
+      if (row) available.add(module.groupKey);
+    }
+  }
+  return available;
 };
 
 const isEnterpriseEdition = (): boolean => {
@@ -655,10 +680,6 @@ const computeValidation = async (params: {
 
   const resolveSchemaNode = (node: any, rootSchema: any, seenRefs = new Set<string>()): any => {
     if (!node || typeof node !== 'object') return node;
-    if (node.anyOf && Array.isArray(node.anyOf)) {
-      const nonNull = node.anyOf.find((s: any) => s && s.type !== 'null') ?? node.anyOf[0];
-      return resolveSchemaNode(nonNull, rootSchema, seenRefs);
-    }
     if (node.$ref && typeof node.$ref === 'string' && !seenRefs.has(node.$ref)) {
       seenRefs.add(node.$ref);
       const resolved = resolveLocalSchemaRef(node.$ref, rootSchema);
@@ -669,26 +690,36 @@ const computeValidation = async (params: {
 
   const resolveSchemaAtPath = (schema: any, path: string[]): any | null => {
     if (!schema || typeof schema !== 'object') return null;
-    let current: any = resolveSchemaNode(schema, schema);
-    for (const seg of path) {
+    const root = schema;
+
+    const descend = (node: any, remaining: string[]): any | null => {
+      const current = resolveSchemaNode(node, root);
       if (!current) return null;
-      current = resolveSchemaNode(current, schema);
+      if (remaining.length === 0) return current;
+
+      if (current.anyOf && Array.isArray(current.anyOf)) {
+        for (const variant of current.anyOf) {
+          const resolved = descend(variant, remaining);
+          if (resolved) return resolved;
+        }
+        return null;
+      }
+
+      const [seg, ...rest] = remaining;
       if (current.type === 'object' && current.properties && typeof current.properties === 'object') {
-        current = resolveSchemaNode((current.properties as any)[seg] ?? null, schema);
-        continue;
+        return descend((current.properties as any)[seg] ?? null, rest);
       }
       if (current.type === 'array' && current.items) {
         // Only support `.items.<prop>` lookup if seg is 'items'
         if (seg === 'items') {
-          current = resolveSchemaNode(current.items, schema);
-          continue;
+          return descend(current.items, rest);
         }
-        // Unknown array access
         return null;
       }
       return null;
-    }
-    return resolveSchemaNode(current, schema);
+    };
+
+    return descend(schema, path);
   };
 
   const literalTypes = (value: unknown): Set<string> => {
@@ -707,6 +738,61 @@ const computeValidation = async (params: {
         return new Set(['unknown']);
     }
   };
+
+  const cloneJsonSchema = (schema: any): any => JSON.parse(JSON.stringify(schema ?? {}));
+
+  const normalizeAssignmentPath = (path: string): string => {
+    const trimmed = path.trim();
+    if (!trimmed) return trimmed;
+    const scoped = trimmed.startsWith('payload.')
+      || trimmed.startsWith('vars.')
+      || trimmed.startsWith('meta.')
+      || trimmed.startsWith('error.')
+      || trimmed.startsWith('/');
+    return scoped ? trimmed : `vars.${trimmed}`;
+  };
+
+  const assignmentPathParts = (path: string): { scope: 'payload' | 'vars' | 'meta' | 'error'; parts: string[] } | null => {
+    const normalized = normalizeAssignmentPath(path);
+    if (normalized.startsWith('/')) {
+      return {
+        scope: 'payload',
+        parts: normalized
+          .replace(/^\//, '')
+          .split('/')
+          .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+          .filter(Boolean),
+      };
+    }
+
+    const [scope, ...parts] = normalized.split('.').filter(Boolean);
+    if (scope === 'payload' || scope === 'vars' || scope === 'meta' || scope === 'error') {
+      return { scope, parts };
+    }
+    return null;
+  };
+
+  const setSchemaAtPath = (root: any, parts: string[], schema: any): void => {
+    if (!root || typeof root !== 'object' || parts.length === 0) return;
+    root.type = 'object';
+    root.properties = root.properties && typeof root.properties === 'object' ? root.properties : {};
+    let cursor = root;
+    parts.forEach((part, index) => {
+      cursor.properties = cursor.properties && typeof cursor.properties === 'object' ? cursor.properties : {};
+      const isLeaf = index === parts.length - 1;
+      if (isLeaf) {
+        cursor.properties[part] = cloneJsonSchema(schema);
+        return;
+      }
+      const existing = cursor.properties[part];
+      if (!existing || typeof existing !== 'object' || existing.type !== 'object') {
+        cursor.properties[part] = { type: 'object', properties: {} };
+      }
+      cursor = cursor.properties[part];
+    });
+  };
+
+  const inferredPayloadSchemaJson = payloadSchemaJson ? cloneJsonSchema(payloadSchemaJson) : null;
 
   const exprPathToSchemaTypes = (expr: string, ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> }): Set<string> => {
     const trimmed = String(expr ?? '').trim();
@@ -917,16 +1003,19 @@ const computeValidation = async (params: {
                 mapping: inputMapping,
                 targetSchema: inputSchemaJson,
                 options: { stepPath: `root.steps.${String(step.id)}.config.inputMapping`, stepId: String(step.id), fieldName: 'inputMapping' },
-                ctx: { payload: payloadSchemaJson, vars: varsSchemas, eventPayload: null }
+                ctx: { payload: inferredPayloadSchemaJson, vars: varsSchemas, eventPayload: null }
               });
             }
           }
 
-          // Track outputs for vars.* typing
-          if (saveAs) {
-            if (step.type === 'action.call' && actionId) {
-              const out = resolveActionCallOutputSchema(registry as any, cfg as any);
-              if (out) varsSchemas.set(saveAs, out);
+          // Track outputs for downstream type checks. Unscoped saveAs values remain vars.* for compatibility.
+          if (saveAs && step.type === 'action.call' && actionId) {
+            const out = resolveActionCallOutputSchema(registry as any, cfg as any);
+            const parsedSaveAs = assignmentPathParts(saveAs);
+            if (out && parsedSaveAs?.scope === 'vars' && parsedSaveAs.parts.length === 1) {
+              varsSchemas.set(parsedSaveAs.parts[0], out);
+            } else if (out && parsedSaveAs?.scope === 'payload' && inferredPayloadSchemaJson) {
+              setSchemaAtPath(inferredPayloadSchemaJson, parsedSaveAs.parts, out);
             }
           }
         }
@@ -1200,12 +1289,19 @@ const requireWorkflowPermission = async (
   throwHttpError(403, 'Forbidden');
 };
 
+const hasWorkflowScheduleTable = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
+): Promise<boolean> => knex.schema.hasTable('tenant_workflow_schedule');
+
 const loadWorkflowScheduleStateMap = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
   workflowIds: string[],
   tenant?: string | null
 ): Promise<Map<string, WorkflowScheduleStateRecord>> => {
   if (!workflowIds.length) return new Map();
+  if (!(await hasWorkflowScheduleTable(knex))) {
+    return new Map();
+  }
 
   const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
     .select('*')
@@ -1948,7 +2044,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     updated_by: user.user_id
   });
 
-  if (tenant) {
+  if (tenant && await hasWorkflowScheduleTable(knex)) {
     const nextTriggerIsTimeTrigger = isWorkflowTimeTrigger((definition as any)?.trigger);
     const previousTriggerIsTimeTrigger = isWorkflowTimeTrigger((workflow as any)?.trigger);
 
@@ -2447,6 +2543,27 @@ export const listWorkflowRunSummaryAction = withAuth(async (user, { tenant }, in
   });
 
   return { total, byStatus: summary };
+});
+
+export const getWorkflowStepQuotaSummaryAction = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant context required');
+  }
+
+  const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
+  const summary = await workflowStepQuotaService.resolveQuotaSummary(knex, tenant);
+  return {
+    periodStart: summary.periodStart,
+    periodEnd: summary.periodEnd,
+    periodSource: summary.periodSource,
+    effectiveLimit: summary.effectiveLimit,
+    usedCount: summary.usedCount,
+    remaining: summary.remaining,
+    tier: summary.tier,
+    limitSource: summary.limitSource,
+  };
 });
 
 export const getWorkflowRunSummaryMetadataAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3306,9 +3423,19 @@ export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { t
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
-  const catalog = buildWorkflowDesignerActionCatalog(registry.list().map(serializeWorkflowRegistryAction));
+  const integrationModules = getWorkflowIntegrationModuleRegistry().list();
+  const catalog = buildWorkflowDesignerActionCatalog(
+    registry.list().map(serializeWorkflowRegistryAction),
+    { modules: integrationModules }
+  );
   const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
-  return catalog.filter((record) => record.tileKind !== 'app' || availableAppKeys.has(record.groupKey));
+  const availableFirstPartyKeys = await loadAvailableFirstPartyIntegrationAppKeys(knex, tenant);
+  const firstPartyModuleKeys: Set<string> = new Set(integrationModules.map((module) => module.groupKey));
+  return catalog.filter((record) => {
+    if (record.tileKind !== 'app') return true;
+    if (firstPartyModuleKeys.has(record.groupKey)) return availableFirstPartyKeys.has(record.groupKey);
+    return availableAppKeys.has(record.groupKey);
+  });
 });
 
 export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {

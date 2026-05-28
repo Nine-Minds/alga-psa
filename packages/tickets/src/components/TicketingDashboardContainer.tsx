@@ -137,7 +137,7 @@ interface TicketingDashboardContainerProps {
   canUpdateTickets?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   allowSlaStatusFilter?: boolean;
-  useAlgadeskQuickAddForm?: boolean;
+  useAlgaDeskQuickAddForm?: boolean;
 }
 
 export default function TicketingDashboardContainer({
@@ -152,7 +152,7 @@ export default function TicketingDashboardContainer({
   canUpdateTickets,
   renderClientDetails,
   allowSlaStatusFilter = true,
-  useAlgadeskQuickAddForm = false,
+  useAlgaDeskQuickAddForm = false,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -609,7 +609,7 @@ export default function TicketingDashboardContainer({
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
         allowSlaStatusFilter={allowSlaStatusFilter}
-        useAlgadeskQuickAddForm={useAlgadeskQuickAddForm}
+        useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
       />
   );
 }

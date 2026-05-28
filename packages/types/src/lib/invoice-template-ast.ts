@@ -82,6 +82,7 @@ export interface TemplateFieldNode extends TemplateNodeBase {
   type: 'field';
   binding: TemplateBindingRef;
   label?: string;
+  labelStyle?: TemplateNodeStyleRef;
   emptyValue?: string;
   placeholder?: string;
   format?: TemplateValueFormat;
@@ -145,6 +146,7 @@ export interface TemplateTotalsNode extends TemplateNodeBase {
 export interface TemplateTotalsRow {
   id: string;
   label: string;
+  labelStyle?: TemplateNodeStyleRef;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   emphasize?: boolean;

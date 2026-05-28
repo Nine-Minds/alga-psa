@@ -27,6 +27,7 @@
     "close": "Cerrar"
   },
   "runList": {
+    "shareTooltip": "Imprimir y exportar",
     "quickRanges": {
       "last24h": "Últimas 24 h",
       "last7d": "Últimos 7 días"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "{{count}} ejecución(es) cancelada(s).",
       "bulkSkippedIneligibleCount": "{{count}} ejecución(es) no elegible(s) omitida(s).",
       "bulkActionFailed": "Acción masiva fallida"
+    },
+    "print": {
+      "title": "Ejecuciones de workflows",
+      "selectedTitle": "Ejecuciones seleccionadas",
+      "subtitle": "{{count}} ejecuciones",
+      "noRuns": "No hay ejecuciones para imprimir",
+      "columns": {
+        "run": "Ejecución",
+        "workflow": "Workflow",
+        "version": "Versión",
+        "status": "Estado",
+        "started": "Iniciado",
+        "updated": "Actualizado",
+        "duration": "Duración"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir las ejecuciones de flujo de trabajo."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Abrir editor",
       "apply": "Aplicar",
       "cancel": "Cancelar"
+    },
+    "askAi": {
+      "ariaLabel": "Pedir ayuda a la IA para transformaciones",
+      "title": "Preguntar a la IA",
+      "shortcutHint": "Abrir Quick Ask para obtener ayuda con transformaciones"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Cargando automatización de flujos de trabajo...",
-    "featureName": "Automatización de flujos de trabajo",
-    "notEnabled": "Esta función es experimental y no está habilitada para su tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Habilite la automatización de flujos de trabajo en la configuración para acceder a ella.",
-    "goToExperimental": "Ir a funciones experimentales",
-    "openSettings": "Abrir configuración"
+    "loading": "Cargando automatización de flujos de trabajo..."
   },
   "flow": {
     "designer": {

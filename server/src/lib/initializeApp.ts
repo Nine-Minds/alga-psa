@@ -33,6 +33,8 @@ import { registerEnterpriseStorageProviders } from './storage/registerEnterprise
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
 import { webhookRateLimitConfigGetter } from './webhooks/rateLimitConfig';
+import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimitConfig';
+import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
 
@@ -54,6 +56,9 @@ export async function initializeApp() {
     // feature flags via @alga-psa/core without importing from server.
     const { featureFlags } = await import('./feature-flags/featureFlags');
     registerFeatureFlagChecker((flag, ctx) => featureFlags.isEnabled(flag, ctx));
+
+    await bootstrapInboundWebhookActions();
+    logger.info('Inbound webhook actions bootstrapped');
 
     // Validate secret uniqueness first (must succeed)
     try {
@@ -168,7 +173,8 @@ export async function initializeApp() {
             }
           },
           api: apiRateLimitConfigGetter,
-          'webhook-out': webhookRateLimitConfigGetter
+          'webhook-out': webhookRateLimitConfigGetter,
+          'webhook-in': inboundWebhookRateLimitConfigGetter
         }
       );
       logger.info('Token bucket rate limiter initialized');

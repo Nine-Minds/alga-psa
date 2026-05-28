@@ -21,6 +21,15 @@ export type CompiledExpression = {
   source: string;
 };
 
+export async function evaluateExpressionSource(
+  source: string,
+  ctx: ExpressionContext,
+  timeoutMs?: number
+): Promise<unknown> {
+  const compiled = compileExpression({ $expr: source });
+  return compiled.evaluate(ctx, timeoutMs);
+}
+
 export function validateExpressionSource(source: string): void {
   const normalizedSource = normalizeExpressionSource(source);
   const functionCalls = extractFunctionCalls(normalizedSource);

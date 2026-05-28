@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { publishServiceRequestDefinitionSearchEvent } from './searchEvents';
 
 export interface PublishServiceRequestDefinitionInput {
   knex: Knex;
@@ -57,7 +58,7 @@ export async function publishServiceRequestDefinition(
 ): Promise<ServiceRequestDefinitionVersionRecord> {
   const { knex, tenant, definitionId, publishedBy = null } = input;
 
-  return knex.transaction(async (trx) => {
+  const createdVersion = await knex.transaction(async (trx) => {
     const definition = (await trx('service_request_definitions')
       .where({ tenant, definition_id: definitionId })
       .first()) as ServiceRequestDefinitionRow | undefined;
@@ -121,4 +122,17 @@ export async function publishServiceRequestDefinition(
 
     return createdVersion;
   });
+
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: publishedBy,
+      lifecycleState: 'published',
+      changedFields: ['lifecycle_state', 'published_at'],
+    },
+  );
+
+  return createdVersion;
 }

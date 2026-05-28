@@ -40,7 +40,14 @@
     "duplicate": "Dupliceren",
     "openMenu": "Menu openen",
     "confirmDeletion": "Verwijderen bevestigen",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "print": "Afdrukken",
+    "printSelected_one": "Geselecteerde afdrukken ({{count}})",
+    "printSelected_other": "Geselecteerde afdrukken ({{count}})",
+    "printOptions": "Afdrukopties",
+    "resetPrintOptions": "Afdrukopties resetten",
+    "share": "Delen",
+    "done": "Klaar"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -267,6 +274,13 @@
         "description": "Klik op \"Locatie toevoegen\" om te beginnen"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} antwoord",
+    "replies_other": "{{count}} antwoorden",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen",
+    "showInDrawer": "Tonen in zijpaneel"
   },
   "pagination": {
     "previous": "Vorige",
@@ -1123,6 +1137,18 @@
   "feedback": {
     "providePlaceholder": "Geef feedback"
   },
+  "presence": {
+    "noOneElseEditing": "Niemand anders is aan het bewerken",
+    "conflict": {
+      "changedField": "{{author}} heeft dit veld zojuist gewijzigd {{time}}.",
+      "remoteValue": "Externe waarde:",
+      "keepYours": "Eigen behouden",
+      "takeTheirs": "Externe gebruiken"
+    }
+  },
+  "labels": {
+    "printColumns": "Afdrukkolommen"
+  },
   "deleteEntity": {
     "checkingDependenciesTitle": "Afhankelijkheden controleren",
     "deleteTitle": "{{entityName}} verwijderen",
@@ -1143,5 +1169,12 @@
         "warning": "Gearchiveerde records worden verborgen in standaardweergaven."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} kolom verborgen wegens beperkte ruimte.",
+    "columnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte.",
+    "showAll": "Alles tonen",
+    "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
+    "showLess": "Minder tonen"
   }
 }

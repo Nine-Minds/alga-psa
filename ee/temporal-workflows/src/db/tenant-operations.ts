@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type {
   CreateTenantActivityInput,
@@ -10,6 +10,7 @@ import type {
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
+import { normalizeProductCode } from './product-bootstrap-resolver.js';
 
 const logger = () => Context.current().log;
 
@@ -27,8 +28,8 @@ export async function createTenantInDB(
 
   try {
     const knex = await getAdminConnection();
-    
-    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+
+    const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
       const tenantCompanyName = input.companyName ?? input.tenantName;
 
@@ -57,7 +58,7 @@ export async function createTenantInDB(
         tenantData.plan = input.plan;
       }
       if (input.productCode) {
-        tenantData.product_code = input.productCode;
+        tenantData.product_code = normalizeProductCode(input.productCode);
       }
 
       // Resolve plan from Stripe price → product → tier
@@ -358,7 +359,7 @@ export async function setupTenantDataInDB(
     const knex = await getAdminConnection();
     const setupSteps: string[] = [];
 
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
         await trx('tenant_email_settings')
@@ -532,9 +533,7 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
   log.info('Rolling back tenant creation', { tenantId });
 
   try {
-    const knex = await getAdminConnection();
-
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Delete in proper order to avoid foreign key violations
 
       // Delete user roles first (references users)

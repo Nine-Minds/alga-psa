@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, type MouseEvent } from 'react';
 import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -26,6 +26,7 @@ import { IUser } from '@alga-psa/types';
 import { TimeSheetApproval } from './TimeSheetApproval';
 import { useDrawer } from "@alga-psa/ui";
 import { parseISO } from 'date-fns';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface ManagerApprovalDashboardProps {
   currentUser: IUser;
@@ -43,6 +44,17 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   const [timeSheetToReverse, setTimeSheetToReverse] = useState<ITimeSheetApprovalView | null>(null);
   const { isManager } = useTeamAuth(currentUser);
   const { openDrawer, closeDrawer } = useDrawer();
+  const selectedTimeSheetSet = useMemo(() => new Set(selectedTimeSheets), [selectedTimeSheets]);
+  const selectableTimeSheets = useMemo(
+    () => timeSheets.filter((sheet) => sheet.approval_status !== 'CHANGES_REQUESTED' && sheet.approval_status !== 'APPROVED'),
+    [timeSheets],
+  );
+  const rangeSelect = useRangeSelection<ITimeSheetApprovalView>({
+    items: selectableTimeSheets,
+    getId: (sheet) => sheet.id,
+    selectedIds: selectedTimeSheetSet,
+    onSelectedIdsChange: (next) => setSelectedTimeSheets(Array.from(next)),
+  });
 
   useEffect(() => {
     if (isManager) {
@@ -82,12 +94,6 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
       console.error('Failed to reverse approval:', error);
       alert('Failed to reverse approval: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
-  };
-
-  const handleSelectTimeSheet = (id: string) => {
-    setSelectedTimeSheets(prev =>
-      prev.includes(id) ? prev.filter(sheetId => sheetId !== id) : [...prev, id]
-    );
   };
 
   const handleBulkApprove = async () => {
@@ -191,20 +197,30 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             dataIndex: 'select',
             width: '10%',
             sortable: false, // Non-data column, sorting disabled
-            render: (_, record) => (
-              <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
-                {/* Unique ID for UI reflection system */}
-                <Checkbox
-                  id={`timesheet-select-${record.id}`}
-                  checked={selectedTimeSheets.includes(record.id)}
-                  onChange={() => handleSelectTimeSheet(record.id)}
-                  disabled={
-                    record.approval_status === 'CHANGES_REQUESTED' ||
-                    record.approval_status === 'APPROVED'
-                  }
-                />
-              </div>
-            )
+            render: (_, record) => {
+              const isDisabled = record.approval_status === 'CHANGES_REQUESTED' || record.approval_status === 'APPROVED';
+              const isChecked = rangeSelect.isSelected(record.id);
+              return (
+                <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
+                  {/* Unique ID for UI reflection system */}
+                  <Checkbox
+                    id={`timesheet-select-${record.id}`}
+                    checked={isChecked}
+                    onClick={(event: MouseEvent<HTMLInputElement>) => {
+                      event.stopPropagation();
+                      rangeSelect.handleSelect(record.id, {
+                        shiftKey: event.shiftKey,
+                        selected: !isChecked,
+                        preventDefault: () => event.preventDefault(),
+                      });
+                      event.preventDefault();
+                    }}
+                    onChange={() => { /* controlled via onClick for shift-range support */ }}
+                    disabled={isDisabled}
+                  />
+                </div>
+              );
+            }
           },
           {
             title: t('managerDashboard.columns.employee', { defaultValue: 'Employee' }),

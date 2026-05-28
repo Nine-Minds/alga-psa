@@ -28,6 +28,7 @@ const runner = {
   cancelJob: vi.fn(async () => true),
   getJobStatus: vi.fn(async () => ({ status: 'cancelled' }))
 };
+const hasTableMock = vi.fn(async (table: string) => table === 'tenant_workflow_schedule');
 
 const knexMock: any = vi.fn((table: string) => {
   if (table === 'workflow_definitions') {
@@ -164,6 +165,9 @@ const knexMock: any = vi.fn((table: string) => {
   }
   throw new Error(`Unexpected table access: ${table}`);
 });
+knexMock.schema = {
+  hasTable: hasTableMock
+};
 
 vi.mock('@alga-psa/core', () => ({
   deleteEntityWithValidation: vi.fn()
@@ -355,6 +359,8 @@ describe('workflow external schedules publish lifecycle unit tests', () => {
     runner.scheduleRecurringJob.mockClear();
     runner.cancelJob.mockClear();
     runner.getJobStatus.mockClear();
+    hasTableMock.mockReset();
+    hasTableMock.mockResolvedValue(true);
     registerWorkflowScheduleJobRunner(async () => runner);
 
     initializeWorkflowRuntimeV2();
@@ -495,5 +501,38 @@ describe('workflow external schedules publish lifecycle unit tests', () => {
     expect(invalid.enabled).toBe(false);
     expect(invalid.status).toBe('failed');
     expect(String(invalid.last_error)).toContain('threshold');
+  });
+
+  it('skips external schedule sync during publish when the optional schedule table is unavailable', async () => {
+    hasTableMock.mockResolvedValue(false);
+
+    const workflowId = uuidv4();
+    const createResult = await createWorkflowDefinitionAction({
+      definition: {
+        id: workflowId,
+        ...buildWorkflowDefinition({
+          name: 'Missing schedule table',
+          version: 1,
+          trigger: {
+            type: 'schedule',
+            runAt: '2099-01-01T10:00:00.000Z'
+          },
+          payloadSchemaRef: SCHEDULE_PUBLISH_V1_REF,
+          steps: [stateSetStep('state-1', 'READY')]
+        })
+      },
+      payloadSchemaMode: 'pinned',
+      pinnedPayloadSchemaRef: SCHEDULE_PUBLISH_V1_REF
+    });
+
+    const publishResult = await publishWorkflowDefinitionAction({
+      workflowId: createResult.workflowId,
+      version: 1
+    });
+
+    expect(publishResult.ok).toBe(true);
+    expect(scheduleRecords.size).toBe(0);
+    expect(runner.scheduleJobAt).not.toHaveBeenCalled();
+    expect(runner.scheduleRecurringJob).not.toHaveBeenCalled();
   });
 });

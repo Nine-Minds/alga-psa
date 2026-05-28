@@ -14,6 +14,67 @@ import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
+import { publishTicketUpdate } from '../../lib/liveUpdates';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+
+function formatLiveUpdateDisplayName(user: any): string {
+  return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
+}
+
+async function assertClientCanCreateComment(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: any,
+  comment: Omit<IComment, 'tenant'>
+): Promise<void> {
+  if (user?.user_type !== 'client') {
+    return;
+  }
+
+  if (comment.is_internal) {
+    throw new Error('Client users cannot create internal comments');
+  }
+
+  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
+    throw new Error('Client users can only create their own comments');
+  }
+
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required for client comments');
+  }
+
+  let clientId = user.clientId || user.client_id || null;
+  if (!clientId) {
+    const clientRow = await trx('users as u')
+      .leftJoin('contacts as c', function() {
+        this.on('u.contact_id', 'c.contact_name_id')
+          .andOn('u.tenant', 'c.tenant');
+      })
+      .select('c.client_id')
+      .where({ 'u.tenant': tenant, 'u.user_id': user.user_id })
+      .first();
+    clientId = clientRow?.client_id ?? null;
+  }
+
+  if (!clientId) {
+    throw new Error('Client user is not associated with a client');
+  }
+
+  const ticket = await trx('tickets')
+    .select('client_id')
+    .where({ tenant, ticket_id: comment.ticket_id })
+    .first();
+
+  if (!ticket || ticket.client_id !== clientId) {
+    throw new Error('Client user cannot access this ticket');
+  }
+}
 
 /**
  * Helper function to determine the new response state based on comment properties
@@ -116,7 +177,7 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
   }
 });
 
-export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -189,6 +250,8 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
     const { knex: db } = await createTenantKnex();
     const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
+
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
@@ -227,18 +290,25 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
         // Publish TICKET_COMMENT_ADDED event for mention notifications
         // Note: Using try-catch to avoid blocking comment creation if event publishing fails
         try {
+          const eventComment = await Comment.get(trx, commentTenant, commentId);
           await publishEvent({
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
               ticketId: comment.ticket_id!,
               userId: comment.user_id,
+              thread_id: eventComment?.thread_id,
+              parent_comment_id: eventComment?.parent_comment_id ?? null,
+              is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
                 id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
-                authorType: comment.author_type // F039: Include author_type in event payload
+                authorType: comment.author_type, // F039: Include author_type in event payload
+                thread_id: eventComment?.thread_id,
+                parent_comment_id: eventComment?.parent_comment_id ?? null,
+                is_reply: Boolean(eventComment?.parent_comment_id)
               }
             }
           });
@@ -299,6 +369,75 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
         await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
+      // Write a unified activity row so the timeline interleaves the comment
+      // with field-change events. We pick the most specific event type based
+      // on visibility + responseSource so the UI can render distinct phrasing
+      // for "internal note", "customer reply", and "public comment".
+      if (comment.ticket_id && commentTenant) {
+        const responseSource =
+          (comment.metadata && typeof comment.metadata === 'object'
+            ? (comment.metadata as { responseSource?: string }).responseSource
+            : undefined) ?? comment.response_source ?? undefined;
+
+        let activityEventType: string = TICKET_ACTIVITY_EVENT.COMMENT_ADDED;
+        let activitySource: string = TICKET_ACTIVITY_SOURCE.UI;
+        let actorType: string = TICKET_ACTIVITY_ACTOR.USER;
+
+        if (comment.is_internal) {
+          activityEventType = TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED;
+        } else if (responseSource === 'client_portal' || comment.author_type === 'client' || comment.author_type === 'contact') {
+          activityEventType = TICKET_ACTIVITY_EVENT.CUSTOMER_REPLIED;
+          activitySource = TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL;
+          actorType =
+            comment.author_type === 'contact'
+              ? TICKET_ACTIVITY_ACTOR.CONTACT
+              : TICKET_ACTIVITY_ACTOR.USER;
+        } else if (responseSource === 'inbound_email') {
+          activityEventType = TICKET_ACTIVITY_EVENT.CUSTOMER_REPLIED;
+          activitySource = TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL;
+          actorType = TICKET_ACTIVITY_ACTOR.EMAIL_SENDER;
+        } else {
+          activityEventType = TICKET_ACTIVITY_EVENT.MESSAGE_ADDED;
+        }
+
+        await writeTicketActivity(trx, {
+          tenant: commentTenant,
+          ticketId: comment.ticket_id,
+          eventType: activityEventType,
+          entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+          entityId: commentId,
+          actor: {
+            actorType: actorType as any,
+            userId: actorType === TICKET_ACTIVITY_ACTOR.USER ? (comment.user_id ?? null) : null,
+            contactId:
+              actorType === TICKET_ACTIVITY_ACTOR.CONTACT ||
+              actorType === TICKET_ACTIVITY_ACTOR.EMAIL_SENDER
+                ? (comment.contact_id ?? null)
+                : null,
+          },
+          source: activitySource,
+          details: {
+            is_internal: !!comment.is_internal,
+            is_resolution: !!comment.is_resolution,
+            author_type: comment.author_type,
+            response_source: responseSource ?? null,
+          },
+        });
+      }
+
+      if (comment.ticket_id && commentTenant) {
+        await publishTicketUpdate({
+          tenantId: commentTenant,
+          ticketId: comment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? comment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
       return commentId;
     });
   } catch (error) {
@@ -307,7 +446,7 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
   }
 });
 
-export const updateComment = withAuth(async (_user, { tenant }, id: string, comment: Partial<IComment>) => {
+export const updateComment = withAuth(async (user, { tenant }, id: string, comment: Partial<IComment>) => {
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
       ...comment,
@@ -468,6 +607,45 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
           // Don't throw - allow comment update to succeed even if event publishing fails
         }
       }
+
+      if (updatedComment?.ticket_id && commentTenant) {
+        await publishTicketUpdate({
+          tenantId: commentTenant,
+          ticketId: updatedComment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? comment.user_id ?? existingComment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // Metadata-only edit activity row: by design, we do NOT store the
+      // full old/new comment bodies in the activity log (see PRD FR-24/25,
+      // FR-38). The UI surfaces "X edited a comment" and links to the
+      // current comment; if a content-diff feature is added later, it
+      // should live in a separate body-snapshot table, not here.
+      if (updatedComment?.ticket_id && commentTenant) {
+        const editorUserId = user?.user_id ?? comment.user_id ?? existingComment.user_id ?? null;
+        await writeTicketActivity(trx, {
+          tenant: commentTenant,
+          ticketId: updatedComment.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.COMMENT_UPDATED,
+          entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+          entityId: id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: editorUserId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.UI,
+          details: {
+            is_internal: !!updatedComment.is_internal,
+            was_internal: !!existingComment.is_internal,
+            edited: true,
+          },
+        });
+      }
     });
   } catch (error) {
     console.error(`[updateComment] Failed to update comment with ID ${id}:`, error);
@@ -476,11 +654,11 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
   }
 });
 
-export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
+export const deleteComment = withAuth(async (user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
+  const tenant = _ctx?.tenant;
   try {
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenant = _ctx?.tenant;
+    const deletedTicketId = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!tenant) {
         throw new Error('Tenant is required to delete comment');
       }
@@ -500,7 +678,40 @@ export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
         .update({ comment_id: null });
 
       await Comment.delete(trx, tenant, id);
+
+      if (existingComment?.ticket_id) {
+        await publishTicketUpdate({
+          tenantId: tenant,
+          ticketId: existingComment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? existingComment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return existingComment?.ticket_id ?? null;
     });
+
+    if (tenant && deletedTicketId) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_COMMENT_DELETED',
+          payload: {
+            tenantId: tenant,
+            ticketId: deletedTicketId,
+            commentId: id,
+            userId: user?.user_id,
+          },
+        });
+      } catch (eventError) {
+        // Comment is already deleted; the search index self-heals via the
+        // daily reconcile pass if this event fails to publish.
+        console.error(`[deleteComment] Failed to publish TICKET_COMMENT_DELETED event:`, eventError);
+      }
+    }
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw new Error(`Failed to delete comment with id ${id}`);

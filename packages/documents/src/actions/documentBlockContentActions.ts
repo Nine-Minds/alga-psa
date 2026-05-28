@@ -38,6 +38,31 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   folder_path?: string | null;
 }
 
+async function publishDocumentUpdatedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  changedFields: string[],
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        updatedByUserId: userId,
+        updatedAt: occurredAt,
+        changedFields,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_UPDATED search event:`, eventError);
+  }
+}
+
 // Create a new document with block content
 export const createBlockDocument = withAuth(async (
   user,
@@ -160,6 +185,14 @@ export const createBlockDocument = withAuth(async (
       console.error(`[createBlockDocument] Failed to publish USER_MENTIONED_IN_DOCUMENT event:`, eventError);
       // Don't throw - allow document creation to succeed even if event publishing fails
     }
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      result.document_id,
+      input.user_id || user.user_id,
+      ['document_name', 'content'],
+      'createBlockDocument',
+    );
 
     return {
       document_id: result.document_id,
@@ -330,6 +363,14 @@ export const updateBlockContent = withAuth(async (
       // Don't throw - allow document update to succeed even if event publishing fails
     }
 
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      input.user_id,
+      ['content'],
+      'updateBlockContent',
+    );
+
     return result.updatedContent;
   } catch (error) {
     console.error('Error updating block content:', error);
@@ -363,6 +404,14 @@ export const deleteBlockContent = withAuth(async (_user, { tenant }, documentId:
     if (isActionPermissionError(deletionResult)) {
       return deletionResult;
     }
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      _user.user_id,
+      ['content'],
+      'deleteBlockContent',
+    );
   } catch (error) {
     console.error('Error deleting block content:', error);
     throw new Error('Failed to delete block content');

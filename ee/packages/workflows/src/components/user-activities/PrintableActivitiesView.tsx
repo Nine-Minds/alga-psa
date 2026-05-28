@@ -3,8 +3,8 @@
 import React from 'react';
 import { Activity, ActivityType } from '@alga-psa/types';
 import type { ActivityGroup } from '@alga-psa/workflows/actions';
-import { Calendar, Layers, MessageSquare, ListChecks } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 
 interface PrintableActivitiesViewProps {
   activities: Activity[];
@@ -16,55 +16,44 @@ interface PrintableActivitiesViewProps {
   ungroupedCollapsed?: boolean;
   /** Fallback title */
   title?: string;
+  columns?: PrintableTableColumn<Activity>[];
 }
 
 function formatDate(dateString?: string): string {
   if (!dateString) return '';
   const d = new Date(dateString);
   if (isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getTypeIcon(type: ActivityType) {
-  const cls = "ua-print-type-icon";
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+function getTypeLabel(type: ActivityType, t: TFn) {
   switch (type) {
     case ActivityType.TICKET:
-      return <MessageSquare className={cls} />;
+      return t('table.activityTypes.ticket', { defaultValue: 'Ticket' });
     case ActivityType.PROJECT_TASK:
-      return <Layers className={cls} />;
+      return t('table.activityTypes.projectTask', { defaultValue: 'Project Task' });
     case ActivityType.SCHEDULE:
-      return <Calendar className={cls} />;
+      return t('table.activityTypes.schedule', { defaultValue: 'Schedule' });
     case ActivityType.WORKFLOW_TASK:
-      return <ListChecks className={cls} />;
+      return t('table.activityTypes.workflowTask', { defaultValue: 'Workflow Task' });
+    case ActivityType.TIME_ENTRY:
+      return t('table.activityTypes.timeEntry', { defaultValue: 'Time Entry' });
+    case ActivityType.NOTIFICATION:
+      return t('table.activityTypes.notification', { defaultValue: 'Notification' });
     default:
-      return <span className="ua-print-type">•</span>;
+      return t('table.activityTypes.unknown', { defaultValue: 'Unknown' });
   }
-}
-
-function ActivityRow({ activity }: { activity: Activity }) {
-  const metaParts: string[] = [];
-  if (activity.status) metaParts.push(activity.status);
-  if (activity.priorityName) metaParts.push(activity.priorityName);
-  if (activity.dueDate) metaParts.push(`due ${formatDate(activity.dueDate)}`);
-
-  return (
-    <div className="ua-print-row">
-      {getTypeIcon(activity.type)}
-      <span className="ua-print-title">{activity.title}</span>
-      {metaParts.length > 0 && (
-        <span className="ua-print-meta">{metaParts.join(' · ')}</span>
-      )}
-    </div>
-  );
 }
 
 /**
  * Renders a print-only version of the activities list.
- * Hidden by default; only appears when `html.ua-print-mode` is set
- * (toggled by the Print button in ActivitiesDataTableSection).
+ * Hidden by default; only appears when `html.app-print-mode` is set
+ * by the shared PrintButton.
  *
- * In grouped mode, fetches the user's groups and organizes activities by group.
- * In flat mode, just renders the flat list.
+ * In grouped mode, organizes activities by the user's groups.
+ * In flat mode, renders one print-friendly table.
  */
 export function PrintableActivitiesView({
   activities,
@@ -72,6 +61,7 @@ export function PrintableActivitiesView({
   serverGroups = [],
   ungroupedCollapsed = false,
   title,
+  columns: providedColumns,
 }: PrintableActivitiesViewProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('printable.defaultTitle', { defaultValue: 'Activities' });
@@ -81,6 +71,48 @@ export function PrintableActivitiesView({
     month: 'long',
     day: 'numeric',
   });
+  const defaultColumns: PrintableTableColumn<Activity>[] = [
+    {
+      key: 'type',
+      header: t('table.columns.type', { defaultValue: 'Type' }),
+      render: (activity) => getTypeLabel(activity.type, t),
+      className: 'ua-print-type-column',
+    },
+    {
+      key: 'title',
+      header: t('table.columns.title', { defaultValue: 'Title' }),
+      render: (activity) => activity.title,
+      className: 'ua-print-title-column',
+    },
+    {
+      key: 'status',
+      header: t('table.columns.status', { defaultValue: 'Status' }),
+      render: (activity) => activity.status || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'priority',
+      header: t('table.columns.priority', { defaultValue: 'Priority' }),
+      render: (activity) => activity.priorityName || activity.priority || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'dueDate',
+      header: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
+      render: (activity) => formatDate(activity.dueDate) || t('table.values.noDueDate', { defaultValue: 'No due date' }),
+      className: 'ua-print-date-column',
+    },
+  ];
+  const columns = providedColumns ?? defaultColumns;
+
+  const renderTable = (sectionTitle: string, rows: Activity[]) => (
+    <PrintableTable
+      title={sectionTitle}
+      subtitle={dateStr}
+      rows={rows}
+      columns={columns}
+      getRowKey={(activity) => `${activity.type}:${activity.id}`}
+      emptyMessage={t('printable.empty', { defaultValue: '(empty)' })}
+    />
+  );
 
   // Build grouped structure if needed
   let groupedSections: Array<{ name: string; activities: Activity[] }> = [];
@@ -116,37 +148,22 @@ export function PrintableActivitiesView({
   }
 
   return (
-    <div className="ua-print-root ua-print-only">
-      <div className="ua-print-header">
-        {effectiveTitle}
-        <span className="ua-print-header-date">{dateStr}</span>
-      </div>
-
+    <div className="app-print-root app-print-only ua-print-root ua-print-only">
       {groupedSections.length > 0 ? (
         <>
           {groupedSections.map((g) => (
             <div key={g.name} className="ua-print-group">
-              <div className="ua-print-group-name">{g.name}</div>
-              {g.activities.length === 0 ? (
-                <div className="ua-print-row" style={{ color: '#888', fontStyle: 'italic' }}>
-                  {t('printable.empty', { defaultValue: '(empty)' })}
-                </div>
-              ) : (
-                g.activities.map((a) => <ActivityRow key={`${a.type}:${a.id}`} activity={a} />)
-              )}
+              {renderTable(g.name, g.activities)}
             </div>
           ))}
           {ungroupedActivities.length > 0 && !ungroupedCollapsed && (
             <div className="ua-print-group">
-              <div className="ua-print-group-name">{t('printable.ungroupedHeading', { defaultValue: 'Ungrouped' })}</div>
-              {ungroupedActivities.map((a) => (
-                <ActivityRow key={`${a.type}:${a.id}`} activity={a} />
-              ))}
+              {renderTable(t('printable.ungroupedHeading', { defaultValue: 'Ungrouped' }), ungroupedActivities)}
             </div>
           )}
         </>
       ) : (
-        activities.map((a) => <ActivityRow key={`${a.type}:${a.id}`} activity={a} />)
+        renderTable(effectiveTitle, activities)
       )}
     </div>
   );

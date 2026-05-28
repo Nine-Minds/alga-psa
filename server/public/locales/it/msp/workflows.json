@@ -27,6 +27,7 @@
     "close": "Chiudi"
   },
   "runList": {
+    "shareTooltip": "Stampa ed esporta",
     "quickRanges": {
       "last24h": "Ultime 24h",
       "last7d": "Ultimi 7 giorni"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Annullata/e {{count}} esecuzione/i.",
       "bulkSkippedIneligibleCount": "Saltata/e {{count}} esecuzione/i non idonea/e.",
       "bulkActionFailed": "Azione multipla non riuscita"
+    },
+    "print": {
+      "title": "Esecuzioni workflow",
+      "selectedTitle": "Esecuzioni workflow selezionate",
+      "subtitle": "{{count}} esecuzioni",
+      "noRuns": "Nessuna esecuzione workflow da stampare",
+      "columns": {
+        "run": "Esecuzione",
+        "workflow": "Workflow",
+        "version": "Versione",
+        "status": "Stato",
+        "started": "Avviato",
+        "updated": "Aggiornato",
+        "duration": "Durata"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle esecuzioni del workflow."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Apri editor",
       "apply": "Applica",
       "cancel": "Annulla"
+    },
+    "askAi": {
+      "ariaLabel": "Chiedi aiuto all’IA per le trasformazioni",
+      "title": "Chiedi all’IA",
+      "shortcutHint": "Apri Quick Ask per la guida sulle trasformazioni"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Caricamento dell'automazione dei flussi di lavoro...",
-    "featureName": "Automazione dei flussi di lavoro",
-    "notEnabled": "Questa funzione è sperimentale e non è abilitata per il tuo tenant.",
-    "experimental": "Sperimentale",
-    "enableHint": "Abilita l'automazione dei flussi di lavoro nelle impostazioni per accedervi.",
-    "goToExperimental": "Vai alle funzionalità sperimentali",
-    "openSettings": "Apri impostazioni"
+    "loading": "Caricamento dell'automazione dei flussi di lavoro..."
   },
   "flow": {
     "designer": {

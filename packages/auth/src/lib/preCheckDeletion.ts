@@ -57,11 +57,6 @@ export async function preCheckDeletion(
     };
   }
 
-  const canDelete = await hasPermission(user, permissionEntityFor(entityType), permissionActionFor(entityType));
-  if (!canDelete) {
-    return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
-  }
-
   const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     return {
@@ -73,5 +68,31 @@ export async function preCheckDeletion(
     };
   }
 
-  return withTransaction(knex, async (trx) => validateDeletion(trx, config, entityId, tenant));
+  return withTransaction(knex, async (trx) => {
+    let permission = {
+      resource: permissionEntityFor(entityType),
+      action: permissionActionFor(entityType)
+    };
+
+    if (entityType === 'status') {
+      const status = await trx('statuses')
+        .select('status_type')
+        .where({
+          tenant,
+          status_id: entityId
+        })
+        .first<{ status_type?: string }>();
+
+      if (status?.status_type === 'project' || status?.status_type === 'project_task') {
+        permission = { resource: 'project', action: 'update' };
+      }
+    }
+
+    const canDelete = await hasPermission(user, permission.resource, permission.action, trx);
+    if (!canDelete) {
+      return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
+    }
+
+    return validateDeletion(trx, config, entityId, tenant);
+  });
 }

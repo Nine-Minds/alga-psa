@@ -70,6 +70,20 @@ describe('componentSchema', () => {
     expect(paths).toContain('metadata.bindingKey');
     expect(paths).toContain('metadata.format');
     expect(paths).toContain('metadata.emptyValue');
+    expect(paths).toContain('metadata.labelStyle.inline.fontWeight');
+    expect(paths).toContain('metadata.labelStyle.inline.fontSize');
+    expect(paths).toContain('metadata.labelStyle.inline.color');
     expect(paths).toContain('style.justifyContent');
+  });
+
+  it('exposes label style controls for totals row labels', () => {
+    const subtotalSchema = getComponentSchema('subtotal');
+    const paths = (subtotalSchema.inspector?.panels ?? [])
+      .flatMap((panel) => panel.fields)
+      .flatMap((field) => ('path' in field ? [field.path] : []));
+
+    expect(paths).toContain('metadata.labelStyle.inline.fontWeight');
+    expect(paths).toContain('metadata.labelStyle.inline.fontSize');
+    expect(paths).toContain('metadata.labelStyle.inline.color');
   });
 });

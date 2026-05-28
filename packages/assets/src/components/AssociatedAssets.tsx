@@ -406,13 +406,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     };
 
     return (
-        <ReflectionContainer id={id} label={t('associatedAssets.title', { defaultValue: 'Associated Assets' })}>
+        <ReflectionContainer id={id} label={t('associatedAssets.title', { defaultValue: 'Assets' })}>
             <ContentCard
                 id={id}
                 collapsible
                 defaultExpanded={false}
-                title={t('associatedAssets.title', { defaultValue: 'Associated Assets' })}
-                headerIcon={<Boxes className="w-5 h-5" />}
+                title={t('associatedAssets.title', { defaultValue: 'Assets' })}
+                headerIcon={<Monitor className="w-5 h-5" />}
                 count={associatedAssets.length}
                 addButton={{
                     id: 'add-asset-button',

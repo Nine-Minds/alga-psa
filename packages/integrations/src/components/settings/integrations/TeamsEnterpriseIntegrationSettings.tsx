@@ -1,6 +1,6 @@
 'use client';
 
-import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
+import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
 
 export function TeamsEnterpriseIntegrationSettings() {

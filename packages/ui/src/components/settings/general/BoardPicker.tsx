@@ -39,6 +39,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const mappedOptions = useMemo(() => 
     boards.map(board => ({
@@ -119,7 +120,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
       // Update the ref with the new metadata
       prevMetadataRef.current = newMetadata;
     }
-  }, [selectedBoardId, boards, updateMetadata]); // updateMetadata intentionally omitted
+  }, [selectedBoardId, boards, mappedOptions, updateMetadata]);
 
   const selectedBoard = useMemo(() =>
     boards.find((c) => c.board_id === selectedBoardId),
@@ -146,6 +147,18 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [isOpen]);
+
   const opts = useMemo(() => [
     { value: 'active', label: 'Active Boards' },
     { value: 'inactive', label: 'Inactive Boards' },
@@ -162,8 +175,15 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
             label={selectedBoard?.board_name || placeholder}
             type="button"
             ref={dropdownRef}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setIsOpen(true);
+              }
+            }}
+            aria-haspopup="listbox"
             aria-expanded={isOpen}
-            aria-controls={isOpen ? `${id}-content` : undefined}
+            aria-controls={`${id}-boards-listbox`}
             {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
@@ -208,6 +228,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               </div>
               <div className="whitespace-nowrap">
                 <Input
+                  ref={searchInputRef}
                   id={`${id}-search`}
                   placeholder="Search boards..."
                   value={searchTerm}
@@ -221,6 +242,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
             <div
               className="max-h-60 overflow-y-auto border-t bg-white"
               role="listbox"
+              id={`${id}-boards-listbox`}
               aria-label="Boards"
               onWheel={(e) => {
                 e.stopPropagation();

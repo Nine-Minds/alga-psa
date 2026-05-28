@@ -27,6 +27,7 @@
     "close": "Sluiten"
   },
   "runList": {
+    "shareTooltip": "Afdrukken en exporteren",
     "quickRanges": {
       "last24h": "Laatste 24 uur",
       "last7d": "Laatste 7 dagen"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "{{count}} uitvoering(en) geannuleerd.",
       "bulkSkippedIneligibleCount": "{{count}} niet-geschikte uitvoering(en) overgeslagen.",
       "bulkActionFailed": "Bulkactie mislukt"
+    },
+    "print": {
+      "title": "Workflow-runs",
+      "selectedTitle": "Geselecteerde workflow-runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "Geen workflow-runs om af te drukken",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Versie",
+        "status": "Status",
+        "started": "Gestart",
+        "updated": "Bijgewerkt",
+        "duration": "Duur"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van workflow-uitvoeringen."
+      }
     }
   },
   "runDetails": {
@@ -1383,6 +1403,11 @@
       "openEditor": "Editor openen",
       "apply": "Toepassen",
       "cancel": "Annuleren"
+    },
+    "askAi": {
+      "ariaLabel": "Vraag AI om hulp bij transformaties",
+      "title": "Vraag AI",
+      "shortcutHint": "Open Quick Ask voor transformatiehulp"
     }
   },
   "schemaReference": {
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Workflowautomatisering wordt geladen...",
-    "featureName": "Workflowautomatisering",
-    "notEnabled": "Deze functie is experimenteel en niet ingeschakeld voor uw tenant.",
-    "experimental": "Experimenteel",
-    "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
-    "goToExperimental": "Ga naar experimentele functies",
-    "openSettings": "Instellingen openen"
+    "loading": "Workflowautomatisering wordt geladen..."
   },
   "flow": {
     "designer": {

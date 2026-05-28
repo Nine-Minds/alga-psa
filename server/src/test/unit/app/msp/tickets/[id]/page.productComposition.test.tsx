@@ -103,12 +103,12 @@ describe('MSP ticket details page product composition', () => {
     getSurveyTicketSummaryMock.mockResolvedValue({ score: null });
   });
 
-  it('routes Algadesk tenants through Algadesk detail mode', async () => {
+  it('routes AlgaDesk tenants through AlgaDesk detail mode', async () => {
     getCurrentTenantProductMock.mockResolvedValue('algadesk');
 
     const props = await getRenderedDetailProps();
 
-    expect(props.isAlgadeskMode).toBe(true);
+    expect(props.isAlgaDeskMode).toBe(true);
     expect(props.associatedAssets).toBeNull();
     expect(props.ticketData.comments).toHaveLength(1);
     expect(props.ticketData.documents).toHaveLength(1);
@@ -125,7 +125,7 @@ describe('MSP ticket details page product composition', () => {
 
     const props = await getRenderedDetailProps();
 
-    expect(props.isAlgadeskMode).toBe(false);
+    expect(props.isAlgaDeskMode).toBe(false);
     expect(getSurveyTicketSummaryMock).toHaveBeenCalled();
   });
 });

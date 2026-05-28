@@ -6,7 +6,7 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 }
 
-describe('Algadesk client portal ticketing contracts', () => {
+describe('AlgaDesk client portal ticketing contracts', () => {
   it('renders dashboard and ticket list/ticket detail portal surfaces', () => {
     const dashboardPage = read('src/app/client-portal/dashboard/page.tsx');
     const ticketsPage = read('src/app/client-portal/tickets/page.tsx');

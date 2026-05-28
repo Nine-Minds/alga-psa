@@ -38,7 +38,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const tab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : null;
   const { t } = await getServerTranslation(undefined, 'common');
-  const isAlgadesk = (await getCurrentTenantProduct()) === 'algadesk';
+  const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';
 
   try {
     // Fetch user data first for authorization
@@ -71,7 +71,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
 
     // Conditionally fetch documents only when on documents tab
     let documents: IDocument[] = [];
-    if (!isAlgadesk && tab === 'documents') {
+    if (!isAlgaDesk && tab === 'documents') {
       const documentsResponse = await getDocumentsByEntity(id, 'contact');
       if (!isActionPermissionError(documentsResponse)) {
         documents = Array.isArray(documentsResponse)
@@ -101,7 +101,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
             documents={documents}
             userId={currentUser.user_id}
             userPermissions={permissions}
-            isAlgadeskMode={isAlgadesk}
+            isAlgaDeskMode={isAlgaDesk}
           />
         </div>
       </AIChatContextBoundary>

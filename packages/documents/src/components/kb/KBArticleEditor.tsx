@@ -27,7 +27,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { CollaborativeEditor } from '../CollaborativeEditor';
+import type { CollaborativeEditorHandle } from '../CollaborativeEditor';
 import { DocumentEditor } from '../DocumentEditor';
+import { syncCollabSnapshot } from '../../actions/collaborativeEditingActions';
+import { updateBlockContent } from '../../actions/documentBlockContentActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
   getArticle,
@@ -98,6 +101,13 @@ export default function KBArticleEditor({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Explicit "save now" for collaborative content. Live edits autosave
+  // server-side (Hocuspocus persistence extension); this forces an immediate
+  // flush + preview refresh.
+  const collabEditorRef = useRef<CollaborativeEditorHandle | null>(null);
+  const isSavingContentRef = useRef(false);
+  const [isSavingContent, setIsSavingContent] = useState(false);
 
   // Auto-fallback if CollaborativeEditor can't connect within 5 seconds
   const collabConnectedRef = useRef(false);
@@ -228,6 +238,51 @@ export default function KBArticleEditor({
     setHasUnsavedMetadata(true);
   };
 
+  const documentId = article?.document_id;
+
+  // Force an immediate save of the collaborative content. Live edits are
+  // autosaved server-side by the Hocuspocus persistence extension (~2s
+  // debounce + on disconnect); this is an explicit "save now" that also
+  // refreshes the document preview immediately.
+  const saveContent = useCallback(async (): Promise<void> => {
+    if (!documentId || isFallbackMode || isSavingContentRef.current) return;
+    isSavingContentRef.current = true;
+    setIsSavingContent(true);
+    try {
+      const result = await syncCollabSnapshot(documentId);
+      if (!result || !('success' in result) || !result.success) {
+        // Fallback: write the client-side editor JSON directly.
+        const json = collabEditorRef.current?.getJSON();
+        if (!json) {
+          const message =
+            result && 'message' in result && result.message
+              ? result.message
+              : 'Snapshot sync failed';
+          throw new Error(message);
+        }
+        await updateBlockContent(documentId, {
+          block_data: JSON.stringify(json),
+          user_id: userId,
+        });
+      }
+      toast.success(
+        tRef.current('editor.feedback.contentSaveSuccess', {
+          defaultValue: 'Article content saved',
+        })
+      );
+    } catch (error) {
+      handleError(
+        error,
+        tRef.current('editor.feedback.contentSaveError', {
+          defaultValue: 'Failed to save article content',
+        })
+      );
+    } finally {
+      isSavingContentRef.current = false;
+      setIsSavingContent(false);
+    }
+  }, [documentId, isFallbackMode, userId]);
+
   const handleStatusChange = async (newStatus: 'review' | 'published' | 'archived') => {
     if (!article) return;
 
@@ -346,6 +401,20 @@ export default function KBArticleEditor({
           </div>
           {/* Status Actions */}
           <div className="flex items-center gap-2">
+            {!isFallbackMode && (
+              <Button
+                id="kb-editor-save-content"
+                variant="outline"
+                size="sm"
+                onClick={() => void saveContent()}
+                disabled={isSavingContent}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isSavingContent
+                  ? t('editor.actions.saving', { defaultValue: 'Saving...' })
+                  : t('editor.actions.saveContent', { defaultValue: 'Save' })}
+              </Button>
+            )}
             {article.status === 'draft' && (
               <>
                 <Button
@@ -420,6 +489,7 @@ export default function KBArticleEditor({
             tenantId={tenantId || article.tenant || ''}
             userId={userId}
             userName={userName || userId}
+            editorRef={collabEditorRef}
             searchMentions={searchUsersForMentions}
             aiAssistantEnabled={aiAssistantEnabled}
             initialContent={article.block_data ?? undefined}

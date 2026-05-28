@@ -133,6 +133,29 @@
       "bucketUsageRecords": "11111"
     },
     "deleteSelectedPrompt": "11111 {{count}} 11111 {{clientsLabel}} 11111",
+    "clientTypes": {
+      "company": "11111",
+      "individual": "11111"
+    },
+    "print": {
+      "title": "11111",
+      "selectedTitle": "11111",
+      "subtitle": "11111 {{count}} 11111",
+      "noClients": "11111",
+      "emptyValue": "11111",
+      "columns": {
+        "name": "11111",
+        "type": "11111",
+        "phone": "11111",
+        "address": "11111",
+        "status": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "shareTooltip": "11111",
     "defaultClientDeleteError": "11111",
     "clientNotFound": "11111",
     "deletePermissionDenied": "11111"
@@ -219,6 +242,11 @@
     "status": {
       "label": "11111",
       "helper": "11111"
+    },
+    "fields": {
+      "accountManager": "11111",
+      "url": "11111",
+      "status": "11111"
     },
     "deactivateClientDescription": "11111",
     "deactivateClientOnlyDescription": "11111"

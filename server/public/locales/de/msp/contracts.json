@@ -1463,12 +1463,16 @@
     "heading": "Festgebühren-Services",
     "preview": {
       "labels": {
+        "alternateFrequency": "Alternative Abrechnungsfrequenz:",
         "billingTiming": "Abrechnungszeitpunkt:",
         "cadenceOwner": "Rhythmus-Eigentümer:",
         "invoiceWindow": "Rechnungsfenster:",
         "recurringRate": "Wiederkehrender Tarif:",
         "service": "Dienst:",
         "services": "Dienste:"
+      },
+      "materializedPeriods": {
+        "tooltip": "Eine Vorschau der nächsten Servicezeiträume und der Rechnungsfenster, die auf Grundlage der aktuellen Einstellungen für sie erzeugt würden. Damit lässt sich die Kadenz vor dem Speichern überprüfen – die tatsächlichen Rechnungen werden später vom Abrechnungslauf erstellt."
       },
       "title": "Wiederkehrende Vorschau vor dem Speichern"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Alternative Abrechnungsfrequenz:",
+        "bucketsHeading": "Stundenkontingente:",
+        "includedHours": "Inkludierte Stunden:",
         "minimumTime": "Minimale Zeit:",
+        "overageRate": "Überschreitungssatz:",
+        "rollover": "Übertrag:",
         "roundUp": "Aufrunden:",
+        "serviceFallback": "Service {{index}}",
         "services": "Dienste:"
       },
       "title": "Zusammenfassung der Stunden-Services",
       "values": {
         "everyMinutes": "Alle {{count}} Minuten",
-        "minutes": "{{count}} Minuten"
+        "hours": "{{count}} Stunden",
+        "minutes": "{{count}} Minuten",
+        "overageRatePerHour": "{{rate}}/Stunde",
+        "rolloverDisabled": "Deaktiviert",
+        "rolloverEnabled": "Aktiviert"
       }
     }
   },

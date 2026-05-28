@@ -5,6 +5,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
+import { ADD_ONS } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -64,7 +65,18 @@ export interface TeamsMeetingOrganizerState {
 export interface TeamsMeetingOrganizerVerification {
   valid: boolean;
   displayName?: string;
-  reason?: 'ee_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+  reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+}
+
+async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
+  const row = await db('tenant_addons')
+    .where({ tenant, addon_key: ADD_ONS.TEAMS })
+    .andWhere((builder: any) => {
+      builder.whereNull('expires_at').orWhere('expires_at', '>', db.fn.now());
+    })
+    .first('addon_key');
+
+  return Boolean(row);
 }
 
 export const getTeamsMeetingsTabState = withAuth(async (
@@ -80,6 +92,10 @@ export const getTeamsMeetingsTabState = withAuth(async (
 
     const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
     if (!hasTeamsIntegrationsTable) {
+      return { success: true, data: { visible: false, organizerUpn: null } };
+    }
+
+    if (!(await tenantHasTeamsAddOn(db, tenant))) {
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
@@ -117,6 +133,10 @@ export const setDefaultMeetingOrganizer = withAuth(async (
     const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
     if (!hasTeamsIntegrationsTable) {
       return { success: false, error: 'Teams integration is not available in this environment' };
+    }
+
+    if (!(await tenantHasTeamsAddOn(db, tenant))) {
+      return { success: false, error: 'Microsoft Teams meetings require the Teams add-on.' };
     }
 
     const integration = await db('teams_integrations')
@@ -164,6 +184,10 @@ export const verifyMeetingOrganizer = withAuth(async (
 
     if (!isEnterprise) {
       return { success: true, data: { valid: false, reason: 'ee_disabled' } };
+    }
+
+    if (!(await tenantHasTeamsAddOn(db, tenant))) {
+      return { success: true, data: { valid: false, reason: 'addon_required' } };
     }
 
     const organizerUpn = (input.upn || '').trim();

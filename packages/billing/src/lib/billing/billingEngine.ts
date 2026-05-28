@@ -1,8 +1,6 @@
 import { Knex } from "knex";
 import {
   createTenantKnex,
-  computeWorkDateFields,
-  resolveUserTimeZone,
   withTransaction,
 } from "@alga-psa/db";
 import {
@@ -3020,6 +3018,8 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
+    const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
       tenant,
@@ -3132,6 +3132,15 @@ export class BillingEngine {
           "time_entries.service_id",
         ).andOn("service_catalog.tenant", "=", "time_entries.tenant");
       })
+      .leftJoin("service_prices as sp", function () {
+        this.on("sp.service_id", "=", "service_catalog.service_id")
+          .andOn("sp.tenant", "=", "service_catalog.tenant")
+          .andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+      })
       .leftJoin("project_ticket_links", function () {
         this.on(
           "time_entries.work_item_id",
@@ -3215,6 +3224,7 @@ export class BillingEngine {
         "service_catalog.service_name",
         "service_catalog.default_rate",
         "service_catalog.tax_rate_id",
+        "sp.rate as currency_rate",
         this.knex.raw(
           "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
         ),
@@ -3261,11 +3271,28 @@ export class BillingEngine {
         // Convert to hours
         const duration = Math.ceil(durationMinutes / 60);
 
-        // Determine rate based on user type if applicable
-        let rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
-        if (!isSystemManagedDefault && serviceConfig && serviceConfig.userTypeRates.has(entry.user_type)) {
-          rate = serviceConfig.userTypeRates.get(entry.user_type) as number;
+        // Resolve rate, preferring overrides over the currency-specific catalog price.
+        // Order: per-entry custom rate → per-user-type rate (contract-line config) → service_prices
+        // row in the contract's currency. We deliberately do NOT fall back to the legacy
+        // service_catalog.default_rate column because it is currency-untagged and would
+        // silently bill a USD-intended amount in a non-USD contract.
+        const userTypeRate =
+          !isSystemManagedDefault &&
+          serviceConfig &&
+          serviceConfig.userTypeRates.has(entry.user_type)
+            ? (serviceConfig.userTypeRates.get(entry.user_type) as number)
+            : undefined;
+        const resolvedRate =
+          entry.custom_rate ??
+          userTypeRate ??
+          (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
+        if (resolvedRate === undefined) {
+          throw new Error(
+            `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
+              `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
+          );
         }
+        const rate = Math.ceil(Number(resolvedRate) || 0);
 
         // Check for overtime if applicable
         let total = Math.round(duration * rate);
@@ -3379,6 +3406,8 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
+    const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
       tenant,
@@ -3482,6 +3511,15 @@ export class BillingEngine {
           "usage_tracking.service_id",
         ).andOn("service_catalog.tenant", "=", "usage_tracking.tenant");
       })
+      .leftJoin("service_prices as sp", function () {
+        this.on("sp.service_id", "=", "service_catalog.service_id")
+          .andOn("sp.tenant", "=", "service_catalog.tenant")
+          .andOn(
+            "sp.currency_code",
+            "=",
+            knexRef.raw("?", [contractCurrency]),
+          );
+      })
       .where({
         "usage_tracking.client_id": clientId,
         "usage_tracking.tenant": this.tenant,
@@ -3511,6 +3549,7 @@ export class BillingEngine {
         "service_catalog.service_name",
         "service_catalog.default_rate",
         "service_catalog.tax_rate_id",
+        "sp.rate as currency_rate",
       ); // Fetch tax_rate_id
 
     const usageRecords = await usageRecordQuery;
@@ -3532,15 +3571,30 @@ export class BillingEngine {
           quantity = serviceConfig.config.minimum_usage;
         }
 
-        // Determine rate and calculate total
-        let rate = Math.ceil(record.default_rate);
-        let total = Math.ceil(quantity * rate);
-
-        // If service has a custom rate in the configuration, use that
-        if (!isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate) {
-          rate = Math.ceil(serviceConfig.config.custom_rate);
-          total = Math.ceil(quantity * rate);
+        // Determine rate and calculate total.
+        // Order: contract-line configured custom_rate → service_prices row in the contract
+        // currency. The legacy service_catalog.default_rate is intentionally not used here
+        // because it is currency-untagged and would silently mis-price non-USD contracts.
+        const configuredCustomRate =
+          !isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate
+            ? Number(serviceConfig.config.custom_rate)
+            : undefined;
+        const resolvedRate =
+          configuredCustomRate ??
+          (record.currency_rate != null ? Number(record.currency_rate) : undefined);
+        const willUseTieredPricing =
+          !isSystemManagedDefault &&
+          serviceConfig &&
+          serviceConfig.config.enable_tiered_pricing &&
+          serviceConfig.rateTiers.length > 0;
+        if (resolvedRate === undefined && !willUseTieredPricing) {
+          throw new Error(
+            `Missing pricing for usage on service "${record.service_name}" (${record.service_id}) in ${contractCurrency}. ` +
+              `Add a ${contractCurrency} price in the service catalog, set a custom rate on the contract line, or enable tiered pricing.`,
+          );
         }
+        let rate = Math.ceil(resolvedRate ?? 0);
+        let total = Math.ceil(quantity * rate);
 
         // Apply tiered pricing if enabled
         if (
@@ -4823,144 +4877,6 @@ export class BillingEngine {
       tenant: client.tenant,
     });
     return Array.isArray(adjustments) ? adjustments : [];
-  }
-
-  async rolloverUnapprovedTime(
-    clientId: string,
-    currentPeriodEnd: ISO8601String,
-    nextPeriodStart: ISO8601String,
-  ): Promise<void> {
-    await this.initKnex();
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
-    }
-
-    const client = await this.knex("clients")
-      .where({
-        client_id: clientId,
-        tenant: this.tenant,
-      })
-      .first();
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
-    }
-    // Fetch unapproved time entries
-    const knex = this.knex;
-    const unapprovedEntries = await this.knex("time_entries")
-      .leftJoin("tickets", function (this: Knex.JoinClause) {
-        this.on("time_entries.work_item_id", "=", "tickets.ticket_id")
-          .andOn("time_entries.work_item_type", "=", knex.raw("?", ["ticket"]))
-          .andOn("tickets.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_tasks", function (this: Knex.JoinClause) {
-        this.on("time_entries.work_item_id", "=", "project_tasks.task_id")
-          .andOn(
-            "time_entries.work_item_type",
-            "=",
-            knex.raw("?", ["project_task"]),
-          )
-          .andOn("project_tasks.tenant", "=", "time_entries.tenant");
-      })
-      .leftJoin("project_phases", function () {
-        this.on("project_tasks.phase_id", "=", "project_phases.phase_id").andOn(
-          "project_phases.tenant",
-          "=",
-          "project_tasks.tenant",
-        );
-      })
-      .leftJoin("projects", function () {
-        this.on("project_phases.project_id", "=", "projects.project_id").andOn(
-          "projects.tenant",
-          "=",
-          "project_phases.tenant",
-        );
-      })
-      .where({
-        "time_entries.tenant": client.tenant,
-      })
-      .where(function (this: Knex.QueryBuilder) {
-        this.where("tickets.client_id", clientId).orWhere(
-          "projects.client_id",
-          clientId,
-        );
-      })
-      .whereIn("time_entries.approval_status", [
-        "DRAFT",
-        "SUBMITTED",
-        "CHANGES_REQUESTED",
-      ])
-      .where("time_entries.end_time", "<=", currentPeriodEnd)
-      .select("time_entries.*");
-
-    // Helper function for robust date parsing, defined outside the loop
-    const parseDateRobustly = (
-      dateString: string,
-      fieldName: string,
-    ): Temporal.Instant => {
-      try {
-        // First try to parse as a standard ISO string
-        return Temporal.Instant.from(dateString);
-      } catch (error) {
-        console.log(`Converting non-ISO date for ${fieldName}: ${dateString}`);
-        // If that fails, try to convert using JavaScript Date
-        try {
-          const jsDate = new Date(dateString);
-          if (isNaN(jsDate.getTime())) {
-            throw new Error(`Invalid date: ${dateString}`);
-          }
-          return Temporal.Instant.from(jsDate.toISOString());
-        } catch (innerError) {
-          console.error(
-            `Failed to convert date for ${fieldName}: ${dateString}`,
-            innerError,
-          );
-          // Last resort: use current date (or handle error differently)
-          console.warn(`Falling back to current time for ${fieldName}`);
-          return Temporal.Now.instant();
-        }
-      }
-    };
-
-    // Update the start and end times of unapproved entries to the next billing period
-    for (const entry of unapprovedEntries) {
-      // Get the duration of the original entry using robust parsing
-      const startInstant = parseDateRobustly(
-        entry.start_time,
-        "entry.start_time",
-      );
-      const endInstant = parseDateRobustly(entry.end_time, "entry.end_time");
-      const durationMs =
-        endInstant.epochMilliseconds - startInstant.epochMilliseconds;
-
-      // Parse nextPeriodStart robustly
-      const newStartInstant = parseDateRobustly(
-        nextPeriodStart,
-        "nextPeriodStart",
-      );
-      const newEndInstant = newStartInstant.add({ milliseconds: durationMs });
-
-      const workTimeZone =
-        entry.work_timezone ||
-        (await resolveUserTimeZone(this.knex, entry.tenant, entry.user_id)) ||
-        "UTC";
-      const { work_date, work_timezone } = computeWorkDateFields(
-        newStartInstant.toString(),
-        workTimeZone,
-      );
-
-      await this.knex("time_entries")
-        .where({ entry_id: entry.entry_id, tenant: entry.tenant })
-        .update({
-          start_time: newStartInstant.toString(),
-          end_time: newEndInstant.toString(),
-          work_date,
-          work_timezone,
-        });
-    }
-
-    console.log(
-      `Rolled over ${unapprovedEntries.length} unapproved time entries for client ${clientId}`,
-    );
   }
 
   /**

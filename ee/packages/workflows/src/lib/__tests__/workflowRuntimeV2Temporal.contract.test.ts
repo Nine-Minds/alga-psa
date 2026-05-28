@@ -4,6 +4,8 @@ import {
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW,
+  WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+  WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
   signalWorkflowRuntimeV2Event,
   signalWorkflowRuntimeV2HumanTask,
   startWorkflowRuntimeV2TemporalRun,
@@ -73,6 +75,8 @@ describe('workflow runtime v2 Temporal contract', () => {
       expect.objectContaining({
         taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
         workflowId: 'workflow-runtime-v2:run:run-1',
+        workflowExecutionTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+        workflowRunTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
       }),
     );
     expect(result).toEqual({

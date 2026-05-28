@@ -37,7 +37,7 @@
     "heading": "Kontakte",
     "addContact": "+ Kontakt hinzufügen",
     "actions": "Aktionen",
-    "searchPlaceholder": "Kontakte suchen",
+    "searchPlaceholder": "Kontakte, Notizen und Interaktionen suchen",
     "resetFilters": "Zurücksetzen",
     "unknownClient": "Unbekannter Kunde",
     "noClient": "Kein Kunde",
@@ -68,7 +68,25 @@
       "message": "Der folgende benutzerdefinierte Telefontyp{{suffix}} wird von keinem Kontakt mehr verwendet: {{labels}}. Die Typdefinition löschen{{definitionSuffix}} oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
       "keepType": "Typ behalten"
-    }
+    },
+    "print": {
+      "title": "Kontakte",
+      "subtitle": "{{count}} Kontakte",
+      "noContacts": "Keine Kontakte zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "client": "Kunde",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Kontakten enthaltenen Spalten."
+      }
+    },
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "contactDetails": {
     "title": "Kontaktdetails",
@@ -96,7 +114,8 @@
       "useClientDestination": "Kundenziel verwenden",
       "inboundTicketDestinationHelp": "Falls gesetzt, überschreibt dies das Kundenziel für genau diesen Absenderkontakt. Vorrang: Kontaktüberschreibung -> Kundenziel -> Standard des Anbieters.",
       "tags": "Tags",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

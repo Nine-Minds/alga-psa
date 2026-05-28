@@ -11,6 +11,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import { readApproverIdsFromConfig } from '../../lib/appointmentApprovers';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { Calendar } from '@alga-psa/ui/components/Calendar';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -68,7 +70,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const { data: session } = useSession();
 
   // Team management state
-  const [allUsers, setAllUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
+  const [allUsers, setAllUsers] = useState<IUser[]>([]);
+  const [allTeams, setAllTeams] = useState<ITeam[]>([]);
   const [managedTeams, setManagedTeams] = useState<ITeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [isManager, setIsManager] = useState(false);
@@ -76,7 +79,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // General settings state
   const [defaultAdvanceBookingDays, setDefaultAdvanceBookingDays] = useState('30');
   const [defaultMinimumNoticeHours, setDefaultMinimumNoticeHours] = useState('24');
-  const [defaultApproverId, setDefaultApproverId] = useState<string>('');
+  // Company-wide approvers (multiple users and/or teams)
+  const [approverUserIds, setApproverUserIds] = useState<string[]>([]);
+  const [approverTeamIds, setApproverTeamIds] = useState<string[]>([]);
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
   const [autoApprovalRequireAvailability, setAutoApprovalRequireAvailability] = useState(true);
   const [autoApprovalRequireContract, setAutoApprovalRequireContract] = useState(true);
@@ -91,7 +96,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [userBufferBefore, setUserBufferBefore] = useState('0');
   const [userBufferAfter, setUserBufferAfter] = useState('15');
   const [userAllowClientPreference, setUserAllowClientPreference] = useState(true);
-  const [userDefaultApproverId, setUserDefaultApproverId] = useState<string>('');
+  // Per-technician approver override (multiple users and/or teams)
+  const [userApproverUserIds, setUserApproverUserIds] = useState<string[]>([]);
+  const [userApproverTeamIds, setUserApproverTeamIds] = useState<string[]>([]);
   const [configuredUsers, setConfiguredUsers] = useState<Set<string>>(new Set());
 
   // Service rules state
@@ -183,6 +190,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       let userManagedTeams: ITeam[] = [];
       if (session?.user?.id) {
         const teams = await getTeams();
+        setAllTeams(teams);
         userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
 
         if (userManagedTeams.length > 0) {
@@ -192,7 +200,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
 
       // Try to load all users (requires user:read permission)
-      let fetchedUsers: Omit<IUser, 'tenant'>[] = [];
+      let fetchedUsers: IUser[] = [];
       try {
         fetchedUsers = await getAllUsersBasic(false, 'internal');
         console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
@@ -201,7 +209,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
         // If user doesn't have permission to load all users, load team members from managed teams
         if (userManagedTeams.length > 0) {
-          const allMembers: Omit<IUser, 'tenant'>[] = [];
+          const allMembers: IUser[] = [];
           userManagedTeams.forEach(team => {
             if (team.members) {
               allMembers.push(...team.members);
@@ -272,9 +280,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       if (setting.setting_type === 'general_settings') {
         if (setting.advance_booking_days) setDefaultAdvanceBookingDays(String(setting.advance_booking_days));
         if (setting.minimum_notice_hours) setDefaultMinimumNoticeHours(String(setting.minimum_notice_hours));
-        if (setting.config_json?.default_approver_id) {
-          setDefaultApproverId(setting.config_json.default_approver_id);
-        }
+        const generalApprovers = readApproverIdsFromConfig(setting.config_json);
+        setApproverUserIds(generalApprovers.userIds);
+        setApproverTeamIds(generalApprovers.teamIds);
         if (setting.config_json?.auto_approval_enabled !== undefined) {
           setAutoApprovalEnabled(setting.config_json.auto_approval_enabled);
         }
@@ -332,11 +340,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           } else {
             setUserAllowClientPreference(true);
           }
-          if (setting.config_json?.default_approver_id) {
-            setUserDefaultApproverId(setting.config_json.default_approver_id);
-          } else {
-            setUserDefaultApproverId('');
-          }
+          const userApprovers = readApproverIdsFromConfig(setting.config_json);
+          setUserApproverUserIds(userApprovers.userIds);
+          setUserApproverTeamIds(userApprovers.teamIds);
         }
       });
       setUserHours(hoursMap);
@@ -360,7 +366,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       setUserBufferBefore('0');
       setUserBufferAfter('15');
       setUserAllowClientPreference(true);
-      setUserDefaultApproverId('');
+      setUserApproverUserIds([]);
+      setUserApproverTeamIds([]);
     }
   };
 
@@ -436,7 +443,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         advance_booking_days: parseInt(defaultAdvanceBookingDays) || 30,
         minimum_notice_hours: parseInt(defaultMinimumNoticeHours) || 24,
         config_json: {
-          default_approver_id: defaultApproverId || undefined,
+          approver_user_ids: approverUserIds,
+          approver_team_ids: approverTeamIds,
           auto_approval_enabled: autoApprovalEnabled,
           auto_approval_criteria: {
             require_availability: autoApprovalRequireAvailability,
@@ -467,7 +475,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       // Build config_json, only including default_duration if it's set
       const configJson: any = {
         allow_client_preference: userAllowClientPreference,
-        default_approver_id: userDefaultApproverId || undefined
+        approver_user_ids: userApproverUserIds,
+        approver_team_ids: userApproverTeamIds
       };
 
       // Only include default_duration if user has explicitly set it
@@ -537,6 +546,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       case 'not_configured':
         return t('availabilitySettings.teamsMeetings.verify.reasons.notConfigured', {
           defaultValue: 'Teams integration must be active before an organizer can be verified.',
+        });
+      case 'addon_required':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.addonRequired', {
+          defaultValue: 'The Teams add-on must be active before an organizer can be verified.',
         });
       case 'user_not_found':
         return t('availabilitySettings.teamsMeetings.verify.reasons.userNotFound', {
@@ -977,19 +990,20 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </Alert>
 
             <div>
-              <Label htmlFor="general-default-approver">{t('availabilitySettings.general.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
+              <Label htmlFor="general-default-approver">{t('availabilitySettings.general.defaultApprover.label', { defaultValue: 'Approvers' })}</Label>
               <p className="text-xs text-gray-600 mb-2">
-                {t('availabilitySettings.general.defaultApprover.help', { defaultValue: 'Company-wide default approver for appointment requests that require manual approval. This can be overridden per technician in User Hours settings.' })}
+                {t('availabilitySettings.general.defaultApprover.help', { defaultValue: 'Company-wide approvers for appointment requests that require manual approval. Add multiple users and/or teams — everyone selected is notified and can approve. This can be overridden per technician in User Hours settings.' })}
               </p>
-              <CustomSelect
+              <MultiUserAndTeamPicker
                 id="general-default-approver"
-                options={allUsers.map(user => ({
-                  value: user.user_id,
-                  label: `${user.first_name} ${user.last_name}`
-                }))}
-                value={defaultApproverId || undefined}
-                onValueChange={setDefaultApproverId}
-                placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
+                users={allUsers}
+                values={approverUserIds}
+                onValuesChange={setApproverUserIds}
+                teams={allTeams}
+                teamValues={approverTeamIds}
+                onTeamValuesChange={setApproverTeamIds}
+                showSearch
+                placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select approvers' })}
               />
             </div>
 
@@ -1092,19 +1106,18 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="user-default-approver">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
-                    <p className="text-xs text-gray-600 mb-2">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.help', { defaultValue: 'Who should review and approve appointment requests for this technician that require manual approval' })}</p>
-                    <CustomSelect
+                    <Label htmlFor="user-default-approver">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.label', { defaultValue: 'Approvers' })}</Label>
+                    <p className="text-xs text-gray-600 mb-2">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.help', { defaultValue: 'Who should review and approve appointment requests for this technician that require manual approval. Add multiple users and/or teams. Leave empty to use the company-wide approvers.' })}</p>
+                    <MultiUserAndTeamPicker
                       id="user-default-approver"
-                      options={allUsers
-                        .filter(u => u.user_id !== selectedUserId)
-                        .map(user => ({
-                          value: user.user_id,
-                          label: `${user.first_name} ${user.last_name}`
-                        }))}
-                      value={userDefaultApproverId || undefined}
-                      onValueChange={setUserDefaultApproverId}
-                      placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
+                      users={allUsers.filter(u => u.user_id !== selectedUserId)}
+                      values={userApproverUserIds}
+                      onValuesChange={setUserApproverUserIds}
+                      teams={allTeams}
+                      teamValues={userApproverTeamIds}
+                      onTeamValuesChange={setUserApproverTeamIds}
+                      showSearch
+                      placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select approvers' })}
                     />
                   </div>
                   <div className="flex items-center space-x-2">

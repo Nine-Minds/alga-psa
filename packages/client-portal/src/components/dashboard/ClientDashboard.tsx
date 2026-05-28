@@ -196,7 +196,7 @@ const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 
 export function ClientDashboard({ productCode = 'psa' }: { productCode?: ProductCode } = {}) {
   const { t, i18n } = useTranslation('client-portal');
-  const isAlgadeskPortal = productCode === 'algadesk';
+  const isAlgaDeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
   const heroTextColor = useHeroTextColor();
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
@@ -214,7 +214,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
   const fetchDashboardData = useCallback(async () => {
     setError(false);
     try {
-      if (isAlgadeskPortal) {
+      if (isAlgaDeskPortal) {
         const [user, metricsData, activityData] = await Promise.all([
           getCurrentUser(),
           getDashboardMetrics(),
@@ -252,7 +252,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       console.error('Error loading dashboard:', err);
       setError(true);
     }
-  }, [isAlgadeskPortal]);
+  }, [isAlgaDeskPortal]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -336,7 +336,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         onClick: () => setIsTicketModalOpen(true),
       },
     },
-    ...(!isAlgadeskPortal
+    ...(!isAlgaDeskPortal
       ? [
           {
             id: 'active-projects',
@@ -417,7 +417,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       </div>
 
       {/* KPI Cards */}
-      <div className={isAlgadeskPortal ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}>
+      <div className={isAlgaDeskPortal ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}>
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -467,7 +467,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       {/* Activity + side rail (Schedule + Devices) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         {/* Recent activity timeline */}
-        <Card className={isAlgadeskPortal ? 'bg-[rgb(var(--color-card))] lg:col-span-4' : 'bg-[rgb(var(--color-card))] lg:col-span-3'}>
+        <Card className={isAlgaDeskPortal ? 'bg-[rgb(var(--color-card))] lg:col-span-4' : 'bg-[rgb(var(--color-card))] lg:col-span-3'}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -493,7 +493,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
           <CardContent className="p-0">
             {activities.length === 0 ? (
               <div className="px-6 pb-6 text-sm text-[rgb(var(--color-text-500))]">
-                {isAlgadeskPortal
+                {isAlgaDeskPortal
                   ? t('dashboard.activity.algadeskEmptyHint', 'When tickets are updated, you will see them here.')
                   : t('dashboard.activity.emptyHint', 'When tickets are updated or invoices arrive, you will see them here.')}
               </div>
@@ -537,7 +537,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         </Card>
 
         {/* Side rail: Schedule + Devices stacked */}
-        {!isAlgadeskPortal && (
+        {!isAlgaDeskPortal && (
         <div className="lg:col-span-1 space-y-4">
         <Card className="bg-[rgb(var(--color-card))]">
           <CardHeader>
@@ -681,7 +681,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         )}
       </div>
 
-      {!isAlgadeskPortal && (
+      {!isAlgaDeskPortal && (
       <RequestAppointmentModal
         open={isAppointmentModalOpen}
         onOpenChange={setIsAppointmentModalOpen}

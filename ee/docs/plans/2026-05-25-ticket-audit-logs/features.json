@@ -1,0 +1,242 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a dedicated ticket activity/audit table migration with tenant, ticket, event, actor, source, entity, changes, details, occurred_at, and created_at fields.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Add tenant/ticket/time indexes that support efficient timeline reads for a single ticket.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Data / API / Integration Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Define TypeScript types/constants for ticket activity event types, actor types, entity types, and sources.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes"]
+  },
+  {
+    "id": "F004",
+    "description": "Align ticket activity event names with existing ticket domain events where practical.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integration Notes"]
+  },
+  {
+    "id": "F005",
+    "description": "Implement a shared activity logging helper that writes with explicit tenant and works in normal and admin transactions.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes", "Non-functional Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure activity logging helper fails fast for transactional write failures while tolerating optional display-name enrichment failures.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Implement curated ticket field diffing for status, priority, assignment/team, board, category/subcategory, client/contact, due date, title, response state, and close/reopen fields.",
+    "implemented": true,
+    "prdRefs": ["Field Diff Rules", "Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Prevent no-op ticket updates from creating activity entries.",
+    "implemented": true,
+    "prdRefs": ["Field Diff Rules"]
+  },
+  {
+    "id": "F009",
+    "description": "Resolve display labels for curated field diffs where practical while retaining raw IDs in structured changes.",
+    "implemented": true,
+    "prdRefs": ["Field Diff Rules"]
+  },
+  {
+    "id": "F010",
+    "description": "Create activity entries for ticket creation paths used by UI/server actions and shared ticket model flows.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F011",
+    "description": "Create activity entries for general curated ticket update paths used by UI/server actions.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Field Diff Rules"]
+  },
+  {
+    "id": "F012",
+    "description": "Create activity entries for REST API ticket create/update paths in TicketService.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes", "Audited / Timeline Events"]
+  },
+  {
+    "id": "F013",
+    "description": "Create activity entries for status changes, including closed and reopened transitions.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F014",
+    "description": "Create activity entries for priority changes.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F015",
+    "description": "Create activity entries for assignment, unassignment, and team assignment changes.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F016",
+    "description": "Create activity entries for board/status move actions.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F017",
+    "description": "Create activity entries for response state changes.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F018",
+    "description": "Create activity entries for public comment/customer-visible message creation.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Timeline Scope"]
+  },
+  {
+    "id": "F019",
+    "description": "Create activity entries for internal note creation.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Timeline Scope"]
+  },
+  {
+    "id": "F020",
+    "description": "Create metadata-only activity entries for comment/internal-note edits without storing full old/new body content.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Data / API / Integration Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "Create activity entries for customer replies from client portal paths.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F022",
+    "description": "Create activity entries for inbound email ticket creation with source and safe email metadata.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Non-functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Create activity entries for inbound email reply/comment creation with source and safe email metadata.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events", "Non-functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Create activity entries for inbound email reopen transitions.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F025",
+    "description": "Create activity entries for bundle/master reopen from child reply behavior.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F026",
+    "description": "Create activity entries for ticket document attachment/removal flows where those mutations already exist.",
+    "implemented": true,
+    "prdRefs": ["Audited / Timeline Events"]
+  },
+  {
+    "id": "F027",
+    "description": "Implement a ticket timeline read model that returns activity entries for a ticket sorted by occurrence time with stable tie-breaking.",
+    "implemented": true,
+    "prdRefs": ["Data and API Behavior", "Timeline Scope"]
+  },
+  {
+    "id": "F028",
+    "description": "Have the timeline read model include or resolve current comment content for comment/note activity entries without duplicating old/new edit bodies.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Data and API Behavior"]
+  },
+  {
+    "id": "F029",
+    "description": "Enforce existing internal ticket read permissions on the timeline read path.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F030",
+    "description": "Do not expose the unified timeline to client portal users in v1.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Timeline Scope"]
+  },
+  {
+    "id": "F031",
+    "description": "Add a unified internal activity timeline UI to the ticket detail experience.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F032",
+    "description": "Render human-readable timeline entries for ticket creation, field changes, status/close/reopen, priority, assignment, response state, inbound email, and document events.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F033",
+    "description": "Render public comments, customer replies, and internal notes chronologically within the unified timeline.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Timeline Scope"]
+  },
+  {
+    "id": "F034",
+    "description": "Display actor/source context on timeline entries, including user/contact/system/API/inbound email distinctions.",
+    "implemented": true,
+    "prdRefs": ["Timeline Scope", "UX / UI Notes"]
+  },
+  {
+    "id": "F035",
+    "description": "Handle tickets with no activity rows gracefully without requiring historical backfill.",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Non-functional Requirements"]
+  },
+  {
+    "id": "F036",
+    "description": "Ensure timeline UI uses existing Alga UI components and unique IDs for interactive elements.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F037",
+    "description": "Document activity event payload conventions and safe metadata rules for future ticket mutation paths.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes", "Security / Permissions"]
+  },
+  {
+    "id": "F038",
+    "description": "Avoid storing raw full inbound email bodies or full old/new comment edit bodies in activity rows.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Audited / Timeline Events"]
+  },
+  {
+    "id": "F039",
+    "description": "Ensure activity writes in inbound email/admin transaction paths pass explicit tenant and do not rely on `app.current_tenant` GUC.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integration Notes"]
+  },
+  {
+    "id": "F040",
+    "description": "Keep existing generic audit log helpers untouched except where consolidation is clearly safe and not required for ticket timeline v1.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "Existing Related Infrastructure"]
+  }
+]

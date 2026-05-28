@@ -34,7 +34,24 @@
       "minutesSeconds": "55555 {{minutes}} 55555 {{seconds}} 55555",
       "hoursMinutes": "55555 {{hours}} 55555 {{minutes}} 55555"
     },
-    "externalId": "55555 {{id}} 55555"
+    "externalId": "55555 {{id}} 55555",
+    "print": {
+      "title": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noJobs": "55555",
+      "columns": {
+        "jobName": "55555",
+        "runner": "55555",
+        "status": "55555",
+        "duration": "55555",
+        "started": "55555",
+        "completed": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      }
+    }
   },
   "metrics": {
     "labels": {

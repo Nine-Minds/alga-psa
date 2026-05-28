@@ -27,6 +27,7 @@
     "close": "Close"
   },
   "runList": {
+    "shareTooltip": "Print and export",
     "quickRanges": {
       "last24h": "Last 24h",
       "last7d": "Last 7d"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
+    },
+    "print": {
+      "title": "Workflow Runs",
+      "selectedTitle": "Selected Workflow Runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "No workflow runs to print",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "started": "Started",
+        "updated": "Updated",
+        "duration": "Duration"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing workflow runs."
+      }
     }
   },
   "runDetails": {
@@ -1340,6 +1360,11 @@
     "addItem": "Add item",
     "fill": "Fill",
     "clearValues": "Clear values",
+    "askAi": {
+      "ariaLabel": "Ask AI for transform help",
+      "title": "Ask AI",
+      "shortcutHint": "Open Quick Ask for transform guidance"
+    },
     "applySuggestions": "Apply suggestions ({{count}})",
     "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
     "fuzzySuffix": "(fuzzy)",
@@ -2347,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Loading workflow automation...",
-    "featureName": "Workflow Automation",
-    "notEnabled": "This feature is experimental and is not enabled for your tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Enable Workflow Automation in Settings to access workflow automation features.",
-    "goToExperimental": "Go to Experimental Features",
-    "openSettings": "Open settings"
+    "loading": "Loading workflow automation..."
   },
   "flow": {
     "designer": {

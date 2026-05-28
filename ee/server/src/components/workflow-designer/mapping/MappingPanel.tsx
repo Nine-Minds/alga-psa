@@ -120,6 +120,7 @@ export interface MappingPanelProps {
   dataContext: WorkflowDataContext;
   fieldOptions: SelectOption[];
   stepId: string;
+  actionId?: string;
   disabled?: boolean;
   payloadRootPath?: string;
   expressionContextOverride?: ExpressionContext;
@@ -132,6 +133,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
   dataContext,
   fieldOptions,
   stepId,
+  actionId,
   disabled,
   payloadRootPath = 'payload',
   expressionContextOverride
@@ -167,6 +169,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
         targetFields={targetFields}
         fieldOptions={fieldOptions}
         stepId={stepId}
+        actionId={actionId}
         sourceTypeMap={sourceTypeMap}
         disabled={disabled}
         expressionContext={expressionContext}

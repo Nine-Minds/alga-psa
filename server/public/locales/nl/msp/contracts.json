@@ -1463,12 +1463,16 @@
     "heading": "Vaste-vergoedingsservices",
     "preview": {
       "labels": {
+        "alternateFrequency": "Alternatieve factureerfrequentie:",
         "billingTiming": "Facturatietiming:",
         "cadenceOwner": "Cadanseigenaar:",
         "invoiceWindow": "Factuurvenster:",
         "recurringRate": "Terugkerend tarief:",
         "service": "Service:",
         "services": "Services:"
+      },
+      "materializedPeriods": {
+        "tooltip": "Een voorbeeld van de volgende serviceperioden en de factureringsvensters die op basis van de huidige instellingen zouden worden gegenereerd. Hiermee kunt u de cadans controleren voordat u opslaat — de daadwerkelijke facturen worden later door de factureringsrun geproduceerd."
       },
       "title": "Terugkerend voorbeeld vóór opslaan"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Alternatieve factureerfrequentie:",
+        "bucketsHeading": "Bundels:",
+        "includedHours": "Inbegrepen uren:",
         "minimumTime": "Minimale tijd:",
+        "overageRate": "Overschrijdingstarief:",
+        "rollover": "Overdracht:",
         "roundUp": "Naar boven afronden:",
+        "serviceFallback": "Service {{index}}",
         "services": "Services:"
       },
       "title": "Samenvatting uurservices",
       "values": {
         "everyMinutes": "Elke {{count}} minuten",
-        "minutes": "{{count}} minuten"
+        "hours": "{{count}} uur",
+        "minutes": "{{count}} minuten",
+        "overageRatePerHour": "{{rate}}/uur",
+        "rolloverDisabled": "Uitgeschakeld",
+        "rolloverEnabled": "Ingeschakeld"
       }
     }
   },

@@ -26,6 +26,14 @@
       "types": "./src/ui-reflection/*.tsx",
       "import": "./dist/ui-reflection/*.mjs"
     },
+    "./keyboard-shortcuts": {
+      "types": "./src/keyboard-shortcuts/index.ts",
+      "import": "./dist/keyboard-shortcuts/index.mjs"
+    },
+    "./keyboard-shortcuts/*": {
+      "types": "./src/keyboard-shortcuts/*.ts",
+      "import": "./dist/keyboard-shortcuts/*.mjs"
+    },
     "./lib": {
       "types": "./src/lib/index.ts",
       "import": "./dist/lib/index.mjs"

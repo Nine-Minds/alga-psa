@@ -74,7 +74,7 @@
     "addProject": "Add Project",
     "createFromTemplate": "Create from Template",
     "openMenu": "Open menu",
-    "searchPlaceholder": "Search projects",
+    "searchPlaceholder": "Search projects, tasks, and comments",
     "statusPlaceholder": "Select status",
     "contactPlaceholder": "Filter by contact",
     "managerPlaceholder": "All managers",
@@ -103,6 +103,8 @@
       "created": "Created",
       "projectManager": "Project Manager",
       "tags": "Tags",
+      "priority": "Priority",
+      "taskType": "Type",
       "actions": "Actions"
     },
     "unknownUser": "Unknown"
@@ -240,7 +242,22 @@
     "dueLabel": "Due",
     "noDueDate": "No due date",
     "hideTags": "Hide tags",
-    "criticalPath": "Critical Path"
+    "criticalPath": "Critical Path",
+    "selectTaskAria": "Select task {{taskName}}",
+    "bulkMoveSuccess": "{{count}} task(s) moved successfully!",
+    "bulkMovePartial": "Moved {{moved}} task(s), {{failed}} failed.",
+    "bulkDeleteSuccess": "{{count}} task(s) deleted successfully!",
+    "bulkDeletePartial": "Deleted {{deleted}} task(s), {{failed}} failed.",
+    "bulkAssignSuccess": "{{count}} task(s) assigned successfully!",
+    "bulkAssignPartial": "Assigned {{success}} task(s), {{failed}} failed.",
+    "bulkAssignTeamSuccess": "{{count}} task(s) assigned to team successfully!",
+    "bulkAssignTeamPartial": "Assigned {{success}} task(s) to team, {{failed}} failed.",
+    "bulkDeleteTitle": "Delete Tasks",
+    "bulkDeleteMessage": "Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.",
+    "bulkTasksMovedSuccess": "{{count}} tasks moved",
+    "bulkTasksMovedToPhase": "{{count}} tasks moved to {{phaseName}}",
+    "moveTasksTitle": "Move Tasks",
+    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -519,7 +536,9 @@
       "tags": "Tags",
       "createdAt": "Created At",
       "updatedAt": "Updated At"
-    }
+    },
+    "exportSelected": "Export {{count}} Selected",
+    "selectedTasksNotice": "Exporting {{count}} selected task{{plural}}."
   },
   "import": {
     "title": "Import Phases & Tasks",
@@ -709,6 +728,19 @@
       "tasks": "Tasks",
       "badgeCount": "{{count}} Task",
       "badgeCount_other": "{{count}} Tasks"
+    },
+    "bulkMoveTask": {
+      "title": "Move Tasks",
+      "message": "Move {{count}} selected task(s) to a new phase/status:",
+      "confirm": "Move Tasks"
+    },
+    "bulkAssign": {
+      "title": "Assign Tasks",
+      "message": "Assign {{count}} selected task(s) to:",
+      "unassigned": "Not assigned",
+      "assigning": "Assigning...",
+      "confirm": "Assign Tasks",
+      "teamReplaceNotice": "Tasks already assigned to a different team will have that team replaced."
     }
   },
   "filters": {
@@ -1268,7 +1300,8 @@
     "saveAsTemplate": "Save as Template",
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
-    "templateCreatedSuccess": "Template created successfully"
+    "templateCreatedSuccess": "Template created successfully",
+    "shareTooltip": "Print, import and export"
   },
   "comments": {
     "title": "Comments",
@@ -1382,5 +1415,43 @@
     "unknownTask": "Unknown task",
     "blocks": "Blocks"
   },
-  "columnsHidden": "column(s) hidden due to limited space. Resize browser to see more."
+  "columnsHidden": "column(s) hidden due to limited space. Resize browser to see more.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Project Tasks",
+      "subtitle": "{{count}} tasks",
+      "noTasks": "No project tasks to print",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Task",
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Assignee",
+        "dueDate": "Due Date",
+        "hours": "Hours"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing project tasks."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Assignee",
+        "dueDate": "Due Date",
+        "estimatedHours": "Estimated Hours",
+        "wbsCode": "WBS Code",
+        "description": "Description"
+      },
+      "subtitleSelected": "{{count}} selected tasks"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} selected",
+    "move": "Move",
+    "assign": "Assign",
+    "delete": "Delete",
+    "clear": "Clear"
+  }
 }

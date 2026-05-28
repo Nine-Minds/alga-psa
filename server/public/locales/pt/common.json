@@ -40,7 +40,14 @@
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "print": "Imprimir",
+    "printSelected_one": "Imprimir selecionado ({{count}})",
+    "printSelected_other": "Imprimir selecionados ({{count}})",
+    "printOptions": "Opções de impressão",
+    "resetPrintOptions": "Redefinir opções de impressão",
+    "share": "Compartilhar",
+    "done": "Concluído"
   },
   "status": {
     "loading": "Loading...",
@@ -311,6 +318,13 @@
         "description": "Click \"Add Location\" to get started"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} resposta",
+    "replies_other": "{{count}} respostas",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "showInDrawer": "Mostrar no painel"
   },
   "pagination": {
     "previous": "Previous",
@@ -1123,6 +1137,18 @@
   "feedback": {
     "providePlaceholder": "Por favor, forneça um comentário"
   },
+  "presence": {
+    "noOneElseEditing": "Ninguém mais está editando",
+    "conflict": {
+      "changedField": "{{author}} acabou de alterar este campo {{time}}.",
+      "remoteValue": "Valor remoto:",
+      "keepYours": "Manter o seu",
+      "takeTheirs": "Usar o remoto"
+    }
+  },
+  "labels": {
+    "printColumns": "Colunas de impressão"
+  },
   "deleteEntity": {
     "checkingDependenciesTitle": "Verificando dependências",
     "deleteTitle": "Excluir {{entityName}}",
@@ -1143,5 +1169,12 @@
         "warning": "Registros arquivados ficam ocultos nas visualizações padrão."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} coluna oculta devido ao espaço limitado.",
+    "columnsHidden_other": "{{count}} colunas ocultas devido ao espaço limitado.",
+    "showAll": "Mostrar tudo",
+    "showingAllColumns": "Mostrando todas as colunas; role horizontalmente para vê-las.",
+    "showLess": "Mostrar menos"
   }
 }

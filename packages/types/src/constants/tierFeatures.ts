@@ -50,7 +50,14 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'premium',
 } as const;
 
-const ALL_TIER_FEATURES = Object.values(TIER_FEATURES) as TIER_FEATURES[];
+const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([
+  TIER_FEATURES.ENTRA_SYNC,
+  TIER_FEATURES.TEAMS_INTEGRATION,
+]);
+
+const ALL_TIER_FEATURES = (Object.values(TIER_FEATURES) as TIER_FEATURES[]).filter(
+  (feature) => !ADD_ON_ONLY_FEATURES.has(feature)
+);
 
 /**
  * Maps each tier to the features it has access to.
@@ -74,5 +81,9 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = TE
  * @returns True if the tier has access to the feature
  */
 export function tierHasFeature(tier: TenantTier, feature: TIER_FEATURES): boolean {
+  if (ADD_ON_ONLY_FEATURES.has(feature)) {
+    return false;
+  }
+
   return tierAtLeast(tier, FEATURE_MINIMUM_TIER[feature]);
 }

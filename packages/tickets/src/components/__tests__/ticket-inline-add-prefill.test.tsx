@@ -833,15 +833,15 @@ describe('QuickAddTicket prefills', () => {
     ));
   });
 
-  it('T010: Algadesk quick-add omits asset prefill banner and asset_id submission while PSA preserves both', async () => {
-    const renderQuickAdd = (isAlgadeskMode: boolean) => render(
+  it('T010: AlgaDesk quick-add omits asset prefill banner and asset_id submission while PSA preserves both', async () => {
+    const renderQuickAdd = (isAlgaDeskMode: boolean) => render(
       <QuickAddTicket
         open={true}
         onOpenChange={() => undefined}
         onTicketAdded={() => undefined}
         assetId="asset-123"
         assetName="Router A"
-        isAlgadeskMode={isAlgadeskMode}
+        isAlgaDeskMode={isAlgaDeskMode}
       />
     );
 
@@ -862,7 +862,7 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     expect(screen.queryByTestId('quick-add-ticket-asset-pill')).not.toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
-      target: { value: 'Algadesk quick add' }
+      target: { value: 'AlgaDesk quick add' }
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());

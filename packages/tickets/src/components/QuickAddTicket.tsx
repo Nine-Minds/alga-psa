@@ -2,7 +2,7 @@
 // TODO: Priority index signature issue
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
@@ -54,6 +54,7 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../l
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -156,7 +157,7 @@ interface QuickAddTicketProps {
   /** Optional asset display name; rendered in a banner so the operator sees which asset will be linked. */
   assetName?: string;
   renderBeforeFooter?: () => React.ReactNode;
-  isAlgadeskMode?: boolean;
+  isAlgaDeskMode?: boolean;
 }
 
 export function QuickAddTicket({
@@ -175,7 +176,7 @@ export function QuickAddTicket({
   assetId,
   assetName,
   renderBeforeFooter,
-  isAlgadeskMode = false,
+  isAlgaDeskMode = false,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -251,7 +252,8 @@ export function QuickAddTicket({
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
-  const effectiveAssetId = isAlgadeskMode ? undefined : assetId;
+  const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
   const calculatedItilPriority = useMemo(() => {
@@ -381,6 +383,18 @@ export function QuickAddTicket({
     };
     fetchTeamsData();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || isLoading) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [open, isLoading]);
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -938,6 +952,11 @@ export function QuickAddTicket({
     await handleCreateTicket();
   };
 
+  useDialogSubmitShortcut(
+    () => { void handleCreateTicket(); },
+    { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading },
+  );
+
   const filteredClients = clients.filter(client => {
     if (clientFilterState === 'all') return true;
     if (clientFilterState === 'active') return !client.is_inactive;
@@ -1025,7 +1044,6 @@ export function QuickAddTicket({
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
         title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
-        disableFocusTrap
         footer={footer}
       >
         <DialogContent>
@@ -1074,6 +1092,7 @@ export function QuickAddTicket({
 
                   <Input
                     id={`${id}-title`}
+                    ref={titleInputRef}
                     value={title}
                     onChange={(e) => {
                       setTitle(e.target.value);
@@ -1081,6 +1100,7 @@ export function QuickAddTicket({
                     }}
                     placeholder={t('quickAdd.titlePlaceholder', 'Ticket Title *')}
                     className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
+                    autoFocus
                   />
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-gray-700">{t('quickAdd.descriptionLabel', 'Description')}</div>

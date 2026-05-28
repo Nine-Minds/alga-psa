@@ -206,7 +206,7 @@ async function createFixture(): Promise<Fixture> {
   };
 }
 
-describe('Algadesk ticket create/update integration', () => {
+describe('AlgaDesk ticket create/update integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
@@ -231,7 +231,7 @@ describe('Algadesk ticket create/update integration', () => {
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
-  it('T010: Algadesk tenant can create a ticket with assignment/category/priority and update status, while ticket actions keep RBAC checks', async () => {
+  it('T010: AlgaDesk tenant can create a ticket with assignment/category/priority and update status, while ticket actions keep RBAC checks', async () => {
     const fixture = await createFixture();
 
     let createdTicketId: string;
@@ -239,7 +239,7 @@ describe('Algadesk ticket create/update integration', () => {
     await db.transaction(async (trx) => {
       const created = await TicketModel.createTicket(
         {
-          title: 'Algadesk integration ticket',
+          title: 'AlgaDesk integration ticket',
           description: 'Create and update flow coverage',
           client_id: fixture.clientId,
           board_id: fixture.boardId,

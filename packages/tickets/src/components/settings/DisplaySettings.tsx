@@ -32,7 +32,6 @@ const DisplaySettings = (): React.JSX.Element => {
     created_by: true,
     due_date: true,
     tags: true,
-    actions: true,
   });
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
@@ -60,7 +59,6 @@ const DisplaySettings = (): React.JSX.Element => {
     { key: 'created', label: t('fields.created', 'Created'), required: false },
     { key: 'created_by', label: t('settings.display.columns.createdBy', 'Created By'), required: false },
     { key: 'due_date', label: t('fields.dueDate', 'Due Date'), required: false },
-    { key: 'actions', label: t('settings.display.columns.actions', 'Actions'), required: true },
   ] as const;
 
   // Track original values to detect changes
@@ -84,7 +82,6 @@ const DisplaySettings = (): React.JSX.Element => {
       created_by: true,
       due_date: true,
       tags: true,
-      actions: true,
     },
     tagsInlineUnderTitle: false,
     responseStateTrackingEnabled: true,
@@ -120,7 +117,6 @@ const DisplaySettings = (): React.JSX.Element => {
           created_by: true,
           due_date: true,
           tags: true,
-          actions: true,
         };
         const loadedTagsInline = s?.list?.tagsInlineUnderTitle || false;
         const loadedResponseStateTracking = s?.responseStateTrackingEnabled ?? true;

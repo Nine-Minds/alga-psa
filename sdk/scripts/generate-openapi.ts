@@ -121,7 +121,7 @@ async function main() {
   const registry = buildBaseRegistry({ edition: options.edition });
 
   const metadata: DocumentBuildOptions = {
-    title: options.title ?? 'Alga PSA API',
+    title: options.title ?? 'AlgaPSA API',
     version: options.version,
     description: options.description ?? 'OpenAPI specification generated from registered route metadata.',
     edition: options.edition,

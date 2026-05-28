@@ -1,0 +1,38 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a product bootstrap resolver for Temporal onboarding seeds with psa, algadesk, default, and invalid-code handling.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Acceptance criteria"]
+  },
+  {
+    "id": "F002",
+    "description": "Thread productCode from tenantCreationWorkflow into the onboarding seed activity while preserving PSA default behavior.",
+    "implemented": true,
+    "prdRefs": ["Data and integration notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Move the existing full PSA onboarding seed set behind the PSA bootstrap selection without changing PSA seed content.",
+    "implemented": true,
+    "prdRefs": ["Target flows"]
+  },
+  {
+    "id": "F004",
+    "description": "Create an Algadesk onboarding seed set with minimal help-desk MSP and client portal roles.",
+    "implemented": true,
+    "prdRefs": ["Algadesk bootstrap scope"]
+  },
+  {
+    "id": "F005",
+    "description": "Create Algadesk permissions and role-permission assignments that exclude PSA-only billing, invoice, project, service, asset, workflow, and time-management domains.",
+    "implemented": true,
+    "prdRefs": ["Algadesk bootstrap scope"]
+  },
+  {
+    "id": "F006",
+    "description": "Keep Temporal worker Docker seed copying compatible with both PSA and Algadesk seed sets.",
+    "implemented": true,
+    "prdRefs": ["Data and integration notes"]
+  }
+]

@@ -37,7 +37,7 @@
     "heading": "Contacts",
     "addContact": "+ Ajouter un contact",
     "actions": "Actions",
-    "searchPlaceholder": "Rechercher des contacts",
+    "searchPlaceholder": "Rechercher des contacts, notes et interactions",
     "resetFilters": "Réinitialiser",
     "unknownClient": "Client inconnu",
     "noClient": "Aucun client",
@@ -68,7 +68,25 @@
       "message": "Le type de téléphone personnalisé suivant{{suffix}} n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type{{definitionSuffix}} ou le conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
       "keepType": "Conserver le type"
-    }
+    },
+    "print": {
+      "title": "Contacts",
+      "subtitle": "{{count}} contacts",
+      "noContacts": "Aucun contact à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "client": "Client",
+        "status": "Statut"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des contacts."
+      }
+    },
+    "shareTooltip": "Imprimer, importer et exporter"
   },
   "contactDetails": {
     "title": "Détails du contact",
@@ -96,7 +114,8 @@
       "useClientDestination": "Utiliser la destination du client",
       "inboundTicketDestinationHelp": "Si défini, cela remplace la destination du client pour ce contact expéditeur exact. Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
       "tags": "Étiquettes",
-      "notes": "Notes"
+      "notes": "Notes",
+      "status": "Statut"
     },
     "status": {
       "label": "Statut",

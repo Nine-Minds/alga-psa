@@ -7,7 +7,8 @@
       "sso": "55555",
       "apiKeys": "55555",
       "notifications": "55555",
-      "calendar": "55555"
+      "calendar": "55555",
+      "keyboardShortcuts": "55555"
     },
     "basicInfo": {
       "title": "55555"
@@ -191,7 +192,222 @@
       "newWebhook": "55555",
       "tabs": {
         "configuration": "55555",
-        "deliveries": "55555"
+        "deliveries": "55555",
+        "inbound": "55555",
+        "outbound": "55555"
+      },
+      "inbound": {
+        "title": "55555",
+        "description": "55555",
+        "placeholder": "55555",
+        "newWebhook": "55555",
+        "list": {
+          "title": "55555",
+          "loading": "55555",
+          "configuredCount": "55555 {{count}} 55555",
+          "empty": "55555",
+          "columns": {
+            "name": "55555",
+            "handler": "55555",
+            "lastDelivery": "55555",
+            "active": "55555",
+            "actions": "55555"
+          }
+        },
+        "handlers": {
+          "directAction": "55555",
+          "workflow": "55555"
+        },
+        "status": {
+          "active": "55555",
+          "inactive": "55555"
+        },
+        "messages": {
+          "loadFailed": "55555",
+          "nameRequired": "55555",
+          "slugRequired": "55555",
+          "actionRequired": "55555",
+          "workflowRequired": "55555",
+          "missingRequiredFields": "55555 {{fields}} 55555"
+        },
+        "dialog": {
+          "createTitle": "55555",
+          "editTitle": "55555",
+          "cancel": "55555",
+          "create": "55555",
+          "save": "55555",
+          "saveUnavailable": "55555"
+        },
+        "identity": {
+          "title": "55555",
+          "help": "55555",
+          "name": "55555",
+          "namePlaceholder": "55555",
+          "slug": "55555",
+          "slugPlaceholder": "55555",
+          "description": "55555",
+          "descriptionPlaceholder": "55555"
+        },
+        "auth": {
+          "title": "55555",
+          "help": "55555",
+          "method": "55555",
+          "types": {
+            "hmacSha256": "55555",
+            "bearer": "55555",
+            "ipAllowlist": "55555",
+            "pathToken": "55555"
+          },
+          "signatureHeader": "55555",
+          "signatureHeaderPlaceholder": "55555",
+          "bearerToken": "55555",
+          "bearerTokenPlaceholder": "55555",
+          "secretUnchangedPlaceholder": "55555",
+          "ipCidrs": "55555",
+          "ipCidrsPlaceholder": "55555",
+          "queryParam": "55555",
+          "queryParamPlaceholder": "55555",
+          "pathToken": "55555",
+          "pathTokenPlaceholder": "55555"
+        },
+        "secret": {
+          "label": "55555",
+          "warning": "55555",
+          "copy": "55555",
+          "download": "55555",
+          "close": "55555"
+        },
+        "idempotency": {
+          "title": "55555",
+          "help": "55555",
+          "source": "55555",
+          "types": {
+            "header": "55555",
+            "jsonata": "55555"
+          },
+          "headerName": "55555",
+          "headerNamePlaceholder": "55555",
+          "jsonataExpression": "55555",
+          "jsonataExpressionPlaceholder": "55555",
+          "windowSeconds": "55555"
+        },
+        "active": {
+          "title": "55555",
+          "help": "55555",
+          "toggle": "55555",
+          "autoDisabled": "55555 {{date}} 55555",
+          "updateFailed": "55555"
+        },
+        "handler": {
+          "title": "55555",
+          "help": "55555",
+          "type": "55555",
+          "types": {
+            "directAction": "55555",
+            "workflow": "55555"
+          },
+          "directActionTitle": "55555",
+          "directActionHelp": "55555",
+          "action": "55555",
+          "actionPlaceholder": "55555",
+          "actionEmpty": "55555",
+          "targetFields": "55555",
+          "required": "55555",
+          "optional": "55555",
+          "mappingPlaceholder": "55555",
+          "workflowTitle": "55555",
+          "workflowHelp": "55555",
+          "workflow": "55555",
+          "workflowPlaceholder": "55555",
+          "workflowEmpty": "55555",
+          "envelopeTitle": "55555",
+          "fieldTypes": {
+            "string": "55555",
+            "int": "55555",
+            "number": "55555",
+            "boolean": "55555",
+            "enum": "55555",
+            "json": "55555",
+            "ref": "55555"
+          }
+        },
+        "sample": {
+          "title": "55555",
+          "help": "55555",
+          "createFirst": "55555",
+          "captureButton": "55555",
+          "captureActive": "55555 {{expiresAt}} 55555",
+          "sampleAvailable": "55555",
+          "noSample": "55555",
+          "captureFailed": "55555"
+        },
+        "sampleTree": {
+          "title": "55555",
+          "help": "55555 {{field}} 55555",
+          "focusHelp": "55555",
+          "empty": "55555"
+        },
+        "mapping": {
+          "modeStatic": "55555",
+          "modeExpression": "55555",
+          "unknownReference": "55555",
+          "loading": "55555",
+          "errors": {
+            "INVALID_INT": "55555 {{value}} 55555",
+            "INVALID_NUMBER": "55555 {{value}} 55555",
+            "INVALID_BOOLEAN": "55555",
+            "INVALID_JSON": "55555"
+          }
+        },
+        "deliveryLog": {
+          "title": "55555",
+          "help": "55555",
+          "empty": "55555",
+          "loadFailed": "55555",
+          "pageSummary": "55555 {{page}} 55555 {{total}} 55555",
+          "durationMs": "55555 {{duration}} 55555",
+          "allStatuses": "55555",
+          "columns": {
+            "received": "55555",
+            "status": "55555",
+            "response": "55555",
+            "duration": "55555",
+            "actions": "55555"
+          },
+          "view": "55555",
+          "status": {
+            "pending": "55555",
+            "dispatched": "55555",
+            "duplicate": "55555",
+            "failed": "55555"
+          }
+        },
+        "deliveryDetail": {
+          "title": "55555",
+          "close": "55555",
+          "replay": "55555",
+          "replayConfirm": "55555",
+          "replayFailed": "55555",
+          "received": "55555",
+          "status": "55555",
+          "responseStatus": "55555",
+          "duration": "55555",
+          "sections": {
+            "headers": "55555",
+            "requestBody": "55555",
+            "responseBody": "55555",
+            "handlerOutcome": "55555"
+          }
+        },
+        "test": {
+          "openButton": "55555",
+          "title": "55555",
+          "body": "55555",
+          "headers": "55555",
+          "cancel": "55555",
+          "send": "55555",
+          "sendFailed": "55555"
+        }
       },
       "stats": {
         "total": "55555",
@@ -328,7 +544,7 @@
         "sourceLabels": {
           "key": "55555",
           "tenant": "55555",
-          "system": "55555"
+          "default": "55555"
         },
         "remaining": "55555 {{remaining}} 55555 {{maxTokens}} 55555",
         "remainingUnavailable": "55555",

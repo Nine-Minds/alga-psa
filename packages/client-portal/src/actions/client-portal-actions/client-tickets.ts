@@ -22,6 +22,7 @@ import {
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
+import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
 const clientTicketSchema = z.object({
@@ -521,17 +522,44 @@ export const addClientTicketComment = withAuth(async (
         markdownContent = "[Error converting content to markdown]";
       }
 
+      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
+      const clientCommentIds = await trx.raw(
+        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+      );
+      const clientGeneratedIds = clientCommentIds.rows?.[0] as
+        | { comment_id: string; thread_id: string }
+        | undefined;
+      if (!clientGeneratedIds?.comment_id || !clientGeneratedIds?.thread_id) {
+        throw new Error('Failed to generate comment/thread identifiers');
+      }
+      const clientNowIso = new Date().toISOString();
+
+      await trx('comment_threads').insert({
+        tenant,
+        thread_id: clientGeneratedIds.thread_id,
+        ticket_id: ticketId,
+        project_task_id: null,
+        root_comment_id: clientGeneratedIds.comment_id,
+        is_internal: isInternal,
+        reply_count: 0,
+        last_activity_at: clientNowIso,
+        created_at: clientNowIso,
+        created_by: user.user_id || null,
+      });
+
       const [newComment] = await trx('comments').insert({
-      tenant,
-      ticket_id: ticketId,
-      author_type: 'client',
-      note: content,
-      is_internal: isInternal,
-      is_resolution: isResolution,
+        tenant,
+        comment_id: clientGeneratedIds.comment_id,
+        thread_id: clientGeneratedIds.thread_id,
+        ticket_id: ticketId,
+        author_type: 'client',
+        note: content,
+        is_internal: isInternal,
+        is_resolution: isResolution,
         metadata: JSON.stringify({
           responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
         }),
-        created_at: new Date().toISOString(),
+        created_at: clientNowIso,
         user_id: user.user_id,
         markdown_content: markdownContent
       }).returning('*');
@@ -561,6 +589,17 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         }
+      });
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId,
+        updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: newComment.created_at instanceof Date ? newComment.created_at.toISOString() : new Date().toISOString(),
       });
     });
 
@@ -652,6 +691,17 @@ export const updateClientTicketComment = withAuth(async (
           updated_at: new Date().toISOString()
           // Removed updated_by as it doesn't exist in the comments table
         });
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: comment.ticket_id,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: new Date().toISOString(),
+      });
     });
   } catch (error) {
     console.error('Failed to update comment:', error);
@@ -829,6 +879,17 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
           tenant: tenant
         })
         .del();
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: comment.ticket_id,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: new Date().toISOString(),
+      });
     });
   } catch (error) {
     console.error('Failed to delete comment:', error);

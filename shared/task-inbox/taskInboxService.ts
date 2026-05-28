@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import WorkflowTaskModel, { WorkflowTaskStatus } from '../workflow/persistence/workflowTaskModel';
+import WorkflowTaskModel, {
+  WorkflowTaskStatus,
+  publishWorkflowTaskSearchEvent,
+} from '../workflow/persistence/workflowTaskModel';
 import { TaskCreationParams } from '../workflow/persistence/taskInboxInterfaces';
 
 /**
@@ -163,8 +166,27 @@ export class TaskInboxService {
     userId?: string
   ): Promise<string> {
     try {
+      let assignedRoles: string[] | undefined = undefined;
+      let assignedUsers: string[] | undefined = undefined;
+
+      if (params.assignTo?.roles) {
+        if (typeof params.assignTo.roles === 'string') {
+          assignedRoles = [params.assignTo.roles];
+        } else if (Array.isArray(params.assignTo.roles)) {
+          assignedRoles = params.assignTo.roles;
+        }
+      }
+
+      if (params.assignTo?.users) {
+        if (typeof params.assignTo.users === 'string') {
+          assignedUsers = [params.assignTo.users];
+        } else if (Array.isArray(params.assignTo.users)) {
+          assignedUsers = params.assignTo.users;
+        }
+      }
+
       // Start a transaction to ensure atomicity
-      return knex.transaction(async (trx: Knex.Transaction) => {
+      const taskId = await knex.transaction(async (trx: Knex.Transaction) => {
         // Generate a unique form ID
         const formId = uuidv4();
         const tempTaskType = `inline_task_${formId}`;
@@ -211,26 +233,6 @@ export class TaskInboxService {
           updated_at: new Date().toISOString()
         });
 
-        // Process the assignTo parameter to ensure proper array format
-      let assignedRoles: string[] | undefined = undefined;
-      let assignedUsers: string[] | undefined = undefined;
-
-        if (params.assignTo?.roles) {
-          if (typeof params.assignTo.roles === 'string') {
-            assignedRoles = [params.assignTo.roles];
-          } else if (Array.isArray(params.assignTo.roles)) {
-            assignedRoles = params.assignTo.roles;
-          }
-        }
-
-        if (params.assignTo?.users) {
-          if (typeof params.assignTo.users === 'string') {
-            assignedUsers = [params.assignTo.users];
-          } else if (Array.isArray(params.assignTo.users)) {
-            assignedUsers = params.assignTo.users;
-          }
-        }
-
         // Generate task ID
         const taskId = uuidv4();
 
@@ -267,6 +269,15 @@ export class TaskInboxService {
 
         return taskId;
       });
+
+      await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_CREATED', tenant, taskId, {
+        userId,
+        status: WorkflowTaskStatus.PENDING,
+        assignedUserIds: assignedUsers,
+        changedFields: ['title', 'description', 'assigned_users', 'status'],
+      });
+
+      return taskId;
     } catch (error) {
       console.error('Error creating task with inline form:', error);
       throw error;

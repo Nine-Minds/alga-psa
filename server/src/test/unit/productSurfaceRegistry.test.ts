@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   filterMenuSectionsByProduct,
   filterPortalNavigationByProduct,
+  getApiMetadataProducts,
   isApiVisibleInMetadata,
   matchesDynamicPattern,
   matchesStaticPrefix,
@@ -10,13 +11,14 @@ import {
 } from '../../lib/productSurfaceRegistry';
 
 describe('product surface registry', () => {
-  it('T003: classifies representative Algadesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
+  it('T003: classifies representative AlgaDesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
     expect(resolveProductRouteBehavior('algadesk', '/msp/tickets')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/reports')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/msp/billing')).toBe('upgrade_boundary');
     expect(resolveProductRouteBehavior('algadesk', '/msp/test/ui-kit')).toBe('not_found');
   });
 
-  it('T003: classifies representative Algadesk portal routes correctly', () => {
+  it('T003: classifies representative AlgaDesk portal routes correctly', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/tickets')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/client-settings')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/settings')).toBe('not_found');
@@ -46,6 +48,13 @@ describe('product surface registry', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/unknown-area')).toBe(false);
   });
 
+  it('T003: exposes API metadata product availability for OpenAPI extensions', () => {
+    expect(getApiMetadataProducts('/api/v1/tickets')).toEqual(['psa', 'algadesk']);
+    expect(getApiMetadataProducts('/api/v1/projects')).toEqual(['psa']);
+    expect(getApiMetadataProducts('/api/v1/tickets/{id}/time-entries')).toEqual(['psa']);
+    expect(getApiMetadataProducts('/api/v1/unknown-area')).toEqual(['psa']);
+  });
+
   it('T003: provides static and dynamic route matcher helpers', () => {
     expect(matchesStaticPrefix('/msp/tickets/123', ['/msp/tickets'])).toBe(true);
     expect(matchesStaticPrefix('/msp/tickets', ['/msp/clients'])).toBe(false);
@@ -62,6 +71,7 @@ describe('product surface registry', () => {
       {
         items: [
           { href: '/msp/tickets' },
+          { href: '/msp/reports' },
           { href: '/msp/billing' },
           {
             subItems: [{ href: '/msp/knowledge-base' }, { href: '/msp/projects' }],
@@ -70,9 +80,10 @@ describe('product surface registry', () => {
       },
     ]);
 
-    expect(filteredMenu[0].items).toHaveLength(2);
+    expect(filteredMenu[0].items).toHaveLength(3);
     expect(filteredMenu[0].items[0]).toMatchObject({ href: '/msp/tickets' });
-    expect(filteredMenu[0].items[1]).toMatchObject({
+    expect(filteredMenu[0].items[1]).toMatchObject({ href: '/msp/reports' });
+    expect(filteredMenu[0].items[2]).toMatchObject({
       subItems: [{ href: '/msp/knowledge-base' }],
     });
 
@@ -85,12 +96,11 @@ describe('product surface registry', () => {
 
 
 
-  it('T003: narrows Algadesk settings navigation tabs and excludes denied direct settings routes', () => {
+  it('T003: narrows AlgaDesk settings navigation tabs and excludes denied direct settings routes', () => {
     const filteredSettings = filterMenuSectionsByProduct('algadesk', [
       {
         items: [
           { href: '/msp/settings?tab=email' },
-          { href: '/msp/settings?tab=knowledge-base' },
           { href: '/msp/settings?tab=integrations' },
           { href: '/msp/settings/extensions' },
           { href: '/msp/settings/notifications' },
@@ -102,13 +112,12 @@ describe('product surface registry', () => {
       {
         items: [
           { href: '/msp/settings?tab=email' },
-          { href: '/msp/settings?tab=knowledge-base' },
         ],
       },
     ]);
   });
 
-  it('T003: keeps PSA route and API behavior fully allowed for representative denied Algadesk groups', () => {
+  it('T003: keeps PSA route and API behavior fully allowed for representative denied AlgaDesk groups', () => {
     expect(resolveProductRouteBehavior('psa', '/msp/settings/extensions')).toBe('allowed');
     expect(resolveProductApiBehavior('psa', '/api/v1/financial')).toBe('allowed');
     expect(resolveProductApiBehavior('psa', '/api/email/oauth/initiate')).toBe('allowed');

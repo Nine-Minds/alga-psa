@@ -24,6 +24,7 @@ export default function SchedulePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
+  const [headerActionsSlot, setHeaderActionsSlot] = useState<HTMLDivElement | null>(null);
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -81,7 +82,7 @@ export default function SchedulePage() {
         <h1 className="text-2xl font-bold">
           {t('page.title', { defaultValue: 'Schedule' })}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {canConfigureAvailability && (
             <Button
               id="configure-availability-button"
@@ -110,10 +111,11 @@ export default function SchedulePage() {
               </Badge>
             )}
           </Button>
+          <div ref={setHeaderActionsSlot} className="flex items-center" />
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
-        <ScheduleCalendar key={refreshKey} />
+        <ScheduleCalendar key={refreshKey} headerActionsSlot={headerActionsSlot} />
       </div>
 
       <AppointmentRequestsPanel

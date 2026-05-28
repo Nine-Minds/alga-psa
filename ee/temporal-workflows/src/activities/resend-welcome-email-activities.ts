@@ -101,6 +101,7 @@ export async function sendWelcomeEmail(input: {
     lastName: string;
   };
   temporaryPassword: string;
+  productCode?: 'psa' | 'algadesk';
 }) {
   const log = logger();
   log.info('Sending welcome email', {
@@ -118,6 +119,7 @@ export async function sendWelcomeEmail(input: {
       lastName: input.adminUser.lastName,
     },
     temporaryPassword: input.temporaryPassword,
+    productCode: input.productCode,
   };
 
   const result = await sendEmail(emailInput);

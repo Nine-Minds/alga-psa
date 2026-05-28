@@ -1,6 +1,7 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { ADD_ONS } from '@alga-psa/types';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
   calendarWebhookMaintenanceWorkflow,
@@ -35,6 +36,7 @@ interface EntraScheduleConfigRow {
   syncEnabled: boolean;
   syncIntervalMinutes: number;
   hasActiveConnection: boolean;
+  hasEnterpriseAddOn: boolean;
 }
 
 interface NinjaOneBackfillRow {
@@ -199,11 +201,17 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
     .leftJoin('entra_partner_connections as c', function joinConnection() {
       this.on('s.tenant', '=', 'c.tenant').andOn(knex.raw('c.is_active = true'));
     })
+    .leftJoin('tenant_addons as a', function joinEnterpriseAddOn() {
+      this.on('s.tenant', '=', 'a.tenant')
+        .andOn(knex.raw('a.addon_key = ?', [ADD_ONS.ENTERPRISE]))
+        .andOn(knex.raw('(a.expires_at IS NULL OR a.expires_at > now())'));
+    })
     .select([
       's.tenant as tenantId',
       's.sync_enabled as syncEnabled',
       's.sync_interval_minutes as syncIntervalMinutes',
       'c.connection_id as activeConnectionId',
+      'a.addon_key as activeEnterpriseAddOn',
     ]);
 
   return rows.map((row: any) => ({
@@ -211,6 +219,7 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
     syncEnabled: Boolean(row.syncEnabled),
     syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
     hasActiveConnection: Boolean(row.activeConnectionId),
+    hasEnterpriseAddOn: Boolean(row.activeEnterpriseAddOn),
   }));
 }
 
@@ -286,7 +295,7 @@ export async function setupSchedules() {
     const entraConfigs = await loadEntraScheduleConfigs();
     for (const config of entraConfigs) {
       const tenantScheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${config.tenantId}`;
-      if (!config.syncEnabled || !config.hasActiveConnection) {
+      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn) {
         await deleteScheduleIfExists(client, tenantScheduleId);
         continue;
       }

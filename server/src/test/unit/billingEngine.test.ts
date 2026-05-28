@@ -153,6 +153,7 @@ describe('BillingEngine', () => {
               service_id: 'service1',
               service_name: 'Managed Support (Contract: Acme Corp)',
               default_rate: 12000,
+              currency_rate: 12000,
               tax_rate_id: null,
               service_quantity: 1,
               configuration_quantity: 1,
@@ -168,6 +169,7 @@ describe('BillingEngine', () => {
               service_id: 'service1',
               service_name: 'Managed Support (Contract: Acme Corp)',
               default_rate: 12000,
+              currency_rate: 12000,
               tax_rate_id: null,
               service_quantity: 1,
               configuration_quantity: 1,
@@ -1219,6 +1221,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-01T12:00:00.000Z'),
             user_rate: 50,
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null,
             contract_line_id: 'contract_line_1'
           },
@@ -1232,6 +1235,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-02T17:00:00.000Z'),
             user_rate: null,
             default_rate: 60,
+            currency_rate: 60,
             tax_rate_id: null,
             contract_line_id: 'contract_line_2'
           },
@@ -1245,6 +1249,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-03T11:00:00.000Z'),
             user_rate: null,
             default_rate: 70,
+            currency_rate: 70,
             tax_rate_id: null,
             contract_line_id: null
           },
@@ -1305,6 +1310,7 @@ describe('BillingEngine', () => {
               start_time: new Date('2023-01-01T10:00:00.000Z'),
               end_time: new Date('2023-01-01T12:00:00.000Z'),
               default_rate: 40,
+              currency_rate: 40,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1319,6 +1325,7 @@ describe('BillingEngine', () => {
               start_time: new Date('2023-01-01T10:00:00.000Z'),
               end_time: new Date('2023-01-01T12:00:00.000Z'),
               default_rate: 40,
+              currency_rate: 40,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1385,6 +1392,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 1',
             quantity: 10,
             default_rate: 5,
+            currency_rate: 5,
             contract_line_id: 'contract_line_1'
           },
           {
@@ -1392,6 +1400,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 2',
             quantity: 20,
             default_rate: 3,
+            currency_rate: 3,
             contract_line_id: 'contract_line_2'
           },
           {
@@ -1399,6 +1408,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 3',
             quantity: 15,
             default_rate: 4,
+            currency_rate: 4,
             contract_line_id: null
           },
         ];
@@ -1453,6 +1463,7 @@ describe('BillingEngine', () => {
               service_name: 'Service 1',
               quantity: 8,
               default_rate: 5,
+              currency_rate: 5,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1464,6 +1475,7 @@ describe('BillingEngine', () => {
               service_name: 'Service 1',
               quantity: 8,
               default_rate: 5,
+              currency_rate: 5,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1535,6 +1547,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-01T12:00:00.000Z'),
             user_rate: 50,
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null
           },
           {
@@ -1547,6 +1560,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-02T17:00:00.000Z'),
             user_rate: null,
             default_rate: 60,
+            currency_rate: 60,
             tax_rate_id: null
           },
         ];
@@ -1624,12 +1638,14 @@ describe('BillingEngine', () => {
             service_name: 'Service 1',
             quantity: 10,
             default_rate: 5,
+            currency_rate: 5,
           },
           {
             service_id: 'service2',
             service_name: 'Service 2',
             quantity: 20,
             default_rate: 3,
+            currency_rate: 3,
           },
         ];
 
@@ -1698,6 +1714,7 @@ describe('BillingEngine', () => {
             start_time: new Date('2025-02-14T10:00:00.000Z'),
             end_time: new Date('2025-02-14T12:00:00.000Z'),
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null,
           },
         ];
@@ -1708,6 +1725,7 @@ describe('BillingEngine', () => {
             service_name: 'Usage Service',
             quantity: 6,
             default_rate: 9,
+            currency_rate: 9,
             tax_rate_id: null,
           },
         ];

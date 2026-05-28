@@ -12,7 +12,7 @@
     "hoursShort": "hrs",
     "days": "days",
     "percent": "%",
-    "dash": "\u2014"
+    "dash": "—"
   },
   "reportsPage": {
     "cards": {
@@ -32,6 +32,144 @@
         "title": "Team Performance",
         "placeholder": "[Team Performance Chart Placeholder]"
       }
+    },
+    "description": "Canned operational reports for the current workspace. More customization will layer onto this catalog later.",
+    "categories": {
+      "helpdesk": "Help desk",
+      "operations": "Operations",
+      "billing": "Billing"
+    },
+    "badges": {
+      "planned": "Planned"
+    },
+    "actions": {
+      "viewReport": "View report",
+      "openInBilling": "Open in billing",
+      "requiresTier": "Requires {{tier}}",
+      "comingSoon": "Coming soon"
+    },
+    "errors": {
+      "loadReport": "Failed to load report."
+    },
+    "empty": {
+      "noData": "No data for this report.",
+      "noOpenTicketsInRange": "No open tickets in this range.",
+      "noDate": "No date",
+      "notAvailable": "n/a",
+      "noEmailChannels": "No email channels are configured."
+    },
+    "fallbackTitle": "Report",
+    "dateRange": {
+      "lastDays": "Last {{count}} days"
+    },
+    "units": {
+      "daysWithCount": "{{count}} days"
+    },
+    "metrics": {
+      "created": "Created",
+      "closed": "Closed",
+      "openNow": "Open now",
+      "awaitingCustomer": "Awaiting customer",
+      "awaitingInternal": "Awaiting internal",
+      "under2Days": "Under 2 days",
+      "days2To7": "2 to 7 days",
+      "days8To30": "8 to 30 days",
+      "over30Days": "Over 30 days",
+      "activeChannels": "Active channels",
+      "healthyChannels": "Healthy channels",
+      "problemChannels": "Problem channels",
+      "emailsProcessed": "Emails processed",
+      "ticketsFromEmail": "Tickets from email",
+      "failedEmails": "Failed emails",
+      "avgProcessingTime": "Avg. processing time",
+      "avgTicketCreationTime": "Avg. email-to-ticket time",
+      "totalHours": "Total hours",
+      "billableHours": "Billable hours",
+      "nonBillableHours": "Non-billable hours",
+      "billablePercent": "Billable %",
+      "timeEntries": "Time entries",
+      "activeContracts": "Active contracts",
+      "monthlyRecurring": "Monthly recurring",
+      "renewalsDue": "Renewals due",
+      "bucketUsedHours": "Bucket hours used",
+      "bucketOverageHours": "Bucket overage",
+      "openAssigned": "Open assigned",
+      "activeAssignees": "Active assignees",
+      "avgResolutionTime": "Avg. resolution time"
+    },
+    "sections": {
+      "openByStatus": "Open by status",
+      "openByPriority": "Open by priority",
+      "openByAssignee": "Open by assignee",
+      "ageDistribution": "Age distribution",
+      "responseOwnership": "Response ownership",
+      "oldestOpenTickets": "Oldest open tickets",
+      "emailProcessingStatus": "Processing status",
+      "emailChannels": "Email channels",
+      "timeByUser": "Time by user",
+      "billableHoursByService": "Billable hours by service",
+      "entriesByWorkType": "Entries by work type",
+      "contractRevenue": "Contract revenue",
+      "upcomingRenewals": "Upcoming renewals",
+      "bucketUsage": "Bucket usage",
+      "performanceByAssignee": "Performance by assignee",
+      "closedByAssignee": "Closed by assignee"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Ticket Workload",
+        "description": "Created, closed, and currently open tickets grouped by status, priority, and assignee."
+      },
+      "ticketAging": {
+        "title": "Ticket Aging",
+        "description": "Open-ticket age buckets, response ownership, and oldest active tickets."
+      },
+      "emailChannelHealth": {
+        "title": "Email Channel Health",
+        "description": "Email intake volume, ticket creation speed, and mailbox connection health."
+      },
+      "timeUtilization": {
+        "title": "Time Utilization",
+        "description": "Tracked work by person and service area for PSA operations."
+      },
+      "teamPerformance": {
+        "title": "Team Performance",
+        "description": "Team-level throughput and response ownership for multi-user workspaces."
+      },
+      "contractReports": {
+        "title": "Contract Reports",
+        "description": "Contract revenue, renewals, bucket utilization, and simple profitability."
+      }
+    },
+    "table": {
+      "channel": "Channel",
+      "status": "Status",
+      "processed": "Processed",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Avg. email to ticket",
+      "assignee": "Assignee",
+      "created": "Created",
+      "closed": "Closed",
+      "open": "Open",
+      "avgResolution": "Avg. resolution",
+      "user": "User",
+      "totalHours": "Total hours",
+      "billableHours": "Billable hours",
+      "entries": "Entries",
+      "ticket": "Ticket",
+      "entered": "Entered",
+      "age": "Age"
+    },
+    "statusValues": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error",
+      "configuring": "Configuring",
+      "unknown": "Unknown",
+      "success": "Success",
+      "failed": "Failed",
+      "partial": "Partial",
+      "processing": "Processing"
     }
   },
   "contractReports": {

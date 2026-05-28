@@ -502,7 +502,7 @@ export class PDFGenerationService {
 
     try {
       page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      await page.setContent(htmlContent, { waitUntil: 'load' });
       const pdfBuffer = await page.pdf(
         templateAst ? resolvePdfPrintOptionsFromAst(templateAst) : DEFAULT_DOCUMENT_PDF_OPTIONS
       );

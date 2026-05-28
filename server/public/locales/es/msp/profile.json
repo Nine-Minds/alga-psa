@@ -6,7 +6,8 @@
       "sso": "Inicio de sesión único",
       "apiKeys": "Claves API",
       "notifications": "Notificaciones",
-      "calendar": "Calendario"
+      "calendar": "Calendario",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Información básica"
@@ -191,7 +192,222 @@
       "newWebhook": "Nuevo webhook",
       "tabs": {
         "configuration": "Configuración",
-        "deliveries": "Entregas"
+        "deliveries": "Entregas",
+        "inbound": "Entrantes",
+        "outbound": "Salientes"
+      },
+      "inbound": {
+        "title": "Webhooks entrantes",
+        "description": "Acepta solicitudes autenticadas de sistemas externos y despáchalas a acciones directas o flujos de trabajo.",
+        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y despachan a acciones o flujos.",
+        "newWebhook": "Nuevo webhook",
+        "list": {
+          "title": "Webhooks entrantes configurados",
+          "loading": "Cargando…",
+          "configuredCount": "{{count}} configurados",
+          "empty": "Aún no hay webhooks entrantes configurados.",
+          "columns": {
+            "name": "Nombre",
+            "handler": "Manejador",
+            "lastDelivery": "Última entrega",
+            "active": "Activo",
+            "actions": "Acciones"
+          }
+        },
+        "handlers": {
+          "directAction": "Acción directa",
+          "workflow": "Flujo de trabajo"
+        },
+        "status": {
+          "active": "Activo",
+          "inactive": "Inactivo"
+        },
+        "messages": {
+          "loadFailed": "Error al cargar los webhooks entrantes.",
+          "nameRequired": "El nombre es obligatorio.",
+          "slugRequired": "El slug es obligatorio.",
+          "actionRequired": "Selecciona una acción antes de guardar.",
+          "workflowRequired": "Selecciona un flujo antes de guardar.",
+          "missingRequiredFields": "Asigna un valor para los campos obligatorios: {{fields}}"
+        },
+        "dialog": {
+          "createTitle": "Crear webhook entrante",
+          "editTitle": "Editar webhook entrante",
+          "cancel": "Cancelar",
+          "create": "Crear webhook",
+          "save": "Guardar cambios",
+          "saveUnavailable": "Continuar"
+        },
+        "identity": {
+          "title": "Identidad",
+          "help": "Nombra el webhook y elige el slug seguro para URL usado en su endpoint receptor.",
+          "name": "Nombre",
+          "namePlaceholder": "Alertas críticas de RMM",
+          "slug": "Slug",
+          "slugPlaceholder": "alertas-criticas-rmm",
+          "description": "Descripción",
+          "descriptionPlaceholder": "Notas opcionales sobre el sistema de origen y el payload."
+        },
+        "auth": {
+          "title": "Autenticación",
+          "help": "Elige cómo las solicitudes entrantes demuestran que están autorizadas a usar este endpoint.",
+          "method": "Método de autenticación",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Token Bearer",
+            "ipAllowlist": "Lista blanca de IPs",
+            "pathToken": "Secreto compartido en ruta"
+          },
+          "signatureHeader": "Cabecera de firma",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Token Bearer",
+          "bearerTokenPlaceholder": "Pega el token o deja vacío para generar uno",
+          "secretUnchangedPlaceholder": "Deja vacío para mantener el secreto actual",
+          "ipCidrs": "IPs / CIDRs permitidos",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Parámetro de consulta",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Token de ruta",
+          "pathTokenPlaceholder": "Pega el token o deja vacío para generar uno"
+        },
+        "secret": {
+          "label": "Secreto del webhook",
+          "warning": "Este valor se muestra solo ahora. Guárdalo en el sistema de origen antes de cerrar este diálogo.",
+          "copy": "Copiar",
+          "download": "Descargar como .txt",
+          "close": "Cerrar"
+        },
+        "idempotency": {
+          "title": "Idempotencia",
+          "help": "Usa una clave estable para detectar entregas duplicadas dentro de la ventana configurada.",
+          "source": "Origen de la clave",
+          "types": {
+            "header": "Cabecera HTTP",
+            "jsonata": "Expresión JSONata"
+          },
+          "headerName": "Nombre de la cabecera",
+          "headerNamePlaceholder": "X-Idempotency-Key",
+          "jsonataExpression": "Expresión JSONata",
+          "jsonataExpressionPlaceholder": "alert.id",
+          "windowSeconds": "Ventana de duplicados (segundos)"
+        },
+        "active": {
+          "title": "Estado activo",
+          "help": "Pausa el endpoint sin eliminar su URL, mapeos o historial de entregas.",
+          "toggle": "El webhook está activo",
+          "autoDisabled": "Deshabilitado automáticamente el {{date}} tras fallos repetidos.",
+          "updateFailed": "Error al actualizar el estado del webhook entrante."
+        },
+        "handler": {
+          "title": "Manejador",
+          "help": "Elige qué debe hacer Alga después de que la solicitud sea verificada y deduplicada.",
+          "type": "Tipo de manejador",
+          "types": {
+            "directAction": "Acción directa",
+            "workflow": "Flujo de trabajo"
+          },
+          "directActionTitle": "Acción directa",
+          "directActionHelp": "Selecciona una acción entrante y mapea los campos del payload a sus campos de destino.",
+          "action": "Acción",
+          "actionPlaceholder": "Selecciona una acción",
+          "actionEmpty": "No hay acciones entrantes registradas. Asegúrate de que el servidor haya inicializado el registro de acciones antes de guardar.",
+          "targetFields": "Campos de destino",
+          "required": "Requerido",
+          "optional": "Opcional",
+          "mappingPlaceholder": "Escribe una expresión JSONata, p. ej. payload.field",
+          "workflowTitle": "Flujo de trabajo",
+          "workflowHelp": "Selecciona un flujo para iniciar con el envelope normalizado del webhook.",
+          "workflow": "Flujo de trabajo",
+          "workflowPlaceholder": "Selecciona un flujo",
+          "workflowEmpty": "No hay flujos visibles en este inquilino. Publica o muestra un flujo para usar el manejador de flujos.",
+          "envelopeTitle": "Envelope de entrada del flujo",
+          "fieldTypes": {
+            "string": "cadena",
+            "int": "entero",
+            "number": "número",
+            "boolean": "booleano",
+            "enum": "enum",
+            "json": "json",
+            "ref": "referencia"
+          }
+        },
+        "sample": {
+          "title": "Payload de ejemplo",
+          "help": "Captura la próxima solicitud verificada para la autocompletado de mapeo.",
+          "createFirst": "Guarda el webhook antes de capturar una solicitud de ejemplo.",
+          "captureButton": "Capturar solicitud de ejemplo",
+          "captureActive": "Ventana de captura activa hasta {{expiresAt}}.",
+          "sampleAvailable": "Payload de ejemplo capturado.",
+          "noSample": "Aún no se ha capturado ningún ejemplo.",
+          "captureFailed": "Error al habilitar la captura de ejemplos."
+        },
+        "sampleTree": {
+          "title": "Rutas de ejemplo",
+          "help": "Haz clic en una ruta para insertarla en {{field}}.",
+          "focusHelp": "Enfoca un campo de mapeo, luego haz clic en una ruta para insertarla.",
+          "empty": "Captura un payload de ejemplo para explorar campos."
+        },
+        "mapping": {
+          "modeStatic": "Valor estático",
+          "modeExpression": "Mapear desde la carga útil",
+          "unknownReference": "referencia desconocida",
+          "loading": "Cargando…",
+          "errors": {
+            "INVALID_INT": "El valor \"{{value}}\" debe ser un entero.",
+            "INVALID_NUMBER": "El valor \"{{value}}\" debe ser un número.",
+            "INVALID_BOOLEAN": "El valor debe ser \"true\" o \"false\".",
+            "INVALID_JSON": "El valor debe ser JSON válido."
+          }
+        },
+        "deliveryLog": {
+          "title": "Registro de entregas",
+          "help": "Entregas verificadas recientes para este webhook entrante.",
+          "empty": "Aún no se han registrado entregas.",
+          "loadFailed": "Error al cargar las entregas.",
+          "pageSummary": "Página {{page}} de {{total}}",
+          "durationMs": "{{duration}} ms",
+          "allStatuses": "Todos los estados",
+          "columns": {
+            "received": "Recibido",
+            "status": "Estado",
+            "response": "Respuesta",
+            "duration": "Duración",
+            "actions": "Acciones"
+          },
+          "view": "Ver",
+          "status": {
+            "pending": "pendiente",
+            "dispatched": "entregado",
+            "duplicate": "duplicado",
+            "failed": "fallido"
+          }
+        },
+        "deliveryDetail": {
+          "title": "Detalle de entrega",
+          "close": "Cerrar",
+          "replay": "Reenviar",
+          "replayConfirm": "¿Reenviar esta entrega a través de la configuración actual del webhook? Cualquier efecto secundario (creación de tickets, cambios de estado, etc.) volverá a ejecutarse.",
+          "replayFailed": "Error al reenviar la entrega.",
+          "received": "Recibido",
+          "status": "Estado",
+          "responseStatus": "Estado de respuesta",
+          "duration": "Duración",
+          "sections": {
+            "headers": "Cabeceras de la solicitud",
+            "requestBody": "Cuerpo de la solicitud",
+            "responseBody": "Cuerpo de la respuesta",
+            "handlerOutcome": "Resultado del manejador"
+          }
+        },
+        "test": {
+          "openButton": "Enviar prueba",
+          "title": "Enviar solicitud de prueba",
+          "body": "Cuerpo JSON de la solicitud",
+          "headers": "Cabeceras",
+          "cancel": "Cancelar",
+          "send": "Enviar prueba",
+          "sendFailed": "Error al enviar la solicitud de prueba del webhook."
+        }
       },
       "stats": {
         "total": "Webhooks totales",
@@ -328,7 +544,7 @@
         "sourceLabels": {
           "key": "Anulación",
           "tenant": "Predeterminado del tenant",
-          "system": "Predeterminado del sistema"
+          "default": "Predeterminado del sistema"
         },
         "remaining": " • Restante: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Restante: no disponible",

@@ -177,5 +177,13 @@
     "featureIds": [
       "F030"
     ]
+  },
+  {
+    "id": "T021",
+    "description": "Component smoke: Workflow Control Panel renders current workflow action quota usage with consumed and remaining counts from the quota summary action.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
   }
 ]

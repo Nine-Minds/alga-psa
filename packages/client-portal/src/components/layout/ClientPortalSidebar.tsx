@@ -7,12 +7,12 @@ import { useEffect, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   Home,
-  MessageSquare,
+  Ticket,
   LayoutTemplate,
   Calendar,
   Monitor,
   BookOpen,
-  Layers,
+  ListTodo,
   FileText,
   CreditCard,
   Settings,
@@ -94,23 +94,23 @@ export function ClientPortalSidebar({
   };
 
   const sidebarOpen = !collapsed;
-  const isAlgadeskPortal = productCode === 'algadesk';
+  const isAlgaDeskPortal = productCode === 'algadesk';
 
-  const workspaceItems: NavItem[] = isAlgadeskPortal
+  const workspaceItems: NavItem[] = isAlgaDeskPortal
     ? [
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
-        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
       ]
     : [
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
-        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
         { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
-        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: Layers },
+        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo },
         { key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar },
         { key: 'devices', href: '/client-portal/devices', label: t('nav.myDevices', 'My devices'), icon: Monitor },
       ];
 
-  const resourcesItems: NavItem[] = isAlgadeskPortal
+  const resourcesItems: NavItem[] = isAlgaDeskPortal
     ? [
         {
           key: 'knowledge-base',
@@ -137,7 +137,7 @@ export function ClientPortalSidebar({
           label: t('nav.profile', 'Profile'),
           icon: User,
         },
-        ...(isAlgadeskPortal
+        ...(isAlgaDeskPortal
           ? []
           : [
               ...(permissions.hasBillingAccess
@@ -268,7 +268,7 @@ export function ClientPortalSidebar({
   };
 
   const visibleSections = sections.filter((s) => s.items.length > 0);
-  const brandLabel = branding?.clientName || (isAlgadeskPortal ? 'Algadesk' : 'AlgaPSA');
+  const brandLabel = branding?.clientName || (isAlgaDeskPortal ? 'AlgaDesk' : 'AlgaPSA');
   const transitionClass = transitionsEnabled
     ? 'transition-all duration-300 ease-in-out'
     : '';
@@ -349,7 +349,7 @@ export function ClientPortalSidebar({
             </div>
           )}
 
-          {!isAlgadeskPortal && <ClientPortalExtensionsNav sidebarOpen={sidebarOpen} />}
+          {!isAlgaDeskPortal && <ClientPortalExtensionsNav sidebarOpen={sidebarOpen} />}
         </nav>
 
         {/* Collapse toggle */}

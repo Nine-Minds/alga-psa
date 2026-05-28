@@ -53,6 +53,10 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
+const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
+
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
   contact_name_id: z.string().nullable().optional(),
@@ -306,6 +310,133 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         console.error('Error fetching projects:', error);
         throw error;
     }
+});
+
+function buildProjectListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+export const searchProjectListIds = withAuth(async (
+  user,
+  { tenant },
+  query: string
+): Promise<string[]> => {
+  const rawSearch = query.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return [];
+  }
+
+  const { knex } = await createTenantKnex();
+  const denied = await checkPermission(user, 'project', 'read', knex);
+  if (denied) {
+    return [];
+  }
+
+  const prefixTsquery = buildProjectListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
+      `
+        WITH q AS (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ),
+        matched AS (
+          SELECT DISTINCT
+            CASE
+              WHEN si.object_type = 'project' THEN si.object_id
+              WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
+              WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
+            END AS project_id
+          FROM app_search_index si
+          CROSS JOIN q
+          LEFT JOIN project_tasks pt
+            ON si.object_type = 'project_task_comment'
+            AND pt.tenant = si.tenant
+            AND pt.task_id::text = si.parent_id
+          LEFT JOIN project_phases ph
+            ON ph.tenant = pt.tenant
+            AND ph.phase_id = pt.phase_id
+          WHERE si.tenant = ?::uuid
+            AND si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+              )
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+              )
+            )
+        )
+        SELECT project_id
+        FROM matched
+        WHERE project_id IS NOT NULL
+      `,
+      [
+        rawSearch,
+        prefixTsquery,
+        prefixTsquery,
+        rawSearch,
+        identifier,
+        tenant,
+        [...PROJECT_LIST_SEARCH_TYPES],
+        ['project:read'],
+        user.user_id,
+        isInternalUser,
+        user.user_id,
+        ...clientScopeBindings,
+      ]
+    );
+
+    const projectIds = result.rows.map((row) => row.project_id);
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    const matchedProjects = await trx('projects')
+      .where({ tenant })
+      .whereIn('project_id', projectIds)
+      .select<IProject[]>('project_id', 'assigned_to', 'client_id');
+    const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
+    const authorizedProjectIds = new Set(authorizedProjects.map((project) => project.project_id).filter(Boolean));
+
+    return projectIds.filter((projectId) => authorizedProjectIds.has(projectId));
+  });
 });
 
 /**
@@ -571,6 +702,18 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             });
         });
 
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_UPDATED',
+            payload: {
+                tenantId: tenant,
+                projectId: updatedPhase.project_id,
+                phaseId,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+                changes: phaseData as Record<string, unknown>,
+            }
+        });
+
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
@@ -590,14 +733,29 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
         const denied = await checkPermission(user, 'project', 'delete', knex);
         if (denied) return denied;
 
+        let projectIdForEvent: string | null = null;
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
             await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
+
+        if (projectIdForEvent) {
+            await publishEvent({
+                eventType: 'PROJECT_PHASE_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId: projectIdForEvent,
+                    phaseId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
     } catch (error) {
         console.error('Error deleting project phase:', error);
         throw error;
@@ -619,7 +777,7 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const createdPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const project = await ProjectModel.getById(trx, tenant, phaseData.project_id);
             if (!project) {
                 throw new Error('Project not found');
@@ -668,6 +826,19 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
 
             return await ProjectModel.addPhase(trx, tenant, phaseWithDefaults as Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
+
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_CREATED',
+            payload: {
+                tenantId: tenant,
+                projectId: createdPhase.project_id,
+                phaseId: createdPhase.phase_id,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+            }
+        });
+
+        return createdPhase;
     } catch (error) {
         console.error('Error adding project phase:', error);
         throw error;
@@ -1154,11 +1325,25 @@ export const deleteProject = withAuth(async (
             await ProjectModel.delete(trx, tenantId, projectId);
         });
 
-        return {
+        const response = {
             ...result,
             success: result.deleted === true,
             deleted: result.deleted
         };
+
+        if (response.success) {
+            await publishEvent({
+                eventType: 'PROJECT_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
+
+        return response;
     } catch (error) {
         console.error('Error deleting project:', error);
         return {
@@ -1281,19 +1466,44 @@ async function getProjectTaskStatusesInternal(
         throw new Error('Permission denied: Cannot read project');
     }
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    return resolvePhaseStatusesInternal(trx, tenant, projectId, phaseId);
+}
+
+// Resolve the effective statuses for a single phase (or the project defaults
+// when phaseId is null). The caller is responsible for having verified read
+// permission on the project within `trx`, so this can be looped over many
+// phases inside a single transaction without repeating the permission checks.
+async function resolvePhaseStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     const statusMappings = await ProjectModel.getEffectiveStatusMappings(trx, tenant, projectId, phaseId);
     if (!statusMappings || statusMappings.length === 0) {
         console.warn(`No status mappings found for project ${projectId}`);
         return [];
     }
 
-    // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
-    const standardIds = statusMappings
-        .filter(m => m.is_standard && m.standard_status_id)
-        .map(m => m.standard_status_id!);
-    const customIds = statusMappings
-        .filter(m => !m.is_standard && m.status_id)
-        .map(m => m.status_id!);
+    const { standardMap, customMap } = await fetchStatusesForMappings(trx, tenant, statusMappings);
+    return mapStatusMappingsToStatuses(statusMappings, standardMap, customMap);
+}
+
+// Batch-fetch the standard and custom status rows referenced by a set of
+// mappings in 2 queries (one per status table) instead of 1 per mapping.
+async function fetchStatusesForMappings(
+    trx: Knex.Transaction,
+    tenant: string,
+    mappings: IProjectStatusMapping[]
+): Promise<{ standardMap: Map<string, IStandardStatus>; customMap: Map<string, IStatus> }> {
+    // De-dupe ids: when multiple phases fall back to the same default mappings
+    // the same status can appear many times across the merged mapping list.
+    const standardIds = [...new Set(
+        mappings.filter(m => m.is_standard && m.standard_status_id).map(m => m.standard_status_id!)
+    )];
+    const customIds = [...new Set(
+        mappings.filter(m => !m.is_standard && m.status_id).map(m => m.status_id!)
+    )];
 
     const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
@@ -1304,9 +1514,19 @@ async function getProjectTaskStatusesInternal(
             : []
     ]);
 
-    const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
-    const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
+    return {
+        standardMap: new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s])),
+        customMap: new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s])),
+    };
+}
 
+// Transform status mappings into resolved ProjectStatus rows using pre-fetched
+// status lookups. Pure (no I/O), so it can resolve many phases from one batch.
+function mapStatusMappingsToStatuses(
+    statusMappings: IProjectStatusMapping[],
+    standardMap: Map<string, IStandardStatus>,
+    customMap: Map<string, IStatus>
+): ProjectStatus[] {
     const statuses = statusMappings.map((mapping: IProjectStatusMapping): ProjectStatus | null => {
         if (mapping.is_standard && mapping.standard_status_id) {
             const standardStatus = standardMap.get(mapping.standard_status_id);
@@ -1481,6 +1701,87 @@ export const getProjectTaskStatuses = withAuth(async (
         return [];
     }
 });
+
+/**
+ * Resolve the effective status mappings for every phase in a project, keyed by
+ * phase_id. The list view renders all phases at once, and status mapping IDs are
+ * per-phase (a phase either has its own mappings or falls back to the project
+ * defaults), so a single phase's statuses cannot bucket tasks from other phases.
+ */
+export const getProjectStatusesByPhase = withAuth(async (
+    user,
+    { tenant },
+    projectId: string
+): Promise<Record<string, ProjectStatus[]>> => {
+    const { knex } = await createTenantKnex();
+
+    // Resolve every phase's statuses inside a single transaction, verifying
+    // access once. The actual resolution batches all phases into 3 queries
+    // total (see resolveAllPhaseStatusesInternal) rather than querying per
+    // phase, which previously also opened a transaction per phase.
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(user, 'project', 'read', trx)) {
+            throw new Error('Permission denied: Cannot read project');
+        }
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+        const phases = await ProjectModel.getPhases(trx, tenant, projectId);
+        return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
+    });
+});
+
+// Resolve the effective statuses for every phase in 3 queries total, regardless
+// of phase count: one query for all of the project's status mappings (phase
+// rows + the phase_id IS NULL defaults), grouped by phase in memory, then two
+// queries to resolve every referenced standard/custom status. This replaces the
+// per-phase query fan-out of looping resolvePhaseStatusesInternal.
+async function resolveAllPhaseStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phases: IProjectPhase[]
+): Promise<Record<string, ProjectStatus[]>> {
+    const allMappings = await trx<IProjectStatusMapping>('project_status_mappings')
+        .where('project_id', projectId)
+        .andWhere('tenant', tenant)
+        .orderBy('display_order');
+
+    // Split into per-phase groups and the project-level defaults (phase_id null).
+    // Iteration order follows the display_order sort, so each group stays ordered.
+    const defaultMappings: IProjectStatusMapping[] = [];
+    const mappingsByPhase = new Map<string, IProjectStatusMapping[]>();
+    for (const mapping of allMappings) {
+        if (mapping.phase_id) {
+            const list = mappingsByPhase.get(mapping.phase_id);
+            if (list) {
+                list.push(mapping);
+            } else {
+                mappingsByPhase.set(mapping.phase_id, [mapping]);
+            }
+        } else {
+            defaultMappings.push(mapping);
+        }
+    }
+
+    // A phase uses its own mappings when present, otherwise the project defaults
+    // — mirroring ProjectModel.getEffectiveStatusMappings, but without a query.
+    const effectiveByPhase = new Map<string, IProjectStatusMapping[]>();
+    for (const phase of phases) {
+        const own = mappingsByPhase.get(phase.phase_id);
+        effectiveByPhase.set(phase.phase_id, own && own.length > 0 ? own : defaultMappings);
+    }
+
+    // Resolve every referenced status across all phases in 2 queries.
+    const effectiveMappings = Array.from(effectiveByPhase.values()).flat();
+    const { standardMap, customMap } = await fetchStatusesForMappings(trx, tenant, effectiveMappings);
+
+    const result: Record<string, ProjectStatus[]> = {};
+    for (const phase of phases) {
+        const mappings = effectiveByPhase.get(phase.phase_id) ?? [];
+        result[phase.phase_id] = mapStatusMappingsToStatuses(mappings, standardMap, customMap);
+    }
+    return result;
+}
 
 export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
     try {

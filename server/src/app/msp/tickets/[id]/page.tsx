@@ -39,7 +39,7 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
   const resolvedParams = await params;
   const { id } = resolvedParams;
   const productCode = await getCurrentTenantProduct();
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
   
   // Get current user for authorization
   const user = await getCurrentUser();
@@ -51,14 +51,14 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
   try {
     const [ticketData, surveySummary] = await Promise.all([
       getConsolidatedTicketData(id),
-      (isAlgadesk ? Promise.resolve(null) : getSurveyTicketSummary(id)).catch((error) => {
+      (isAlgaDesk ? Promise.resolve(null) : getSurveyTicketSummary(id)).catch((error) => {
         console.error('[TicketDetailsPage] Failed to load survey summary', error);
         return null;
       }),
     ]);
 
     const associatedAssets =
-      !isAlgadesk && ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
+      !isAlgaDesk && ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
         <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
           <AssociatedAssets
             id="ticket-details-associated-assets"
@@ -77,13 +77,13 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
             ticketData={ticketData}
             surveySummary={surveySummary ?? null}
             associatedAssets={associatedAssets}
-            isAlgadeskMode={isAlgadesk}
+            isAlgaDeskMode={isAlgaDesk}
           />
         </Suspense>
       </div>
     );
 
-    return isAlgadesk ? detailsContent : (
+    return isAlgaDesk ? detailsContent : (
       <AIChatContextBoundary
         value={{
           pathname: `/msp/tickets/${id}`,

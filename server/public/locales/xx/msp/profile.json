@@ -7,7 +7,8 @@
       "sso": "11111",
       "apiKeys": "11111",
       "notifications": "11111",
-      "calendar": "11111"
+      "calendar": "11111",
+      "keyboardShortcuts": "11111"
     },
     "basicInfo": {
       "title": "11111"
@@ -191,7 +192,222 @@
       "newWebhook": "11111",
       "tabs": {
         "configuration": "11111",
-        "deliveries": "11111"
+        "deliveries": "11111",
+        "inbound": "11111",
+        "outbound": "11111"
+      },
+      "inbound": {
+        "title": "11111",
+        "description": "11111",
+        "placeholder": "11111",
+        "newWebhook": "11111",
+        "list": {
+          "title": "11111",
+          "loading": "11111",
+          "configuredCount": "11111 {{count}} 11111",
+          "empty": "11111",
+          "columns": {
+            "name": "11111",
+            "handler": "11111",
+            "lastDelivery": "11111",
+            "active": "11111",
+            "actions": "11111"
+          }
+        },
+        "handlers": {
+          "directAction": "11111",
+          "workflow": "11111"
+        },
+        "status": {
+          "active": "11111",
+          "inactive": "11111"
+        },
+        "messages": {
+          "loadFailed": "11111",
+          "nameRequired": "11111",
+          "slugRequired": "11111",
+          "actionRequired": "11111",
+          "workflowRequired": "11111",
+          "missingRequiredFields": "11111 {{fields}} 11111"
+        },
+        "dialog": {
+          "createTitle": "11111",
+          "editTitle": "11111",
+          "cancel": "11111",
+          "create": "11111",
+          "save": "11111",
+          "saveUnavailable": "11111"
+        },
+        "identity": {
+          "title": "11111",
+          "help": "11111",
+          "name": "11111",
+          "namePlaceholder": "11111",
+          "slug": "11111",
+          "slugPlaceholder": "11111",
+          "description": "11111",
+          "descriptionPlaceholder": "11111"
+        },
+        "auth": {
+          "title": "11111",
+          "help": "11111",
+          "method": "11111",
+          "types": {
+            "hmacSha256": "11111",
+            "bearer": "11111",
+            "ipAllowlist": "11111",
+            "pathToken": "11111"
+          },
+          "signatureHeader": "11111",
+          "signatureHeaderPlaceholder": "11111",
+          "bearerToken": "11111",
+          "bearerTokenPlaceholder": "11111",
+          "secretUnchangedPlaceholder": "11111",
+          "ipCidrs": "11111",
+          "ipCidrsPlaceholder": "11111",
+          "queryParam": "11111",
+          "queryParamPlaceholder": "11111",
+          "pathToken": "11111",
+          "pathTokenPlaceholder": "11111"
+        },
+        "secret": {
+          "label": "11111",
+          "warning": "11111",
+          "copy": "11111",
+          "download": "11111",
+          "close": "11111"
+        },
+        "idempotency": {
+          "title": "11111",
+          "help": "11111",
+          "source": "11111",
+          "types": {
+            "header": "11111",
+            "jsonata": "11111"
+          },
+          "headerName": "11111",
+          "headerNamePlaceholder": "11111",
+          "jsonataExpression": "11111",
+          "jsonataExpressionPlaceholder": "11111",
+          "windowSeconds": "11111"
+        },
+        "active": {
+          "title": "11111",
+          "help": "11111",
+          "toggle": "11111",
+          "autoDisabled": "11111 {{date}} 11111",
+          "updateFailed": "11111"
+        },
+        "handler": {
+          "title": "11111",
+          "help": "11111",
+          "type": "11111",
+          "types": {
+            "directAction": "11111",
+            "workflow": "11111"
+          },
+          "directActionTitle": "11111",
+          "directActionHelp": "11111",
+          "action": "11111",
+          "actionPlaceholder": "11111",
+          "actionEmpty": "11111",
+          "targetFields": "11111",
+          "required": "11111",
+          "optional": "11111",
+          "mappingPlaceholder": "11111",
+          "workflowTitle": "11111",
+          "workflowHelp": "11111",
+          "workflow": "11111",
+          "workflowPlaceholder": "11111",
+          "workflowEmpty": "11111",
+          "envelopeTitle": "11111",
+          "fieldTypes": {
+            "string": "11111",
+            "int": "11111",
+            "number": "11111",
+            "boolean": "11111",
+            "enum": "11111",
+            "json": "11111",
+            "ref": "11111"
+          }
+        },
+        "sample": {
+          "title": "11111",
+          "help": "11111",
+          "createFirst": "11111",
+          "captureButton": "11111",
+          "captureActive": "11111 {{expiresAt}} 11111",
+          "sampleAvailable": "11111",
+          "noSample": "11111",
+          "captureFailed": "11111"
+        },
+        "sampleTree": {
+          "title": "11111",
+          "help": "11111 {{field}} 11111",
+          "focusHelp": "11111",
+          "empty": "11111"
+        },
+        "mapping": {
+          "modeStatic": "11111",
+          "modeExpression": "11111",
+          "unknownReference": "11111",
+          "loading": "11111",
+          "errors": {
+            "INVALID_INT": "11111 {{value}} 11111",
+            "INVALID_NUMBER": "11111 {{value}} 11111",
+            "INVALID_BOOLEAN": "11111",
+            "INVALID_JSON": "11111"
+          }
+        },
+        "deliveryLog": {
+          "title": "11111",
+          "help": "11111",
+          "empty": "11111",
+          "loadFailed": "11111",
+          "pageSummary": "11111 {{page}} 11111 {{total}} 11111",
+          "durationMs": "11111 {{duration}} 11111",
+          "allStatuses": "11111",
+          "columns": {
+            "received": "11111",
+            "status": "11111",
+            "response": "11111",
+            "duration": "11111",
+            "actions": "11111"
+          },
+          "view": "11111",
+          "status": {
+            "pending": "11111",
+            "dispatched": "11111",
+            "duplicate": "11111",
+            "failed": "11111"
+          }
+        },
+        "deliveryDetail": {
+          "title": "11111",
+          "close": "11111",
+          "replay": "11111",
+          "replayConfirm": "11111",
+          "replayFailed": "11111",
+          "received": "11111",
+          "status": "11111",
+          "responseStatus": "11111",
+          "duration": "11111",
+          "sections": {
+            "headers": "11111",
+            "requestBody": "11111",
+            "responseBody": "11111",
+            "handlerOutcome": "11111"
+          }
+        },
+        "test": {
+          "openButton": "11111",
+          "title": "11111",
+          "body": "11111",
+          "headers": "11111",
+          "cancel": "11111",
+          "send": "11111",
+          "sendFailed": "11111"
+        }
       },
       "stats": {
         "total": "11111",
@@ -328,7 +544,7 @@
         "sourceLabels": {
           "key": "11111",
           "tenant": "11111",
-          "system": "11111"
+          "default": "11111"
         },
         "remaining": "11111 {{remaining}} 11111 {{maxTokens}} 11111",
         "remainingUnavailable": "11111",

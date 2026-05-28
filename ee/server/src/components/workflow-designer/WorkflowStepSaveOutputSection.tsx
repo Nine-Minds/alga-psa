@@ -9,6 +9,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+import { getWorkflowSaveAsDisplayPath } from './workflowSaveAsPath';
+
 type SaveAsValidation = {
   type: 'error' | 'warning';
   message: string;
@@ -35,6 +37,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
 }) => {
   const { t } = useTranslation('msp/workflows');
   const currentSaveAs = saveAs ?? '';
+  const displayPath = getWorkflowSaveAsDisplayPath(currentSaveAs);
   const isSaveEnabled = currentSaveAs.length > 0;
 
   const handleToggleSave = (enabled: boolean) => {
@@ -77,7 +80,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
               id={`workflow-step-saveAs-copy-${stepId}`}
               variant="outline"
               size="sm"
-              onClick={() => onCopyPath(`vars.${currentSaveAs}`)}
+              onClick={() => onCopyPath(displayPath)}
               title={t('stepSaveOutput.copyPathTitle', { defaultValue: 'Copy full path' })}
               className="flex-shrink-0"
               disabled={!currentSaveAs}
@@ -89,7 +92,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
           <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
             <span>{t('stepSaveOutput.accessibleAs', { defaultValue: 'Accessible as:' })}</span>
             <code className="bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 rounded text-[rgb(var(--color-text-700))] font-mono">
-              vars.{currentSaveAs}
+              {displayPath}
             </code>
           </div>
 

@@ -5,9 +5,37 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IStatus } from '@alga-psa/types';
 
 import Status from '../../models/status';
+
+type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
+
+// Keeps the app-wide search index in sync when ticket statuses change.
+// Failures are swallowed: the daily search reconcile job is the backstop.
+async function publishStatusSearchEvent(
+  eventType: StatusSearchEventType,
+  tenant: string,
+  statusId: string,
+  boardId: string,
+  userId?: string,
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        statusId,
+        statusType: 'ticket',
+        boardId,
+        userId,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[boardTicketStatusActions] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
 
 export interface BoardTicketStatusInput {
   status_id?: string;
@@ -94,6 +122,52 @@ function normalizeBoardTicketStatuses(
   }));
 }
 
+async function getTicketUsageByStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusIds: string[]
+): Promise<Array<{ status_id: string; count: number }>> {
+  if (statusIds.length === 0) {
+    return [];
+  }
+
+  const rows = await trx('tickets')
+    .where({ tenant })
+    .whereIn('status_id', statusIds)
+    .select('status_id')
+    .count('ticket_id as count')
+    .groupBy('status_id') as Array<{ status_id: string; count: string }>;
+
+  return rows.map((row) => ({
+    status_id: row.status_id,
+    count: Number(row.count || 0),
+  }));
+}
+
+function buildTicketStatusInUseMessage(
+  usages: Array<{ status_id: string; count: number }>,
+  existingStatuses: IStatus[]
+): string {
+  const statusNameById = new Map(existingStatuses.map((status) => [status.status_id, status.name]));
+  const details = usages
+    .map((usage) => {
+      const name = statusNameById.get(usage.status_id) || 'Unknown status';
+      const ticketLabel = usage.count === 1 ? 'ticket' : 'tickets';
+      return `"${name}" (${usage.count} ${ticketLabel})`;
+    })
+    .join(', ');
+
+  if (usages.length === 1) {
+    const usage = usages[0];
+    const name = statusNameById.get(usage.status_id) || 'Unknown status';
+    const ticketLabel = usage.count === 1 ? 'ticket' : 'tickets';
+    const ticketReference = usage.count === 1 ? 'that ticket' : 'those tickets';
+    return `Cannot delete ticket status "${name}" because it is used by ${usage.count} ${ticketLabel}. Move ${ticketReference} to another status before deleting it.`;
+  }
+
+  return `Cannot delete ticket statuses because they are still used: ${details}. Move those tickets to another status before deleting them.`;
+}
+
 async function getStatusColumns(trx: Knex.Transaction): Promise<Record<string, unknown>> {
   return trx('statuses').columnInfo();
 }
@@ -156,6 +230,13 @@ async function persistBoardTicketStatuses(
   const deletedStatusIds = existingStatuses
     .map((status) => status.status_id)
     .filter((statusId) => !keptStatusIds.includes(statusId));
+
+  const deletedStatusUsage = await getTicketUsageByStatus(trx, tenant, deletedStatusIds);
+  if (deletedStatusUsage.length > 0) {
+    throw formatBoardTicketStatusValidationError(
+      buildTicketStatusInUseMessage(deletedStatusUsage, existingStatuses)
+    );
+  }
 
   for (const [index, existingStatus] of existingStatuses.entries()) {
     if (!keptStatusIds.includes(existingStatus.status_id)) {
@@ -254,7 +335,7 @@ export const createBoardTicketStatus = withAuth(async (
   statusData: BoardTicketStatusInput
 ): Promise<IStatus> => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const createdStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
     const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
     const existingStatusIds = new Set(existingStatuses.map((status) => status.status_id));
     const nextStatuses: BoardTicketStatusInput[] = existingStatuses.map((status) => ({
@@ -274,14 +355,17 @@ export const createBoardTicketStatus = withAuth(async (
     });
 
     const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
-    const createdStatus = savedStatuses.find((status) => !existingStatusIds.has(status.status_id));
+    const created = savedStatuses.find((status) => !existingStatusIds.has(status.status_id));
 
-    if (!createdStatus) {
+    if (!created) {
       throw new Error('Failed to create board ticket status');
     }
 
-    return createdStatus;
+    return created;
   });
+
+  await publishStatusSearchEvent('STATUS_CREATED', tenant, createdStatus.status_id, boardId, user.user_id);
+  return createdStatus;
 });
 
 export const updateBoardTicketStatus = withAuth(async (
@@ -306,7 +390,7 @@ export const updateBoardTicketStatus = withAuth(async (
   }
 
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const updatedStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
     const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
     const currentStatus = existingStatuses.find((status) => status.status_id === statusId);
 
@@ -339,14 +423,17 @@ export const updateBoardTicketStatus = withAuth(async (
     });
 
     const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
-    const updatedStatus = savedStatuses.find((status) => status.status_id === statusId);
+    const updated = savedStatuses.find((status) => status.status_id === statusId);
 
-    if (!updatedStatus) {
+    if (!updated) {
       throw new Error('Failed to update board ticket status');
     }
 
-    return updatedStatus;
+    return updated;
   });
+
+  await publishStatusSearchEvent('STATUS_UPDATED', tenant, updatedStatus.status_id, boardId, user.user_id);
+  return updatedStatus;
 });
 
 export const deleteBoardTicketStatus = withAuth(async (
@@ -356,7 +443,7 @@ export const deleteBoardTicketStatus = withAuth(async (
   statusId: string
 ): Promise<IStatus[]> => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const remainingStatuses = await withTransaction(db, async (trx: Knex.Transaction) => {
     const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
     if (!existingStatuses.some((status) => status.status_id === statusId)) {
       throw new Error('Ticket status not found on the selected board.');
@@ -376,4 +463,7 @@ export const deleteBoardTicketStatus = withAuth(async (
 
     return persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
   });
+
+  await publishStatusSearchEvent('STATUS_DELETED', tenant, statusId, boardId, user.user_id);
+  return remainingStatuses;
 });

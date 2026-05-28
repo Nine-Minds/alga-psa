@@ -247,7 +247,7 @@ describe('time authorization delegation and approval contracts', () => {
     );
   });
 
-  it('T019: not-self-approver mutation guard remains enforced on kernelized approval flow', async () => {
+  it('T019: self-approval is allowed by default and denied only by configured not-self-approver bundle rules', async () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
 
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
@@ -256,6 +256,16 @@ describe('time authorization delegation and approval contracts', () => {
       if (action === 'read_all') return true;
       return false;
     });
+
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([]))).resolves.toBe('self');
+
+    resolveBundleRulesMock.mockResolvedValueOnce([
+      {
+        resource: 'time_entry',
+        action: 'approve',
+        constraintKey: 'not_self_approver',
+      },
+    ]);
 
     await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([]))).rejects.toThrow(
       'Permission denied: Cannot approve your own time submissions'

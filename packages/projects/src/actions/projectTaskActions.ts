@@ -37,6 +37,7 @@ import {
     updateChecklistItemSchema
 } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 import {
   buildProjectTaskAssignedPayload,
@@ -529,6 +530,11 @@ export const updateTaskWithChecklist = withAuth(async (
             const validatedTaskData = validateData(updateTaskSchema, taskUpdateData);
 
             const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData as Partial<IProjectTask>);
+            const webhookChanges = buildProjectTaskWebhookChanges(
+                existingTask,
+                updatedTask,
+                Object.keys(validatedTaskData)
+            );
 
             const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
             if (phase) {
@@ -588,6 +594,25 @@ export const updateTaskWithChecklist = withAuth(async (
                             }),
                         });
                     }
+                }
+
+                // Single shared PROJECT_TASK_UPDATED emit. Search reindexes on
+                // any change (treats `changes` opaquely); the webhook builder
+                // needs the rich {previous,new} diff, so emit that and gate on
+                // a real field change (PRD F003 — no no-op deliveries).
+                if (Object.keys(webhookChanges).length > 0) {
+                    await publishEvent({
+                        eventType: 'PROJECT_TASK_UPDATED',
+                        payload: {
+                            tenantId: tenant,
+                            projectId: phase.project_id,
+                            phaseId: phase.phase_id,
+                            taskId,
+                            userId: user.user_id,
+                            timestamp: new Date().toISOString(),
+                            changes: webhookChanges,
+                        },
+                    });
                 }
             }
 
@@ -963,6 +988,17 @@ export const deleteTask = withAuth(async (
             await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
 
             await ProjectTaskModel.deleteTask(trx, tenant, taskId);
+
+            await publishEvent({
+                eventType: 'PROJECT_TASK_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
         });
     } catch (error) {
         console.error('Error deleting task:', error);
@@ -1761,6 +1797,29 @@ export const moveTaskToPhase = withAuth(async (
                         phase_id: newPhaseId
                     });
                 }
+            }
+
+            // A phase move is a task update: emit PROJECT_TASK_UPDATED with a
+            // rich {previous,new} diff so the webhook delivers a meaningful
+            // changes body (search treats `changes` opaquely either way).
+            const moveChanges = buildProjectTaskWebhookChanges(
+                existingTask,
+                updatedTask,
+                ['phase_id', 'project_status_mapping_id']
+            );
+            if (Object.keys(moveChanges).length > 0) {
+                await publishEvent({
+                    eventType: 'PROJECT_TASK_UPDATED',
+                    payload: {
+                        tenantId: tenant,
+                        projectId: newPhase.project_id,
+                        phaseId: newPhaseId,
+                        taskId,
+                        userId: user.user_id,
+                        timestamp: new Date().toISOString(),
+                        changes: moveChanges,
+                    }
+                });
             }
 
             return updatedTask;

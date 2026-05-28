@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { UnsavedChangesContext } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
@@ -71,33 +72,21 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
     }
   }, [returnFilters, unsavedChangesContext]);
 
-  // Keyboard shortcuts: Alt+ArrowLeft / Alt+ArrowRight
-  useEffect(() => {
-    if (!adjacentData) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
-      ) {
-        return;
+  const previousRecordShortcut = useCallback(() => {
+      if (!adjacentData?.prevTicketId) {
+        return false;
       }
-
-      if (e.altKey && e.key === 'ArrowLeft' && adjacentData.prevTicketId) {
-        e.preventDefault();
-        navigateToTicket(adjacentData.prevTicketId);
-      } else if (e.altKey && e.key === 'ArrowRight' && adjacentData.nextTicketId) {
-        e.preventDefault();
-        navigateToTicket(adjacentData.nextTicketId);
+      navigateToTicket(adjacentData.prevTicketId);
+  }, [adjacentData?.prevTicketId, navigateToTicket]);
+  const nextRecordShortcut = useCallback(() => {
+      if (!adjacentData?.nextTicketId) {
+        return false;
       }
-    };
+      navigateToTicket(adjacentData.nextTicketId);
+  }, [adjacentData?.nextTicketId, navigateToTicket]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [adjacentData, navigateToTicket]);
+  useCatalogShortcut('record.previous', previousRecordShortcut, { enabled: Boolean(adjacentData?.prevTicketId) });
+  useCatalogShortcut('record.next', nextRecordShortcut, { enabled: Boolean(adjacentData?.nextTicketId) });
 
   if (isLoading) {
     return (

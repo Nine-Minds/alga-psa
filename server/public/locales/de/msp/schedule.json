@@ -92,6 +92,24 @@
         "future": "Dieses und zukünftige Ereignisse",
         "all": "Alle Ereignisse"
       }
+    },
+    "print": {
+      "title": "Terminagenda",
+      "subtitle": "{{count}} geplante Einträge",
+      "noEntries": "Keine Termine zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titel",
+        "type": "Typ",
+        "start": "Start",
+        "end": "Ende",
+        "assigned": "Zugewiesen",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken des Zeitplans enthaltenen Spalten."
+      }
     }
   },
   "weeklyEvent": {
@@ -231,7 +249,7 @@
         "deleting": "Wird gelöscht..."
       },
       "defaultApprover": {
-        "placeholder": "Wählen Sie einen Genehmiger aus"
+        "placeholder": "Genehmiger auswählen"
       },
       "teamSelect": {
         "label": "Wählen Sie Team",
@@ -254,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Standardgenehmiger",
-        "help": "Unternehmensweiter Standardgenehmiger für Terminanfragen, die eine manuelle Genehmigung erfordern. Dies kann pro Techniker in den Benutzerstundeneinstellungen überschrieben werden."
+        "label": "Genehmiger",
+        "help": "Unternehmensweite Genehmiger für Terminanfragen, die eine manuelle Genehmigung erfordern. Fügen Sie mehrere Benutzer und/oder Teams hinzu – alle ausgewählten Personen werden benachrichtigt und können genehmigen. Dies kann pro Techniker in den Benutzerstundeneinstellungen überschrieben werden."
       },
       "advanceBookingDays": {
         "label": "Standard-Vorausbuchung (Tage)"
@@ -297,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Standardgenehmiger",
-          "help": "Wer soll Terminanfragen für diesen Techniker prüfen und genehmigen, die eine manuelle Genehmigung erfordern?"
+          "label": "Genehmiger",
+          "help": "Wer soll Terminanfragen für diesen Techniker prüfen und genehmigen, die eine manuelle Genehmigung erfordern? Fügen Sie mehrere Benutzer und/oder Teams hinzu. Leer lassen, um die unternehmensweiten Genehmiger zu verwenden."
         },
         "allowClientPreference": {
           "label": "Kundenpräferenz zulassen",

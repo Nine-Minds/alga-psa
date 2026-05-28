@@ -36,7 +36,8 @@
       "invoiceLayouts": "Mises en page de facture",
       "billingCycles": "Cycles de facturation",
       "servicePeriods": "Périodes de service",
-      "serviceCatalog": "Catalogue de services",
+      "serviceTypes": "Types de service",
+      "serviceCatalog": "Services",
       "products": "Produits",
       "taxRates": "Taux de taxe",
       "usageTracking": "Suivi de l'utilisation",
@@ -165,7 +166,12 @@
       "system": "Systeme",
       "selected": "Selectionne"
     },
-    "openUserMenu": "Ouvrir le menu utilisateur"
+    "openUserMenu": "Ouvrir le menu utilisateur",
+    "quickAsk": {
+      "ariaLabel": "Demander à l’IA au sujet de ce workflow",
+      "title": "Demander à l’IA",
+      "shortcutHint": "Ouvrir Quick Ask pour l’aide sur le workflow"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
@@ -229,6 +235,92 @@
       "error": {
         "loadFailed": "Échec du chargement des notifications"
       }
+    }
+  },
+  "search": {
+    "placeholder": "Search clients, tickets, documents...",
+    "shortcutHint": "Cmd/Ctrl+K",
+    "loading": "Searching...",
+    "pageTitle": "Search",
+    "helperText": "Search across the workspace.",
+    "resultSummary": "{{count}} results for \"{{query}}\"",
+    "resultsRegionLabel": "Search results",
+    "filtersLabel": "Search filters",
+    "sortLabel": "Sort results",
+    "paginationLabel": "Search pagination",
+    "seeAllResults": "See all {{count}} results",
+    "noResults": "No results for \"{{query}}\"",
+    "emptyBroadenQuery": "Try a broader query.",
+    "emptyRemoveFilter": "Try removing the type filter.",
+    "error": "Search failed. Try again.",
+    "filters": {
+      "all": "All",
+      "client": "Clients",
+      "contact": "Contacts",
+      "user": "Team members",
+      "ticket": "Tickets",
+      "ticket_comment": "Ticket comments",
+      "project": "Projects",
+      "project_phase": "Project phases",
+      "project_task": "Project tasks",
+      "project_task_comment": "Project task comments",
+      "asset": "Assets",
+      "invoice": "Invoices",
+      "invoice_item": "Invoice line items",
+      "invoice_annotation": "Invoice annotations",
+      "contract": "Contracts",
+      "client_contract": "Client contracts",
+      "document": "Documents",
+      "kb_article": "KB articles",
+      "service_catalog": "Service catalog",
+      "service_request_submission": "Service requests",
+      "service_request_definition": "Service request definitions",
+      "workflow_task": "Workflow tasks",
+      "interaction": "Interactions",
+      "schedule_entry": "Schedule entries",
+      "time_entry": "Time entries",
+      "board": "Boards",
+      "category": "Categories",
+      "tag": "Tags",
+      "status": "Statuts"
+    },
+    "groups": {
+      "client": "Clients",
+      "contact": "Contacts",
+      "user": "Team members",
+      "ticket": "Tickets",
+      "ticket_comment": "Ticket comments",
+      "project": "Projects",
+      "project_phase": "Project phases",
+      "project_task": "Project tasks",
+      "project_task_comment": "Project task comments",
+      "asset": "Assets",
+      "invoice": "Invoices",
+      "invoice_item": "Invoice line items",
+      "invoice_annotation": "Invoice annotations",
+      "contract": "Contracts",
+      "client_contract": "Client contracts",
+      "document": "Documents",
+      "kb_article": "KB articles",
+      "service_catalog": "Service catalog",
+      "service_request_submission": "Service requests",
+      "service_request_definition": "Service request definitions",
+      "workflow_task": "Workflow tasks",
+      "interaction": "Interactions",
+      "schedule_entry": "Schedule entries",
+      "time_entry": "Time entries",
+      "board": "Boards",
+      "category": "Categories",
+      "tag": "Tags",
+      "status": "Statuts"
+    },
+    "sort": {
+      "relevance": "Relevance",
+      "recent": "Recent"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
     }
   }
 }

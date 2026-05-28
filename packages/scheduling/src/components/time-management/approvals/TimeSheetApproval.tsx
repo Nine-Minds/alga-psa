@@ -16,6 +16,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IUser } from '@alga-psa/types';
 import { fetchWorkItemsForTimeSheet, updateTimeEntryApprovalStatus } from '../../../actions/timeEntryActions';
 import { parseISO } from 'date-fns';
+import { getTimeEntryWorkDate } from '../time-entry/time-sheet/utils';
 import {
   TimeEntryChangeRequestIndicator,
   TimeEntryChangeRequestPanel,
@@ -332,11 +333,12 @@ export function TimeSheetApproval({
 
   // Group entries by date
   const entriesByDate = timeEntries.reduce((acc, entry) => {
-    const date = new Date(entry.start_time).toDateString();
+    const date = getTimeEntryWorkDate(entry);
     const totalDuration = (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60);
     acc[date] = (acc[date] || 0) + totalDuration;
     return acc;
   }, {} as Record<string, number>);
+  const sortedEntriesByDate = Object.entries(entriesByDate).sort(([a], [b]) => a.localeCompare(b));
 
   const handleAddComment = async () => {
     if (newComment.trim() && !isAddingComment) {
@@ -461,10 +463,10 @@ export function TimeSheetApproval({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {Object.entries(entriesByDate).map(([date, hours]): React.JSX.Element => (
+            {sortedEntriesByDate.map(([date, hours]): React.JSX.Element => (
               <div key={date} className="flex items-center justify-between py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-0">
                 <span className="text-sm text-[rgb(var(--color-text-700))]">
-                  {formatDate(new Date(date), { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {formatDate(parseISO(date), { weekday: 'short', month: 'short', day: 'numeric' })}
                 </span>
                 <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours, t)}</span>
               </div>
@@ -499,7 +501,7 @@ export function TimeSheetApproval({
                     onClick={() => toggleEntryDetails(entry.entry_id as string)}
                   >
                     <td className="py-2.5 pr-3">
-                      {formatDate(new Date(entry.start_time), { month: 'short', day: 'numeric' })}
+                      {formatDate(parseISO(getTimeEntryWorkDate(entry)), { month: 'short', day: 'numeric' })}
                     </td>
                     <td className="py-2.5 pr-3">{formatWorkItem(entry.workItem)}</td>
                     <td className="py-2.5 pr-3">

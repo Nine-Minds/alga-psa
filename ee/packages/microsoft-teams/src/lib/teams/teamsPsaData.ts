@@ -268,16 +268,35 @@ export async function addTeamsTicketComment(params: {
       throw new Error('Ticket not found');
     }
 
+    // comments.thread_id is NOT NULL — create the thread row first.
+    const teamsCommentId = randomUUID();
+    const teamsThreadId = randomUUID();
+    const teamsNowIso = new Date().toISOString();
+
+    await trx('comment_threads').insert({
+      tenant: params.tenantId,
+      thread_id: teamsThreadId,
+      ticket_id: params.ticketId,
+      project_task_id: null,
+      root_comment_id: teamsCommentId,
+      is_internal: params.isInternal,
+      reply_count: 0,
+      last_activity_at: teamsNowIso,
+      created_at: teamsNowIso,
+      created_by: params.actorUserId || null,
+    });
+
     await trx('comments').insert({
-      comment_id: randomUUID(),
+      comment_id: teamsCommentId,
+      thread_id: teamsThreadId,
       ticket_id: params.ticketId,
       note: params.commentText,
       is_internal: params.isInternal,
       is_resolution: false,
       user_id: params.actorUserId,
       tenant: params.tenantId,
-      created_at: trx.raw('now()'),
-      updated_at: trx.raw('now()'),
+      created_at: teamsNowIso,
+      updated_at: teamsNowIso,
       metadata: params.metadata,
     });
 

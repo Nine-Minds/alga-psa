@@ -11,6 +11,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
+import { Metadata } from '@grpc/grpc-js';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import logger from './simple-logger';
@@ -56,19 +57,19 @@ export async function initializeTelemetry(): Promise<void> {
       return;
     }
 
-    // Create OTLP exporters with deployment ID headers
+    const metadata = new Metadata();
+    if (process.env.DEPLOYMENT_ID) {
+      metadata.set('X-Deployment-Id', process.env.DEPLOYMENT_ID);
+    }
+
     const traceExporter = new OTLPTraceExporter({
       url: `${endpoint}/v1/traces`,
-      headers: process.env.DEPLOYMENT_ID ? {
-        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
-      } : {},
+      metadata,
     });
 
     const metricExporter = new OTLPMetricExporter({
       url: `${endpoint}/v1/metrics`,
-      headers: process.env.DEPLOYMENT_ID ? {
-        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
-      } : {},
+      metadata,
     });
 
     // Create resource with service information

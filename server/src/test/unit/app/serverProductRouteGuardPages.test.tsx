@@ -53,7 +53,7 @@ describe('server page guards', () => {
     listMyRecentServiceRequestsActionMock.mockResolvedValue([]);
   });
 
-  it('blocks Algadesk projects page before project data actions execute', async () => {
+  it('blocks AlgaDesk projects page before project data actions execute', async () => {
     enforceServerProductRouteMock.mockResolvedValue(boundaryNode);
     const mod = await import('@/app/msp/projects/page');
 
@@ -64,7 +64,7 @@ describe('server page guards', () => {
     expect(getAllClientsForProjectsMock).not.toHaveBeenCalled();
   });
 
-  it('blocks Algadesk request-services page before portal data actions execute', async () => {
+  it('blocks AlgaDesk request-services page before portal data actions execute', async () => {
     enforceServerProductRouteMock.mockResolvedValue(boundaryNode);
     const mod = await import('@/app/client-portal/request-services/page');
 

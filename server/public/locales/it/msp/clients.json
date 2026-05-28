@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Pagina clienti",
     "description": "Pagina di gestione dei clienti principali con ricerca, filtri e visualizzazione griglia/elenco dei clienti",
-    "searchPlaceholder": "Cerca clienti",
+    "searchPlaceholder": "Cerca clienti, note, documenti e interazioni",
     "createClient": "Crea cliente",
     "createClientShort": "+ Crea cliente",
     "allClients": "Tutti i clienti",
@@ -133,6 +133,30 @@
     "deleteSelectedPrompt": "Sei sicuro di voler eliminare {{count}} selezionato {{clientsLabel}}? Questa azione non può essere annullata.",
     "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contatto sono stati disattivati con successo.",
     "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo.",
+    "clientTypes": {
+      "company": "Azienda",
+      "individual": "Persona"
+    },
+    "print": {
+      "title": "Clienti",
+      "selectedTitle": "Clienti selezionati",
+      "subtitle": "{{count}} clienti",
+      "noClients": "Nessun cliente da stampare",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Cliente",
+        "type": "Tipo",
+        "phone": "Telefono",
+        "address": "Indirizzo",
+        "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa dei clienti."
+      }
+    },
+    "shareTooltip": "Stampa, importa ed esporta"
+    ,
     "defaultClientDeleteError": "Impossibile eliminare il cliente predefinito. Imposta prima un altro cliente come predefinito nelle impostazioni generali.",
     "clientNotFound": "Cliente non trovato.",
     "deletePermissionDenied": "Autorizzazione negata: impossibile eliminare i clienti."
@@ -220,6 +244,12 @@
     "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
     "inboundDomainRemoved": "Dominio email in entrata rimosso",
     "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio",
+    "fields": {
+      "accountManager": "Account manager",
+      "url": "URL",
+      "status": "Stato"
+    }
+    ,
     "deactivateClientDescription": "Disattiva il record senza eliminarne i dati.",
     "deactivateClientOnlyDescription": "Disattiva il cliente ma lascia attivi i suoi contatti."
   },
@@ -598,10 +628,10 @@
     "scenarios": {
       "description": "Questi esempi illustrano come funziona la disambiguazione delle righe di contratto negli scenari comuni per questo cliente.",
       "scenario1Description": "Quando un servizio viene visualizzato sia in una riga di contratto bucket che in una riga di contratto standard per questo cliente:",
-      "scenario1Item1": "Per impostazione predefinita, alla riga del contratto bucket viene data priorità",
-      "scenario1Item2": "Gli inserimenti di tempo e l'utilizzo verranno fatturati in base alla riga del contratto dell'intervallo fino al suo esaurimento",
-      "scenario1Item3": "Una volta esaurito il bucket, la riga di contratto standard verrà utilizzata automaticamente",
-      "scenario1Item4": "Gli utenti possono ignorare manualmente questo comportamento selezionando esplicitamente una riga di contratto durante l'immissione delle ore",
+      "scenario1Item1": "La riga del contratto bucket viene selezionata per impostazione predefinita",
+      "scenario1Item2": "Gli inserimenti di tempo e l'utilizzo consumano la quantità inclusa nel bucket e poi continuano sulla stessa riga del contratto bucket come eccedenza alla tariffa di eccedenza configurata",
+      "scenario1Item3": "La fatturazione non passa automaticamente alla riga di contratto standard quando il bucket è esaurito",
+      "scenario1Item4": "Gli utenti possono ignorare manualmente questa impostazione predefinita selezionando una riga di contratto diversa durante l'immissione delle ore",
       "scenario1Title": "Scenario 1: piano a scaglioni + piano standard",
       "scenario2Description": "Quando un servizio appare in più righe di contratto standard per questo cliente:",
       "scenario2Item1": "Agli utenti verrà richiesto di selezionare la riga di contratto da fatturare durante l'immissione dell'orario",

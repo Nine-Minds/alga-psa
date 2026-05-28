@@ -205,7 +205,7 @@ async function seedFixture() {
   return { tenantId, userId, ticketId, deletableDocumentId, blockedDocumentId };
 }
 
-describe('Algadesk ticket attachment draft integration', () => {
+describe('AlgaDesk ticket attachment draft integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
@@ -224,7 +224,7 @@ describe('Algadesk ticket attachment draft integration', () => {
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
-  it('T011: deletes ticket-scoped draft image attachments while blocking non-ticket/shared docs and keeps Algadesk composition restrictions', async () => {
+  it('T011: deletes ticket-scoped draft image attachments while blocking non-ticket/shared docs and keeps AlgaDesk composition restrictions', async () => {
     const fixture = await seedFixture();
 
     dbRef.tenant = fixture.tenantId;

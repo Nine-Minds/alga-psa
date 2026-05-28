@@ -104,6 +104,10 @@ export function resolveTeamsTabDestinationFromPsaUrl(psaUrl: string | undefined)
   }
 
   if (segments[1] === 'projects' && segments[2]) {
+    if (segments[3] === 'tasks' && segments[4]) {
+      return { type: 'project_task', projectId: segments[2], taskId: segments[4] };
+    }
+
     const taskId = parsed.searchParams.get('taskId')?.trim();
     return taskId ? { type: 'project_task', projectId: segments[2], taskId } : { type: 'my_work' };
   }

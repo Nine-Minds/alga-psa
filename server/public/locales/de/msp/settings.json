@@ -25,7 +25,8 @@
     "teamManagement": "Team-Verwaltung",
     "loadingTeam": "Team-Konfiguration wird geladen...",
     "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
-    "loadingInteractions": "Interaktionseinstellungen werden geladen..."
+    "loadingInteractions": "Interaktionseinstellungen werden geladen...",
+    "keyboardShortcuts": "Tastenkürzel"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -90,10 +91,6 @@
         "name": "KI-Assistent",
         "description": "Aktivieren Sie den KI-gestützten Schnellzugriff und die Chat-Seitenleiste.",
         "restriction": "Nur für den Hauptabrechnungsmandanten verfügbar."
-      },
-      "workflowAutomation": {
-        "name": "Workflow-Automatisierung",
-        "description": "Aktivieren Sie experimentelle Workflow-Automatisierungsfunktionen im Workflow-Kontrollpanel und -Editor."
       }
     },
     "actions": {

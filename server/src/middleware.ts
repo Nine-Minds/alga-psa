@@ -94,6 +94,12 @@ const apiKeySkipPaths = [
   '/api/webhooks/stripe',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
+  // Server-to-server webhooks from nm-store. Authenticated via HMAC
+  // x-webhook-signature using ALGA_WEBHOOK_SECRET (verified in route handlers).
+  '/api/billing/check-tenant',
+  '/api/billing/licence-count',
+  '/api/billing/licence-usage/',
+  '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth
   '/api/ext/',  // Extension API routes handle their own auth
@@ -109,6 +115,7 @@ const apiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
 }
 

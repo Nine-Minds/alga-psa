@@ -1,0 +1,366 @@
+{
+  "settings": {
+    "title": "Keyboard Shortcuts",
+    "description": "Customize keyboard shortcuts for this device and account.",
+    "loading": "Loading keyboard shortcuts...",
+    "capturePrompt": "Press keys",
+    "columns": {
+      "action": "Action",
+      "scope": "Scope",
+      "default": "Default",
+      "effective": "Effective binding",
+      "enabled": "Enabled",
+      "reset": "Reset"
+    },
+    "actions": {
+      "resetAll": "Reset all",
+      "replace": "Replace",
+      "copyCheatsheet": "Copy cheatsheet",
+      "printCheatsheet": "Print"
+    },
+    "messages": {
+      "bindingUpdated": "Keyboard shortcut updated",
+      "enabledUpdated": "Keyboard shortcut updated",
+      "resetOne": "Keyboard shortcut reset",
+      "resetAll": "Keyboard shortcuts reset",
+      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+    },
+    "errors": {
+      "saveFailed": "Failed to save keyboard shortcut preferences",
+      "copyFailed": "Failed to copy cheatsheet",
+      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+    },
+    "resetAll": {
+      "title": "Reset all shortcuts?",
+      "message": "All custom keyboard shortcuts will be removed."
+    },
+    "conflict": {
+      "title": "Replace existing shortcut?",
+      "message": "{{binding}} is already assigned to {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} may conflict with browser or operating system shortcuts for {{action}}."
+    }
+  },
+  "help": {
+    "title": "Keyboard shortcuts",
+    "close": "Close keyboard shortcuts",
+    "custom": "Custom"
+  },
+  "commandPalette": {
+    "title": "Command Palette",
+    "placeholder": "Search navigation and actions",
+    "placeholderFulltext": "Search records, comments, documents…",
+    "loading": "Searching…",
+    "resultCount": "{{count}} results",
+    "seeAll": "See all results",
+    "fulltextHint": "Type at least 2 characters to search records.",
+    "fulltextInlineHelp": "Searching across records, comments, and documents.",
+    "modes": {
+      "ariaLabel": "Search mode",
+      "navigation": "Navigation",
+      "fulltext": "Full text"
+    },
+    "syntax": {
+      "title": "Search tips",
+      "summary": "Type a menu name or action; use /nav or >action to narrow.",
+      "inlineHelp": "Use /nav for navigation or >action for actions."
+    },
+    "types": {
+      "nav": "Navigation",
+      "action": "Action",
+      "record": "Record",
+      "help": "Help"
+    }
+  },
+  "groups": {
+    "global": "Global",
+    "ai": "AI",
+    "page": "Page",
+    "selection": "Selection",
+    "navigation": "Navigation",
+    "assets": "Assets",
+    "dialog": "Dialog",
+    "panel": "Panel",
+    "record": "Record",
+    "editor": "Editor",
+    "scroll": "Scroll"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Search",
+        "description": "Focus the sidebar search field."
+      },
+      "commandPalette": {
+        "label": "Command palette",
+        "description": "Open navigation and action search."
+      },
+      "toggleChat": {
+        "label": "Toggle AI chat",
+        "description": "Open the AI assistant or focus the current chat."
+      },
+      "openShortcuts": {
+        "label": "Open keyboard shortcuts",
+        "description": "Show the keyboard shortcuts reference."
+      },
+      "quickCreate": {
+        "label": "Quick create",
+        "description": "Open the quick create dialog."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Quick ask AI",
+        "description": "Start a quick AI assistant prompt."
+      }
+    },
+    "page": {
+      "create": {
+        "label": "Create on page",
+        "description": "Create a new item on the current page."
+      },
+      "save": {
+        "label": "Save page",
+        "description": "Save the current page."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Previous item",
+        "description": "Move selection to the previous item."
+      },
+      "next": {
+        "label": "Next item",
+        "description": "Move selection to the next item."
+      },
+      "open": {
+        "label": "Open selection",
+        "description": "Open the selected item."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Go to tickets",
+        "description": "Navigate to the tickets page."
+      },
+      "goAssets": {
+        "label": "Go to assets",
+        "description": "Navigate to the assets page."
+      },
+      "goClients": {
+        "label": "Go to clients",
+        "description": "Navigate to the clients page."
+      },
+      "goDashboard": {
+        "label": "Go to dashboard",
+        "description": "Navigate to the dashboard."
+      },
+      "goProjects": {
+        "label": "Go to projects",
+        "description": "Navigate to the projects page."
+      },
+      "goBilling": {
+        "label": "Go to billing",
+        "description": "Navigate to billing."
+      },
+      "goSettings": {
+        "label": "Go to settings",
+        "description": "Navigate to settings."
+      },
+      "goSearch": {
+        "label": "Go to global search",
+        "description": "Focus the global search field."
+      },
+      "goHelp": {
+        "label": "Go to keyboard help",
+        "description": "Open the keyboard shortcuts reference."
+      },
+      "backToParent": {
+        "label": "Back to parent list",
+        "description": "Activate the page back navigation button when one is available."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Asset command palette",
+        "description": "Open asset page commands."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Cancel dialog",
+        "description": "Close or cancel the active dialog."
+      },
+      "submit": {
+        "label": "Submit dialog",
+        "description": "Submit the active dialog form."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Close panel",
+        "description": "Close the active panel or drawer."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Drawer back",
+        "description": "Go back in drawer history."
+      },
+      "historyForward": {
+        "label": "Drawer forward",
+        "description": "Go forward in drawer history."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Previous record",
+        "description": "Open the previous record."
+      },
+      "next": {
+        "label": "Next record",
+        "description": "Open the next record."
+      },
+      "addTime": {
+        "label": "Add time entry",
+        "description": "Open the time entry drawer for the current record."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Undo",
+        "description": "Undo the editor change."
+      },
+      "redo": {
+        "label": "Redo",
+        "description": "Redo the editor change."
+      },
+      "save": {
+        "label": "Save editor",
+        "description": "Save the editor content."
+      },
+      "deleteSelection": {
+        "label": "Delete selection",
+        "description": "Delete the selected editor item."
+      },
+      "cancel": {
+        "label": "Cancel editor action",
+        "description": "Cancel the active editor action."
+      },
+      "moveUp": {
+        "label": "Move up",
+        "description": "Move the selected editor item up."
+      },
+      "moveDown": {
+        "label": "Move down",
+        "description": "Move the selected editor item down."
+      },
+      "moveLeft": {
+        "label": "Move left",
+        "description": "Move the selected editor item left."
+      },
+      "moveRight": {
+        "label": "Move right",
+        "description": "Move the selected editor item right."
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "Scroll half page down",
+        "description": "Scroll down by half a page."
+      },
+      "halfUp": {
+        "label": "Scroll half page up",
+        "description": "Scroll up by half a page."
+      },
+      "fullDown": {
+        "label": "Scroll full page down",
+        "description": "Scroll down by one full page."
+      },
+      "fullUp": {
+        "label": "Scroll full page up",
+        "description": "Scroll up by one full page."
+      },
+      "top": {
+        "label": "Scroll to top",
+        "description": "Scroll to the top of the current page or panel."
+      },
+      "bottom": {
+        "label": "Scroll to bottom",
+        "description": "Scroll to the bottom of the current page or panel."
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "Focus page search",
+        "description": "Focus the primary search field on the current page."
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "Next table row",
+        "description": "Move the active row marker to the next selectable table row."
+      },
+      "previousRow": {
+        "label": "Previous table row",
+        "description": "Move the active row marker to the previous selectable table row."
+      },
+      "toggleRow": {
+        "label": "Toggle table row",
+        "description": "Select or deselect the active table row."
+      },
+      "visualRange": {
+        "label": "Visual row range",
+        "description": "Start or stop selecting a contiguous table row range."
+      },
+      "openRow": {
+        "label": "Open table row",
+        "description": "Open the active table row."
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "Repeat last action",
+        "description": "Repeat the last Vim-style navigation action."
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "Record macro",
+        "description": "Start or stop recording a Vim-style navigation macro."
+      },
+      "play": {
+        "label": "Play macro",
+        "description": "Play a recorded Vim-style navigation macro."
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "Show link hints",
+        "description": "Show keyboard hints for visible links and controls."
+      },
+      "showNewTab": {
+        "label": "Show link hints in new tab",
+        "description": "Show keyboard hints and open links in a new tab when possible."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift"
+    },
+    "keys": {
+      "space": "Space"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

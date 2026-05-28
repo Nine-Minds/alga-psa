@@ -34,9 +34,9 @@ export class TierAccessError extends Error {
  * Use this in server actions to gate functionality by tier.
  *
  * @example
- * async function syncEntraTenants() {
+ * async function saveManagedEmailSettings() {
  *   'use server';
- *   await assertTierAccess(TIER_FEATURES.ENTRA_SYNC);
+ *   await assertTierAccess(TIER_FEATURES.MANAGED_EMAIL);
  *   // ... rest of the action
  * }
  */

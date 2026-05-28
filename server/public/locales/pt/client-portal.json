@@ -12,7 +12,7 @@
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
     "portal": "Portal",
-    "notifications": "Notifications",
+    "notifications": "Notificações",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
     "requestServices": "Pedidos de serviço",
@@ -392,7 +392,7 @@
     "preferences": "Preferences",
     "security": "Security",
     "activity": "Activity",
-    "notificationSettings": "Notification Settings",
+    "notificationSettings": "Definições de notificações",
     "fields": {
       "firstName": "First Name",
       "lastName": "Last Name",
@@ -434,14 +434,14 @@
       "disabled": "Disabled"
     },
     "notifications": {
-      "title": "Notification Settings",
-      "email": "Email Notifications",
+      "title": "Definições de notificações",
+      "email": "Notificações por email",
       "ticketUpdates": "Ticket Updates",
       "projectUpdates": "Project Updates",
       "invoices": "Invoice Notifications",
       "announcements": "System Announcements",
       "emailPreferences": "Email",
-      "internalPreferences": "Internal"
+      "internalPreferences": "Internas"
     },
     "actions": {
       "save": "Save Changes",
@@ -602,7 +602,7 @@
       "save": "Save group",
       "create": "Create group",
       "nameRequired": "Visibility group name is required",
-      "saveError": "Unable to save visibility group",
+      "saveError": "Não foi possível guardar o grupo de visibilidade",
       "updateSuccess": "Visibility group updated",
       "createSuccess": "Visibility group created",
       "assignmentsTitle": "Contact assignments",
@@ -616,11 +616,11 @@
     }
   },
   "notifications": {
-    "title": "Notifications",
+    "title": "Notificações",
     "markAsRead": "Mark as read",
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
-    "settings": "Notification Settings",
+    "settings": "Definições de notificações",
     "viewAll": "View all notifications",
     "tabs": {
       "unread": "Unread",
@@ -628,14 +628,14 @@
       "read": "Read"
     },
     "preferences": {
-      "title": "Notification Preferences",
-      "description": "Manage which internal notifications you receive",
-      "loading": "Loading preferences...",
-      "loadError": "Failed to load preferences",
-      "saveError": "Failed to save preference",
-      "noCategories": "No notification categories available",
-      "emailPreferences": "Email preferences",
-      "internalPreferences": "Internal preferences"
+      "title": "Preferências de notificações",
+      "description": "Gerir as notificações internas que recebe",
+      "loading": "A carregar preferências...",
+      "loadError": "Falha ao carregar as preferências",
+      "saveError": "Falha ao guardar a preferência",
+      "noCategories": "Não há categorias de notificação disponíveis",
+      "emailPreferences": "Preferências de email",
+      "internalPreferences": "Preferências internas"
     },
     "categories": {
       "tickets": "Tickets",

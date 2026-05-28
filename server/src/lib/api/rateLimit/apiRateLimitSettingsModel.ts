@@ -40,6 +40,16 @@ function toBucketConfig(row: ApiRateLimitSettingsRow): BucketConfig {
   };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// api_key_id is a uuid column; querying it with a non-uuid string (e.g. the
+// 'nm_store' bucket sentinel) raises a Postgres cast error that surfaces as a
+// 500. Treat non-uuid keys as "no per-key override" instead.
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 async function loadForKey(
   tenant: string,
   apiKeyId?: string | null,
@@ -193,7 +203,7 @@ export async function resolveApiRateLimitConfig(
   tenant: string,
   apiKeyId?: string,
 ): Promise<BucketConfig> {
-  if (apiKeyId) {
+  if (apiKeyId && isUuid(apiKeyId)) {
     const perKey = await apiRateLimitSettingsReadOps.getForKey(tenant, apiKeyId);
     if (perKey) {
       return toBucketConfig(perKey);

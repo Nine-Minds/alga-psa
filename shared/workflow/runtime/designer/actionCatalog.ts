@@ -44,6 +44,17 @@ export type WorkflowDesignerCatalogSourceAction = {
   outputSchema?: JsonSchema;
 };
 
+export type WorkflowDesignerCatalogModuleDefinition = {
+  groupKey: `app:${string}`;
+  label: string;
+  description?: string;
+  tileKind: Extract<WorkflowDesignerCatalogKind, 'app'>;
+  iconToken: string;
+  defaultActionId?: string;
+  allowedActionIds: string[];
+  availabilityKey?: string;
+};
+
 type BuiltInCatalogSeed = {
   groupKey: string;
   label: string;
@@ -63,7 +74,8 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     tileKind: 'core-object',
     description: 'Create, find, update, assign, and manage tickets.',
     defaultActionId: 'tickets.create',
-    modules: ['tickets']
+    modules: ['tickets'],
+    actionIds: ['assets.find_associated_tickets']
   },
   {
     groupKey: 'contact',
@@ -205,7 +217,8 @@ const toCatalogAction = (action: WorkflowDesignerCatalogSourceAction): WorkflowD
 });
 
 export const buildWorkflowDesignerActionCatalog = (
-  actions: WorkflowDesignerCatalogSourceAction[]
+  actions: WorkflowDesignerCatalogSourceAction[],
+  options?: { modules?: WorkflowDesignerCatalogModuleDefinition[] }
 ): WorkflowDesignerCatalogRecord[] => {
   const catalogActions = actions
     .map((action) => ({
@@ -237,10 +250,34 @@ export const buildWorkflowDesignerActionCatalog = (
   });
 
   const builtInActionIds = new Set(records.flatMap((record) => record.allowedActionIds));
+  const configuredModules = (options?.modules ?? []).map((module) => ({
+    ...module,
+    allowedActionIds: [...new Set(module.allowedActionIds)]
+  }));
+  const configuredModuleActionIds = new Set(configuredModules.flatMap((module) => module.allowedActionIds));
 
   const appRecords = new Map<string, WorkflowDesignerCatalogRecord>();
+  for (const module of configuredModules) {
+    const actionMap = new Map(catalogActions.map((entry) => [entry.source.id, entry.catalogAction]));
+    const matchingActions = module.allowedActionIds
+      .map((actionId) => actionMap.get(actionId))
+      .filter((value): value is WorkflowDesignerCatalogAction => Boolean(value))
+      .sort((left, right) => left.label.localeCompare(right.label));
+    appRecords.set(module.groupKey, {
+      groupKey: module.groupKey,
+      label: module.label,
+      iconToken: module.iconToken,
+      tileKind: module.tileKind,
+      allowedActionIds: matchingActions.map((action) => action.id),
+      defaultActionId: module.defaultActionId,
+      description: module.description,
+      actions: matchingActions
+    });
+  }
+
   for (const { source, moduleName, catalogAction } of catalogActions) {
     if (builtInActionIds.has(source.id)) continue;
+    if (configuredModuleActionIds.has(source.id)) continue;
 
     const normalizedModuleName = moduleName || source.id.trim().toLowerCase();
     if (!normalizedModuleName) continue;

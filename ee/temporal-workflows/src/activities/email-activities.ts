@@ -4,7 +4,6 @@ import type {
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult,
 } from "../types/workflow-types";
-import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 
 const logger = () => Context.current().log;
 
@@ -73,6 +72,93 @@ const COLORS = {
   warningText: "#92400e",
 };
 
+interface WelcomeEmailCopy {
+  subject: string;
+  headerTitle: string;
+  taglineText: string;
+  mspCardEmoji: string;
+  mspCardTitle: string;
+  mspCardDescription: string;
+  mspButtonLabel: string;
+  nextSteps: [string, string, string, string];
+  textHeaderTitle: string;
+  textMspCardTitle: string;
+  textMspCardDescription: string;
+  textNextSteps: [string, string, string, string];
+  textProductName: string;
+}
+
+const PSA_WELCOME_COPY: WelcomeEmailCopy = {
+  subject: 'Welcome to Alga PSA - Your Account is Ready',
+  headerTitle: 'Welcome to Alga PSA!',
+  taglineText:
+    'Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.',
+  mspCardEmoji: '🏢',
+  mspCardTitle: 'Alga PSA Workspace',
+  mspCardDescription:
+    'Use this workspace to manage your MSP operations, including tickets, clients, projects, billing, and team activity.',
+  mspButtonLabel: 'Open Alga PSA →',
+  nextSteps: [
+    'Sign in to your <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">Alga PSA workspace</a>',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Start setting up your team, clients, tickets, billing, and workflows',
+  ],
+  textHeaderTitle: 'Welcome to Alga PSA!',
+  textMspCardTitle: '🏢 ALGA PSA WORKSPACE',
+  textMspCardDescription:
+    'Use this workspace to manage your MSP operations, including tickets, clients, projects, billing, and team activity.',
+  textNextSteps: [
+    'Sign in to your Alga PSA workspace: ${defaultLoginUrl}',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Start setting up your team, clients, tickets, billing, and workflows',
+  ],
+  textProductName: 'Alga PSA',
+};
+
+const ALGADESK_WELCOME_COPY: WelcomeEmailCopy = {
+  subject: 'Welcome to AlgaDesk - Your Account is Ready',
+  headerTitle: 'Welcome to AlgaDesk!',
+  taglineText:
+    'AlgaDesk gives your team a focused help desk: email-to-ticket, a knowledge base, and a client portal — without the overhead of a full PSA. Everything you need to respond fast and keep clients informed.',
+  mspCardEmoji: '🎫',
+  mspCardTitle: 'AlgaDesk Workspace',
+  mspCardDescription:
+    'Use this workspace to manage support tickets, clients, contacts, and your help desk team.',
+  mspButtonLabel: 'Open AlgaDesk →',
+  nextSteps: [
+    'Sign in to your <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">AlgaDesk workspace</a>',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Add your team, clients, contacts, and ticketing defaults',
+  ],
+  textHeaderTitle: 'Welcome to AlgaDesk!',
+  textMspCardTitle: '🎫 ALGADESK WORKSPACE',
+  textMspCardDescription:
+    'Use this workspace to manage support tickets, clients, contacts, and your help desk team.',
+  textNextSteps: [
+    'Sign in to your AlgaDesk workspace: ${defaultLoginUrl}',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Add your team, clients, contacts, and ticketing defaults',
+  ],
+  textProductName: 'AlgaDesk',
+};
+
+function selectWelcomeCopy(productCode?: 'psa' | 'algadesk'): WelcomeEmailCopy {
+  return productCode === 'algadesk' ? ALGADESK_WELCOME_COPY : PSA_WELCOME_COPY;
+}
+
+/**
+ * Interpolate ${defaultLoginUrl} occurrences within a copy fragment.
+ * Each copy bundle uses literal `${defaultLoginUrl}` markers so the rendered
+ * template can substitute the resolved URL without per-product builders.
+ */
+function interpolateLoginUrl(value: string, defaultLoginUrl: string): string {
+  return value.replaceAll('${defaultLoginUrl}', defaultLoginUrl);
+}
+
 /**
  * Create welcome email content
  */
@@ -81,30 +167,31 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   htmlBody: string;
   textBody: string;
 } {
-  const { tenantId, tenantName, adminUser, temporaryPassword } = input;
-  const tenantSlug = buildTenantPortalSlug(tenantId);
+  const { tenantName, adminUser, temporaryPassword } = input;
+  const copy = selectWelcomeCopy(input.productCode);
   const defaultLoginUrl = process.env.APPLICATION_URL || process.env.NEXTAUTH_URL || "";
-  const trimmedBaseUrl = defaultLoginUrl.replace(/\/$/, "");
-  let clientPortalLoginUrl: string;
-
-  if (trimmedBaseUrl) {
-    const loginUrl = new URL(
-      "/auth/client-portal/signin",
-      trimmedBaseUrl.endsWith("/") ? trimmedBaseUrl : `${trimmedBaseUrl}/`
-    );
-    loginUrl.searchParams.set("tenant", tenantSlug);
-    clientPortalLoginUrl = loginUrl.toString();
-  } else {
-    const params = new URLSearchParams({ tenant: tenantSlug });
-    clientPortalLoginUrl = `/auth/client-portal/signin?${params.toString()}`;
-  }
 
   // Nine Minds support portal URL (hardcoded custom domain)
   const nineMindsPortalUrl = "https://portal.nineminds.com/auth/client-portal/signin";
 
   const currentYear = new Date().getFullYear();
 
-  const subject = `Welcome to Alga PSA - Your Account is Ready`;
+  const subject = copy.subject;
+
+  const nextStepsRowsHtml = copy.nextSteps
+    .map(
+      (step, index) => `
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">${index + 1}.</b> ${interpolateLoginUrl(step, defaultLoginUrl)}
+                          </td>
+                        </tr>`
+    )
+    .join('');
+
+  const nextStepsTextLines = copy.textNextSteps
+    .map((step, index) => `${index + 1}. ${interpolateLoginUrl(step, defaultLoginUrl)}`)
+    .join('\n');
 
   const htmlBody = `
   <!DOCTYPE html>
@@ -118,7 +205,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <!--[if !mso]><!-->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <!--<![endif]-->
-    <title>Welcome to Alga PSA</title>
+    <title>${copy.headerTitle}</title>
     <!--[if mso]>
     <xml>
       <o:OfficeDocumentSettings>
@@ -192,7 +279,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
                     <tr>
                       <td align="center" bgcolor="#8a4dea" class="rounded-top" style="background: linear-gradient(135deg, #8a4dea 0%, #a366f0 100%); background-color: #8a4dea; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 32px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Welcome to Alga PSA!</h1>
+                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 32px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">${copy.headerTitle}</h1>
                         <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">Your account has been successfully created</p>
                       </td>
                     </tr>
@@ -202,7 +289,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: #0f172a; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 24px; font-weight: 600; margin-bottom: 16px; line-height: 1.3;">Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
 
-                      <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">Congratulations! Your new account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> has been successfully set up. You now have access to two powerful portals designed to streamline your operations.</p>
+                      <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">Your <b style="color: #0f172a; font-weight: 600;">${copy.textProductName}</b> account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> is ready. Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.</p>
 
                       <!-- Tagline with spacing -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -211,7 +298,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 6px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#faf8ff" class="tagline-box" style="background-color: #faf8ff; border-left: 4px solid #8a4dea; padding: 20px 24px; border-radius: 6px;">
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; line-height: 1.7; font-size: 15px; font-style: italic;">Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; line-height: 1.7; font-size: 15px; font-style: italic;">${copy.taglineText}</p>
                                 </td>
                               </tr>
                             </table>
@@ -219,18 +306,18 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                         </tr>
                       </table>
 
-                      <!-- Two Portal Access Section -->
-                      <h3 style="color: #0f172a; font-size: 20px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 32px 0 20px 0;">Your Two Portal Access</h3>
+                      <!-- Access Section -->
+                      <h3 style="color: #0f172a; font-size: 20px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 32px 0 20px 0;">Your Access</h3>
 
-                      <!-- MSP Portal -->
+                      <!-- Product Workspace -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 16px;">
                         <tr>
                           <td style="padding: 0;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#f8f4ff" style="background-color: #f8f4ff; padding: 24px; border: 1px solid #e9e5f5; border-left: 4px solid #8a4dea; border-radius: 8px;">
-                                  <h4 style="color: #8a4dea; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">🏢 MSP Management Portal</h4>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.</p>
+                                  <h4 style="color: #8a4dea; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">${copy.mspCardEmoji} ${copy.mspCardTitle}</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">${copy.mspCardDescription}</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">${defaultLoginUrl}</a></p>
                                 </td>
                               </tr>
@@ -239,15 +326,15 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                         </tr>
                       </table>
 
-                      <!-- NineMinds Portal -->
+                      <!-- Nine Minds Support Portal -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 24px;">
                         <tr>
                           <td style="padding: 0;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#f0fbff" style="background-color: #f0fbff; padding: 24px; border: 1px solid #bae6fd; border-left: 4px solid #40cff9; border-radius: 8px;">
-                                  <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Portal</h4>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Nine Minds Client Portal where you can submit support tickets, track them, and get help from our team.</p>
+                                  <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Support Portal</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Use this portal when you need help from Nine Minds. You can submit support requests, track open tickets, and communicate with our team.</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">${nineMindsPortalUrl}</a></p>
                                 </td>
                               </tr>
@@ -263,7 +350,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#faf8ff" class="credential-box" style="background-color: #faf8ff; padding: 24px; border: 1px solid #e9e5f5; border-radius: 8px;">
-                                  <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">🔐 Your Login Credentials (Same for Both Portals)</h3>
+                                  <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">🔐 Your Login Credentials</h3>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0; line-height: 1.6; font-size: 14px;">These credentials work for your workspace and the Nine Minds Support Portal. You’ll be asked to set a new password when you first sign in.</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Email:</b> ${adminUser.email}</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Temporary Password:</b> <span style="font-family: 'Courier New', monospace; background-color: #e2e8f0; padding: 4px 8px; color: #0f172a; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">${temporaryPassword}</span></p>
                                 </td>
@@ -299,26 +387,26 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse;">
                               <tr>
                                 <td style="padding-right: 12px;">
-                                  <!-- MSP Portal Button -->
+                                  <!-- Product Workspace Button -->
                                   <!--[if mso]>
                                   <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${defaultLoginUrl}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#8a4dea">
                                     <w:anchorlock/>
                                     <center>
                                   <![endif]-->
-                                  <a href="${defaultLoginUrl}" class="button-hover rounded" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> MSP Portal →</a>
+                                  <a href="${defaultLoginUrl}" class="button-hover rounded" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> ${copy.mspButtonLabel}</a>
                                   <!--[if mso]>
                                     </center>
                                   </v:roundrect>
                                   <![endif]-->
                                 </td>
                                 <td style="padding-left: 12px;">
-                                  <!-- Client Portal Button -->
+                                  <!-- Nine Minds Support Portal Button -->
                                   <!--[if mso]>
-                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${clientPortalLoginUrl}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#40cff9">
+                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${nineMindsPortalUrl}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#40cff9">
                                     <w:anchorlock/>
                                     <center>
                                   <![endif]-->
-                                  <a href="${clientPortalLoginUrl}" class="button-hover button-hover-blue rounded" style="background-color:#40cff9;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> Nine Minds Portal →</a>
+                                  <a href="${nineMindsPortalUrl}" class="button-hover button-hover-blue rounded" style="background-color:#40cff9;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> Nine Minds Support Portal →</a>
                                   <!--[if mso]>
                                     </center>
                                   </v:roundrect>
@@ -344,27 +432,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                       </table>
 
                       <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">What's Next?</h3>
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">1.</b> Visit the <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;"> MSP Portal</a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">2.</b> Enter your email and temporary password
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">3.</b> Complete the onboarding wizard and set your new password
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">4.</b> Start transforming your business with Alga PSA
-                          </td>
-                        </tr>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">${nextStepsRowsHtml}
                       </table>
 
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 24px 0;">
@@ -372,7 +440,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           <td>
                             <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">Need Help?</h3>
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
-                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${clientPortalLoginUrl}" style="color: #0284c7; text-decoration: underline;"> Nine Minds Client Portal</a></p>
+                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${nineMindsPortalUrl}" style="color: #0284c7; text-decoration: underline;">Nine Minds Support Portal</a>.</p>
 
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 24px 0 0 0;">Welcome aboard!</p>
                           </td>
@@ -402,23 +470,25 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 </html>`;
 
   const textBody = `
-Welcome to Alga PSA!
+${copy.textHeaderTitle}
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
-Congratulations! Your new account for "${tenantName}" has been successfully set up. You now have access to two powerful portals designed to streamline your operations.
+Your ${copy.textProductName} account for "${tenantName}" is ready. Use your workspace to get started, and use the Nine Minds Support Portal whenever you need help from our team.
 
-YOUR TWO PORTAL ACCESS:
+YOUR ACCESS:
 
-🏢 MSP MANAGEMENT PORTAL
-Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.
+${copy.textMspCardTitle}
+${copy.textMspCardDescription}
 Login URL: ${defaultLoginUrl}
 
-👥 NINE MINDS PORTAL
-Nine Minds Client Portal where you can submit support tickets, track them, and get help from our team.
-Login URL: ${clientPortalLoginUrl}
+👥 NINE MINDS SUPPORT PORTAL
+Use this portal when you need help from Nine Minds. You can submit support requests, track open tickets, and communicate with our team.
+Login URL: ${nineMindsPortalUrl}
 
-LOGIN CREDENTIALS (Same for Both Portals):
+YOUR LOGIN CREDENTIALS:
+These credentials work for your workspace and the Nine Minds Support Portal. You'll be asked to set a new password when you first sign in.
+
 Email: ${adminUser.email}
 Temporary Password: ${temporaryPassword}
 
@@ -427,14 +497,11 @@ IMPORTANT SECURITY INFORMATION:
 - You will be required to create a new password when you sign in
 
 What's Next?
-1. Visit the MSP Portal: ${defaultLoginUrl}
-2. Enter your email and temporary password
-3. Complete the onboarding wizard and set your new password
-4. Start transforming your business with Alga PSA
+${nextStepsTextLines}
 
 Need help?
 If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
-For support, use the Nine Minds Client Portal: ${nineMindsPortalUrl}
+For support, use the Nine Minds Support Portal: ${nineMindsPortalUrl}
 
 Welcome aboard!
 

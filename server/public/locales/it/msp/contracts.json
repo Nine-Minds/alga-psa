@@ -1463,12 +1463,16 @@
     "heading": "Servizi a tariffa fissa",
     "preview": {
       "labels": {
+        "alternateFrequency": "Frequenza di fatturazione alternativa:",
         "billingTiming": "Tempistiche di fatturazione:",
         "cadenceOwner": "Proprietario della cadenza:",
         "invoiceWindow": "Finestra di fatturazione:",
         "recurringRate": "Tariffa ricorrente:",
         "service": "Servizio:",
         "services": "Servizi:"
+      },
+      "materializedPeriods": {
+        "tooltip": "Anteprima dei prossimi periodi di servizio e delle finestre di fatturazione che verrebbero generate per essi in base alle impostazioni attuali. Permettono di verificare la cadenza prima del salvataggio — le fatture effettive vengono prodotte successivamente dall'esecuzione di fatturazione."
       },
       "title": "Anteprima ricorrente prima del salvataggio"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Frequenza di fatturazione alternativa:",
+        "bucketsHeading": "Pacchetti:",
+        "includedHours": "Ore incluse:",
         "minimumTime": "Tempo minimo:",
+        "overageRate": "Tariffa di superamento:",
+        "rollover": "Riporto:",
         "roundUp": "Arrotondamento per eccesso:",
+        "serviceFallback": "Servizio {{index}}",
         "services": "Servizi:"
       },
       "title": "Riepilogo dei servizi orari",
       "values": {
         "everyMinutes": "Ogni {{count}} minuti",
-        "minutes": "{{count}} minuti"
+        "hours": "{{count}} ore",
+        "minutes": "{{count}} minuti",
+        "overageRatePerHour": "{{rate}}/ora",
+        "rolloverDisabled": "Disabilitato",
+        "rolloverEnabled": "Abilitato"
       }
     }
   },

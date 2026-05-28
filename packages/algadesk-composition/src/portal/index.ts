@@ -1,6 +1,6 @@
-export type AlgadeskPortalNavKey = 'dashboard' | 'tickets' | 'knowledge_base' | 'profile' | 'client_settings';
+export type AlgaDeskPortalNavKey = 'dashboard' | 'tickets' | 'knowledge_base' | 'profile' | 'client_settings';
 
-export const ALGADESK_PORTAL_NAV: AlgadeskPortalNavKey[] = [
+export const ALGA_DESK_PORTAL_NAV: AlgaDeskPortalNavKey[] = [
   'dashboard',
   'tickets',
   'knowledge_base',

@@ -7,7 +7,8 @@
       "sso": "Single Sign-On",
       "apiKeys": "API Keys",
       "notifications": "Notifications",
-      "calendar": "Calendar"
+      "calendar": "Calendar",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Basic Information"
@@ -191,7 +192,222 @@
       "newWebhook": "New Webhook",
       "tabs": {
         "configuration": "Configuration",
-        "deliveries": "Deliveries"
+        "deliveries": "Deliveries",
+        "inbound": "Inbound",
+        "outbound": "Outbound"
+      },
+      "inbound": {
+        "title": "Inbound Webhooks",
+        "description": "Accept authenticated requests from external systems and dispatch them to direct actions or workflows.",
+        "placeholder": "Configure incoming webhook endpoints that verify requests, deduplicate deliveries, and dispatch to actions or workflows.",
+        "newWebhook": "New Webhook",
+        "list": {
+          "title": "Configured Inbound Webhooks",
+          "loading": "Loading…",
+          "configuredCount": "{{count}} configured",
+          "empty": "No inbound webhooks configured yet.",
+          "columns": {
+            "name": "Name",
+            "handler": "Handler",
+            "lastDelivery": "Last Delivery",
+            "active": "Active",
+            "actions": "Actions"
+          }
+        },
+        "handlers": {
+          "directAction": "Direct action",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "messages": {
+          "loadFailed": "Failed to load inbound webhooks.",
+          "nameRequired": "Name is required.",
+          "slugRequired": "Slug is required.",
+          "actionRequired": "Select an action before saving.",
+          "workflowRequired": "Select a workflow before saving.",
+          "missingRequiredFields": "Map a value for required fields: {{fields}}"
+        },
+        "dialog": {
+          "createTitle": "Create Inbound Webhook",
+          "editTitle": "Edit Inbound Webhook",
+          "cancel": "Cancel",
+          "create": "Create Webhook",
+          "save": "Save Changes",
+          "saveUnavailable": "Continue"
+        },
+        "identity": {
+          "title": "Identity",
+          "help": "Name the webhook and choose the URL-safe slug used in its receiver endpoint.",
+          "name": "Name",
+          "namePlaceholder": "RMM critical alerts",
+          "slug": "Slug",
+          "slugPlaceholder": "rmm-critical-alerts",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional notes about the source system and payload."
+        },
+        "auth": {
+          "title": "Auth",
+          "help": "Choose how incoming requests prove they are allowed to use this endpoint.",
+          "method": "Auth Method",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer token",
+            "ipAllowlist": "IP allowlist",
+            "pathToken": "Shared secret in path"
+          },
+          "signatureHeader": "Signature Header",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer Token",
+          "bearerTokenPlaceholder": "Paste token or leave blank to generate one",
+          "secretUnchangedPlaceholder": "Leave blank to keep the current secret",
+          "ipCidrs": "Allowed IPs / CIDRs",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Query Parameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Path Token",
+          "pathTokenPlaceholder": "Paste token or leave blank to generate one"
+        },
+        "secret": {
+          "label": "Webhook secret",
+          "warning": "This value is shown only now. Store it in the source system before you close this dialog.",
+          "copy": "Copy",
+          "download": "Download as .txt",
+          "close": "Close"
+        },
+        "idempotency": {
+          "title": "Idempotency",
+          "help": "Use a stable key to detect duplicate deliveries inside the configured window.",
+          "source": "Key Source",
+          "types": {
+            "header": "HTTP header",
+            "jsonata": "JSONata expression"
+          },
+          "headerName": "Header Name",
+          "headerNamePlaceholder": "X-Idempotency-Key",
+          "jsonataExpression": "JSONata Expression",
+          "jsonataExpressionPlaceholder": "alert.id",
+          "windowSeconds": "Duplicate Window (seconds)"
+        },
+        "active": {
+          "title": "Active State",
+          "help": "Pause the endpoint without deleting its URL, mappings, or delivery history.",
+          "toggle": "Webhook is active",
+          "autoDisabled": "Auto-disabled at {{date}} after repeated failures.",
+          "updateFailed": "Failed to update inbound webhook state."
+        },
+        "handler": {
+          "title": "Handler",
+          "help": "Choose what Alga should do after the request is verified and deduplicated.",
+          "type": "Handler Type",
+          "types": {
+            "directAction": "Direct action",
+            "workflow": "Workflow"
+          },
+          "directActionTitle": "Direct action",
+          "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
+          "action": "Action",
+          "actionPlaceholder": "Select an action",
+          "actionEmpty": "No inbound actions are registered. Ensure the server has bootstrapped the action registry before saving.",
+          "targetFields": "Target fields",
+          "required": "Required",
+          "optional": "Optional",
+          "mappingPlaceholder": "Type a JSONata expression, e.g. payload.field",
+          "workflowTitle": "Workflow",
+          "workflowHelp": "Select a workflow to start with the normalized webhook envelope.",
+          "workflow": "Workflow",
+          "workflowPlaceholder": "Select a workflow",
+          "workflowEmpty": "No workflows are visible in this tenant. Publish or unhide a workflow to use the workflow handler.",
+          "envelopeTitle": "Workflow input envelope",
+          "fieldTypes": {
+            "string": "string",
+            "int": "integer",
+            "number": "number",
+            "boolean": "boolean",
+            "enum": "enum",
+            "json": "json",
+            "ref": "reference"
+          }
+        },
+        "sample": {
+          "title": "Sample payload",
+          "help": "Capture the next verified request for mapping autocomplete.",
+          "createFirst": "Save the webhook before capturing a sample request.",
+          "captureButton": "Capture sample request",
+          "captureActive": "Capture window active until {{expiresAt}}.",
+          "sampleAvailable": "Sample payload captured.",
+          "noSample": "No sample captured yet.",
+          "captureFailed": "Failed to enable sample capture."
+        },
+        "sampleTree": {
+          "title": "Sample paths",
+          "help": "Click a path to insert it into {{field}}.",
+          "focusHelp": "Focus a mapping field, then click a path to insert it.",
+          "empty": "Capture a sample payload to browse fields."
+        },
+        "mapping": {
+          "modeStatic": "Static value",
+          "modeExpression": "Map from payload",
+          "unknownReference": "unknown reference",
+          "loading": "Loading…",
+          "errors": {
+            "INVALID_INT": "Value \"{{value}}\" must be an integer.",
+            "INVALID_NUMBER": "Value \"{{value}}\" must be a number.",
+            "INVALID_BOOLEAN": "Value must be \"true\" or \"false\".",
+            "INVALID_JSON": "Value must be valid JSON."
+          }
+        },
+        "deliveryLog": {
+          "title": "Delivery log",
+          "help": "Recent verified deliveries for this inbound webhook.",
+          "empty": "No deliveries recorded yet.",
+          "loadFailed": "Failed to load inbound webhook deliveries.",
+          "pageSummary": "Page {{page}} of {{total}}",
+          "durationMs": "{{duration}} ms",
+          "allStatuses": "All Statuses",
+          "columns": {
+            "received": "Received",
+            "status": "Status",
+            "response": "Response",
+            "duration": "Duration",
+            "actions": "Actions"
+          },
+          "view": "View",
+          "status": {
+            "pending": "pending",
+            "dispatched": "dispatched",
+            "duplicate": "duplicate",
+            "failed": "failed"
+          }
+        },
+        "deliveryDetail": {
+          "title": "Delivery detail",
+          "close": "Close",
+          "replay": "Replay",
+          "replayConfirm": "Re-dispatch this delivery through the current webhook configuration? Any side effects (ticket creation, status changes, etc.) will run again.",
+          "replayFailed": "Failed to replay delivery.",
+          "received": "Received",
+          "status": "Status",
+          "responseStatus": "Response status",
+          "duration": "Duration",
+          "sections": {
+            "headers": "Request headers",
+            "requestBody": "Request body",
+            "responseBody": "Response body",
+            "handlerOutcome": "Handler outcome"
+          }
+        },
+        "test": {
+          "openButton": "Send test",
+          "title": "Send Test Request",
+          "body": "Request Body JSON",
+          "headers": "Headers",
+          "cancel": "Cancel",
+          "send": "Send Test",
+          "sendFailed": "Failed to send inbound webhook test."
+        }
       },
       "stats": {
         "total": "Total webhooks",
@@ -328,7 +544,7 @@
         "sourceLabels": {
           "key": "Override",
           "tenant": "Tenant default",
-          "system": "System default"
+          "default": "System default"
         },
         "remaining": " • Remaining: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Remaining: unavailable",

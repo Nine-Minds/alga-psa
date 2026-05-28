@@ -12,6 +12,7 @@ import {
   getPaginationRowModel,
   flexRender,
   ColumnDef,
+  ColumnSizingState,
   Row,
   SortingFn,
   SortingState,
@@ -21,6 +22,7 @@ import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
+import { Tooltip } from './Tooltip';
 import { useTranslation } from '../lib/i18n/client';
 
 // Helper function to get nested property value
@@ -44,6 +46,27 @@ const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
   }, obj);
 };
 
+const extractTextFromReactNode = (node: React.ReactNode): string => {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return '';
+  }
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromReactNode).filter(Boolean).join(' ');
+  }
+
+  if (React.isValidElement(node)) {
+    const resultProps = node.props as { children?: React.ReactNode };
+    return extractTextFromReactNode(resultProps.children);
+  }
+
+  return '';
+};
+
 // Helper function to extract display text from column render function
 const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue: unknown, rowData: any): string => {
   if (!columnDef || !columnDef.render) {
@@ -59,20 +82,9 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
     return renderResult;
   }
   
-  // For JSX elements, try to extract text content based on common patterns
-  if (React.isValidElement(renderResult)) {
-    // Handle common patterns in the codebase
-    const resultProps = renderResult.props as { children?: React.ReactNode };
-    if (resultProps && resultProps.children) {
-      const children = resultProps.children;
-      if (typeof children === 'string') {
-        return children;
-      }
-      // Handle nested text content
-      if (Array.isArray(children)) {
-        return children.filter(child => typeof child === 'string').join(' ');
-      }
-    }
+  const renderedText = extractTextFromReactNode(renderResult);
+  if (renderedText) {
+    return renderedText;
   }
   
   // Fallback: use the original value with N/A handling
@@ -81,6 +93,60 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   }
   
   return String(cellValue);
+};
+
+const COLUMN_SIZE_BASE_WIDTH = 1800;
+const DEFAULT_COLUMN_SIZE = 160;
+const COMPACT_COLUMN_IDS = new Set(['selection', 'actions', 'tags']);
+
+const getColumnId = (dataIndex: string | string[]): string => (
+  Array.isArray(dataIndex) ? dataIndex.join('_') : dataIndex
+);
+
+const parseColumnWidth = (width: string | undefined): number | undefined => {
+  if (!width) return undefined;
+
+  const trimmed = width.trim();
+  if (trimmed.endsWith('px')) {
+    const px = Number.parseFloat(trimmed);
+    return Number.isFinite(px) ? Math.round(px) : undefined;
+  }
+
+  if (trimmed.endsWith('%')) {
+    const percent = Number.parseFloat(trimmed);
+    return Number.isFinite(percent) ? Math.round((percent / 100) * COLUMN_SIZE_BASE_WIDTH) : undefined;
+  }
+
+  const numeric = Number.parseFloat(trimmed);
+  return Number.isFinite(numeric) ? Math.round(numeric) : undefined;
+};
+
+const getColumnSizeConfig = (column: ColumnDefinition<any>): { size: number; minSize: number; maxSize: number } => {
+  const columnId = getColumnId(column.dataIndex);
+  const parsedWidth = parseColumnWidth(column.width);
+  const titleLength = typeof column.title === 'string' ? column.title.length : 12;
+
+  if (COMPACT_COLUMN_IDS.has(columnId)) {
+    return {
+      size: parsedWidth ?? 64,
+      minSize: columnId === 'selection' ? 44 : 56,
+      maxSize: 180,
+    };
+  }
+
+  if (columnId === 'title') {
+    return {
+      size: parsedWidth ?? 320,
+      minSize: 180,
+      maxSize: 720,
+    };
+  }
+
+  return {
+    size: parsedWidth ?? Math.max(DEFAULT_COLUMN_SIZE, Math.min(280, titleLength * 12 + 72)),
+    minSize: 96,
+    maxSize: 520,
+  };
 };
 
 // Custom case-insensitive sorting function for all columns
@@ -105,6 +171,91 @@ const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   }
 
   return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
+};
+
+interface OverflowTooltipProps {
+  text?: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const isElementOverflowing = (element: HTMLElement): boolean => (
+  element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1
+);
+
+const hasOverflow = (element: HTMLElement): boolean => {
+  if (isElementOverflowing(element)) {
+    return true;
+  }
+
+  return Array.from(element.querySelectorAll<HTMLElement>('*')).some(isElementOverflowing);
+};
+
+// Shows the custom Tooltip only when the content is actually truncated. The open state is
+// controlled and vetoed in onOpenChange so overflow is measured lazily (on hover) — no tooltip
+// is shown for content that fits.
+const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setOpen(false);
+      return;
+    }
+    const element = contentRef.current;
+    if (text && element && hasOverflow(element)) {
+      setOpen(true);
+    }
+  };
+
+  const content = (
+    <div ref={contentRef} className={className}>
+      {children}
+    </div>
+  );
+
+  if (!text) {
+    return content;
+  }
+
+  return (
+    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
+      {content}
+    </Tooltip>
+  );
+};
+
+const OverflowTooltipSpan = ({ text, children, className }: OverflowTooltipProps) => {
+  const contentRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setOpen(false);
+      return;
+    }
+    const element = contentRef.current;
+    if (text && element && hasOverflow(element)) {
+      setOpen(true);
+    }
+  };
+
+  const content = (
+    <span ref={contentRef} className={className}>
+      {children}
+    </span>
+  );
+
+  if (!text) {
+    return content;
+  }
+
+  return (
+    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
+      {content}
+    </Tooltip>
+  );
 };
 
 // Component to register table cell content with UI reflection system
@@ -137,15 +288,20 @@ const ReflectedTableCell = ({
     }
   }, [content, updateCellMetadata]);
   
+  const tooltipText = content && content !== 'N/A' ? content : undefined;
+
   return (
     <td
       className={className}
       style={style}
       data-automation-id={id}
     >
-      <div className="break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
+      <OverflowTooltip
+        text={tooltipText}
+        className="min-w-0 overflow-hidden whitespace-nowrap [&_.break-all]:![overflow-wrap:normal] [&_.break-all]:![word-break:normal] [&_.break-words]:![overflow-wrap:normal] [&_.flex-wrap]:!flex-nowrap [&_a]:block [&_a]:max-w-full [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:!text-[rgb(var(--color-text-800))] [&_a]:!whitespace-nowrap [&_a]:![overflow-wrap:normal] [&_a]:![word-break:normal] [&_a:hover]:!text-[rgb(var(--color-primary-700))] [&_button]:max-w-full [&_button]:overflow-hidden [&_button]:text-ellipsis [&_button]:!whitespace-nowrap"
+      >
         {children}
-      </div>
+      </OverflowTooltip>
     </td>
   );
 };
@@ -188,117 +344,138 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const suppressNextHeaderSortClickRef = useRef(false);
+  const suppressHeaderSortClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suppressNextHeaderSortClick = () => {
+    suppressNextHeaderSortClickRef.current = true;
+    if (suppressHeaderSortClickTimeoutRef.current) {
+      clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+    }
+    suppressHeaderSortClickTimeoutRef.current = setTimeout(() => {
+      suppressNextHeaderSortClickRef.current = false;
+      suppressHeaderSortClickTimeoutRef.current = null;
+    }, 500);
+  };
+
+  useEffect(() => () => {
+    if (suppressHeaderSortClickTimeoutRef.current) {
+      clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+    }
+  }, []);
   
   // State to track which columns should be visible
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
-    columns.map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex)
+    columns.map(col => getColumnId(col.dataIndex))
   );
+  // When true, every column renders and the table scrolls horizontally; otherwise only the
+  // columns that fully fit the container are shown (no horizontal overflow).
+  const [showAllColumns, setShowAllColumns] = useState(false);
 
-  // Function to calculate which columns should be visible based on available width
-  const updateVisibleColumns = () => {
-    if (!tableContainerRef.current) return;
-    
-    const containerWidth = tableContainerRef.current.clientWidth;
-    const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
-    
-    // Check if the last column is 'Actions' or 'Action' with interactive elements
-    const lastColumnIndex = columns.length - 1;
-    const lastColumn = columns[lastColumnIndex];
-    const isActionsColumn = lastColumn && 
-      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
-      lastColumn.render !== undefined;
-    
-    const prioritizedColumns = [...columns].sort((a, b) => {
-      // Always prioritize Actions column if it's the last column
-      if (isActionsColumn) {
-        if (a === lastColumn) return -1;
-        if (b === lastColumn) return 1;
-      }
-      
-      // Keep ID column and any columns with explicit width as highest priority
-      const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
-      const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-      
-      if (aIsId && !bIsId) return -1;
-      if (!aIsId && bIsId) return 1;
-      
-      // Then prioritize columns with explicit width
-      if (a.width && !b.width) return -1;
-      if (!a.width && b.width) return 1;
-      
-      return 0;
-    });
-    
-    // Calculate how many columns we can fit
-    const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-    
-    // Get the IDs of columns that should be visible
-    const newVisibleColumnIds = prioritizedColumns
-      .slice(0, maxColumns)
-      .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-    
-    setVisibleColumnIds(newVisibleColumnIds);
-  };
-  
-  // Add resize event listener
+  const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
+  const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
+
   useEffect(() => {
-    // Define updateVisibleColumns inside the effect to properly capture the columns dependency
+    if (!columnSizingStorageKey || typeof window === 'undefined') {
+      setColumnSizing({});
+      setHasLoadedColumnSizing(true);
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(columnSizingStorageKey);
+      const parsed = stored ? JSON.parse(stored) as Record<string, unknown> : {};
+      const validColumnIds = new Set(columnIds);
+      const nextSizing = Object.fromEntries(
+        Object.entries(parsed).filter(([key, value]) => validColumnIds.has(key) && typeof value === 'number' && Number.isFinite(value))
+      ) as ColumnSizingState;
+      setColumnSizing(nextSizing);
+    } catch {
+      setColumnSizing({});
+    } finally {
+      setHasLoadedColumnSizing(true);
+    }
+  }, [columnIds, columnSizingStorageKey]);
+
+  useEffect(() => {
+    if (!hasLoadedColumnSizing || !columnSizingStorageKey || typeof window === 'undefined') return;
+
+    window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
+  }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
+
+  // Recalculate which columns fit the container. Columns are accumulated in priority order using
+  // their real sizes (not a uniform estimate) so the visible set never exceeds the container width
+  // and the table doesn't scroll horizontally. `showAllColumns` bypasses this and renders everything.
+  useEffect(() => {
+    const allColumnIds = columns.map(col => getColumnId(col.dataIndex));
+
     const updateVisibleColumnsEffect = () => {
+      if (showAllColumns) {
+        setVisibleColumnIds(allColumnIds);
+        return;
+      }
       if (!tableContainerRef.current) return;
-      
+
       const containerWidth = tableContainerRef.current.clientWidth;
-      const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
-      
+
       // Check if the last column is 'Actions' or 'Action' with interactive elements
-      const lastColumnIndex = columns.length - 1;
-      const lastColumn = columns[lastColumnIndex];
-      const isActionsColumn = lastColumn && 
-        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+      const lastColumn = columns[columns.length - 1];
+      const isActionsColumn = !!lastColumn &&
+        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
         lastColumn.render !== undefined;
-      
+
       const prioritizedColumns = [...columns].sort((a, b) => {
         // Always prioritize Actions column if it's the last column
         if (isActionsColumn) {
           if (a === lastColumn) return -1;
           if (b === lastColumn) return 1;
         }
-        
+
         // Keep ID column and any columns with explicit width as highest priority
         const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
         const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-        
+
         if (aIsId && !bIsId) return -1;
         if (!aIsId && bIsId) return 1;
-        
+
         // Then prioritize columns with explicit width
         if (a.width && !b.width) return -1;
         if (!a.width && b.width) return 1;
-        
+
         return 0;
       });
-      
-      // Calculate how many columns we can fit
-      const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-      
-      // Get the IDs of columns that should be visible
-      const newVisibleColumnIds = prioritizedColumns
-        .slice(0, maxColumns)
-        .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-      
-      setVisibleColumnIds(newVisibleColumnIds);
+
+      // Greedily include columns (highest priority first) until the next one would overflow.
+      // Using each column's real rendered size keeps the visible set within the container.
+      const visible = new Set<string>();
+      let usedWidth = 0;
+      for (const col of prioritizedColumns) {
+        const colId = getColumnId(col.dataIndex);
+        const { size } = getColumnSizeConfig(col);
+        if (visible.size > 0 && usedWidth + size > containerWidth) {
+          break;
+        }
+        usedWidth += size;
+        visible.add(colId);
+      }
+
+      // Preserve original column order in the visible list.
+      setVisibleColumnIds(allColumnIds.filter(colId => visible.has(colId)));
     };
-    
+
     updateVisibleColumnsEffect();
-    
+
     const handleResize = () => {
       updateVisibleColumnsEffect();
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [columns]); // Re-run when columns change
+  }, [columns, showAllColumns]); // Re-run when columns or show-all change
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
@@ -339,17 +516,24 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     () =>
       columns
         .filter(col => {
-          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+          const colId = getColumnId(col.dataIndex);
           return visibleColumnIds.includes(colId);
         })
-        .map((col): ColumnDef<T> => ({
-          id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
-          accessorFn: (row) => getNestedValue(row, col.dataIndex),
-          header: () => col.title,
-          cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
-          sortingFn: caseInsensitiveSort,
-          enableSorting: col.sortable !== false,
-        })),
+        .map((col): ColumnDef<T> => {
+          const sizing = getColumnSizeConfig(col);
+          return {
+            id: getColumnId(col.dataIndex),
+            accessorFn: (row) => getNestedValue(row, col.dataIndex),
+            header: () => col.title,
+            cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
+            sortingFn: caseInsensitiveSort,
+            enableSorting: col.sortable !== false,
+            enableResizing: true,
+            size: sizing.size,
+            minSize: sizing.minSize,
+            maxSize: sizing.maxSize,
+          };
+        }),
     [columns, visibleColumnIds]
   );
 
@@ -437,7 +621,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageSize: currentPageSize,
       },
       sorting: validSorting,
+      columnSizing,
     },
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
+    onColumnSizingChange: setColumnSizing,
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {
       if (manualSorting && onSortChange) {
@@ -550,25 +738,52 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   return (
     <div
-      className="datatable-container overflow-hidden bg-background rounded-lg border border-border"
+      className="datatable-container overflow-hidden rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"
       data-automation-id={id}
       ref={tableContainerRef}
     >
-        {visibleColumnIds.length < columns.length && (
+        {showAllColumns ? (
           <Alert variant="info" className="rounded-none border-x-0 border-t-0">
             <AlertDescription className="flex items-center text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              {columns.length - visibleColumnIds.length} columns hidden due to limited space. Resize browser to see more.
+              {t('dataTable.showingAllColumns', 'Showing all columns; scroll horizontally to see them.')}{' '}
+              <button
+                type="button"
+                onClick={() => setShowAllColumns(false)}
+                className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
+              >
+                {t('dataTable.showLess', 'Show less')}
+              </button>
+            </AlertDescription>
+          </Alert>
+        ) : visibleColumnIds.length < columns.length && (
+          <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+            <AlertDescription className="flex items-center text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {t('dataTable.columnsHidden', {
+                count: columns.length - visibleColumnIds.length,
+                defaultValue: '{{count}} columns hidden due to limited space.',
+              })}{' '}
+              <button
+                type="button"
+                onClick={() => setShowAllColumns(true)}
+                className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
+              >
+                {t('dataTable.showAll', 'Show all')}
+              </button>
             </AlertDescription>
           </Alert>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [scrollbar-color:rgb(var(--color-border-300))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
           <table
-            className="w-full divide-y divide-[rgb(var(--color-border-200))]"
+            className="border-collapse text-[13px]"
+            style={{ minWidth: '100%', width: table.getTotalSize() }}
           >
-            <thead className="bg-background">
+            <thead className="bg-[rgb(var(--color-border-50)/0.55)]">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
@@ -578,38 +793,88 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     return colId === header.column.id;
                   });
                   const isSortable = header.column.getCanSort();
+                  const headerTitle = typeof colDef?.title === 'string' ? colDef.title : undefined;
                   return (
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
-                      onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
+                      onClick={isSortable ? (event) => {
+                        if (suppressNextHeaderSortClickRef.current) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          suppressNextHeaderSortClickRef.current = false;
+                          if (suppressHeaderSortClickTimeoutRef.current) {
+                            clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+                            suppressHeaderSortClickTimeoutRef.current = null;
+                          }
+                          return;
+                        }
+                        header.column.getToggleSortingHandler()?.(event);
+                      } : undefined}
                       className={cn(
-                        'px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors',
-                        isSortable && 'cursor-pointer hover:bg-muted',
+                        'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
+                        isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-100)/0.62)] hover:text-[rgb(var(--color-text-700))]',
                         colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
                         colDef?.headerClassName ?? ''
                       )}
-                      style={{ width: colDef?.width }}
+                      style={{ width: header.getSize() }}
                     >
-                        <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
-                          <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
+                          <OverflowTooltipSpan className="min-w-0 overflow-hidden text-ellipsis" text={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</OverflowTooltipSpan>
                           {isSortable && (
-                            <span className="text-muted-foreground">
+                            <span className="shrink-0 text-[rgb(var(--color-text-400))]">
                               {{
-                                asc: ' ↑',
-                                desc: ' ↓',
+                                asc: '↑',
+                                desc: '↓',
                               }[header.column.getIsSorted() as string] ?? null}
                             </span>
                           )}
                         </div>
+                        {header.column.getCanResize() && headerIndex < headerGroup.headers.length - 1 && (
+                          <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Resize ${typeof colDef?.title === 'string' ? colDef.title : columnId} column`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
+                            onMouseDown={(event) => {
+                              event.stopPropagation();
+                              suppressNextHeaderSortClick();
+                              header.getResizeHandler(document)(event);
+                            }}
+                            onTouchStart={(event) => {
+                              event.stopPropagation();
+                              suppressNextHeaderSortClick();
+                              header.getResizeHandler(document)(event);
+                            }}
+                            onDoubleClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              header.column.resetSize();
+                              setColumnSizing(prev => {
+                                const next = { ...prev };
+                                delete next[header.column.id];
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none',
+                              'after:absolute after:right-1 after:top-1 after:h-[calc(100%-0.5rem)] after:w-px after:rounded-full after:bg-transparent after:transition-colors',
+                              'hover:after:bg-[rgb(var(--color-primary-400))] group-hover:after:bg-[rgb(var(--color-border-300)/0.9)]',
+                              header.column.getIsResizing() && 'after:bg-[rgb(var(--color-primary-500))]'
+                            )}
+                          />
+                        )}
                       </th>
                     );
                   })}
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
-              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
+            <tbody className="divide-y divide-[rgb(var(--color-border-100)/0.72)] bg-[rgb(var(--color-card))]">
+              {table.getPaginationRowModel().rows.map((row): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
@@ -618,9 +883,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-table-row-alt' : 'bg-background'}
-                    ${onRowClick ? 'hover:bg-table-hover cursor-pointer' : 'cursor-default'}
-                    transition-colors
+                    bg-[rgb(var(--color-card))]
+                    ${onRowClick ? 'hover:bg-[rgb(var(--color-border-50)/0.82)] cursor-pointer' : 'cursor-default'}
+                    transition-colors duration-150
                     ${extraRowClass}
                   `}
                   >
@@ -644,8 +909,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className={`px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top ${columnDef?.cellClassName ?? ''}`}
-                          style={{ width: columnDef?.width }}
+                          className={`h-8 max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-100)/0.72)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
+                          style={{ width: cell.column.getSize() }}
                         >
                           <div className="min-w-0">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -660,7 +925,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </table>
         </div>
         {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
-          <div className="border-t border-[rgb(var(--color-border-100))]">
+          <div className="border-t border-[rgb(var(--color-border-100)/0.72)]">
             <Pagination
               id={id ? `${id}-pagination` : 'datatable-pagination'}
               currentPage={pageIndex + 1}

@@ -7,18 +7,19 @@ function readTicketCompositionSource(): string {
 }
 
 describe('MspTicketDetailsContainerClient static contracts', () => {
-  it('keeps Algadesk project-task and interval integrations disabled in component composition', () => {
+  it('keeps AlgaDesk project-task and interval integrations disabled in component composition', () => {
     const source = readTicketCompositionSource();
 
-    expect(source).toContain('renderCreateProjectTask={isAlgadeskMode ? undefined : renderCreateProjectTask}');
-    expect(source).toContain('renderIntervalManagement={isAlgadeskMode ? undefined : renderIntervalManagement}');
+    expect(source).toContain('renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}');
+    expect(source).toContain('renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}');
+    expect(source).toContain('disableAgentSchedule={isAlgaDeskMode}');
   });
 
-  it('keeps Algadesk attachment restrictions wired in component composition', () => {
+  it('keeps AlgaDesk attachment restrictions wired in component composition', () => {
     const source = readTicketCompositionSource();
 
-    expect(source).toContain('disableAttachmentFolderSelection={isAlgadeskMode}');
-    expect(source).toContain('disableAttachmentSharing={isAlgadeskMode}');
-    expect(source).toContain('disableAttachmentLinking={isAlgadeskMode}');
+    expect(source).toContain('disableAttachmentFolderSelection={isAlgaDeskMode}');
+    expect(source).toContain('disableAttachmentSharing={isAlgaDeskMode}');
+    expect(source).toContain('disableAttachmentLinking={isAlgaDeskMode}');
   });
 });

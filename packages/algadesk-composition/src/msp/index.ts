@@ -1,6 +1,6 @@
-export type AlgadeskMspNavKey = 'dashboard' | 'tickets' | 'clients' | 'contacts' | 'knowledge_base' | 'settings';
+export type AlgaDeskMspNavKey = 'dashboard' | 'tickets' | 'clients' | 'contacts' | 'knowledge_base' | 'settings';
 
-export const ALGADESK_MSP_NAV: AlgadeskMspNavKey[] = [
+export const ALGA_DESK_MSP_NAV: AlgaDeskMspNavKey[] = [
   'dashboard',
   'tickets',
   'clients',

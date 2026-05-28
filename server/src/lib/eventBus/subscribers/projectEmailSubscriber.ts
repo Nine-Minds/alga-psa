@@ -197,11 +197,39 @@ async function sendNotificationIfEnabled(
 }
 
 /**
- * Format changes record into a readable string
+ * HTML-escape a string for safe interpolation into the email body.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
+const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
+
+function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
+  if (oldValue === null) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+}
+
+/**
+ * Format changes record into an HTML fragment for use in the "Changes Made" email box.
  */
 async function formatChanges(db: any, changes: Record<string, unknown>): Promise<string> {
-  const formattedChanges = await Promise.all(
+  const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]) => {
+      const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null) {
         const { from, to, previous, new: newValue } = value as {
           from?: unknown;
@@ -213,20 +241,23 @@ async function formatChanges(db: any, changes: Record<string, unknown>): Promise
         if (from !== undefined && to !== undefined) {
           const fromValue = await resolveValue(db, field, from);
           const toValue = await resolveValue(db, field, to);
-          return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
+          return renderChangeItemHtml(fieldLabel, fromValue, toValue);
         }
 
         if (previous !== undefined && newValue !== undefined) {
           const fromValue = await resolveValue(db, field, previous);
           const toValue = await resolveValue(db, field, newValue);
-          return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
+          return renderChangeItemHtml(fieldLabel, fromValue, toValue);
         }
       }
       const resolvedValue = await resolveValue(db, field, value);
-      return `${formatFieldName(field)}: ${resolvedValue}`;
+      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
     })
   );
-  return formattedChanges.join('\n');
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
 }
 
 /**

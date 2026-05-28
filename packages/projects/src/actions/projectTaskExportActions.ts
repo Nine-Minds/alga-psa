@@ -298,6 +298,7 @@ export const exportProjectTasksToCSV = withAuth(async (
   projectId: string,
   selectedPhaseIds: string[],
   selectedFields?: string[],
+  taskIds?: string[],
 ): Promise<{ csv: string; count: number }> => {
   await assertPsaOnlyTenantAccess(tenant, 'project_actions');
   const { knex: db } = await createTenantKnex();
@@ -308,36 +309,57 @@ export const exportProjectTasksToCSV = withAuth(async (
       throwPermissionError('read project');
     }
 
-    // Get phases for this project, filtered to selected ones
-    const phases = await trx('project_phases')
-      .where({ project_id: projectId, tenant })
-      .whereIn('phase_id', selectedPhaseIds)
-      .select('phase_id');
+    let tasks: TaskRow[];
 
-    const phaseIds = phases.map(p => p.phase_id);
-    if (phaseIds.length === 0) {
-      return { csv: '', count: 0 };
+    if (taskIds && taskIds.length > 0) {
+      // Export only the explicitly selected tasks, scoped to this project's phases
+      const projectPhases = await trx('project_phases')
+        .where({ project_id: projectId, tenant })
+        .select('phase_id');
+
+      const projectPhaseIds = projectPhases.map(p => p.phase_id);
+      if (projectPhaseIds.length === 0) {
+        return { csv: '', count: 0 };
+      }
+
+      tasks = await trx('project_tasks')
+        .whereIn('task_id', taskIds)
+        .whereIn('phase_id', projectPhaseIds)
+        .andWhere('tenant', tenant)
+        .orderBy(['phase_id', 'order_key'])
+        .limit(MAX_EXPORT_ROWS);
+    } else {
+      // Get phases for this project, filtered to selected ones
+      const phases = await trx('project_phases')
+        .where({ project_id: projectId, tenant })
+        .whereIn('phase_id', selectedPhaseIds)
+        .select('phase_id');
+
+      const phaseIds = phases.map(p => p.phase_id);
+      if (phaseIds.length === 0) {
+        return { csv: '', count: 0 };
+      }
+
+      // Get all tasks for selected phases
+      tasks = await trx('project_tasks')
+        .whereIn('phase_id', phaseIds)
+        .andWhere('tenant', tenant)
+        .orderBy(['phase_id', 'order_key'])
+        .limit(MAX_EXPORT_ROWS);
     }
-
-    // Get all tasks for selected phases
-    const tasks: TaskRow[] = await trx('project_tasks')
-      .whereIn('phase_id', phaseIds)
-      .andWhere('tenant', tenant)
-      .orderBy(['phase_id', 'order_key'])
-      .limit(MAX_EXPORT_ROWS);
 
     if (tasks.length === 0) {
       return { csv: '', count: 0 };
     }
 
-    const taskIds = tasks.map(t => t.task_id);
+    const taskRowIds = tasks.map(t => t.task_id);
 
     // Resolve lookups, tags, and checklist counts in parallel
     const [lookups, tagsArray, checklistRows] = await Promise.all([
       resolveNameLookups(trx, tenant, tasks),
-      findTagsByEntityIds(taskIds, 'project_task').catch(() => []),
+      findTagsByEntityIds(taskRowIds, 'project_task').catch(() => []),
       trx('task_checklist_items')
-        .whereIn('task_id', taskIds)
+        .whereIn('task_id', taskRowIds)
         .andWhere('tenant', tenant)
         .select('task_id', 'completed'),
     ]);

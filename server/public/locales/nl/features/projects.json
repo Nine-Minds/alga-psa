@@ -74,7 +74,7 @@
     "addProject": "Project toevoegen",
     "createFromTemplate": "Maken vanuit sjabloon",
     "openMenu": "Menu openen",
-    "searchPlaceholder": "Zoek projecten",
+    "searchPlaceholder": "Zoek projecten, taken en opmerkingen",
     "statusPlaceholder": "Selecteer status",
     "contactPlaceholder": "Filter op contactpersoon",
     "managerPlaceholder": "Alle beheerders",
@@ -103,6 +103,8 @@
       "created": "Gemaakt",
       "projectManager": "Projectmanager",
       "tags": "Labels",
+      "priority": "Prioriteit",
+      "taskType": "Type",
       "actions": "Acties"
     },
     "unknownUser": "Onbekend"
@@ -240,7 +242,22 @@
     "dueLabel": "Vervaldatum",
     "noDueDate": "Geen vervaldatum",
     "hideTags": "Tags verbergen",
-    "criticalPath": "Kritiek pad"
+    "criticalPath": "Kritiek pad",
+    "selectTaskAria": "Taak {{taskName}} selecteren",
+    "bulkMoveSuccess": "{{count}} taak/taken succesvol verplaatst!",
+    "bulkMovePartial": "{{moved}} taak/taken verplaatst, {{failed}} mislukt.",
+    "bulkDeleteSuccess": "{{count}} taak/taken succesvol verwijderd!",
+    "bulkDeletePartial": "{{deleted}} taak/taken verwijderd, {{failed}} mislukt.",
+    "bulkAssignSuccess": "{{count}} taak/taken succesvol toegewezen!",
+    "bulkAssignPartial": "{{success}} taak/taken toegewezen, {{failed}} mislukt.",
+    "bulkAssignTeamSuccess": "{{count}} taak/taken succesvol aan team toegewezen!",
+    "bulkAssignTeamPartial": "{{success}} taak/taken aan team toegewezen, {{failed}} mislukt.",
+    "bulkDeleteTitle": "Taken verwijderen",
+    "bulkDeleteMessage": "Weet je zeker dat je {{count}} geselecteerde taak/taken wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "bulkTasksMovedSuccess": "{{count}} taken verplaatst",
+    "bulkTasksMovedToPhase": "{{count}} taken verplaatst naar {{phaseName}}",
+    "moveTasksTitle": "Taken verplaatsen",
+    "confirmMoveTasksMessage": "Weet je zeker dat je {{count}} geselecteerde taken naar fase \"{{targetPhase}}\" wilt verplaatsen?"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -519,7 +536,9 @@
       "tags": "Labels",
       "createdAt": "Gemaakt op",
       "updatedAt": "Bijgewerkt op"
-    }
+    },
+    "exportSelected": "{{count}} geselecteerde exporteren",
+    "selectedTasksNotice": "{{count}} geselecteerde taak{{plural}} exporteren."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -709,6 +728,19 @@
       "tasks": "Taken",
       "badgeCount": "{{count}} Taak",
       "badgeCount_other": "{{count}} Taken"
+    },
+    "bulkMoveTask": {
+      "title": "Taken verplaatsen",
+      "message": "{{count}} geselecteerde taak/taken naar een nieuwe fase/status verplaatsen:",
+      "confirm": "Taken verplaatsen"
+    },
+    "bulkAssign": {
+      "title": "Taken toewijzen",
+      "message": "{{count}} geselecteerde taak/taken toewijzen aan:",
+      "unassigned": "Niet toegewezen",
+      "assigning": "Toewijzen...",
+      "confirm": "Taken toewijzen",
+      "teamReplaceNotice": "Taken die al aan een ander team zijn toegewezen, worden aan het nieuwe team toegewezen."
     }
   },
   "filters": {
@@ -1268,7 +1300,8 @@
     "templateCreatedSuccess": "Sjabloon succesvol aangemaakt",
     "notAvailable": "N.v.t.",
     "saveAsTemplate": "Opslaan als sjabloon",
-    "materials": "Materialen"
+    "materials": "Materialen",
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "projectPhases": {
     "addTask": "Taak toevoegen",
@@ -1382,5 +1415,43 @@
     "unknownTask": "Onbekende taak",
     "blocks": "Blokkeert"
   },
-  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien."
+  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projecttaken",
+      "subtitle": "{{count}} taken",
+      "noTasks": "Geen projecttaken om af te drukken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Taak",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "hours": "Uren"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van projecttaken."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "estimatedHours": "Geschatte uren",
+        "wbsCode": "WBS-code",
+        "description": "Beschrijving"
+      },
+      "subtitleSelected": "{{count}} geselecteerde taken"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} geselecteerd",
+    "move": "Verplaatsen",
+    "assign": "Toewijzen",
+    "delete": "Verwijderen",
+    "clear": "Wissen"
+  }
 }

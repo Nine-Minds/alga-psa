@@ -2,8 +2,8 @@
 set -euo pipefail
 
 KUBECONFIG_PATH="${KUBECONFIG:-}"
-REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
-STORAGE_MANIFEST="$REPO_ROOT/ee/appliance/manifests/local-path-storage.yaml"
+APPLIANCE_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
 STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 SMOKE_NAMESPACE="storage-smoke"
 DRY_RUN=false
@@ -223,6 +223,11 @@ if [ ! -f "$STORAGE_MANIFEST" ]; then
 fi
 
 kubectl_cmd apply -f "$STORAGE_MANIFEST"
+if $DRY_RUN; then
+  echo "+ kubectl --kubeconfig $KUBECONFIG_PATH create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig $KUBECONFIG_PATH apply -f -"
+else
+  kubectl --kubeconfig "$KUBECONFIG_PATH" create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+fi
 kubectl_cmd label namespace msp \
   pod-security.kubernetes.io/enforce=privileged \
   pod-security.kubernetes.io/audit=privileged \

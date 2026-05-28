@@ -107,6 +107,16 @@
       "reviewAndApprove": "Überprüfen und genehmigen, sobald Sie bereit sind.",
       "completedNoDetails": "Die Aktion wurde ohne weitere Details abgeschlossen.",
       "emDash": "—"
+    },
+    "continuation": {
+      "badge": "FORTSETZEN",
+      "endpoint": "Such-/Tool-Kette",
+      "title": "Weitere Ergebnisse abrufen?",
+      "description": "Alga hat beim Sammeln von Informationen das Tool-Schrittlimit erreicht.",
+      "status": "Die oben gezeigten Suchen und schreibgeschützten Aufrufe wurden abgeschlossen. Fahren Sie an derselben Stelle fort, um mehr zu sammeln oder die Antwort abzuschließen.",
+      "continue": "Fortsetzen",
+      "continueAriaLabel": "KI-Antwort ab dem Tool-Limit fortsetzen",
+      "defaultPrompt": "Fortsetzen"
     }
   },
   "quickAsk": {

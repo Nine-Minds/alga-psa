@@ -465,7 +465,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={t('quickAddContact.dialog.title', { defaultValue: 'Add New Contact' })}
-      disableFocusTrap
       footer={footer}
     >
       <DialogContent>

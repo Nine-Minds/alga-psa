@@ -16,38 +16,6 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
 
-function buildTimesheetNotSelfApproverGuard(input: AuthorizationEvaluationInput) {
-  if (
-    input.mutation?.kind === 'approve' &&
-    typeof input.record?.ownerUserId === 'string' &&
-    input.record.ownerUserId === input.subject.userId
-  ) {
-    return {
-      allowed: false,
-      reasons: [
-        {
-          stage: 'mutation' as const,
-          sourceType: 'builtin' as const,
-          code: 'timesheet_not_self_approver_denied',
-          message: 'Approvers cannot approve their own time submissions.',
-        },
-      ],
-    };
-  }
-
-  return {
-    allowed: true,
-    reasons: [
-      {
-        stage: 'mutation' as const,
-        sourceType: 'builtin' as const,
-        code: 'timesheet_not_self_approver_passed',
-        message: 'Not-self-approver guard passed.',
-      },
-    ],
-  };
-}
-
 async function resolveBundleRulesOrThrow(
   db: Knex | Knex.Transaction,
   input: AuthorizationEvaluationInput,
@@ -198,9 +166,7 @@ export async function assertCanApproveSubject(
   };
 
   const approvalKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider({
-      mutationGuards: [buildTimesheetNotSelfApproverGuard],
-    }),
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) =>
         resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions'),

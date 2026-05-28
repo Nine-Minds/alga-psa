@@ -47,6 +47,7 @@ import {
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog'; // Corrected import
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
@@ -722,6 +723,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     return group.childExecutionRows.some((member) => selectedTargets.has(childSelectionKeyForMember(member)));
   });
+  const selectableParentGroups = readyParentGroups.filter(
+    (group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable,
+  );
+  const selectedParentTargetSet = new Set(
+    selectableParentGroups
+      .filter((group) => selectedTargets.has(group.parentSummary.parentSelectionKey))
+      .map((group) => group.parentSummary.parentSelectionKey),
+  );
+  const parentGroupRangeSelect = useRangeSelection<RecurringInvoiceParentGroup>({
+    items: selectableParentGroups,
+    getId: (group) => group.parentSummary.parentSelectionKey,
+    selectedIds: selectedParentTargetSet,
+    onSelectedIdsChange: (nextParentKeys) => {
+      const changedParentKeys = new Set<string>();
+      for (const key of selectedParentTargetSet) {
+        if (!nextParentKeys.has(key)) changedParentKeys.add(key);
+      }
+      for (const key of nextParentKeys) {
+        if (!selectedParentTargetSet.has(key)) changedParentKeys.add(key);
+      }
+
+      setSelectedTargets((previous) => {
+        const next = new Set(previous);
+        for (const group of selectableParentGroups) {
+          const parentSelectionKey = group.parentSummary.parentSelectionKey;
+          if (!changedParentKeys.has(parentSelectionKey)) {
+            continue;
+          }
+
+          for (const child of group.childExecutionRows) {
+            next.delete(childSelectionKeyForMember(child));
+          }
+
+          if (nextParentKeys.has(parentSelectionKey)) {
+            next.add(parentSelectionKey);
+          } else {
+            next.delete(parentSelectionKey);
+          }
+        }
+        return next;
+      });
+    },
+  });
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -805,26 +849,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     } else {
       setSelectedTargets(new Set());
     }
-  };
-
-  const handleSelectParentGroup = (
-    group: RecurringInvoiceParentGroup,
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const parentSelectionKey = group.parentSummary.parentSelectionKey;
-    if (!parentSelectionKey) return;
-
-    const newSelected = new Set(selectedTargets);
-    for (const child of group.childExecutionRows) {
-      newSelected.delete(childSelectionKeyForMember(child));
-    }
-
-    if (event.target.checked) {
-      newSelected.add(parentSelectionKey);
-    } else {
-      newSelected.delete(parentSelectionKey);
-    }
-    setSelectedTargets(newSelected);
   };
 
   const handleSelectChild = (
@@ -1569,11 +1593,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         indeterminate={isPartiallySelected}
                         disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
                         // Stop propagation to prevent row click when clicking checkbox
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        onClick={(event: React.MouseEvent<HTMLInputElement>) => {
                           event.stopPropagation();
-                          handleSelectParentGroup(record, event);
+                          parentGroupRangeSelect.handleSelect(record.parentSummary.parentSelectionKey, {
+                            shiftKey: event.shiftKey,
+                            selected: !isParentSelected,
+                            preventDefault: () => event.preventDefault(),
+                          });
+                          event.preventDefault();
                         }}
-                        onClick={(e) => e.stopPropagation()} // Also stop propagation on click
+                        onChange={() => { /* controlled via onClick for shift-range support */ }}
                       />
                     </div>
                   );

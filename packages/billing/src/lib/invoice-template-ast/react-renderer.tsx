@@ -494,9 +494,14 @@ const renderNode = (
         ...(multilineFieldAdjustments ?? null),
         ...(style ?? {}),
       };
+      const { className: labelClassName, style: labelStyle } = resolveStyleRef(node.labelStyle);
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={fieldStyle}>
-          {node.label ? <span>{node.label}: </span> : null}
+          {node.label ? (
+            <span className={labelClassName || undefined} style={labelStyle}>
+              {node.label}:{' '}
+            </span>
+          ) : null}
           <span style={formattedValue.multiline ? { whiteSpace: 'pre-line' } : undefined}>
             {formattedValue.text ?? ''}
           </span>
@@ -632,13 +637,16 @@ const renderNode = (
           {node.rows.map((row) => {
             const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
             const { style: rowStyle } = resolveStyleRef(row.style);
+            const { className: labelClassName, style: labelStyle } = resolveStyleRef(row.labelStyle);
             const emphasizeStyle = row.emphasize ? { fontWeight: 700 } : undefined;
             const mergedRowStyle = rowStyle || emphasizeStyle
               ? { ...(emphasizeStyle ?? {}), ...(rowStyle ?? {}) }
               : undefined;
             return (
               <div key={row.id} className="ast-totals-row" style={mergedRowStyle}>
-                <span className="ast-totals-label">{row.label}</span>
+                <span className={joinClassNames('ast-totals-label', labelClassName) || undefined} style={labelStyle}>
+                  {row.label}
+                </span>
                 <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
               </div>
             );

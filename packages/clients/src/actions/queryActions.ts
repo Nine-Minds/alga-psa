@@ -13,6 +13,10 @@ import {
 import { hasPermissionAsync } from '../lib/authHelpers';
 import InteractionModel from '../models/interactions';
 
+const CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+const CONTACT_LIST_SEARCH_TYPES = ['contact', 'document', 'interaction'] as const;
+
 // --- Client query actions ---
 
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClientWithLocation | null> => {
@@ -207,6 +211,134 @@ export const getContactsByClient = withAuth(async (
 
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving client contacts');
   }
+});
+
+function buildContactListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+export const searchContactListIds = withAuth(async (
+  user,
+  { tenant },
+  query: string
+): Promise<string[]> => {
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
+  const rawSearch = query.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return [];
+  }
+
+  const permissions = ['contact:read'];
+  if (await hasPermissionAsync(user, 'document', 'read')) {
+    permissions.push('document:read');
+  }
+  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+    permissions.push('interaction:read');
+  }
+
+  const prefixTsquery = buildContactListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const { knex: db } = await createTenantKnex();
+
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(
+      `
+        WITH q AS (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ),
+        matched AS (
+          SELECT DISTINCT
+            CASE
+              WHEN si.object_type = 'contact' THEN si.object_id
+              WHEN si.object_type = 'interaction' THEN interaction_match.contact_name_id::text
+              WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id::text)
+            END AS contact_id
+          FROM app_search_index si
+          CROSS JOIN q
+          LEFT JOIN interactions interaction_match
+            ON si.object_type = 'interaction'
+            AND interaction_match.tenant = si.tenant
+            AND interaction_match.interaction_id::text = si.object_id
+          LEFT JOIN contacts note_contact
+            ON si.object_type = 'document'
+            AND note_contact.tenant = si.tenant
+            AND note_contact.notes_document_id::text = si.object_id
+          LEFT JOIN document_associations document_contact_match
+            ON si.object_type = 'document'
+            AND document_contact_match.tenant = si.tenant
+            AND document_contact_match.document_id::text = si.object_id
+            AND document_contact_match.entity_type = 'contact'
+          WHERE si.tenant = ?::uuid
+            AND si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+              )
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+              )
+            )
+        )
+        SELECT contact_id
+        FROM matched
+        WHERE contact_id IS NOT NULL
+      `,
+      [
+        rawSearch,
+        prefixTsquery,
+        prefixTsquery,
+        rawSearch,
+        identifier,
+        tenant,
+        [...CONTACT_LIST_SEARCH_TYPES],
+        permissions,
+        user.user_id,
+        isInternalUser,
+        user.user_id,
+        ...clientScopeBindings,
+      ]
+    );
+
+    return result.rows.map((row) => row.contact_id);
+  });
 });
 
 export const getAllContacts = withAuth(async (

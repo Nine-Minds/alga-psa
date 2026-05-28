@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Unit test product-specific step derivation: PSA includes all existing steps and Algadesk excludes Billing while keeping required workspace/ticketing positions correct.",
+    "description": "Unit test product-specific step derivation: PSA includes all existing steps and AlgaDesk excludes Billing while keeping required workspace/ticketing positions correct.",
     "implemented": true,
     "featureIds": [
       "F002",
@@ -20,7 +20,7 @@
   },
   {
     "id": "T003",
-    "description": "Source/contract test that Algadesk-specific wizard copy exists while PSA defaults remain available.",
+    "description": "Source/contract test that AlgaDesk-specific wizard copy exists while PSA defaults remain available.",
     "implemented": true,
     "featureIds": [
       "F006"
@@ -36,7 +36,7 @@
   },
   {
     "id": "T005",
-    "description": "Contract test every onboarding locale defines the Algadesk wizard shell and workspace step translation keys.",
+    "description": "Contract test every onboarding locale defines the AlgaDesk wizard shell and workspace step translation keys.",
     "implemented": true,
     "featureIds": [
       "F006",

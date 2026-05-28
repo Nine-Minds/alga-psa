@@ -1,0 +1,9 @@
+[
+  { "id": "F001", "description": "Add labelStyle to invoice field AST nodes.", "implemented": true },
+  { "id": "F002", "description": "Add labelStyle to invoice totals rows.", "implemented": true },
+  { "id": "F003", "description": "Validate labelStyle in the invoice template AST schema.", "implemented": true },
+  { "id": "F004", "description": "Apply labelStyle in the production React/PDF renderer.", "implemented": true },
+  { "id": "F005", "description": "Expose label typography controls in field and totals-row designer inspectors.", "implemented": true },
+  { "id": "F006", "description": "Apply labelStyle in designer canvas previews.", "implemented": true },
+  { "id": "F007", "description": "Round-trip labelStyle through designer AST import/export.", "implemented": true }
+]

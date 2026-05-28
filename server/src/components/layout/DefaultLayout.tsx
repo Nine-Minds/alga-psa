@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { ADD_ONS } from '@alga-psa/types';
 import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
-import Header from "./Header";
+import Header, { QUICK_CREATE_OPEN_EVENT } from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
@@ -14,7 +14,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
+import VimNavigationLayer from './VimNavigationLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
 import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
@@ -25,6 +27,11 @@ import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/docu
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
 import { useTier } from 'server/src/context/TierContext';
+import {
+  useCatalogShortcut,
+  useShortcutScope,
+} from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutHelpDialog, ShortcutHintHud } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -119,6 +126,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [quickAskOpen, setQuickAskOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [isChatInterruptible, setIsChatInterruptible] = useState(false);
   const [pendingInterruptKind, setPendingInterruptKind] = useState<'close-sidebar' | 'navigate' | null>(null);
   const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
@@ -209,41 +217,67 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     cancelActiveChatWorkRef.current = null;
   }, [rightSidebarOpen]);
 
+  const toggleChatShortcut = useCallback(() => {
+      if (!aiAssistantAvailable) {
+        return false;
+      }
+
+      if (rightSidebarOpen) {
+        requestSidebarClose();
+        return;
+      }
+
+      setRightSidebarOpen(true);
+  }, [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
+
+  const quickAskShortcut = useCallback(() => {
+      if (!aiAssistantAvailable) {
+        return false;
+      }
+
+      if (rightSidebarOpen) {
+        const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+        input?.focus();
+        return;
+      }
+
+      setQuickAskOpen(prev => !prev);
+  }, [aiAssistantAvailable, rightSidebarOpen]);
+
+  const openShortcutsShortcut = useCallback(() => {
+    setShortcutsHelpOpen(true);
+  }, []);
+
+  const quickCreateShortcut = useCallback(() => {
+    const trigger = document.getElementById('global-quick-create-trigger');
+    if (!(trigger instanceof HTMLElement)) {
+      return false;
+    }
+    window.dispatchEvent(new CustomEvent(QUICK_CREATE_OPEN_EVENT));
+  }, []);
+
+  const goTicketsShortcut = useCallback(() => {
+    router.push('/msp/tickets');
+  }, [router]);
+
+  const goAssetsShortcut = useCallback(() => {
+    router.push('/msp/assets');
+  }, [router]);
+
+  const goClientsShortcut = useCallback(() => {
+    router.push('/msp/clients');
+  }, [router]);
+
+  useShortcutScope('page');
+  useCatalogShortcut('global.toggleChat', toggleChatShortcut, { enabled: aiAssistantAvailable });
+  useCatalogShortcut('ai.quickAsk', quickAskShortcut, { enabled: aiAssistantAvailable });
+  useCatalogShortcut('global.openShortcuts', openShortcutsShortcut);
+  useCatalogShortcut('global.quickCreate', quickCreateShortcut);
+  useCatalogShortcut('navigation.goTickets', goTicketsShortcut);
+  useCatalogShortcut('navigation.goAssets', goAssetsShortcut);
+  useCatalogShortcut('navigation.goClients', goClientsShortcut);
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
-        if (!aiAssistantAvailable) {
-          return;
-        }
-
-        event.preventDefault();
-        if (rightSidebarOpen) {
-          requestSidebarClose();
-          return;
-        }
-
-        setRightSidebarOpen(true);
-      }
-
-      if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
-        if (!aiAssistantAvailable) {
-          return;
-        }
-
-        event.preventDefault();
-
-        if (rightSidebarOpen) {
-          const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
-          input?.focus();
-          return;
-        }
-
-        setQuickAskOpen(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
     const bootstrapChatContext = async () => {
       // Fetch or set up the necessary data for Chat component
       setClientUrl('https://example.com');
@@ -276,10 +310,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
     bootstrapChatContext();
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -379,9 +410,21 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     };
   }, [isChatInterruptible, router, runInterruptGuard]);
 
+  const handleQuickAskOpen = useCallback(() => {
+    setQuickAskOpen(true);
+  }, []);
+
   const handleQuickAskClose = () => {
     setQuickAskOpen(false);
   };
+
+  const quickAskContextValue = useMemo(
+    () => ({
+      aiAssistantAvailable,
+      openQuickAsk: handleQuickAskOpen,
+    }),
+    [aiAssistantAvailable, handleQuickAskOpen]
+  );
 
   const handleOpenQuickAskInSidebar = (chatId: string) => {
     if (!aiAssistantAvailable) {
@@ -431,20 +474,45 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             onMenuItemClick={handleMenuItemClick}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Header
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              rightSidebarOpen={rightSidebarOpen}
-              setRightSidebarOpen={setRightSidebarOpen}
-            />
-            <PlatformNotificationBanner />
-            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
-              <Body>{children}</Body>
+            <QuickAskProvider value={quickAskContextValue}>
+              <Header
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                setRightSidebarOpen={setRightSidebarOpen}
+              />
+              <PlatformNotificationBanner />
+              <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+                <Body>{children}</Body>
+                {aiAssistantAvailable ? (
+                  <RightSidebar
+                    isOpen={rightSidebarOpen}
+                    setIsOpen={setRightSidebarOpen}
+                    onRequestClose={requestSidebarClose}
+                    clientUrl={clientUrl}
+                    accountId={accountId}
+                    messages={messages}
+                    userRole={userRole}
+                    userId={userId}
+                    selectedAccount={selectedAccount}
+                    handleSelectAccount={handleSelectAccount}
+                    auth_token={auth_token}
+                    setChatTitle={setChatTitle}
+                    isTitleLocked={isTitleLocked}
+                    handoffChatId={sidebarHandoff.chatId}
+                    handoffNonce={sidebarHandoff.nonce}
+                    onInterruptibleStateChange={setIsChatInterruptible}
+                    onRegisterCancelHandler={(cancelHandler) => {
+                      cancelActiveChatWorkRef.current = cancelHandler;
+                    }}
+                  />
+                ) : null}
+              </main>
               {aiAssistantAvailable ? (
-                <RightSidebar
-                  isOpen={rightSidebarOpen}
-                  setIsOpen={setRightSidebarOpen}
-                  onRequestClose={requestSidebarClose}
+                <QuickAskOverlay
+                  isOpen={quickAskOpen}
+                  onClose={handleQuickAskClose}
+                  onOpenInSidebar={handleOpenQuickAskInSidebar}
                   clientUrl={clientUrl}
                   accountId={accountId}
                   messages={messages}
@@ -455,33 +523,13 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   auth_token={auth_token}
                   setChatTitle={setChatTitle}
                   isTitleLocked={isTitleLocked}
-                  handoffChatId={sidebarHandoff.chatId}
-                  handoffNonce={sidebarHandoff.nonce}
-                  onInterruptibleStateChange={setIsChatInterruptible}
-                  onRegisterCancelHandler={(cancelHandler) => {
-                    cancelActiveChatWorkRef.current = cancelHandler;
-                  }}
+                  hf={null}
                 />
               ) : null}
-            </main>
-            {aiAssistantAvailable ? (
-              <QuickAskOverlay
-                isOpen={quickAskOpen}
-                onClose={handleQuickAskClose}
-                onOpenInSidebar={handleOpenQuickAskInSidebar}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messages}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-                hf={null}
-              />
-            ) : null}
+              <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
+              <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
+              <ShortcutHintHud />
+            </QuickAskProvider>
           </div>
         </div>
         {pendingInterruptKind !== null && (

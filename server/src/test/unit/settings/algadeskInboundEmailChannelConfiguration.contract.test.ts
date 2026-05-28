@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 
-describe('Algadesk inbound email channel configuration contract', () => {
+describe('AlgaDesk inbound email channel configuration contract', () => {
   it('T022: email channel UI/actions expose inbound mailbox provider configuration fields', () => {
     const configPath = path.resolve(__dirname, '../../../../../packages/integrations/src/components/email/EmailProviderConfiguration.tsx');
     const providerActionsPath = path.resolve(__dirname, '../../../../../packages/integrations/src/actions/email-actions/emailProviderActions.ts');

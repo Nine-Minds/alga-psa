@@ -44,7 +44,7 @@ async function cleanupPortalTestTenant(db: ReturnType<typeof createTestDbConnect
   }
 }
 
-test.describe('Algadesk portal ticketing happy path', () => {
+test.describe('AlgaDesk portal ticketing happy path', () => {
   test('T015: portal contact creates ticket with attachment, sees technician public reply, replies, and cannot see internal comments', async ({ page }) => {
     test.setTimeout(300000);
 
@@ -56,7 +56,7 @@ test.describe('Algadesk portal ticketing happy path', () => {
       await fs.writeFile(uploadPath, 'portal ticket attachment', 'utf8');
 
       tenantData = await createTenantAndLogin(db, page, {
-        companyName: `Algadesk Portal ${uuidv4().slice(0, 6)}`,
+        companyName: `AlgaDesk Portal ${uuidv4().slice(0, 6)}`,
       });
 
       const tenantId = tenantData.tenant.tenantId;

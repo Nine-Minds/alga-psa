@@ -37,7 +37,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
   buildDocumentDetachedPayload,
@@ -65,6 +65,70 @@ async function loadSharp() {
         `Ensure platform-specific sharp binaries are installed. Original error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
+}
+
+async function publishDocumentUpdatedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  changedFields: string[],
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        updatedByUserId: userId,
+        updatedAt: occurredAt,
+        changedFields,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_UPDATED search event:`, eventError);
+  }
+}
+
+async function publishDocumentDeletedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_DELETED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        deletedByUserId: userId,
+        deletedAt: occurredAt,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_DELETED search event:`, eventError);
+  }
+}
+
+const VALID_DOCUMENT_SORT_FIELDS = new Set(['document_name', 'updated_at', 'file_size', 'created_by_full_name']);
+
+type SafeDocumentSortField = NonNullable<DocumentFilters['sortBy']>;
+type SafeSortOrder = 'asc' | 'desc';
+
+function normalizeDocumentSortOrder(sortOrder: unknown): SafeSortOrder {
+  const normalizedOrder = typeof sortOrder === 'string' ? sortOrder.toLowerCase() : undefined;
+  return normalizedOrder === 'asc' || normalizedOrder === 'desc' ? normalizedOrder : 'desc';
+}
+
+function normalizeDocumentSortBy(sortBy: unknown): SafeDocumentSortField | undefined {
+  return typeof sortBy === 'string' && VALID_DOCUMENT_SORT_FIELDS.has(sortBy)
+    ? sortBy as SafeDocumentSortField
+    : undefined;
 }
 
 async function ensureEntityFoldersInitializedInternal(
@@ -707,6 +771,14 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const cache = CacheFactory.getPreviewCache(tenant);
     await cache.delete(documentId);
     console.log(`[updateDocument] Invalidated preview cache for document ${documentId}`);
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      user.user_id,
+      Object.keys(data),
+      'updateDocument',
+    );
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
@@ -848,6 +920,8 @@ export const deleteDocument = withAuth(async (
         })
       );
     }
+
+    await publishDocumentDeletedSearchEvent(tenant, documentId, user.user_id, 'deleteDocument');
 
     const filesToDelete: string[] = [];
 
@@ -1856,12 +1930,15 @@ export const getDocumentsByEntity = withAuth(async (
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
 
-        if (filters?.sortBy === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-        } else if (filters?.sortBy === 'document_name') {
-          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
-        } else if (filters?.sortBy) {
-          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
+        const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+        const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+        if (sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        } else if (sortBy) {
+          query = query.orderBy(`documents.${sortBy}`, sortOrder);
         } else {
           query = query.orderBy('documents.updated_at', 'desc');
         }
@@ -2030,12 +2107,15 @@ export const getAllDocuments = withAuth(async (
           }
         }
 
-        if (filters?.sortBy === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-        } else if (filters?.sortBy === 'document_name') {
-          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
-        } else if (filters?.sortBy) {
-          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
+        const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+        const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+        if (sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        } else if (sortBy) {
+          query = query.orderBy(`documents.${sortBy}`, sortOrder);
         } else {
           query = query.orderBy('documents.updated_at', 'desc');
         }
@@ -2130,6 +2210,13 @@ export const createDocumentAssociations = withAuth(async (
         } catch (eventError) {
           console.error('[createDocumentAssociations] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
         }
+        await publishDocumentUpdatedSearchEvent(
+          tenant,
+          association.document_id,
+          user.user_id,
+          ['document_associations'],
+          'createDocumentAssociations',
+        );
       })
     );
 
@@ -2213,6 +2300,13 @@ export const removeDocumentAssociations = withAuth(async (
           } catch (eventError) {
             console.error('[removeDocumentAssociations] Failed to publish DOCUMENT_DETACHED workflow event:', eventError);
           }
+          await publishDocumentUpdatedSearchEvent(
+            tenant,
+            row.document_id,
+            user.user_id,
+            ['document_associations'],
+            'removeDocumentAssociations',
+          );
         })
       );
     }
@@ -2506,6 +2600,14 @@ export const uploadDocument = withAuth(async (
           })
         );
       }
+
+      await publishDocumentUpdatedSearchEvent(
+        tenant,
+        document.document_id,
+        user.user_id,
+        ['document_name', 'file_id', 'storage_path'],
+        'uploadDocument',
+      );
 
       // Generate previews after the transaction completes.
       // Awaited so the preview is ready before the response reaches the client.
@@ -3086,12 +3188,15 @@ export const getDocumentsByFolder = withAuth(async (
         )
         .distinct('d.document_id');
 
-      if (filters?.sortBy === 'created_by_full_name') {
-        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-      } else if (filters?.sortBy === 'document_name') {
-        query = query.orderByRaw(`numeric_prefix ${filters.sortOrder || 'desc'}, d.document_name ${filters.sortOrder || 'desc'}`);
-      } else if (filters?.sortBy) {
-        query = query.orderBy(`d.${filters.sortBy}`, filters.sortOrder || 'desc');
+      const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+      const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+      if (sortBy === 'created_by_full_name') {
+        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+      } else if (sortBy === 'document_name') {
+        query = query.orderByRaw(`numeric_prefix ${sortOrder}, d.document_name ${sortOrder}`);
+      } else if (sortBy) {
+        query = query.orderBy(`d.${sortBy}`, sortOrder);
       } else {
         query = query.orderByRaw('numeric_prefix ASC, d.document_name ASC');
       }

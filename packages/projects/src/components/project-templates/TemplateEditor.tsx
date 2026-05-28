@@ -24,6 +24,7 @@ import {
   GripVertical,
   Settings,
   CheckSquare,
+  ClipboardList,
   Bug,
   Sparkles,
   TrendingUp,
@@ -114,7 +115,7 @@ const lightenColor = (hex: string, percent: number) => {
 };
 
 const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  task: CheckSquare,
+  task: ClipboardList,
   bug: Bug,
   feature: Sparkles,
   improvement: TrendingUp,
@@ -2079,7 +2080,7 @@ function TaskCard({
 
   // Get task type icon and color from database, with fallback
   const taskTypeKey = task.task_type_key || 'task';
-  const Icon = taskTypeIcons[taskTypeKey] || CheckSquare;
+  const Icon = taskTypeIcons[taskTypeKey] || ClipboardList;
   const iconColor = taskType?.color || '#6B7280';
 
   // Get priority info

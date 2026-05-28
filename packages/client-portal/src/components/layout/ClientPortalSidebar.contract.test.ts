@@ -34,10 +34,10 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
     expect(sidebarSource).toMatch(/['"]\/client-portal\/request-services['"]/);
   });
 
-  it('contains explicit Algadesk portal navigation gating', () => {
-    expect(sidebarSource).toContain('const isAlgadeskPortal = productCode === \'algadesk\'');
+  it('contains explicit AlgaDesk portal navigation gating', () => {
+    expect(sidebarSource).toContain('const isAlgaDeskPortal = productCode === \'algadesk\'');
     expect(sidebarSource).toContain('/client-portal/knowledge-base');
     expect(sidebarSource).toContain('/client-portal/profile');
-    expect(sidebarSource).toContain('!isAlgadeskPortal && <ClientPortalExtensionsNav');
+    expect(sidebarSource).toContain('!isAlgaDeskPortal && <ClientPortalExtensionsNav');
   });
 });

@@ -20,9 +20,6 @@ const translationMap: Record<string, string> = {
   'experimentalFeatures.features.aiAssistant.name': 'AI Assistant',
   'experimentalFeatures.features.aiAssistant.description': 'Enable AI-powered Quick Ask and Chat sidebar.',
   'experimentalFeatures.features.aiAssistant.restriction': 'Only available for whitelisted tenants.',
-  'experimentalFeatures.features.workflowAutomation.name': 'Workflow Automation',
-  'experimentalFeatures.features.workflowAutomation.description':
-    'Enable experimental workflow automation features in the workflow control panel and editor.',
   'experimentalFeatures.actions.save': 'Save',
   'experimentalFeatures.actions.saving': 'Saving...',
   'experimentalFeatures.actions.retry': 'Retry',
@@ -35,7 +32,7 @@ const translationMap: Record<string, string> = {
 const translate = (key: string): string => translationMap[key] ?? key;
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
-  getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false, workflowAutomation: false }),
+  getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false }),
   canEnableAiAssistant: vi.fn().mockResolvedValue(true),
   updateExperimentalFeatures: vi.fn(),
 }));
@@ -60,7 +57,7 @@ describe('ExperimentalFeaturesSettings', () => {
 
   it("shows 'AI Assistant' name and description", async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 
     render(
       <UIStateProvider
@@ -109,7 +106,7 @@ describe('ExperimentalFeaturesSettings', () => {
 
   it('renders experimental features warning banner', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 
     render(
       <UIStateProvider
@@ -131,7 +128,7 @@ describe('ExperimentalFeaturesSettings', () => {
 
   it('calls updateExperimentalFeatures() with current toggle states on save', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
     render(
@@ -163,13 +160,13 @@ describe('ExperimentalFeaturesSettings', () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true, workflowAutomation: false });
+      expect(updateExperimentalFeatures).toHaveBeenCalledWith({ aiAssistant: true });
     });
   });
 
   it('shows success feedback after saving', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
     vi.mocked(updateExperimentalFeatures).mockResolvedValueOnce(undefined);
 
     render(
@@ -209,7 +206,7 @@ describe('ExperimentalFeaturesSettings', () => {
 
   it('updates local state when toggled', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 
     render(
       <UIStateProvider
@@ -238,7 +235,7 @@ describe('ExperimentalFeaturesSettings', () => {
 
   it('loads current settings on mount', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(true);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: true, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: true });
 
     render(
       <UIStateProvider
@@ -285,16 +282,13 @@ describe('ExperimentalFeaturesSettings', () => {
       '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
     );
     expect(toggle).toBeTruthy();
-    const workflowAutomationToggle = document.querySelector(
-      '[data-automation-id="experimental-feature-toggle-workflowAutomation"]'
-    );
-    expect(workflowAutomationToggle).toBeTruthy();
-    expect(screen.getAllByRole('switch')).toHaveLength(2);
+    expect(screen.queryByText('Workflow Automation')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('switch')).toHaveLength(1);
   });
 
   it('disables AI Assistant toggle when not allowed', async () => {
     vi.mocked(canEnableAiAssistant).mockResolvedValueOnce(false);
-    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false, workflowAutomation: false });
+    vi.mocked(getExperimentalFeatures).mockResolvedValueOnce({ aiAssistant: false });
 
     render(
       <UIStateProvider

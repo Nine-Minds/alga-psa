@@ -6,7 +6,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useWorkflowInputSourceModeOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import type { Expr, MappingValue } from '@alga-psa/workflows/runtime';
 
-export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed';
+export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed' | 'expression';
 export type WorkflowActionInputFieldLike = {
   type?: string;
   enum?: Array<string | number | boolean | null>;
@@ -22,6 +22,7 @@ export type WorkflowActionInputFieldLike = {
 export type WorkflowActionInputPreservedModeValues = {
   preservedFixedValue?: MappingValue;
   preservedReferenceValue?: MappingValue;
+  preservedExpressionValue?: MappingValue;
 };
 
 export function isSimpleFieldReferenceExpression(expression: string | undefined): boolean {
@@ -40,7 +41,7 @@ export function deriveWorkflowActionInputSourceMode(
       const expression = (value as Expr).$expr;
       return !expression?.trim() || isSimpleFieldReferenceExpression(expression)
         ? { mode: 'reference' }
-        : { mode: 'fixed' };
+        : { mode: 'expression' };
     }
   }
 
@@ -94,6 +95,17 @@ export function createWorkflowActionInputValueForMode(
     return { $expr: '' };
   }
 
+  if (mode === 'expression') {
+    if (
+      currentValue &&
+      typeof currentValue === 'object' &&
+      '$expr' in currentValue
+    ) {
+      return currentValue;
+    }
+    return { $expr: '' };
+  }
+
   if (
     currentValue !== undefined &&
     (typeof currentValue !== 'object' ||
@@ -115,6 +127,7 @@ export function transitionWorkflowActionInputMode(
   const currentMode = deriveWorkflowActionInputSourceMode(currentValue).mode;
   let preservedFixedValue = preservedValues.preservedFixedValue;
   let preservedReferenceValue = preservedValues.preservedReferenceValue;
+  let preservedExpressionValue = preservedValues.preservedExpressionValue;
 
   if (currentMode === 'fixed' && currentValue !== undefined) {
     preservedFixedValue = currentValue;
@@ -130,17 +143,29 @@ export function transitionWorkflowActionInputMode(
     preservedReferenceValue = currentValue;
   }
 
+  if (
+    currentMode === 'expression' &&
+    currentValue &&
+    typeof currentValue === 'object' &&
+    '$expr' in currentValue
+  ) {
+    preservedExpressionValue = currentValue;
+  }
+
   const transitionSeedValue =
     nextMode === 'fixed' && preservedFixedValue !== undefined
       ? preservedFixedValue
       : nextMode === 'reference' && preservedReferenceValue !== undefined
         ? preservedReferenceValue
-        : currentValue;
+        : nextMode === 'expression' && preservedExpressionValue !== undefined
+          ? preservedExpressionValue
+          : currentValue;
 
   return {
     nextValue: createWorkflowActionInputValueForMode(field, transitionSeedValue, nextMode),
     preservedFixedValue,
     preservedReferenceValue,
+    preservedExpressionValue,
   };
 }
 
@@ -159,13 +184,16 @@ export const WorkflowActionInputSourceMode: React.FC<{
   value: MappingValue | undefined;
   onModeChange: (mode: WorkflowActionInputSourceModeValue) => void;
   disabled?: boolean;
+  /** Explicit mode override (used when an empty `{ $expr: '' }` is ambiguous). */
+  mode?: WorkflowActionInputSourceModeValue;
 }> = ({
   idPrefix,
   value,
   onModeChange,
   disabled,
+  mode,
 }) => {
-  const sourceMode = deriveWorkflowActionInputSourceMode(value);
+  const sourceMode = mode ? { mode } : deriveWorkflowActionInputSourceMode(value);
   const sourceModeOptions = useWorkflowInputSourceModeOptions();
 
   return (

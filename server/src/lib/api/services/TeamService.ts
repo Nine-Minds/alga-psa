@@ -138,12 +138,16 @@ export class TeamService extends BaseService<ITeam> {
       dataQuery = this.applyTeamFilters(dataQuery, filters, knex, true);  // has manager join
       countQuery = this.applyTeamFilters(countQuery, filters, knex, false); // no manager join
   
-      // Apply sorting
-      const sortField = sort || this.defaultSort;
-      const sortOrder = order || this.defaultOrder;
+      // Apply sorting with runtime allowlists; API inputs are not trusted even when typed.
+      const allowedSortFields = new Set(['team_id', 'team_name', 'manager_id', 'created_at', 'updated_at', 'manager_name', 'member_count']);
+      const sortField = sort && allowedSortFields.has(sort) ? sort : this.defaultSort;
+      const requestedOrder = typeof order === 'string' ? order.toLowerCase() : undefined;
+      const sortOrder = requestedOrder === 'desc' || requestedOrder === 'asc' ? requestedOrder : this.defaultOrder;
       
       if (sortField === 'manager_name') {
-        dataQuery = dataQuery.orderByRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ${sortOrder}`);
+        dataQuery = dataQuery.orderByRaw(
+          `COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ${sortOrder}`
+        );
       } else if (sortField === 'member_count') {
         dataQuery = dataQuery.orderBy('member_count', sortOrder);
       } else {

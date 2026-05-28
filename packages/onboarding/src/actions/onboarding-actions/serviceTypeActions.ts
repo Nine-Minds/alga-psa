@@ -12,7 +12,7 @@ export const getStandardServiceTypes = withAuth(async (
   _ctx: AuthContext
 ): Promise<{
   success: boolean;
-  data?: Array<{ id: string; name: string; billing_method: string; display_order?: number }>;
+  data?: Array<{ id: string; name: string; display_order?: number }>;
   error?: string;
 }> => {
   try {
@@ -65,7 +65,7 @@ export const getTenantServiceTypes = withAuth(async (
   { tenant }: AuthContext
 ): Promise<{
   success: boolean;
-  data?: Array<{ id: string; name: string; billing_method: string; order_number?: number }>;
+  data?: Array<{ id: string; name: string; order_number?: number }>;
   error?: string;
 }> => {
   try {
@@ -77,7 +77,7 @@ export const getTenantServiceTypes = withAuth(async (
           tenant: tenant,
           is_active: true
         })
-        .select('id', 'name', 'billing_method', 'order_number')
+        .select('id', 'name', 'order_number')
         .orderBy('name');
     });
 
@@ -100,7 +100,6 @@ export const createTenantServiceType = withAuth(async (
   input: {
     name: string;
     description: string | null;
-    billing_method: 'fixed' | 'hourly' | 'usage';
     is_active: boolean;
     order_number: number;
   }
@@ -114,7 +113,6 @@ export const createTenantServiceType = withAuth(async (
           tenant,
           name: input.name,
           description: input.description,
-          billing_method: input.billing_method,
           is_active: input.is_active,
           order_number: input.order_number,
         })

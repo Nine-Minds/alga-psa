@@ -28,6 +28,16 @@ import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
 } from './handlers/workflowQuotaResumeScanHandler';
+import {
+  SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+  searchVisibleUserReindexHandler,
+  SearchVisibleUserReindexJobData,
+} from './handlers/searchVisibleUserReindexHandler';
+import {
+  SEARCH_RECONCILE_JOB_NAME,
+  searchReconcileHandler,
+  SearchReconcileJobData,
+} from './handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -200,6 +210,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       );
     }
 
+    jobScheduler.registerJobHandler<SearchVisibleUserReindexJobData>(
+      SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+      async (job: Job<SearchVisibleUserReindexJobData>) => {
+        await searchVisibleUserReindexHandler(job.data);
+      }
+    );
+
+    jobScheduler.registerJobHandler<SearchReconcileJobData>(
+      SEARCH_RECONCILE_JOB_NAME,
+      async (job: Job<SearchReconcileJobData>) => {
+        await searchReconcileHandler(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -224,7 +248,9 @@ export type {
   EmailWebhookMaintenanceJobData,
   RenewalQueueProcessorJobData,
   SlaTimerJobData,
-  WorkflowQuotaResumeScanJobData
+  WorkflowQuotaResumeScanJobData,
+  SearchVisibleUserReindexJobData,
+  SearchReconcileJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -292,6 +318,17 @@ export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleImmediateJob(jobName, data);
+};
+
+export const scheduleSearchVisibleUserReindexJob = async (
+  tenantId: string,
+  userId: string,
+  batchSize: number = 500
+): Promise<string | null> => {
+  return await scheduleImmediateJob<SearchVisibleUserReindexJobData>(
+    SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+    { tenantId, userId, batchSize }
+  );
 };
 
 /**
@@ -508,5 +545,17 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
     'workflow-quota-resume-scan',
     cronExpression,
     { tenantId: 'system', batchSize }
+  );
+};
+
+export const scheduleSearchReconcileJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<SearchReconcileJobData>(
+    SEARCH_RECONCILE_JOB_NAME,
+    cronExpression,
+    { tenantId }
   );
 };

@@ -38,7 +38,7 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('dashboard.filters.dueDate', 'Due Date')");
     expect(source).toContain("t('dashboard.filters.slaStatus', 'SLA Status')");
     expect(source).toContain("t('filters.category', 'Filter by category')");
-    expect(source).toContain("t('filters.search', 'Search tickets...')");
+    expect(source).toContain("t('filters.search', 'Search tickets and comments...')");
     expect(source).toContain("t('resetFilters', 'Reset')");
     expect(source).toContain("t('dashboard.bundledToggle', 'Bundled')");
     expect(source).toContain("t('dashboard.spacing.compact', 'Compact')");
@@ -92,8 +92,6 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('dashboard.drawer.loading', 'Loading...')");
     expect(source).toContain("t('dashboard.drawer.clientNotFound', 'Client not found.')");
     expect(source).toContain("t('dashboard.drawer.clientLoadFailed', 'Failed to load client.')");
-    expect(source).toContain("t('errors.validateDeletionFailed', 'Failed to validate deletion. Please try again.')");
-    expect(source).toContain("t('errors.deleteTicketUnexpected', 'An unexpected error occurred while deleting the ticket.')");
     expect(source).toContain("t('errors.loadBundledTickets', 'Failed to load bundled tickets')");
     expect(source).toContain("t('bulk.move.noTicketsSelected', 'No tickets selected.')");
     expect(source).toContain("t('bulk.delete.noTicketsSelected', 'No tickets selected.')");

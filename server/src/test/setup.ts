@@ -114,11 +114,21 @@ vi.mock('@alga-psa/auth', () => {
     };
   };
 
+  const withAuthCheck = (handler: (...args: any[]) => any) => {
+    return async (...args: any[]) => {
+      const user = await getCurrentUser();
+      const tenant = await resolveTenant(user);
+      const authUser = user ? { ...user, tenant } : { ...defaultUser, tenant };
+      return handler(authUser, { tenant }, ...args);
+    };
+  };
+
   return {
     getSession: vi.fn().mockResolvedValue(null),
     getCurrentUser,
     hasPermission,
     withAuth,
+    withAuthCheck,
     withOptionalAuth,
   };
 });

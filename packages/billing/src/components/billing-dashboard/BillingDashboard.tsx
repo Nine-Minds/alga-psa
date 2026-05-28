@@ -25,6 +25,7 @@ import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
+import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
@@ -101,8 +102,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     router.push(`/msp/billing?${params.toString()}`);
   };
 
-  // Get current tab from URL or default to overview
-  const requestedTab = searchParams?.get('tab') as BillingTabValue | null;
+  // Get current tab from URL or default to overview.
+  // Preserve compatibility with old consolidated contracts URLs so they do not fall through to Quotes.
+  const requestedTabParam = searchParams?.get('tab');
+  const requestedTab = requestedTabParam === 'contracts'
+    ? (searchParams?.get('subtab') === 'templates' ? 'contract-templates' : 'client-contracts')
+    : (requestedTabParam as BillingTabValue | null);
   const availableValues = tabDefinitions.map((tab) => tab.value);
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
@@ -218,6 +223,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="usage-tracking">
           <UsageTracking initialServices={initialServices} />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-types">
+          <ServiceTypeSettings />
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">

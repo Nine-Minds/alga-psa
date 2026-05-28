@@ -2,6 +2,7 @@ import { env } from 'node:process';
 import { NextRequest } from 'next/server';
 
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { assertPsaChatProductAccess } from '../../../productAccess';
 
 const isEnterpriseEdition =
@@ -52,7 +53,16 @@ type RawCompletionChunk = {
 type ChatCompletionsServiceLike = {
   createStructuredCompletionStream: (
     conversation: IncomingChatMessage[],
-    options?: { signal?: AbortSignal; uiContext?: IncomingUiContext; mentions?: IncomingMention[] },
+    options?: {
+      signal?: AbortSignal;
+      uiContext?: IncomingUiContext;
+      mentions?: IncomingMention[];
+      baseUrl?: string;
+      tenantId?: string;
+      userId?: string;
+      cookieHeader?: string;
+      currentUser?: Record<string, unknown>;
+    },
   ) => Promise<AsyncIterable<RawCompletionChunk>>;
 };
 
@@ -302,6 +312,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const user = await getCurrentUser();
+  if (!user?.tenant || !user.user_id) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const aiAssistantEnabled = await isExperimentalFeatureEnabled('aiAssistant');
   if (!aiAssistantEnabled) {
     return new Response(
@@ -326,7 +344,16 @@ export async function POST(req: NextRequest) {
         };
         const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
           messages,
-          { signal: req.signal, uiContext, mentions: mentions.length > 0 ? mentions : undefined },
+          {
+            signal: req.signal,
+            uiContext,
+            mentions: mentions.length > 0 ? mentions : undefined,
+            baseUrl: req.nextUrl.origin,
+            tenantId: user.tenant,
+            userId: user.user_id,
+            currentUser: user as unknown as Record<string, unknown>,
+            cookieHeader: req.headers.get('cookie') ?? undefined,
+          },
         );
 
         for await (const event of completionStream) {
@@ -367,7 +394,11 @@ export async function POST(req: NextRequest) {
             continue;
           }
 
-          if (eventType === 'function_proposed') {
+          if (
+            eventType === 'function_proposed' ||
+            eventType === 'tool_executed' ||
+            eventType === 'continuation_available'
+          ) {
             tryEnqueue(controller, controllerState, encodeSseData(encoder, event));
             continue;
           }

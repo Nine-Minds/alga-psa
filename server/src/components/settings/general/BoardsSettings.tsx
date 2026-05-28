@@ -140,7 +140,7 @@ const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, s
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
-  const { isAlgadesk } = useProduct();
+  const { isAlgaDesk } = useProduct();
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -169,6 +169,7 @@ const BoardsSettings: React.FC = () => {
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     boardId: string;
@@ -328,7 +329,7 @@ const BoardsSettings: React.FC = () => {
       }));
     } catch (loadError) {
       console.error('Error loading board ticket statuses:', loadError);
-      setError(loadError instanceof Error ? loadError.message : t('ticketing.boards.messages.error.fetchStatusesFailed'));
+      setDialogError(loadError instanceof Error ? loadError.message : t('ticketing.boards.messages.error.fetchStatusesFailed'));
     } finally {
       setIsLoadingBoardStatuses(false);
     }
@@ -359,6 +360,7 @@ const BoardsSettings: React.FC = () => {
     });
     setShowAddEditDialog(true);
     setError(null);
+    setDialogError(null);
     setIsLoadingBoardStatuses(true);
 
     await loadManagedTicketStatusesFromBoard(board.board_id!);
@@ -517,15 +519,15 @@ const BoardsSettings: React.FC = () => {
 
   const handleSaveBoard = async () => {
     try {
-      setError(null);
+      setDialogError(null);
 
       if (!formData.board_name.trim()) {
-        setError(t('ticketing.boards.messages.error.nameRequired'));
+        setDialogError(t('ticketing.boards.messages.error.nameRequired'));
         return;
       }
 
       if (isDuplicateBoardName) {
-        setError(t('ticketing.boards.messages.error.nameAlreadyExists'));
+        setDialogError(t('ticketing.boards.messages.error.nameAlreadyExists'));
         return;
       }
 
@@ -540,12 +542,12 @@ const BoardsSettings: React.FC = () => {
         formData.status_seed_mode === 'copy_existing';
 
       if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
-        setError(t('ticketing.boards.messages.error.selectBoardToCopy'));
+        setDialogError(t('ticketing.boards.messages.error.selectBoardToCopy'));
         return;
       }
 
       if (shouldManageTicketStatuses && ticketStatusValidationError) {
-        setError(t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError]));
+        setDialogError(t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError]));
         return;
       }
 
@@ -602,7 +604,7 @@ const BoardsSettings: React.FC = () => {
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
-      setError(error instanceof Error ? error.message : t('ticketing.boards.messages.error.saveFailed'));
+      setDialogError(error instanceof Error ? error.message : t('ticketing.boards.messages.error.saveFailed'));
     }
   };
 
@@ -889,9 +891,10 @@ const BoardsSettings: React.FC = () => {
         <div className="mt-4 flex gap-2">
           <Button 
             id="add-board-button"
-            onClick={() => {
-              setEditingBoard(null);
-              setFormData(() => {
+	            onClick={() => {
+	              setEditingBoard(null);
+	              setDialogError(null);
+	              setFormData(() => {
                 const nextFormData = createEmptyFormData();
                 if (boards.length === 0) {
                   return {
@@ -975,54 +978,56 @@ const BoardsSettings: React.FC = () => {
       {/* Add/Edit Dialog */}
       <Dialog
         isOpen={showAddEditDialog}
-        onClose={() => {
-          setShowAddEditDialog(false);
-          setEditingBoard(null);
-          setFormData(createEmptyFormData());
-          setError(null);
-          setIsLoadingBoardStatuses(false);
-        }}
+	        onClose={() => {
+	          setShowAddEditDialog(false);
+	          setEditingBoard(null);
+	          setFormData(createEmptyFormData());
+	          setDialogError(null);
+	          setIsLoadingBoardStatuses(false);
+	        }}
         title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
         footer={(
-          <div className="flex justify-end space-x-2">
-            <Button
-              id="cancel-board-dialog"
-              variant="outline"
-              onClick={() => {
-                setShowAddEditDialog(false);
-                setEditingBoard(null);
-                setFormData(createEmptyFormData());
-                setError(null);
-                setIsLoadingBoardStatuses(false);
-              }}
-            >
-              {t('ticketing.boards.actions.cancel')}
-            </Button>
-            <Button
-              id="save-board-button"
-              onClick={handleSaveBoard}
-              disabled={
-                isLoadingBoardStatuses ||
-                !trimmedBoardName ||
-                isDuplicateBoardName ||
-                (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
-                (!editingBoard &&
-                  formData.status_seed_mode === 'copy_existing' &&
-                  !formData.copy_ticket_statuses_from_board_id)
-              }
-            >
-              {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
-            </Button>
+          <div className="space-y-3">
+            {dialogError && (
+              <Alert variant="destructive">
+                <AlertDescription>{dialogError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button
+                id="cancel-board-dialog"
+                variant="outline"
+                onClick={() => {
+                  setShowAddEditDialog(false);
+                  setEditingBoard(null);
+                  setFormData(createEmptyFormData());
+                  setDialogError(null);
+                  setIsLoadingBoardStatuses(false);
+                }}
+              >
+                {t('ticketing.boards.actions.cancel')}
+              </Button>
+              <Button
+                id="save-board-button"
+                onClick={handleSaveBoard}
+                disabled={
+                  isLoadingBoardStatuses ||
+                  !trimmedBoardName ||
+                  isDuplicateBoardName ||
+                  (shouldManageTicketStatuses && Boolean(ticketStatusValidationError)) ||
+                  (!editingBoard &&
+                    formData.status_seed_mode === 'copy_existing' &&
+                    !formData.copy_ticket_statuses_from_board_id)
+                }
+              >
+                {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
+              </Button>
+            </div>
           </div>
         )}
       >
         <DialogContent>
           <div className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
             <div>
               <Label htmlFor="board_name" required>{t('ticketing.boards.fields.boardName.label')}</Label>
               <Input
@@ -1093,7 +1098,7 @@ const BoardsSettings: React.FC = () => {
                 {t('ticketing.boards.fields.defaultAssignedAgent.help')}
               </p>
             </div>
-            {!isAlgadesk && (
+            {!isAlgaDesk && (
               <div>
                 <Label htmlFor="sla-policy-picker">{t('ticketing.boards.fields.slaPolicy.label')}</Label>
                 <CustomSelect

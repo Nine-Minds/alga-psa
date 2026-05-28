@@ -46,6 +46,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",

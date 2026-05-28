@@ -13,8 +13,39 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
+type ServiceCatalogSearchEventType =
+  | 'SERVICE_CATALOG_CREATED'
+  | 'SERVICE_CATALOG_UPDATED'
+  | 'SERVICE_CATALOG_DELETED';
 
+async function publishServiceCatalogSearchEvent(
+  eventType: ServiceCatalogSearchEventType,
+  tenant: string,
+  serviceId: string,
+  options: {
+    userId?: string;
+    itemKind?: 'service' | 'product';
+    changedFields?: string[];
+  } = {},
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        serviceId,
+        userId: options.userId,
+        itemKind: options.itemKind,
+        changedFields: options.changedFields,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[serviceActions] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -125,11 +156,12 @@ export const searchServiceCatalogForPicker = withAuth(async (
       );
 
     if (options.currency_code) {
+      const currencyCode = options.currency_code;
       query
         .leftJoin('service_prices as sp', function () {
           this.on('sp.service_id', 'sc.service_id')
             .andOn('sp.tenant', 'sc.tenant')
-            .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
+            .andOn('sp.currency_code', trx.raw('?', [currencyCode]));
         })
         .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
         .select(trx.raw(
@@ -424,6 +456,11 @@ export const createService = withAuth(async (
 
             // 4. Create the service using the model
             const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, service.service_id, {
+                userId: user.user_id,
+                itemKind: service.item_kind,
+                changedFields: Object.keys(finalServiceData),
+            });
             console.log('[serviceActions] Service created successfully:', service);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
             return service; // Assuming Service.create returns the full IService object
@@ -459,6 +496,12 @@ export const updateService = withAuth(async (
                 throw new Error(`Service with id ${serviceId} not found or couldn't be updated`);
             }
 
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, serviceId, {
+                userId: user.user_id,
+                itemKind: updatedService.item_kind,
+                changedFields: Object.keys(serviceData),
+            });
+
             return updatedService as IService;
         });
     } catch (error) {
@@ -474,11 +517,23 @@ export const deleteService = withAuth(async (
   ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
         const { knex } = await createTenantKnex();
+        const existing = await knex('service_catalog')
+            .where({ service_id: serviceId, tenant })
+            .select('item_kind')
+            .first();
+
         const result = await deleteEntityWithValidation('service', serviceId, knex, tenant, async (trx) => {
             await Service.delete(trx, serviceId);
             safeRevalidate('/msp/billing');
             safeRevalidate('/msp/settings/billing');
         });
+
+        if (result.deleted === true) {
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
+                userId: _user.user_id,
+                itemKind: existing?.item_kind,
+            });
+        }
 
         return {
             ...result,
@@ -680,6 +735,10 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
                 throw new Error('Product not found');
             }
 
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
+                userId: user.user_id,
+            });
+
             safeRevalidate('/msp/billing');
             safeRevalidate('/msp/settings/billing');
         });
@@ -706,7 +765,7 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; is_standard: boolean }[]> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -834,13 +893,12 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
 /**
  * Create a new service type with just a name (inline creation)
- * Creates with the provided billing_method and generates next order number
+ * Generates the next order number
  */
 export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
-  name: string,
-  billing_method: 'fixed' | 'hourly' | 'usage' = 'usage'
+  name: string
 ): Promise<IServiceType> => {
   try {
     const { knex: db } = await createTenantKnex();
@@ -871,7 +929,6 @@ export const createServiceTypeInline = withAuth(async (
         .insert({
           tenant,
           name: normalizedName,
-          billing_method,
           description: null,
           is_active: true,
           order_number: nextOrder,

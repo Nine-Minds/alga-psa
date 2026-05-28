@@ -53,6 +53,11 @@ import {
   useFormatWorkflowRunTrigger,
   useFormatWorkflowScheduleStatus,
 } from '../workflow-designer/useWorkflowRunTriggerPresentation';
+import {
+  buildRunDisplayError,
+  buildStepDisplayError,
+  type WorkflowDisplayError,
+} from './workflowRunDisplayError';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -553,7 +558,6 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
     () => steps.find((step) => step.step_path === selectedStepPath) ?? null,
     [steps, selectedStepPath]
   );
-  const selectedStepError = (selectedStep?.error_json ?? null) as any;
 
   const stepSnapshots = useMemo(
     () => snapshots.filter((snapshot) => snapshot.step_path === selectedStepPath),
@@ -563,6 +567,27 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
   const stepInvocations = useMemo(
     () => invocations.filter((invocation) => invocation.step_path === selectedStepPath),
     [invocations, selectedStepPath]
+  );
+  const selectedStepDisplayError = useMemo(
+    () => buildStepDisplayError(selectedStep, stepInvocations),
+    [selectedStep, stepInvocations]
+  );
+  const stepDisplayErrorsByPath = useMemo(() => {
+    const map = new Map<string, WorkflowDisplayError>();
+    steps.forEach((step) => {
+      const displayError = buildStepDisplayError(
+        step,
+        invocations.filter((invocation) => invocation.step_path === step.step_path)
+      );
+      if (displayError) {
+        map.set(step.step_path, displayError);
+      }
+    });
+    return map;
+  }, [steps, invocations]);
+  const runDisplayError = useMemo(
+    () => buildRunDisplayError(run, steps, invocations),
+    [run, steps, invocations]
   );
 
   const stepWaits = useMemo(
@@ -815,11 +840,14 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
       title: t('runDetails.stepTimeline.columns.error', { defaultValue: 'Error' }),
       dataIndex: 'error_json',
       sortable: false,
-      render: (_value: unknown, step: WorkflowRunStepRecord) => (
-        <div className="max-w-[18rem] break-words text-xs text-destructive">
-          {(step.error_json as any)?.message ?? emptyValueLabel}
-        </div>
-      ),
+      render: (_value: unknown, step: WorkflowRunStepRecord) => {
+        const displayError = stepDisplayErrorsByPath.get(step.step_path);
+        return (
+          <div className="max-w-[18rem] break-words text-xs text-destructive">
+            {displayError?.message ?? emptyValueLabel}
+          </div>
+        );
+      },
     },
     {
       title: t('runDetails.stepTimeline.columns.action', { defaultValue: 'Action' }),
@@ -837,7 +865,7 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
         </Button>
       ),
     },
-  ], [emptyValueLabel, formatDateTime, formatWorkflowStepStatus, retryWaitsByStep, stepTypeById, t]);
+  ], [emptyValueLabel, formatDateTime, formatWorkflowStepStatus, retryWaitsByStep, stepDisplayErrorsByPath, stepTypeById, t]);
 
   const handleApplyLogFilters = () => {
     fetchLogs(0, false, logFilters);
@@ -1192,18 +1220,22 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             )}
           </div>
         )}
-        {run?.error_json && (
+        {runDisplayError && (
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div>
-              <div>
-                {String((run.error_json as any)?.message
-                  ?? t('runDetails.summary.runErrorFallback', { defaultValue: 'Run error' }))}
-              </div>
+              <div>{runDisplayError.message}</div>
               <div className="text-xs text-destructive">
-                {(run.error_json as any)?.category
-                  ?? t('runDetails.summary.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime((run.error_json as any)?.at ?? null)}
+                {runDisplayError.category
+                  ?? t('runDetails.summary.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime(runDisplayError.at ?? null)}
+                {runDisplayError.stepPath ? ` · ${runDisplayError.stepPath}` : ''}
               </div>
+              {runDisplayError.technicalMessage && (
+                <div className="mt-1 text-xs text-destructive/80">
+                  {t('runDetails.summary.technicalDetailLabel', { defaultValue: 'Technical detail:' })}{' '}
+                  {runDisplayError.technicalMessage}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1352,19 +1384,24 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             </div>
           </div>
 
-          {selectedStepError && (
+          {selectedStepDisplayError && (
             <Card className="p-3 border border-destructive/30 bg-destructive/10">
               <div className="text-xs font-semibold text-destructive">
                 {t('runDetails.stepDetails.errorTitle', { defaultValue: 'Error' })}
               </div>
               <div className="text-sm text-destructive">
-                {String(selectedStepError.message
-                  ?? t('runDetails.stepDetails.stepErrorFallback', { defaultValue: 'Step error' }))}
+                {selectedStepDisplayError.message}
               </div>
               <div className="text-xs text-destructive/80">
-                {selectedStepError.category
-                  ?? t('runDetails.stepDetails.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime(selectedStepError.at ?? null)}
+                {selectedStepDisplayError.category
+                  ?? t('runDetails.stepDetails.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime(selectedStepDisplayError.at ?? null)}
               </div>
+              {selectedStepDisplayError.technicalMessage && (
+                <div className="mt-1 text-xs text-destructive/80">
+                  {t('runDetails.stepDetails.technicalDetailLabel', { defaultValue: 'Technical detail:' })}{' '}
+                  {selectedStepDisplayError.technicalMessage}
+                </div>
+              )}
             </Card>
           )}
 

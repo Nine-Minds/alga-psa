@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   IEmailProvider,
   EmailMessage as ProviderEmailMessage,
@@ -111,7 +111,151 @@ function getMetadataString(
   return null;
 }
 
-function deriveOutboundMessageIds(result: ProviderEmailSendResult): {
+function normalizeHeaderValue(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed || null;
+}
+
+function getHeaderValue(headers: Record<string, string> | undefined, name: string): string | null {
+  if (!headers) {
+    return null;
+  }
+
+  const lowerName = name.toLowerCase();
+  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === lowerName);
+  return key ? normalizeHeaderValue(headers[key]) : null;
+}
+
+interface CommentThreadReplyHeaderContext {
+  commentThreadId: string;
+  references: string[];
+}
+
+function buildGeneratedRfcMessageId(tenantId?: string): string {
+  const domainPart = tenantId ? `${tenantId}.alga-psa.local` : 'alga-psa.local';
+  return `<${randomUUID()}@${domainPart}>`;
+}
+
+function dedupeHeaderValues(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeHeaderValue(value ?? undefined);
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    deduped.push(normalized);
+  }
+
+  return deduped;
+}
+
+async function addCommentThreadReplyHeaders(params: {
+  tenantId?: string;
+  commentId?: string;
+  headers: Record<string, string>;
+  serviceName: string;
+}): Promise<CommentThreadReplyHeaderContext | null> {
+  if (!params.tenantId || !params.commentId) {
+    return null;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(params.tenantId);
+    const comment = await knex('comments')
+      .select('thread_id', 'parent_comment_id')
+      .where({
+        tenant: params.tenantId,
+        comment_id: params.commentId,
+      })
+      .first<{ thread_id?: string | null; parent_comment_id?: string | null }>();
+
+    if (!comment?.thread_id || !comment.parent_comment_id) {
+      return null;
+    }
+
+    const [latestOutbound, thread] = await Promise.all([
+      knex('email_sending_logs')
+        .select('rfc_message_id')
+        .where({
+          tenant: params.tenantId,
+          comment_thread_id: comment.thread_id,
+          status: 'sent',
+        })
+        .whereNotNull('rfc_message_id')
+        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
+        .first<{ rfc_message_id?: string | null }>(),
+      knex('comment_threads')
+        .select('email_references')
+        .where({
+          tenant: params.tenantId,
+          thread_id: comment.thread_id,
+        })
+        .first<{ email_references?: string[] | string | null }>(),
+    ]);
+
+    const inReplyTo = normalizeHeaderValue(latestOutbound?.rfc_message_id ?? undefined);
+    if (!inReplyTo) {
+      return null;
+    }
+
+    const storedReferences = Array.isArray(thread?.email_references)
+      ? thread.email_references
+      : [];
+    const references = dedupeHeaderValues([...storedReferences, inReplyTo]);
+
+    params.headers['In-Reply-To'] = inReplyTo;
+    if (references.length > 0) {
+      params.headers.References = references.join(' ');
+    }
+
+    return {
+      commentThreadId: comment.thread_id,
+      references,
+    };
+  } catch (error) {
+    logger.warn(`[${params.serviceName}] Failed to resolve comment thread reply headers`, {
+      tenantId: params.tenantId,
+      commentId: params.commentId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return null;
+  }
+}
+
+async function persistCommentThreadReferences(params: {
+  tenantId?: string;
+  context: CommentThreadReplyHeaderContext | null;
+  serviceName: string;
+}): Promise<void> {
+  if (!params.tenantId || !params.context || params.context.references.length === 0) {
+    return;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(params.tenantId);
+    await knex('comment_threads')
+      .where({
+        tenant: params.tenantId,
+        thread_id: params.context.commentThreadId,
+      })
+      .update({
+        email_references: params.context.references,
+      });
+  } catch (error) {
+    logger.warn(`[${params.serviceName}] Failed to persist comment thread references`, {
+      tenantId: params.tenantId,
+      commentThreadId: params.context.commentThreadId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+function deriveOutboundMessageIds(result: ProviderEmailSendResult, message?: ProviderEmailMessage): {
   providerMessageId: string | null;
   rfcMessageId: string | null;
 } {
@@ -129,6 +273,7 @@ function deriveOutboundMessageIds(result: ProviderEmailSendResult): {
       'messageIdHeader',
       'message_id_header',
     ]) ??
+    getHeaderValue(message?.headers, 'Message-ID') ??
     (result.messageId && /@/.test(result.messageId) ? result.messageId : null);
 
   return {
@@ -240,6 +385,17 @@ export abstract class BaseEmailService {
         name: from.name || null
       });
       
+      const headers = { ...(params.headers ?? {}) };
+      const commentThreadHeaderContext = await addCommentThreadReplyHeaders({
+        tenantId: params.tenantId,
+        commentId: params.replyContext?.commentId,
+        headers,
+        serviceName: this.getServiceName(),
+      });
+      if (params.replyContext?.commentId && !getHeaderValue(headers, 'Message-ID')) {
+        headers['Message-ID'] = buildGeneratedRfcMessageId(params.tenantId);
+      }
+
       // Convert to provider email message format
       emailMessage = {
         from,
@@ -251,7 +407,7 @@ export abstract class BaseEmailService {
         html,
         text,
         attachments: params.attachments,
-        headers: params.headers
+        headers
       };
 
       // Send via provider
@@ -270,6 +426,12 @@ export abstract class BaseEmailService {
       });
 
       if (result.success) {
+        await persistCommentThreadReferences({
+          tenantId: params.tenantId,
+          context: commentThreadHeaderContext,
+          serviceName: this.getServiceName(),
+        });
+
         logger.info(`[${this.getServiceName()}] Email sent successfully:`, {
           messageId: result.messageId,
           to: emailMessage.to,
@@ -281,6 +443,8 @@ export abstract class BaseEmailService {
       return {
         success: result.success,
         messageId: result.messageId,
+        providerMessageId: result.providerMessageId,
+        rfcMessageId: result.rfcMessageId ?? getHeaderValue(emailMessage.headers, 'Message-ID') ?? undefined,
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
@@ -341,10 +505,20 @@ export abstract class BaseEmailService {
       const toAddresses = params.message.to.map((addr) => addr.email);
       const ccAddresses = params.message.cc?.map((addr) => addr.email) ?? null;
       const bccAddresses = params.message.bcc?.map((addr) => addr.email) ?? null;
-      const { providerMessageId, rfcMessageId } = deriveOutboundMessageIds(params.providerResult);
+      const { providerMessageId, rfcMessageId } = deriveOutboundMessageIds(params.providerResult, params.message);
       const { replyTokenHash, replyTokenSuffix } = getReplyTokenFingerprint(
         params.replyContext?.conversationToken
       );
+      const comment = params.replyContext?.commentId
+        ? await knex('comments')
+          .select('thread_id', 'parent_comment_id')
+          .where({
+            tenant: params.tenantId,
+            comment_id: params.replyContext.commentId,
+          })
+          .first<{ thread_id?: string | null; parent_comment_id?: string | null }>()
+        : null;
+      const commentThreadId = comment?.thread_id ?? null;
       const baseMetadata =
         params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
           ? { ...params.providerResult.metadata }
@@ -361,6 +535,7 @@ export abstract class BaseEmailService {
             providerMessageId,
             rfcMessageId,
             threadId: params.replyContext?.threadId ?? null,
+            commentThreadId,
             ticketId: params.replyContext?.ticketId ?? null,
             projectId: params.replyContext?.projectId ?? null,
             commentId: params.replyContext?.commentId ?? null,
@@ -392,10 +567,25 @@ export abstract class BaseEmailService {
         contact_id: params.contactId ?? null,
         notification_subtype_id: params.notificationSubtypeId ?? null,
         thread_id: params.replyContext?.threadId ?? null,
+        comment_thread_id: commentThreadId,
         comment_id: params.replyContext?.commentId ?? null,
         reply_token_hash: replyTokenHash,
         reply_token_suffix: replyTokenSuffix,
       });
+
+      if (params.providerResult.success && params.replyContext?.commentId && rfcMessageId) {
+        if (comment?.thread_id && !comment.parent_comment_id) {
+          await knex('comment_threads')
+            .where({
+              tenant: params.tenantId,
+              thread_id: comment.thread_id,
+            })
+            .update({
+              email_message_id: rfcMessageId,
+              email_provider_thread_id: params.replyContext.threadId ?? null,
+            });
+        }
+      }
     } catch (error) {
       logger.warn(`[${this.getServiceName()}] Failed to write email_sending_logs record`, {
         tenantId: params.tenantId,

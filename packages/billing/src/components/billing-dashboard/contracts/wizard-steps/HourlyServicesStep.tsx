@@ -13,6 +13,7 @@ import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -22,6 +23,10 @@ interface HourlyServicesStepProps {
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
+  // Legacy default_rate (untagged) from service_catalog, shown as a hint when no currency-specific price exists.
+  const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number | null>>({});
+  // Marks rows where the picked service has no service_prices row in the contract currency.
+  const [missingCurrencyPrice, setMissingCurrencyPrice] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const inputs: Record<number, string> = {};
@@ -49,14 +54,24 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
 
   const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.hourly_services];
+    const currencyRate =
+      typeof item.currency_rate === 'number' && item.currency_rate > 0
+        ? item.currency_rate
+        : undefined;
     next[index] = {
       ...next[index],
       service_id: item.service_id,
       service_name: item.service_name,
-      // Use default_rate from catalog if available
-      hourly_rate: item.default_rate > 0 ? item.default_rate : undefined,
+      // Only prefill when a price exists for this contract's currency. Legacy default_rate is
+      // untagged and likely USD — don't paste it into a non-USD contract.
+      hourly_rate: currencyRate,
     };
     updateData({ hourly_services: next });
+    setLegacyDefaultRates((prev) => ({
+      ...prev,
+      [index]: item.default_rate > 0 ? item.default_rate : null,
+    }));
+    setMissingCurrencyPrice((prev) => ({ ...prev, [index]: currencyRate === undefined }));
   };
 
   const handleRateChange = (index: number, cents: number) => {
@@ -105,6 +120,11 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     if (!cents) return `${currencySymbol}0.00`;
     return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
+
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const hasAlternateBillingFrequency =
+    data.hourly_billing_frequency !== undefined &&
+    data.hourly_billing_frequency !== data.billing_frequency;
 
   return (
     <div className="space-y-6">
@@ -202,6 +222,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   selectedLabel={service.service_name}
                   onSelect={(item) => handleServiceChange(index, item)}
                   itemKinds={['service']}
+                  currencyCode={data.currency_code}
                   placeholder={t('wizardHourly.labels.selectServicePlaceholder', { defaultValue: 'Select a service' })}
                 />
               </div>
@@ -251,6 +272,22 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                     })
                     : t('wizardHourly.labels.enterHourlyRate', { defaultValue: 'Enter the hourly rate' })}
                 </p>
+                {service.service_id && missingCurrencyPrice[index] ? (
+                  <p className="text-xs text-amber-700">
+                    {legacyDefaultRates[index]
+                      ? t('wizardHourly.labels.noCurrencyPriceWithLegacyHint', {
+                          defaultValue:
+                            'No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}.',
+                          currency: data.currency_code,
+                          rate: ((legacyDefaultRates[index] ?? 0) / 100).toFixed(2),
+                        })
+                      : t('wizardHourly.labels.noCurrencyPriceEnterRate', {
+                          defaultValue:
+                            'No {{currency}} price in the catalog. Enter an hourly rate.',
+                          currency: data.currency_code,
+                        })}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
@@ -307,6 +344,15 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       )}
 
       {data.hourly_services.length > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.hourly_billing_frequency}
+          onChange={(value) => updateData({ hourly_billing_frequency: value })}
+          label={t('wizardHourly.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
+        />
+      )}
+
+      {data.hourly_services.length > 0 && (
         <Alert variant="info" className="mt-6">
           <AlertDescription>
             <h4 className="text-sm font-semibold mb-2">
@@ -335,18 +381,79 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   })}
                 </p>
               )}
+              {hasAlternateBillingFrequency && data.hourly_billing_frequency && (
+                <p>
+                  <strong>
+                    {t('wizardHourly.summary.labels.alternateFrequency', {
+                      defaultValue: 'Alternate Billing Frequency:',
+                    })}
+                  </strong>{' '}
+                  {formatBillingFrequency(data.hourly_billing_frequency)}
+                </p>
+              )}
+              {data.hourly_services.some((service) => service.bucket_overlay) && (
+                <div className="pt-2">
+                  <p className="font-semibold">
+                    {t('wizardHourly.summary.labels.bucketsHeading', { defaultValue: 'Buckets:' })}
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {data.hourly_services.map((service, index) => {
+                      if (!service.bucket_overlay) return null;
+                      const overlay = service.bucket_overlay;
+                      const includedHours =
+                        overlay.total_minutes !== undefined ? overlay.total_minutes / 60 : undefined;
+                      const serviceLabel =
+                        service.service_name ||
+                        t('wizardHourly.summary.labels.serviceFallback', {
+                          defaultValue: 'Service {{index}}',
+                          index: index + 1,
+                        });
+                      return (
+                        <li key={`hourly-bucket-summary-${index}`}>
+                          <span className="block">
+                            <strong>{serviceLabel}</strong>
+                          </span>
+                          {includedHours !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.includedHours', { defaultValue: 'Included Hours:' })}
+                              </strong>{' '}
+                              {t('wizardHourly.summary.values.hours', {
+                                defaultValue: '{{count}} hours',
+                                count: includedHours,
+                              })}
+                            </span>
+                          )}
+                          {overlay.overage_rate !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.overageRate', { defaultValue: 'Overage Rate:' })}
+                              </strong>{' '}
+                              {t('wizardHourly.summary.values.overageRatePerHour', {
+                                defaultValue: '{{rate}}/hour',
+                                rate: formatCurrency(overlay.overage_rate),
+                              })}
+                            </span>
+                          )}
+                          {overlay.allow_rollover !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.rollover', { defaultValue: 'Rollover:' })}
+                              </strong>{' '}
+                              {overlay.allow_rollover
+                                ? t('wizardHourly.summary.values.rolloverEnabled', { defaultValue: 'Enabled' })
+                                : t('wizardHourly.summary.values.rolloverDisabled', { defaultValue: 'Disabled' })}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           </AlertDescription>
         </Alert>
-      )}
-
-      {data.hourly_services.length > 0 && (
-        <BillingFrequencyOverrideSelect
-          contractBillingFrequency={data.billing_frequency}
-          value={data.hourly_billing_frequency}
-          onChange={(value) => updateData({ hourly_billing_frequency: value })}
-          label={t('wizardHourly.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
-        />
       )}
     </div>
   );

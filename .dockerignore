@@ -70,3 +70,7 @@ temp_wasm_compile
 # Allow pre-built Next.js artifacts required by Docker builds
 !server/.next
 !server/.next/**
+server/.next/cache
+server/.next/cache/**
+server/.next/dev/cache
+server/.next/dev/cache/**

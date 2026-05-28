@@ -12,7 +12,7 @@
     "allOpen": "Tous les tickets ouverts",
     "allClosed": "Tous les tickets fermés",
     "allPriorities": "Toutes les priorités",
-    "search": "Rechercher des tickets...",
+    "search": "Rechercher des tickets et commentaires...",
     "category": "Filtrer par catégorie",
     "clearFilters": "Effacer les filtres",
     "assignee": "Destinataire",
@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Tableau de bord des tickets",
     "addTicket": "Ajouter un ticket",
+    "shareTooltip": "Imprimer, importer et exporter",
     "exportCsv": "Exportation CSV",
     "bundledToggle": "Groupés",
     "exportSelectedTooltip_one": "Exportation de {{count}} tickets sélectionnés vers CSV",
@@ -393,12 +394,42 @@
       "decrease": "Réduire l’espacement des listes de tickets",
       "increase": "Augmenter l'espacement des listes de tickets",
       "reset": "Réinitialiser l'espacement de la liste de tickets"
-    }
+    },
+    "print": {
+      "action": "Imprimer",
+      "selectedAction_one": "Imprimer la sélection ({{count}})",
+      "selectedAction_other": "Imprimer la sélection ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Tickets sélectionnés ({{count}})",
+      "selectedTitle_other": "Tickets sélectionnés ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Aucun ticket à imprimer",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titre",
+        "client": "Client",
+        "status": "Statut",
+        "priority": "Priorité",
+        "assigned": "Assigné",
+        "dueDate": "Date d'échéance"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Aucune date d'échéance",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "selectedTitle": "Options d'impression ({{count}} sélectionnés)",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tickets."
+      }
+    },
+    "exportSelectedAction": "Exporter la sélection ({{count}})",
+    "exportAction": "Exporter CSV",
+    "importAction": "Importer CSV"
   },
   "bulk": {
-    "moveToBoard": "Déplacer à bord",
-    "deleteSelected_one": "Supprimer la sélection ({{count}})",
-    "deleteSelected_other": "Supprimer la sélection ({{count}})",
     "bundleTickets": "Regrouper les tickets",
     "moveDialogTitle": "Déplacer les tickets sélectionnés",
     "moveDialogDescription": "Sélectionnez un tableau de destination et un statut, puis confirmez le déplacement des tickets sélectionnés.",
@@ -499,7 +530,98 @@
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
-      "deleteRequired": "Vous devez être connecté pour supprimer des tickets"
+      "deleteRequired": "Vous devez être connecté pour supprimer des tickets",
+      "assignRequired": "Vous devez être connecté pour réassigner des tickets",
+      "tagsRequired": "Vous devez être connecté pour ajouter des étiquettes",
+      "dueDateRequired": "Vous devez être connecté pour mettre à jour des tickets",
+      "statusRequired": "Vous devez être connecté pour mettre à jour des tickets",
+      "priorityRequired": "Vous devez être connecté pour mettre à jour des tickets"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} sélectionné",
+      "selectedCount_other": "{{count}} sélectionnés",
+      "move": "Déplacer au tableau",
+      "bundle": "Regrouper",
+      "delete": "Supprimer",
+      "clear": "Effacer la sélection",
+      "bundleNeedsTwo": "Sélectionnez au moins 2 tickets pour les regrouper",
+      "assign": "Assigner",
+      "status": "Statut",
+      "priority": "Priorité",
+      "tags": "Étiquettes",
+      "dueDate": "Échéance",
+      "statusDisabledMultiBoard": "Les tickets sélectionnés sont sur des tableaux différents",
+      "statusResolvingBoards": "Vérification des tableaux des tickets sélectionnés…",
+      "more": "Plus"
+    },
+    "assign": {
+      "dialogTitle": "Assigner les tickets sélectionnés",
+      "message": "Réassigner {{count}} ticket(s) sélectionné(s) à :",
+      "unassigned": "Non assigné",
+      "teamHint": "Le chef d'équipe devient l'assigné principal ; les autres membres sont ajoutés comme agents supplémentaires.",
+      "confirm_one": "Réassigner {{count}} ticket",
+      "confirm_other": "Réassigner {{count}} tickets",
+      "submitting": "Réassignation...",
+      "success_one": "{{count}} ticket réassigné",
+      "success_other": "{{count}} tickets réassignés",
+      "partialFailure": "Certains tickets n’ont pas pu être réassignés",
+      "failure": "Échec de la réassignation des tickets sélectionnés",
+      "failedHeading": "Les tickets suivants n’ont pas pu être réassignés :"
+    },
+    "tags": {
+      "dialogTitle": "Ajouter des étiquettes aux tickets sélectionnés",
+      "message": "Ajoutez une ou plusieurs étiquettes à {{count}} ticket(s). Les étiquettes déjà présentes sont ignorées.",
+      "placeholder": "Saisissez une étiquette et appuyez sur Entrée",
+      "confirm_one": "Ajouter aux {{count}} ticket",
+      "confirm_other": "Ajouter aux {{count}} tickets",
+      "submitting": "Ajout des étiquettes...",
+      "success_one": "Étiquettes ajoutées à {{count}} ticket",
+      "success_other": "Étiquettes ajoutées à {{count}} tickets",
+      "partialFailure": "Les étiquettes n’ont pas pu être ajoutées à certains tickets",
+      "failure": "Échec de l’ajout d’étiquettes",
+      "failedHeading": "Les étiquettes n’ont pas pu être ajoutées aux tickets suivants :"
+    },
+    "dueDate": {
+      "dialogTitle": "Définir l’échéance des tickets sélectionnés",
+      "message": "Définissez ou effacez l’échéance sur {{count}} ticket(s).",
+      "modeSet": "Définir à",
+      "modeClear": "Effacer l’échéance",
+      "placeholder": "Choisissez une date",
+      "confirm_one": "Mettre à jour {{count}} ticket",
+      "confirm_other": "Mettre à jour {{count}} tickets",
+      "submitting": "Mise à jour...",
+      "success_one": "Échéance mise à jour sur {{count}} ticket",
+      "success_other": "Échéance mise à jour sur {{count}} tickets",
+      "partialFailure": "L’échéance n’a pas pu être mise à jour sur certains tickets",
+      "failure": "Échec de la mise à jour de l’échéance",
+      "failedHeading": "L’échéance n’a pas pu être mise à jour sur les tickets suivants :"
+    },
+    "status": {
+      "dialogTitle": "Changer le statut des tickets sélectionnés",
+      "message": "Définissez le statut pour {{count}} ticket(s) :",
+      "placeholder": "Sélectionnez un statut",
+      "loading": "Chargement des statuts...",
+      "confirm_one": "Mettre à jour {{count}} ticket",
+      "confirm_other": "Mettre à jour {{count}} tickets",
+      "submitting": "Mise à jour...",
+      "success_one": "Statut mis à jour sur {{count}} ticket",
+      "success_other": "Statut mis à jour sur {{count}} tickets",
+      "partialFailure": "Le statut n’a pas pu être mis à jour sur certains tickets",
+      "failure": "Échec de la mise à jour du statut",
+      "failedHeading": "Le statut n’a pas pu être mis à jour sur les tickets suivants :"
+    },
+    "priority": {
+      "dialogTitle": "Changer la priorité des tickets sélectionnés",
+      "message": "Définissez la priorité pour {{count}} ticket(s) :",
+      "placeholder": "Sélectionnez une priorité",
+      "confirm_one": "Mettre à jour {{count}} ticket",
+      "confirm_other": "Mettre à jour {{count}} tickets",
+      "submitting": "Mise à jour...",
+      "success_one": "Priorité mise à jour sur {{count}} ticket",
+      "success_other": "Priorité mise à jour sur {{count}} tickets",
+      "partialFailure": "La priorité n’a pas pu être mise à jour sur certains tickets",
+      "failure": "Échec de la mise à jour de la priorité",
+      "failedHeading": "La priorité n’a pas pu être mise à jour sur les tickets suivants :"
     }
   },
   "quickAdd": {
@@ -1126,6 +1248,18 @@
       "hr": "h",
       "hrs": "h",
       "min": "min"
+    }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} modifie",
+      "multiple_one": "{{name}} et {{count}} autre personne modifient",
+      "multiple_other": "{{name}} et {{count}} autres personnes modifient"
+    },
+    "remoteFieldUpdated": "{{name}} a mis à jour {{field}}",
+    "connection": {
+      "reconnecting": "Mises à jour en direct hors ligne - reconnexion...",
+      "unavailable": "Mises à jour en direct indisponibles"
     }
   }
 }

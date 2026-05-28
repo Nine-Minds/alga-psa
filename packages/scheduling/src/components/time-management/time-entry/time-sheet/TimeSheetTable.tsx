@@ -8,7 +8,7 @@ import { Trash, Plus, Check, X, ClipboardList, ArrowRight } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format, isToday } from 'date-fns';
-import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType } from './utils';
+import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType, isTimeEntryOnWorkDate } from './utils';
 import { BillableLegend } from './BillableLegend';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TimeEntrySelectionRequest, TimeSheetDateNavigatorState, TimeSheetQuickAddState } from './types';
@@ -461,8 +461,9 @@ export function TimeSheetTable({
                                         )}
                                     </td>
                                         {visibleDates.map((date): React.JSX.Element => {
-                                            const dayEntries = entries.filter(entry =>
-                                                parseISO(entry.start_time).toDateString() === date.toDateString()
+                                            const dateKey = formatISO(date, { representation: 'date' });
+                                            const dayEntries = entries.filter((entry) =>
+                                                isTimeEntryOnWorkDate(entry, dateKey)
                                             );
 
                                             const totalDuration = dayEntries.reduce((sum, entry) => {
@@ -486,7 +487,6 @@ export function TimeSheetTable({
                                             ) as BillabilityPercentage;
 
                                             const colors = billabilityColorScheme[billabilityTier];
-                                            const dateKey = formatISO(date, { representation: 'date' });
                                             const cellKey = `${workItem.work_item_id}-${dateKey}`;
                                             const isHovered = hoveredCell?.workItemId === workItem.work_item_id &&
                                                 hoveredCell?.date === dateKey;
@@ -682,8 +682,9 @@ export function TimeSheetTable({
                             Weekly Total
                         </td>
                         {visibleDates.map((date): React.JSX.Element => {
+                            const dateKey = formatISO(date, { representation: 'date' });
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
-                                .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());
+                                .filter((entry) => isTimeEntryOnWorkDate(entry, dateKey));
 
                             const totalDuration = entriesForDate.reduce((sum, entry) => {
                                 const start = parseISO(entry.start_time);

@@ -200,6 +200,7 @@ export const createAssetSchema = z.object({
   asset_tag: z.string(),
   name: z.string(),
   status: z.string(),
+  location_id: z.string().uuid().nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: z.string().optional(),
@@ -246,6 +247,7 @@ export const createMaintenanceHistorySchema = z.object({
 export const assetQuerySchema = z.object({
   client_id: z.string().uuid().optional(),
   client_name: z.string().optional(),
+  location_id: z.string().uuid().optional(),
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']).optional(),
   status: z.string().optional(),
   search: z.string().optional(),
