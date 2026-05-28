@@ -868,6 +868,101 @@ describe('Appointment Request Integration Tests', () => {
     });
   });
 
+  describe('Approve as configured approver (no user_schedule:update)', () => {
+    // Returns false specifically for user_schedule:update so the action falls into the
+    // approver-membership fallback path. Other permission checks still succeed.
+    const denyScheduleUpdate = (
+      _user: unknown,
+      resource?: string,
+      action?: string
+    ) => !(resource === 'user_schedule' && action === 'update');
+
+    const setStaffWithoutScheduleUpdate = (tenant: string) => {
+      const staffUser = createMockUser('internal', {
+        user_id: STAFF_USER_ID,
+        tenant,
+      });
+      setMockUser(staffUser, ['user_schedule:read']);
+      setupCommonMocks({
+        tenantId: tenant,
+        userId: STAFF_USER_ID,
+        user: staffUser,
+        permissionCheck: denyScheduleUpdate,
+      });
+    };
+
+    it('allows approval when the caller is listed in approver_user_ids (modern config)', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+
+      const settingId = uuidv4();
+      await db('availability_settings').insert({
+        availability_setting_id: settingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: {
+          approver_user_ids: [STAFF_USER_ID],
+          approver_team_ids: [],
+        },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(settingId);
+
+      setStaffWithoutScheduleUpdate(tenantId);
+
+      const result = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.approved_by_user_id).toBe(STAFF_USER_ID);
+    });
+
+    it('honors the legacy default_approver_id fallback for un-backfilled rows', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+
+      // Pre-migration shape: only `default_approver_id`, no array fields.
+      const settingId = uuidv4();
+      await db('availability_settings').insert({
+        availability_setting_id: settingId,
+        tenant: tenantId,
+        setting_type: 'general_settings',
+        is_available: true,
+        config_json: { default_approver_id: STAFF_USER_ID },
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      createdIds.availabilitySettingIds.push(settingId);
+
+      setStaffWithoutScheduleUpdate(tenantId);
+
+      const result = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.approved_by_user_id).toBe(STAFF_USER_ID);
+    });
+
+    it('rejects approval when the caller is neither permitted nor a configured approver', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+
+      // No approver config exists for STAFF_USER_ID.
+      setStaffWithoutScheduleUpdate(tenantId);
+
+      const result = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/insufficient permissions/i);
+    });
+  });
+
   describe('Decline Appointment Request', () => {
     it('should update status correctly when declined', async () => {
       const { clientId, contactId, serviceId, clientUserId } = await setupTestData(db, tenantId);

@@ -14,6 +14,7 @@ import {
   formatDate,
   formatTime
 } from '@alga-psa/scheduling/actions';
+import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
 
@@ -293,14 +294,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Send notification email to MSP staff
-    // Only notify: preferred technician (if specified) + default approver
+    // Notify the preferred technician (if specified) plus every resolved approver.
     try {
       const emailService = SystemEmailService.getInstance();
 
       // Get tenant settings
       const tenantSettings = await getTenantSettings(tenantId);
 
-      // Determine which staff should receive notifications
+      // Determine which staff should receive notifications:
+      // the preferred technician (if specified) plus every resolved approver.
+      // Approvers may be configured as multiple users and/or teams (expanded to members),
+      // falling back to the company-wide approvers.
       const notifyUserIds = new Set<string>();
 
       // Add preferred technician if specified
@@ -308,21 +312,14 @@ export async function POST(req: NextRequest) {
         notifyUserIds.add(validatedData.preferred_assigned_user_id);
       }
 
-      // Get the default approver from general settings
-      const generalSetting = await knex('availability_settings')
-        .where({
-          tenant: tenantId,
-          setting_type: 'general_settings'
-        })
-        .whereNotNull('config_json')
-        .first();
-
-      const defaultApproverId = generalSetting?.config_json?.default_approver_id;
-      if (defaultApproverId) {
-        notifyUserIds.add(defaultApproverId);
+      const approverUserIds = await resolveAppointmentApproverUserIds(knex, tenantId, {
+        preferredTechnicianId: validatedData.preferred_assigned_user_id || null
+      });
+      for (const approverId of approverUserIds) {
+        notifyUserIds.add(approverId);
       }
 
-      // Only notify specific users (preferred tech + default approver)
+      // Only notify the resolved set (preferred technician + approvers)
       if (notifyUserIds.size > 0) {
         const staffUsers = await knex('users')
           .where({ tenant: tenantId, user_type: 'internal' })
@@ -369,11 +366,11 @@ export async function POST(req: NextRequest) {
           appointmentRequestId,
           staffUsersCount: staffUsers.length,
           userIds: staffUsers.map(u => u.user_id),
-          defaultApproverId,
+          approverUserIds,
           preferredTechnicianId: validatedData.preferred_assigned_user_id
         });
       } else {
-        logger.warn('[public-appointment-request] No staff users to notify - no default approver configured', {
+        logger.warn('[public-appointment-request] No staff users to notify - no approvers configured', {
           appointmentRequestId
         });
       }

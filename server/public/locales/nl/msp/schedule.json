@@ -249,7 +249,7 @@
         "deleting": "Bezig met verwijderen..."
       },
       "defaultApprover": {
-        "placeholder": "Selecteer een goedkeurder"
+        "placeholder": "Selecteer goedkeurders"
       },
       "teamSelect": {
         "label": "Selecteer Team",
@@ -272,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Standaardgoedkeurder",
-        "help": "Bedrijfsbrede standaardgoedkeurder voor afspraakverzoeken die handmatige goedkeuring vereisen. Dit kan per technicus worden overschreven in de Gebruikersureninstellingen."
+        "label": "Goedkeurders",
+        "help": "Bedrijfsbrede goedkeurders voor afspraakverzoeken die handmatige goedkeuring vereisen. Voeg meerdere gebruikers en/of teams toe — iedereen die is geselecteerd, ontvangt een melding en kan goedkeuren. Dit kan per technicus worden overschreven in de Gebruikersureninstellingen."
       },
       "advanceBookingDays": {
         "label": "Standaard vooruitboeking (dagen)"
@@ -315,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Standaardgoedkeurder",
-          "help": "Wie moet afspraakverzoeken voor deze technicus beoordelen en goedkeuren die handmatige goedkeuring vereisen?"
+          "label": "Goedkeurders",
+          "help": "Wie moet afspraakverzoeken voor deze technicus beoordelen en goedkeuren die handmatige goedkeuring vereisen? Voeg meerdere gebruikers en/of teams toe. Laat leeg om de bedrijfsbrede goedkeurders te gebruiken."
         },
         "allowClientPreference": {
           "label": "Klantvoorkeur toestaan",
