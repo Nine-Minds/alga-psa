@@ -43,7 +43,7 @@ function toSearchDoc(tenant: string, row: DocumentSearchRow): SearchDoc {
     objectId: row.document_id,
     title: row.document_name,
     body: resolveBody(row),
-    url: `/msp/documents/${row.document_id}`,
+    url: `/msp/documents?doc=${row.document_id}`,
     acl: {
       requiredPermission: 'document:read',
     },
