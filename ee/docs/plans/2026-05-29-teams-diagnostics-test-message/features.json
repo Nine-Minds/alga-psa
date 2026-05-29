@@ -30,56 +30,56 @@
   {
     "id": "F005",
     "description": "Add sendTeamsTestMessageImpl(input, ctx) server action behind withAuth, gated on the same permission as saveTeamsIntegrationSettingsImpl, returning a structured TeamsTestMessageResult.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Goals", "Flow B"]
   },
   {
     "id": "F006",
     "description": "Test message resolves Teams availability; when addon is inactive it returns a skipped result (reason 'addon_inactive') and records a skipped delivery row without attempting send.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B", "Non-Goals (Explicit)"]
   },
   {
     "id": "F007",
     "description": "Test message returns skipped ('integration_inactive' or 'capability_disabled') when the integration row is not active or the personal_bot capability is disabled.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B"]
   },
   {
     "id": "F008",
     "description": "Test message returns skipped ('bot_not_configured') when isBotConnectorConfigured() is false, without attempting a Bot Framework token or send.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B", "Risks / Open Questions"]
   },
   {
     "id": "F009",
     "description": "Test message resolves the calling admin's Microsoft user linkage; when missing returns skipped ('missing_user_linkage').",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B"]
   },
   {
     "id": "F010",
     "description": "Test message looks up the latest personal conversation reference via the F001 reader; when missing returns skipped ('missing_conversation_reference') with an actionable hint to message the bot first.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B", "UX / UI Notes"]
   },
   {
     "id": "F011",
     "description": "Test message builds a synthetic test activity (card + text 'Alga PSA Teams test message') and calls sendBotActivity({ serviceUrl, conversationId, activity }) from the stored conversation reference.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Flow B", "Data Model / Integration Notes"]
   },
   {
     "id": "F012",
     "description": "Test message records a teams_notification_deliveries row for every outcome (skipped/sent/failed) reusing the existing recorder: category='test', destination_type='bot_test', destination_id=microsoft_user_id, idempotency_key includes an attempt nonce so repeated tests each record.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "prdRefs": ["Data Model / Integration Notes", "Risks / Open Questions"]
   },

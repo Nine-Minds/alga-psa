@@ -44,84 +44,84 @@
   {
     "id": "T007",
     "description": "sendTeamsTestMessageImpl rejects/denies when the caller lacks the teams settings permission (withAuth gate).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F005"]
   },
   {
     "id": "T008",
     "description": "Test message returns skipped reason 'addon_inactive' and records a skipped delivery row when the addon is not active; sendBotActivity is never called.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F006", "F012"]
   },
   {
     "id": "T009",
     "description": "Test message returns 'integration_inactive' when install_status != 'active'.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F007"]
   },
   {
     "id": "T010",
     "description": "Test message returns 'capability_disabled' when personal_bot is not in enabled_capabilities.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F007"]
   },
   {
     "id": "T011",
     "description": "Test message returns 'bot_not_configured' (and never requests a Bot Framework token) when isBotConnectorConfigured() is false.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F008"]
   },
   {
     "id": "T012",
     "description": "Test message returns 'missing_user_linkage' when the admin has no Microsoft account link.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F009"]
   },
   {
     "id": "T013",
     "description": "Test message returns 'missing_conversation_reference' with the actionable hint when no conversation reference exists for the admin.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F010"]
   },
   {
     "id": "T014",
     "description": "Happy path: test message calls sendBotActivity with the serviceUrl and conversationId from the stored reference and a test activity payload.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F011"]
   },
   {
     "id": "T015",
     "description": "On successful send, a teams_notification_deliveries row is written with status='sent', category='test', destination_type='bot_test', destination_id=microsoft_user_id.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F012"]
   },
   {
     "id": "T016",
     "description": "When sendBotActivity throws, the action records a status='failed' row with the error message and returns a failed result.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F011", "F012"]
   },
   {
     "id": "T017",
     "description": "Two consecutive test sends record two distinct delivery rows (attempt nonce in idempotency_key prevents ON CONFLICT collapse).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F012"]
   },
   {
     "id": "T018",
     "description": "All test-message DB writes are tenant-scoped (no cross-tenant row written or read).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "test-message",
     "featureIds": ["F012"]
   },
