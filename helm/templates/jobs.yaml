@@ -227,7 +227,30 @@ spec:
             - name: SECRET_ENV_PREFIX
               value: "{{ .Values.secrets_provider.envPrefix }}"
             {{- end }}
-            
+
+            # Crypto secrets must match the server deployment so values written
+            # during bootstrap (e.g. the initial admin password, which is PBKDF2
+            # peppered with NEXTAUTH_SECRET) can be verified/decrypted by the
+            # running app. With SECRET_READ_CHAIN="env,filesystem", omitting
+            # these lets getSecret fall through to the filesystem provider, which
+            # generates a divergent value in the job's ephemeral container and
+            # makes the created admin password impossible to log in with.
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: NEXTAUTH_SECRET
+            - name: CRYPTR_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: CRYPTR_KEY
+            - name: TOKEN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: TOKEN_SECRET_KEY
+
             # Vault configuration for setup jobs (only if vault is used)
             {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
             {{- if .Values.secrets_provider.vault.addr }}
