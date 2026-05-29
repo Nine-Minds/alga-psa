@@ -153,3 +153,9 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 
 - F033-F035: Added `integrations.teams.settings.diagnostics.*` locale keys to every `server/public/locales/*/msp/integrations.json` file. The diagnostics panel now localizes its section title/description, button labels, status labels, errors, test-message reason text, step titles, and recommendation strings with defaultValue fallbacks.
 - T040-T041: Added `TeamsIntegrationSettings.i18n.test.ts` to assert every integrations locale contains the diagnostics keys and every test-message skip/fail reason maps to a defined key, preventing raw key leaks or unmapped reason codes.
+
+### wiring
+
+- F036-F037: Verified the EE action barrel exports `teamsDiagnosticsActions`, and `packages/integrations/src/actions` plus `packages/integrations/src/actions/integrations` re-export `runTeamsDiagnostics`, `sendTeamsTestMessage`, and their result types for `TeamsIntegrationSettings`. Added T042 coverage to `teamsActions.test.ts` so the boundary remains importable.
+- F038/T043: Rebuilt `@alga-psa/ee-microsoft-teams` with `npm -w @alga-psa/ee-microsoft-teams run build`. Changed the package tsup config to bundle local source into dist entries because the non-bundled dist action barrel re-exported local paths that were not emitted. Verified `dist/actions/index.mjs` contains `runTeamsDiagnostics`, `sendTeamsTestMessage`, `runTeamsDiagnosticsImpl`, and `sendTeamsTestMessageImpl`. Direct Node import still depends on the broader monorepo package runtime state, so the smoke check is a built-file export check after the successful build.
+- Verification: `cd server && npx vitest run ../packages/integrations/src/actions/integrations/teamsActions.test.ts`; `npm -w @alga-psa/integrations run typecheck`; `npm -w @alga-psa/ee-microsoft-teams run typecheck`; `npm -w @alga-psa/ee-microsoft-teams run build`.

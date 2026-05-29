@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -164,7 +166,9 @@ vi.mock('./providerReadiness', () => ({
 import {
   getTeamsIntegrationExecutionState,
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
   saveTeamsIntegrationSettings,
+  sendTeamsTestMessage,
 } from './teamsActions';
 
 function addMicrosoftProfile({
@@ -580,5 +584,29 @@ describe('Teams integration actions', () => {
       expect.objectContaining({ consumer_type: 'calendar', profile_id: 'profile-1' }),
       expect.objectContaining({ consumer_type: 'msp_sso', profile_id: 'profile-1' }),
     ]);
+  });
+
+  it('T042: exports Teams diagnostics actions through the integrations action boundary', () => {
+    const repoRoot = path.resolve(process.cwd(), '..');
+    const integrationsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
+      'utf8'
+    );
+    const rootActionsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'packages/integrations/src/actions/index.ts'),
+      'utf8'
+    );
+    const eeActionsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'ee/packages/microsoft-teams/src/actions/index.ts'),
+      'utf8'
+    );
+
+    expect(typeof runTeamsDiagnostics).toBe('function');
+    expect(typeof sendTeamsTestMessage).toBe('function');
+    expect(integrationsIndex).toContain('runTeamsDiagnostics');
+    expect(integrationsIndex).toContain('sendTeamsTestMessage');
+    expect(rootActionsIndex).toContain('runTeamsDiagnostics');
+    expect(rootActionsIndex).toContain('sendTeamsTestMessage');
+    expect(eeActionsIndex).toContain('teamsDiagnosticsActions');
   });
 });

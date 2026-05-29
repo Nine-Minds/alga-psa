@@ -334,7 +334,7 @@
   {
     "id": "F036",
     "description": "Export runTeamsDiagnostics and sendTeamsTestMessage from the microsoft-teams package action index, mirroring teamsObservabilityActions.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "wiring",
     "prdRefs": [
       "Data Model / Integration Notes"
@@ -343,7 +343,7 @@
   {
     "id": "F037",
     "description": "Re-export/register the two actions where packages/integrations consumes EE Teams actions so TeamsIntegrationSettings can import them through the established boundary.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "wiring",
     "prdRefs": [
       "Data Model / Integration Notes"
@@ -352,7 +352,7 @@
   {
     "id": "F038",
     "description": "Rebuild @alga-psa/microsoft-teams (tsup -> dist) so the server resolves the new exports at runtime (per observability-loop F045).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "wiring",
     "prdRefs": [
       "Data Model / Integration Notes"

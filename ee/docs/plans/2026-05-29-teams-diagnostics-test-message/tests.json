@@ -387,7 +387,7 @@
   {
     "id": "T042",
     "description": "runTeamsDiagnostics and sendTeamsTestMessage are importable through the packages/integrations boundary used by TeamsIntegrationSettings.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "wiring",
     "featureIds": [
       "F036",
@@ -397,7 +397,7 @@
   {
     "id": "T043",
     "description": "Built dist of @alga-psa/microsoft-teams exposes the two new exports (smoke import).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "wiring",
     "featureIds": [
       "F038"
