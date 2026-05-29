@@ -5,6 +5,7 @@ const hoisted = vi.hoisted(() => {
     hasPermission: true,
     hasAddon: true,
     integrations: [] as Array<Record<string, unknown>>,
+    profiles: [] as Array<Record<string, unknown>>,
     conversationReferences: [] as Array<Record<string, unknown>>,
     accountLinks: [] as Array<{ provider: string; provider_account_id: string | null }>,
     deliveries: [] as Array<Record<string, unknown>>,
@@ -40,6 +41,21 @@ const hoisted = vi.hoisted(() => {
       },
       first: async () =>
         state.integrations.find((row) =>
+          Object.entries(filters).every(([key, value]) => row[key] === value)
+        ),
+    };
+    return chain;
+  }
+
+  function buildProfileQuery() {
+    const filters: Record<string, unknown> = {};
+    const chain: any = {
+      where: (criteria: Record<string, unknown>) => {
+        Object.assign(filters, criteria);
+        return chain;
+      },
+      first: async () =>
+        state.profiles.find((row) =>
           Object.entries(filters).every(([key, value]) => row[key] === value)
         ),
     };
@@ -85,12 +101,51 @@ const hoisted = vi.hoisted(() => {
     return chain;
   }
 
+  function buildDeliveryQuery() {
+    const filters: Record<string, unknown> = {};
+    let allowedStatuses: string[] | null = null;
+    const chain: any = {
+      where: (criteria: Record<string, unknown>) => {
+        Object.assign(filters, criteria);
+        return chain;
+      },
+      modify: (callback: (builder: any) => void) => {
+        callback(chain);
+        return chain;
+      },
+      whereIn: (column: string, values: string[]) => {
+        if (column === 'status') {
+          allowedStatuses = values;
+        }
+        return chain;
+      },
+      orderBy: () => chain,
+      first: async () => {
+        let rows = state.deliveries.filter((row) =>
+          Object.entries(filters).every(([key, value]) => row[key] === value)
+        );
+        if (allowedStatuses) {
+          rows = rows.filter((row) => allowedStatuses!.includes(String(row.status)));
+        }
+        rows = [...rows].sort((a, b) => {
+          const byCreatedAt = Date.parse(String(b.created_at ?? '')) - Date.parse(String(a.created_at ?? ''));
+          if (byCreatedAt !== 0) return byCreatedAt;
+          return String(b.delivery_id ?? '').localeCompare(String(a.delivery_id ?? ''));
+        });
+        return rows[0];
+      },
+    };
+    return chain;
+  }
+
   const knex: any = (table: string) => {
     if (table === 'tenant_addons') return buildTenantAddonQuery();
     if (table === 'teams_integrations') return buildIntegrationQuery();
+    if (table === 'microsoft_profiles') return buildProfileQuery();
     if (table === 'teams_conversation_references') return buildConversationReferenceQuery();
     if (table === 'teams_notification_deliveries') {
       return {
+        ...buildDeliveryQuery(),
         insert: buildDeliveryInsert,
       };
     }
@@ -138,7 +193,10 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotConnector', () => ({
   sendBotActivity: hoisted.sendBotActivityMock,
 }));
 
-import { sendTeamsTestMessageImpl } from '@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsDiagnosticsActions';
+import {
+  runTeamsDiagnosticsImpl,
+  sendTeamsTestMessageImpl,
+} from '@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsDiagnosticsActions';
 
 const TENANT = '22222222-2222-2222-2222-222222222222';
 const USER = {
@@ -149,8 +207,23 @@ const USER = {
 function activeIntegration(capabilities: string[] = ['personal_bot', 'activity_notifications']) {
   hoisted.state.integrations.push({
     tenant: TENANT,
+    selected_profile_id: 'profile-1',
     install_status: 'active',
     enabled_capabilities: capabilities,
+    app_id: 'teams-app-1',
+    package_metadata: { baseUrl: 'https://psa.example.com' },
+  });
+}
+
+function readyProfile(overrides: Record<string, unknown> = {}) {
+  hoisted.state.profiles.push({
+    tenant: TENANT,
+    profile_id: 'profile-1',
+    client_id: 'client-1',
+    tenant_id: 'aad-tenant-1',
+    client_secret_ref: 'secret-ref-1',
+    is_archived: false,
+    ...overrides,
   });
 }
 
@@ -173,17 +246,45 @@ function conversationReference(overrides: Record<string, unknown> = {}) {
   });
 }
 
+function delivery(overrides: Record<string, unknown>) {
+  hoisted.state.deliveries.push({
+    tenant: TENANT,
+    delivery_id: `delivery-${hoisted.state.deliveries.length + 1}`,
+    internal_notification_id: null,
+    category: 'test',
+    destination_type: 'bot_test',
+    destination_id: 'aad-user-1',
+    attempt_number: 1,
+    idempotency_key: `key-${hoisted.state.deliveries.length + 1}`,
+    provider_message_id: null,
+    status: 'sent',
+    error_code: null,
+    error_message: null,
+    retryable: null,
+    provider_request_id: null,
+    sent_at: null,
+    delivered_at: null,
+    responded_at: null,
+    created_at: '2026-05-24T10:00:00.000Z',
+    ...overrides,
+  });
+}
+
 async function send() {
   return sendTeamsTestMessageImpl(USER, { tenant: TENANT });
 }
 
-describe('Teams diagnostics test message action', () => {
-  beforeEach(() => {
+async function diagnose() {
+  return runTeamsDiagnosticsImpl(USER, { tenant: TENANT });
+}
+
+function resetTeamsState() {
     process.env.EDITION = 'enterprise';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     hoisted.state.hasPermission = true;
     hoisted.state.hasAddon = true;
     hoisted.state.integrations.length = 0;
+    hoisted.state.profiles.length = 0;
     hoisted.state.conversationReferences.length = 0;
     hoisted.state.accountLinks.length = 0;
     hoisted.state.deliveries.length = 0;
@@ -193,6 +294,11 @@ describe('Teams diagnostics test message action', () => {
     hoisted.listOAuthAccountLinksForUserMock.mockClear();
     hoisted.isBotConnectorConfiguredMock.mockClear();
     hoisted.sendBotActivityMock.mockClear();
+}
+
+describe('Teams diagnostics test message action', () => {
+  beforeEach(() => {
+    resetTeamsState();
   });
 
   it('denies callers that lack the Teams settings permission', async () => {
@@ -360,5 +466,251 @@ describe('Teams diagnostics test message action', () => {
       destination_id: 'aad-user-1',
     });
     expect(hoisted.sendBotActivityMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('Teams diagnostics report action', () => {
+  beforeEach(() => {
+    resetTeamsState();
+  });
+
+  function healthyTenant() {
+    activeIntegration();
+    readyProfile();
+    microsoftLink();
+    conversationReference();
+    delivery({
+      delivery_id: 'delivery-success',
+      status: 'sent',
+      created_at: '2026-05-24T10:00:00.000Z',
+      sent_at: '2026-05-24T10:00:00.000Z',
+    });
+  }
+
+  it('denies callers that lack the Teams settings permission', async () => {
+    hoisted.state.hasPermission = false;
+
+    await expect(diagnose()).rejects.toThrow('Forbidden');
+  });
+
+  it('returns the expected ordered steps with valid statuses', async () => {
+    healthyTenant();
+
+    const report = await diagnose();
+
+    expect(report.steps.map((step) => step.id)).toEqual([
+      'addon_entitlement',
+      'integration_status',
+      'capabilities',
+      'microsoft_profile',
+      'package_metadata',
+      'bot_connector',
+      'user_linkage',
+      'conversation_reference',
+      'recent_delivery_health',
+    ]);
+    expect(report.steps.every((step) => ['pass', 'warn', 'fail', 'skip'].includes(step.status))).toBe(true);
+  });
+
+  it('fails the add-on check with a recommendation when the add-on is unavailable', async () => {
+    healthyTenant();
+    hoisted.state.hasAddon = false;
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'addon_entitlement')).toMatchObject({
+      status: 'fail',
+      data: { reason: 'addon_required' },
+    });
+    expect(report.recommendations).toContain('Enable the Microsoft Teams add-on for this tenant.');
+  });
+
+  it('fails when no integration row exists and warns when it is not active', async () => {
+    readyProfile();
+
+    let report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'integration_status')).toMatchObject({
+      status: 'fail',
+    });
+
+    resetTeamsState();
+    activeIntegration();
+    hoisted.state.integrations[0].install_status = 'install_pending';
+    readyProfile();
+    report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'integration_status')).toMatchObject({
+      status: 'warn',
+      data: { installStatus: 'install_pending' },
+    });
+  });
+
+  it('warns and names missing required capabilities', async () => {
+    activeIntegration(['personal_bot']);
+    readyProfile();
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'capabilities')).toMatchObject({
+      status: 'warn',
+      data: { missingCapabilities: ['activity_notifications'] },
+    });
+  });
+
+  it('fails when the selected profile is missing, archived, or lacks a client secret', async () => {
+    activeIntegration();
+    let report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'microsoft_profile')).toMatchObject({
+      status: 'fail',
+      detail: 'Selected Microsoft profile was not found.',
+    });
+
+    resetTeamsState();
+    activeIntegration();
+    readyProfile({ is_archived: true });
+    report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'microsoft_profile')).toMatchObject({
+      status: 'fail',
+      detail: 'Selected Microsoft profile is archived.',
+    });
+
+    resetTeamsState();
+    activeIntegration();
+    readyProfile({ client_secret_ref: null });
+    report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'microsoft_profile')).toMatchObject({
+      status: 'fail',
+      detail: 'Selected Microsoft profile is missing a client secret reference.',
+    });
+  });
+
+  it('fails with no package metadata and warns for an invalid base URL', async () => {
+    activeIntegration();
+    readyProfile();
+    hoisted.state.integrations[0].package_metadata = null;
+
+    let report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'package_metadata')).toMatchObject({
+      status: 'fail',
+    });
+
+    resetTeamsState();
+    activeIntegration();
+    readyProfile();
+    hoisted.state.integrations[0].package_metadata = { baseUrl: 'not a url' };
+    report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'package_metadata')).toMatchObject({
+      status: 'warn',
+    });
+  });
+
+  it('fails the bot connector check with env-var guidance when credentials are absent', async () => {
+    healthyTenant();
+    hoisted.state.isBotConfigured = false;
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'bot_connector')).toMatchObject({
+      status: 'fail',
+    });
+    expect(report.recommendations).toContain(
+      'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.'
+    );
+  });
+
+  it('warns when the admin has no Microsoft link', async () => {
+    activeIntegration();
+    readyProfile();
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'user_linkage')).toMatchObject({
+      status: 'warn',
+    });
+    expect(report.recommendations).toContain('Link your Microsoft account in your profile settings.');
+  });
+
+  it('warns when the admin has no conversation reference', async () => {
+    activeIntegration();
+    readyProfile();
+    microsoftLink();
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'conversation_reference')).toMatchObject({
+      status: 'warn',
+      detail: 'Open the Alga PSA bot in Teams and send it any message first, then retry.',
+    });
+  });
+
+  it('reports recent success/failure and warns when the most recent attempt failed', async () => {
+    healthyTenant();
+    delivery({
+      delivery_id: 'delivery-failure',
+      status: 'failed',
+      error_code: 'transient',
+      error_message: 'network timeout',
+      created_at: '2026-05-24T10:05:00.000Z',
+    });
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'recent_delivery_health')).toMatchObject({
+      status: 'warn',
+      data: {
+        lastSuccess: expect.objectContaining({ deliveryId: 'delivery-success' }),
+        lastFailure: expect.objectContaining({
+          deliveryId: 'delivery-failure',
+          errorMessage: 'network timeout',
+        }),
+      },
+    });
+  });
+
+  it('reads recent deliveries only for the current tenant', async () => {
+    healthyTenant();
+    hoisted.state.deliveries.length = 0;
+    delivery({
+      tenant: '33333333-3333-3333-3333-333333333333',
+      delivery_id: 'wrong-tenant-failure',
+      status: 'failed',
+      created_at: '2026-05-24T10:05:00.000Z',
+    });
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'recent_delivery_health')).toMatchObject({
+      status: 'pass',
+      data: {
+        lastSuccess: null,
+        lastFailure: null,
+      },
+    });
+  });
+
+  it('aggregates overall status by fail, warn, then pass', async () => {
+    healthyTenant();
+    await expect(diagnose()).resolves.toMatchObject({ overallStatus: 'pass' });
+
+    resetTeamsState();
+    activeIntegration();
+    readyProfile();
+    await expect(diagnose()).resolves.toMatchObject({ overallStatus: 'warn' });
+
+    resetTeamsState();
+    activeIntegration();
+    hoisted.state.isBotConfigured = false;
+    await expect(diagnose()).resolves.toMatchObject({ overallStatus: 'fail' });
+  });
+
+  it('deduplicates recommendations across checks', async () => {
+    activeIntegration();
+    readyProfile();
+
+    const report = await diagnose();
+    const linkRecommendations = report.recommendations.filter(
+      (recommendation) => recommendation === 'Link your Microsoft account in your profile settings.'
+    );
+    expect(linkRecommendations).toHaveLength(1);
+  });
+
+  it('returns pass and no recommendations for a fully healthy tenant', async () => {
+    healthyTenant();
+
+    const report = await diagnose();
+    expect(report.overallStatus).toBe('pass');
+    expect(report.recommendations).toEqual([]);
   });
 });

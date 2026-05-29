@@ -122,6 +122,13 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 - T007-T018: Added `server/src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` covering permission denial, every skip reason, happy-path proactive send payload, sent/failed delivery rows, distinct idempotency keys, and tenant-scoped reads/writes.
 - Verification: `cd server && npx vitest run src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` passed 16 tests.
 
+### diagnostics
+
+- F013-F014: Added `TeamsDiagnosticsStep`, `TeamsDiagnosticsReport`, `TeamsDiagnosticsStatus`, and `runTeamsDiagnosticsImpl()` with ordered `runStep()` capture of status/detail/duration/data/error plus recommendation accumulation.
+- F015-F024: Diagnostics now checks Teams add-on availability, integration status, required capabilities, Microsoft profile readiness, package metadata/base URL, bot connector env credentials, current admin Microsoft link, personal conversation reference, and tenant-scoped recent delivery health. Overall status rolls up fail > warn > pass and recommendations are deduped.
+- T019-T033: Extended `server/src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` with diagnostics coverage for permission denial, ordered steps, every required check, recent delivery tenant scoping, status aggregation, recommendation dedupe, and the fully healthy pass case.
+- Verification: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` passed 27 tests; `npm -w @alga-psa/ee-microsoft-teams run typecheck` passed.
+
 ## Out of scope (Phase 2+ — do NOT bundle)
 
 - `teams_channel_mappings`, channel routing/delivery, expanded categories.

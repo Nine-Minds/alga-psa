@@ -86,84 +86,84 @@
   {
     "id": "F013",
     "description": "Define TeamsDiagnosticsStep and TeamsDiagnosticsReport types (status: 'pass'|'warn'|'fail'|'skip', id, title, detail, durationMs, data?, error?, plus overallStatus and recommendations: string[]), mirroring Microsoft365DiagnosticsReport.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Data Model / Integration Notes", "Flow A"]
   },
   {
     "id": "F014",
     "description": "Add runTeamsDiagnosticsImpl(input, ctx) with a runStep(id, title, fn) helper that captures status/duration/error per step and accumulates recommendations, mirroring runMicrosoft365Diagnostics aggregation.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F015",
     "description": "Diagnostics check: addon entitlement active via getTeamsAvailability — fail with an actionable recommendation when addon_required/ce_unavailable.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F016",
     "description": "Diagnostics check: teams_integrations row exists and install_status='active' — fail when missing, warn when present but not active.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F017",
     "description": "Diagnostics check: enabled_capabilities include personal_bot and activity_notifications — warn (with which are missing) otherwise.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F018",
     "description": "Diagnostics check: selected Microsoft profile exists, is not archived, and has a client_secret_ref — fail otherwise.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F019",
     "description": "Diagnostics check: package metadata present and base URL resolvable — fail when no package generated, warn when base URL missing.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F020",
     "description": "Diagnostics check: bot connector credentials configured (isBotConnectorConfigured) — fail with the TEAMS_BOT_APP_* env recommendation when absent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A", "Risks / Open Questions"]
   },
   {
     "id": "F021",
     "description": "Diagnostics check: the calling admin's Microsoft user linkage present — warn with 'link your Microsoft account' recommendation when missing.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A"]
   },
   {
     "id": "F022",
     "description": "Diagnostics check: a conversation reference exists for the calling admin — warn with 'open the bot and message it once' recommendation when missing.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A", "UX / UI Notes"]
   },
   {
     "id": "F023",
     "description": "Diagnostics check: recent delivery health — read most recent success and most recent failure from teams_notification_deliveries (tenant-scoped); warn when the latest attempt failed and surface the error_code/message.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A", "User Value"]
   },
   {
     "id": "F024",
     "description": "Aggregate overallStatus (fail if any fail, else warn if any warn, else pass), dedupe recommendations, and expose runTeamsDiagnostics = withAuth(runTeamsDiagnosticsImpl) gated on the teams settings permission.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "prdRefs": ["Flow A", "Goals"]
   },

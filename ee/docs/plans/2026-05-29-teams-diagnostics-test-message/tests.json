@@ -128,105 +128,105 @@
   {
     "id": "T019",
     "description": "runTeamsDiagnostics is permission-gated via withAuth and denies unauthorized callers.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F024"]
   },
   {
     "id": "T020",
     "description": "Diagnostics report has the expected step ids/titles in order and each step carries a valid status.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F013", "F014"]
   },
   {
     "id": "T021",
     "description": "Addon check fails with recommendation when getTeamsAvailability returns addon_required.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F015"]
   },
   {
     "id": "T022",
     "description": "Integration check fails when no teams_integrations row exists and warns when present but not active.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F016"]
   },
   {
     "id": "T023",
     "description": "Capability check warns and names the missing capability when personal_bot or activity_notifications is absent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F017"]
   },
   {
     "id": "T024",
     "description": "Profile check fails when the selected profile is missing, archived, or lacks client_secret_ref.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F018"]
   },
   {
     "id": "T025",
     "description": "Package check fails with no package metadata and warns when base URL is unresolvable.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F019"]
   },
   {
     "id": "T026",
     "description": "Bot connector check fails with the TEAMS_BOT_APP_* recommendation when isBotConnectorConfigured() is false.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F020"]
   },
   {
     "id": "T027",
     "description": "User-linkage check warns with the link recommendation when the admin has no Microsoft link.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F021"]
   },
   {
     "id": "T028",
     "description": "Conversation-reference check warns with the 'message the bot first' recommendation when none exists for the admin.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F022"]
   },
   {
     "id": "T029",
     "description": "Recent-delivery check reports the latest success and latest failure and warns when the most recent attempt failed.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F023"]
   },
   {
     "id": "T030",
     "description": "Recent-delivery check reads only the current tenant's teams_notification_deliveries rows.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F023"]
   },
   {
     "id": "T031",
     "description": "overallStatus = 'fail' when any check fails, 'warn' when none fail but some warn, 'pass' when all pass/skip.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F024"]
   },
   {
     "id": "T032",
     "description": "Recommendations are deduplicated across checks.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F024"]
   },
   {
     "id": "T033",
     "description": "Fully healthy tenant fixture yields overallStatus='pass' and no recommendations.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "diagnostics",
     "featureIds": ["F015", "F016", "F017", "F018", "F019", "F020", "F021", "F022", "F023", "F024"]
   },
