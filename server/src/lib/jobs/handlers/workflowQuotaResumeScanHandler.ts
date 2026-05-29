@@ -41,7 +41,9 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
     const resumptions = await knex.transaction(async (trx) => {
       const nowIso = new Date().toISOString();
       const candidates = await trx<QuotaWaitCandidate>('workflow_run_waits as w')
-        .join('workflow_runs as r', 'r.run_id', 'w.run_id')
+        .join('workflow_runs as r', function () {
+          this.on('r.run_id', 'w.run_id').andOn('r.tenant', 'w.tenant');
+        })
         .where('w.wait_type', 'quota')
         .where('w.status', 'WAITING')
         .where('r.status', 'WAITING')

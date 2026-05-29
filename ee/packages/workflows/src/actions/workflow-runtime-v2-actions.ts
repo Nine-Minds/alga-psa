@@ -1460,15 +1460,17 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
 
   const versionsSubquery = knex('workflow_definition_versions')
-    .select('workflow_id')
+    .select('tenant', 'workflow_id')
     .max('version as published_version')
-    .groupBy('workflow_id')
+    .groupBy('tenant', 'workflow_id')
     .as('pv');
 
   const itemsQuery = knex('workflow_definitions as wd')
     .select('wd.*')
     .select(knex.raw('pv.published_version as published_version'))
-    .leftJoin(versionsSubquery, 'pv.workflow_id', 'wd.workflow_id');
+    .leftJoin(versionsSubquery, function () {
+      this.on('pv.workflow_id', 'wd.workflow_id').andOn('pv.tenant', 'wd.tenant');
+    });
 
   applyFilters(itemsQuery);
 
@@ -2350,7 +2352,10 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
   const [sortField, sortDir] = parsed.sort.split(':') as ['started_at' | 'updated_at', 'asc' | 'desc'];
 
   const query = knex('workflow_runs')
-    .leftJoin('workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
+    .leftJoin('workflow_definitions', function () {
+      this.on('workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
+        .andOn('workflow_runs.tenant', 'workflow_definitions.tenant');
+    })
     .select(
       'workflow_runs.run_id',
       'workflow_runs.workflow_id',
@@ -2458,8 +2463,12 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
   await requireWorkflowPermission(user, 'admin', knex);
 
   const query = knex('workflow_runs as runs')
-    .leftJoin('workflow_definitions as defs', 'runs.workflow_id', 'defs.workflow_id')
-    .leftJoin('workflow_run_steps as steps', 'runs.run_id', 'steps.run_id')
+    .leftJoin('workflow_definitions as defs', function () {
+      this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');
+    })
+    .leftJoin('workflow_run_steps as steps', function () {
+      this.on('runs.run_id', 'steps.run_id').andOn('runs.tenant', 'steps.tenant');
+    })
     .where('runs.status', 'FAILED')
     .select(
       'runs.run_id',

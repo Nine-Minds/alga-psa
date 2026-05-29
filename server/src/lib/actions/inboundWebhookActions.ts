@@ -454,13 +454,16 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
   }
 
   const publishedVersions = knex('workflow_definition_versions')
-    .select('workflow_id')
+    .select('tenant', 'workflow_id')
     .max('version as published_version')
-    .groupBy('workflow_id')
+    .groupBy('tenant', 'workflow_id')
     .as('published_versions');
 
   const rows = await knex('workflow_definitions as workflow_definitions')
-    .leftJoin(publishedVersions, 'published_versions.workflow_id', 'workflow_definitions.workflow_id')
+    .leftJoin(publishedVersions, function () {
+      this.on('published_versions.workflow_id', 'workflow_definitions.workflow_id')
+        .andOn('published_versions.tenant', 'workflow_definitions.tenant');
+    })
     .select(
       'workflow_definitions.workflow_id',
       'workflow_definitions.name',

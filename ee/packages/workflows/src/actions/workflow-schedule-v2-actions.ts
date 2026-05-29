@@ -404,7 +404,9 @@ export const listWorkflowSchedulesAction = withAuth(async (user, _ctx, input: un
   }
 
   const query = knex('tenant_workflow_schedule as tws')
-    .leftJoin('workflow_definitions as wd', 'wd.workflow_id', 'tws.workflow_id')
+    .leftJoin('workflow_definitions as wd', function () {
+      this.on('wd.workflow_id', 'tws.workflow_id').andOn('wd.tenant', 'tws.tenant');
+    })
     .select('tws.*', 'wd.name as workflow_name')
     .where('tws.tenant', tenant);
 

@@ -174,9 +174,19 @@ exports.up = async function up(knex) {
     if (await knex.schema.hasTable(table)) present.push(table);
   }
 
-  // 1. Final backfill of any NULL tenant (rollover rows written by old code), then
-  //    enforce NOT NULL (required: the distribution column must be NOT NULL).
+  // Only NOT-yet-distributed tables need prep + distribution. Already-distributed
+  // tables (e.g. from a prior partial run that failed at the constraint step) skip
+  // straight to the idempotent constraint re-add: re-running their backfill would
+  // fail with "modifying the partition value of rows is not allowed", because
+  // `tenant` is now the distribution column.
+  const toPrep = [];
   for (const table of present) {
+    if (!(await isDistributed(knex, table))) toPrep.push(table);
+  }
+
+  // 1. Backfill any NULL tenant (rollover rows written by old code), then enforce
+  //    NOT NULL (required: the distribution column must be NOT NULL).
+  for (const table of toPrep) {
     if (await knex.schema.hasColumn(table, 'tenant_id')) {
       await knex.raw(
         `UPDATE ?? SET tenant = tenant_id::uuid WHERE tenant IS NULL AND tenant_id ~ ${UUID_REGEX}`,
@@ -185,7 +195,7 @@ exports.up = async function up(knex) {
     }
   }
   for (const table of RUN_CHILDREN) {
-    if (!present.includes(table)) continue;
+    if (!toPrep.includes(table)) continue;
     await knex.raw(
       `UPDATE ?? AS c SET tenant = r.tenant
          FROM workflow_runs r
@@ -193,14 +203,14 @@ exports.up = async function up(knex) {
       [table]
     );
   }
-  if (present.includes('workflow_definition_versions')) {
+  if (toPrep.includes('workflow_definition_versions')) {
     await knex.raw(
       `UPDATE workflow_definition_versions AS v SET tenant = d.tenant
          FROM workflow_definitions d
         WHERE v.workflow_id = d.workflow_id AND v.tenant IS NULL AND d.tenant IS NOT NULL`
     );
   }
-  for (const table of present) {
+  for (const table of toPrep) {
     const nulls = await knex(table).whereNull('tenant').count({ c: '*' }).first();
     if (Number(nulls?.c ?? 0) > 0) {
       throw new Error(`Cannot distribute ${table}: ${nulls.c} rows still have NULL tenant`);
@@ -208,27 +218,27 @@ exports.up = async function up(knex) {
     await knex.raw('ALTER TABLE ?? ALTER COLUMN tenant SET NOT NULL', [table]);
   }
 
-  // 2. Drop all FKs across the v2 set first (so PKs they reference can be rebuilt).
-  for (const table of present) {
+  // 2. Drop all FKs (so PKs they reference can be rebuilt).
+  for (const table of toPrep) {
     await dropForeignKeys(knex, table);
   }
 
   // 3. Per table: drop triggers + uniques + unique indexes, recreate PK as (tenant, <id>).
-  for (const table of present) {
+  for (const table of toPrep) {
     await dropTriggers(knex, table);
     await dropUniqueConstraints(knex, table);
     await dropUniqueIndexes(knex, table);
     await recreateTenantPrimaryKey(knex, table);
   }
 
-  // 4. Distribute (parents first), then immediately truncate the leftover LOCAL
-  //    coordinator data — it otherwise blocks the constraint re-adds below.
-  //    Cast to ::regclass explicitly so the Citus functions resolve unambiguously.
-  console.log(`Colocating workflow v2 tables with ${COLOCATE_WITH}`);
-  for (const table of present) {
-    if (!(await isDistributed(knex, table))) {
-      await knex.raw(`SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => ?)`, [table, COLOCATE_WITH]);
-    }
+  // 4. Distribute, then immediately truncate the leftover LOCAL coordinator data —
+  //    it otherwise blocks the constraint re-adds below. Cast to ::regclass so the
+  //    Citus functions resolve unambiguously.
+  if (toPrep.length) {
+    console.log(`Colocating workflow v2 tables with ${COLOCATE_WITH}`);
+  }
+  for (const table of toPrep) {
+    await knex.raw(`SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => ?)`, [table, COLOCATE_WITH]);
     await knex.raw('SELECT truncate_local_data_after_distributing_table(?::regclass)', [table]);
   }
 

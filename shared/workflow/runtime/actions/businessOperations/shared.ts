@@ -103,7 +103,9 @@ export async function setTenantContext(trx: Knex.Transaction, tenantId: string):
 export async function resolveRunActorUserId(trx: Knex.Transaction, runId: string): Promise<string | null> {
   const row = await trx('workflow_runs as wr')
     .leftJoin('workflow_definition_versions as wdv', function joinVersions() {
-      this.on('wr.workflow_id', 'wdv.workflow_id').andOn('wr.workflow_version', 'wdv.version');
+      this.on('wr.workflow_id', 'wdv.workflow_id')
+        .andOn('wr.workflow_version', 'wdv.version')
+        .andOn('wr.tenant', 'wdv.tenant');
     })
     .leftJoin('workflow_definitions as wd', function joinDefinitions() {
       this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant', 'wd.tenant');
