@@ -755,6 +755,41 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/recover') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
+      return;
+    }
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+
+    // Force a Flux reconcile of the alga-core HelmRelease (same as
+    // `flux reconcile helmrelease alga-core --force`): bumping requestedAt and
+    // forceAt to the same value makes the helm-controller run a forced upgrade,
+    // which creates a fresh bootstrap Job. That job re-runs migrations,
+    // onboarding seeds, and creates the initial tenant/admin if no users exist.
+    const namespace = 'alga-system';
+    const name = 'alga-core';
+    const requestedAt = new Date().toISOString();
+    const signal = requestAbortSignal(req, res);
+    const command = kubectlCommand(`-n ${shellQuote(namespace)} annotate helmrelease ${shellQuote(name)} reconcile.fluxcd.io/requestedAt=${shellQuote(requestedAt)} reconcile.fluxcd.io/forceAt=${shellQuote(requestedAt)} --overwrite`, KUBECTL_API_TIMEOUT_MS);
+    const result = await runQueuedKubectl(command, { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal });
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Failed to trigger reconcile.', helmRelease: `${namespace}/${name}` });
+      return;
+    }
+    jsonResponse(res, 200, {
+      ok: true,
+      helmRelease: `${namespace}/${name}`,
+      requestedAt,
+      message: 'Forced a Flux reconcile of alga-core. A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes about a minute.'
+    });
+    return;
+  }
+
   if (url.pathname === '/api/updates') {
     const providedToken = url.searchParams.get('token') || '';
     if (!setupToken || providedToken !== setupToken) {

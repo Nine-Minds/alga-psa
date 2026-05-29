@@ -135,6 +135,9 @@ export default function StatusPage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
+  const [confirmRecover, setConfirmRecover] = useState(false);
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
   const [namespace, setNamespace] = useState('msp');
   const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -187,6 +190,23 @@ export default function StatusPage() {
       }
     }
   }, [query]);
+
+  const recoverBootstrap = useCallback(async () => {
+    if (!query || recovering) return;
+    setRecovering(true);
+    setRecoverMsg(null);
+    try {
+      const response = await fetch(apiPath('/api/recover', query), { method: 'POST', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to trigger recovery.');
+      setRecoverMsg(data.message || 'Recovery triggered.');
+      loadStatus();
+    } catch (err) {
+      setRecoverMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecovering(false);
+    }
+  }, [query, recovering, loadStatus]);
 
   const loadNamespaces = useCallback(async () => {
     if (!query) return;
@@ -422,6 +442,23 @@ export default function StatusPage() {
               {loadingStatus && !status ? <SkeletonBlock lines={3} /> : runningOperations.length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : runningOperations.map((op, index) => (
                 <div className={styles.operation} key={index}><strong>{op.component}</strong><p>{op.message}</p></div>
               ))}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Recovery</h2>
+              <p className={styles.muted}>Re-runs the application bootstrap — database migrations, onboarding seeds, and creation of the initial tenant and admin user (only when no user exists yet). Use this if setup finished but you cannot log in because the initial account was never created.</p>
+              <div className={styles.toolbar}>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  disabled={recovering}
+                  onClick={() => { if (!confirmRecover) { setConfirmRecover(true); } else { setConfirmRecover(false); recoverBootstrap(); } }}
+                >
+                  {recovering ? 'Triggering…' : confirmRecover ? 'Confirm re-run' : 'Re-run application bootstrap'}
+                </button>
+                {confirmRecover && !recovering ? <button type="button" onClick={() => setConfirmRecover(false)}>Cancel</button> : null}
+              </div>
+              {recoverMsg ? <p className={styles.helpText}>{recoverMsg}</p> : null}
             </article>
 
             <article className={`${styles.panel} ${styles.wide}`}>
