@@ -102,6 +102,17 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 # prior loop tests live under server/src/test/unit/internal-notifications/
 ```
 
+## 2026-05-29 implementation notes
+
+### conversation-reader
+
+- F001: Added `getLatestTeamsConversationReferenceImpl({ tenant, microsoftUserId, conversationType })` in `ee/packages/microsoft-teams/src/lib/teams/bot/teamsConversationReferences.ts`. It scopes through `createTenantKnex`, filters by `tenant`, `microsoft_user_id`, and `conversation_type`, defaults to `personal`, and orders by `last_activity_at DESC`.
+- F002: Reader returns a typed `TeamsConversationReferenceRecord | null` and maps missing/blank input, empty result, or read failure to `null` with a warning for read failures.
+- F003: Exported existing `resolveTeamsRecipientLink()` and `TeamsRecipientLink` from `teamsNotificationDelivery.ts`; this reuses the verified Microsoft `provider_account_id`/AAD oid as the conversation-reference key.
+- F004: No extra barrel change was required for source exports because `ee/packages/microsoft-teams/src/lib/index.ts` already exports both `teamsConversationReferences` and `teamsNotificationDelivery`.
+- T001-T004: Extended `server/src/test/unit/lib/teams/bot/teamsConversationReferences.test.ts` to cover newest-row selection, default/explicit conversation-type filtering, tenant scoping, and null return for no match.
+- T005-T006: Updated stale checklist wording from the removed `resolveTeamsMicrosoftUserId` helper to `resolveTeamsRecipientLink`, then covered successful Microsoft-link resolution and null when no Microsoft link exists.
+
 ## Out of scope (Phase 2+ — do NOT bundle)
 
 - `teams_channel_mappings`, channel routing/delivery, expanded categories.

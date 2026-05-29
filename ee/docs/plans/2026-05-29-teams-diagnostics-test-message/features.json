@@ -2,28 +2,28 @@
   {
     "id": "F001",
     "description": "Add getLatestTeamsConversationReferenceImpl({ tenant, microsoftUserId, conversationType? }) in teamsConversationReferences.ts that selects the newest row by last_activity_at DESC, tenant-scoped, with optional conversation_type filter (default 'personal').",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "prdRefs": ["Data Model / Integration Notes", "Flow B"]
   },
   {
     "id": "F002",
     "description": "Reader returns a typed result and is null-safe: returns null (never throws) when no matching conversation reference exists, so callers can map to a 'message the bot first' skip reason.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "prdRefs": ["Flow B"]
   },
   {
     "id": "F003",
     "description": "Map PSA user id -> microsoft_user_id by reusing resolveTeamsRecipientLink(tenant, userId).providerAccountId (verified to equal the AAD oid stored as teams_conversation_references.microsoft_user_id). No new mapping helper; export/reuse resolveTeamsRecipientLink and feed its providerAccountId into the F001 reader.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "prdRefs": ["Data Model / Integration Notes"]
   },
   {
     "id": "F004",
     "description": "Export the conversation-reference reader, resolver, and their TypeScript record/result types from the microsoft-teams package lib index so server actions can import them.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "prdRefs": ["Data Model / Integration Notes"]
   },

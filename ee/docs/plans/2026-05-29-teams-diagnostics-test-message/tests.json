@@ -2,42 +2,42 @@
   {
     "id": "T001",
     "description": "getLatestTeamsConversationReferenceImpl returns the row with the most recent last_activity_at for a (tenant, microsoftUserId).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F001"]
   },
   {
     "id": "T002",
     "description": "Reader filters by conversation_type (default 'personal') and ignores groupChat/channel rows for that user.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F001"]
   },
   {
     "id": "T003",
     "description": "Reader is tenant-scoped: a reference for the same microsoftUserId under a different tenant is never returned.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F001"]
   },
   {
     "id": "T004",
     "description": "Reader returns null (does not throw) when no matching row exists.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F002"]
   },
   {
     "id": "T005",
-    "description": "resolveTeamsMicrosoftUserId maps a PSA user id to the Microsoft user id and normalizes casing so it matches a stored microsoft_user_id.",
-    "implemented": false,
+    "description": "resolveTeamsRecipientLink maps a PSA user id to the Microsoft provider_account_id, which is reused as teams_conversation_references.microsoft_user_id.",
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F003"]
   },
   {
     "id": "T006",
-    "description": "resolveTeamsMicrosoftUserId returns null when the PSA user has no Microsoft account link.",
-    "implemented": false,
+    "description": "resolveTeamsRecipientLink returns null when the PSA user has no Microsoft account link.",
+    "implemented": true,
     "commitGroup": "conversation-reader",
     "featureIds": ["F003"]
   },
