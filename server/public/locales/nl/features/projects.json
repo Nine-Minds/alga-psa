@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} taken verplaatst",
     "bulkTasksMovedToPhase": "{{count}} taken verplaatst naar {{phaseName}}",
     "moveTasksTitle": "Taken verplaatsen",
-    "confirmMoveTasksMessage": "Weet je zeker dat je {{count}} geselecteerde taken naar fase \"{{targetPhase}}\" wilt verplaatsen?"
+    "confirmMoveTasksMessage": "Weet je zeker dat je {{count}} geselecteerde taken naar fase \"{{targetPhase}}\" wilt verplaatsen?",
+    "bulkTagsSuccess_one": "Labels toegevoegd aan {{count}} taak",
+    "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
+    "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
+    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -1452,6 +1456,18 @@
     "move": "Verplaatsen",
     "assign": "Toewijzen",
     "delete": "Verwijderen",
-    "clear": "Wissen"
+    "clear": "Wissen",
+    "tags": "Labels"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Labels toevoegen aan geselecteerde taken",
+      "message": "Voeg een of meer labels toe aan {{count}} geselecteerde taak/taken. Labels die al op een taak staan, worden overgeslagen.",
+      "placeholder": "Typ een label en druk op Enter",
+      "submitting": "Labels toevoegen...",
+      "confirm_one": "Labels toevoegen aan {{count}} taak",
+      "confirm_other": "Labels toevoegen aan {{count}} taken",
+      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
+    }
   }
 }

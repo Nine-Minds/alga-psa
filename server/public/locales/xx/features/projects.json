@@ -252,6 +252,10 @@
     "bulkAssignPartial": "11111 {{success}} 11111 {{failed}} 11111",
     "bulkAssignTeamSuccess": "11111 {{count}} 11111",
     "bulkAssignTeamPartial": "11111 {{success}} 11111 {{failed}} 11111",
+    "bulkTagsSuccess_one": "11111 {{count}} 11111",
+    "bulkTagsSuccess_other": "11111 {{count}} 11111",
+    "bulkTagsPartial": "11111",
+    "bulkTagsFailure": "11111",
     "bulkDeleteTitle": "11111",
     "bulkDeleteMessage": "11111 {{count}} 11111",
     "bulkTasksMovedSuccess": "11111 {{count}} 11111",
@@ -1451,7 +1455,19 @@
     "selectedCount": "11111 {{count}} 11111",
     "move": "11111",
     "assign": "11111",
+    "tags": "11111",
     "delete": "11111",
     "clear": "11111"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "placeholder": "11111",
+      "submitting": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "failedHeading": "11111"
+    }
   }
 }

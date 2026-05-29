@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} tareas movidas",
     "bulkTasksMovedToPhase": "{{count}} tareas movidas a {{phaseName}}",
     "moveTasksTitle": "Mover tareas",
-    "confirmMoveTasksMessage": "¿Seguro que quieres mover {{count}} tareas seleccionadas a la fase \"{{targetPhase}}\"?"
+    "confirmMoveTasksMessage": "¿Seguro que quieres mover {{count}} tareas seleccionadas a la fase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Etiquetas añadidas a {{count}} tarea",
+    "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
+    "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
+    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -1452,6 +1456,18 @@
     "move": "Mover",
     "assign": "Asignar",
     "delete": "Eliminar",
-    "clear": "Borrar"
+    "clear": "Borrar",
+    "tags": "Etiquetas"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Añadir etiquetas a las tareas seleccionadas",
+      "message": "Añade una o más etiquetas a {{count}} tarea(s) seleccionada(s). Las etiquetas que ya están en una tarea se omiten.",
+      "placeholder": "Escribe una etiqueta y pulsa Enter",
+      "submitting": "Añadiendo etiquetas...",
+      "confirm_one": "Añadir etiquetas a {{count}} tarea",
+      "confirm_other": "Añadir etiquetas a {{count}} tareas",
+      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
+    }
   }
 }

@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} tâches déplacées",
     "bulkTasksMovedToPhase": "{{count}} tâches déplacées vers {{phaseName}}",
     "moveTasksTitle": "Déplacer les tâches",
-    "confirmMoveTasksMessage": "Voulez-vous vraiment déplacer {{count}} tâches sélectionnées vers la phase « {{targetPhase}} » ?"
+    "confirmMoveTasksMessage": "Voulez-vous vraiment déplacer {{count}} tâches sélectionnées vers la phase « {{targetPhase}} » ?",
+    "bulkTagsSuccess_one": "Étiquettes ajoutées à {{count}} tâche",
+    "bulkTagsSuccess_other": "Étiquettes ajoutées à {{count}} tâches",
+    "bulkTagsPartial": "Impossible d'ajouter des étiquettes à certaines tâches",
+    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -1452,6 +1456,18 @@
     "move": "Déplacer",
     "assign": "Affecter",
     "delete": "Supprimer",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "tags": "Étiquettes"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Ajouter des étiquettes aux tâches sélectionnées",
+      "message": "Ajoutez une ou plusieurs étiquettes à {{count}} tâche(s) sélectionnée(s). Les étiquettes déjà présentes sur une tâche sont ignorées.",
+      "placeholder": "Saisissez une étiquette et appuyez sur Entrée",
+      "submitting": "Ajout des étiquettes...",
+      "confirm_one": "Ajouter des étiquettes à {{count}} tâche",
+      "confirm_other": "Ajouter des étiquettes à {{count}} tâches",
+      "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :"
+    }
   }
 }

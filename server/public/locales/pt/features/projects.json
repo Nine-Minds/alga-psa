@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} tasks moved",
     "bulkTasksMovedToPhase": "{{count}} tasks moved to {{phaseName}}",
     "moveTasksTitle": "Move Tasks",
-    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?"
+    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Tags adicionadas a {{count}} tarefa",
+    "bulkTagsSuccess_other": "Tags adicionadas a {{count}} tarefas",
+    "bulkTagsPartial": "Não foi possível adicionar tags a algumas tarefas",
+    "bulkTagsFailure": "Não foi possível adicionar tags às tarefas selecionadas"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -1452,6 +1456,18 @@
     "move": "Move",
     "assign": "Assign",
     "delete": "Delete",
-    "clear": "Clear"
+    "clear": "Clear",
+    "tags": "Tags"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Adicionar tags às tarefas selecionadas",
+      "message": "Adicione uma ou mais tags a {{count}} tarefa(s) selecionada(s). As tags que já estão numa tarefa são ignoradas.",
+      "placeholder": "Digite uma tag e pressione Enter",
+      "submitting": "Adicionando tags...",
+      "confirm_one": "Adicionar tags a {{count}} tarefa",
+      "confirm_other": "Adicionar tags a {{count}} tarefas",
+      "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:"
+    }
   }
 }

@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "Przeniesiono {{count}} zadania",
     "bulkTasksMovedToPhase": "Przeniesiono {{count}} zadania do {{phaseName}}",
     "moveTasksTitle": "Przenieś zadania",
-    "confirmMoveTasksMessage": "Czy na pewno chcesz przenieść {{count}} wybrane zadania do fazy „{{targetPhase}}”?"
+    "confirmMoveTasksMessage": "Czy na pewno chcesz przenieść {{count}} wybrane zadania do fazy „{{targetPhase}}”?",
+    "bulkTagsSuccess_one": "Dodano tagi do {{count}} zadania",
+    "bulkTagsSuccess_other": "Dodano tagi do {{count}} zadań",
+    "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
+    "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -1452,6 +1456,18 @@
     "move": "Przenieś",
     "assign": "Przypisz",
     "delete": "Usuń",
-    "clear": "Wyczyść"
+    "clear": "Wyczyść",
+    "tags": "Tagi"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Dodaj tagi do wybranych zadań",
+      "message": "Dodaj jeden lub więcej tagów do {{count}} wybranych zadań. Tagi już przypisane do zadania zostaną pominięte.",
+      "placeholder": "Wpisz tag i naciśnij Enter",
+      "submitting": "Dodawanie tagów...",
+      "confirm_one": "Dodaj tagi do {{count}} zadania",
+      "confirm_other": "Dodaj tagi do {{count}} zadań",
+      "failedHeading": "Nie udało się dodać tagów do następujących zadań:"
+    }
   }
 }

@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} attività spostate",
     "bulkTasksMovedToPhase": "{{count}} attività spostate in {{phaseName}}",
     "moveTasksTitle": "Sposta attività",
-    "confirmMoveTasksMessage": "Sei sicuro di voler spostare {{count}} attività selezionate nella fase \"{{targetPhase}}\"?"
+    "confirmMoveTasksMessage": "Sei sicuro di voler spostare {{count}} attività selezionate nella fase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_other": "Tag aggiunti a {{count}} attività",
+    "bulkTagsPartial": "Impossibile aggiungere i tag ad alcune attività",
+    "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -1452,6 +1456,18 @@
     "move": "Sposta",
     "assign": "Assegna",
     "delete": "Elimina",
-    "clear": "Cancella"
+    "clear": "Cancella",
+    "tags": "Tag"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Aggiungi tag alle attività selezionate",
+      "message": "Aggiungi uno o più tag a {{count}} attività selezionata/e. I tag già presenti su un'attività vengono ignorati.",
+      "placeholder": "Digita un tag e premi Invio",
+      "submitting": "Aggiunta dei tag...",
+      "confirm_one": "Aggiungi tag a {{count}} attività",
+      "confirm_other": "Aggiungi tag a {{count}} attività",
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
+    }
   }
 }

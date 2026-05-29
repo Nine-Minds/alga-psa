@@ -10,7 +10,7 @@ import { useDrawer } from "@alga-psa/ui";
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -27,7 +27,7 @@ import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask } from '../actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -36,6 +36,7 @@ import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
 import BulkMoveTaskDialog from './BulkMoveTaskDialog';
 import BulkAssignDialog from './BulkAssignDialog';
+import BulkAddTagsToTasksDialog from './BulkAddTagsToTasksDialog';
 import BulkTaskActionBar from './BulkTaskActionBar';
 import { useTaskSelection } from './TaskSelectionContext';
 import ProjectPhases from './ProjectPhases';
@@ -311,6 +312,9 @@ export default function ProjectDetail({
   const { selectedTaskIds, clearSelection, setTasksSelected } = useTaskSelection();
   const [isBulkMoveOpen, setIsBulkMoveOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [isBulkTagsOpen, setIsBulkTagsOpen] = useState(false);
+  const [bulkTagsErrors, setBulkTagsErrors] = useState<Array<{ taskId: string; message: string }>>([]);
+  const [isBulkAddingTags, setIsBulkAddingTags] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
@@ -2913,6 +2917,66 @@ export default function ProjectDetail({
     setIsBulkAssignOpen(false);
   };
 
+  // Handler for bulk tag add confirmation
+  const handleBulkAddTagsConfirm = async (tagTexts: string[]) => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0 || tagTexts.length === 0) return;
+
+    setIsBulkAddingTags(true);
+    setBulkTagsErrors([]);
+
+    try {
+      const result = await bulkAddTagsToTasks(ids, tagTexts);
+
+      if (result.updatedIds.length > 0) {
+        // Refetch authoritative tags for the updated tasks and push them into
+        // the per-task tag state via the existing handler.
+        try {
+          const refreshed = await findTagsByEntityIds(result.updatedIds, 'project_task');
+          const byTask = new Map<string, ITag[]>();
+          for (const id of result.updatedIds) byTask.set(id, []);
+          for (const tag of refreshed) {
+            const list = byTask.get(tag.tagged_id) ?? [];
+            list.push(tag);
+            byTask.set(tag.tagged_id, list);
+          }
+          for (const [taskId, tags] of byTask) {
+            handleTaskTagsChange(taskId, tags);
+          }
+        } catch (error) {
+          console.error('Failed to refresh task tags after bulk add:', error);
+        }
+      }
+
+      if (result.failed.length > 0) {
+        setBulkTagsErrors(result.failed);
+        // Narrow selection to failed tasks so the user can retry on just those.
+        setTasksSelected(ids, false);
+        setTasksSelected(result.failed.map(f => f.taskId), true);
+        if (result.updatedIds.length > 0) {
+          toast.success(
+            t('projectDetail.bulkTagsSuccess', 'Tags added to {{count}} task(s)', { count: result.updatedIds.length }),
+          );
+        }
+        toast.error(
+          t('projectDetail.bulkTagsPartial', 'Tags could not be added to some tasks'),
+        );
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(
+            t('projectDetail.bulkTagsSuccess', 'Tags added to {{count}} task(s)', { count: result.updatedIds.length }),
+          );
+        }
+        // Keep selection so user can run more bulk actions on the same tasks.
+        setIsBulkTagsOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('projectDetail.bulkTagsFailure', 'Failed to add tags to selected tasks'));
+    } finally {
+      setIsBulkAddingTags(false);
+    }
+  };
+
   // Render the sticky header with title, view switcher, search, and filters
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
@@ -3842,6 +3906,10 @@ export default function ProjectDetail({
       <BulkTaskActionBar
         onMove={() => setIsBulkMoveOpen(true)}
         onAssign={() => setIsBulkAssignOpen(true)}
+        onTags={() => {
+          setBulkTagsErrors([]);
+          setIsBulkTagsOpen(true);
+        }}
         onDelete={() => setIsBulkDeleteOpen(true)}
       />
 
@@ -3867,6 +3935,20 @@ export default function ProjectDetail({
           onConfirm={handleBulkAssignConfirm}
         />
       )}
+
+      {/* Bulk Add Tags Dialog */}
+      <BulkAddTagsToTasksDialog
+        isOpen={isBulkTagsOpen && selectedTaskIds.size > 0}
+        onClose={() => setIsBulkTagsOpen(false)}
+        taskCount={selectedTaskIds.size}
+        failed={bulkTagsErrors.map(err => {
+          const task = projectTasks.find(t => t.task_id === err.taskId)
+            || allProjectTasks.find(t => t.task_id === err.taskId);
+          return { ...err, label: task?.task_name };
+        })}
+        isSubmitting={isBulkAddingTags}
+        onConfirm={handleBulkAddTagsConfirm}
+      />
 
       {/* Bulk Delete Confirmation Dialog */}
       {isBulkDeleteOpen && (

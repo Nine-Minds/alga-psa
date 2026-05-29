@@ -252,6 +252,10 @@
     "bulkAssignPartial": "Assigned {{success}} task(s), {{failed}} failed.",
     "bulkAssignTeamSuccess": "{{count}} task(s) assigned to team successfully!",
     "bulkAssignTeamPartial": "Assigned {{success}} task(s) to team, {{failed}} failed.",
+    "bulkTagsSuccess_one": "Tags added to {{count}} task",
+    "bulkTagsSuccess_other": "Tags added to {{count}} tasks",
+    "bulkTagsPartial": "Tags could not be added to some tasks",
+    "bulkTagsFailure": "Failed to add tags to selected tasks",
     "bulkDeleteTitle": "Delete Tasks",
     "bulkDeleteMessage": "Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.",
     "bulkTasksMovedSuccess": "{{count}} tasks moved",
@@ -1451,7 +1455,19 @@
     "selectedCount": "{{count}} selected",
     "move": "Move",
     "assign": "Assign",
+    "tags": "Tags",
     "delete": "Delete",
     "clear": "Clear"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Add Tags to Selected Tasks",
+      "message": "Add one or more tags to {{count}} selected task(s). Tags already on a task are skipped.",
+      "placeholder": "Type a tag and press Enter",
+      "submitting": "Adding tags...",
+      "confirm_one": "Add Tags to {{count}} Task",
+      "confirm_other": "Add Tags to {{count}} Tasks",
+      "failedHeading": "Tags could not be added to the following tasks:"
+    }
   }
 }

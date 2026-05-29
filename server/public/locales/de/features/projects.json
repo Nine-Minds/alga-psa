@@ -257,7 +257,11 @@
     "bulkTasksMovedSuccess": "{{count}} Aufgaben verschoben",
     "bulkTasksMovedToPhase": "{{count}} Aufgaben nach {{phaseName}} verschoben",
     "moveTasksTitle": "Aufgaben verschieben",
-    "confirmMoveTasksMessage": "Möchten Sie {{count}} ausgewählte Aufgaben wirklich in die Phase „{{targetPhase}}“ verschieben?"
+    "confirmMoveTasksMessage": "Möchten Sie {{count}} ausgewählte Aufgaben wirklich in die Phase „{{targetPhase}}“ verschieben?",
+    "bulkTagsSuccess_one": "Tags zu {{count}} Aufgabe hinzugefügt",
+    "bulkTagsSuccess_other": "Tags zu {{count}} Aufgaben hinzugefügt",
+    "bulkTagsPartial": "Tags konnten zu einigen Aufgaben nicht hinzugefügt werden",
+    "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -1452,6 +1456,18 @@
     "move": "Verschieben",
     "assign": "Zuweisen",
     "delete": "Löschen",
-    "clear": "Zurücksetzen"
+    "clear": "Zurücksetzen",
+    "tags": "Tags"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Tags zu ausgewählten Aufgaben hinzufügen",
+      "message": "Fügen Sie {{count}} ausgewählten Aufgabe(n) ein oder mehrere Tags hinzu. Tags, die bereits an einer Aufgabe vorhanden sind, werden übersprungen.",
+      "placeholder": "Tag eingeben und Enter drücken",
+      "submitting": "Tags werden hinzugefügt...",
+      "confirm_one": "Tags zu {{count}} Aufgabe hinzufügen",
+      "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
+      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
+    }
   }
 }
