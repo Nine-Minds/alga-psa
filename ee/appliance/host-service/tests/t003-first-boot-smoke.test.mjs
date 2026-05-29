@@ -164,11 +164,14 @@ test('T003 first-boot smoke: console output and host web service health', async 
     const submitBody = JSON.parse(submit.body);
     assert.equal(submitBody.ok, true);
     assert.equal(submitBody.acceptedInputs.appHostname, 'alga.example.com');
-    assert.equal(submitBody.acceptedInputs.repoBranch, 'feature/on-premise-email-processing');
+    // repoBranch/repoUrl are no longer part of setup inputs (registry-metadata):
+    // release selection is resolved by channel from the OCI registry. Any
+    // repoBranch/repoUrl posted by an older client is ignored, not echoed.
+    assert.equal(submitBody.acceptedInputs.repoBranch, undefined);
     const persistedSetupInputs = JSON.parse(fs.readFileSync(path.join(tmp, 'setup-inputs.json'), 'utf8'));
     assert.equal(persistedSetupInputs.channel, 'stable');
     assert.equal(persistedSetupInputs.appHostname, 'alga.example.com');
-    assert.equal(persistedSetupInputs.repoBranch, 'feature/on-premise-email-processing');
+    assert.equal(persistedSetupInputs.repoBranch, undefined);
     assert.equal(persistedSetupInputs.initialTenant.tenantName, 'Acme MSP');
     assert.equal(persistedSetupInputs.initialTenant.adminEmail, 'ava@example.com');
     assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'install-state.json'), 'utf8')).status, 'setup-queued');

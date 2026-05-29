@@ -13,6 +13,30 @@ const initialTenant = {
   adminPassword: 'Str0ng!Pass'
 };
 
+// A release manifest in the registry-metadata shape, injected via
+// releaseManifestOverride so tests never touch the network or git. Per-service
+// profile values are carried in the manifest (profileValues), as published.
+function makeReleaseManifest(overrides = {}) {
+  return {
+    schema: 'alga.appliance.release/v1',
+    version: '1.2.3',
+    valuesProfile: 'single-node',
+    images: { algaCore: 'coretag', workflowWorker: 'workertag', emailService: 'emailtag', temporalWorker: 'twtag' },
+    controlPlane: 'cptag',
+    config: { repository: 'ghcr.io/nine-minds/alga-appliance-config', tag: '1.2.3', digest: 'sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' },
+    charts: { sebastian: '0.0.1', temporal: '0.1.0', 'temporal-worker': '0.1.0', 'workflow-worker': '0.1.0', 'email-service': '0.1.0' },
+    profileValues: {
+      'alga-core.single-node.yaml': 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n',
+      'pgbouncer.single-node.yaml': 'pgbouncer: packaged\n',
+      'temporal.single-node.yaml': 'temporal: packaged\n',
+      'workflow-worker.single-node.yaml': 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n',
+      'email-service.single-node.yaml': 'email-service: packaged\nimage:\n  tag: old\n',
+      'temporal-worker.single-node.yaml': 'temporal-worker: packaged\nimage:\n  tag: old\n'
+    },
+    ...overrides
+  };
+}
+
 test('installFlux records success when flux install command exits cleanly', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
@@ -33,131 +57,72 @@ test('installFlux records success when flux install command exits cleanly', () =
   assert.equal(persisted.phase, 'flux');
 });
 
-test('resolveChannelMetadata uses channel release fields from GitHub schema', async () => {
+test('resolveChannelMetadata resolves a channel to the registry release manifest', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
 
-  const result = await resolveChannelMetadata({
-    channel: 'stable',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: ''
-  }, {
+  const result = await resolveChannelMetadata({ channel: 'stable' }, {
     stateFile,
-    channelMetadataOverride: {
-      channel: 'stable',
-      releaseVersion: '1.0-rc5.1',
-      repoBranch: 'release/1.0-rc5'
-    }
+    releaseManifestOverride: makeReleaseManifest()
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.releaseVersion, '1.0-rc5.1');
-  assert.equal(result.repoBranch, 'release/1.0-rc5');
+  assert.equal(result.channel, 'stable');
+  assert.equal(result.releaseVersion, '1.2.3');
+  assert.equal(result.manifest.images.algaCore, 'coretag');
+  assert.equal(result.manifest.config.digest, 'sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef');
+
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'release-resolve-complete');
+  assert.equal(persisted.phase, 'registry-release-source');
 });
 
-test('resolveChannelMetadata honors support repoBranch override over channel branch', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-override-'));
+test('resolveChannelMetadata rejects a malformed manifest', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-bad-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
 
-  const result = await resolveChannelMetadata({
-    channel: 'stable',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: 'feature/on-premise-email-processing'
-  }, {
+  const result = await resolveChannelMetadata({ channel: 'stable' }, {
     stateFile,
-    channelMetadataOverride: {
-      channel: 'stable',
-      releaseVersion: '1.0-rc5.1',
-      repoBranch: 'release/1.0-rc5'
-    }
+    // missing images.algaCore + config -> invalid
+    releaseManifestOverride: { version: '9.9.9' }
   });
 
-  assert.equal(result.ok, true);
-  assert.equal(result.releaseVersion, '1.0-rc5.1');
-  assert.equal(result.repoBranch, 'feature/on-premise-email-processing');
+  assert.equal(result.ok, false);
+  assert.equal(result.step, 'resolve-release-manifest');
 });
 
-test('applyFluxSource applies the resolved support branch override to Flux', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-source-override-'));
-  const stateFile = path.join(tmp, 'state', 'install-state.json');
-  const manifestPath = path.join(tmp, 'manifest.yaml');
-  const inputs = {
-    channel: 'stable',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: 'feature/on-premise-email-processing'
-  };
-
-  const releaseSelection = await resolveChannelMetadata(inputs, {
-    stateFile,
-    channelMetadataOverride: {
-      channel: 'stable',
-      releaseVersion: '1.0-rc5.1',
-      repoBranch: 'release/1.0-rc5'
-    }
-  });
-  assert.equal(releaseSelection.ok, true);
-
-  const result = applyFluxSource(inputs, releaseSelection, {
-    stateFile,
-    fluxSourceApplyCommand: `cat > ${manifestPath}`
-  });
-
-  assert.equal(result.ok, true);
-  const manifest = fs.readFileSync(manifestPath, 'utf8');
-  assert.match(manifest, /branch: feature\/on-premise-email-processing/);
-  assert.doesNotMatch(manifest, /branch: release\/1\.0-rc5/);
-});
-
-test('applyFluxSource normalizes SSH GitHub URL to HTTPS for Flux source', () => {
+test('applyFluxSource emits an OCIRepository pinned to the config bundle digest (no GitRepository)', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-source-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
   const manifestPath = path.join(tmp, 'manifest.yaml');
 
-  const result = applyFluxSource({
-    channel: 'stable',
-    repoUrl: 'git@github.com:Nine-Minds/alga-psa.git',
-    repoBranch: 'main'
-  }, {
-    ok: true,
-    repoUrl: 'git@github.com:Nine-Minds/alga-psa.git',
-    repoBranch: 'main',
-    releaseVersion: '1.0-rc5.1'
-  }, {
+  const releaseSelection = await resolveChannelMetadata({ channel: 'stable' }, {
+    stateFile,
+    releaseManifestOverride: makeReleaseManifest()
+  });
+  assert.equal(releaseSelection.ok, true);
+
+  const result = applyFluxSource({ channel: 'stable' }, releaseSelection, {
     stateFile,
     fluxSourceApplyCommand: `cat > ${manifestPath}`
   });
 
   assert.equal(result.ok, true);
   const manifest = fs.readFileSync(manifestPath, 'utf8');
-  assert.ok(manifest.includes('url: https://github.com/Nine-Minds/alga-psa'));
+  assert.match(manifest, /kind: OCIRepository/);
+  assert.match(manifest, /url: oci:\/\/ghcr\.io\/nine-minds\/alga-appliance-config/);
+  assert.match(manifest, /digest: sha256:deadbeef/);
+  assert.match(manifest, /kind: OCIRepository\n {4}name: alga-appliance/);
+  assert.doesNotMatch(manifest, /GitRepository/);
+  assert.doesNotMatch(manifest, /branch:/);
 });
 
-test('applyRuntimeValuesAndReleaseSelection renders runtime values from injected metadata (no baked files)', async () => {
-  // Release metadata has a single source of truth (git on the configured branch).
-  // Tests inject it via the *Override options instead of any baked local files.
+test('applyRuntimeValuesAndReleaseSelection renders runtime values from the manifest (registry-metadata)', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-runtime-values-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
   const runtimeValuesDir = path.join(tmp, 'runtime');
   const binDir = path.join(tmp, 'bin');
   const oldPath = process.env.PATH;
-
-  const releaseManifestOverride = {
-    app: {
-      version: '1.2.3',
-      releaseBranch: 'release/offline',
-      valuesProfile: 'single-node',
-      images: { algaCore: 'coretag', workflowWorker: 'workertag', emailService: 'emailtag', temporalWorker: 'twtag' }
-    }
-  };
-
-  const profileValuesOverride = {
-    'alga-core.single-node.yaml': 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n',
-    'pgbouncer.single-node.yaml': 'pgbouncer: packaged\n',
-    'temporal.single-node.yaml': 'temporal: packaged\n',
-    'workflow-worker.single-node.yaml': 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n',
-    'email-service.single-node.yaml': 'email-service: packaged\nimage:\n  tag: old\n',
-    'temporal-worker.single-node.yaml': 'temporal-worker: packaged\nimage:\n  tag: old\n'
-  };
 
   fs.mkdirSync(binDir, { recursive: true });
   fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
@@ -166,19 +131,15 @@ test('applyRuntimeValuesAndReleaseSelection renders runtime values from injected
   try {
     const result = await applyRuntimeValuesAndReleaseSelection({
       channel: 'stable',
-      repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-      repoBranch: 'main',
       appHostname: 'psa.example.test',
       initialTenant
     }, {
       ok: true,
-      releaseVersion: '1.2.3',
-      repoBranch: 'release/offline'
+      releaseVersion: '1.2.3'
     }, {
       stateFile,
       runtimeValuesDir,
-      releaseManifestOverride,
-      profileValuesOverride,
+      releaseManifestOverride: makeReleaseManifest(),
       kubeconfigPath: path.join(tmp, 'k3s.yaml'),
       tokenFile: path.join(tmp, 'setup-token')
     });
@@ -189,6 +150,9 @@ test('applyRuntimeValuesAndReleaseSelection renders runtime values from injected
     const renderedWorkflowValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'workflow-worker.single-node.yaml'), 'utf8');
     assert.match(renderedWorkflowValues, /workflow-worker: packaged/);
     assert.match(renderedWorkflowValues, /TEMPORAL_ADDRESS/);
+    // image tag from the manifest is injected into the alga-core values
+    const renderedCoreValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'alga-core.single-node.yaml'), 'utf8');
+    assert.match(renderedCoreValues, /tag: "coretag"/);
     const initialTenantSecret = fs.readFileSync(path.join(runtimeValuesDir, 'initial-tenant-secret.yaml'), 'utf8');
     assert.match(initialTenantSecret, /name: appliance-initial-tenant/);
     assert.match(initialTenantSecret, /INITIAL_ADMIN_EMAIL: "ava@example.com"/);
@@ -213,9 +177,10 @@ test('applyReleaseSelectionConfiguration persists selected release and runtime v
   }, {
     ok: true,
     channel: 'stable',
-    releaseVersion: '1.0-rc5.1',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa',
-    repoBranch: 'release/1.0-rc5'
+    releaseVersion: '1.2.3',
+    registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release',
+    manifestDigest: 'sha256:abc'
   }, {
     stateFile,
     releaseSelectionFile
@@ -224,7 +189,8 @@ test('applyReleaseSelectionConfiguration persists selected release and runtime v
   assert.equal(result.ok, true);
   const persistedConfig = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));
   assert.equal(persistedConfig.selectedChannel, 'stable');
-  assert.equal(persistedConfig.selectedReleaseVersion, '1.0-rc5.1');
+  assert.equal(persistedConfig.selectedReleaseVersion, '1.2.3');
+  assert.equal(persistedConfig.registryHost, 'ghcr.io');
   assert.equal(persistedConfig.runtime.appHostname, 'psa.example.com');
 
   const persistedState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));

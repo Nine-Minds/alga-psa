@@ -39,54 +39,6 @@ function isValidIpv4(value) {
   });
 }
 
-function normalizeGithubRepoUrl(repoUrl) {
-  if (/^https:\/\/github\.com\//i.test(repoUrl)) {
-    return repoUrl.replace(/\.git$/i, '');
-  }
-
-  const scpMatch = repoUrl.match(/^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/i);
-  if (scpMatch) {
-    return `https://github.com/${scpMatch[1]}/${scpMatch[2]}`;
-  }
-
-  throw new Error('Repo URL must target github.com via HTTPS or git@github.com:owner/repo.git format.');
-}
-
-function extractRepoParts(normalizedRepoUrl) {
-  const match = normalizedRepoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/i);
-  if (!match) {
-    throw new Error('Unable to parse GitHub owner/repo from repo URL.');
-  }
-
-  return { owner: match[1], repo: match[2] };
-}
-
-function readChannelRelease(channelData) {
-  const releaseVersion = (channelData.releaseVersion || channelData.release || '').trim();
-  const repoBranch = (channelData.repoBranch || channelData.branch || '').trim();
-
-  if (!releaseVersion) {
-    throw new Error('Channel metadata is missing releaseVersion.');
-  }
-
-  return {
-    releaseVersion,
-    repoBranch: repoBranch || 'main'
-  };
-}
-
-function applyRepoBranchOverride(releaseSelection, inputs) {
-  const requestedBranch = (inputs.repoBranch || '').trim();
-  if (!requestedBranch) {
-    return releaseSelection;
-  }
-
-  return {
-    ...releaseSelection,
-    repoBranch: requestedBranch
-  };
-}
-
 function readSystemResolvers(resolvConfPath = DEFAULT_RESOLV_CONF) {
   if (!fs.existsSync(resolvConfPath)) {
     return [];
@@ -275,19 +227,6 @@ function ensureFluxCli(options = {}) {
   return { ok: true, installed: true };
 }
 
-function rawGithubUrl(repo, branch, filePath) {
-  return `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/${filePath}`;
-}
-
-async function fetchGithubText(repo, branch, filePath, timeoutMs, lookupServers = []) {
-  const url = rawGithubUrl(repo, branch, filePath);
-  const response = await httpsRequest(url, timeoutMs, lookupServers);
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`GET ${url} returned ${response.statusCode}`);
-  }
-  return response.body;
-}
-
 // --- OCI registry client -----------------------------------------------------
 // Release metadata is pulled from an OCI registry (ghcr) instead of git. The
 // release manifest is the artifact's config blob; everything it references
@@ -400,7 +339,11 @@ export function validateReleaseManifest(manifest) {
       tag: config.tag ? String(config.tag).trim() : version,
       digest: String(config.digest).trim()
     },
-    charts: manifest.charts && typeof manifest.charts === 'object' ? manifest.charts : {}
+    charts: manifest.charts && typeof manifest.charts === 'object' ? manifest.charts : {},
+    // Per-service profile values (e.g. "alga-core.single-node.yaml" -> yaml text)
+    // are carried in the manifest so the host can render the runtime-values
+    // ConfigMaps without fetching anything from git.
+    profileValues: manifest.profileValues && typeof manifest.profileValues === 'object' ? manifest.profileValues : {}
   };
 }
 
@@ -555,8 +498,10 @@ export function validateSetupInputs(raw, options = {}) {
   const appHostname = String(raw.appHostname || '').trim();
   const dnsMode = String(raw.dnsMode || 'system').trim();
   const dnsServers = String(raw.dnsServers || '').trim();
-  const repoUrl = String(raw.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git').trim();
-  const repoBranch = String(raw.repoBranch || '').trim();
+  // Optional advanced override: pin to a specific release version or digest
+  // instead of following the channel tag. There is no repoUrl/repoBranch any
+  // more -- release metadata is resolved from the OCI registry by channel.
+  const releaseRef = String(raw.releaseRef || '').trim();
   const initialTenant = options.requireInitialTenant === false ? null : normalizeInitialTenant(raw);
 
   if (!['stable', 'nightly'].includes(channel)) {
@@ -588,8 +533,7 @@ export function validateSetupInputs(raw, options = {}) {
     appHostname,
     dnsMode,
     dnsServers,
-    repoUrl,
-    repoBranch,
+    releaseRef,
     initialTenant,
     submittedAt: nowIso()
   };
@@ -625,8 +569,7 @@ function baseState(inputs) {
     setupInputs: {
       channel: inputs.channel,
       dnsMode: inputs.dnsMode,
-      repoUrl: inputs.repoUrl,
-      repoBranch: inputs.repoBranch || 'main',
+      releaseRef: inputs.releaseRef || undefined,
       initialTenant: inputs.initialTenant ? {
         tenantName: inputs.initialTenant.tenantName,
         adminEmail: inputs.initialTenant.adminEmail
@@ -639,9 +582,8 @@ export async function runSetupPreflight(inputs, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const resolvConfPath = options.resolvConfPath || DEFAULT_RESOLV_CONF;
   const timeoutMs = Number(options.timeoutMs || 8000);
-  const repoBranch = (inputs.repoBranch || 'main').trim() || 'main';
-  const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const releaseReference = (inputs.releaseRef || inputs.channel || 'stable').trim();
   const proxySet = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy']
     .filter((name) => (process.env[name] || '').trim().length > 0);
 
@@ -662,54 +604,35 @@ export async function runSetupPreflight(inputs, options = {}) {
   }
 
   try {
-    await dnsLookup('raw.githubusercontent.com', servers);
+    await dnsLookup(registryHost, servers);
   } catch (error) {
     const failure = preflightFailure(
       'dns',
-      'resolve-raw-githubusercontent-com',
-      'DNS lookup failed for raw.githubusercontent.com.',
+      'resolve-registry-host',
+      `DNS lookup failed for ${registryHost}.`,
       `Verify DNS resolver reachability and split-horizon policy. ${error instanceof Error ? error.message : String(error)}`
     );
     writeInstallState({ ...state, status: 'preflight-blocked', phase: 'dns', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
-  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repoBranch}/ee/appliance/releases/channels/${inputs.channel}.json`;
-  let channelBody = '';
+  let resolvedRelease;
   try {
-    const channelResponse = await httpsRequest(channelUrl, timeoutMs, servers);
-    channelBody = channelResponse.body;
-    if (channelResponse.statusCode < 200 || channelResponse.statusCode >= 300) {
-      const failure = preflightFailure(
-        'github-release-source',
-        'fetch-channel-metadata',
-        `Unable to fetch channel metadata (${channelResponse.statusCode}) from GitHub.`,
-        'Verify repo URL/branch, outbound HTTPS to GitHub, and proxy/firewall policy.'
-      );
-      writeInstallState({ ...state, status: 'preflight-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
-      return failure;
-    }
+    resolvedRelease = await resolveReleaseManifest(releaseReference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: servers,
+      releaseManifestOverride: options.releaseManifestOverride
+    });
   } catch (error) {
     const failure = preflightFailure(
-      'network',
-      'fetch-channel-metadata',
-      'Network failure while fetching GitHub channel metadata.',
-      `Check outbound HTTPS and proxy settings. ${error instanceof Error ? error.message : String(error)}`
+      'registry-release-source',
+      'resolve-release-manifest',
+      `Unable to resolve release manifest for "${releaseReference}" from ${registryHost}.`,
+      `Verify the channel/release exists in the registry and outbound HTTPS to ${registryHost} is allowed by firewall/proxy policy. ${error instanceof Error ? error.message : String(error)}`
     );
-    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'network', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
-    return failure;
-  }
-
-  try {
-    JSON.parse(channelBody);
-  } catch {
-    const failure = preflightFailure(
-      'github-release-source',
-      'parse-channel-metadata',
-      'Channel metadata is not valid JSON.',
-      'Verify the selected branch and channel file format before retrying.'
-    );
-    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
@@ -745,10 +668,10 @@ export async function runSetupPreflight(inputs, options = {}) {
         mode: inputs.dnsMode,
         resolvers: servers
       },
-      github: {
-        channelUrl,
-        repoUrl: normalizedRepoUrl,
-        branch: repoBranch
+      release: {
+        registryHost,
+        reference: releaseReference,
+        version: resolvedRelease.manifest.version
       },
       ghcr: {
         endpoint: 'https://ghcr.io/v2/'
@@ -782,16 +705,8 @@ export async function runNetworkChecks(inputs, options = {}) {
   const checkedAt = nowIso();
   const errText = (error) => (error instanceof Error ? error.message : String(error));
 
-  let repo;
-  let repoBranch;
-  let normalizedRepoUrl;
-  try {
-    repoBranch = (inputs.repoBranch || 'main').trim() || 'main';
-    normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git');
-    repo = extractRepoParts(normalizedRepoUrl);
-  } catch (error) {
-    return { ok: false, checkedAt, failure: preflightFailure('github-release-source', 'parse-repo-url', 'Invalid repository URL for network checks.', errText(error)) };
-  }
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const releaseReference = (inputs.releaseRef || inputs.channel || 'stable').trim();
 
   const servers = resolverServersForInputs(inputs, resolvConfPath);
   if (inputs.dnsMode === 'system' && servers.length === 0) {
@@ -799,19 +714,9 @@ export async function runNetworkChecks(inputs, options = {}) {
   }
 
   try {
-    await dnsLookup('raw.githubusercontent.com', servers);
+    await dnsLookup(registryHost, servers);
   } catch (error) {
-    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-raw-githubusercontent-com', 'DNS lookup failed for raw.githubusercontent.com.', `Verify DNS resolver reachability and split-horizon policy. ${errText(error)}`) };
-  }
-
-  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repoBranch}/ee/appliance/releases/channels/${inputs.channel || 'stable'}.json`;
-  try {
-    const response = await httpsRequest(channelUrl, timeoutMs, servers);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      return { ok: false, checkedAt, failure: preflightFailure('github-release-source', 'fetch-channel-metadata', `Unable to fetch channel metadata (${response.statusCode}) from GitHub.`, 'Verify repo URL/branch, outbound HTTPS to GitHub, and proxy/firewall policy.') };
-    }
-  } catch (error) {
-    return { ok: false, checkedAt, failure: preflightFailure('network', 'fetch-channel-metadata', 'Network failure while fetching GitHub channel metadata.', `Check outbound HTTPS and proxy settings. ${errText(error)}`) };
+    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-registry-host', `DNS lookup failed for ${registryHost}.`, `Verify DNS resolver reachability and split-horizon policy. ${errText(error)}`) };
   }
 
   try {
@@ -823,7 +728,20 @@ export async function runNetworkChecks(inputs, options = {}) {
     return { ok: false, checkedAt, failure: preflightFailure('network', 'reach-ghcr', 'Network failure while contacting ghcr.io.', `Check outbound HTTPS and proxy settings for GHCR. ${errText(error)}`) };
   }
 
-  return { ok: true, checkedAt, failure: null, checks: { channelUrl, repoUrl: normalizedRepoUrl, branch: repoBranch } };
+  let resolvedRelease;
+  try {
+    resolvedRelease = await resolveReleaseManifest(releaseReference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: servers,
+      releaseManifestOverride: options.releaseManifestOverride
+    });
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('registry-release-source', 'resolve-release-manifest', `Unable to resolve release manifest for "${releaseReference}" from ${registryHost}.`, `Verify the channel/release exists in the registry and outbound HTTPS to ${registryHost} is allowed by firewall/proxy policy. ${errText(error)}`) };
+  }
+
+  return { ok: true, checkedAt, failure: null, checks: { registryHost, reference: releaseReference, version: resolvedRelease.manifest.version } };
 }
 
 export function installFlux(options = {}) {
@@ -911,60 +829,38 @@ export function installFlux(options = {}) {
 export async function resolveChannelMetadata(inputs, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const timeoutMs = Number(options.timeoutMs || 8000);
-  const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
-  const branch = (inputs.repoBranch || 'main').trim() || 'main';
-  // Release metadata (channel/release/profile values) has ONE source of truth:
-  // git (raw.githubusercontent) on the configured branch. There is deliberately
-  // no baked-into-the-image copy -- a baked copy used to win over git and made
-  // image-tag changes silently require an ISO rebuild. The install is online
-  // (it pulls images from ghcr), so fetching metadata from git is always viable.
-  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/ee/appliance/releases/channels/${inputs.channel}.json`;
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  // Single source of truth: an immutable release manifest published as an OCI
+  // artifact in the registry, resolved by channel tag (or an explicit
+  // version/digest pin via inputs.releaseRef). No git, no branch.
+  const reference = (inputs.releaseRef || inputs.channel || 'stable').trim();
 
   writeInstallState({
     status: 'release-resolve-running',
-    phase: 'github-release-source',
-    lastAction: `Resolving ${inputs.channel} channel metadata`,
+    phase: 'registry-release-source',
+    lastAction: `Resolving ${inputs.channel} release manifest from ${registryHost}`,
     updatedAt: nowIso()
   }, stateFile);
 
-  let channelData;
-  if (options.channelMetadataOverride) {
-    channelData = options.channelMetadataOverride;
-  } else {
-    const response = await httpsRequest(channelUrl, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      const failure = preflightFailure(
-        'github-release-source',
-        'resolve-channel-metadata',
-        `Unable to resolve channel metadata from ${channelUrl} (${response.statusCode}).`,
-        'Verify release channel file exists for the selected branch and retry.'
-      );
-      writeInstallState({
-        status: 'release-resolve-blocked',
-        phase: 'github-release-source',
-        lastAction: failure.message,
-        failure,
-        updatedAt: nowIso()
-      }, stateFile);
-      return failure;
-    }
-    channelData = JSON.parse(response.body);
-  }
-
-  let releaseSelection;
+  let resolved;
   try {
-    releaseSelection = applyRepoBranchOverride(readChannelRelease(channelData), inputs);
+    resolved = await resolveReleaseManifest(reference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF),
+      releaseManifestOverride: options.releaseManifestOverride
+    });
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
-      'parse-channel-release',
-      'Channel metadata does not contain required release fields.',
+      'registry-release-source',
+      'resolve-release-manifest',
+      `Unable to resolve release manifest for "${reference}" from ${registryHost}.`,
       error instanceof Error ? error.message : String(error)
     );
     writeInstallState({
       status: 'release-resolve-blocked',
-      phase: 'github-release-source',
+      phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
@@ -972,25 +868,30 @@ export async function resolveChannelMetadata(inputs, options = {}) {
     return failure;
   }
 
+  const manifest = resolved.manifest;
   const success = {
     ok: true,
-    phase: 'github-release-source',
-    message: `Resolved channel ${inputs.channel} to release ${releaseSelection.releaseVersion}.`,
-    repoUrl: normalizedRepoUrl,
+    phase: 'registry-release-source',
+    message: `Resolved channel ${inputs.channel} to release ${manifest.version}.`,
     channel: inputs.channel,
-    repoBranch: releaseSelection.repoBranch,
-    releaseVersion: releaseSelection.releaseVersion
+    reference,
+    releaseVersion: manifest.version,
+    registryHost,
+    repository: resolved.repository,
+    manifestDigest: resolved.manifestDigest,
+    manifest
   };
 
   writeInstallState({
     status: 'release-resolve-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     release: {
       selectedChannel: success.channel,
       selectedReleaseVersion: success.releaseVersion,
-      repoUrl: success.repoUrl,
-      repoBranch: success.repoBranch
+      registryHost,
+      repository: resolved.repository,
+      manifestDigest: resolved.manifestDigest
     },
     updatedAt: nowIso()
   }, stateFile);
@@ -1001,39 +902,31 @@ export async function resolveChannelMetadata(inputs, options = {}) {
 export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
-  const timeoutMs = Number(options.timeoutMs || 8000);
-  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
-  const branch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
   const releaseVersion = releaseSelection.releaseVersion;
+  const manifest = options.releaseManifestOverride
+    ? validateReleaseManifest(options.releaseManifestOverride)
+    : releaseSelection.manifest;
   const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
   const valuesDir = path.join(tempDir, 'values');
   writeInstallState({
     status: 'runtime-values-running',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: 'Creating Kubernetes runtime values and release selection',
     updatedAt: nowIso()
   }, stateFile);
 
-  let releaseManifest;
-  try {
-    const lookupServers = resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF);
-    const releaseBody = options.releaseManifestOverride
-      ? JSON.stringify(options.releaseManifestOverride)
-      : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
-    releaseManifest = JSON.parse(releaseBody);
-  } catch (error) {
+  if (!manifest) {
     const failure = preflightFailure(
-      'github-release-source',
-      'fetch-release-manifest',
-      `Unable to fetch release manifest ${releaseVersion}.`,
-      error instanceof Error ? error.message : String(error)
+      'registry-release-source',
+      'missing-release-manifest',
+      'Release selection did not include a resolved manifest.',
+      'resolveChannelMetadata must run (and succeed) before applyRuntimeValuesAndReleaseSelection.'
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
-  const profile = releaseManifest.app?.valuesProfile || 'single-node';
+  const profile = manifest.valuesProfile || 'single-node';
   const names = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
   const values = {};
 
@@ -1041,12 +934,14 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     fs.mkdirSync(valuesDir, { recursive: true, mode: 0o700 });
     for (const name of names) {
       const key = `${name}.${profile}.yaml`;
-      const override = options.profileValuesOverride?.[key];
-      values[key] = override
-        ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
+      const value = options.profileValuesOverride?.[key] ?? manifest.profileValues?.[key];
+      if (typeof value !== 'string') {
+        throw new Error(`Release manifest is missing profileValues["${key}"].`);
+      }
+      values[key] = value;
     }
 
-    const images = releaseManifest.app?.images || {};
+    const images = manifest.images || {};
     const bootstrapMode = options.bootstrapMode || 'recover';
     values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['bootstrap', 'mode'], yamlString(bootstrapMode));
     const appUrl = appUrlFromInput(inputs.appHostname);
@@ -1076,12 +971,12 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     fs.writeFileSync(path.join(tempDir, 'kustomization.yaml'), `apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\ngeneratorOptions:\n  disableNameSuffixHash: true\nconfigMapGenerator:\n${names.map((name) => `  - name: appliance-values-${name}\n    namespace: alga-system\n    files:\n      - ${name}.${profile}.yaml=values/${name}.${profile}.yaml`).join('\n')}\n`, { mode: 0o600 });
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
+      'registry-release-source',
       'render-runtime-values',
       'Unable to render runtime values for the selected release.',
       error instanceof Error ? error.message : String(error)
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
@@ -1097,12 +992,12 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
       fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant), { mode: 0o600 });
     } catch (error) {
       const failure = preflightFailure(
-        'github-release-source',
+        'registry-release-source',
         'render-initial-tenant-secret',
         'Unable to render initial tenant Secret for appliance bootstrap.',
         error instanceof Error ? error.message : String(error)
       );
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
       return failure;
     }
   }
@@ -1115,26 +1010,26 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic alga-psa-shared --from-literal=ALGA_AUTH_KEY=${shellQuote(authKey)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
-    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(releaseManifest.app?.version || '')} --from-literal=releaseBranch=${shellQuote(releaseManifest.app?.releaseBranch || branch)} --from-literal=algaCoreTag=${shellQuote(releaseManifest.app?.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(releaseManifest.app?.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(releaseManifest.app?.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(releaseManifest.app?.images?.temporalWorker || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
   ];
 
   for (const command of commands) {
     const result = runShell(command);
     if (!result.ok) {
       const failure = preflightFailure(
-        'github-release-source',
+        'registry-release-source',
         'apply-runtime-values',
         'Failed to apply Kubernetes runtime values or release selection.',
         (result.stderr || result.stdout || `exit ${result.status}`).trim()
       );
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
       return failure;
     }
   }
 
   const success = {
     ok: true,
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     message: `Runtime values and release selection applied for ${releaseVersion}.`,
     releaseVersion,
     profile
@@ -1142,7 +1037,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
 
   writeInstallState({
     status: 'runtime-values-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     runtimeValues: { profile, releaseVersion },
     updatedAt: nowIso()
@@ -1154,19 +1049,38 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
 export function applyFluxSource(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
-  const fluxPath = options.fluxPath || './ee/appliance/flux/base';
+  const fluxPath = options.fluxPath || './base';
   const sourceName = options.fluxSourceName || 'alga-appliance';
   const sourceNamespace = options.fluxNamespace || 'flux-system';
   const applyCommand = options.fluxSourceApplyCommand || `kubectl --kubeconfig ${kubeconfigPath} apply -f -`;
-  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
-  const sourceBranch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
+  const releaseManifest = options.releaseManifestOverride
+    ? validateReleaseManifest(options.releaseManifestOverride)
+    : releaseSelection.manifest;
 
-  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: GitRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${normalizedRepoUrl}\n  ref:\n    branch: ${sourceBranch}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: GitRepository\n    name: ${sourceName}\n`;
+  if (!releaseManifest) {
+    const failure = preflightFailure(
+      'flux',
+      'missing-release-manifest',
+      'Release selection did not include a resolved manifest.',
+      'resolveChannelMetadata must run (and succeed) before applyFluxSource.'
+    );
+    writeInstallState({ status: 'flux-source-blocked', phase: 'flux', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    return failure;
+  }
+
+  const configRepository = releaseManifest.config.repository;
+  const configDigest = releaseManifest.config.digest;
+  const configTag = releaseManifest.config.tag;
+  const ociUrl = `oci://${configRepository}`;
+
+  // Flux pulls the appliance config bundle (the rendered flux base overlay) as
+  // an OCI artifact pinned to its digest -- no GitRepository, no branch.
+  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1beta2\nkind: OCIRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${ociUrl}\n  ref:\n    digest: ${configDigest}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: OCIRepository\n    name: ${sourceName}\n`;
 
   writeInstallState({
     status: 'flux-source-running',
     phase: 'flux',
-    lastAction: 'Applying Flux GitRepository/Kustomization source configuration',
+    lastAction: 'Applying Flux OCIRepository/Kustomization source configuration',
     updatedAt: nowIso()
   }, stateFile);
 
@@ -1183,7 +1097,7 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
     const failure = preflightFailure(
       'flux',
       'apply-flux-source',
-      'Failed to apply Flux GitRepository/Kustomization manifests.',
+      'Failed to apply Flux OCIRepository/Kustomization manifests.',
       message
     );
 
@@ -1205,8 +1119,9 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
     source: {
       name: sourceName,
       namespace: sourceNamespace,
-      repoUrl: normalizedRepoUrl,
-      branch: sourceBranch,
+      url: ociUrl,
+      digest: configDigest,
+      tag: configTag,
       path: fluxPath
     }
   };
@@ -1228,7 +1143,7 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
 
   writeInstallState({
     status: 'release-config-running',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: 'Persisting runtime values and selected release configuration',
     updatedAt: nowIso()
   }, stateFile);
@@ -1237,8 +1152,9 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     updatedAt: nowIso(),
     selectedChannel: releaseSelection.channel || inputs.channel,
     selectedReleaseVersion: releaseSelection.releaseVersion,
-    repoUrl: releaseSelection.repoUrl,
-    repoBranch: releaseSelection.repoBranch,
+    registryHost: releaseSelection.registryHost || DEFAULT_REGISTRY_HOST,
+    repository: releaseSelection.repository,
+    manifestDigest: releaseSelection.manifestDigest,
     runtime: {
       appHostname: inputs.appHostname,
       dnsMode: inputs.dnsMode,
@@ -1250,14 +1166,14 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     writeSecureJsonFile(releaseSelectionFile, payload);
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
+      'registry-release-source',
       'write-release-selection',
       'Unable to persist release selection configuration.',
       error instanceof Error ? error.message : String(error)
     );
     writeInstallState({
       status: 'release-config-blocked',
-      phase: 'github-release-source',
+      phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
@@ -1267,14 +1183,14 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
 
   const success = {
     ok: true,
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     message: `Release selection persisted to ${releaseSelectionFile}.`,
     releaseSelectionFile
   };
 
   writeInstallState({
     status: 'release-config-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     releaseSelection: {
       file: releaseSelectionFile,

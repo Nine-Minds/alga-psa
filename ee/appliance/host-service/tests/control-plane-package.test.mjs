@@ -24,7 +24,10 @@ test('control-plane image packages existing setup/status UI and API contracts', 
   assert.match(dockerfile, /COPY ee\/appliance\/scripts \.\/scripts/);
   assert.match(dockerfile, /COPY ee\/appliance\/manifests \.\/manifests/);
   assert.match(dockerfile, /COPY ee\/appliance\/flux \.\/flux/);
-  assert.match(dockerfile, /COPY ee\/appliance\/releases \.\/releases/);
+  // Release metadata (channels + release.json) is intentionally NOT baked into
+  // the control-plane image any more -- it is resolved from the OCI registry by
+  // channel at setup time (registry-metadata design).
+  assert.doesNotMatch(dockerfile, /COPY ee\/appliance\/releases/);
   assert.match(dockerfile, /COPY --from=ui-build .*status-ui\/dist \.\/status-ui\/dist/);
   assert.match(dockerfile, /control-plane-entrypoint\.sh/);
   assert.match(dockerfile, /USER 10001:10001/);

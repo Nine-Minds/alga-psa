@@ -42,12 +42,36 @@ test('T004 control-plane workflow persists setup, release/runtime selection, ini
     persistSetupInputs(inputs, setupInputsFile);
     assert.equal(JSON.parse(fs.readFileSync(setupInputsFile, 'utf8')).initialTenant.adminEmail, 'ava@example.com');
 
+    const manifest = {
+      schema: 'alga.appliance.release/v1',
+      version: '1.0-test',
+      valuesProfile: 'single-node',
+      images: {
+        algaCore: 'alga-core:test',
+        workflowWorker: 'workflow:test',
+        emailService: 'email:test',
+        temporalWorker: 'temporal-worker:test'
+      },
+      controlPlane: 'cp:test',
+      config: { repository: 'ghcr.io/nine-minds/alga-appliance-config', tag: '1.0-test', digest: 'sha256:cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe' },
+      charts: { sebastian: '0.0.1' },
+      profileValues: {
+        'alga-core.single-node.yaml': 'bootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\nappUrl: ""\nhost: ""\ndomainSuffix: ""\n',
+        'pgbouncer.single-node.yaml': 'pgbouncer: packaged\n',
+        'temporal.single-node.yaml': 'temporal: packaged\n',
+        'workflow-worker.single-node.yaml': 'image:\n  tag: old\n',
+        'email-service.single-node.yaml': 'image:\n  tag: old\n',
+        'temporal-worker.single-node.yaml': 'image:\n  tag: old\n'
+      }
+    };
     const releaseSelection = {
       ok: true,
       channel: 'stable',
       releaseVersion: '1.0-test',
-      repoUrl: 'https://github.com/Nine-Minds/alga-psa',
-      repoBranch: 'release/1.0.0'
+      registryHost: 'ghcr.io',
+      repository: 'nine-minds/alga-appliance-release',
+      manifestDigest: 'sha256:abc',
+      manifest
     };
 
     const releaseConfig = applyReleaseSelectionConfiguration(inputs, releaseSelection, { stateFile, releaseSelectionFile });
@@ -58,28 +82,7 @@ test('T004 control-plane workflow persists setup, release/runtime selection, ini
       stateFile,
       runtimeValuesDir,
       kubeconfigPath: path.join(tmp, 'k3s.yaml'),
-      tokenFile: path.join(tmp, 'setup-token'),
-      releaseManifestOverride: {
-        app: {
-          version: '1.0-test',
-          releaseBranch: 'release/1.0.0',
-          valuesProfile: 'single-node',
-          images: {
-            algaCore: 'alga-core:test',
-            workflowWorker: 'workflow:test',
-            emailService: 'email:test',
-            temporalWorker: 'temporal-worker:test'
-          }
-        }
-      },
-      profileValuesOverride: {
-        'alga-core.single-node.yaml': 'bootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\nappUrl: ""\nhost: ""\ndomainSuffix: ""\n',
-        'pgbouncer.single-node.yaml': 'pgbouncer: packaged\n',
-        'temporal.single-node.yaml': 'temporal: packaged\n',
-        'workflow-worker.single-node.yaml': 'image:\n  tag: old\n',
-        'email-service.single-node.yaml': 'image:\n  tag: old\n',
-        'temporal-worker.single-node.yaml': 'image:\n  tag: old\n'
-      }
+      tokenFile: path.join(tmp, 'setup-token')
     });
 
     assert.equal(runtime.ok, true, JSON.stringify(runtime));
@@ -96,13 +99,13 @@ test('T004 control-plane workflow persists setup, release/runtime selection, ini
 
     const flux = applyFluxSource(inputs, releaseSelection, {
       stateFile,
-      fluxPath: 'ee/appliance/flux/base',
+      fluxPath: 'base',
       fluxSourceApplyCommand: 'true'
     });
     assert.equal(flux.ok, true);
-    assert.equal(flux.source.repoUrl, 'https://github.com/Nine-Minds/alga-psa');
-    assert.equal(flux.source.branch, 'release/1.0.0');
-    assert.equal(flux.source.path, 'ee/appliance/flux/base');
+    assert.equal(flux.source.url, 'oci://ghcr.io/nine-minds/alga-appliance-config');
+    assert.equal(flux.source.digest, 'sha256:cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe');
+    assert.equal(flux.source.path, 'base');
 
     const resumedInputs = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
     const resumedRelease = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));
