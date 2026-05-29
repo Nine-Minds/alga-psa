@@ -1,6 +1,7 @@
 # Directories that are not npm packages but contain Dockerfiles
 ee/runner
 ee/setup
+ee/appliance/control-plane
 setup
 pgbouncer
 redis
