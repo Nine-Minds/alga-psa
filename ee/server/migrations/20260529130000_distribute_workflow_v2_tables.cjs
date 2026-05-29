@@ -248,13 +248,18 @@ exports.up = async function up(knex) {
       'CREATE UNIQUE INDEX workflow_definitions_tenant_key_unique ON workflow_definitions (tenant, key) WHERE key IS NOT NULL'
     );
   }
+  // Add FKs as NOT VALID: there are legacy rows (e.g. ~388 pre-split cross-tenant
+  // workflow_runs) whose (tenant, workflow_id) has no same-tenant definition. The
+  // constraint is enforced for all NEW writes (the app always scopes a run to its
+  // definition's tenant); the legacy rows are grandfathered. Clean them up and run
+  // `ALTER TABLE .. VALIDATE CONSTRAINT ..` later as a separate task.
   for (const fk of FKS) {
     if (!present.includes(fk.table) || !present.includes(fk.ref)) continue;
     const cols = fk.cols.map(() => '??').join(', ');
     const refCols = fk.refCols.map(() => '??').join(', ');
     await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [fk.table, fk.name]);
     await knex.raw(
-      `ALTER TABLE ?? ADD CONSTRAINT ?? FOREIGN KEY (${cols}) REFERENCES ?? (${refCols}) ON DELETE CASCADE`,
+      `ALTER TABLE ?? ADD CONSTRAINT ?? FOREIGN KEY (${cols}) REFERENCES ?? (${refCols}) ON DELETE CASCADE NOT VALID`,
       [fk.table, fk.name, ...fk.cols, fk.ref, ...fk.refCols]
     );
   }
