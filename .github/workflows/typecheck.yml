@@ -59,4 +59,7 @@ jobs:
         run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static
         env:
           NX_DAEMON: 'false'
-          NODE_OPTIONS: '--max-old-space-size=8192'
+          # ubuntu-latest runners have 16 GB RAM; server:typecheck OOM-crashed at the
+          # previous 8192 (8 GB) ceiling as the server type graph grew. 14 GB leaves
+          # headroom for the runner while giving tsc room to complete.
+          NODE_OPTIONS: '--max-old-space-size=14336'
