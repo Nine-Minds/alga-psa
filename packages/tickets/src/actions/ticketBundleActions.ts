@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -194,6 +195,13 @@ export const bundleTicketsAction = withAuth(async (
       },
     });
   }
+
+  // Trigger an RSC refresh of the tickets list. The client also refetches via
+  // onFilterChange({}), but that fire-and-forget server action can be starved
+  // by background polling and never settle, leaving the loading spinner stuck.
+  // The revalidation here is a reliable backstop (the container clears its
+  // loading state when the refreshed data arrives).
+  revalidatePath('/msp/tickets');
 
   return result;
 });

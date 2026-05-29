@@ -157,7 +157,6 @@ export default function TicketingDashboardContainer({
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const latestFetchRequestIdRef = useRef(0);
-  const pendingFetchCountRef = useRef(0);
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
@@ -211,6 +210,11 @@ export default function TicketingDashboardContainer({
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
+    // A revalidatePath() inside a bulk action triggers an RSC refresh that can
+    // abort the concurrent client-side fetchTickets request, leaving its promise
+    // unsettled (so its finally never runs). The refresh itself delivers fresh
+    // data here, so clear the loading spinner — otherwise it hangs forever.
+    setIsLoading(false);
   }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
 
   const {
@@ -301,7 +305,6 @@ export default function TicketingDashboardContainer({
       return;
     }
     const requestId = ++latestFetchRequestIdRef.current;
-    pendingFetchCountRef.current++;
     setIsLoading(true);
     try {
       const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
@@ -360,9 +363,10 @@ export default function TicketingDashboardContainer({
       setTickets([]);
       setTotalCount(0);
     } finally {
-      pendingFetchCountRef.current--;
-      if (pendingFetchCountRef.current === 0) {
-        console.log('[Container] Setting isLoading to false (no pending fetches)');
+      // Clear loading only if this is still the latest request. A superseded
+      // (older) fetch must not flip the spinner off while a newer one is in
+      // flight, and an orphaned fetch must not be able to keep it stuck.
+      if (requestId === latestFetchRequestIdRef.current) {
         setIsLoading(false);
       }
     }
