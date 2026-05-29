@@ -8,10 +8,17 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
-const DEFAULT_SETUP_FILE = '/etc/alga-appliance/setup-inputs.json';
-const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
+// Path defaults honor the ALGA_APPLIANCE_* environment the control plane runs
+// with, falling back to the bare-host locations. This keeps the setup workflow
+// aligned with the pod's mounted paths (token secret, in-cluster kubeconfig,
+// hostPath state) instead of hardcoded bare-host defaults.
+const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
 const DEFAULT_RELEASES_DIR = '/opt/alga-appliance/releases';
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
+const DEFAULT_TOKEN_FILE = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 
 function isValidIpv4(value) {
   const parts = value.split('.');
@@ -111,20 +118,61 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+async function resolveAddressesWithServers(servers, hostname, family = 0) {
+  const resolver = new dns.promises.Resolver();
+  resolver.setServers(servers);
+
+  const records = [];
+  if (family !== 6) {
+    try {
+      for (const address of await resolver.resolve4(hostname)) {
+        records.push({ address, family: 4 });
+      }
+    } catch {
+      // No IPv4 records (or query error); fall through to IPv6 before giving up.
+    }
+  }
+  if (family !== 4 && records.length === 0) {
+    try {
+      for (const address of await resolver.resolve6(hostname)) {
+        records.push({ address, family: 6 });
+      }
+    } catch {
+      // Surfaced by the empty-result check below.
+    }
+  }
+
+  if (records.length === 0) {
+    throw new Error(`No A or AAAA records resolved for ${hostname} via DNS server(s) ${servers.join(', ')}`);
+  }
+
+  return records;
+}
+
+// Custom DNS lookup for https.request that resolves against explicit servers.
+// Guards against empty results (which previously yielded "Invalid IP address:
+// undefined") and honors Node's all/family lookup options.
+function resolverLookup(servers) {
+  return (hostname, options, callback) => {
+    const done = typeof options === 'function' ? options : callback;
+    const opts = typeof options === 'object' && options ? options : {};
+    resolveAddressesWithServers(servers, hostname, opts.family || 0)
+      .then((records) => {
+        if (opts.all) {
+          done(null, records);
+        } else {
+          done(null, records[0].address, records[0].family);
+        }
+      })
+      .catch((error) => done(error));
+  };
+}
+
 function httpsRequest(url, timeoutMs = 8000, lookupServers = []) {
   return new Promise((resolve, reject) => {
     const requestOptions = { method: 'GET', timeout: timeoutMs };
     if (lookupServers && lookupServers.length > 0) {
-      const resolver = new dns.promises.Resolver();
-      resolver.setServers(lookupServers);
-      requestOptions.lookup = async (hostname, _options, callback) => {
-        try {
-          const addresses = await resolver.resolve4(hostname);
-          callback(null, addresses[0], 4);
-        } catch (error) {
-          callback(error);
-        }
-      };
+      requestOptions.lookup = resolverLookup(lookupServers);
     }
 
     const req = https.request(url, requestOptions, (res) => {
@@ -313,9 +361,7 @@ function resolverServersForInputs(inputs, resolvConfPath = DEFAULT_RESOLV_CONF) 
 
 async function dnsLookup(hostname, servers) {
   if (servers && servers.length > 0) {
-    const resolver = new dns.promises.Resolver();
-    resolver.setServers(servers);
-    return resolver.resolve4(hostname);
+    return (await resolveAddressesWithServers(servers, hostname)).map((record) => record.address);
   }
 
   return dns.promises.resolve4(hostname);
@@ -542,168 +588,64 @@ export async function runSetupPreflight(inputs, options = {}) {
   return success;
 }
 
-export function installK3sSingleNode(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const installScriptUrl = options.installScriptUrl || 'https://get.k3s.io';
-  const k3sVersion = options.k3sVersion || process.env.ALGA_APPLIANCE_K3S_VERSION || 'v1.31.4+k3s1';
-  const installExec = options.installExec || process.env.ALGA_APPLIANCE_K3S_EXEC || `server --write-kubeconfig ${kubeconfigPath} --write-kubeconfig-mode 600 --disable traefik --disable servicelb`;
-  const installCommand = options.installCommand || `curl -sfL ${installScriptUrl} | sh -s -`;
+// Read-only network reachability checks (DNS + GitHub channel + GHCR).
+// Unlike runSetupPreflight, this writes no install-state and has no side
+// effects, so it is safe to call repeatedly from the live status path to
+// re-validate a previously recorded network failure instead of trusting a
+// stale record forever.
+export async function runNetworkChecks(inputs, options = {}) {
+  const resolvConfPath = options.resolvConfPath || DEFAULT_RESOLV_CONF;
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const checkedAt = nowIso();
+  const errText = (error) => (error instanceof Error ? error.message : String(error));
 
-  writeInstallState({
-    status: 'k3s-install-running',
-    phase: 'k3s',
-    lastAction: `Installing k3s ${k3sVersion}`,
-    updatedAt: nowIso()
-  }, stateFile);
-
-  const env = {
-    ...process.env,
-    INSTALL_K3S_VERSION: k3sVersion,
-    INSTALL_K3S_EXEC: installExec
-  };
-
-  const result = spawnSync('sh', ['-c', installCommand], {
-    env,
-    encoding: 'utf8'
-  });
-
-  if (result.status !== 0) {
-    const stderr = (result.stderr || '').trim();
-    const stdout = (result.stdout || '').trim();
-    const message = stderr || stdout || `k3s install command failed with exit code ${result.status ?? 1}`;
-
-    const failure = preflightFailure(
-      'k3s',
-      'install-k3s-server',
-      'k3s installation command failed.',
-      `Inspect installer output and host networking/firewall state. ${message}`
-    );
-
-    writeInstallState({
-      status: 'k3s-install-blocked',
-      phase: 'k3s',
-      lastAction: failure.message,
-      failure,
-      installerOutput: {
-        stdout: result.stdout || '',
-        stderr: result.stderr || ''
-      },
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  let repo;
+  let repoBranch;
+  let normalizedRepoUrl;
+  try {
+    repoBranch = (inputs.repoBranch || 'main').trim() || 'main';
+    normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git');
+    repo = extractRepoParts(normalizedRepoUrl);
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('github-release-source', 'parse-repo-url', 'Invalid repository URL for network checks.', errText(error)) };
   }
 
-  if (!fs.existsSync(kubeconfigPath)) {
-    const failure = preflightFailure(
-      'k3s',
-      'verify-kubeconfig-path',
-      `k3s install completed but kubeconfig was not found at ${kubeconfigPath}.`,
-      'Validate k3s service startup and kubeconfig path configuration, then retry.'
-    );
-
-    writeInstallState({
-      status: 'k3s-install-blocked',
-      phase: 'k3s',
-      lastAction: failure.message,
-      failure,
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  const servers = resolverServersForInputs(inputs, resolvConfPath);
+  if (inputs.dnsMode === 'system' && servers.length === 0) {
+    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-system-resolvers', 'No system DNS resolvers detected from /etc/resolv.conf.', 'Confirm DHCP/static resolver configuration and retry setup.') };
   }
 
-  const success = {
-    ok: true,
-    phase: 'k3s',
-    message: `k3s installed successfully with kubeconfig at ${kubeconfigPath}.`,
-    k3sVersion,
-    kubeconfigPath
-  };
-
-  writeInstallState({
-    status: 'k3s-install-complete',
-    phase: 'k3s',
-    lastAction: success.message,
-    k3s: {
-      version: k3sVersion,
-      kubeconfigPath
-    },
-    updatedAt: nowIso()
-  }, stateFile);
-
-  return success;
-}
-
-export function ensureLocalPathStorage(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const storageInstallScript = options.storageInstallScript || '/opt/alga-appliance/scripts/install-storage.sh';
-  const storageInstallCommand = options.storageInstallCommand || `${storageInstallScript} --kubeconfig ${kubeconfigPath}`;
-
-  writeInstallState({
-    status: 'storage-config-running',
-    phase: 'storage',
-    lastAction: 'Ensuring local-path storage class is installed as default',
-    updatedAt: nowIso()
-  }, stateFile);
-
-  const result = spawnSync('sh', ['-c', storageInstallCommand], {
-    env: process.env,
-    encoding: 'utf8'
-  });
-
-  if (result.status !== 0) {
-    const stderr = (result.stderr || '').trim();
-    const stdout = (result.stdout || '').trim();
-    const message = stderr || stdout || `storage install command failed with exit code ${result.status ?? 1}`;
-    const failure = preflightFailure(
-      'storage',
-      'install-local-path-storage',
-      'Failed to install local-path storage defaults.',
-      `Inspect storage installer output and retry. ${message}`
-    );
-
-    writeInstallState({
-      status: 'storage-config-blocked',
-      phase: 'storage',
-      lastAction: failure.message,
-      failure,
-      installerOutput: {
-        stdout: result.stdout || '',
-        stderr: result.stderr || ''
-      },
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  try {
+    await dnsLookup('raw.githubusercontent.com', servers);
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-raw-githubusercontent-com', 'DNS lookup failed for raw.githubusercontent.com.', `Verify DNS resolver reachability and split-horizon policy. ${errText(error)}`) };
   }
 
-  const success = {
-    ok: true,
-    phase: 'storage',
-    message: 'local-path storage installer completed successfully.',
-    kubeconfigPath
-  };
+  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repoBranch}/ee/appliance/releases/channels/${inputs.channel || 'stable'}.json`;
+  try {
+    const response = await httpsRequest(channelUrl, timeoutMs, servers);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return { ok: false, checkedAt, failure: preflightFailure('github-release-source', 'fetch-channel-metadata', `Unable to fetch channel metadata (${response.statusCode}) from GitHub.`, 'Verify repo URL/branch, outbound HTTPS to GitHub, and proxy/firewall policy.') };
+    }
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('network', 'fetch-channel-metadata', 'Network failure while fetching GitHub channel metadata.', `Check outbound HTTPS and proxy settings. ${errText(error)}`) };
+  }
 
-  writeInstallState({
-    status: 'storage-config-complete',
-    phase: 'storage',
-    lastAction: success.message,
-    storage: {
-      installer: storageInstallScript,
-      kubeconfigPath
-    },
-    updatedAt: nowIso()
-  }, stateFile);
+  try {
+    const ghcrResponse = await httpsRequest('https://ghcr.io/v2/', timeoutMs, servers);
+    if (![200, 401].includes(ghcrResponse.statusCode)) {
+      return { ok: false, checkedAt, failure: preflightFailure('network', 'reach-ghcr', `GHCR reachability check returned ${ghcrResponse.statusCode}.`, 'Ensure outbound HTTPS to ghcr.io is allowed by firewall/proxy policy.') };
+    }
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('network', 'reach-ghcr', 'Network failure while contacting ghcr.io.', `Check outbound HTTPS and proxy settings for GHCR. ${errText(error)}`) };
+  }
 
-  return success;
+  return { ok: true, checkedAt, failure: null, checks: { channelUrl, repoUrl: normalizedRepoUrl, branch: repoBranch } };
 }
 
 export function installFlux(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxInstallCommand = options.fluxInstallCommand || `flux install --namespace flux-system --kubeconfig ${kubeconfigPath}`;
 
   const cli = options.fluxInstallCommand ? { ok: true, installed: false } : ensureFluxCli(options);
@@ -874,7 +816,7 @@ export async function resolveChannelMetadata(inputs, options = {}) {
 
 export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const timeoutMs = Number(options.timeoutMs || 8000);
   const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
   const repo = extractRepoParts(normalizedRepoUrl);
@@ -968,8 +910,8 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
   }
 
   const authKey = options.algaAuthKey || crypto.randomBytes(32).toString('base64url');
-  const statusToken = fs.existsSync(options.tokenFile || '/var/lib/alga-appliance/setup-token')
-    ? fs.readFileSync(options.tokenFile || '/var/lib/alga-appliance/setup-token', 'utf8').trim()
+  const statusToken = fs.existsSync(options.tokenFile || DEFAULT_TOKEN_FILE)
+    ? fs.readFileSync(options.tokenFile || DEFAULT_TOKEN_FILE, 'utf8').trim()
     : crypto.randomBytes(24).toString('base64url');
   const initialTenantSecretPath = path.join(tempDir, 'initial-tenant-secret.yaml');
   const hasInitialTenant = Boolean(inputs.initialTenant);
@@ -1035,7 +977,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
 
 export function applyFluxSource(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxPath = options.fluxPath || './ee/appliance/flux/base';
   const sourceName = options.fluxSourceName || 'alga-appliance';
   const sourceNamespace = options.fluxNamespace || 'flux-system';
@@ -1106,7 +1048,7 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
 
 export function applyReleaseSelectionConfiguration(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
+  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
 
   writeInstallState({
     status: 'release-config-running',
@@ -1175,23 +1117,10 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return preflight;
   }
 
-  const skipK3sInstall = options.skipK3sInstall === true || process.env.ALGA_APPLIANCE_SKIP_K3S_INSTALL === '1';
-  const skipStorageInstall = options.skipStorageInstall === true || process.env.ALGA_APPLIANCE_SKIP_STORAGE_INSTALL === '1';
-
-  if (!skipK3sInstall) {
-    const k3sResult = installK3sSingleNode(options);
-    if (!k3sResult.ok) {
-      return k3sResult;
-    }
-  }
-
-  if (!skipStorageInstall) {
-    const storageResult = ensureLocalPathStorage(options);
-    if (!storageResult.ok) {
-      return storageResult;
-    }
-  }
-
+  // The k3s substrate and local-path storage are provisioned by the host
+  // bootstrap (bootstrap-control-plane.sh) before this control-plane workflow
+  // ever runs. The setup workflow only layers Flux and the application release
+  // on top of that substrate.
   const fluxResult = installFlux(options);
   if (!fluxResult.ok) {
     return fluxResult;
@@ -1241,10 +1170,6 @@ function parseCliArgs(argv) {
     } else if (arg === '--release-selection-file') {
       parsed.releaseSelectionFile = argv[i + 1];
       i += 1;
-    } else if (arg === '--skip-k3s-install') {
-      parsed.skipK3sInstall = true;
-    } else if (arg === '--skip-storage-install') {
-      parsed.skipStorageInstall = true;
     }
   }
   return parsed;

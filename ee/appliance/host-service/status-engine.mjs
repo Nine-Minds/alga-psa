@@ -2,10 +2,13 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
-const DEFAULT_SETUP_INPUTS_FILE = '/etc/alga-appliance/setup-inputs.json';
-const DEFAULT_RELEASE_SELECTION_FILE = '/etc/alga-appliance/release-selection.json';
-const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
+const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
+const DEFAULT_SETUP_INPUTS_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+// Honor the control plane's configured kubeconfig (the pod's in-cluster
+// kubeconfig) instead of the bare-host path, so status queries actually reach
+// the cluster from inside the control-plane pod.
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_COMMAND_TIMEOUT_MS = 5_000;
 const MAX_DIAGNOSTIC_BYTES = 64 * 1024;
 const HAS_GNU_TIMEOUT = spawnSync('sh', ['-c', 'command -v timeout >/dev/null 2>&1']).status === 0;
@@ -233,6 +236,42 @@ function guidanceForCategory(category) {
     return 'Review background worker pod logs; login readiness can remain true.';
   }
   return 'Inspect app pods/events and reconcile blockers for login readiness.';
+}
+
+const NETWORK_CLASS_CATEGORIES = ['network', 'dns', 'github-release-source'];
+
+// Builds a failure-summary entry from a live network probe. When `resolved` is
+// true the probe currently passes but a network-class failure was previously
+// recorded, so we surface an accurate, actionable retry blocker instead of the
+// stale recorded text.
+function networkFailureSummary(probe, { resolved }) {
+  const checkedAt = probe?.checkedAt || null;
+  if (resolved) {
+    return {
+      category: 'network',
+      phase: 'network',
+      lastAction: 'Earlier setup attempt halted at the network check.',
+      suspectedCause: 'The earlier setup attempt stopped at the outbound network check, but outbound network checks pass now.',
+      suggestedNextStep: 'Re-run setup to continue the installation.',
+      retrySafe: true,
+      resolved: true,
+      checkedAt,
+      logs: ['journalctl -u alga-appliance.service -u alga-appliance-console.service -n 200']
+    };
+  }
+
+  const failure = probe?.failure || {};
+  const category = classifyFailureCategory(failure.phase, '', failure);
+  return {
+    category,
+    phase: failure.phase || 'network',
+    lastAction: failure.message || 'Network reachability check failed.',
+    suspectedCause: failure.suspectedCause || failure.message || 'Network reachability check failed.',
+    suggestedNextStep: failure.suggestedNextStep || failure.details || guidanceForCategory(category),
+    retrySafe: failure.retrySafe !== false,
+    checkedAt,
+    logs: ['journalctl -u alga-appliance.service -u alga-appliance-console.service -n 200']
+  };
 }
 
 function helmReleaseIssues(helmLines) {
@@ -531,6 +570,8 @@ function buildStatusSnapshot({
   setupInputsFile,
   releaseSelectionFile,
   kubeconfigPath,
+  networkProbe,
+  autoRetry,
   nodeResult,
   podResult,
   jobResult,
@@ -541,6 +582,38 @@ function buildStatusSnapshot({
   const installState = readJsonFile(stateFile);
   const setupInputs = readJsonFile(setupInputsFile);
   const releaseSelection = readJsonFile(releaseSelectionFile);
+
+  // Authority inversion for network-class failures: the recorded install-state
+  // failure is only trusted for non-network categories. For network/dns/github
+  // failures we defer to the live probe so a transient (or fixed) network issue
+  // is not reported as a permanent blocker, and so it cannot poison the
+  // early-Kubernetes suppression below.
+  const recordedFailure = installState?.failure || null;
+  const recordedCategory = recordedFailure
+    ? classifyFailureCategory(installState?.phase, installState?.status, recordedFailure)
+    : null;
+  const recordedIsNetworkClass = NETWORK_CLASS_CATEGORIES.includes(recordedCategory);
+
+  let effectiveFailure = recordedFailure;
+  let liveNetworkBlocker = null;
+  let resolvedNetworkFailure = null;
+  let networkStatus = null;
+  if (networkProbe) {
+    networkStatus = { ok: Boolean(networkProbe.ok), checkedAt: networkProbe.checkedAt || null };
+    if (!networkProbe.ok) {
+      liveNetworkBlocker = networkFailureSummary(networkProbe, { resolved: false });
+      if (recordedIsNetworkClass) effectiveFailure = null; // the live blocker supersedes the recorded one
+    } else if (recordedIsNetworkClass) {
+      resolvedNetworkFailure = { ...recordedFailure, resolvedByLiveCheck: true, checkedAt: networkProbe.checkedAt || null };
+      effectiveFailure = null;
+      liveNetworkBlocker = networkFailureSummary(networkProbe, { resolved: true });
+    }
+  }
+  // install-state with network-class failures neutralized; used for failure
+  // derivation and suppression so the rest of the readout reflects live truth.
+  const failureState = effectiveFailure === recordedFailure
+    ? installState
+    : { ...(installState || {}), failure: effectiveFailure };
 
   let nodes = [];
   if (nodeResult.ok) {
@@ -567,16 +640,16 @@ function buildStatusSnapshot({
     : [];
 
   const helmIssues = helmReleaseIssues(helmLines);
-  const blockingHelmIssues = blockingHelmReleaseIssues(installState, helmIssues);
+  const blockingHelmIssues = blockingHelmReleaseIssues(failureState, helmIssues);
   const nodeWarnings = nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`];
   const podWarnings = podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`];
   const helmWarnings = helmResult.ok ? [] : [`helm release query failed: ${helmResult.stderr.trim() || helmResult.stdout.trim() || 'unknown error'}`];
-  const suppressKubernetesWarnings = isExpectedEarlyKubernetesUnavailable(installState, [
+  const suppressKubernetesWarnings = isExpectedEarlyKubernetesUnavailable(failureState, [
     nodeResult,
     podResult,
     helmResult
   ]);
-  const suppressTransientHelmReleaseWarning = isExpectedHelmReleaseCrdUnavailable(installState, helmResult);
+  const suppressTransientHelmReleaseWarning = isExpectedHelmReleaseCrdUnavailable(failureState, helmResult);
   const rawWarnings = [
     ...nodeWarnings,
     ...podWarnings,
@@ -587,10 +660,35 @@ function buildStatusSnapshot({
     ? [...nodeWarnings, ...podWarnings, ...helmWarnings]
     : (suppressTransientHelmReleaseWarning ? helmWarnings : []);
   const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
-  const tiers = deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
-  const failures = deriveFailureSummary(installState, podLines, blockingHelmIssues, warnings);
+  const tiers = deriveReadiness(failureState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
+  const derivedFailures = deriveFailureSummary(failureState, podLines, blockingHelmIssues, warnings);
+  const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
   const readinessTiers = normalizeReadinessTiers(tiers);
-  const rollup = rollupFromState(installState, tiers, failures);
+  let rollup = rollupFromState(installState, tiers, failures);
+
+  // When the control plane will auto-retry a retry-safe blocker, present it as an
+  // in-progress automatic retry rather than a manual "re-run setup" dead end.
+  if (autoRetry?.willRetry && failures.length > 0) {
+    const retrySafeFailures = failures.filter((failure) => failure.retrySafe !== false);
+    const pendingSeconds = autoRetry.nextAttemptInSeconds ?? 0;
+    const whenSentence = pendingSeconds > 0 ? `next attempt in ~${pendingSeconds}s` : 'starting the next attempt now';
+    for (const failure of retrySafeFailures) {
+      failure.autoRetry = { attempts: autoRetry.attempts, nextAttemptInSeconds: pendingSeconds };
+      failure.suggestedNextStep = `Continuing automatically — retry attempt ${autoRetry.attempts + 1} of ${autoRetry.maxAttempts}, ${whenSentence}. No action needed.`;
+    }
+    if (retrySafeFailures.length === failures.length) {
+      rollup = {
+        state: 'installing',
+        message: `Continuing automatically (retry attempt ${autoRetry.attempts + 1} of ${autoRetry.maxAttempts}).`,
+        nextAction: pendingSeconds > 0 ? `Next attempt in ~${pendingSeconds}s. No action needed.` : 'Starting the next attempt now. No action needed.'
+      };
+    }
+  } else if (autoRetry?.exhausted) {
+    for (const failure of failures) {
+      failure.suggestedNextStep = `${failure.suggestedNextStep} Automatic retries are exhausted after ${autoRetry.attempts} attempts; open the Setup page to re-run setup or collect a support bundle.`;
+    }
+  }
+
   const topBlockers = failures.map(blockerFromFailure);
   const recentEvents = eventsResult.ok ? parseEventsJson(eventsResult.stdout).slice(-40) : [];
   const activeOperations = deriveActiveOperations(podLines);
@@ -604,6 +702,8 @@ function buildStatusSnapshot({
     currentPhase: installState?.phase || 'setup',
     status: installState?.status || 'unknown',
     kubeconfigPath,
+    network: networkStatus,
+    lastRecordedError: resolvedNetworkFailure,
     tiers,
     failures,
     readinessTiers,
@@ -688,6 +788,8 @@ export function collectStatusSnapshot(options = {}) {
 
   return buildStatusSnapshot({
     ...context,
+    networkProbe: options.networkProbe,
+    autoRetry: options.autoRetry,
     nodeResult,
     podResult,
     jobResult,
@@ -710,9 +812,14 @@ export async function collectStatusSnapshotAsync(options = {}) {
   const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : await runner(context.helmCommand, { timeoutMs });
   const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : await runner(context.eventsCommand, { timeoutMs });
   const diagnostics = options.includeDiagnostics === true ? await collectDiagnosticsAsync(context.kubectlPrefix, runner) : [];
+  const networkProbe = options.networkProbe
+    ? (typeof options.networkProbe === 'function' ? await options.networkProbe() : options.networkProbe)
+    : undefined;
 
   return buildStatusSnapshot({
     ...context,
+    networkProbe,
+    autoRetry: options.autoRetry,
     nodeResult,
     podResult,
     jobResult,

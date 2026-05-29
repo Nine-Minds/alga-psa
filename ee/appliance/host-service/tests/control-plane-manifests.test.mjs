@@ -41,7 +41,7 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
   assert.match(workload, /ALGA_APPLIANCE_TOKEN_FILE: "\/var\/lib\/alga-appliance-token\/setup-token"/);
   assert.match(workload, /ALGA_APPLIANCE_KUBECONFIG: "\/tmp\/alga-appliance\/kubeconfig"/);
   assert.match(workload, /ALGA_APPLIANCE_HOST_AGENT_SOCKET: "\/run\/alga-appliance\/host-agent\.sock"/);
-  assert.match(workload, /ALGA_APPLIANCE_SKIP_K3S_INSTALL: "1"/);
+  assert.doesNotMatch(workload, /ALGA_APPLIANCE_SKIP_K3S_INSTALL/);
   assert.doesNotMatch(workload, /ALGA_APPLIANCE_SKIP_STORAGE_INSTALL/);
   assert.doesNotMatch(workload, /kind: PersistentVolumeClaim/);
   assert.match(workload, /kind: Deployment\nmetadata:\n\s+name: appliance-control-plane\n\s+namespace: alga-appliance-control-plane/);

@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
-import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
 
@@ -23,9 +23,195 @@ const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQ
 const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
 const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIMEOUT_MS || 30_000);
 const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
+const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
+const NETWORK_PROBE_FAILURE_DEBOUNCE = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_DEBOUNCE || 2);
 const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
+let cachedNetworkProbe = null;
+let cachedNetworkProbeAt = 0;
+let networkProbeConsecutiveFailures = 0;
+let networkProbeInFlight = null;
+
+function readInstallStateSafe() {
+  try {
+    return fs.existsSync(stateFile) ? JSON.parse(fs.readFileSync(stateFile, 'utf8')) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Only spend outbound network egress on the live probe when a network-class
+// outcome is actually relevant: during early install phases or when a
+// network/dns/github failure is recorded. A healthy, progressed install does
+// not get probed.
+function networkProbeRelevant(installState) {
+  if (!installState) return false;
+  const phase = String(installState.phase || '').toLowerCase();
+  const failurePhase = String(installState.failure?.phase || '').toLowerCase();
+  const earlyPhases = ['setup', 'dns', 'network', 'github-release-source', 'release'];
+  return earlyPhases.includes(phase) || ['network', 'dns', 'github-release-source'].includes(failurePhase);
+}
+
+function networkProbeInputs() {
+  let inputs = {};
+  try {
+    if (fs.existsSync(setupInputsFile)) inputs = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+  } catch {
+    inputs = {};
+  }
+  return {
+    channel: inputs.channel || 'stable',
+    dnsMode: inputs.dnsMode || 'system',
+    dnsServers: inputs.dnsServers || '',
+    repoUrl: inputs.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
+    repoBranch: inputs.repoBranch || 'main'
+  };
+}
+
+// Cached + debounced live network probe. The TTL bounds egress regardless of
+// poll rate; the debounce requires consecutive failures before flipping a
+// previously-healthy result to failing, to avoid flapping the UI on a blip.
+async function getNetworkProbe() {
+  const now = Date.now();
+  if (cachedNetworkProbe && now - cachedNetworkProbeAt < NETWORK_PROBE_TTL_MS) return cachedNetworkProbe;
+  if (networkProbeInFlight) return networkProbeInFlight;
+
+  networkProbeInFlight = (async () => {
+    let raw;
+    try {
+      raw = await runNetworkChecks(networkProbeInputs(), { timeoutMs: 8_000 });
+    } catch (error) {
+      raw = {
+        ok: false,
+        checkedAt: new Date().toISOString(),
+        failure: {
+          phase: 'network',
+          step: 'network-probe',
+          message: 'Live network probe failed to run.',
+          suspectedCause: 'Live network probe failed to run.',
+          suggestedNextStep: error instanceof Error ? error.message : String(error),
+          retrySafe: true
+        }
+      };
+    }
+
+    networkProbeConsecutiveFailures = raw.ok ? 0 : networkProbeConsecutiveFailures + 1;
+    const debounced = !raw.ok && cachedNetworkProbe?.ok && networkProbeConsecutiveFailures < NETWORK_PROBE_FAILURE_DEBOUNCE;
+    const reported = debounced
+      ? { ok: true, checkedAt: raw.checkedAt, failure: null }
+      : raw;
+
+    cachedNetworkProbe = reported;
+    cachedNetworkProbeAt = Date.now();
+    networkProbeInFlight = null;
+    return reported;
+  })();
+
+  return networkProbeInFlight;
+}
+
+// --- Self-healing reconcile loop -------------------------------------------
+// The setup workflow is fire-once: on a failure it records a blocked state and
+// exits. Rather than asking an operator to manually re-run setup (the inputs
+// are already persisted), the control plane re-runs the workflow on its own for
+// retry-safe blocked states, with exponential backoff and an attempt cap.
+// Network-class blockers are only retried once the live probe is healthy again,
+// so a real outage waits instead of hammering.
+const AUTO_RETRY_DISABLED = process.env.ALGA_APPLIANCE_DISABLE_AUTO_RETRY === '1'
+  || process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1';
+const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_ATTEMPTS || 10);
+const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
+const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
+const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
+const NETWORK_CLASS_PHASES = ['network', 'dns', 'github-release-source'];
+const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
+let reconcileRunning = false;
+
+function installStateBlocked(state) {
+  return Boolean(state?.failure) && state.failure.retrySafe !== false && String(state.status || '').includes('blocked');
+}
+
+function installStateRunning(state) {
+  const status = String(state?.status || '');
+  return status === 'setup-queued' || status.endsWith('-running');
+}
+
+function failureCategory(state) {
+  const phase = String(state?.failure?.phase || state?.phase || '').toLowerCase();
+  return NETWORK_CLASS_PHASES.find((candidate) => phase.includes(candidate)) || phase;
+}
+
+function backoffMs(attempts) {
+  return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
+}
+
+function readRetryState() {
+  try {
+    return fs.existsSync(retryStateFile) ? JSON.parse(fs.readFileSync(retryStateFile, 'utf8')) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeRetryState(value) {
+  try {
+    fs.mkdirSync(path.dirname(retryStateFile), { recursive: true });
+    fs.writeFileSync(retryStateFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  } catch { /* best effort */ }
+}
+
+function clearRetryState() {
+  try {
+    if (fs.existsSync(retryStateFile)) fs.unlinkSync(retryStateFile);
+  } catch { /* best effort */ }
+}
+
+// Summary used by the status snapshot so the UI shows "retrying automatically"
+// instead of a dead-end "re-run setup" instruction.
+function computeAutoRetrySummary(state) {
+  if (AUTO_RETRY_DISABLED || !installStateBlocked(state)) return undefined;
+  const retry = readRetryState();
+  const attempts = Number(retry.attempts || 0);
+  if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) {
+    return { willRetry: false, exhausted: true, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS };
+  }
+  const nextAttemptInSeconds = retry.nextAttemptAt ? Math.max(0, Math.round((retry.nextAttemptAt - Date.now()) / 1000)) : 0;
+  return { willRetry: true, exhausted: false, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, nextAttemptInSeconds };
+}
+
+async function reconcileBlockedSetup() {
+  if (AUTO_RETRY_DISABLED || reconcileRunning) return;
+  reconcileRunning = true;
+  try {
+    const state = readInstallStateSafe();
+    if (!state || !installStateBlocked(state)) {
+      clearRetryState();
+      return;
+    }
+    if (installStateRunning(state)) return;
+
+    const retry = readRetryState();
+    const attempts = Number(retry.attempts || 0);
+    if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) return; // exhausted; leave for manual action
+    const now = Date.now();
+    if (retry.nextAttemptAt && now < retry.nextAttemptAt) return; // still in backoff window
+
+    if (NETWORK_CLASS_PHASES.includes(failureCategory(state))) {
+      const probe = await getNetworkProbe();
+      if (!probe.ok) {
+        writeRetryState({ attempts, nextAttemptAt: now + backoffMs(attempts || 1), lastReason: 'network still unhealthy' });
+        return;
+      }
+    }
+
+    const nextAttempts = attempts + 1;
+    writeRetryState({ attempts: nextAttempts, lastAttemptAt: new Date(now).toISOString(), nextAttemptAt: now + backoffMs(nextAttempts) });
+    queueSetupWorkflow();
+  } finally {
+    reconcileRunning = false;
+  }
+}
 
 function currentMode() {
   if (!fs.existsSync(stateFile)) {
@@ -188,7 +374,8 @@ function queueSetupWorkflow() {
     'run',
     '--setup-inputs', setupInputsFile,
     '--state-file', stateFile,
-    '--release-selection-file', releaseSelectionFile
+    '--release-selection-file', releaseSelectionFile,
+    '--kubeconfig', kubeconfigPath
   ], {
     detached: true,
     stdio: 'ignore',
@@ -421,15 +608,20 @@ const server = http.createServer(async (req, res) => {
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
     const now = Date.now();
     const cacheUsable = !includeDiagnostics && cachedStatusSnapshot && now - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS;
+    const installStateForProbe = readInstallStateSafe();
+    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
     const snapshot = cacheUsable
       ? cachedStatusSnapshot
       : await collectStatusSnapshotAsync({
         stateFile,
         setupInputsFile,
         releaseSelectionFile,
+        kubeconfigPath,
         includeDiagnostics,
         kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
         kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+        networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
+        autoRetry: computeAutoRetrySummary(installStateForProbe),
         runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
       });
     if (!includeDiagnostics && !cacheUsable) {
@@ -767,12 +959,17 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     const signal = requestAbortSignal(req, res);
+    const installStateForProbe = readInstallStateSafe();
+    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
     const snapshot = await collectStatusSnapshotAsync({
       stateFile,
       setupInputsFile,
       releaseSelectionFile,
+        kubeconfigPath,
       kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
       kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+      networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
+      autoRetry: computeAutoRetrySummary(installStateForProbe),
       runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
     });
     const failureItems = (snapshot.failures || [])
@@ -815,3 +1012,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   process.stdout.write(`alga-appliance host service listening on :${port}\n`);
 });
+
+if (!AUTO_RETRY_DISABLED) {
+  const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);
+  reconcileTimer.unref();
+  process.stdout.write(`alga-appliance auto-retry reconciler enabled (every ${RECONCILE_INTERVAL_MS}ms, max ${AUTO_RETRY_MAX_ATTEMPTS} attempts)\n`);
+}

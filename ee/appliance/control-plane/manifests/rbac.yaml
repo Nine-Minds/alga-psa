@@ -24,8 +24,13 @@ metadata:
       shell commands to typed in-cluster API operations.
 rules:
   - apiGroups: [""]
-    resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events"]
+    resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events", "resourcequotas", "limitranges"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Read-only node visibility so the status snapshot can determine platform
+  # readiness (a Ready node) without granting node mutation.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]

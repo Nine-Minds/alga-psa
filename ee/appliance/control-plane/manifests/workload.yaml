@@ -16,7 +16,6 @@ data:
   ALGA_APPLIANCE_SETUP_INPUTS_FILE: "/var/lib/alga-appliance/setup-inputs.json"
   ALGA_APPLIANCE_RELEASE_SELECTION_FILE: "/var/lib/alga-appliance/release-selection.json"
   ALGA_APPLIANCE_BUNDLE_ORIGIN: "baked-iso"
-  ALGA_APPLIANCE_SKIP_K3S_INSTALL: "1"
 ---
 apiVersion: apps/v1
 kind: Deployment

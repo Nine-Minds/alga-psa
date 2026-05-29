@@ -438,6 +438,66 @@
   background: var(--appliance-panel);
 }
 
+/* Custom dropdown — replaces native <select>, whose OS-level popup is
+   unreliable inside the Electron browser pane and gets dismissed by polling
+   re-renders. This renders the option list in-DOM instead. */
+.dropdown { position: relative; display: inline-flex; min-width: 168px; }
+
+.dropdownButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--appliance-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--appliance-card);
+  color: var(--appliance-text);
+  padding: 8px 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dropdownButton:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--operator-purple) 55%, var(--appliance-border));
+}
+
+.dropdownButton:disabled { opacity: 0.58; cursor: default; }
+.dropdownLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dropdownCaret { flex: 0 0 auto; color: var(--appliance-text-muted); font-size: 0.7rem; }
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-width: 340px;
+  max-height: 288px;
+  overflow: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--appliance-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--appliance-card);
+  box-shadow: 0 10px 26px color-mix(in oklch, var(--appliance-sidebar-text) 20%, transparent);
+}
+
+.dropdownOption {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--appliance-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.dropdownOption:hover { background: var(--operator-purple-soft); }
+.dropdownOptionActive { background: color-mix(in oklch, var(--operator-purple) 16%, transparent); font-weight: 650; }
+
 .tableWrap {
   overflow: auto;
   border: 1px solid var(--appliance-border);

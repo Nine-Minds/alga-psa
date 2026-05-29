@@ -460,9 +460,9 @@ export default function StatusPage() {
         {activeTab === 'logs' ? (
           <section id="appliance-panel-logs" role="tabpanel" aria-labelledby="appliance-tab-logs" className={styles.panel}>
             <div className={styles.logControls}>
-              <select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
-              <select aria-label="Pod" value={selectedPod} disabled={loadingPods} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
-              <select aria-label="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
+              <Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(value) => { setNamespace(value); setSelectedPod(''); }} options={[{ value: 'msp', label: 'msp' }, ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))]} />
+              <Dropdown ariaLabel="Pod" value={selectedPod} disabled={loadingPods} placeholder="Select pod" onChange={(value) => { setSelectedPod(value); setSelectedContainer(''); }} options={pods.map((pod) => ({ value: pod.name, label: pod.name }))} />
+              <Dropdown ariaLabel="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} placeholder="Select container" onChange={setSelectedContainer} options={(selectedPodData?.containers || []).map((container) => ({ value: container.name, label: container.name }))} />
               <button type="button" onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
               <span className={styles.muted}>tail {logTail} · scroll up for older lines</span>
             </div>
@@ -488,6 +488,72 @@ export default function StatusPage() {
   );
 }
 
+type DropdownOption = { value: string; label: string };
+
+// Custom dropdown used instead of a native <select>. Native select popups are
+// unreliable inside the Electron browser pane (they fail to open or are
+// dismissed by the 15s status-poll re-render). This renders the option list in
+// the page DOM and keeps its open state across parent re-renders.
+function Dropdown({ value, options, onChange, disabled, ariaLabel, placeholder }: {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
+
+  return (
+    <div className={styles.dropdown} ref={ref}>
+      <button type="button" className={styles.dropdownButton} aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} disabled={disabled} onClick={() => setOpen((prev) => !prev)}>
+        <span className={styles.dropdownLabel}>{selected?.label ?? (value || placeholder || '—')}</span>
+        <span className={styles.dropdownCaret} aria-hidden="true">▾</span>
+      </button>
+      {open && !disabled ? (
+        <ul className={styles.dropdownMenu} role="listbox" aria-label={ariaLabel}>
+          {options.length === 0 ? (
+            <li className={styles.dropdownOption} aria-disabled="true">No options</li>
+          ) : options.map((option) => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              className={`${styles.dropdownOption} ${option.value === value ? styles.dropdownOptionActive : ''}`}
+              onClick={() => { onChange(option.value); setOpen(false); }}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function Toolbar({ namespace, namespaces, loadingNamespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; loadingNamespaces?: boolean; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
-  return <div className={styles.toolbar}><select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
+  const options: DropdownOption[] = [
+    { value: 'all', label: 'all namespaces' },
+    { value: 'msp', label: 'msp' },
+    ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))
+  ];
+  return <div className={styles.toolbar}><Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={onNamespace} options={options} /><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
 }
