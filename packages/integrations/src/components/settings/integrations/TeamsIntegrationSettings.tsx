@@ -215,6 +215,62 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
   }
 }
 
+function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): string {
+  switch (step.id) {
+    case 'addon_entitlement':
+      return t('integrations.teams.settings.diagnostics.steps.addonEntitlement', { defaultValue: 'Teams add-on entitlement' });
+    case 'integration_status':
+      return t('integrations.teams.settings.diagnostics.steps.integrationStatus', { defaultValue: 'Teams integration status' });
+    case 'capabilities':
+      return t('integrations.teams.settings.diagnostics.steps.capabilities', { defaultValue: 'Teams capabilities' });
+    case 'microsoft_profile':
+      return t('integrations.teams.settings.diagnostics.steps.microsoftProfile', { defaultValue: 'Microsoft profile readiness' });
+    case 'package_metadata':
+      return t('integrations.teams.settings.diagnostics.steps.packageMetadata', { defaultValue: 'Teams package metadata' });
+    case 'bot_connector':
+      return t('integrations.teams.settings.diagnostics.steps.botConnector', { defaultValue: 'Bot connector credentials' });
+    case 'user_linkage':
+      return t('integrations.teams.settings.diagnostics.steps.userLinkage', { defaultValue: 'Admin Microsoft account linkage' });
+    case 'conversation_reference':
+      return t('integrations.teams.settings.diagnostics.steps.conversationReference', { defaultValue: 'Admin Teams conversation reference' });
+    case 'recent_delivery_health':
+      return t('integrations.teams.settings.diagnostics.steps.recentDeliveryHealth', { defaultValue: 'Recent Teams delivery health' });
+    default:
+      return step.title;
+  }
+}
+
+function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn): string {
+  switch (recommendation) {
+    case 'Enable the Microsoft Teams add-on for this tenant.':
+      return t('integrations.teams.settings.diagnostics.recommendation.addon', { defaultValue: recommendation });
+    case 'Activate the Teams integration in settings.':
+      return t('integrations.teams.settings.diagnostics.recommendation.activate', { defaultValue: recommendation });
+    case 'Enable personal bot and activity notifications for Teams.':
+      return t('integrations.teams.settings.diagnostics.recommendation.capabilities', { defaultValue: recommendation });
+    case 'Select a ready Microsoft profile for Teams.':
+      return t('integrations.teams.settings.diagnostics.recommendation.profile', { defaultValue: recommendation });
+    case 'Select an active Microsoft profile for Teams.':
+      return t('integrations.teams.settings.diagnostics.recommendation.activeProfile', { defaultValue: recommendation });
+    case 'Complete Microsoft profile credentials before activating Teams.':
+      return t('integrations.teams.settings.diagnostics.recommendation.profileCredentials', { defaultValue: recommendation });
+    case 'Generate the Teams app package before running end-to-end validation.':
+      return t('integrations.teams.settings.diagnostics.recommendation.package', { defaultValue: recommendation });
+    case 'Regenerate the Teams package with a reachable base URL.':
+      return t('integrations.teams.settings.diagnostics.recommendation.baseUrl', { defaultValue: recommendation });
+    case 'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.':
+      return t('integrations.teams.settings.diagnostics.recommendation.botEnv', { defaultValue: recommendation });
+    case 'Link your Microsoft account in your profile settings.':
+      return t('integrations.teams.settings.diagnostics.recommendation.userLinkage', { defaultValue: recommendation });
+    case 'Open the Alga PSA bot in Teams and send it any message first, then retry.':
+      return t('integrations.teams.settings.diagnostics.recommendation.conversationReference', { defaultValue: recommendation });
+    case 'Review the most recent Teams delivery failure and retry after correcting the cause.':
+      return t('integrations.teams.settings.diagnostics.recommendation.deliveryFailure', { defaultValue: recommendation });
+    default:
+      return recommendation;
+  }
+}
+
 function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormState {
   return {
     selectedProfileId: integration?.selectedProfileId ?? '',
@@ -864,7 +920,7 @@ export function TeamsIntegrationSettings() {
                   return (
                     <div key={step.id} className="flex items-start justify-between gap-4 rounded-md border bg-muted/10 p-3">
                       <div>
-                        <div className="text-sm font-medium">{step.title}</div>
+                        <div className="text-sm font-medium">{getDiagnosticsStepTitle(step, t)}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{step.detail}</div>
                       </div>
                       <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -899,7 +955,7 @@ export function TeamsIntegrationSettings() {
                   <div className="text-sm font-medium">{t('integrations.teams.settings.diagnostics.recommendations', { defaultValue: 'Recommendations' })}</div>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                     {diagnosticsReport.recommendations.map((recommendation) => (
-                      <li key={recommendation}>{recommendation}</li>
+                      <li key={recommendation}>{getDiagnosticsRecommendationText(recommendation, t)}</li>
                     ))}
                   </ul>
                 </div>

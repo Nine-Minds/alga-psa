@@ -148,3 +148,8 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 ## Suggested commit groups (≈7 commits)
 
 `conversation-reader` → `test-message` → `diagnostics` → `settings-ui` → `i18n` → `wiring` → (tests land in each group's commit).
+
+### i18n
+
+- F033-F035: Added `integrations.teams.settings.diagnostics.*` locale keys to every `server/public/locales/*/msp/integrations.json` file. The diagnostics panel now localizes its section title/description, button labels, status labels, errors, test-message reason text, step titles, and recommendation strings with defaultValue fallbacks.
+- T040-T041: Added `TeamsIntegrationSettings.i18n.test.ts` to assert every integrations locale contains the diagnostics keys and every test-message skip/fail reason maps to a defined key, preventing raw key leaks or unmapped reason codes.
