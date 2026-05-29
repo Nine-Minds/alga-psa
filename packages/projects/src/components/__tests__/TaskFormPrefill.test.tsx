@@ -53,6 +53,7 @@ vi.mock('../actions/projectTaskActions', () => ({
   moveTaskToPhase: vi.fn(),
   deleteTask: vi.fn(),
   addTaskResourceAction: vi.fn(),
+  addTaskResourcesAction: vi.fn(),
   removeTaskResourceAction: vi.fn(),
   getTaskResourcesAction: vi.fn(),
   addTicketLinkAction: (...args: unknown[]) => addTicketLinkActionMock(...args),

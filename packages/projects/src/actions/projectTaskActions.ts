@@ -1315,6 +1315,84 @@ export const addTaskResourceAction = withAuth(async (
     }
 });
 
+// Batched equivalent of addTaskResourceAction: inserts every missing resource in a
+// single transaction, then emits one PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event
+// per added agent (same per-agent contract as the single-add path). Returns the
+// task's resources so callers refetch once instead of per member.
+export const addTaskResourcesAction = withAuth(async (
+    user,
+    { tenant },
+    taskId: string,
+    userIds: string[],
+    role?: string
+): Promise<any[]> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        const { resources, added, projectId, primaryAgentId } = await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const task = await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .first();
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            const wanted = Array.from(new Set(userIds.filter(Boolean)));
+            const existing = await trx('task_resources')
+                .where({ task_id: taskId, tenant })
+                .whereIn('additional_user_id', wanted)
+                .select('additional_user_id');
+            const existingIds = new Set(existing.map((row: { additional_user_id: string }) => row.additional_user_id));
+
+            // A user can't be both the primary and an additional agent
+            // (CHECK assigned_to != additional_user_id); also skip rows already present.
+            const primaryAgentId = task.assigned_to as string | null;
+            const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
+
+            if (toInsert.length > 0) {
+                await trx('task_resources').insert(
+                    toInsert.map((userId) => ({
+                        tenant,
+                        task_id: taskId,
+                        assigned_to: primaryAgentId || userId,
+                        additional_user_id: userId,
+                        role: role || null
+                    }))
+                );
+            }
+
+            const resources = await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
+            return { resources, added: toInsert, projectId, primaryAgentId };
+        });
+
+        // Emit per-agent events after commit so subscribers see the committed rows.
+        for (const userId of added) {
+            await publishEvent({
+                eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    primaryAgentId,
+                    additionalAgentId: userId,
+                    assignedByUserId: user.user_id
+                }
+            });
+        }
+
+        return resources;
+    } catch (error) {
+        console.error('Error adding task resources:', error);
+        throw error;
+    }
+});
+
 export const assignTeamToProjectTask = withAuth(async (
     user,
     { tenant },
@@ -1365,9 +1443,16 @@ export const assignTeamToProjectTask = withAuth(async (
                 .andWhere('users.is_inactive', false)
                 .select('team_members.user_id');
 
-            // assigned_to is guaranteed non-null: either the task already has one,
-            // or we fall back to team.manager_id (validated above).
-            const assignedTo: string = (task.assigned_to as string | null) || team.manager_id;
+            // Assigning a team makes that team's lead the task's primary agent,
+            // overwriting any previous primary (e.g. the prior team's lead).
+            const assignedTo: string = team.manager_id;
+
+            // The new lead can't be both primary and an additional resource
+            // (CHECK assigned_to != additional_user_id + unique index), so drop
+            // any existing resource row for them before promoting to primary.
+            await trx('task_resources')
+                .where({ task_id: taskId, tenant, additional_user_id: assignedTo })
+                .delete();
 
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
@@ -1466,6 +1551,15 @@ export const removeTeamFromProjectTask = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
+            // Resolve the team's lead so we know whether removing the team should
+            // also vacate the primary agent slot it filled.
+            const removedTeam = task.assigned_team_id
+                ? await trx('teams')
+                    .where({ team_id: task.assigned_team_id, tenant })
+                    .first()
+                : null;
+            const teamLeadId: string | null = removedTeam?.manager_id ?? null;
+
             const mode = options.mode;
             if (mode === 'remove_all') {
                 await trx('task_resources')
@@ -1493,10 +1587,16 @@ export const removeTeamFromProjectTask = withAuth(async (
                     .update({ role: null });
             }
 
+            // 'remove_all' takes the whole team off the task, including its lead,
+            // so clear the primary agent when it's that lead. 'keep_all' and
+            // 'selective' keep people assigned, so the lead stays as primary.
+            const clearPrimary = mode === 'remove_all' && !!teamLeadId && task.assigned_to === teamLeadId;
+
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
                 .update({
                     assigned_team_id: null,
+                    ...(clearPrimary ? { assigned_to: null } : {}),
                     updated_at: new Date()
                 });
         });
