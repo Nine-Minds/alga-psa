@@ -1880,12 +1880,12 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       .pluck('run_id');
 
     if (runIds.length > 0) {
-      await trx('workflow_run_logs').whereIn('run_id', runIds).del();
-      await trx('workflow_action_invocations').whereIn('run_id', runIds).del();
-      await trx('workflow_run_snapshots').whereIn('run_id', runIds).del();
-      await trx('workflow_run_waits').whereIn('run_id', runIds).del();
-      await trx('workflow_run_steps').whereIn('run_id', runIds).del();
-      await trx('workflow_runs').whereIn('run_id', runIds).del();
+      await trx('workflow_run_logs').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_action_invocations').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_snapshots').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_waits').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_steps').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_runs').where('tenant', tenant).whereIn('run_id', runIds).del();
     }
 
     await trx('workflow_definition_versions')
@@ -2397,6 +2397,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
           knex('workflow_run_waits')
             .select(1)
             .whereRaw('workflow_run_waits.run_id = workflow_runs.run_id')
+            .whereRaw('workflow_run_waits.tenant = workflow_runs.tenant')
             .where('workflow_run_waits.key', 'ilike', searchValue)
         );
     });
