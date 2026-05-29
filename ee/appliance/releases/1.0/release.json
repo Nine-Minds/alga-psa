@@ -6,7 +6,7 @@
     "releaseBranch": "release/1.0.0",
     "valuesProfile": "single-node",
     "images": {
-      "algaCore": "fc7909c4",
+      "algaCore": "ef80c44c",
       "workflowWorker": "a2cbb43",
       "emailService": "61e4a00e",
       "temporalWorker": "a2cbb43"
