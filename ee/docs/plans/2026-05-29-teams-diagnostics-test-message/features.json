@@ -170,56 +170,56 @@
   {
     "id": "F025",
     "description": "Add a 'Diagnostics & Test Message' Card section to TeamsIntegrationSettings.tsx below the existing config/package cards.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F026",
     "description": "Wire a 'Run diagnostics' button that calls runTeamsDiagnostics with loading and error state handling.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes", "Flow A"]
   },
   {
     "id": "F027",
     "description": "Render diagnostics steps as a list, each with a status badge (pass=green, warn=amber, fail=red, skip=grey) plus title and detail text.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F028",
     "description": "Render the aggregated recommendations as a bullet list when the report includes any.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F029",
     "description": "Wire a 'Send test message' button that calls sendTeamsTestMessage with its own loading state.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes", "Flow B"]
   },
   {
     "id": "F030",
     "description": "Render the test-message result: success confirmation on sent; friendly mapped text for each skip reason (including 'missing_conversation_reference' -> open the bot and message it first) and for failures.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes", "Flow B"]
   },
   {
     "id": "F031",
     "description": "Surface the recent delivery summary (last success / last failure) from the diagnostics report data in the panel.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes", "Flow A"]
   },
   {
     "id": "F032",
     "description": "Disable the diagnostics and test-message buttons when the addon is missing or the integration is not active, consistent with the existing canPersist gating.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "prdRefs": ["UX / UI Notes", "Non-Goals (Explicit)"]
   },

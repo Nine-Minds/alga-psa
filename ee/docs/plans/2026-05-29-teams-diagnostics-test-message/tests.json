@@ -233,42 +233,42 @@
   {
     "id": "T034",
     "description": "Diagnostics panel renders the step list with the correct status badge per step after Run diagnostics resolves.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F026", "F027"]
   },
   {
     "id": "T035",
     "description": "Recommendations bullet list renders when the report includes recommendations and is hidden when empty.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F028"]
   },
   {
     "id": "T036",
     "description": "Send test message button shows a success confirmation on a sent result.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F029", "F030"]
   },
   {
     "id": "T037",
     "description": "missing_conversation_reference skip renders the 'open the bot and message it first' guidance.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F030"]
   },
   {
     "id": "T038",
     "description": "Diagnostics and test-message buttons are disabled when the addon is missing or the integration is not active.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F032"]
   },
   {
     "id": "T039",
     "description": "Recent delivery summary (last success / last failure) renders from report data.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-ui",
     "featureIds": ["F031"]
   },

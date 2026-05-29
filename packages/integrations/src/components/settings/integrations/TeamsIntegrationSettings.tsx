@@ -12,7 +12,9 @@ import {
   getMicrosoftIntegrationStatus,
   getTeamsAppPackageStatus,
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
   saveTeamsIntegrationSettings,
+  sendTeamsTestMessage,
 } from '../../../actions';
 import {
   AlertTriangle,
@@ -23,6 +25,7 @@ import {
   Package,
   RefreshCw,
   Save,
+  Send,
 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -32,6 +35,9 @@ type TeamsIntegrationStatus = Awaited<ReturnType<typeof getTeamsIntegrationStatu
 type TeamsIntegration = NonNullable<TeamsIntegrationStatus['integration']>;
 type TeamsPackageStatus = Awaited<ReturnType<typeof getTeamsAppPackageStatus>>;
 type TeamsPackage = NonNullable<TeamsPackageStatus['package']>;
+type TeamsDiagnosticsReport = Awaited<ReturnType<typeof runTeamsDiagnostics>>;
+type TeamsDiagnosticsStep = TeamsDiagnosticsReport['steps'][number];
+type TeamsTestMessageResult = Awaited<ReturnType<typeof sendTeamsTestMessage>>;
 
 type TeamsFormState = {
   selectedProfileId: string;
@@ -161,6 +167,54 @@ function getInstallStatusBadge(installStatus: TeamsIntegration['installStatus'],
   }
 }
 
+function getDiagnosticsStatusBadge(status: TeamsDiagnosticsStep['status'], t: TranslateFn) {
+  switch (status) {
+    case 'pass':
+      return { label: t('integrations.teams.settings.diagnostics.status.pass', { defaultValue: 'Pass' }), variant: 'success' as const };
+    case 'warn':
+      return { label: t('integrations.teams.settings.diagnostics.status.warn', { defaultValue: 'Warn' }), variant: 'warning' as const };
+    case 'fail':
+      return { label: t('integrations.teams.settings.diagnostics.status.fail', { defaultValue: 'Fail' }), variant: 'error' as const };
+    default:
+      return { label: t('integrations.teams.settings.diagnostics.status.skip', { defaultValue: 'Skip' }), variant: 'secondary' as const };
+  }
+}
+
+function formatDiagnosticsTimestamp(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn): string {
+  if (result.status === 'sent') {
+    return t('integrations.teams.settings.diagnostics.test.sent', { defaultValue: 'Teams test message sent.' });
+  }
+
+  if (result.status === 'failed') {
+    return result.errorMessage || t('integrations.teams.settings.diagnostics.test.failed', { defaultValue: 'Teams test message failed.' });
+  }
+
+  switch (result.reason) {
+    case 'addon_inactive':
+      return t('integrations.teams.settings.diagnostics.test.addonInactive', { defaultValue: 'The Teams add-on is not active for this tenant.' });
+    case 'integration_inactive':
+      return t('integrations.teams.settings.diagnostics.test.integrationInactive', { defaultValue: 'Activate the Teams integration before sending a test message.' });
+    case 'capability_disabled':
+      return t('integrations.teams.settings.diagnostics.test.capabilityDisabled', { defaultValue: 'Enable the personal bot capability before sending a test message.' });
+    case 'bot_not_configured':
+      return t('integrations.teams.settings.diagnostics.test.botNotConfigured', { defaultValue: 'Configure the Teams bot credentials before sending a test message.' });
+    case 'missing_user_linkage':
+      return t('integrations.teams.settings.diagnostics.test.missingUserLinkage', { defaultValue: 'Link your Microsoft account before sending a Teams test message.' });
+    case 'missing_conversation_reference':
+      return t('integrations.teams.settings.diagnostics.test.missingConversationReference', { defaultValue: 'Open the Alga PSA bot in Teams and send it any message first, then retry.' });
+    default:
+      return result.detail || t('integrations.teams.settings.diagnostics.test.skipped', { defaultValue: 'Teams test message was skipped.' });
+  }
+}
+
 function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormState {
   return {
     selectedProfileId: integration?.selectedProfileId ?? '',
@@ -203,12 +257,17 @@ export function TeamsIntegrationSettings() {
   const [saving, setSaving] = React.useState(false);
   const [packageLoading, setPackageLoading] = React.useState(false);
   const [downloadLoading, setDownloadLoading] = React.useState(false);
+  const [diagnosticsLoading, setDiagnosticsLoading] = React.useState(false);
+  const [testMessageLoading, setTestMessageLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [packageError, setPackageError] = React.useState<string | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [microsoftStatus, setMicrosoftStatus] = React.useState<MicrosoftIntegrationStatus | null>(null);
   const [teamsStatus, setTeamsStatus] = React.useState<TeamsIntegrationStatus | null>(null);
   const [packageStatus, setPackageStatus] = React.useState<TeamsPackage | null>(null);
+  const [diagnosticsReport, setDiagnosticsReport] = React.useState<TeamsDiagnosticsReport | null>(null);
+  const [testMessageResult, setTestMessageResult] = React.useState<TeamsTestMessageResult | null>(null);
   const [formState, setFormState] = React.useState<TeamsFormState>(EMPTY_FORM_STATE);
 
   const load = React.useCallback(async () => {
@@ -258,6 +317,7 @@ export function TeamsIntegrationSettings() {
   const isActive = installStatus === 'active';
   const canActivate = canPersist && !isActive;
   const canDeactivate = installStatus !== 'not_configured';
+  const diagnosticsDisabled = !teamsStatus?.success || !isActive;
   const hasSavedPackageContext = Boolean(currentIntegration?.selectedProfileId)
     && installStatus !== 'not_configured'
     && currentIntegration?.selectedProfileId === formState.selectedProfileId;
@@ -401,6 +461,42 @@ export function TeamsIntegrationSettings() {
       setDownloadLoading(false);
     }
   }, [packageStatus, t]);
+
+  const handleRunDiagnostics = React.useCallback(async () => {
+    setDiagnosticsLoading(true);
+    setDiagnosticsError(null);
+    setDiagnosticsReport(null);
+
+    try {
+      const report = await runTeamsDiagnostics();
+      setDiagnosticsReport(report);
+    } catch (err: any) {
+      setDiagnosticsError(err?.message || t('integrations.teams.settings.diagnostics.errors.run', { defaultValue: 'Failed to run Teams diagnostics' }));
+    } finally {
+      setDiagnosticsLoading(false);
+    }
+  }, [t]);
+
+  const handleSendTestMessage = React.useCallback(async () => {
+    setTestMessageLoading(true);
+    setDiagnosticsError(null);
+    setTestMessageResult(null);
+
+    try {
+      const result = await sendTeamsTestMessage();
+      setTestMessageResult(result);
+    } catch (err: any) {
+      setDiagnosticsError(err?.message || t('integrations.teams.settings.diagnostics.errors.testMessage', { defaultValue: 'Failed to send Teams test message' }));
+    } finally {
+      setTestMessageLoading(false);
+    }
+  }, [t]);
+
+  const recentDeliveryStep = diagnosticsReport?.steps.find((step) => step.id === 'recent_delivery_health');
+  const recentDeliveryData = recentDeliveryStep?.data as {
+    lastSuccess?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null } | null;
+    lastFailure?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null; errorCode?: string | null } | null;
+  } | undefined;
 
   if (loading) {
     return (
@@ -694,6 +790,120 @@ export function TeamsIntegrationSettings() {
                   </a>
                 </Button>
               </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('integrations.teams.settings.diagnostics.title', { defaultValue: 'Diagnostics & Test Message' })}</CardTitle>
+          <CardDescription>
+            {t('integrations.teams.settings.diagnostics.description', { defaultValue: 'Verify the Teams setup and send a proactive test message to your Teams bot conversation.' })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {diagnosticsError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{diagnosticsError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              id="teams-run-diagnostics"
+              variant="secondary"
+              onClick={() => void handleRunDiagnostics()}
+              disabled={diagnosticsLoading || diagnosticsDisabled}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {diagnosticsLoading
+                ? t('integrations.teams.settings.diagnostics.running', { defaultValue: 'Running...' })
+                : t('integrations.teams.settings.diagnostics.run', { defaultValue: 'Run diagnostics' })}
+            </Button>
+            <Button
+              id="teams-send-test-message"
+              onClick={() => void handleSendTestMessage()}
+              disabled={testMessageLoading || diagnosticsDisabled}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {testMessageLoading
+                ? t('integrations.teams.settings.diagnostics.sending', { defaultValue: 'Sending...' })
+                : t('integrations.teams.settings.diagnostics.sendTest', { defaultValue: 'Send test message' })}
+            </Button>
+          </div>
+
+          {diagnosticsDisabled ? (
+            <p className="text-sm text-muted-foreground">
+              {t('integrations.teams.settings.diagnostics.disabled', { defaultValue: 'Diagnostics and test messages are available after the Teams integration is active.' })}
+            </p>
+          ) : null}
+
+          {testMessageResult ? (
+            <Alert variant={testMessageResult.status === 'failed' ? 'destructive' : 'default'}>
+              {testMessageResult.status === 'sent' ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              <AlertDescription>{getTestMessageResultText(testMessageResult, t)}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {diagnosticsReport ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Badge variant={getDiagnosticsStatusBadge(diagnosticsReport.overallStatus, t).variant}>
+                  {getDiagnosticsStatusBadge(diagnosticsReport.overallStatus, t).label}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {t('integrations.teams.settings.diagnostics.completedAt', { defaultValue: 'Completed {{time}}', time: formatDiagnosticsTimestamp(diagnosticsReport.createdAt) || diagnosticsReport.createdAt })}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {diagnosticsReport.steps.map((step) => {
+                  const badge = getDiagnosticsStatusBadge(step.status, t);
+                  return (
+                    <div key={step.id} className="flex items-start justify-between gap-4 rounded-md border bg-muted/10 p-3">
+                      <div>
+                        <div className="text-sm font-medium">{step.title}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{step.detail}</div>
+                      </div>
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {recentDeliveryData ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-md border bg-muted/10 p-3">
+                    <div className="text-sm font-medium">{t('integrations.teams.settings.diagnostics.lastSuccess', { defaultValue: 'Last success' })}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {recentDeliveryData.lastSuccess?.createdAt
+                        ? formatDiagnosticsTimestamp(recentDeliveryData.lastSuccess.createdAt) || recentDeliveryData.lastSuccess.createdAt
+                        : t('integrations.teams.settings.diagnostics.noneRecorded', { defaultValue: 'None recorded' })}
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-muted/10 p-3">
+                    <div className="text-sm font-medium">{t('integrations.teams.settings.diagnostics.lastFailure', { defaultValue: 'Last failure' })}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {recentDeliveryData.lastFailure?.createdAt
+                        ? `${formatDiagnosticsTimestamp(recentDeliveryData.lastFailure.createdAt) || recentDeliveryData.lastFailure.createdAt}${recentDeliveryData.lastFailure.errorMessage ? ` - ${recentDeliveryData.lastFailure.errorMessage}` : ''}`
+                        : t('integrations.teams.settings.diagnostics.noneRecorded', { defaultValue: 'None recorded' })}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {diagnosticsReport.recommendations.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">{t('integrations.teams.settings.diagnostics.recommendations', { defaultValue: 'Recommendations' })}</div>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {diagnosticsReport.recommendations.map((recommendation) => (
+                      <li key={recommendation}>{recommendation}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </CardContent>

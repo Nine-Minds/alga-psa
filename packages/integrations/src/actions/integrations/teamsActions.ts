@@ -21,6 +21,10 @@ import type {
   TeamsIntegrationStatusResponse,
 } from './teamsContracts';
 
+type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
+export type TeamsDiagnosticsReport = Awaited<ReturnType<EeTeamsDiagnosticsActions['runTeamsDiagnosticsImpl']>>;
+export type TeamsTestMessageResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>;
+
 interface TeamsIntegrationRow {
   tenant: string;
   selected_profile_id: string | null;
@@ -371,4 +375,36 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   }
 
   return saveTeamsIntegrationSettingsImpl(user, { tenant }, input);
+});
+
+async function loadEeTeamsActions(): Promise<EeTeamsDiagnosticsActions> {
+  return import('@alga-psa/ee-microsoft-teams/actions');
+}
+
+export const runTeamsDiagnostics = withAuth(async (
+  user,
+  { tenant },
+  input: Record<string, never> = {}
+): Promise<TeamsDiagnosticsReport> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    throw new Error(availability.message);
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.runTeamsDiagnosticsImpl(user, { tenant }, input);
+});
+
+export const sendTeamsTestMessage = withAuth(async (
+  user,
+  { tenant },
+  input: Record<string, never> = {}
+): Promise<TeamsTestMessageResult> => {
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    throw new Error(availability.message);
+  }
+
+  const actions = await loadEeTeamsActions();
+  return actions.sendTeamsTestMessageImpl(user, { tenant }, input);
 });

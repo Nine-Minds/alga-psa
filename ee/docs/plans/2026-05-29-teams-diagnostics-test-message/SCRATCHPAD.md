@@ -129,6 +129,13 @@ npm run build -w @alga-psa/microsoft-teams   # verify the workspace/script name
 - T019-T033: Extended `server/src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` with diagnostics coverage for permission denial, ordered steps, every required check, recent delivery tenant scoping, status aggregation, recommendation dedupe, and the fully healthy pass case.
 - Verification: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts` passed 27 tests; `npm -w @alga-psa/ee-microsoft-teams run typecheck` passed.
 
+### settings-ui
+
+- F025-F032: Added a `Diagnostics & Test Message` card below the package card in `packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx`. It wires `Run diagnostics` and `Send test message` actions, renders step badges, recommendations, recent delivery summary, mapped test-message results, loading/error state, and disables both buttons unless the integration is active.
+- Boundary note: the UI needs the action imports through `packages/integrations/src/actions`; action re-exports and EE action-index export were added while implementing this panel and will be verified/marked in the later `wiring` group.
+- T034-T039: Added `TeamsIntegrationSettings.diagnostics.test.tsx` covering step/status rendering, recommendations present/hidden, sent confirmation, missing-conversation-reference guidance, disabled states, and recent delivery summary.
+- Verification: `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.diagnostics.test.tsx` passed 6 tests (React act warnings emitted by async state updates); `npm -w @alga-psa/integrations run typecheck` passed.
+
 ## Out of scope (Phase 2+ — do NOT bundle)
 
 - `teams_channel_mappings`, channel routing/delivery, expanded categories.
