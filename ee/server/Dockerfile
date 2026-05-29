@@ -39,15 +39,21 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 # needs runtime deps and should not fail on dev-only peer conflicts.
 RUN npm install --omit=dev --legacy-peer-deps
 
+# ts-command-line-args is a server-scoped dependency used by server/scripts CLIs
+# (e.g. create-tenant.ts, run via tsx during appliance bootstrap). The root
+# production install above does not pull it in, so add it explicitly.
+RUN npm install --no-save --legacy-peer-deps ts-command-line-args@^2.5.1
+
 # Copy base files
 COPY tsconfig.base.json ./
 COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-# Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist/ ./shared/dist/
-COPY ./shared/package.json ./shared/package.json
+# Copy the shared workspace: pre-built dist AND source. Source is required so the
+# appliance tenant bootstrap (npx tsx server/scripts/create-tenant.ts) can resolve
+# createTenantComplete -> shared/utils/encryption -> shared/core/getSecret at runtime.
+COPY ./shared/ ./shared/
 
 # Copy packages directory for webpack aliases
 COPY ./packages/ ./packages/
@@ -65,6 +71,9 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+
+# Appliance bootstrap CLI (create-tenant.ts) invoked via tsx during onboarding.
+COPY ./server/scripts/ ./server/scripts/
 
 # Copy EE-specific files
 COPY ./ee/server/src /app/ee/server/src
