@@ -17,12 +17,13 @@ spec:
       retries: 0
   chart:
     spec:
-      chart: ./helm
+      chart: sebastian
+      version: 0.0.1
       interval: 10m
       reconcileStrategy: Revision
       sourceRef:
-        kind: GitRepository
-        name: alga-appliance
+        kind: HelmRepository
+        name: alga-charts
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap

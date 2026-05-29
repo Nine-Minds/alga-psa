@@ -1,0 +1,10 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: alga-charts
+  namespace: flux-system
+spec:
+  # Appliance charts are published as OCI artifacts to ghcr (public read).
+  type: oci
+  interval: 5m0s
+  url: oci://ghcr.io/nine-minds/charts
