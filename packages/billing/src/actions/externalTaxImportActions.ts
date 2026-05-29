@@ -90,8 +90,8 @@ export const getInvoicesPendingExternalTax = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const invoices = await knex('invoices as i')
-    .join('companies as c', function() {
-      this.on('i.client_id', '=', 'c.company_id')
+    .join('clients as c', function() {
+      this.on('i.client_id', '=', 'c.client_id')
         .andOn('i.tenant', '=', 'c.tenant');
     })
     .leftJoin('tenant_external_entity_mappings as m', function() {
@@ -106,7 +106,7 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     .select(
       'i.invoice_id',
       'i.invoice_number',
-      'c.company_name as client_name',
+      'c.client_name as client_name',
       'i.total_amount',
       'i.created_at',
       'm.integration_type as adapter_type'

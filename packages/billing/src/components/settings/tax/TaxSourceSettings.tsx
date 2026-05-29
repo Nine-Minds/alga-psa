@@ -177,6 +177,11 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
                   defaultValue: 'The accounting system used is determined automatically based on which system you export the invoice to.'
                 })}
               </p>
+              <p className="mt-3 text-sm font-medium text-[rgb(var(--color-accent-800))]">
+                {t('tax.source.workflow.warning', {
+                  defaultValue: 'Important: invoices for clients using external tax cannot be finalized until their tax has been imported back from your accounting system. This requires a connected accounting integration (QuickBooks or Xero) and exporting the invoice there first. Without it, these invoices will stay stuck in Draft — switch an individual invoice back to internal tax to finalize it in Alga.'
+                })}
+              </p>
             </AlertDescription>
           </Alert>
         )}
