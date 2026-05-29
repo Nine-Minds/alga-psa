@@ -38,6 +38,7 @@ tags:
   - name: Projects
   - name: QuickBooks v1
   - name: Quotes & Contracts v1
+  - name: Search
   - name: Service Catalog
   - name: Service Categories
   - name: Service Types
@@ -1318,6 +1319,10 @@ components:
           type: string
           format: uuid
           description: Client UUID from clients.client_id.
+        location_id:
+          type: string
+          format: uuid
+          description: Client location UUID from client_locations.location_id.
         asset_type:
           type: string
           enum: &a2
@@ -1491,9 +1496,16 @@ components:
           type: string
           minLength: 1
           description: Required asset status.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Optional client_locations.location_id link. Validated to belong to
+            client_id.
         location:
           type: string
-          description: Optional asset location.
+          description: Optional free-text asset location.
         serial_number:
           type: string
           description: Optional serial number.
@@ -1538,9 +1550,15 @@ components:
           type: string
           minLength: 1
           description: Asset status.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client_locations.location_id link. Pass null to clear.
         location:
           type: string
-          description: Asset location.
+          description: Free-text asset location.
         serial_number:
           type: string
           description: Serial number.
@@ -1785,6 +1803,12 @@ components:
         status:
           type: string
           description: Asset status.
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client_locations.location_id link, when set.
         location:
           type:
             - string
@@ -9351,6 +9375,166 @@ components:
           type: string
           maxLength: 50
       description: Payload for updating a status. All fields are optional.
+    SearchQuery:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Full-text query. A concise expression of likely record words,
+            identifiers, names, or quoted phrases — not a full sentence.
+            Supports OR for alternatives (e.g. "laptop OR workstation").
+        types:
+          type: string
+          description: "Comma-separated list of object types to restrict the search (e.g.
+            \"ticket,project\"). Omit to search every type the API key's user is
+            permitted to read. Allowed values: client, contact, user, ticket,
+            ticket_comment, project, project_phase, project_task,
+            project_task_comment, asset, invoice, invoice_item,
+            invoice_annotation, contract, client_contract, document, kb_article,
+            service_catalog, service_request_submission,
+            service_request_definition, workflow_task, interaction,
+            schedule_entry, time_entry, board, category, tag, status."
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of results to return. Defaults to 30; capped at 100.
+        cursor:
+          type: string
+          description: Opaque pagination cursor copied from a prior response's nextCursor.
+        sort:
+          type: string
+          enum: &a95
+            - relevance
+            - recent
+          description: Result ordering. "relevance" (default) ranks by full-text score;
+            "recent" orders by last update.
+      required:
+        - query
+    SearchResultRow:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - client
+            - contact
+            - user
+            - ticket
+            - ticket_comment
+            - project
+            - project_phase
+            - project_task
+            - project_task_comment
+            - asset
+            - invoice
+            - invoice_item
+            - invoice_annotation
+            - contract
+            - client_contract
+            - document
+            - kb_article
+            - service_catalog
+            - service_request_submission
+            - service_request_definition
+            - workflow_task
+            - interaction
+            - schedule_entry
+            - time_entry
+            - board
+            - category
+            - tag
+            - status
+          description: Indexed business object type.
+        id:
+          type: string
+          description: Object identifier within its type.
+        parentId:
+          type: string
+          description: Identifier of the parent record for nested results (e.g. the ticket
+            of a ticket comment).
+        title:
+          type: string
+          description: Primary display label for the record.
+        subtitle:
+          type: string
+          description: Secondary context line.
+        snippet:
+          type: string
+          description: Matched-text excerpt with <mark> tags around the highlighted terms.
+        url:
+          type: string
+          description: Relative in-app URL pointing at the record.
+        score:
+          type: number
+          description: Relevance score; higher is more relevant.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Source record last-updated timestamp.
+      required:
+        - type
+        - id
+        - title
+        - url
+        - score
+        - updatedAt
+    SearchResultData:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResultRow"
+          description: Matching records for this page, ordered by the requested sort.
+        groups:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Total match counts keyed by object type (across all pages), before
+            the page limit is applied.
+        totalCount:
+          type: integer
+          description: Total number of matches across all permitted types.
+        nextCursor:
+          type: string
+          description: Cursor for the next page; absent when the result set fits within
+            the page.
+      required:
+        - results
+        - groups
+        - totalCount
+    SearchResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/SearchResultData"
+            - description: Search payload returned by createSuccessResponse.
+      required:
+        - data
+    SearchApiErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code such as VALIDATION_ERROR, UNAUTHORIZED,
+                or INTERNAL_ERROR.
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              description: Optional structured details, including Zod validation errors.
+          required:
+            - code
+            - message
+      required:
+        - error
     ServiceCategory:
       type: object
       properties:
@@ -9545,7 +9729,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a95
+          enum: &a96
             - asc
             - desc
         search:
@@ -9572,19 +9756,19 @@ components:
           format: uuid
         is_parent:
           type: string
-          enum: &a96
+          enum: &a97
             - "true"
             - "false"
         is_child:
           type: string
-          enum: &a97
+          enum: &a98
             - "true"
             - "false"
         depth:
           type: string
         active:
           type: string
-          enum: &a98
+          enum: &a99
             - "true"
             - "false"
         offset:
@@ -9593,17 +9777,17 @@ components:
           type: string
         sort_order:
           type: string
-          enum: &a99
+          enum: &a100
             - asc
             - desc
         include_hierarchy:
           type: string
-          enum: &a100
+          enum: &a101
             - "true"
             - "false"
         category_type:
           type: string
-          enum: &a101
+          enum: &a102
             - service
             - ticket
     CategoryMoveRequest:
@@ -9630,7 +9814,7 @@ components:
           minLength: 1
         category_type:
           type: string
-          enum: &a102
+          enum: &a103
             - service
             - ticket
         board_id:
@@ -9638,7 +9822,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum: &a103
+          enum: &a104
             - "true"
             - "false"
         limit:
@@ -9652,7 +9836,7 @@ components:
       properties:
         category_type:
           type: string
-          enum: &a104
+          enum: &a105
             - service
             - ticket
         board_id:
@@ -9666,7 +9850,7 @@ components:
           format: date-time
         include_usage:
           type: string
-          enum: &a105
+          enum: &a106
             - "true"
             - "false"
     CategoryAnalyticsResponse:
@@ -10287,7 +10471,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a111
+          enum: &a112
             - asc
             - desc
         name:
@@ -10298,24 +10482,24 @@ components:
           type: string
         is_active:
           type: string
-          enum: &a112
+          enum: &a113
             - "true"
             - "false"
         is_test_mode:
           type: string
-          enum: &a113
+          enum: &a114
             - "true"
             - "false"
         payload_format:
           type: string
-          enum: &a114
+          enum: &a115
             - json
             - xml
             - form_data
             - custom
         has_failures:
           type: string
-          enum: &a115
+          enum: &a116
             - "true"
             - "false"
         last_delivery_from:
@@ -10349,7 +10533,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a116
+          enum: &a117
             - pending
             - delivered
             - failed
@@ -12111,7 +12295,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a117
+          enum: &a118
             - asc
             - desc
         fields:
@@ -12337,7 +12521,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a118
+          enum: &a119
             - asc
             - desc
         search:
@@ -12346,12 +12530,12 @@ components:
           type: string
         include_items:
           type: string
-          enum: &a119
+          enum: &a120
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a120
+          enum: &a121
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -18502,6 +18686,14 @@ paths:
           required: false
           description: Client UUID from clients.client_id.
           name: client_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Client location UUID from client_locations.location_id.
+          required: false
+          description: Client location UUID from client_locations.location_id.
+          name: location_id
           in: query
         - schema:
             type: string
@@ -39151,6 +39343,123 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/search:
+    get:
+      summary: Unified full-text search
+      description: "Full-text search across all indexed business records (tickets,
+        clients, contacts, projects, assets, invoices, contracts, documents,
+        knowledge-base articles, and more) backed by the shared
+        app_search_index. Results are tenant-scoped and filtered by the API key
+        user's permissions: a coarse per-type permission gate plus a per-row
+        access-control check, so only records the user could see in-app are
+        returned. No dedicated search permission is required — any valid API key
+        may call this endpoint. Client-portal API keys are automatically scoped
+        to their own client."
+      tags:
+        - Search
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-acl-filtered: true
+        x-not-paginated: false
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+            description: Full-text query. A concise expression of likely record words,
+              identifiers, names, or quoted phrases — not a full sentence.
+              Supports OR for alternatives (e.g. "laptop OR workstation").
+          required: true
+          description: Full-text query. A concise expression of likely record words,
+            identifiers, names, or quoted phrases — not a full sentence.
+            Supports OR for alternatives (e.g. "laptop OR workstation").
+          name: query
+          in: query
+        - schema:
+            type: string
+            description: "Comma-separated list of object types to restrict the search (e.g.
+              \"ticket,project\"). Omit to search every type the API key's user
+              is permitted to read. Allowed values: client, contact, user,
+              ticket, ticket_comment, project, project_phase, project_task,
+              project_task_comment, asset, invoice, invoice_item,
+              invoice_annotation, contract, client_contract, document,
+              kb_article, service_catalog, service_request_submission,
+              service_request_definition, workflow_task, interaction,
+              schedule_entry, time_entry, board, category, tag, status."
+          required: false
+          description: "Comma-separated list of object types to restrict the search (e.g.
+            \"ticket,project\"). Omit to search every type the API key's user is
+            permitted to read. Allowed values: client, contact, user, ticket,
+            ticket_comment, project, project_phase, project_task,
+            project_task_comment, asset, invoice, invoice_item,
+            invoice_annotation, contract, client_contract, document, kb_article,
+            service_catalog, service_request_submission,
+            service_request_definition, workflow_task, interaction,
+            schedule_entry, time_entry, board, category, tag, status."
+          name: types
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: Maximum number of results to return. Defaults to 30; capped at 100.
+          required: false
+          description: Maximum number of results to return. Defaults to 30; capped at 100.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            description: Opaque pagination cursor copied from a prior response's nextCursor.
+          required: false
+          description: Opaque pagination cursor copied from a prior response's nextCursor.
+          name: cursor
+          in: query
+        - schema:
+            type: string
+            enum: *a95
+            description: Result ordering. "relevance" (default) ranks by full-text score;
+              "recent" orders by last update.
+          required: false
+          description: Result ordering. "relevance" (default) ranks by full-text score;
+            "recent" orders by last update.
+          name: sort
+          in: query
+      responses:
+        "200":
+          description: Matching records returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          description: Query parameter validation failed (missing/empty query, unknown
+            type, or out-of-range limit).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchApiErrorEnvelope"
+        "401":
+          description: API key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchApiErrorEnvelope"
+        "429":
+          description: API rate limit exceeded for the key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchApiErrorEnvelope"
+        "500":
+          description: Unexpected error while executing the search.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchApiErrorEnvelope"
   /api/v1/categories/service:
     get:
       summary: List service categories
@@ -39486,7 +39795,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a95
+            enum: *a96
           required: false
           name: order
           in: query
@@ -39538,13 +39847,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a96
+            enum: *a97
           required: false
           name: is_parent
           in: query
         - schema:
             type: string
-            enum: *a97
+            enum: *a98
           required: false
           name: is_child
           in: query
@@ -39555,7 +39864,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a98
+            enum: *a99
           required: false
           name: active
           in: query
@@ -39571,19 +39880,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a99
+            enum: *a100
           required: false
           name: sort_order
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: include_hierarchy
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: category_type
           in: query
@@ -40039,7 +40348,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a102
+            enum: *a103
           required: false
           name: category_type
           in: query
@@ -40051,7 +40360,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a103
+            enum: *a104
           required: false
           name: include_inactive
           in: query
@@ -40126,7 +40435,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a104
+            enum: *a105
           required: false
           name: category_type
           in: query
@@ -40150,7 +40459,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a105
+            enum: *a106
           required: false
           name: include_usage
           in: query
@@ -40236,7 +40545,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a106
+      tags: &a107
         - Services
         - Service Catalog
       security:
@@ -40312,7 +40621,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a107
+            enum: &a108
               - fixed
               - hourly
               - usage
@@ -40360,7 +40669,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a106
+      tags: *a107
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40389,7 +40698,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a107
+                  enum: *a108
                 default_rate:
                   type: number
                   minimum: 0
@@ -40451,7 +40760,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a106
+      tags: *a107
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40500,7 +40809,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a106
+      tags: *a107
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40538,7 +40847,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a107
+                  enum: *a108
                 default_rate:
                   type: number
                   minimum: 0
@@ -40599,7 +40908,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a106
+      tags: *a107
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40648,7 +40957,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a108
+      tags: &a109
         - Products
         - Service Catalog
       security:
@@ -40759,7 +41068,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a108
+      tags: *a109
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40788,7 +41097,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a109
+                  enum: &a110
                     - usage
                   default: usage
                 default_rate:
@@ -40927,7 +41236,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a108
+      tags: *a109
       security:
         - ApiKeyAuth: []
       extensions:
@@ -40976,7 +41285,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a108
+      tags: *a109
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41014,7 +41323,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a109
+                  enum: *a110
                   default: usage
                 default_rate:
                   type: number
@@ -41153,7 +41462,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a108
+      tags: *a109
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41201,7 +41510,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a110
+      tags: &a111
         - Service Types
         - Service Catalog
       security:
@@ -41262,7 +41571,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a110
+      tags: *a111
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41343,7 +41652,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a111
+            enum: *a112
           required: false
           name: order
           in: query
@@ -41364,25 +41673,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a112
+            enum: *a113
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum: *a113
+            enum: *a114
           required: false
           name: is_test_mode
           in: query
         - schema:
             type: string
-            enum: *a114
+            enum: *a115
           required: false
           name: payload_format
           in: query
         - schema:
             type: string
-            enum: *a115
+            enum: *a116
           required: false
           name: has_failures
           in: query
@@ -42413,7 +42722,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a116
+            enum: *a117
           required: false
           name: status
           in: query
@@ -44531,7 +44840,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -44832,7 +45141,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -44916,7 +45225,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45000,7 +45309,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45093,7 +45402,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45191,7 +45500,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45494,7 +45803,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45591,7 +45900,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45849,7 +46158,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -45939,7 +46248,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -46083,7 +46392,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -46378,7 +46687,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -46469,7 +46778,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -46613,7 +46922,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -47048,7 +47357,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -47359,7 +47668,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -47785,7 +48094,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -47869,7 +48178,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48056,7 +48365,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48141,7 +48450,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48499,7 +48808,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48597,7 +48906,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48832,7 +49141,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -48974,7 +49283,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -49283,7 +49592,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -49426,7 +49735,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -49569,7 +49878,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -49726,7 +50035,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -50009,7 +50318,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -50153,7 +50462,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -50588,7 +50897,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -50791,7 +51100,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -50877,7 +51186,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -51320,7 +51629,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -51791,7 +52100,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a118
           required: false
           name: order
           in: query
@@ -51883,7 +52192,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a119
           required: false
           name: order
           in: query
@@ -51899,13 +52208,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a120
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a121
           required: false
           name: include_client
           in: query
@@ -51974,7 +52283,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a119
           required: false
           name: order
           in: query
@@ -51990,13 +52299,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a120
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a121
           required: false
           name: include_client
           in: query
@@ -53411,7 +53720,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a119
           required: false
           name: order
           in: query
@@ -53427,13 +53736,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a120
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a121
           required: false
           name: include_client
           in: query
@@ -53506,7 +53815,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a119
           required: false
           name: order
           in: query
@@ -53522,13 +53831,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a120
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a121
           required: false
           name: include_client
           in: query
