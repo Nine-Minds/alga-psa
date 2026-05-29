@@ -2,7 +2,14 @@
 # Designed for Argo workflows and CI systems that build separately
 # Expects .next, dist, shared/dist to exist locally with EE features included
 
-FROM node:alpine
+# Pin Node to the supported LTS (package.json engines: ">=20 <25"; .nvmrc: 20).
+# An unpinned `node:alpine` resolves to the latest major (Node 26+), whose
+# fs.Stats.prototype adds Temporal `*Instant` BigInt getters. bluebird's
+# promisifyAll(require('fs')) (pulled in transitively via node-vault ->
+# postman-request -> stream-length) enumerates those getters on the prototype,
+# where the fields are NaN, throwing "RangeError: NaN cannot be converted to a
+# BigInt" at module load and 500-ing every auth/DB SSR route.
+FROM node:20-alpine
 RUN apk add --no-cache \
     bash \
     postgresql-client \
