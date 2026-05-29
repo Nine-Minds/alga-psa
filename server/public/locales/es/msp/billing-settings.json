@@ -161,7 +161,8 @@
         "step3": "El sistema contable calcula el impuesto en función de sus normas fiscales.",
         "step4": "Los importes de los impuestos se importan de nuevo a Alga PSA",
         "step5": "Los totales de las facturas se actualizan con el impuesto importado.",
-        "note": "El sistema de contabilidad utilizado se determina automáticamente en función del sistema al que exporta la factura."
+        "note": "El sistema de contabilidad utilizado se determina automáticamente en función del sistema al que exporta la factura.",
+        "warning": "Importante: las facturas de clientes que usan impuesto externo no se pueden finalizar hasta que su impuesto se haya importado de vuelta desde su sistema contable. Esto requiere una integración contable conectada (QuickBooks o Xero) y exportar primero la factura allí. Sin ello, estas facturas quedarán atascadas en Borrador: cambie una factura individual de vuelta a impuesto interno para finalizarla en Alga."
       },
       "loading": "Cargando configuración...",
       "actions": {

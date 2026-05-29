@@ -308,7 +308,11 @@
       "finalizeFailed": "Nie udało się sfinalizować faktury. Spróbuj ponownie.",
       "bulkFinalizeFailed": "Nie udało się sfinalizować wybranych faktur. Spróbuj ponownie.",
       "pdfFailed": "Nie udało się wygenerować pliku PDF. Spróbuj ponownie.",
-      "reverseFailed": "Nie udało się wycofać wersji roboczej faktury. Spróbuj ponownie."
+      "reverseFailed": "Nie udało się wycofać wersji roboczej faktury. Spróbuj ponownie.",
+      "bulkFinalizePendingTax_one": "Pominięto {{count}} fakturę, ponieważ oczekuje na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz ją na podatek wewnętrzny, a następnie sfinalizuj ją pojedynczo.",
+      "bulkFinalizePendingTax_other": "Pominięto {{count}} faktur(y), ponieważ oczekują na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz je na podatek wewnętrzny, a następnie sfinalizuj je pojedynczo.",
+      "bulkFinalizeSkipped_one": "Nie udało się sfinalizować {{count}} faktury i została pominięta.",
+      "bulkFinalizeSkipped_other": "Nie udało się sfinalizować {{count}} faktur(y) i zostały pominięte."
     },
     "reverseDialog": {
       "title": "Odwrotna wersja faktury",
@@ -316,6 +320,12 @@
       "message_one": "Wycofanie tej wersji roboczej faktury spowoduje jej usunięcie i zwolnienie wszelkich powiązanych zapisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
       "message_other": "Wycofanie wersji roboczych faktur {{count}} spowoduje ich usunięcie i zwolnienie wszelkich powiązanych wpisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
       "confirm": "Odwrotny projekt",
+      "cancel": "Anuluj"
+    },
+    "pendingTaxDialog": {
+      "title": "Faktura oczekuje na podatek zewnętrzny",
+      "message": "Ta faktura jest ustawiona tak, aby używać podatku obliczanego przez zewnętrzny system księgowy, ale nie zaimportowano jeszcze żadnego podatku, więc nie można jej sfinalizować. Wyeksportuj ją do swojego systemu księgowego (QuickBooks, Xero) i zaimportuj podatek z powrotem, aby sfinalizować ją z podatkiem zewnętrznym — albo przełącz teraz tę fakturę na podatek wewnętrzny, aby Alga obliczyła podatek, i sfinalizuj ją.",
+      "confirm": "Przełącz na podatek wewnętrzny i sfinalizuj",
       "cancel": "Anuluj"
     }
   },

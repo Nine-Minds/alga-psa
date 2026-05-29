@@ -308,7 +308,11 @@
       "finalizeFailed": "Failed to finalize invoice. Please try again.",
       "bulkFinalizeFailed": "Failed to finalize selected invoices. Please try again.",
       "pdfFailed": "Failed to generate PDF. Please try again.",
-      "reverseFailed": "Failed to reverse draft invoice(s). Please try again."
+      "reverseFailed": "Failed to reverse draft invoice(s). Please try again.",
+      "bulkFinalizePendingTax_one": "{{count}} invoice was skipped because it is awaiting external tax import. Import the tax from your accounting system, or switch it to internal tax, then finalize it individually.",
+      "bulkFinalizePendingTax_other": "{{count}} invoices were skipped because they are awaiting external tax import. Import the tax from your accounting system, or switch them to internal tax, then finalize them individually.",
+      "bulkFinalizeSkipped_one": "{{count}} invoice could not be finalized and was skipped.",
+      "bulkFinalizeSkipped_other": "{{count}} invoices could not be finalized and were skipped."
     },
     "reverseDialog": {
       "title": "Reverse Draft Invoice",
@@ -316,6 +320,12 @@
       "message_one": "Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.",
       "message_other": "Reversing {{count}} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.",
       "confirm": "Reverse Draft",
+      "cancel": "Cancel"
+    },
+    "pendingTaxDialog": {
+      "title": "Invoice awaiting external tax",
+      "message": "This invoice is set to use tax calculated by an external accounting system, but no tax has been imported yet, so it cannot be finalized. Export it to your accounting system (QuickBooks, Xero) and import the tax back to finalize with external tax — or switch this invoice to internal tax now so Alga calculates the tax and finalize it.",
+      "confirm": "Switch to internal tax & finalize",
       "cancel": "Cancel"
     }
   },

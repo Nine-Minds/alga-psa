@@ -308,7 +308,11 @@
       "finalizeFailed": "No se pudo finalizar la factura. Por favor inténtalo de nuevo.",
       "bulkFinalizeFailed": "No se pudieron finalizar las facturas seleccionadas. Por favor inténtalo de nuevo.",
       "pdfFailed": "No se pudo generar el PDF. Por favor inténtalo de nuevo.",
-      "reverseFailed": "No se pudieron revertir los borradores de facturas. Por favor inténtalo de nuevo."
+      "reverseFailed": "No se pudieron revertir los borradores de facturas. Por favor inténtalo de nuevo.",
+      "bulkFinalizePendingTax_one": "Se omitió {{count}} factura porque está pendiente de la importación del impuesto externo. Importe el impuesto desde su sistema contable, o cámbiela a impuesto interno, y luego finalícela individualmente.",
+      "bulkFinalizePendingTax_other": "Se omitieron {{count}} facturas porque están pendientes de la importación del impuesto externo. Importe el impuesto desde su sistema contable, o cámbielas a impuesto interno, y luego finalícelas individualmente.",
+      "bulkFinalizeSkipped_one": "No se pudo finalizar {{count}} factura y se omitió.",
+      "bulkFinalizeSkipped_other": "No se pudieron finalizar {{count}} facturas y se omitieron."
     },
     "reverseDialog": {
       "title": "Borrador de factura inversa",
@@ -316,6 +320,12 @@
       "message_one": "Revertir este borrador de factura lo eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "message_other": "Revertir los borradores de facturas {{count}} los eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "confirm": "Borrador inverso",
+      "cancel": "Cancelar"
+    },
+    "pendingTaxDialog": {
+      "title": "Factura en espera del impuesto externo",
+      "message": "Esta factura está configurada para usar el impuesto calculado por un sistema contable externo, pero aún no se ha importado ningún impuesto, por lo que no se puede finalizar. Expórtela a su sistema contable (QuickBooks, Xero) e importe el impuesto de vuelta para finalizarla con impuesto externo, o cambie esta factura a impuesto interno ahora para que Alga calcule el impuesto y finalícela.",
+      "confirm": "Cambiar a impuesto interno y finalizar",
       "cancel": "Cancelar"
     }
   },

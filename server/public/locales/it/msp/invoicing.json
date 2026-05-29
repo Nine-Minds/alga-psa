@@ -308,7 +308,11 @@
       "finalizeFailed": "Impossibile finalizzare la fattura. Per favore riprova.",
       "bulkFinalizeFailed": "Impossibile finalizzare le fatture selezionate. Per favore riprova.",
       "pdfFailed": "Impossibile generare il PDF. Per favore riprova.",
-      "reverseFailed": "Impossibile stornare le bozze di fattura/e. Per favore riprova."
+      "reverseFailed": "Impossibile stornare le bozze di fattura/e. Per favore riprova.",
+      "bulkFinalizePendingTax_one": "{{count}} fattura è stata saltata perché è in attesa dell'importazione dell'imposta esterna. Importa l'imposta dal tuo sistema contabile, oppure passala all'imposta interna, quindi finalizzala singolarmente.",
+      "bulkFinalizePendingTax_other": "{{count}} fatture sono state saltate perché sono in attesa dell'importazione dell'imposta esterna. Importa l'imposta dal tuo sistema contabile, oppure passale all'imposta interna, quindi finalizzale singolarmente.",
+      "bulkFinalizeSkipped_one": "Impossibile finalizzare {{count}} fattura ed è stata saltata.",
+      "bulkFinalizeSkipped_other": "Impossibile finalizzare {{count}} fatture e sono state saltate."
     },
     "reverseDialog": {
       "title": "Progetto di fattura inversa",
@@ -316,6 +320,12 @@
       "message_one": "Lo storno di questa bozza di fattura la eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
       "message_other": "Lo storno delle bozze di fattura {{count}} le eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
       "confirm": "Bozza inversa",
+      "cancel": "Annulla"
+    },
+    "pendingTaxDialog": {
+      "title": "Fattura in attesa dell'imposta esterna",
+      "message": "Questa fattura è impostata per utilizzare l'imposta calcolata da un sistema contabile esterno, ma non è ancora stata importata alcuna imposta, quindi non può essere finalizzata. Esportala nel tuo sistema contabile (QuickBooks, Xero) e reimporta l'imposta per finalizzarla con l'imposta esterna, oppure passa ora questa fattura all'imposta interna in modo che Alga calcoli l'imposta e finalizzala.",
+      "confirm": "Passa all'imposta interna e finalizza",
       "cancel": "Annulla"
     }
   },

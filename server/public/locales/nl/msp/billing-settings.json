@@ -161,7 +161,8 @@
         "step3": "Belasting wordt berekend door het boekhoudsysteem op basis van de belastingregels",
         "step4": "Belastingbedragen worden terug geïmporteerd naar Alga PSA",
         "step5": "Factuurtotalen worden bijgewerkt met de geïmporteerde belasting",
-        "note": "Het gebruikte boekhoudsysteem wordt automatisch bepaald op basis van het systeem waarnaar u de factuur exporteert."
+        "note": "Het gebruikte boekhoudsysteem wordt automatisch bepaald op basis van het systeem waarnaar u de factuur exporteert.",
+        "warning": "Belangrijk: facturen voor klanten die externe belasting gebruiken, kunnen pas worden gefinaliseerd nadat hun belasting is teruggeïmporteerd uit uw boekhoudsysteem. Dit vereist een gekoppelde boekhoudintegratie (QuickBooks of Xero) en het eerst exporteren van de factuur daarheen. Zonder dat blijven deze facturen vastzitten in Concept — schakel een afzonderlijke factuur terug naar interne belasting om deze in Alga te finaliseren."
       },
       "loading": "Instellingen laden...",
       "actions": {

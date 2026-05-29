@@ -308,7 +308,11 @@
       "finalizeFailed": "Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkFinalizeFailed": "Ausgewählte Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "pdfFailed": "PDF konnte nicht generiert werden. Bitte versuchen Sie es erneut.",
-      "reverseFailed": "Rechnungsentwürfe konnten nicht storniert werden. Bitte versuchen Sie es erneut."
+      "reverseFailed": "Rechnungsentwürfe konnten nicht storniert werden. Bitte versuchen Sie es erneut.",
+      "bulkFinalizePendingTax_one": "{{count}} Rechnung wurde übersprungen, da sie auf den Import der externen Steuer wartet. Importieren Sie die Steuer aus Ihrem Buchhaltungssystem oder wechseln Sie zur internen Steuer und schließen Sie sie dann einzeln ab.",
+      "bulkFinalizePendingTax_other": "{{count}} Rechnungen wurden übersprungen, da sie auf den Import der externen Steuer warten. Importieren Sie die Steuer aus Ihrem Buchhaltungssystem oder wechseln Sie zur internen Steuer und schließen Sie sie dann einzeln ab.",
+      "bulkFinalizeSkipped_one": "{{count}} Rechnung konnte nicht abgeschlossen werden und wurde übersprungen.",
+      "bulkFinalizeSkipped_other": "{{count}} Rechnungen konnten nicht abgeschlossen werden und wurden übersprungen."
     },
     "reverseDialog": {
       "title": "Rechnungsentwurf umkehren",
@@ -316,6 +320,12 @@
       "message_one": "Wenn Sie diesen Rechnungsentwurf stornieren, wird er gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
       "message_other": "Durch das Stornieren von {{count}}-Rechnungsentwürfen werden diese gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Umgekehrter Entwurf",
+      "cancel": "Abbrechen"
+    },
+    "pendingTaxDialog": {
+      "title": "Rechnung wartet auf externe Steuer",
+      "message": "Diese Rechnung ist so eingestellt, dass die Steuer von einem externen Buchhaltungssystem berechnet wird, aber es wurde noch keine Steuer importiert, sodass sie nicht abgeschlossen werden kann. Exportieren Sie sie in Ihr Buchhaltungssystem (QuickBooks, Xero) und importieren Sie die Steuer zurück, um sie mit externer Steuer abzuschließen – oder wechseln Sie diese Rechnung jetzt zur internen Steuer, damit Alga die Steuer berechnet, und schließen Sie sie ab.",
+      "confirm": "Zur internen Steuer wechseln & abschließen",
       "cancel": "Abbrechen"
     }
   },

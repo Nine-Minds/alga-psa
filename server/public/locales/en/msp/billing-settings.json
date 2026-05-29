@@ -161,7 +161,8 @@
         "step3": "Tax is calculated by the accounting system based on its tax rules",
         "step4": "Tax amounts are imported back to Alga PSA",
         "step5": "Invoice totals are updated with the imported tax",
-        "note": "The accounting system used is determined automatically based on which system you export the invoice to."
+        "note": "The accounting system used is determined automatically based on which system you export the invoice to.",
+        "warning": "Important: invoices for clients using external tax cannot be finalized until their tax has been imported back from your accounting system. This requires a connected accounting integration (QuickBooks or Xero) and exporting the invoice there first. Without it, these invoices will stay stuck in Draft — switch an individual invoice back to internal tax to finalize it in Alga."
       },
       "loading": "Loading settings...",
       "actions": {

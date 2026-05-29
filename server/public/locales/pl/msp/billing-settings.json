@@ -161,7 +161,8 @@
         "step3": "Podatek obliczany jest przez system księgowy w oparciu o obowiązujące w nim przepisy podatkowe",
         "step4": "Kwoty podatku są importowane z powrotem do Alga PSA",
         "step5": "Sumy faktur są aktualizowane o importowany podatek",
-        "note": "Stosowany system księgowy jest ustalany automatycznie na podstawie tego, do którego systemu eksportujesz fakturę."
+        "note": "Stosowany system księgowy jest ustalany automatycznie na podstawie tego, do którego systemu eksportujesz fakturę.",
+        "warning": "Ważne: faktury dla klientów korzystających z podatku zewnętrznego nie mogą zostać sfinalizowane, dopóki ich podatek nie zostanie zaimportowany z powrotem z systemu księgowego. Wymaga to połączonej integracji księgowej (QuickBooks lub Xero) oraz wcześniejszego wyeksportowania faktury do niej. Bez tego faktury te pozostaną zablokowane w stanie Wersja robocza — przełącz pojedynczą fakturę z powrotem na podatek wewnętrzny, aby sfinalizować ją w Alga."
       },
       "loading": "Ładowanie ustawień...",
       "actions": {

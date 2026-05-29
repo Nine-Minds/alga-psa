@@ -308,7 +308,11 @@
       "finalizeFailed": "Het is niet gelukt de factuur af te ronden. Probeer het opnieuw.",
       "bulkFinalizeFailed": "Kan de geselecteerde facturen niet finaliseren. Probeer het opnieuw.",
       "pdfFailed": "Kan geen PDF genereren. Probeer het opnieuw.",
-      "reverseFailed": "Kan conceptfactuur(en) niet terugboeken. Probeer het opnieuw."
+      "reverseFailed": "Kan conceptfactuur(en) niet terugboeken. Probeer het opnieuw.",
+      "bulkFinalizePendingTax_one": "{{count}} factuur is overgeslagen omdat deze wacht op het importeren van de externe belasting. Importeer de belasting uit uw boekhoudsysteem, of schakel deze over naar interne belasting, en finaliseer deze daarna afzonderlijk.",
+      "bulkFinalizePendingTax_other": "{{count}} facturen zijn overgeslagen omdat ze wachten op het importeren van de externe belasting. Importeer de belasting uit uw boekhoudsysteem, of schakel ze over naar interne belasting, en finaliseer ze daarna afzonderlijk.",
+      "bulkFinalizeSkipped_one": "{{count}} factuur kon niet worden gefinaliseerd en is overgeslagen.",
+      "bulkFinalizeSkipped_other": "{{count}} facturen konden niet worden gefinaliseerd en zijn overgeslagen."
     },
     "reverseDialog": {
       "title": "Omgekeerde conceptfactuur",
@@ -316,6 +320,12 @@
       "message_one": "Als u deze conceptfactuur terugboekt, wordt deze verwijderd en worden eventuele gekoppelde tijdsvermeldingen of gebruiksregistraties vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "message_other": "Als u {{count}}-conceptfacturen terugdraait, worden deze verwijderd en worden eventuele gekoppelde tijdsinvoer- of gebruiksgegevens vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "confirm": "Omgekeerde diepgang",
+      "cancel": "Annuleren"
+    },
+    "pendingTaxDialog": {
+      "title": "Factuur wacht op externe belasting",
+      "message": "Deze factuur is ingesteld om de belasting te gebruiken die door een extern boekhoudsysteem wordt berekend, maar er is nog geen belasting geïmporteerd, dus kan deze niet worden gefinaliseerd. Exporteer deze naar uw boekhoudsysteem (QuickBooks, Xero) en importeer de belasting terug om deze met externe belasting te finaliseren — of schakel deze factuur nu over naar interne belasting zodat Alga de belasting berekent, en finaliseer deze.",
+      "confirm": "Overschakelen naar interne belasting en finaliseren",
       "cancel": "Annuleren"
     }
   },
