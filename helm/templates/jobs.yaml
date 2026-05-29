@@ -249,6 +249,23 @@ spec:
                   name: "{{ include "sebastian.fullname" . }}-secrets"
                   key: NEXTAUTH_SECRET
 
+            # PBKDF2 parameters MUST match the server deployment. hashPassword
+            # reads ITERATIONS/KEY_LENGTH/SALT_BYTES/ALGORITHM from the env and
+            # falls back to hardcoded defaults (10000/64/12/sha512) when unset.
+            # The server sets these from .Values.crypto (e.g. ITERATIONS=1000),
+            # so without them here the bootstrap hashes the initial admin
+            # password with 10000 iterations while the server verifies with
+            # 1000 -- producing a different PBKDF2 digest and a permanent
+            # "Invalid email or password" at first login.
+            - name: SALT_BYTES
+              value: "{{ .Values.crypto.salt_bytes }}"
+            - name: ITERATIONS
+              value: "{{ .Values.crypto.iteration }}"
+            - name: KEY_LENGTH
+              value: "{{ .Values.crypto.key_length }}"
+            - name: ALGORITHM
+              value: "{{ .Values.crypto.algorithm }}"
+
             # Vault configuration for setup jobs (only if vault is used)
             {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
             {{- if .Values.secrets_provider.vault.addr }}
