@@ -1365,9 +1365,16 @@ export const assignTeamToProjectTask = withAuth(async (
                 .andWhere('users.is_inactive', false)
                 .select('team_members.user_id');
 
-            // assigned_to is guaranteed non-null: either the task already has one,
-            // or we fall back to team.manager_id (validated above).
-            const assignedTo: string = (task.assigned_to as string | null) || team.manager_id;
+            // Assigning a team makes that team's lead the task's primary agent,
+            // overwriting any previous primary (e.g. the prior team's lead).
+            const assignedTo: string = team.manager_id;
+
+            // The new lead can't be both primary and an additional resource
+            // (CHECK assigned_to != additional_user_id + unique index), so drop
+            // any existing resource row for them before promoting to primary.
+            await trx('task_resources')
+                .where({ task_id: taskId, tenant, additional_user_id: assignedTo })
+                .delete();
 
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
@@ -1466,6 +1473,15 @@ export const removeTeamFromProjectTask = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
+            // Resolve the team's lead so we know whether removing the team should
+            // also vacate the primary agent slot it filled.
+            const removedTeam = task.assigned_team_id
+                ? await trx('teams')
+                    .where({ team_id: task.assigned_team_id, tenant })
+                    .first()
+                : null;
+            const teamLeadId: string | null = removedTeam?.manager_id ?? null;
+
             const mode = options.mode;
             if (mode === 'remove_all') {
                 await trx('task_resources')
@@ -1493,10 +1509,16 @@ export const removeTeamFromProjectTask = withAuth(async (
                     .update({ role: null });
             }
 
+            // 'remove_all' takes the whole team off the task, including its lead,
+            // so clear the primary agent when it's that lead. 'keep_all' and
+            // 'selective' keep people assigned, so the lead stays as primary.
+            const clearPrimary = mode === 'remove_all' && !!teamLeadId && task.assigned_to === teamLeadId;
+
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
                 .update({
                     assigned_team_id: null,
+                    ...(clearPrimary ? { assigned_to: null } : {}),
                     updated_at: new Date()
                 });
         });

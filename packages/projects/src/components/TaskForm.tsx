@@ -712,15 +712,27 @@ export default function TaskForm({
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[]
   ) => {
+    // 'remove_all' takes the team's lead off the task too, so mirror the server
+    // and clear the primary agent when it's that lead.
+    const removedTeam = teams.find(t => t.team_id === assignedTeamId);
+    const removedLeadId =
+      removedTeam?.manager_id ||
+      removedTeam?.members?.find(m => m.role === 'lead')?.user_id ||
+      null;
+    const shouldClearPrimary =
+      mode === 'remove_all' && !!removedLeadId && assignedUser === removedLeadId;
+
     if (!task?.task_id) {
       // New task: just clear local state (nothing persisted yet)
       setAssignedTeamId(null);
       setTempTaskResources(prev => prev.filter(r => r.role !== 'team_member'));
+      if (shouldClearPrimary) setAssignedUser(null);
       return;
     }
     try {
       await removeTeamFromProjectTask(task.task_id, { mode, keepUserIds });
       setAssignedTeamId(null);
+      if (shouldClearPrimary) setAssignedUser(null);
       const resources = await getTaskResourcesAction(task.task_id);
       setTaskResources(resources);
       setInitialTaskResources(resources);
@@ -1351,6 +1363,27 @@ export default function TaskForm({
     }
   };
 
+  // Add every member of a team (including its lead) onto the task as additional
+  // agents, leaving the primary agent untouched. Used by the Additional Agents
+  // picker; team *assignment* (lead → primary) goes through performTeamAssign.
+  const addTeamMembersAsAgents = async (teamId: string) => {
+    const team = teams.find(t => t.team_id === teamId);
+    if (!team) return;
+    const memberIds = Array.from(new Set(
+      [...(team.members || []).map(m => m.user_id), team.manager_id || null]
+        .filter((id): id is string => Boolean(id))
+    ));
+    const existingIds = new Set(
+      [...taskResources, ...tempTaskResources].map(r => r.additional_user_id)
+    );
+    for (const userId of memberIds) {
+      // The primary agent can't also be an additional agent (CHECK constraint);
+      // skip them and anyone already on the task.
+      if (userId === assignedUser || existingIds.has(userId)) continue;
+      await handleAddAgent(userId);
+    }
+  };
+
   const handleRemoveAgent = async (assignmentId: string) => {
     try {
       if (assignmentId.startsWith('temp-')) {
@@ -1794,11 +1827,12 @@ export default function TaskForm({
                     teams={teams}
                     teamSectionLabel={taskFormT('addTeamMembers', 'Add Team Members')}
                     onTeamValuesChange={(selectedTeamIds) => {
-                      // When a team is selected, use handleAssignTeam which already
-                      // expands team members into task_resources server-side.
-                      // Do NOT also call handleAddAgent per member (causes duplicates).
+                      // Selecting a team here drops its members (including the
+                      // lead) onto the task as additional agents and leaves the
+                      // primary agent alone. Team assignment (lead → primary) is
+                      // done via the Assigned To picker above.
                       for (const teamId of selectedTeamIds) {
-                        handleAssignTeam(teamId);
+                        void addTeamMembersAsAgents(teamId);
                       }
                     }}
                     onValuesChange={async (newUserIds) => {
