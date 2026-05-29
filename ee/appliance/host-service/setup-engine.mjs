@@ -15,6 +15,10 @@ import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
+// Registry-metadata source of truth: the appliance resolves a channel to an
+// immutable release manifest published as an OCI artifact in this registry/repo.
+const DEFAULT_REGISTRY_HOST = process.env.ALGA_APPLIANCE_REGISTRY_HOST || 'ghcr.io';
+const DEFAULT_RELEASE_REPOSITORY = process.env.ALGA_APPLIANCE_RELEASE_REPOSITORY || 'nine-minds/alga-appliance-release';
 const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_TOKEN_FILE = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
@@ -167,19 +171,55 @@ function resolverLookup(servers) {
   };
 }
 
-function httpsRequest(url, timeoutMs = 8000, lookupServers = []) {
+function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = {}) {
   return new Promise((resolve, reject) => {
-    const requestOptions = { method: 'GET', timeout: timeoutMs };
+    const requestOptions = {
+      method: extra.method || 'GET',
+      timeout: timeoutMs,
+      headers: extra.headers || {}
+    };
     if (lookupServers && lookupServers.length > 0) {
       requestOptions.lookup = resolverLookup(lookupServers);
     }
 
     const req = https.request(url, requestOptions, (res) => {
+      const status = res.statusCode || 0;
+      // Opt-in redirect following (OCI blob fetches 307 to a CDN). On a
+      // cross-host redirect, drop Authorization — the redirect target is a
+      // pre-signed URL and forwarding a bearer to a third party is unsafe.
+      const redirectsLeft = extra.followRedirects ? (extra.maxRedirects ?? 5) : 0;
+      if (status >= 300 && status < 400 && res.headers.location && redirectsLeft > 0) {
+        res.resume();
+        let nextUrl;
+        try {
+          nextUrl = new URL(res.headers.location, url).toString();
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        const nextHeaders = { ...(extra.headers || {}) };
+        try {
+          if (new URL(nextUrl).host !== new URL(url).host) {
+            delete nextHeaders.Authorization;
+            delete nextHeaders.authorization;
+          }
+        } catch {
+          // keep headers if URL parsing fails; the next request will surface errors
+        }
+        httpsRequest(nextUrl, timeoutMs, lookupServers, {
+          ...extra,
+          headers: nextHeaders,
+          maxRedirects: redirectsLeft - 1
+        }).then(resolve, reject);
+        return;
+      }
+
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => {
         resolve({
-          statusCode: res.statusCode || 0,
+          statusCode: status,
+          headers: res.headers || {},
           body: Buffer.concat(chunks).toString('utf8')
         });
       });
@@ -246,6 +286,150 @@ async function fetchGithubText(repo, branch, filePath, timeoutMs, lookupServers 
     throw new Error(`GET ${url} returned ${response.statusCode}`);
   }
   return response.body;
+}
+
+// --- OCI registry client -----------------------------------------------------
+// Release metadata is pulled from an OCI registry (ghcr) instead of git. The
+// release manifest is the artifact's config blob; everything it references
+// (chart versions, the flux base bundle digest, image tags) is content-pinned.
+
+const OCI_MANIFEST_ACCEPT = [
+  'application/vnd.oci.image.manifest.v1+json',
+  'application/vnd.oci.image.index.v1+json',
+  'application/vnd.docker.distribution.manifest.v2+json'
+].join(', ');
+
+const RELEASE_MANIFEST_SCHEMA = 'alga.appliance.release/v1';
+
+// ghcr and Docker-style registries hand out an anonymous pull token for public
+// repositories via the token endpoint advertised in the 401 challenge.
+async function fetchRegistryPullToken(registryHost, repository, timeoutMs, lookupServers = []) {
+  const scope = encodeURIComponent(`repository:${repository}:pull`);
+  const url = `https://${registryHost}/token?service=${encodeURIComponent(registryHost)}&scope=${scope}`;
+  const response = await httpsRequest(url, timeoutMs, lookupServers, { headers: { Accept: 'application/json' } });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`Registry token request to ${registryHost} returned ${response.statusCode}`);
+  }
+  let token;
+  try {
+    const parsed = JSON.parse(response.body);
+    token = parsed.token || parsed.access_token;
+  } catch (error) {
+    throw new Error(`Registry token response was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!token) {
+    throw new Error('Registry token response did not include a token.');
+  }
+  return token;
+}
+
+function ociV2Url(registryHost, repository, kind, reference) {
+  return `https://${registryHost}/v2/${repository}/${kind}/${reference}`;
+}
+
+// Resolve an OCI artifact reference (tag or digest) to its config blob parsed as
+// JSON. The blob fetch follows the registry's redirect to its CDN.
+async function fetchOciConfigJson(registryHost, repository, reference, timeoutMs, lookupServers = []) {
+  const token = await fetchRegistryPullToken(registryHost, repository, timeoutMs, lookupServers);
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  const manifestUrl = ociV2Url(registryHost, repository, 'manifests', reference);
+  const manifestResponse = await httpsRequest(manifestUrl, timeoutMs, lookupServers, {
+    headers: { ...authHeaders, Accept: OCI_MANIFEST_ACCEPT }
+  });
+  if (manifestResponse.statusCode < 200 || manifestResponse.statusCode >= 300) {
+    throw new Error(`GET ${manifestUrl} returned ${manifestResponse.statusCode}`);
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestResponse.body);
+  } catch (error) {
+    throw new Error(`OCI manifest for ${repository}:${reference} was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const configDigest = manifest?.config?.digest;
+  if (!configDigest) {
+    throw new Error(`OCI manifest for ${repository}:${reference} has no config descriptor.`);
+  }
+  const manifestDigest = manifestResponse.headers['docker-content-digest'] || null;
+
+  const blobUrl = ociV2Url(registryHost, repository, 'blobs', configDigest);
+  const blobResponse = await httpsRequest(blobUrl, timeoutMs, lookupServers, {
+    headers: { ...authHeaders, Accept: 'application/json' },
+    followRedirects: true
+  });
+  if (blobResponse.statusCode < 200 || blobResponse.statusCode >= 300) {
+    throw new Error(`GET ${blobUrl} returned ${blobResponse.statusCode}`);
+  }
+  let config;
+  try {
+    config = JSON.parse(blobResponse.body);
+  } catch (error) {
+    throw new Error(`OCI config blob ${configDigest} was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return { config, configDigest, manifestDigest };
+}
+
+// Validate + normalize a release manifest into the shape the engine consumes.
+export function validateReleaseManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object') {
+    throw new Error('Release manifest is empty or not an object.');
+  }
+  if (manifest.schema && manifest.schema !== RELEASE_MANIFEST_SCHEMA) {
+    throw new Error(`Unsupported release manifest schema "${manifest.schema}" (expected ${RELEASE_MANIFEST_SCHEMA}).`);
+  }
+  const version = String(manifest.version || '').trim();
+  if (!version) {
+    throw new Error('Release manifest is missing "version".');
+  }
+  const images = manifest.images && typeof manifest.images === 'object' ? manifest.images : null;
+  if (!images || !String(images.algaCore || '').trim()) {
+    throw new Error('Release manifest is missing images.algaCore.');
+  }
+  const config = manifest.config && typeof manifest.config === 'object' ? manifest.config : null;
+  if (!config || !String(config.repository || '').trim() || !String(config.digest || '').trim()) {
+    throw new Error('Release manifest is missing config.repository/config.digest (the flux base OCI bundle).');
+  }
+  return {
+    schema: RELEASE_MANIFEST_SCHEMA,
+    version,
+    valuesProfile: String(manifest.valuesProfile || 'single-node').trim() || 'single-node',
+    images,
+    controlPlane: manifest.controlPlane ? String(manifest.controlPlane).trim() : null,
+    config: {
+      repository: String(config.repository).trim(),
+      tag: config.tag ? String(config.tag).trim() : version,
+      digest: String(config.digest).trim()
+    },
+    charts: manifest.charts && typeof manifest.charts === 'object' ? manifest.charts : {}
+  };
+}
+
+// Resolve a channel (or an explicit version/digest reference) to a validated,
+// immutable release manifest pulled from the OCI registry. No git involved.
+export async function resolveReleaseManifest(reference, options = {}) {
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const repository = options.releaseRepository || DEFAULT_RELEASE_REPOSITORY;
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const lookupServers = options.lookupServers || [];
+
+  if (options.releaseManifestOverride) {
+    return {
+      manifest: validateReleaseManifest(options.releaseManifestOverride),
+      registryHost,
+      repository,
+      reference,
+      manifestDigest: null
+    };
+  }
+
+  const { config, manifestDigest } = await fetchOciConfigJson(registryHost, repository, reference, timeoutMs, lookupServers);
+  return {
+    manifest: validateReleaseManifest(config),
+    registryHost,
+    repository,
+    reference,
+    manifestDigest
+  };
 }
 
 function yamlString(value) {
