@@ -104,6 +104,9 @@
       "name": "Quotes & Contracts v1"
     },
     {
+      "name": "Search"
+    },
+    {
       "name": "Service Catalog"
     },
     {
@@ -1962,6 +1965,11 @@
             "format": "uuid",
             "description": "Client UUID from clients.client_id."
           },
+          "location_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client location UUID from client_locations.location_id."
+          },
           "asset_type": {
             "type": "string",
             "enum": [
@@ -2192,9 +2200,17 @@
             "minLength": 1,
             "description": "Required asset status."
           },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional client_locations.location_id link. Validated to belong to client_id."
+          },
           "location": {
             "type": "string",
-            "description": "Optional asset location."
+            "description": "Optional free-text asset location."
           },
           "serial_number": {
             "type": "string",
@@ -2259,9 +2275,17 @@
             "minLength": 1,
             "description": "Asset status."
           },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Client_locations.location_id link. Pass null to clear."
+          },
           "location": {
             "type": "string",
-            "description": "Asset location."
+            "description": "Free-text asset location."
           },
           "serial_number": {
             "type": "string",
@@ -2607,6 +2631,14 @@
           "status": {
             "type": "string",
             "description": "Asset status."
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Client_locations.location_id link, when set."
           },
           "location": {
             "type": [
@@ -13228,6 +13260,200 @@
           }
         },
         "description": "Payload for updating a status. All fields are optional."
+      },
+      "SearchQuery": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Full-text query. A concise expression of likely record words, identifiers, names, or quoted phrases — not a full sentence. Supports OR for alternatives (e.g. \"laptop OR workstation\")."
+          },
+          "types": {
+            "type": "string",
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of results to return. Defaults to 30; capped at 100."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor copied from a prior response's nextCursor."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "relevance",
+              "recent"
+            ],
+            "description": "Result ordering. \"relevance\" (default) ranks by full-text score; \"recent\" orders by last update."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "SearchResultRow": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "client",
+              "contact",
+              "user",
+              "ticket",
+              "ticket_comment",
+              "project",
+              "project_phase",
+              "project_task",
+              "project_task_comment",
+              "asset",
+              "invoice",
+              "invoice_item",
+              "invoice_annotation",
+              "contract",
+              "client_contract",
+              "document",
+              "kb_article",
+              "service_catalog",
+              "service_request_submission",
+              "service_request_definition",
+              "workflow_task",
+              "interaction",
+              "schedule_entry",
+              "time_entry",
+              "board",
+              "category",
+              "tag",
+              "status"
+            ],
+            "description": "Indexed business object type."
+          },
+          "id": {
+            "type": "string",
+            "description": "Object identifier within its type."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Identifier of the parent record for nested results (e.g. the ticket of a ticket comment)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Primary display label for the record."
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "Secondary context line."
+          },
+          "snippet": {
+            "type": "string",
+            "description": "Matched-text excerpt with <mark> tags around the highlighted terms."
+          },
+          "url": {
+            "type": "string",
+            "description": "Relative in-app URL pointing at the record."
+          },
+          "score": {
+            "type": "number",
+            "description": "Relevance score; higher is more relevant."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Source record last-updated timestamp."
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "title",
+          "url",
+          "score",
+          "updatedAt"
+        ]
+      },
+      "SearchResultData": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchResultRow"
+            },
+            "description": "Matching records for this page, ordered by the requested sort."
+          },
+          "groups": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Total match counts keyed by object type (across all pages), before the page limit is applied."
+          },
+          "totalCount": {
+            "type": "integer",
+            "description": "Total number of matches across all permitted types."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Cursor for the next page; absent when the result set fits within the page."
+          }
+        },
+        "required": [
+          "results",
+          "groups",
+          "totalCount"
+        ]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SearchResultData"
+              },
+              {
+                "description": "Search payload returned by createSuccessResponse."
+              }
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SearchApiErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code such as VALIDATION_ERROR, UNAUTHORIZED, or INTERNAL_ERROR."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message."
+              },
+              "details": {
+                "description": "Optional structured details, including Zod validation errors."
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
       },
       "ServiceCategory": {
         "type": "object",
@@ -26623,6 +26849,17 @@
             "required": false,
             "description": "Client UUID from clients.client_id.",
             "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client location UUID from client_locations.location_id."
+            },
+            "required": false,
+            "description": "Client location UUID from client_locations.location_id.",
+            "name": "location_id",
             "in": "query"
           },
           {
@@ -57594,6 +57831,140 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Unified full-text search",
+        "description": "Full-text search across all indexed business records (tickets, clients, contacts, projects, assets, invoices, contracts, documents, knowledge-base articles, and more) backed by the shared app_search_index. Results are tenant-scoped and filtered by the API key user's permissions: a coarse per-type permission gate plus a per-row access-control check, so only records the user could see in-app are returned. No dedicated search permission is required — any valid API key may call this endpoint. Client-portal API keys are automatically scoped to their own client.",
+        "tags": [
+          "Search"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-acl-filtered": true,
+          "x-not-paginated": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Full-text query. A concise expression of likely record words, identifiers, names, or quoted phrases — not a full sentence. Supports OR for alternatives (e.g. \"laptop OR workstation\")."
+            },
+            "required": true,
+            "description": "Full-text query. A concise expression of likely record words, identifiers, names, or quoted phrases — not a full sentence. Supports OR for alternatives (e.g. \"laptop OR workstation\").",
+            "name": "query",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+            },
+            "required": false,
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+            "name": "types",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of results to return. Defaults to 30; capped at 100."
+            },
+            "required": false,
+            "description": "Maximum number of results to return. Defaults to 30; capped at 100.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque pagination cursor copied from a prior response's nextCursor."
+            },
+            "required": false,
+            "description": "Opaque pagination cursor copied from a prior response's nextCursor.",
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "recent"
+              ],
+              "description": "Result ordering. \"relevance\" (default) ranks by full-text score; \"recent\" orders by last update."
+            },
+            "required": false,
+            "description": "Result ordering. \"relevance\" (default) ranks by full-text score; \"recent\" orders by last update.",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching records returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameter validation failed (missing/empty query, unknown type, or out-of-range limit).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "API rate limit exceeded for the key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while executing the search.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchApiErrorEnvelope"
                 }
               }
             }

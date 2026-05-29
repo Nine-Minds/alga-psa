@@ -18,6 +18,7 @@ import { registerInstallRoutes } from './routes/installs';
 import { registerInboundWebhookRoutes } from './routes/inboundWebhooks';
 import { registerStatusRoutes } from './routes/statuses';
 import { registerProjectRoutes } from './routes/projects';
+import { registerSearchRoutes } from './routes/search';
 import { registerServiceCategoryRoutes } from './routes/serviceCategories';
 import { registerServiceRoutes } from './routes/services';
 import { registerProductRoutes } from './routes/products';
@@ -62,6 +63,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerQuickBooksV1Routes(registry);
   registerBoardRoutes(registry, components);
   registerStatusRoutes(registry, components);
+  registerSearchRoutes(registry);
   registerServiceCategoryRoutes(registry, components);
   registerServiceRoutes(registry, components);
   registerProductRoutes(registry, components);
