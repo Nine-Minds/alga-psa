@@ -228,28 +228,26 @@ spec:
               value: "{{ .Values.secrets_provider.envPrefix }}"
             {{- end }}
 
-            # Crypto secrets must match the server deployment so values written
-            # during bootstrap (e.g. the initial admin password, which is PBKDF2
-            # peppered with NEXTAUTH_SECRET) can be verified/decrypted by the
-            # running app. With SECRET_READ_CHAIN="env,filesystem", omitting
-            # these lets getSecret fall through to the filesystem provider, which
-            # generates a divergent value in the job's ephemeral container and
-            # makes the created admin password impossible to log in with.
+            # The initial admin password is hashed with PBKDF2 peppered by
+            # getSecret('nextauth_secret','NEXTAUTH_SECRET'). getSecret consults
+            # the composite provider chain (env,filesystem) FIRST, and the
+            # EnvSecretProvider looks up the *lowercase* secret name
+            # (process.env['nextauth_secret']) -- NOT the uppercase env var. With
+            # SECRET_WRITE_PROVIDER=filesystem the bootstrap otherwise resolves a
+            # divergent per-pod filesystem value, so the hash it writes can never
+            # be verified by the server. Bind the lowercase name (and the
+            # uppercase var) to the shared cluster secret so both the bootstrap
+            # and the server resolve the identical pepper.
+            - name: nextauth_secret
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: NEXTAUTH_SECRET
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
                   name: "{{ include "sebastian.fullname" . }}-secrets"
                   key: NEXTAUTH_SECRET
-            - name: CRYPTR_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ include "sebastian.fullname" . }}-secrets"
-                  key: CRYPTR_KEY
-            - name: TOKEN_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: "{{ include "sebastian.fullname" . }}-secrets"
-                  key: TOKEN_SECRET_KEY
 
             # Vault configuration for setup jobs (only if vault is used)
             {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}

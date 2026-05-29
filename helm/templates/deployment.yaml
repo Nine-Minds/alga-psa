@@ -533,6 +533,16 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          # Lowercase alias: getSecret()/EnvSecretProvider resolves secrets by
+          # their lowercase name (process.env['nextauth_secret']) ahead of the
+          # uppercase env fallback and the filesystem provider. Binding it here
+          # makes the server verify password hashes with the same pepper the
+          # bootstrap job used to create them (see helm/templates/jobs.yaml).
+          - name: nextauth_secret
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: NEXTAUTH_SECRET
           - name: IMAP_WEBHOOK_SECRET
             valueFrom:
               secretKeyRef:
