@@ -95,7 +95,7 @@ export class WorkflowRuntimeV2 {
 
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_id: entry.stepId ?? null,
         step_path: entry.stepPath ?? null,
         level: entry.level,
@@ -116,7 +116,7 @@ export class WorkflowRuntimeV2 {
     const run = await WorkflowRunModelV2.create(knex, {
       workflow_id: params.workflowId,
       workflow_version: params.version,
-      tenant_id: params.tenantId ?? null,
+      tenant: params.tenantId ?? null,
       status: 'RUNNING',
       node_path: nodePath,
       input_json: params.payload,
@@ -266,8 +266,8 @@ export class WorkflowRuntimeV2 {
       const resumedWaitStepRecord = await this.getResumableWaitStepRecord(knex, run, currentPath);
       const resumedStepStartedAt = resumedWaitStepRecord?.started_at ? new Date(resumedWaitStepRecord.started_at).getTime() : NaN;
       const stepStart = Number.isNaN(resumedStepStartedAt) ? Date.now() : resumedStepStartedAt;
-      if (!resumedWaitStepRecord && run.tenant_id) {
-        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant_id);
+      if (!resumedWaitStepRecord && run.tenant) {
+        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant);
         if (!reservation.allowed) {
           await this.pauseForQuota(knex, run, currentPath, reservation.summary);
           return;
@@ -276,6 +276,7 @@ export class WorkflowRuntimeV2 {
       const attempt = resumedWaitStepRecord?.attempt ?? await this.nextAttempt(knex, runId, currentPath);
       const stepRecord = resumedWaitStepRecord ?? await WorkflowRunStepModelV2.create(knex, {
         run_id: runId,
+        tenant: run.tenant ?? null,
         step_path: currentPath,
         definition_step_id: step.id,
         status: 'STARTED',
@@ -324,7 +325,7 @@ export class WorkflowRuntimeV2 {
 
         if (result.type === 'return') {
           env = result.env;
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env, run.tenant);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -359,7 +360,7 @@ export class WorkflowRuntimeV2 {
 
         env = result.env;
 
-        const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+        const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env, run.tenant);
         await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
           status: 'SUCCEEDED',
           duration_ms: Date.now() - stepStart,
@@ -410,7 +411,7 @@ export class WorkflowRuntimeV2 {
 
         if (onErrorPolicy === 'continue') {
           env = applyErrorToEnv(env, runtimeError, currentPath!);
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath!, env);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath!, env, run.tenant);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -444,7 +445,7 @@ export class WorkflowRuntimeV2 {
         const forEachPolicy = resolveForEachOnItemError(definition, currentPath!);
         if (forEachPolicy === 'continue') {
           env = applyErrorToEnv(env, runtimeError, currentPath!);
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath!, env);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath!, env, run.tenant);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -479,6 +480,7 @@ export class WorkflowRuntimeV2 {
 
           await WorkflowRunWaitModelV2.create(knex, {
             run_id: runId,
+            tenant: run.tenant ?? null,
             step_path: currentPath!,
             wait_type: 'retry',
             timeout_at: timeoutAt,
@@ -689,7 +691,7 @@ export class WorkflowRuntimeV2 {
         workflowId: callStep.workflowId,
         version: callStep.workflowVersion,
         payload: input ?? {},
-        tenantId: run.tenant_id
+        tenantId: run.tenant
       });
       await this.executeRun(knex, childRunId, `inline-${run.run_id}`);
       const childRun = await WorkflowRunModelV2.getById(knex, childRunId);
@@ -725,7 +727,7 @@ export class WorkflowRuntimeV2 {
     const nodeCtx = {
       runId: run.run_id,
       stepPath: path,
-      tenantId: run.tenant_id,
+      tenantId: run.tenant,
       nowIso: () => new Date().toISOString(),
       actions: {
         call: async (
@@ -744,7 +746,7 @@ export class WorkflowRuntimeV2 {
             version,
             args,
             options?.idempotencyKey,
-            run.tenant_id,
+            run.tenant,
             redactions,
             stepRecord.step_id,
             options?.stepConfig
@@ -754,6 +756,7 @@ export class WorkflowRuntimeV2 {
       publishWait: async (wait: { type: 'event' | 'human' | 'time'; key?: string; eventName?: string; timeoutAt?: string; payload?: Record<string, unknown> | null }) => {
         const waitRecord = await WorkflowRunWaitModelV2.create(knex, {
           run_id: run.run_id,
+          tenant: run.tenant ?? null,
           step_path: path,
           wait_type: wait.type,
           key: wait.key ?? null,
@@ -862,6 +865,7 @@ export class WorkflowRuntimeV2 {
 
     const invocation = await WorkflowActionInvocationModelV2.create(knex, {
       run_id: run.run_id,
+      tenant: run.tenant ?? null,
       step_path: stepPath,
       action_id: actionId,
       action_version: version,
@@ -953,13 +957,14 @@ export class WorkflowRuntimeV2 {
     }
   }
 
-  private async persistSnapshot(knex: Knex, runId: string, stepPath: string, env: Envelope): Promise<string> {
+  private async persistSnapshot(knex: Knex, runId: string, stepPath: string, env: Envelope, tenant?: string | null): Promise<string> {
     const redactions = env.meta.redactions ?? [];
     const sanitized = applyRedactions(env, redactions);
     const serializable = safeSerialize(sanitized);
     const sized = enforceSnapshotSize(serializable, SNAPSHOT_MAX_BYTES);
     const snapshotRecord = await WorkflowRunSnapshotModelV2.create(knex, {
       run_id: runId,
+      tenant: tenant ?? null,
       step_path: stepPath,
       envelope_json: sized as Record<string, unknown>,
       size_bytes: JSON.stringify(sized).length
@@ -1045,6 +1050,7 @@ export class WorkflowRuntimeV2 {
     } else {
       await WorkflowRunWaitModelV2.create(knex, {
         run_id: run.run_id,
+        tenant: run.tenant ?? null,
         step_path: stepPath,
         wait_type: 'quota',
         timeout_at: summary.periodEnd,
@@ -1086,7 +1092,7 @@ export class WorkflowRuntimeV2 {
   }
 
   private async maybeAutoPauseWorkflow(knex: Knex, run: WorkflowRunRecord): Promise<void> {
-    const definition = await WorkflowDefinitionModelV2.getById(knex, run.tenant_id ?? '', run.workflow_id);
+    const definition = await WorkflowDefinitionModelV2.getById(knex, run.tenant ?? '', run.workflow_id);
     if (!definition?.auto_pause_on_failure) return;
     const minRuns = Number(definition.failure_rate_min_runs ?? 10);
     const threshold = Number(definition.failure_rate_threshold ?? 0.5);
@@ -1103,7 +1109,7 @@ export class WorkflowRuntimeV2 {
     const failureRate = failedCount / recentRuns.length;
 
     if (failureRate >= threshold && !definition.is_paused) {
-      await WorkflowDefinitionModelV2.update(knex, run.tenant_id ?? '', run.workflow_id, {
+      await WorkflowDefinitionModelV2.update(knex, run.tenant ?? '', run.workflow_id, {
         is_paused: true
       });
       await this.logRunEvent(knex, run, {

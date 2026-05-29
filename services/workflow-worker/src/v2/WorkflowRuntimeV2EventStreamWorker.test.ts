@@ -241,7 +241,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       knexMock,
       expect.objectContaining({
         event_id: 'event-1',
-        tenant_id: 'tenant-1',
+        tenant: 'tenant-1',
         event_name: 'PING',
         correlation_key: 'corr-1',
         payload: { foo: 'bar' },

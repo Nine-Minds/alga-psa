@@ -301,7 +301,7 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
       ? await knex('workflow_definitions')
         .select(knex.raw("trigger->>'eventName' as event_type"))
         .count('* as count')
-        .where({ status: 'published', tenant_id: tenant })
+        .where({ status: 'published', tenant: tenant })
         .whereRaw("trigger->>'eventName' is not null")
         .whereIn(knex.raw("trigger->>'eventName'") as any, eventTypes)
         .groupByRaw("trigger->>'eventName'")
@@ -314,7 +314,7 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
       ? await knex('workflow_runtime_events')
         .select('event_name')
         .count('* as count')
-        .where({ tenant_id: tenant })
+        .where({ tenant: tenant })
         .whereIn('event_name', eventTypes)
         .where('created_at', '>=', range.from)
         .where('created_at', '<=', range.to)
@@ -332,7 +332,7 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
           knex.raw("count(case when status = 'SUCCEEDED' then 1 end)::int as succeeded"),
           knex.raw("avg(case when completed_at is not null then extract(epoch from (completed_at - started_at)) * 1000 end) as avg_ms")
         )
-        .where({ tenant_id: tenant })
+        .where({ tenant: tenant })
         .whereIn('event_type', eventTypes)
         .where('started_at', '>=', range.from)
         .where('started_at', '<=', range.to)
@@ -447,7 +447,7 @@ export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { te
       'is_paused',
       'is_visible'
     )
-    .where({ status: 'published', tenant_id: tenant })
+    .where({ status: 'published', tenant: tenant })
     .whereRaw("trigger->>'eventName' = ?", [parsed.eventType]);
 
   // published version is max from versions table
@@ -692,7 +692,7 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
       knex.raw("count(case when matched_run_id is null and error_message is null then 1 end)::int as unmatched"),
       knex.raw('count(case when error_message is not null then 1 end)::int as error')
     )
-    .where({ tenant_id: tenant, event_name: parsed.eventType })
+    .where({ tenant: tenant, event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .first() as unknown as { total: number; matched: number; unmatched: number; error: number } | undefined;
@@ -700,7 +700,7 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
   const seriesRows = await knex('workflow_runtime_events')
     .select(knex.raw("date_trunc('day', created_at) as day"))
     .count('* as count')
-    .where({ tenant_id: tenant, event_name: parsed.eventType })
+    .where({ tenant: tenant, event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .groupByRaw("date_trunc('day', created_at)")
@@ -712,7 +712,7 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
       knex.raw("count(case when status = 'SUCCEEDED' then 1 end)::int as succeeded"),
       knex.raw("avg(case when completed_at is not null then extract(epoch from (completed_at - started_at)) * 1000 end) as avg_ms")
     )
-    .where({ tenant_id: tenant, event_type: parsed.eventType })
+    .where({ tenant: tenant, event_type: parsed.eventType })
     .where('started_at', '>=', range.from)
     .where('started_at', '<=', range.to)
     .first() as unknown as { total: number; succeeded: number; avg_ms: number | null } | undefined;
@@ -730,7 +730,7 @@ export const getEventMetricsAction = withAuth(async (user, { tenant }, input: un
       'error_message',
       'payload'
     )
-    .where({ tenant_id: tenant, event_name: parsed.eventType })
+    .where({ tenant: tenant, event_name: parsed.eventType })
     .where('created_at', '>=', range.from)
     .where('created_at', '<=', range.to)
     .orderBy('created_at', 'desc')

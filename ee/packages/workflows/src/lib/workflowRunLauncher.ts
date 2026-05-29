@@ -101,7 +101,7 @@ export async function recordFailedWorkflowRunLaunch(
   const run = await WorkflowRunModelV2.create(knex, {
     workflow_id: request.workflowId,
     workflow_version: request.workflowVersion,
-    tenant_id: request.tenantId,
+    tenant: request.tenantId,
     status: 'FAILED',
     node_path: null,
     input_json: request.payload,

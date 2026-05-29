@@ -28,7 +28,7 @@ describe('workflow shared helper actor resolution', () => {
     const leakingWorkflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: leakingWorkflowId,
-      tenant_id: tenantB,
+      tenant: tenantB,
       name: 'Cross Tenant Definition',
       description: null,
       payload_schema_ref: 'schema://test',
@@ -44,6 +44,7 @@ describe('workflow shared helper actor resolution', () => {
     await db('workflow_definition_versions').insert({
       version_id: uuidv4(),
       workflow_id: leakingWorkflowId,
+      tenant: tenantB,
       version: 1,
       definition_json: { id: leakingWorkflowId },
       payload_schema_json: {},
@@ -58,7 +59,7 @@ describe('workflow shared helper actor resolution', () => {
       run_id: crossTenantRunId,
       workflow_id: leakingWorkflowId,
       workflow_version: 1,
-      tenant_id: tenantA,
+      tenant: tenantA,
       status: 'running',
       started_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -70,7 +71,7 @@ describe('workflow shared helper actor resolution', () => {
     const scopedWorkflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: scopedWorkflowId,
-      tenant_id: tenantA,
+      tenant: tenantA,
       name: 'Tenant Scoped Definition',
       description: null,
       payload_schema_ref: 'schema://test',
@@ -89,7 +90,7 @@ describe('workflow shared helper actor resolution', () => {
       run_id: scopedRunId,
       workflow_id: scopedWorkflowId,
       workflow_version: 1,
-      tenant_id: tenantA,
+      tenant: tenantA,
       status: 'running',
       started_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

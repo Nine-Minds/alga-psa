@@ -468,7 +468,7 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
       'workflow_definitions.status',
       knex.raw('published_versions.published_version as published_version'),
     )
-    .where('workflow_definitions.tenant_id', tenant)
+    .where('workflow_definitions.tenant', tenant)
     .where((query) => {
       query.whereNull('workflow_definitions.is_visible').orWhere('workflow_definitions.is_visible', true);
     })

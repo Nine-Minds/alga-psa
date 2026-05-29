@@ -106,7 +106,7 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, runId: string
       this.on('wr.workflow_id', 'wdv.workflow_id').andOn('wr.workflow_version', 'wdv.version');
     })
     .leftJoin('workflow_definitions as wd', function joinDefinitions() {
-      this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant_id', 'wd.tenant_id');
+      this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant', 'wd.tenant');
     })
     .select(
       'wd.workflow_id as matched_workflow_id',

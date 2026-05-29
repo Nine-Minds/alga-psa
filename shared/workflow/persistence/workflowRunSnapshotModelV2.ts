@@ -3,6 +3,8 @@ import { Knex } from 'knex';
 export type WorkflowRunSnapshotRecord = {
   snapshot_id: string;
   run_id: string;
+  // uuid Citus distribution column (backfilled from the parent run).
+  tenant?: string | null;
   step_path: string;
   envelope_json: Record<string, unknown>;
   size_bytes: number;
@@ -20,10 +22,10 @@ const WorkflowRunSnapshotModelV2 = {
     return record;
   },
 
-  listByRun: async (knex: Knex, runId: string): Promise<WorkflowRunSnapshotRecord[]> => {
-    return knex<WorkflowRunSnapshotRecord>('workflow_run_snapshots')
-      .where({ run_id: runId })
-      .orderBy('created_at', 'asc');
+  listByRun: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowRunSnapshotRecord[]> => {
+    const query = knex<WorkflowRunSnapshotRecord>('workflow_run_snapshots').where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
+    return query.orderBy('created_at', 'asc');
   }
 };
 
