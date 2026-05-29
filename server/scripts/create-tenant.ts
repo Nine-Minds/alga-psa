@@ -4,7 +4,12 @@
  * CLI script to create a new tenant with onboarding seeds
  */
 
-import { createTenantComplete } from '../../ee/server/src/lib/testing/tenant-creation';
+// Imported as a namespace with a default fallback: under tsx the module is
+// loaded as CommonJS, so the named export isn't statically visible to an ESM
+// importer — the real exports live on the module's default (module.exports).
+// This form resolves correctly whether the module is loaded as CJS or ESM.
+import * as tenantCreationModule from '../../ee/server/src/lib/testing/tenant-creation';
+const { createTenantComplete } = ((tenantCreationModule as { default?: typeof tenantCreationModule }).default ?? tenantCreationModule);
 import knex from 'knex';
 import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';
