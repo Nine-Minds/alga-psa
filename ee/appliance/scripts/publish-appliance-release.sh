@@ -61,7 +61,7 @@ flux push artifact "oci://${CONFIG_REPO}:${RELEASE_VERSION}" \
   --path="${REPO_ROOT}/ee/appliance/flux" \
   --source="${SOURCE_URL}" \
   --revision="${REVISION}"
-CONFIG_DIGEST="$(oras manifest fetch "oci://${CONFIG_REPO}:${RELEASE_VERSION}" --descriptor \
+CONFIG_DIGEST="$(oras manifest fetch "${CONFIG_REPO}:${RELEASE_VERSION}" --descriptor \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])')"
 echo "    config bundle digest: ${CONFIG_DIGEST}"
 
@@ -78,11 +78,11 @@ python3 "${REPO_ROOT}/ee/appliance/scripts/build-release-manifest.py" \
 
 # The manifest JSON is the artifact's config blob (the consume side reads
 # config.digest); also attach it as a layer so the artifact is well-formed.
-( cd "${WORK}" && oras push "oci://${RELEASE_REPO}:${RELEASE_VERSION}" \
+( cd "${WORK}" && oras push "${RELEASE_REPO}:${RELEASE_VERSION}" \
     --config "${MANIFEST}:${RELEASE_MEDIA_TYPE}" \
     --artifact-type "${RELEASE_ARTIFACT_TYPE}" \
     "release-manifest.json:${RELEASE_MEDIA_TYPE}" )
-oras tag "oci://${RELEASE_REPO}:${RELEASE_VERSION}" "${CHANNEL}"
+oras tag "${RELEASE_REPO}:${RELEASE_VERSION}" "${CHANNEL}"
 
 echo "==> done."
 echo "    charts:   oci://${CHARTS_REPO}/{sebastian,pgbouncer,temporal,temporal-worker,workflow-worker,email-service}"
