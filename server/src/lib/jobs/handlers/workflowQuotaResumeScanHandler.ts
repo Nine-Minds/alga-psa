@@ -18,7 +18,7 @@ type QuotaWaitCandidate = {
   wait_id: string;
   run_id: string;
   step_path: string;
-  tenant_id: string | null;
+  tenant: string | null;
   engine: string | null;
   node_path: string | null;
 };
@@ -45,12 +45,12 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
         .where('w.wait_type', 'quota')
         .where('w.status', 'WAITING')
         .where('r.status', 'WAITING')
-        .whereNotNull('r.tenant_id')
+        .whereNotNull('r.tenant')
         .orderBy('w.created_at', 'asc')
         .forUpdate()
         .skipLocked()
         .limit(batchSize)
-        .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant_id', 'r.engine', 'r.node_path');
+        .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant', 'r.engine', 'r.node_path');
 
       if (candidates.length === 0) {
         return [] as QuotaWaitCandidate[];
@@ -59,10 +59,10 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
       const selected: QuotaWaitCandidate[] = [];
       const byTenant = new Map<string, QuotaWaitCandidate[]>();
       for (const candidate of candidates) {
-        if (!candidate.tenant_id || candidate.node_path !== candidate.step_path) continue;
-        const list = byTenant.get(candidate.tenant_id) ?? [];
+        if (!candidate.tenant || candidate.node_path !== candidate.step_path) continue;
+        const list = byTenant.get(candidate.tenant) ?? [];
         list.push(candidate);
-        byTenant.set(candidate.tenant_id, list);
+        byTenant.set(candidate.tenant, list);
       }
 
       for (const [tenantId, waits] of byTenant.entries()) {
@@ -114,7 +114,7 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
       for (const selectedWait of selected) {
         await WorkflowRunLogModelV2.create(trx, {
           run_id: selectedWait.run_id,
-          tenant_id: selectedWait.tenant_id,
+          tenant: selectedWait.tenant,
           step_path: selectedWait.step_path,
           level: 'INFO',
           message: 'Quota wait resolved by scheduled scan',
