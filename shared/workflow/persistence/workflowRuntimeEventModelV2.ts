@@ -2,7 +2,9 @@ import { Knex } from 'knex';
 
 export type WorkflowRuntimeEventRecord = {
   event_id: string;
-  tenant_id?: string | null;
+  // uuid Citus distribution column. The legacy `tenant_id` column is being phased
+  // out (dropped in the cleanup migration) and is not referenced here.
+  tenant?: string | null;
   event_name: string;
   correlation_key?: string | null;
   payload?: Record<string, unknown> | null;
@@ -27,9 +29,10 @@ const WorkflowRuntimeEventModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, eventId: string, data: Partial<WorkflowRuntimeEventRecord>): Promise<WorkflowRuntimeEventRecord> => {
-    const [record] = await knex<WorkflowRuntimeEventRecord>('workflow_runtime_events')
-      .where({ event_id: eventId })
+  update: async (knex: Knex, eventId: string, data: Partial<WorkflowRuntimeEventRecord>, tenant?: string | null): Promise<WorkflowRuntimeEventRecord> => {
+    const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events').where({ event_id: eventId });
+    if (tenant) query.andWhere({ tenant });
+    const [record] = await query
       .update({
         ...data
       })
@@ -37,10 +40,10 @@ const WorkflowRuntimeEventModelV2 = {
     return record;
   },
 
-  getById: async (knex: Knex, eventId: string): Promise<WorkflowRuntimeEventRecord | null> => {
-    const record = await knex<WorkflowRuntimeEventRecord>('workflow_runtime_events')
-      .where({ event_id: eventId })
-      .first();
+  getById: async (knex: Knex, eventId: string, tenant?: string | null): Promise<WorkflowRuntimeEventRecord | null> => {
+    const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events').where({ event_id: eventId });
+    if (tenant) query.andWhere({ tenant });
+    const record = await query.first();
     return record || null;
   },
 
@@ -59,7 +62,7 @@ const WorkflowRuntimeEventModelV2 = {
   ): Promise<WorkflowRuntimeEventRecord[]> => {
     const query = knex<WorkflowRuntimeEventRecord>('workflow_runtime_events');
     if (options?.tenantId) {
-      query.where('tenant_id', options.tenantId);
+      query.where('tenant', options.tenantId);
     }
     if (options?.eventName) {
       query.where('event_name', options.eventName);

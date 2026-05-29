@@ -77,7 +77,7 @@ export class WorkflowRuntimeV2Worker {
       await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING' });
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_path: wait.step_path,
         level: 'INFO',
         message: 'Retry wait resolved',
@@ -127,7 +127,7 @@ export class WorkflowRuntimeV2Worker {
       await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING', resume_error: { category: 'TimeoutError', message: 'Event wait timeout' } });
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_path: wait.step_path,
         level: 'WARN',
         message: 'Event wait timed out',
@@ -181,7 +181,7 @@ export class WorkflowRuntimeV2Worker {
       });
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_path: wait.step_path,
         level: 'INFO',
         message: 'Time wait resolved',

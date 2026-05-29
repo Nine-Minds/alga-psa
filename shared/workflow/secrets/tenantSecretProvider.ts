@@ -305,7 +305,7 @@ export class TenantSecretProvider {
    */
   async getSecretUsage(): Promise<Map<string, string[]>> {
     const definitions = await this.knex('workflow_definitions')
-      .where({ tenant_id: this.tenantId })
+      .where({ tenant: this.tenantId })
       .select<{ workflow_id: string }[]>('workflow_id');
 
     const workflowIds = definitions.map((row) => row.workflow_id);
@@ -319,7 +319,7 @@ export class TenantSecretProvider {
         .whereRaw("definition_json::text LIKE '%$secret%'")
         .select<{ workflow_id: string; definition_json: unknown }[]>('workflow_id', 'definition_json'),
       this.knex('workflow_definitions')
-        .where({ tenant_id: this.tenantId })
+        .where({ tenant: this.tenantId })
         .whereIn('workflow_id', workflowIds)
         .whereRaw("draft_definition::text LIKE '%$secret%'")
         .select<{ workflow_id: string; draft_definition: unknown }[]>('workflow_id', 'draft_definition'),

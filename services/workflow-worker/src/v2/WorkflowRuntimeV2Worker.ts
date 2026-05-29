@@ -52,7 +52,7 @@ export class WorkflowRuntimeV2Worker {
       logger.debug('[WorkflowRuntimeV2Worker] Due retries', { workerId: this.workerId, count: retryWaits.length });
     }
     for (const wait of retryWaits) {
-      const run = await WorkflowRunModelV2.getById(knex, wait.run_id);
+      const run = await WorkflowRunModelV2.getById(knex, wait.run_id, wait.tenant);
       if (!run) {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
         continue;
@@ -79,7 +79,7 @@ export class WorkflowRuntimeV2Worker {
       await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING' });
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_path: wait.step_path,
         level: 'INFO',
         message: 'Retry wait resolved',
@@ -98,7 +98,7 @@ export class WorkflowRuntimeV2Worker {
       logger.debug('[WorkflowRuntimeV2Worker] Due timeouts', { workerId: this.workerId, count: timeoutWaits.length });
     }
     for (const wait of timeoutWaits) {
-      const run = await WorkflowRunModelV2.getById(knex, wait.run_id);
+      const run = await WorkflowRunModelV2.getById(knex, wait.run_id, wait.tenant);
       if (!run) {
         await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
         continue;
@@ -129,7 +129,7 @@ export class WorkflowRuntimeV2Worker {
       await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING', resume_error: { category: 'TimeoutError', message: 'Event wait timeout' } });
       await WorkflowRunLogModelV2.create(knex, {
         run_id: run.run_id,
-        tenant_id: run.tenant_id ?? null,
+        tenant: run.tenant ?? null,
         step_path: wait.step_path,
         level: 'WARN',
         message: 'Event wait timed out',

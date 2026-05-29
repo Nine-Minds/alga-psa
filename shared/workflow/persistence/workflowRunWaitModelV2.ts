@@ -3,6 +3,8 @@ import { Knex } from 'knex';
 export type WorkflowRunWaitRecord = {
   wait_id: string;
   run_id: string;
+  // uuid Citus distribution column (backfilled from the parent run).
+  tenant?: string | null;
   step_path: string;
   wait_type: string;
   key?: string | null;
@@ -25,9 +27,10 @@ const WorkflowRunWaitModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, waitId: string, data: Partial<WorkflowRunWaitRecord>): Promise<WorkflowRunWaitRecord> => {
-    const [record] = await knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .where({ wait_id: waitId })
+  update: async (knex: Knex, waitId: string, data: Partial<WorkflowRunWaitRecord>, tenant?: string | null): Promise<WorkflowRunWaitRecord> => {
+    const query = knex<WorkflowRunWaitRecord>('workflow_run_waits').where({ wait_id: waitId });
+    if (tenant) query.andWhere({ tenant });
+    const [record] = await query
       .update({
         ...data
       })
@@ -35,9 +38,10 @@ const WorkflowRunWaitModelV2 = {
     return record;
   },
 
-  resolveIfWaiting: async (knex: Knex, waitId: string, data: Partial<WorkflowRunWaitRecord>): Promise<WorkflowRunWaitRecord | null> => {
-    const [record] = await knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .where({ wait_id: waitId, status: 'WAITING' })
+  resolveIfWaiting: async (knex: Knex, waitId: string, data: Partial<WorkflowRunWaitRecord>, tenant?: string | null): Promise<WorkflowRunWaitRecord | null> => {
+    const query = knex<WorkflowRunWaitRecord>('workflow_run_waits').where({ wait_id: waitId, status: 'WAITING' });
+    if (tenant) query.andWhere({ tenant });
+    const [record] = await query
       .update({
         ...data
       })
@@ -52,18 +56,17 @@ const WorkflowRunWaitModelV2 = {
     tenantId?: string | null,
     waitTypes: string[] = ['event']
   ): Promise<WorkflowRunWaitRecord | null> => {
-    let query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .whereIn('workflow_run_waits.wait_type', waitTypes)
-      .where('workflow_run_waits.event_name', eventName)
-      .where('workflow_run_waits.key', key)
-      .where('workflow_run_waits.status', 'WAITING')
-      .orderBy('workflow_run_waits.created_at', 'asc');
+    const query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .whereIn('wait_type', waitTypes)
+      .where('event_name', eventName)
+      .where('key', key)
+      .where('status', 'WAITING')
+      .orderBy('created_at', 'asc');
 
+    // The wait carries its own (colocated) tenant column now, so filter directly
+    // instead of joining workflow_runs.
     if (tenantId) {
-      query = query
-        .join('workflow_runs', 'workflow_run_waits.run_id', 'workflow_runs.run_id')
-        .where('workflow_runs.tenant_id', tenantId)
-        .select('workflow_run_waits.*');
+      query.where('tenant', tenantId);
     }
 
     const record = await query.first();
@@ -77,18 +80,15 @@ const WorkflowRunWaitModelV2 = {
     tenantId?: string | null,
     waitTypes: string[] = ['event']
   ): Promise<WorkflowRunWaitRecord[]> => {
-    let query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .whereIn('workflow_run_waits.wait_type', waitTypes)
-      .where('workflow_run_waits.event_name', eventName)
-      .where('workflow_run_waits.key', key)
-      .where('workflow_run_waits.status', 'WAITING')
-      .orderBy('workflow_run_waits.created_at', 'asc');
+    const query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .whereIn('wait_type', waitTypes)
+      .where('event_name', eventName)
+      .where('key', key)
+      .where('status', 'WAITING')
+      .orderBy('created_at', 'asc');
 
     if (tenantId) {
-      query = query
-        .join('workflow_runs', 'workflow_run_waits.run_id', 'workflow_runs.run_id')
-        .where('workflow_runs.tenant_id', tenantId)
-        .select('workflow_run_waits.*');
+      query.where('tenant', tenantId);
     }
 
     return query;
@@ -123,10 +123,10 @@ const WorkflowRunWaitModelV2 = {
       .andWhere('timeout_at', '<=', knex.fn.now());
   },
 
-  listByRun: async (knex: Knex, runId: string): Promise<WorkflowRunWaitRecord[]> => {
-    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .where({ run_id: runId })
-      .orderBy('created_at', 'asc');
+  listByRun: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowRunWaitRecord[]> => {
+    const query = knex<WorkflowRunWaitRecord>('workflow_run_waits').where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
+    return query.orderBy('created_at', 'asc');
   }
 };
 

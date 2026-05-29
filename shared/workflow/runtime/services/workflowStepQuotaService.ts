@@ -368,8 +368,10 @@ export class WorkflowStepQuotaService {
       .first();
 
     const ledgerRow = await knex('workflow_run_steps as s')
-      .join('workflow_runs as r', 'r.run_id', 's.run_id')
-      .where('r.tenant_id', tenant)
+      .join('workflow_runs as r', function () {
+        this.on('r.run_id', 's.run_id').andOn('r.tenant', 's.tenant');
+      })
+      .where('r.tenant', tenant)
       .andWhere('s.started_at', '>=', periodStart)
       .andWhere('s.started_at', '<', periodEnd)
       .count<{ count: string }>('s.step_id as count')

@@ -302,6 +302,13 @@ def "main cleanup" [
         "workflow_action_dependencies" "workflow_sync_points" "workflow_timers"
         "workflow_task_history" "workflow_form_schemas"
 
+        # Workflow runtime V2 (child tables first, then parent) — keep in sync
+        # with TENANT_TABLES_DELETION_ORDER in tenant-deletion-activities.ts
+        "workflow_run_steps" "workflow_run_waits" "workflow_run_snapshots"
+        "workflow_action_invocations" "workflow_definition_versions"
+        "workflow_run_logs" "workflow_runtime_events" "workflow_step_usage_periods"
+        "workflow_runs" "tenant_workflow_schedule" "workflow_definitions"
+
         # Task/project details
         "task_checklist_items" "project_task_dependencies" "task_resources"
         "project_ticket_links" "project_task_comments"
