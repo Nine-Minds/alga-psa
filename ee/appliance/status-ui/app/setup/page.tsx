@@ -12,8 +12,7 @@ type SetupConfig = {
     appHostname?: string;
     dnsMode?: string;
     dnsServers?: string;
-    repoUrl?: string;
-    repoBranch?: string;
+    releaseRef?: string;
   };
   network?: {
     addresses?: string[];
@@ -21,7 +20,7 @@ type SetupConfig = {
   };
 };
 
-type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'repoUrl' | 'repoBranch', string>>;
+type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef', string>>;
 
 function tokenQuery() {
   if (typeof window === 'undefined') return '';
@@ -47,7 +46,7 @@ function passwordValidationError(value: string) {
   return null;
 }
 
-function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; repoUrl: string; repoBranch: string }) {
+function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string }) {
   const errors: FieldErrors = {};
 
   if (!payload.tenantName.trim()) errors.tenantName = 'Enter the company name for the initial tenant.';
@@ -81,12 +80,8 @@ function validateSetupForm(payload: { tenantName: string; adminFirstName: string
     }
   }
 
-  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+(?:\.git)?$/i.test(payload.repoUrl) && !/^git@github\.com:[^/]+\/[^/]+(?:\.git)?$/i.test(payload.repoUrl)) {
-    errors.repoUrl = 'Use a GitHub HTTPS URL or git@github.com:owner/repo.git.';
-  }
-
-  if (payload.repoBranch && !/^[A-Za-z0-9._/-]+$/.test(payload.repoBranch)) {
-    errors.repoBranch = 'Use a branch name with letters, numbers, dots, slashes, underscores, or hyphens.';
+  if (payload.releaseRef && !/^[A-Za-z0-9._:@/-]+$/.test(payload.releaseRef)) {
+    errors.releaseRef = 'Use a release version (e.g. 1.0.3) or a digest (sha256:...).';
   }
 
   return errors;
@@ -119,8 +114,7 @@ export default function SetupPage() {
   const [appHostname, setAppHostname] = useState('');
   const [dnsMode, setDnsMode] = useState('system');
   const [dnsServers, setDnsServers] = useState('');
-  const [repoUrl, setRepoUrl] = useState('https://github.com/Nine-Minds/alga-psa.git');
-  const [repoBranch, setRepoBranch] = useState('');
+  const [releaseRef, setReleaseRef] = useState('');
 
   useEffect(() => {
     setQuery(tokenQuery());
@@ -140,8 +134,7 @@ export default function SetupPage() {
         setAppHostname(data.defaults?.appHostname || '');
         setDnsMode(data.defaults?.dnsMode || 'system');
         setDnsServers(data.defaults?.dnsServers || '');
-        setRepoUrl(data.defaults?.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git');
-        setRepoBranch(data.defaults?.repoBranch || '');
+        setReleaseRef(data.defaults?.releaseRef || '');
         setError(null);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -165,8 +158,7 @@ export default function SetupPage() {
       appHostname: String(formData.get('appHostname') || ''),
       dnsMode: String(formData.get('dnsMode') || dnsMode),
       dnsServers: String(formData.get('dnsServers') || ''),
-      repoUrl: String(formData.get('repoUrl') || repoUrl),
-      repoBranch: String(formData.get('repoBranch') || ''),
+      releaseRef: String(formData.get('releaseRef') || releaseRef),
     };
     const validation = validateSetupForm(payload);
     setFieldErrors(validation);
@@ -318,21 +310,14 @@ export default function SetupPage() {
                 </div>
 
                 <details className={styles.advancedSupport}>
-                  <summary className={styles.advancedSummary}>Advanced support</summary>
-                  <p className={styles.helpText}>Change these only when support asks you to use a specific repository or branch.</p>
+                  <summary className={styles.advancedSummary}>Advanced</summary>
+                  <p className={styles.helpText}>Optional: pin a specific release instead of following the channel. Support/testing only.</p>
                   <div className={styles.formGrid}>
                     <div className={styles.field}>
-                      <label htmlFor="setup-repo-url">Repo URL override</label>
-                      <input id="setup-repo-url" name="repoUrl" value={repoUrl} onChange={(event) => { setRepoUrl(event.target.value); clearFieldError('repoUrl'); }} disabled={disabled} aria-invalid={Boolean(fieldErrors.repoUrl)} aria-describedby="setup-repo-url-help setup-repo-url-error" />
-                      <span id="setup-repo-url-help" className={styles.helpText}>Support/testing only.</span>
-                      {fieldErrors.repoUrl ? <span id="setup-repo-url-error" className={styles.fieldError}>{fieldErrors.repoUrl}</span> : null}
-                    </div>
-
-                    <div className={styles.field}>
-                      <label htmlFor="setup-repo-branch">Repo branch override</label>
-                      <input id="setup-repo-branch" name="repoBranch" value={repoBranch} onChange={(event) => { setRepoBranch(event.target.value); clearFieldError('repoBranch'); }} placeholder="main" disabled={disabled} aria-invalid={Boolean(fieldErrors.repoBranch)} aria-describedby="setup-repo-branch-help setup-repo-branch-error" />
-                      <span id="setup-repo-branch-help" className={styles.helpText}>Leave blank to use the selected release channel.</span>
-                      {fieldErrors.repoBranch ? <span id="setup-repo-branch-error" className={styles.fieldError}>{fieldErrors.repoBranch}</span> : null}
+                      <label htmlFor="setup-release-ref">Release pin</label>
+                      <input id="setup-release-ref" name="releaseRef" value={releaseRef} onChange={(event) => { setReleaseRef(event.target.value); clearFieldError('releaseRef'); }} placeholder="e.g. 1.0.3 or sha256:..." disabled={disabled} aria-invalid={Boolean(fieldErrors.releaseRef)} aria-describedby="setup-release-ref-help setup-release-ref-error" />
+                      <span id="setup-release-ref-help" className={styles.helpText}>Leave blank to use the selected release channel.</span>
+                      {fieldErrors.releaseRef ? <span id="setup-release-ref-error" className={styles.fieldError}>{fieldErrors.releaseRef}</span> : null}
                     </div>
                   </div>
                 </details>

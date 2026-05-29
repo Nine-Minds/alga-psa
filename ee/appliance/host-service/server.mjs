@@ -64,8 +64,7 @@ function networkProbeInputs() {
     channel: inputs.channel || 'stable',
     dnsMode: inputs.dnsMode || 'system',
     dnsServers: inputs.dnsServers || '',
-    repoUrl: inputs.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: inputs.repoBranch || 'main'
+    releaseRef: inputs.releaseRef || ''
   };
 }
 
@@ -335,8 +334,7 @@ function readSetupDefaults(requestHost) {
     appHostname: defaultAppUrlForRequest(requestHost),
     dnsMode: 'system',
     dnsServers: '',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: ''
+    releaseRef: ''
   };
   if (!fs.existsSync(setupInputsFile)) return fallback;
   try {
@@ -559,8 +557,7 @@ const server = http.createServer(async (req, res) => {
         appHostname: payload.appHostname || '',
         dnsMode: payload.dnsMode || 'system',
         dnsServers: payload.dnsServers || '',
-        repoUrl: payload.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
-        repoBranch: payload.repoBranch || '',
+        releaseRef: payload.releaseRef || '',
         tenantName: payload.tenantName || '',
         adminFirstName: payload.adminFirstName || '',
         adminLastName: payload.adminLastName || '',
@@ -885,8 +882,7 @@ const server = http.createServer(async (req, res) => {
           appHostname: params.get('appHostname') || '',
           dnsMode: params.get('dnsMode') || 'system',
           dnsServers: params.get('dnsServers') || '',
-          repoUrl: params.get('repoUrl') || 'https://github.com/Nine-Minds/alga-psa.git',
-          repoBranch: params.get('repoBranch') || '',
+          releaseRef: params.get('releaseRef') || '',
           tenantName: params.get('tenantName') || '',
           adminFirstName: params.get('adminFirstName') || '',
           adminLastName: params.get('adminLastName') || '',
@@ -962,11 +958,8 @@ const server = http.createServer(async (req, res) => {
         <label>Custom DNS servers (comma-separated)</label><br />
         <input type="text" name="dnsServers" placeholder="8.8.8.8,8.8.4.4" /><br /><br />
 
-        <label>Repo URL override (support/testing only)</label><br />
-        <input type="text" name="repoUrl" value="https://github.com/Nine-Minds/alga-psa.git" /><br /><br />
-
-        <label>Repo branch override (support/testing only)</label><br />
-        <input type="text" name="repoBranch" placeholder="main" /><br /><br />
+        <label>Release pin (advanced; blank follows the channel)</label><br />
+        <input type="text" name="releaseRef" placeholder="e.g. 1.0.3 or sha256:..." /><br /><br />
 
         <button type="submit">Save and continue</button>
       </form>
