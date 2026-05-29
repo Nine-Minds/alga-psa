@@ -70,10 +70,25 @@ const isDistributed = async (knex, table) => {
   return Boolean(result.rows?.[0]?.distributed);
 };
 
+// Normalize a value that may be a JS array or a Postgres array literal string
+// (`{a,b}`) — `array_agg(name)` returns name[], which node-postgres leaves as a
+// raw string rather than parsing into a JS array.
+const toArray = (val) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    return val
+      .replace(/^\{|\}$/g, '')
+      .split(',')
+      .map((s) => s.replace(/^"|"$/g, '').trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const getPrimaryKey = async (knex, table) => {
   const result = await knex.raw(
     `SELECT c.conname AS constraint_name,
-            array_agg(a.attname ORDER BY ord.ordinality) AS columns
+            array_agg(a.attname::text ORDER BY ord.ordinality) AS columns
        FROM pg_constraint c
        JOIN unnest(c.conkey) WITH ORDINALITY AS ord(attnum, ordinality) ON true
        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ord.attnum
@@ -81,7 +96,9 @@ const getPrimaryKey = async (knex, table) => {
       GROUP BY c.conname`,
     [table]
   );
-  return result.rows?.[0] ?? null;
+  const row = result.rows?.[0];
+  if (!row) return null;
+  return { constraint_name: row.constraint_name, columns: toArray(row.columns) };
 };
 
 // PK columns are implicitly NOT NULL, so tenant_id must leave the PK before
