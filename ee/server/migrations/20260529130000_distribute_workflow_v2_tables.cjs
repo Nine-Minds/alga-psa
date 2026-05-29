@@ -1,9 +1,9 @@
 // Migration B (DISTRIBUTE) of the Workflow Runtime V2 Citus colocation work.
 // Runs AFTER Deploy 1 (code writes `tenant` only). Distributes the v2 tables into
-// colocation group 41 (the tenants/workflow_executions uuid group) on `tenant`.
+// colocation group 41 (the uuid group of the v1 workflow tables) on `tenant`.
 //
 // Per-table sequence: drop FKs/uniques/PK -> recreate PK as (tenant, <id>) ->
-// create_distributed_table(..., 'tenant', colocate_with => 'workflow_executions')
+// create_distributed_table(..., 'tenant', colocate_with => 'workflow_tasks')
 // -> truncate_local_data_after_distributing_table (Citus leaves the original rows
 // as LOCAL coordinator data after distributing a non-empty table, and that
 // leftover data blocks the FK/constraint re-adds) -> re-add tenant-scoped uniques
@@ -18,7 +18,9 @@ exports.config = { transaction: false };
 const UUID_REGEX =
   "'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'";
 
-const COLOCATE_WITH = 'workflow_executions'; // anchor of the uuid group 41
+// Colocate the v2 tables with an existing distributed v1 workflow table in the
+// uuid group 41. workflow_tasks is present and distributed on tenant in group 41.
+const COLOCATE_WITH = 'workflow_tasks';
 
 // Single natural-id PK column per table (tenant is prepended).
 const PK_ID = {
@@ -222,6 +224,7 @@ exports.up = async function up(knex) {
   // 4. Distribute (parents first), then immediately truncate the leftover LOCAL
   //    coordinator data — it otherwise blocks the constraint re-adds below.
   //    Cast to ::regclass explicitly so the Citus functions resolve unambiguously.
+  console.log(`Colocating workflow v2 tables with ${COLOCATE_WITH}`);
   for (const table of present) {
     if (!(await isDistributed(knex, table))) {
       await knex.raw(`SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => ?)`, [table, COLOCATE_WITH]);
