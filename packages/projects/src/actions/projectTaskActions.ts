@@ -1315,6 +1315,84 @@ export const addTaskResourceAction = withAuth(async (
     }
 });
 
+// Batched equivalent of addTaskResourceAction: inserts every missing resource in a
+// single transaction, then emits one PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event
+// per added agent (same per-agent contract as the single-add path). Returns the
+// task's resources so callers refetch once instead of per member.
+export const addTaskResourcesAction = withAuth(async (
+    user,
+    { tenant },
+    taskId: string,
+    userIds: string[],
+    role?: string
+): Promise<any[]> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        const { resources, added, projectId, primaryAgentId } = await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const task = await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .first();
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            const wanted = Array.from(new Set(userIds.filter(Boolean)));
+            const existing = await trx('task_resources')
+                .where({ task_id: taskId, tenant })
+                .whereIn('additional_user_id', wanted)
+                .select('additional_user_id');
+            const existingIds = new Set(existing.map((row: { additional_user_id: string }) => row.additional_user_id));
+
+            // A user can't be both the primary and an additional agent
+            // (CHECK assigned_to != additional_user_id); also skip rows already present.
+            const primaryAgentId = task.assigned_to as string | null;
+            const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
+
+            if (toInsert.length > 0) {
+                await trx('task_resources').insert(
+                    toInsert.map((userId) => ({
+                        tenant,
+                        task_id: taskId,
+                        assigned_to: primaryAgentId || userId,
+                        additional_user_id: userId,
+                        role: role || null
+                    }))
+                );
+            }
+
+            const resources = await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
+            return { resources, added: toInsert, projectId, primaryAgentId };
+        });
+
+        // Emit per-agent events after commit so subscribers see the committed rows.
+        for (const userId of added) {
+            await publishEvent({
+                eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    primaryAgentId,
+                    additionalAgentId: userId,
+                    assignedByUserId: user.user_id
+                }
+            });
+        }
+
+        return resources;
+    } catch (error) {
+        console.error('Error adding task resources:', error);
+        throw error;
+    }
+});
+
 export const assignTeamToProjectTask = withAuth(async (
     user,
     { tenant },

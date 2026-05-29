@@ -18,7 +18,7 @@ import {
   getTaskChecklistItems,
   moveTaskToPhase,
   deleteTask,
-  addTaskResourceAction,
+  addTaskResourcesAction,
   removeTaskResourceAction,
   getTaskResourcesAction,
   assignTeamToProjectTask,
@@ -845,11 +845,11 @@ export default function TaskForm({
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
 
         // Save any temporarily stored additional agents (added while task had no primary agent)
-        for (const resource of tempTaskResources) {
+        if (tempTaskResources.length > 0) {
           try {
-            await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+            await addTaskResourcesAction(taskToUpdate.task_id, tempTaskResources.map(r => r.additional_user_id));
           } catch (agentError) {
-            console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
+            console.error('Failed to add additional agents:', agentError);
           }
         }
 
@@ -883,12 +883,8 @@ export default function TaskForm({
               await assignTeamToProjectTask(resultTask.task_id, assignedTeamId);
             }
             // Add task resources
-            for (const resource of tempTaskResources) {
-              try {
-                await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
-              } catch (agentError) {
-                console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
-              }
+            if (tempTaskResources.length > 0) {
+              await addTaskResourcesAction(resultTask.task_id, tempTaskResources.map(r => r.additional_user_id));
             }
 
             // Add ticket links using the actual task ID and phase ID
@@ -1333,34 +1329,53 @@ export default function TaskForm({
     }
   };
 
-  const handleAddAgent = async (userId: string) => {
-    try {
-      const primaryChanged = task?.assigned_to !== assignedUser;
-      if (task?.task_id && assignedUser && !primaryChanged) {
-        // Existing task with unchanged primary agent: save immediately
-        await addTaskResourceAction(task.task_id, userId);
-        const updatedResources = await getTaskResourcesAction(task.task_id);
+  // Add one or more users to the task as additional agents. Persists in a single
+  // batched request when the task exists with an unchanged primary; otherwise
+  // stages them locally to be saved with the task (deferred to avoid the
+  // assigned_to != additional_user_id CHECK while the primary is mid-change).
+  const addAgents = async (userIds: string[]) => {
+    const existingIds = new Set(
+      [...taskResources, ...tempTaskResources].map(r => r.additional_user_id)
+    );
+    const toAdd = Array.from(new Set(userIds))
+      .filter(id => id && id !== assignedUser && !existingIds.has(id));
+    if (toAdd.length === 0) return;
+
+    const primaryChanged = task?.assigned_to !== assignedUser;
+    if (task?.task_id && assignedUser && !primaryChanged) {
+      // Existing task with unchanged primary agent: one batched insert + refetch.
+      try {
+        const updatedResources = await addTaskResourcesAction(task.task_id, toAdd);
         setTaskResources(updatedResources);
         toast.success(taskFormT('agentAddedSuccess', 'Agent added successfully'));
-      } else {
-        // New task, no primary agent, or primary has changed: store temporarily
-        // When primary has changed, we must defer saving to avoid CHECK constraint
-        // violation (assigned_to != additional_user_id) since DB still has old primary
-        const selectedUser = users.find(u => u.user_id === userId);
-        if (selectedUser) {
-          const tempResource = {
-            additional_user_id: userId,
-            first_name: selectedUser.first_name,
-            last_name: selectedUser.last_name,
-            assignment_id: `temp-${Date.now()}`
-          };
-          setTempTaskResources(prev => [...prev, tempResource]);
-          toast.success(taskFormT('agentPendingSave', 'Agent will be added when task is saved'));
-        }
+      } catch (error: any) {
+        handleError(error, taskFormT('addAgentFailed', 'Failed to add agent'));
       }
-    } catch (error: any) {
-      handleError(error, taskFormT('addAgentFailed', 'Failed to add agent'));
+    } else {
+      // New task, no primary agent, or primary has changed: stage locally and
+      // persist on save (makes no requests, so no per-member round-trips).
+      const tempResources = toAdd
+        .map(userId => {
+          const selectedUser = users.find(u => u.user_id === userId);
+          return selectedUser
+            ? {
+                additional_user_id: userId,
+                first_name: selectedUser.first_name,
+                last_name: selectedUser.last_name,
+                assignment_id: `temp-${Date.now()}-${userId}`
+              }
+            : null;
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+      if (tempResources.length > 0) {
+        setTempTaskResources(prev => [...prev, ...tempResources]);
+        toast.success(taskFormT('agentPendingSave', 'Agent will be added when task is saved'));
+      }
     }
+  };
+
+  const handleAddAgent = async (userId: string) => {
+    await addAgents([userId]);
   };
 
   // Add every member of a team (including its lead) onto the task as additional
@@ -1369,19 +1384,10 @@ export default function TaskForm({
   const addTeamMembersAsAgents = async (teamId: string) => {
     const team = teams.find(t => t.team_id === teamId);
     if (!team) return;
-    const memberIds = Array.from(new Set(
-      [...(team.members || []).map(m => m.user_id), team.manager_id || null]
-        .filter((id): id is string => Boolean(id))
-    ));
-    const existingIds = new Set(
-      [...taskResources, ...tempTaskResources].map(r => r.additional_user_id)
-    );
-    for (const userId of memberIds) {
-      // The primary agent can't also be an additional agent (CHECK constraint);
-      // skip them and anyone already on the task.
-      if (userId === assignedUser || existingIds.has(userId)) continue;
-      await handleAddAgent(userId);
-    }
+    const memberIds = [...(team.members || []).map(m => m.user_id), team.manager_id || null]
+      .filter((id): id is string => Boolean(id));
+    // addAgents drops the primary (CHECK constraint) and anyone already present.
+    await addAgents(memberIds);
   };
 
   const handleRemoveAgent = async (assignmentId: string) => {
@@ -1851,9 +1857,9 @@ export default function TaskForm({
                         // Find removed users
                         const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
 
-                        // Process all additions sequentially
-                        for (const userId of addedUserIds) {
-                          await handleAddAgent(userId);
+                        // Add all new agents in a single batched request
+                        if (addedUserIds.length > 0) {
+                          await addAgents(addedUserIds);
                         }
 
                         // Process all removals sequentially
