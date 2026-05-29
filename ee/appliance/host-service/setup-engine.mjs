@@ -15,7 +15,6 @@ import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
-const DEFAULT_RELEASES_DIR = '/opt/alga-appliance/releases';
 const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_TOKEN_FILE = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
@@ -731,8 +730,11 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
   const repo = extractRepoParts(normalizedRepoUrl);
   const branch = (inputs.repoBranch || 'main').trim() || 'main';
-  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
-  const localChannelFile = path.join(releasesDir, 'channels', `${inputs.channel}.json`);
+  // Release metadata (channel/release/profile values) has ONE source of truth:
+  // git (raw.githubusercontent) on the configured branch. There is deliberately
+  // no baked-into-the-image copy -- a baked copy used to win over git and made
+  // image-tag changes silently require an ISO rebuild. The install is online
+  // (it pulls images from ghcr), so fetching metadata from git is always viable.
   const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/ee/appliance/releases/channels/${inputs.channel}.json`;
 
   writeInstallState({
@@ -745,8 +747,6 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   let channelData;
   if (options.channelMetadataOverride) {
     channelData = options.channelMetadataOverride;
-  } else if (fs.existsSync(localChannelFile)) {
-    channelData = JSON.parse(fs.readFileSync(localChannelFile, 'utf8'));
   } else {
     const response = await httpsRequest(channelUrl, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -824,10 +824,6 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
   const releaseVersion = releaseSelection.releaseVersion;
   const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
   const valuesDir = path.join(tempDir, 'values');
-  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
-  const localReleaseFile = path.join(releasesDir, releaseVersion, 'release.json');
-  const localFluxDir = options.fluxDir || '/opt/alga-appliance/flux';
-
   writeInstallState({
     status: 'runtime-values-running',
     phase: 'github-release-source',
@@ -840,9 +836,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     const lookupServers = resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF);
     const releaseBody = options.releaseManifestOverride
       ? JSON.stringify(options.releaseManifestOverride)
-      : fs.existsSync(localReleaseFile)
-        ? fs.readFileSync(localReleaseFile, 'utf8')
-        : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
+      : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
     releaseManifest = JSON.parse(releaseBody);
   } catch (error) {
     const failure = preflightFailure(
@@ -864,9 +858,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     for (const name of names) {
       const key = `${name}.${profile}.yaml`;
       const override = options.profileValuesOverride?.[key];
-      const localProfileValuesFile = path.join(localFluxDir, 'profiles', profile, 'values', key);
       values[key] = override
-        ?? (fs.existsSync(localProfileValuesFile) ? fs.readFileSync(localProfileValuesFile, 'utf8') : null)
         ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
     }
 

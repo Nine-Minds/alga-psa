@@ -22,7 +22,10 @@ COPY ee/appliance/host-service/*.mjs ./host-service/
 COPY ee/appliance/scripts ./scripts
 COPY ee/appliance/manifests ./manifests
 COPY ee/appliance/flux ./flux
-COPY ee/appliance/releases ./releases
+# NOTE: ee/appliance/releases (channels + release.json) is intentionally NOT
+# baked in. Release metadata is fetched at setup time from git on the configured
+# branch (see host-service/setup-engine.mjs) so image-tag changes don't require
+# rebuilding this image or the ISO.
 COPY --from=ui-build /workspace/ee/appliance/status-ui/dist ./status-ui/dist
 
 RUN addgroup -S alga && adduser -S -G alga -u 10001 alga \

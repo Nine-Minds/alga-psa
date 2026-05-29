@@ -132,35 +132,32 @@ test('applyFluxSource normalizes SSH GitHub URL to HTTPS for Flux source', () =>
   assert.ok(manifest.includes('url: https://github.com/Nine-Minds/alga-psa'));
 });
 
-test('applyRuntimeValuesAndReleaseSelection prefers packaged flux values before GitHub fetch', async () => {
+test('applyRuntimeValuesAndReleaseSelection renders runtime values from injected metadata (no baked files)', async () => {
+  // Release metadata has a single source of truth (git on the configured branch).
+  // Tests inject it via the *Override options instead of any baked local files.
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-runtime-values-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
   const runtimeValuesDir = path.join(tmp, 'runtime');
-  const fluxDir = path.join(tmp, 'flux');
-  const releasesDir = path.join(tmp, 'releases');
   const binDir = path.join(tmp, 'bin');
   const oldPath = process.env.PATH;
 
-  fs.mkdirSync(path.join(releasesDir, '1.2.3'), { recursive: true });
-  fs.writeFileSync(path.join(releasesDir, '1.2.3', 'release.json'), JSON.stringify({
+  const releaseManifestOverride = {
     app: {
       version: '1.2.3',
       releaseBranch: 'release/offline',
       valuesProfile: 'single-node',
       images: { algaCore: 'coretag', workflowWorker: 'workertag', emailService: 'emailtag', temporalWorker: 'twtag' }
     }
-  }));
+  };
 
-  const valueNames = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
-  const valuesDir = path.join(fluxDir, 'profiles', 'single-node', 'values');
-  fs.mkdirSync(valuesDir, { recursive: true });
-  for (const name of valueNames) {
-    fs.writeFileSync(path.join(valuesDir, `${name}.single-node.yaml`), `${name}: packaged\n`);
-  }
-  fs.writeFileSync(path.join(valuesDir, 'alga-core.single-node.yaml'), 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n');
-  fs.writeFileSync(path.join(valuesDir, 'workflow-worker.single-node.yaml'), 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n');
-  fs.writeFileSync(path.join(valuesDir, 'email-service.single-node.yaml'), 'email-service: packaged\nimage:\n  tag: old\n');
-  fs.writeFileSync(path.join(valuesDir, 'temporal-worker.single-node.yaml'), 'temporal-worker: packaged\nimage:\n  tag: old\n');
+  const profileValuesOverride = {
+    'alga-core.single-node.yaml': 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n',
+    'pgbouncer.single-node.yaml': 'pgbouncer: packaged\n',
+    'temporal.single-node.yaml': 'temporal: packaged\n',
+    'workflow-worker.single-node.yaml': 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n',
+    'email-service.single-node.yaml': 'email-service: packaged\nimage:\n  tag: old\n',
+    'temporal-worker.single-node.yaml': 'temporal-worker: packaged\nimage:\n  tag: old\n'
+  };
 
   fs.mkdirSync(binDir, { recursive: true });
   fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
@@ -180,8 +177,8 @@ test('applyRuntimeValuesAndReleaseSelection prefers packaged flux values before 
     }, {
       stateFile,
       runtimeValuesDir,
-      releasesDir,
-      fluxDir,
+      releaseManifestOverride,
+      profileValuesOverride,
       kubeconfigPath: path.join(tmp, 'k3s.yaml'),
       tokenFile: path.join(tmp, 'setup-token')
     });
