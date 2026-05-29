@@ -161,7 +161,8 @@
         "step3": "L'imposta viene calcolata dal sistema contabile in base alle sue norme fiscali",
         "step4": "Gli importi delle tasse vengono importati nuovamente in Alga PSA",
         "step5": "I totali delle fatture vengono aggiornati con l'imposta importata",
-        "note": "Il sistema contabile utilizzato viene determinato automaticamente in base al sistema in cui si esporta la fattura."
+        "note": "Il sistema contabile utilizzato viene determinato automaticamente in base al sistema in cui si esporta la fattura.",
+        "warning": "Importante: le fatture per i clienti che utilizzano l'imposta esterna non possono essere finalizzate finché la loro imposta non è stata reimportata dal tuo sistema contabile. Ciò richiede un'integrazione contabile collegata (QuickBooks o Xero) e l'esportazione preventiva della fattura in essa. Senza di ciò, queste fatture rimarranno bloccate in stato di Bozza: riporta una singola fattura all'imposta interna per finalizzarla in Alga."
       },
       "loading": "Caricamento impostazioni...",
       "actions": {

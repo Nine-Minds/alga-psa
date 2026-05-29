@@ -161,7 +161,8 @@
         "step3": "La taxe est calculée par le système comptable en fonction de ses règles fiscales",
         "step4": "Les montants des taxes sont réimportés dans Alga PSA",
         "step5": "Les totaux des factures sont mis à jour avec la taxe importée",
-        "note": "Le système comptable utilisé est déterminé automatiquement en fonction du système vers lequel vous exportez la facture."
+        "note": "Le système comptable utilisé est déterminé automatiquement en fonction du système vers lequel vous exportez la facture.",
+        "warning": "Important : les factures des clients utilisant la taxe externe ne peuvent pas être finalisées tant que leur taxe n'a pas été réimportée depuis votre système comptable. Cela nécessite une intégration comptable connectée (QuickBooks ou Xero) et l'export préalable de la facture vers celle-ci. Sans cela, ces factures resteront bloquées au stade Brouillon — basculez une facture individuelle en taxe interne pour la finaliser dans Alga."
       },
       "loading": "Chargement des paramètres...",
       "actions": {

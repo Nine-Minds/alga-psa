@@ -21,6 +21,7 @@ import type { ColumnDefinition, InvoiceViewModel as DbInvoiceViewModel, IInvoice
 import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { finalizeInvoice, hardDeleteInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { validateInvoiceFinalization, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
@@ -53,6 +54,13 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   const [tableKey, setTableKey] = useState(0);
   const [reverseDialogState, setReverseDialogState] = useState<{ isOpen: boolean; invoiceIds: string[] }>({ isOpen: false, invoiceIds: [] });
   const [isReverseConfirming, setIsReverseConfirming] = useState(false);
+  // Escape hatch for invoices blocked from finalizing because they await external tax import.
+  const [taxSourceFixState, setTaxSourceFixState] = useState<{ isOpen: boolean; invoiceId: string | null; invoiceNumber: string | null }>({ isOpen: false, invoiceId: null, invoiceNumber: null });
+  const [isFixingTaxSource, setIsFixingTaxSource] = useState(false);
+  // Sticky notice for bulk-finalize results (e.g. invoices skipped). Kept separate from
+  // `error` because loadData() resets `error`, and the post-finalize refresh would
+  // otherwise wipe this message before the user can read it.
+  const [finalizeNotice, setFinalizeNotice] = useState<string | null>(null);
 
   // Pagination state - server-side
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,6 +81,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       if (initialLoadDone.current) {
         setCurrentPage(1);
         setSelectedInvoices(new Set());
+        setFinalizeNotice(null);
       }
     }, 300);
 
@@ -84,12 +93,14 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     setPageSize(newPageSize);
     setCurrentPage(1);
     setSelectedInvoices(new Set());
+    setFinalizeNotice(null);
   };
 
   // Handle page change - clear selection (server-side pagination means selected items may not be visible)
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     setSelectedInvoices(new Set());
+    setFinalizeNotice(null);
   };
 
   // Load data when pagination, search, or refresh changes
@@ -189,7 +200,25 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
   const handleFinalizeSingle = async (invoiceId: string) => {
     setError(null);
+    setFinalizeNotice(null);
     try {
+      // Pre-validate so we can surface the actual blocking reason. Thrown server-action
+      // errors are masked in production, so we rely on this returned shape instead of the
+      // exception text below.
+      const validation = await validateInvoiceFinalization(invoiceId);
+      if (!validation.canFinalize) {
+        if (validation.code === 'pending_external_tax') {
+          // Offer the escape hatch (switch to internal tax) rather than a dead-end message.
+          const invoice = invoices.find(inv => inv.invoice_id === invoiceId);
+          setTaxSourceFixState({ isOpen: true, invoiceId, invoiceNumber: invoice?.invoice_number ?? null });
+          return;
+        }
+        setError(validation.error ?? t('draftsTab.errors.finalizeFailed', {
+          defaultValue: 'Failed to finalize invoice. Please try again.',
+        }));
+        return;
+      }
+
       await finalizeInvoice(invoiceId);
       await loadData();
       onRefreshNeeded();
@@ -209,6 +238,45 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }
   };
 
+  // Escape hatch: switch a draft from external tax delegation back to internal tax
+  // calculation, then finalize it. Used when an invoice is stuck in `pending_external`
+  // and the tenant is not actually completing the export/import accounting cycle.
+  const handleSwitchToInternalAndFinalize = async () => {
+    const invoiceId = taxSourceFixState.invoiceId;
+    if (!invoiceId) return;
+    setIsFixingTaxSource(true);
+    setError(null);
+    setFinalizeNotice(null);
+    try {
+      const result = await updateInvoiceTaxSource(invoiceId, 'internal');
+      if (!result.success) {
+        setError(result.error ?? t('draftsTab.errors.finalizeFailed', {
+          defaultValue: 'Failed to finalize invoice. Please try again.',
+        }));
+        return;
+      }
+      await finalizeInvoice(invoiceId);
+      await loadData();
+      onRefreshNeeded();
+      setSelectedInvoices(prev => {
+        const next = new Set(prev);
+        next.delete(invoiceId);
+        return next;
+      });
+      if (selectedInvoiceId === invoiceId) {
+        updateUrlParams({ invoiceId: null, templateId: null });
+      }
+      setTaxSourceFixState({ isOpen: false, invoiceId: null, invoiceNumber: null });
+    } catch (err) {
+      console.error('Failed to switch tax source and finalize invoice:', err);
+      setError(t('draftsTab.errors.finalizeFailed', {
+        defaultValue: 'Failed to finalize invoice. Please try again.',
+      }));
+    } finally {
+      setIsFixingTaxSource(false);
+    }
+  };
+
   const openReverseDialog = (invoiceIds: string[]) => {
     setReverseDialogState({ isOpen: true, invoiceIds });
   };
@@ -225,14 +293,40 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
   const handleBulkFinalize = async () => {
     setError(null);
+    setFinalizeNotice(null);
     try {
+      // Pre-validate each invoice so blocked ones (e.g. awaiting external tax import) are
+      // skipped with an accurate explanation rather than aborting the whole batch.
+      let blockedByPendingTax = 0;
+      let otherBlocked = 0;
       for (const invoiceId of selectedInvoices) {
+        const validation = await validateInvoiceFinalization(invoiceId);
+        if (!validation.canFinalize) {
+          if (validation.code === 'pending_external_tax') {
+            blockedByPendingTax += 1;
+          } else {
+            otherBlocked += 1;
+          }
+          continue;
+        }
         await finalizeInvoice(invoiceId);
       }
       setSelectedInvoices(new Set());
       await loadData();
       onRefreshNeeded();
       updateUrlParams({ invoiceId: null, templateId: null });
+
+      if (blockedByPendingTax > 0) {
+        setFinalizeNotice(t('draftsTab.errors.bulkFinalizePendingTax', {
+          count: blockedByPendingTax,
+          defaultValue: `${blockedByPendingTax} invoice(s) were skipped because they are awaiting external tax import. Import the tax from your accounting system, or switch them to internal tax, then finalize them individually.`,
+        }));
+      } else if (otherBlocked > 0) {
+        setFinalizeNotice(t('draftsTab.errors.bulkFinalizeSkipped', {
+          count: otherBlocked,
+          defaultValue: `${otherBlocked} invoice(s) could not be finalized and were skipped.`,
+        }));
+      }
     } catch (err) {
       console.error('Failed to finalize selected invoices:', err);
       setError(t('draftsTab.errors.bulkFinalizeFailed', {
@@ -453,6 +547,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         </Alert>
       )}
 
+      {finalizeNotice && (
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>{finalizeNotice}</AlertDescription>
+        </Alert>
+      )}
+
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
@@ -599,6 +699,24 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         confirmLabel={t('draftsTab.reverseDialog.confirm', { defaultValue: 'Reverse Draft' })}
         cancelLabel={t('draftsTab.reverseDialog.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isReverseConfirming}
+      />
+
+      <ConfirmationDialog
+        id="finalize-pending-tax-confirmation"
+        isOpen={taxSourceFixState.isOpen}
+        onClose={() => setTaxSourceFixState({ isOpen: false, invoiceId: null, invoiceNumber: null })}
+        onConfirm={handleSwitchToInternalAndFinalize}
+        title={t('draftsTab.pendingTaxDialog.title', {
+          defaultValue: 'Invoice awaiting external tax',
+        })}
+        message={t('draftsTab.pendingTaxDialog.message', {
+          invoiceNumber: taxSourceFixState.invoiceNumber ?? '',
+          defaultValue:
+            'This invoice is set to use tax calculated by an external accounting system, but no tax has been imported yet, so it cannot be finalized. Export it to your accounting system (QuickBooks, Xero) and import the tax back to finalize with external tax — or switch this invoice to internal tax now so Alga calculates the tax and finalize it.',
+        })}
+        confirmLabel={t('draftsTab.pendingTaxDialog.confirm', { defaultValue: 'Switch to internal tax & finalize' })}
+        cancelLabel={t('draftsTab.pendingTaxDialog.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isFixingTaxSource}
       />
     </div>
   );

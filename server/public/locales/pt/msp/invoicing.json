@@ -308,7 +308,11 @@
       "finalizeFailed": "Falha ao finalizar a fatura. Por favor, tente novamente.",
       "bulkFinalizeFailed": "Falha ao finalizar as faturas selecionadas. Por favor, tente novamente.",
       "pdfFailed": "Falha ao gerar PDF. Por favor, tente novamente.",
-      "reverseFailed": "Falha ao reverter rascunhos de fatura(s). Por favor, tente novamente."
+      "reverseFailed": "Falha ao reverter rascunhos de fatura(s). Por favor, tente novamente.",
+      "bulkFinalizePendingTax_one": "{{count}} fatura foi ignorada porque está aguardando a importação do imposto externo. Importe o imposto do seu sistema contábil, ou altere-a para imposto interno, e então finalize-a individualmente.",
+      "bulkFinalizePendingTax_other": "{{count}} faturas foram ignoradas porque estão aguardando a importação do imposto externo. Importe o imposto do seu sistema contábil, ou altere-as para imposto interno, e então finalize-as individualmente.",
+      "bulkFinalizeSkipped_one": "Não foi possível finalizar {{count}} fatura e ela foi ignorada.",
+      "bulkFinalizeSkipped_other": "Não foi possível finalizar {{count}} faturas e elas foram ignoradas."
     },
     "reverseDialog": {
       "title": "Rascunho de fatura reversa",
@@ -316,6 +320,12 @@
       "message_one": "A reversão deste rascunho de fatura irá excluí-lo e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "message_other": "A reversão de faturas preliminares {{count}} irá excluí-las e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "confirm": "Rascunho reverso",
+      "cancel": "Cancelar"
+    },
+    "pendingTaxDialog": {
+      "title": "Fatura aguardando imposto externo",
+      "message": "Esta fatura está configurada para usar o imposto calculado por um sistema contábil externo, mas nenhum imposto foi importado ainda, portanto ela não pode ser finalizada. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizá-la com imposto externo — ou altere esta fatura para imposto interno agora para que o Alga calcule o imposto e finalize-a.",
+      "confirm": "Alterar para imposto interno e finalizar",
       "cancel": "Cancelar"
     }
   },
