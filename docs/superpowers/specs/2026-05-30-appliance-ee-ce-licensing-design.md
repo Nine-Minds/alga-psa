@@ -190,8 +190,10 @@ CE-chosen install that later wants to try Enterprise).
 
 ### 6.5 Seat claim
 
-The `seats` claim is informational in v1; it is deliberately not wired to the existing
-`licensed_user_count` enforcement (future enhancement).
+The `seats` claim **is enforced for EE tiers** — wired to the existing `licensed_user_count`
+enforcement — while **`essentials` is not metered** (the community-equivalent floor imposes no
+seat limit). *(Refined 2026-05-30 by the purchase-and-distribution design; supersedes the original
+"informational only" plan.)*
 
 ## 7. Component 3 — Appliance integration
 
@@ -240,9 +242,12 @@ The `seats` claim is informational in v1; it is deliberately not wired to the ex
 
 ## 10. Out of scope (v1)
 
-Self-service purchase/renewal portal and Stripe auto-issuance; online revocation; install/
-hardware binding; seat enforcement from the license; per-tenant licenses on the appliance;
-OS/k3s update changes.
+Install/hardware binding; per-tenant licenses on the appliance; OS/k3s update changes.
+
+*(Self-service purchase/renewal portal, Stripe auto-issuance, and online revocation — originally
+out of scope here — are now designed in
+`2026-05-30-appliance-license-purchase-and-distribution-design.md`. Seat enforcement is now in
+scope; see §6.5.)*
 
 ## 11. Defaults
 
