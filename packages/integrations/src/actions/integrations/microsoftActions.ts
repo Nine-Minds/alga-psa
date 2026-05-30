@@ -14,6 +14,7 @@ import {
   isMicrosoftConsumerEnterpriseEdition,
   isVisibleMicrosoftConsumerType,
 } from '../../lib/microsoftConsumerVisibility';
+import { eeRuntimeEnabledServer } from '@alga-psa/licensing';
 import {
   MICROSOFT_PROFILE_CONSUMERS,
   type MicrosoftProfileConsumer,
@@ -1260,11 +1261,14 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
 
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
     const baseUrl = await getDeploymentBaseUrl();
-    const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
+    // Enforce the essentials tier at the server: at essentials, EE Microsoft
+    // consumers (email/calendar/teams) are hidden, leaving only msp_sso (CE set).
+    const eeEnabled = await eeRuntimeEnabledServer();
+    const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl, eeEnabled);
     const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
     const visibleProfiles = profiles.map((profile) => ({
       ...profile,
-      consumers: getVisibleConsumerLabels(profile.consumers),
+      consumers: getVisibleConsumerLabels(profile.consumers, eeEnabled),
     }));
 
     return {

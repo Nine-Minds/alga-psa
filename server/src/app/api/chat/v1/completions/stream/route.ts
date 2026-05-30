@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { assertPsaChatProductAccess } from '../../../productAccess';
+import { eeRuntimeEnabledServer } from '@alga-psa/licensing';
 
 const isEnterpriseEdition =
   env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -266,7 +267,7 @@ export async function POST(req: NextRequest) {
     return productAccessResponse;
   }
 
-  if (!isEnterpriseEdition) {
+  if (!isEnterpriseEdition || !(await eeRuntimeEnabledServer())) {
     return new Response(
       JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),
       {

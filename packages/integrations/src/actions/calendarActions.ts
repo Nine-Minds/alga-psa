@@ -3,6 +3,7 @@
 import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { isCalendarEnterpriseEdition } from '../lib/calendarAvailability';
+import { eeRuntimeEnabledServer } from '@alga-psa/licensing';
 import type {
   CalendarProviderConfig,
   CalendarSyncStatus,
@@ -128,7 +129,7 @@ export const initiateCalendarOAuth = withAuth(async (
   { tenant },
   params: CalendarOAuthParams
 ): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -172,7 +173,7 @@ export const getCalendarProviders = withAuth(async (
   providers?: CalendarProviderConfig[];
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -193,7 +194,7 @@ export const createCalendarProvider = withAuth(async (
   provider?: CalendarProviderConfig;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -215,7 +216,7 @@ export const updateCalendarProvider = withAuth(async (
   provider?: CalendarProviderConfig;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -235,7 +236,7 @@ export const deleteCalendarProvider = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -256,7 +257,7 @@ export const syncScheduleEntryToCalendar = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -277,7 +278,7 @@ export const syncExternalEventToSchedule = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -297,7 +298,7 @@ export const resolveCalendarConflict = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -318,7 +319,7 @@ export const getScheduleEntrySyncStatus = withAuth(async (
   status?: CalendarSyncStatus[];
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -339,7 +340,7 @@ export const syncCalendarProvider = withAuth(async (
   started?: boolean;
   error?: string;
 }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 
@@ -356,7 +357,7 @@ export const retryMicrosoftCalendarSubscriptionRenewal = withAuth(async (
   { tenant },
   providerId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
-  if (!isCalendarEnterpriseEdition()) {
+  if (!isCalendarEnterpriseEdition() || !(await eeRuntimeEnabledServer())) {
     return calendarUnavailable();
   }
 

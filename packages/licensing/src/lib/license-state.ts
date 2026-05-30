@@ -7,6 +7,7 @@
  */
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { TenantTier } from '@alga-psa/types';
+import { isEnterprise } from '@alga-psa/core/features';
 import { verifyLicense, clearLicenseVerifyCache } from './verify-license';
 
 /** Raw row from the license_state table. */
@@ -130,4 +131,31 @@ export function resolveSelfHostTier(row: LicenseStateRow | null): ResolvedLicens
 
   // 4. EE chosen but no trial started yet — essentials until trial starts.
   return { state: 'trial_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
+}
+
+/**
+ * Server-side EE-runtime check for edition-only feature gates that are NOT
+ * covered by the tier-aware assertTierAccess (e.g. calendar, Microsoft-consumer,
+ * AI endpoints — features gated by edition rather than a TIER_FEATURES entry).
+ *
+ * Semantics:
+ *   - CE build                              → false
+ *   - EE build, no license_state row (SaaS) → true (behaviour unchanged)
+ *   - EE build, self-host @ essentials      → false (behaves as CE)
+ *   - EE build, self-host licensed/trial    → true
+ *
+ * Falls back to the build-time edition on any DB error so a transiently
+ * unavailable license_state table never disables EE features on a hosted EE
+ * deployment.
+ */
+export async function eeRuntimeEnabledServer(): Promise<boolean> {
+  if (!isEnterprise) return false;
+  try {
+    const row = await getLicenseStateRow();
+    const resolved = resolveSelfHostTier(row);
+    if (resolved === null) return true; // SaaS / no self-host record
+    return resolved.tier !== 'essentials';
+  } catch {
+    return true; // EE build; don't disable features if license_state is unavailable
+  }
 }

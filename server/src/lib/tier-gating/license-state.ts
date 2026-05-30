@@ -3,6 +3,7 @@ export {
   getLicenseStateRow,
   upsertLicenseState,
   resolveSelfHostTier,
+  eeRuntimeEnabledServer,
   type LicenseStateRow,
   type LicenseStateKind,
   type ResolvedLicenseState,

@@ -3,6 +3,7 @@ import { getExperimentalFeaturesForTenant } from '@alga-psa/tenancy/actions';
 import { ADD_ONS } from '@alga-psa/types';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { AddOnAccessError, assertTenantAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
+import { eeRuntimeEnabledServer } from '@alga-psa/licensing';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -49,8 +50,8 @@ async function resolveDocumentName(tenantId: string, documentId: string): Promis
 }
 
 export async function POST(req: NextRequest) {
-  // Gate 1: Edition check
-  if (!isEnterpriseEdition) {
+  // Gate 1: Edition check (build edition AND runtime tier > essentials)
+  if (!isEnterpriseEdition || !(await eeRuntimeEnabledServer())) {
     return new Response(
       JSON.stringify({ error: 'Document AI assist is only available in Enterprise Edition' }),
       { status: 404, headers: { 'Content-Type': 'application/json' } },

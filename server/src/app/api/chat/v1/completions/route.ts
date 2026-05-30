@@ -3,6 +3,7 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { ADD_ONS } from '@alga-psa/types';
 import { AddOnAccessError, assertAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
 import { assertPsaChatProductAccess } from '../../productAccess';
+import { eeRuntimeEnabledServer } from '@alga-psa/licensing';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     return productAccessResponse;
   }
 
-  if (!isEnterpriseEdition) {
+  if (!isEnterpriseEdition || !(await eeRuntimeEnabledServer())) {
     return new Response(
       JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),
       {

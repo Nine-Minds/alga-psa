@@ -14,6 +14,7 @@ export default defineConfig({
       // pure functions (verifyLicense, resolveSelfHostTier) that don't call the DB.
       '@alga-psa/db/admin': path.resolve(__dirname, 'src/lib/__test-fixtures__/db-admin-stub.ts'),
       '@alga-psa/types': path.resolve(__dirname, '../../packages/types/src/index.ts'),
+      '@alga-psa/core/features': path.resolve(__dirname, '../../packages/core/src/lib/features.ts'),
     },
   },
 });

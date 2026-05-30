@@ -50,19 +50,24 @@ Representative (not exhaustive — ~120 sites). These are NOT user-surface gates
   ExtensionManagement `isEEBuild`, ExtensionSettings page) — the import target stays build-time; only the
   render decision is gated by eeEnabled.
 
-## KNOWN GAP — server-side enforcement for edition-only EE features (follow-up, see F038)
+## Server-side enforcement for edition-only EE features (F038 — RESOLVED)
 
-EE features that are gated ONLY by edition (not by a `TIER_FEATURES` entry, so not covered by the
-tier-aware `assertTierAccess`) still pass their **server-action / API-route** edition checks at the
-essentials tier, because those checks read build-time `isEnterprise`/edition:
+EE features gated ONLY by edition (not by a `TIER_FEATURES` entry) are now enforced at the server layer
+via `eeRuntimeEnabledServer()` in `packages/licensing` — `isEnterprise && self-host tier != essentials`,
+falling back to `isEnterprise` on any DB error so hosted EE is never disabled. Applied to:
 
-- `packages/integrations/src/actions/calendarActions.ts` (~12 `if (!isCalendarEnterpriseEdition())` guards)
-- `packages/integrations/src/actions/integrations/microsoftActions.ts` (MS consumer guards)
-- `server/src/app/api/chat/v1/*`, `server/src/app/api/v1/ai/*` (AI endpoints — also add-on gated, so
-  effectively blocked at essentials by the absent `AI_ASSISTANT` add-on)
+- `packages/integrations/src/actions/calendarActions.ts` — all 11 `isCalendarEnterpriseEdition()` guards
+  now also require `await eeRuntimeEnabledServer()`.
+- `packages/integrations/src/actions/integrations/microsoftActions.ts` — `getMicrosoftIntegrationStatus`
+  resolves `eeRuntimeEnabledServer()` once and threads it into the consumer-visibility helpers.
+- `server/src/app/api/chat/v1/{completions,completions/stream,execute}/route.ts` and
+  `server/src/app/api/v1/ai/document-assist/route.ts` — edition gate now also requires
+  `eeRuntimeEnabledServer()` (AI is additionally `AI_ASSISTANT` add-on gated).
 
-**Impact:** the UI for these is hidden at essentials (Class B above), but a direct server-action/API
-call would still execute. For a single-tenant self-hosted appliance this is a soft boundary, consistent
-with the v1 trust model. **Recommended follow-up (F038):** add a server-side `eeEnabled` resolution
-(via `getLicenseStateRow()`/session) to these edition-only feature gates so essentials is enforced at the
-server layer too. Not implemented in this pass.
+At essentials these now return their CE response (placeholder/404/reduced consumer set). SaaS is
+unchanged (no `license_state` row → `eeRuntimeEnabledServer()` returns true).
+
+**Note on `@enterprise` platform routes** (extensions, platform notifications/reports, workflow studio):
+these are gated by **tier-features** (`EXTENSIONS` etc.) / product-access / add-ons, not by edition. They
+are essentials-aware through the now tier-aware `assertTierAccess` / `hasFeature` (`session.user.effectiveTier`),
+so they are not part of the edition-only F038 set.

@@ -47,7 +47,8 @@
     "imapflow": "^1.2.18",
     "knex": "^3.1.0",
     "zod": "^3.22.4",
-    "@alga-psa/auth": "*"
+    "@alga-psa/auth": "*",
+    "@alga-psa/licensing": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

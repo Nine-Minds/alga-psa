@@ -95,10 +95,14 @@ Adversarial review (3 parallel audits + executable verification) found and FIXED
 - **MEDIUM (F036):** classified inventory artifact didn't exist → created `CHOKE-POINT-INVENTORY.md`.
 - **NITs:** removed dead `eeEnabled` import in LicenseBanner; corrected verifyLicense memoization docstring.
 
-**DEFERRED (F038, now marked implemented:false):** server-side enforcement of edition-only EE features
-(calendarActions ×12, microsoftActions ×2, AI chat/ai API routes) still pass build-time edition checks
-and execute at essentials. UI for these IS hidden. Soft boundary for v1; precise follow-up documented in
-CHOKE-POINT-INVENTORY.md. AI routes are additionally add-on-gated.
+**F038 (now IMPLEMENTED):** server-side enforcement of edition-only EE features via new
+`eeRuntimeEnabledServer()` in packages/licensing (`isEnterprise && self-host tier != essentials`,
+error-fallback to isEnterprise so hosted EE never disabled). Applied to calendarActions (11 guards),
+microsoftActions (getMicrosoftIntegrationStatus → consumer-visibility helpers), and AI chat/ai routes
+(completions/stream/execute/document-assist). SaaS unchanged (no row → returns true). Added
+`@alga-psa/licensing` dep to packages/integrations; aliased `@alga-psa/core/features` in the licensing
+vitest config so the helper's `isEnterprise` import resolves in unit tests. @enterprise platform routes
+(extensions etc.) are tier-feature/product/add-on gated, now essentials-aware via assertTierAccess/hasFeature.
 
 Verification after fixes: shared typecheck no longer reports the essentials TS2741 (only pre-existing
 missing-module errors remain); 18/18 licensing tests pass; CLI sign + gen-fixture round-trip OK; rendered
