@@ -45,6 +45,31 @@ import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
+import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
+import { TIER_RANK } from "@alga-psa/types";
+
+/**
+ * Resolves the effective tier and eeEnabled flag for the current install.
+ * In self-host mode (license_state row present), uses offline license/trial.
+ * In SaaS mode (no row), falls back to the plan from subInfo.
+ */
+async function resolveEffectiveTierForSession(planFromStripe?: string): Promise<{ effectiveTier: string; eeEnabled: boolean }> {
+    try {
+        const row = await getLicenseStateRow();
+        const selfHost = resolveSelfHostTier(row);
+        if (selfHost !== null) {
+            const tier = selfHost.tier;
+            const eeEnabled = isEnterprise && TIER_RANK[tier as keyof typeof TIER_RANK] > TIER_RANK['essentials'];
+            return { effectiveTier: tier, eeEnabled };
+        }
+    } catch {
+        // Non-fatal — fall through to plan-based resolution.
+    }
+    // SaaS: use the plan from the subscription info (default 'pro' for null).
+    const tier = planFromStripe ?? 'pro';
+    const eeEnabled = isEnterprise && TIER_RANK[tier as keyof typeof TIER_RANK] > TIER_RANK['essentials'];
+    return { effectiveTier: tier, eeEnabled };
+}
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -1696,6 +1721,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = Date.now();
+                        const tierInfo = await resolveEffectiveTierForSession(subInfo.plan ?? undefined);
+                        token.effectiveTier = tierInfo.effectiveTier;
+                        token.eeEnabled = tierInfo.eeEnabled;
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
                     }
@@ -1810,6 +1838,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = now;
+                        const tierInfo = await resolveEffectiveTierForSession(subInfo.plan ?? undefined);
+                        token.effectiveTier = tierInfo.effectiveTier;
+                        token.eeEnabled = tierInfo.eeEnabled;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
                         // Don't block on plan refresh errors
@@ -1878,6 +1909,8 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                user.effectiveTier = token.effectiveTier as string | undefined;
+                user.eeEnabled = token.eeEnabled as boolean | undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2443,6 +2476,9 @@ export const options: NextAuthConfig = {
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = Date.now();
+                        const tierInfo = await resolveEffectiveTierForSession(subInfo.plan ?? undefined);
+                        token.effectiveTier = tierInfo.effectiveTier;
+                        token.eeEnabled = tierInfo.eeEnabled;
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
                     }
@@ -2557,6 +2593,9 @@ export const options: NextAuthConfig = {
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = now;
+                        const tierInfo = await resolveEffectiveTierForSession(subInfo.plan ?? undefined);
+                        token.effectiveTier = tierInfo.effectiveTier;
+                        token.eeEnabled = tierInfo.eeEnabled;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
                         // Don't block on plan refresh errors
@@ -2624,6 +2663,8 @@ export const options: NextAuthConfig = {
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                user.effectiveTier = token.effectiveTier as string | undefined;
+                user.eeEnabled = token.eeEnabled as boolean | undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

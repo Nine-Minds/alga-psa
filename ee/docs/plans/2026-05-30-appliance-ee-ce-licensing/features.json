@@ -1,105 +1,700 @@
 [
-  { "id": "F001", "description": "Define license JWT claim schema (iss, sub, cust, tier, seats?, iat, exp) and document the ES256/P-256 token shape.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR1 — License token format"] },
-  { "id": "F002", "description": "Add license token TypeScript types to packages/licensing (LicenseClaims, LicenseTier = 'pro'|'premium').", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR1 — License token format"] },
-  { "id": "F003", "description": "Implement verifyLicense(token) in packages/licensing using jsonwebtoken (ES256) returning { valid, claims, reason }.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR2 — Verification module"] },
-  { "id": "F004", "description": "verifyLicense validates exp/iat (with small clock skew) and maps failures to stable reason codes (expired, bad_signature, unknown_kid, malformed).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR2 — Verification module"] },
-  { "id": "F005", "description": "verifyLicense selects the verifying public key by JWT header kid.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR2 — Verification module", "Requirements > Functional Requirements > FR3 — Public keys & rotation"] },
-  { "id": "F006", "description": "Embed a checked-in public-key registry (kid -> PEM) in packages/licensing; no secret material in the build.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR3 — Public keys & rotation"] },
-  { "id": "F007", "description": "Support multiple active public keys to enable key rotation without breaking deployed appliances.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR3 — Public keys & rotation"] },
-  { "id": "F008", "description": "Internal signing CLI 'alga-license sign --customer --tier --months [--seats]' that mints a signed token.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR4 — Signing CLI & key custody"] },
-  { "id": "F009", "description": "Signing CLI loads the private key from env/file at runtime and never commits key material.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR4 — Signing CLI & key custody"] },
-  { "id": "F010", "description": "Signing CLI can generate a throwaway test keypair and fixture tokens (valid / expired / wrong-kid / tampered) for tests.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR4 — Signing CLI & key custody"] },
-  { "id": "F011", "description": "Key-management & rotation doc (private-key custody, kid rotation, manual issue/renew procedure).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR4 — Signing CLI & key custody"] },
-
-  { "id": "F012", "description": "Add 'essentials' to TENANT_TIERS and TIER_RANK as the lowest tier in packages/types/src/constants/tenantTiers.ts.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR5 — essentials tier"] },
-  { "id": "F013", "description": "Update resolveTier()/isValidTier and any rank comparisons to handle 'essentials'.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR5 — essentials tier"] },
-  { "id": "F014", "description": "Ensure FEATURE_MINIMUM_TIER puts every EE feature at >= solo so 'essentials' grants none of them.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR5 — essentials tier"] },
-  { "id": "F015", "description": "Constrain license tier to {pro, premium}; 'essentials'/'solo' are never sold/encoded in a license.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR5 — essentials tier"] },
-
-  { "id": "F016", "description": "Migration in server/migrations creating the admin-DB singleton license_state (edition_choice, trial_started_at, license_token, updated_at).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR6 — license_state schema"] },
-  { "id": "F017", "description": "license_state accessor/repository: read singleton and upsert singleton (admin connection).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR6 — license_state schema", "Requirements > Functional Requirements > FR7 — Self-host mode detection"] },
-
-  { "id": "F018", "description": "resolveSelfHostTier(): returns { tier, state, expiresAt } when a license_state row exists, else null (SaaS path).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR7 — Self-host mode detection"] },
-  { "id": "F019", "description": "In-process memoization of verifyLicense keyed by token string (invalidated on license change).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR7 — Self-host mode detection"] },
-
-  { "id": "F020", "description": "Effective-tier resolution order: valid license -> license.tier; else active trial -> premium; else essentials.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F021", "description": "Trial window computation from trial_started_at + 30 days.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F022", "description": "License expiry enforced at resolution time (now < exp), per request.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F023", "description": "Self-host resolution supersedes tenants.plan (plan ignored when a license_state row exists).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F024", "description": "SaaS path unchanged when no license_state row (NULL->pro, Stripe solo->pro/premium trials intact).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F025", "description": "Integrate resolveSelfHostTier into server getTenantTier/assertTierAccess as the first-consulted path.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-  { "id": "F026", "description": "Keep the appliance trial independent of the existing Stripe premium-trial mechanics (no cross-effect).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR8 — Effective-tier resolution"] },
-
-  { "id": "F027", "description": "Locate the next-auth session/JWT callback that sets session.user.plan and extend it.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR9 — Session plumbing"] },
-  { "id": "F028", "description": "Add effectiveTier to the session/JWT (resolved server-side).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR9 — Session plumbing"] },
-  { "id": "F029", "description": "Add eeEnabled boolean to the session/JWT (isEnterprise && rank(effectiveTier) > rank(essentials)).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR9 — Session plumbing"] },
-
-  { "id": "F030", "description": "Server helper eeRuntimeEnabled() = isEnterprise && rank(effectiveTier) > rank('essentials').", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR10 — Runtime gating helpers"] },
-  { "id": "F031", "description": "TierContext exposes eeEnabled from the session.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR10 — Runtime gating helpers"] },
-  { "id": "F032", "description": "TierContext hasFeature/hasAddOn respect effectiveTier including 'essentials'.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR10 — Runtime gating helpers"] },
-
-  { "id": "F033", "description": "Inventory: enumerate all runtime isEnterprise / isEnterpriseEdition() usages across server + packages + shared + ee.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR11 — Choke-point inventory"] },
-  { "id": "F034", "description": "Inventory: enumerate all runtime NEXT_PUBLIC_EDITION / process.env.EDITION reads (excluding build-only next.config).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR11 — Choke-point inventory"] },
-  { "id": "F035", "description": "Classify each usage: module-presence guard (leave build-time) vs surface/feature-exposure gate (convert).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR11 — Choke-point inventory"] },
-  { "id": "F036", "description": "Record the classified inventory as a checklist artifact in the plan folder.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR11 — Choke-point inventory"] },
-
-  { "id": "F037", "description": "Convert surface gates in server/src page/component surfaces to eeEnabled/eeRuntimeEnabled.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F038", "description": "Convert surface gates in server/src API routes (return 404/placeholder when !eeRuntimeEnabled).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F039", "description": "Convert surface gates in packages/integrations (largest package surface; RMM/accounting/SSO/Teams/etc affordances).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F040", "description": "Convert surface gates in packages/clients (ClientDetails EE affordances).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F041", "description": "Convert surface gates in packages/email.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F042", "description": "Convert surface gates in packages/sla.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F043", "description": "Convert surface gates in packages/scheduling.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F044", "description": "Convert surface gates in packages/storage.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F045", "description": "Convert surface gates in packages/users.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F046", "description": "Convert surface gates in packages/core.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F047", "description": "Convert surface gates in packages/auth (SSO provider buttons / login affordances).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F048", "description": "Convert surface gates in packages/client-portal.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F049", "description": "Convert surface gates in shared/workflow.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F050", "description": "Convert surface gates in shared/services.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F051", "description": "Convert surface gates in ee/server app surfaces (EE pages/routes exposed at runtime).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F052", "description": "Convert surface gates in ee/packages (e.g. microsoft-teams) runtime affordances.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F053", "description": "Leave module-presence import guards as build-time isEnterprise and document why (avoid breaking imports at essentials).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F054", "description": "Default-locked safety net: ambiguous/unconverted EE surfaces stay hidden at essentials.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F055", "description": "Hide EE navigation/menu entries at essentials (sidebar/menus driven by eeEnabled).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-  { "id": "F056", "description": "RightSidebar and global affordances respect eeEnabled instead of NEXT_PUBLIC_EDITION.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR12 — Exhaustive surface conversion"] },
-
-  { "id": "F057", "description": "License page route under the EE msp/licenses area.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-  { "id": "F058", "description": "License page shows current state (essentials / trial / licensed) with expiry and days remaining.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-  { "id": "F059", "description": "License page paste-and-submit license field with inline verification feedback.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-  { "id": "F060", "description": "License page 'Start 30-day Enterprise trial' action with guard state shown.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-  { "id": "F061", "description": "License page reachable at essentials (gated by admin RBAC only, NOT eeRuntimeEnabled).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-  { "id": "F062", "description": "License page admin RBAC authorization (non-admins blocked).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR13 — In-app License page"] },
-
-  { "id": "F063", "description": "In-app trial/license banner component.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR14 — Trial/expiry banner"] },
-  { "id": "F064", "description": "Banner shows trial countdown / license expiry / essentials state and links to the License page.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR14 — Trial/expiry banner"] },
-  { "id": "F065", "description": "Banner only renders in self-host mode (license_state present).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR14 — Trial/expiry banner"] },
-
-  { "id": "F066", "description": "getLicenseStatus() server action returns { state, tier, expiresAt, daysRemaining }.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR15 — License/trial server actions"] },
-  { "id": "F067", "description": "submitLicense(token): verify, upsert license_state.license_token, invalidate memo.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR15 — License/trial server actions"] },
-  { "id": "F068", "description": "submitLicense rejects invalid/expired/wrong-kid tokens with a reason and does not store them.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR15 — License/trial server actions"] },
-  { "id": "F069", "description": "startTrial(): set trial_started_at when null; guard to one trial per install.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR15 — License/trial server actions"] },
-  { "id": "F070", "description": "startTrial blocked when already licensed or trial already used.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR15 — License/trial server actions"] },
-
-  { "id": "F071", "description": "Setup form: edition-choice control (Enterprise — 30-day trial vs Community/essentials).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR16 — Setup UI"] },
-  { "id": "F072", "description": "Setup form: optional license-key field.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR16 — Setup UI"] },
-  { "id": "F073", "description": "Setup form: client validation (choice required; license, if present, well-formed).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR16 — Setup UI"] },
-  { "id": "F074", "description": "Setup form: include editionChoice + licenseKey in the /api/setup POST payload.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR16 — Setup UI"] },
-  { "id": "F075", "description": "Setup form copy explains trial -> essentials and that a license can be entered later in-app.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR16 — Setup UI"] },
-
-  { "id": "F076", "description": "Control-plane /api/setup (server.mjs) accepts editionChoice and optional licenseKey.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR17 — Control-plane intake"] },
-  { "id": "F077", "description": "Control-plane does a light well-formed-JWS format check (no signature verification).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR17 — Control-plane intake"] },
-  { "id": "F078", "description": "validateSetupInputs (setup-engine.mjs) extended for editionChoice/licenseKey and persisted to setup inputs.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR17 — Control-plane intake"] },
-
-  { "id": "F079", "description": "setup-engine writes an appliance-license-seed Secret (EDITION_CHOICE, LICENSE_TOKEN) in msp.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR18 — Seed secret"] },
-  { "id": "F080", "description": "Seed Secret applied via kubectl in the setup workflow.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR18 — Seed secret"] },
-
-  { "id": "F081", "description": "Sebastian bootstrap job wires the appliance-license-seed Secret into its env (Helm chart change).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR19 — Bootstrap seeding"] },
-  { "id": "F082", "description": "Bootstrap upserts license_state from EDITION_CHOICE/LICENSE_TOKEN at first boot.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR19 — Bootstrap seeding"] },
-  { "id": "F083", "description": "Seeding mapping: ce -> essentials; ee w/o key -> trial (trial_started_at=now); key -> licensed.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR19 — Bootstrap seeding"] },
-  { "id": "F084", "description": "Seeding is idempotent (re-run does not reset an existing trial or overwrite a newer license).", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR19 — Bootstrap seeding"] },
-  { "id": "F085", "description": "Confirm/ensure the admin-DB license_state migration runs as part of the appliance bootstrap.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR19 — Bootstrap seeding"] },
-
-  { "id": "F086", "description": "EDITION/NEXT_PUBLIC_EDITION remain 'enterprise'; no Helm edition change; OSS CE build untouched.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR20 — No edition regression"] },
-  { "id": "F087", "description": "Verify the appliance still deploys the EE image and essentials gating works on that EE build.", "implemented": false, "prdRefs": ["Requirements > Functional Requirements > FR20 — No edition regression"] }
+  {
+    "id": "F001",
+    "description": "Define license JWT claim schema (iss, sub, cust, tier, seats?, iat, exp) and document the ES256/P-256 token shape.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 \u2014 License token format"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add license token TypeScript types to packages/licensing (LicenseClaims, LicenseTier = 'pro'|'premium').",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 \u2014 License token format"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement verifyLicense(token) in packages/licensing using jsonwebtoken (ES256) returning { valid, claims, reason }.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 \u2014 Verification module"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "verifyLicense validates exp/iat (with small clock skew) and maps failures to stable reason codes (expired, bad_signature, unknown_kid, malformed).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 \u2014 Verification module"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "verifyLicense selects the verifying public key by JWT header kid.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 \u2014 Verification module",
+      "Requirements > Functional Requirements > FR3 \u2014 Public keys & rotation"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Embed a checked-in public-key registry (kid -> PEM) in packages/licensing; no secret material in the build.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 \u2014 Public keys & rotation"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Support multiple active public keys to enable key rotation without breaking deployed appliances.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 \u2014 Public keys & rotation"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Internal signing CLI 'alga-license sign --customer --tier --months [--seats]' that mints a signed token.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 \u2014 Signing CLI & key custody"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Signing CLI loads the private key from env/file at runtime and never commits key material.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 \u2014 Signing CLI & key custody"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Signing CLI can generate a throwaway test keypair and fixture tokens (valid / expired / wrong-kid / tampered) for tests.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 \u2014 Signing CLI & key custody"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Key-management & rotation doc (private-key custody, kid rotation, manual issue/renew procedure).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 \u2014 Signing CLI & key custody"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add 'essentials' to TENANT_TIERS and TIER_RANK as the lowest tier in packages/types/src/constants/tenantTiers.ts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 \u2014 essentials tier"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Update resolveTier()/isValidTier and any rank comparisons to handle 'essentials'.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 \u2014 essentials tier"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure FEATURE_MINIMUM_TIER puts every EE feature at >= solo so 'essentials' grants none of them.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 \u2014 essentials tier"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Constrain license tier to {pro, premium}; 'essentials'/'solo' are never sold/encoded in a license.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 \u2014 essentials tier"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Migration in server/migrations creating the admin-DB singleton license_state (edition_choice, trial_started_at, license_token, updated_at).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 \u2014 license_state schema"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "license_state accessor/repository: read singleton and upsert singleton (admin connection).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 \u2014 license_state schema",
+      "Requirements > Functional Requirements > FR7 \u2014 Self-host mode detection"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "resolveSelfHostTier(): returns { tier, state, expiresAt } when a license_state row exists, else null (SaaS path).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 \u2014 Self-host mode detection"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "In-process memoization of verifyLicense keyed by token string (invalidated on license change).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 \u2014 Self-host mode detection"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Effective-tier resolution order: valid license -> license.tier; else active trial -> premium; else essentials.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Trial window computation from trial_started_at + 30 days.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "License expiry enforced at resolution time (now < exp), per request.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Self-host resolution supersedes tenants.plan (plan ignored when a license_state row exists).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "SaaS path unchanged when no license_state row (NULL->pro, Stripe solo->pro/premium trials intact).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Integrate resolveSelfHostTier into server getTenantTier/assertTierAccess as the first-consulted path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Keep the appliance trial independent of the existing Stripe premium-trial mechanics (no cross-effect).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 \u2014 Effective-tier resolution"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Locate the next-auth session/JWT callback that sets session.user.plan and extend it.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 \u2014 Session plumbing"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add effectiveTier to the session/JWT (resolved server-side).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 \u2014 Session plumbing"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Add eeEnabled boolean to the session/JWT (isEnterprise && rank(effectiveTier) > rank(essentials)).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 \u2014 Session plumbing"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Server helper eeRuntimeEnabled() = isEnterprise && rank(effectiveTier) > rank('essentials').",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 \u2014 Runtime gating helpers"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "TierContext exposes eeEnabled from the session.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 \u2014 Runtime gating helpers"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "TierContext hasFeature/hasAddOn respect effectiveTier including 'essentials'.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 \u2014 Runtime gating helpers"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Inventory: enumerate all runtime isEnterprise / isEnterpriseEdition() usages across server + packages + shared + ee.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11 \u2014 Choke-point inventory"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Inventory: enumerate all runtime NEXT_PUBLIC_EDITION / process.env.EDITION reads (excluding build-only next.config).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11 \u2014 Choke-point inventory"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Classify each usage: module-presence guard (leave build-time) vs surface/feature-exposure gate (convert).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11 \u2014 Choke-point inventory"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Record the classified inventory as a checklist artifact in the plan folder.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11 \u2014 Choke-point inventory"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Convert surface gates in server/src page/component surfaces to eeEnabled/eeRuntimeEnabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Convert surface gates in server/src API routes (return 404/placeholder when !eeRuntimeEnabled).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Convert surface gates in packages/integrations (largest package surface; RMM/accounting/SSO/Teams/etc affordances).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Convert surface gates in packages/clients (ClientDetails EE affordances).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Convert surface gates in packages/email.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Convert surface gates in packages/sla.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Convert surface gates in packages/scheduling.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Convert surface gates in packages/storage.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Convert surface gates in packages/users.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Convert surface gates in packages/core.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Convert surface gates in packages/auth (SSO provider buttons / login affordances).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Convert surface gates in packages/client-portal.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Convert surface gates in shared/workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Convert surface gates in shared/services.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Convert surface gates in ee/server app surfaces (EE pages/routes exposed at runtime).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Convert surface gates in ee/packages (e.g. microsoft-teams) runtime affordances.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Leave module-presence import guards as build-time isEnterprise and document why (avoid breaking imports at essentials).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Default-locked safety net: ambiguous/unconverted EE surfaces stay hidden at essentials.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Hide EE navigation/menu entries at essentials (sidebar/menus driven by eeEnabled).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "RightSidebar and global affordances respect eeEnabled instead of NEXT_PUBLIC_EDITION.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "License page route under the EE msp/licenses area.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "License page shows current state (essentials / trial / licensed) with expiry and days remaining.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "License page paste-and-submit license field with inline verification feedback.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "License page 'Start 30-day Enterprise trial' action with guard state shown.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "License page reachable at essentials (gated by admin RBAC only, NOT eeRuntimeEnabled).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "License page admin RBAC authorization (non-admins blocked).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13 \u2014 In-app License page"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "In-app trial/license banner component.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR14 \u2014 Trial/expiry banner"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Banner shows trial countdown / license expiry / essentials state and links to the License page.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR14 \u2014 Trial/expiry banner"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Banner only renders in self-host mode (license_state present).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR14 \u2014 Trial/expiry banner"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "getLicenseStatus() server action returns { state, tier, expiresAt, daysRemaining }.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15 \u2014 License/trial server actions"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "submitLicense(token): verify, upsert license_state.license_token, invalidate memo.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15 \u2014 License/trial server actions"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "submitLicense rejects invalid/expired/wrong-kid tokens with a reason and does not store them.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15 \u2014 License/trial server actions"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "startTrial(): set trial_started_at when null; guard to one trial per install.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15 \u2014 License/trial server actions"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "startTrial blocked when already licensed or trial already used.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15 \u2014 License/trial server actions"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Setup form: edition-choice control (Enterprise \u2014 30-day trial vs Community/essentials).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16 \u2014 Setup UI"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Setup form: optional license-key field.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16 \u2014 Setup UI"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Setup form: client validation (choice required; license, if present, well-formed).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16 \u2014 Setup UI"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Setup form: include editionChoice + licenseKey in the /api/setup POST payload.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16 \u2014 Setup UI"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Setup form copy explains trial -> essentials and that a license can be entered later in-app.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16 \u2014 Setup UI"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Control-plane /api/setup (server.mjs) accepts editionChoice and optional licenseKey.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR17 \u2014 Control-plane intake"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Control-plane does a light well-formed-JWS format check (no signature verification).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR17 \u2014 Control-plane intake"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "validateSetupInputs (setup-engine.mjs) extended for editionChoice/licenseKey and persisted to setup inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR17 \u2014 Control-plane intake"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "setup-engine writes an appliance-license-seed Secret (EDITION_CHOICE, LICENSE_TOKEN) in msp.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR18 \u2014 Seed secret"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Seed Secret applied via kubectl in the setup workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR18 \u2014 Seed secret"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Sebastian bootstrap job wires the appliance-license-seed Secret into its env (Helm chart change).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR19 \u2014 Bootstrap seeding"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Bootstrap upserts license_state from EDITION_CHOICE/LICENSE_TOKEN at first boot.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR19 \u2014 Bootstrap seeding"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Seeding mapping: ce -> essentials; ee w/o key -> trial (trial_started_at=now); key -> licensed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR19 \u2014 Bootstrap seeding"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Seeding is idempotent (re-run does not reset an existing trial or overwrite a newer license).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR19 \u2014 Bootstrap seeding"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Confirm/ensure the admin-DB license_state migration runs as part of the appliance bootstrap.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR19 \u2014 Bootstrap seeding"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "EDITION/NEXT_PUBLIC_EDITION remain 'enterprise'; no Helm edition change; OSS CE build untouched.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR20 \u2014 No edition regression"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Verify the appliance still deploys the EE image and essentials gating works on that EE build.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR20 \u2014 No edition regression"
+    ]
+  }
 ]

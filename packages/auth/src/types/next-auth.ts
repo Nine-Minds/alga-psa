@@ -49,6 +49,10 @@ declare module 'next-auth' {
       premium_trial_end?: string | null;
       premium_trial_confirmed?: boolean;
       premium_trial_effective_date?: string | null;
+      /** Resolved effective tier (includes self-host licensing). */
+      effectiveTier?: string;
+      /** True when the EE feature surface is active (Enterprise build + tier > essentials). */
+      eeEnabled?: boolean;
     };
   }
 
@@ -78,5 +82,7 @@ declare module 'next-auth' {
     last_activity_check?: number;
     last_revocation_check?: number;
     last_plan_check?: number;
+    effectiveTier?: string;
+    eeEnabled?: boolean;
   }
 }

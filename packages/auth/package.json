@@ -102,6 +102,8 @@
     "@auth/core": "^0.41.0",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/licensing": "*",
+    "@alga-psa/types": "*",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.30",
     "ua-parser-js": "^1.0.37"

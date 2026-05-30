@@ -52,7 +52,37 @@ Design spec (approved): `docs/superpowers/specs/2026-05-30-appliance-ee-ce-licen
 - `getFeatureImplementation()` has 0 call sites today (helper exists in features.ts but unused) — candidate central choke for some conversions.
 - Plan structures conversion features per-area (not 149 micro-features); each area gets classify → convert → essentials-parity tests.
 
+## Implementation discoveries (surprising/non-obvious)
+
+### 1. `resolveSelfHostTier` must return `license_expired` (not `trial_expired`) for expired tokens
+When a license token is present but expired, `verifyLicense` returns `{ valid:false, reason:'expired' }`.
+The resolver originally fell through to the trial check, returning `trial_expired` instead of `license_expired`.
+Fix: check `result.reason === 'expired'` explicitly before falling through. Only `malformed`/`bad_signature`/`unknown_kid` should fall through to trial resolution (the token is corrupt/wrong, not truly expired).
+
+### 2. `packages/auth` can't circularly import from `server/src`
+`nextAuthOptions.ts` (packages/auth) needed `getLicenseStateRow`/`resolveSelfHostTier`. These were initially put in `server/src/lib/tier-gating/license-state.ts`, but auth can't import from server. Moved the canonical implementation to `packages/licensing` (which has `@alga-psa/db` as a dep). `server/src/lib/tier-gating/license-state.ts` is now a thin re-export.
+
+### 3. `NEXT_PUBLIC_EDITION` is build-time inlined — can't be used for runtime gating
+On the EE build (appliance), `NEXT_PUBLIC_EDITION` is always `enterprise` (baked at `ee/server/Dockerfile.build:45`). Flipping it at runtime has no effect. All client surface gates must use `session.user.eeEnabled` (via `useEeEnabled()` hook or `useTier().eeEnabled`).
+
+### 4. Choke-point inventory result: ~124 type-A (module guards), ~14 type-B (surface gates)
+The exhaustive inventory found far fewer surface gates than the original ~149-file count suggested. Most usages are module-presence guards for dynamic imports and should remain build-time. The 14 surface gates converted span: 6 in `server/src`, 6 in `packages/integrations`, 1 in `packages/clients`, 1 in `server/src/components/layout/RightSidebar`.
+
+### 5. `RmmIntegrationsSetup` had no outer import anchor — used `RmmIntegrationModal` import as anchor for `useEeEnabled`
+
+### 6. `MicrosoftIntegrationSettings` uses `isMicrosoftConsumerEnterpriseEdition()` in TWO helper functions outside the component body
+`getConsumerDescriptors` and `getGuidanceBlocks` both called `isMicrosoftConsumerEnterpriseEdition()` directly. Solution: added `isEnterpriseEdition: boolean` parameter to both functions; component calls `useEeEnabled()` once and passes the value.
+
+### 7. Bootstrap `license_state` seed is guarded by `EDITION_CHOICE` env var presence
+The bootstrap script only seeds `license_state` when `EDITION_CHOICE` is set (populated from `appliance-license-seed` Secret). Existing appliances that don't have the seed secret will skip the upsert silently, retaining SaaS/unset behaviour.
+
+### 8. Admin-DB migrations run during appliance bootstrap via knex migrate:latest
+The `license_state` migration (20260530100000_create_license_state.cjs) will be picked up automatically by the bootstrap job's `NODE_ENV=migration npx knex migrate:latest` step. No additional wiring needed for F085.
+
+### 9. `essentials` tier uses rank -1 (not shifting existing ranks)
+Solo/pro/premium keep their existing ranks (0/1/2). `essentials` is -1. Verified no code compares TIER_RANK values to hardcoded numbers — all comparisons go through `tierAtLeast()` or `TIER_RANK[tier] >= TIER_RANK[min]`.
+
 ## TODO (fill as we go)
-- [ ] Locate next-auth session callback that sets `session.user.plan`.
-- [ ] Produce the classified choke-point inventory (first task of Component 2).
-- [ ] Confirm how admin-DB migrations are executed by the appliance bootstrap (sebastian chart).
+- [x] Locate next-auth session callback that sets `session.user.plan` → found in `packages/auth/src/lib/nextAuthOptions.ts` ~L1685, L1802, L2435, L2547. Session callbacks at L1854, L2600.
+- [x] Produce the classified choke-point inventory (first task of Component 2) → ~14 surface gates, ~124 module guards.
+- [x] Confirm how admin-DB migrations are executed by the appliance bootstrap → via `npx knex migrate:latest` in appliance-bootstrap-configmap.yaml:309. License_state migration will be picked up automatically.

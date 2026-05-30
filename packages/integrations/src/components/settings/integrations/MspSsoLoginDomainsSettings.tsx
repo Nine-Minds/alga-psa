@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useEeEnabled } from '@alga-psa/auth/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -29,7 +30,6 @@ type ClaimRow = {
   active_challenge_value?: string | null;
 };
 
-const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -62,6 +62,7 @@ function claimStatusVariant(status: ClaimStatus): 'info' | 'warning' | 'success'
 }
 
 export function MspSsoLoginDomainsSettings() {
+  const isEnterprise = useEeEnabled();
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);

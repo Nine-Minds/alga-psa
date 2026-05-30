@@ -1,4 +1,5 @@
 'use client';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -72,7 +73,7 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
 export default function AccountingIntegrationsSetup() {
   const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const isEEAvailable = useEeEnabled();
 
   const options = useMemo<AccountingIntegrationOption[]>(
     () => {

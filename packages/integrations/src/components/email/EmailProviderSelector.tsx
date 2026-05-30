@@ -9,8 +9,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Search, Building2, Mail } from 'lucide-react';
-import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 interface EmailProviderSelectorProps {
   onProviderSelected: (providerType: 'google' | 'microsoft' | 'imap') => void;
@@ -24,7 +24,7 @@ export function EmailProviderSelector({
   hideHeader = false,
 }: EmailProviderSelectorProps) {
   const { t } = useTranslation('msp/email-providers');
-  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
+  const isEnterpriseEdition = useEeEnabled();
   
   const handleProviderClick = (providerType: 'google' | 'microsoft' | 'imap') => {
     onProviderSelected(providerType);

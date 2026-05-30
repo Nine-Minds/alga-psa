@@ -124,7 +124,7 @@ const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentTyp
 
 export default function RmmIntegrationsSetup() {
   const { t } = useTranslation('msp/integrations');
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const isEEAvailable = useEeEnabled();
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;

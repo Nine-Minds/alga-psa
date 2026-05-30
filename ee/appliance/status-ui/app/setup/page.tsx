@@ -20,7 +20,7 @@ type SetupConfig = {
   };
 };
 
-type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef', string>>;
+type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef' | 'licenseKey', string>>;
 
 function tokenQuery() {
   if (typeof window === 'undefined') return '';
@@ -46,7 +46,11 @@ function passwordValidationError(value: string) {
   return null;
 }
 
-function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string }) {
+function isWellFormedJwt(value: string) {
+  return /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value);
+}
+
+function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string; licenseKey: string }) {
   const errors: FieldErrors = {};
 
   if (!payload.tenantName.trim()) errors.tenantName = 'Enter the company name for the initial tenant.';
@@ -84,6 +88,10 @@ function validateSetupForm(payload: { tenantName: string; adminFirstName: string
     errors.releaseRef = 'Use a release version (e.g. 1.0.3) or a digest (sha256:...).';
   }
 
+  if (payload.licenseKey && !isWellFormedJwt(payload.licenseKey.trim())) {
+    errors.licenseKey = 'License key format is invalid. Paste the full key as provided.';
+  }
+
   return errors;
 }
 
@@ -115,6 +123,8 @@ export default function SetupPage() {
   const [dnsMode, setDnsMode] = useState('system');
   const [dnsServers, setDnsServers] = useState('');
   const [releaseRef, setReleaseRef] = useState('');
+  const [editionChoice, setEditionChoice] = useState<'ee' | 'ce'>('ee');
+  const [licenseKey, setLicenseKey] = useState('');
 
   useEffect(() => {
     setQuery(tokenQuery());
@@ -159,6 +169,8 @@ export default function SetupPage() {
       dnsMode: String(formData.get('dnsMode') || dnsMode),
       dnsServers: String(formData.get('dnsServers') || ''),
       releaseRef: String(formData.get('releaseRef') || releaseRef),
+      editionChoice,
+      licenseKey: licenseKey.trim() || undefined,
     };
     const validation = validateSetupForm(payload);
     setFieldErrors(validation);
@@ -238,6 +250,46 @@ export default function SetupPage() {
             <h2>Setup details</h2>
             <form id="appliance-setup-form" className={styles.form} onSubmit={submit} noValidate>
               <div className={styles.formGrid}>
+                <div className={styles.field}>
+                  <label>Edition</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                      <input type="radio" name="editionChoice" value="ee" checked={editionChoice === 'ee'} onChange={() => setEditionChoice('ee')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
+                      <span>
+                        <strong>Enterprise</strong> — 30-day free trial, then reverts to Essentials.
+                        <br /><small style={{ color: 'var(--muted, #6b7280)' }}>Includes all features. Enter a license key below to extend beyond the trial.</small>
+                      </span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                      <input type="radio" name="editionChoice" value="ce" checked={editionChoice === 'ce'} onChange={() => setEditionChoice('ce')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
+                      <span>
+                        <strong>Essentials</strong> — core open-source feature set, no trial required.
+                        <br /><small style={{ color: 'var(--muted, #6b7280)' }}>You can start an Enterprise trial later from the in-app License page.</small>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {editionChoice === 'ee' && (
+                  <div className={styles.field}>
+                    <label htmlFor="setup-license-key">License key <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(optional — enter if you already have one)</small></label>
+                    <textarea
+                      id="setup-license-key"
+                      name="licenseKey"
+                      value={licenseKey}
+                      onChange={(event) => { setLicenseKey(event.target.value); clearFieldError('licenseKey'); }}
+                      placeholder="eyJhbGci…"
+                      rows={3}
+                      disabled={disabled}
+                      aria-invalid={Boolean(fieldErrors.licenseKey)}
+                      aria-describedby="setup-license-key-help setup-license-key-error"
+                      style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
+                    />
+                    <span id="setup-license-key-help" className={styles.helpText}>Paste the signed key from Nine Minds. Leave blank to start the 30-day trial.</span>
+                    {fieldErrors.licenseKey ? <span id="setup-license-key-error" className={styles.fieldError}>{fieldErrors.licenseKey}</span> : null}
+                  </div>
+                )}
+
                 <div className={styles.field}>
                   <label htmlFor="setup-channel">Release channel</label>
                   <select id="setup-channel" name="channel" value={channel} onChange={(event) => setChannel(event.target.value)} disabled={disabled}>

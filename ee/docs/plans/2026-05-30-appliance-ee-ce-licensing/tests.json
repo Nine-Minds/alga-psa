@@ -1,58 +1,498 @@
 [
-  { "id": "T001", "description": "verifyLicense accepts a CLI-signed valid token and returns { valid:true, claims } with correct tier/exp.", "implemented": false, "testType": "automated", "featureIds": ["F003", "F005", "F008"] },
-  { "id": "T002", "description": "verifyLicense rejects an expired token (exp in past) with reason 'expired'.", "implemented": false, "testType": "automated", "featureIds": ["F004"] },
-  { "id": "T003", "description": "verifyLicense rejects a tampered payload (signature mismatch) with reason 'bad_signature'.", "implemented": false, "testType": "automated", "featureIds": ["F003", "F004"] },
-  { "id": "T004", "description": "verifyLicense rejects an unknown/missing kid with reason 'unknown_kid'.", "implemented": false, "testType": "automated", "featureIds": ["F004", "F005"] },
-  { "id": "T005", "description": "verifyLicense verifies tokens signed under a rotated (second) kid against the multi-key registry.", "implemented": false, "testType": "automated", "featureIds": ["F006", "F007"] },
-  { "id": "T006", "description": "verifyLicense rejects a malformed (non-JWS) string with reason 'malformed'.", "implemented": false, "testType": "automated", "featureIds": ["F004"] },
-  { "id": "T007", "description": "Signing CLI mints a token that verifyLicense accepts (round-trip with the test keypair).", "implemented": false, "testType": "automated", "featureIds": ["F008", "F010"] },
-
-  { "id": "T008", "description": "resolveSelfHostTier returns null when no license_state row exists.", "implemented": false, "testType": "automated", "featureIds": ["F018"] },
-  { "id": "T009", "description": "Effective tier = license.tier for a valid, unexpired license.", "implemented": false, "testType": "automated", "featureIds": ["F020", "F022"] },
-  { "id": "T010", "description": "Effective tier = premium during the 30-day trial window.", "implemented": false, "testType": "automated", "featureIds": ["F020", "F021"] },
-  { "id": "T011", "description": "Effective tier = essentials after the trial window elapses.", "implemented": false, "testType": "automated", "featureIds": ["F020", "F021"] },
-  { "id": "T012", "description": "Effective tier = essentials when the license is expired.", "implemented": false, "testType": "automated", "featureIds": ["F020", "F022"] },
-  { "id": "T013", "description": "Effective tier = essentials for edition_choice = 'ce' (no trial, no license).", "implemented": false, "testType": "automated", "featureIds": ["F020"] },
-  { "id": "T014", "description": "Self-host resolution supersedes tenants.plan (plan set to premium but no license -> essentials).", "implemented": false, "testType": "automated", "featureIds": ["F023"] },
-  { "id": "T015", "description": "REGRESSION: with no license_state row, SaaS resolution is unchanged (NULL -> pro).", "implemented": false, "testType": "automated", "featureIds": ["F024"] },
-  { "id": "T016", "description": "REGRESSION: existing Stripe solo->pro / premium trials still resolve when no license_state row.", "implemented": false, "testType": "automated", "featureIds": ["F024", "F026"] },
-  { "id": "T017", "description": "verifyLicense result is memoized per token string (second call hits cache).", "implemented": false, "testType": "automated", "featureIds": ["F019"] },
-  { "id": "T018", "description": "eeRuntimeEnabled() is false at essentials and true at solo/pro/premium (on an EE build).", "implemented": false, "testType": "automated", "featureIds": ["F030"] },
-  { "id": "T019", "description": "TIER_RANK orders essentials below solo; resolveTier handles 'essentials'.", "implemented": false, "testType": "automated", "featureIds": ["F012", "F013"] },
-
-  { "id": "T020", "description": "submitLicense stores a valid token and getLicenseStatus then reports 'licensed' with the encoded tier/expiry.", "implemented": false, "testType": "automated", "featureIds": ["F066", "F067"] },
-  { "id": "T021", "description": "submitLicense rejects an invalid/expired token with a reason and leaves license_state unchanged.", "implemented": false, "testType": "automated", "featureIds": ["F068"] },
-  { "id": "T022", "description": "startTrial sets trial_started_at when null and is rejected on a second call (one-trial guard).", "implemented": false, "testType": "automated", "featureIds": ["F069", "F070"] },
-  { "id": "T023", "description": "startTrial is blocked when the install is already licensed.", "implemented": false, "testType": "automated", "featureIds": ["F070"] },
-
-  { "id": "T024", "description": "SMOKE: License page renders current state, expiry, and days remaining.", "implemented": false, "testType": "smoke", "featureIds": ["F057", "F058"] },
-  { "id": "T025", "description": "SMOKE: pasting a valid license on the License page unlocks the encoded tier end-to-end.", "implemented": false, "testType": "smoke", "featureIds": ["F059", "F067"] },
-  { "id": "T026", "description": "SMOKE: 'Start 30-day trial' on the License page begins the trial and updates the banner/state.", "implemented": false, "testType": "smoke", "featureIds": ["F060", "F069"] },
-  { "id": "T027", "description": "SMOKE: License page is reachable at essentials by an admin (not blocked by EE gating).", "implemented": false, "testType": "smoke", "featureIds": ["F061"] },
-  { "id": "T028", "description": "SMOKE: License page is blocked for non-admin users (RBAC).", "implemented": false, "testType": "smoke", "featureIds": ["F062"] },
-  { "id": "T029", "description": "SMOKE: trial/license banner shows countdown and links to the License page; hidden in SaaS mode.", "implemented": false, "testType": "smoke", "featureIds": ["F063", "F064", "F065"] },
-
-  { "id": "T030", "description": "SMOKE (parity): essentials hides EE surfaces in server/src pages/routes; solo+ shows them.", "implemented": false, "testType": "smoke", "featureIds": ["F037", "F038"] },
-  { "id": "T031", "description": "SMOKE (parity): essentials hides EE affordances in packages/integrations; solo+ shows them.", "implemented": false, "testType": "smoke", "featureIds": ["F039"] },
-  { "id": "T032", "description": "SMOKE (parity): essentials hides EE affordances in packages/clients.", "implemented": false, "testType": "smoke", "featureIds": ["F040"] },
-  { "id": "T033", "description": "SMOKE (parity): essentials hides EE affordances in packages/email.", "implemented": false, "testType": "smoke", "featureIds": ["F041"] },
-  { "id": "T034", "description": "SMOKE (parity): essentials hides EE affordances in packages/sla and packages/scheduling.", "implemented": false, "testType": "smoke", "featureIds": ["F042", "F043"] },
-  { "id": "T035", "description": "SMOKE (parity): essentials hides EE affordances in packages/storage, users, core.", "implemented": false, "testType": "smoke", "featureIds": ["F044", "F045", "F046"] },
-  { "id": "T036", "description": "SMOKE (parity): essentials hides SSO login affordances in packages/auth.", "implemented": false, "testType": "smoke", "featureIds": ["F047"] },
-  { "id": "T037", "description": "SMOKE (parity): essentials hides EE affordances in packages/client-portal.", "implemented": false, "testType": "smoke", "featureIds": ["F048"] },
-  { "id": "T038", "description": "SMOKE (parity): essentials hides EE affordances in shared/workflow and shared/services.", "implemented": false, "testType": "smoke", "featureIds": ["F049", "F050"] },
-  { "id": "T039", "description": "SMOKE (parity): essentials hides EE app surfaces in ee/server and ee/packages.", "implemented": false, "testType": "smoke", "featureIds": ["F051", "F052"] },
-  { "id": "T040", "description": "SMOKE (parity): EE navigation/menu entries and RightSidebar hidden at essentials.", "implemented": false, "testType": "smoke", "featureIds": ["F055", "F056"] },
-  { "id": "T041", "description": "SMOKE (safety): an unconverted/ambiguous EE route stays hidden at essentials (default-locked).", "implemented": false, "testType": "smoke", "featureIds": ["F054"] },
-  { "id": "T042", "description": "SMOKE: module-presence import guards still function (EE modules import fine at essentials on the EE build).", "implemented": false, "testType": "smoke", "featureIds": ["F053"] },
-
-  { "id": "T043", "description": "SMOKE: setup form shows the Enterprise-vs-Community choice and optional license field with validation.", "implemented": false, "testType": "smoke", "featureIds": ["F071", "F072", "F073"] },
-  { "id": "T044", "description": "SMOKE: setup POST carries editionChoice + licenseKey; control-plane persists them.", "implemented": false, "testType": "smoke", "featureIds": ["F074", "F076", "F078"] },
-  { "id": "T045", "description": "SMOKE: control-plane rejects a malformed license string at the format check.", "implemented": false, "testType": "smoke", "featureIds": ["F077"] },
-  { "id": "T046", "description": "SMOKE (live/VM): setup-engine creates the appliance-license-seed Secret with EDITION_CHOICE/LICENSE_TOKEN.", "implemented": false, "testType": "smoke", "featureIds": ["F079", "F080"] },
-  { "id": "T047", "description": "SMOKE (live/VM): bootstrap seeds license_state — ce->essentials, ee w/o key->trial, key->licensed.", "implemented": false, "testType": "smoke", "featureIds": ["F081", "F082", "F083"] },
-  { "id": "T048", "description": "SMOKE (live/VM): re-running bootstrap does not reset an existing trial or overwrite a newer license.", "implemented": false, "testType": "smoke", "featureIds": ["F084"] },
-  { "id": "T049", "description": "SMOKE (live/VM): license_state migration runs during appliance bootstrap.", "implemented": false, "testType": "smoke", "featureIds": ["F085"] },
-  { "id": "T050", "description": "SMOKE (live/VM): EDITION stays enterprise; appliance deploys the EE image; essentials gating active.", "implemented": false, "testType": "smoke", "featureIds": ["F086", "F087"] },
-  { "id": "T051", "description": "SMOKE (live/VM): full flow — choose Enterprise -> trial countdown -> enter license -> unlock; choose Community -> essentials.", "implemented": false, "testType": "smoke", "featureIds": ["F071", "F083", "F067", "F064"] }
+  {
+    "id": "T001",
+    "description": "verifyLicense accepts a CLI-signed valid token and returns { valid:true, claims } with correct tier/exp.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F003",
+      "F005",
+      "F008"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "verifyLicense rejects an expired token (exp in past) with reason 'expired'.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "verifyLicense rejects a tampered payload (signature mismatch) with reason 'bad_signature'.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "verifyLicense rejects an unknown/missing kid with reason 'unknown_kid'.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "verifyLicense verifies tokens signed under a rotated (second) kid against the multi-key registry.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "verifyLicense rejects a malformed (non-JWS) string with reason 'malformed'.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Signing CLI mints a token that verifyLicense accepts (round-trip with the test keypair).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F008",
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "resolveSelfHostTier returns null when no license_state row exists.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Effective tier = license.tier for a valid, unexpired license.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Effective tier = premium during the 30-day trial window.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Effective tier = essentials after the trial window elapses.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Effective tier = essentials when the license is expired.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Effective tier = essentials for edition_choice = 'ce' (no trial, no license).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Self-host resolution supersedes tenants.plan (plan set to premium but no license -> essentials).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "REGRESSION: with no license_state row, SaaS resolution is unchanged (NULL -> pro).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "REGRESSION: existing Stripe solo->pro / premium trials still resolve when no license_state row.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F024",
+      "F026"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "verifyLicense result is memoized per token string (second call hits cache).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "eeRuntimeEnabled() is false at essentials and true at solo/pro/premium (on an EE build).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "TIER_RANK orders essentials below solo; resolveTier handles 'essentials'.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "submitLicense stores a valid token and getLicenseStatus then reports 'licensed' with the encoded tier/expiry.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F066",
+      "F067"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "submitLicense rejects an invalid/expired token with a reason and leaves license_state unchanged.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "startTrial sets trial_started_at when null and is rejected on a second call (one-trial guard).",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F069",
+      "F070"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "startTrial is blocked when the install is already licensed.",
+    "implemented": true,
+    "testType": "automated",
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "SMOKE: License page renders current state, expiry, and days remaining.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F057",
+      "F058"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "SMOKE: pasting a valid license on the License page unlocks the encoded tier end-to-end.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F059",
+      "F067"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "SMOKE: 'Start 30-day trial' on the License page begins the trial and updates the banner/state.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F060",
+      "F069"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "SMOKE: License page is reachable at essentials by an admin (not blocked by EE gating).",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "SMOKE: License page is blocked for non-admin users (RBAC).",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "SMOKE: trial/license banner shows countdown and links to the License page; hidden in SaaS mode.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F063",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "SMOKE (parity): essentials hides EE surfaces in server/src pages/routes; solo+ shows them.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F037",
+      "F038"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/integrations; solo+ shows them.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/clients.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/email.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/sla and packages/scheduling.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/storage, users, core.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F044",
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "SMOKE (parity): essentials hides SSO login affordances in packages/auth.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "SMOKE (parity): essentials hides EE affordances in packages/client-portal.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "SMOKE (parity): essentials hides EE affordances in shared/workflow and shared/services.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "SMOKE (parity): essentials hides EE app surfaces in ee/server and ee/packages.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F051",
+      "F052"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "SMOKE (parity): EE navigation/menu entries and RightSidebar hidden at essentials.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F055",
+      "F056"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "SMOKE (safety): an unconverted/ambiguous EE route stays hidden at essentials (default-locked).",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "SMOKE: module-presence import guards still function (EE modules import fine at essentials on the EE build).",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "SMOKE: setup form shows the Enterprise-vs-Community choice and optional license field with validation.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F071",
+      "F072",
+      "F073"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "SMOKE: setup POST carries editionChoice + licenseKey; control-plane persists them.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F074",
+      "F076",
+      "F078"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "SMOKE: control-plane rejects a malformed license string at the format check.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "SMOKE (live/VM): setup-engine creates the appliance-license-seed Secret with EDITION_CHOICE/LICENSE_TOKEN.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F079",
+      "F080"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "SMOKE (live/VM): bootstrap seeds license_state \u2014 ce->essentials, ee w/o key->trial, key->licensed.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F081",
+      "F082",
+      "F083"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "SMOKE (live/VM): re-running bootstrap does not reset an existing trial or overwrite a newer license.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "SMOKE (live/VM): license_state migration runs during appliance bootstrap.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "SMOKE (live/VM): EDITION stays enterprise; appliance deploys the EE image; essentials gating active.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F086",
+      "F087"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "SMOKE (live/VM): full flow \u2014 choose Enterprise -> trial countdown -> enter license -> unlock; choose Community -> essentials.",
+    "implemented": false,
+    "testType": "smoke",
+    "featureIds": [
+      "F071",
+      "F083",
+      "F067",
+      "F064"
+    ]
+  }
 ]

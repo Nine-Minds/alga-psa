@@ -16,3 +16,21 @@ export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
   }
   return ceModule;
 }
+
+/**
+ * Default-locked safety for server components / server actions.
+ *
+ * Returns false (EE surfaces hidden) until confirmed otherwise:
+ * - On a CE build: always false.
+ * - On an EE build at essentials tier: false.
+ * - On an EE build at solo+ tier: true.
+ *
+ * Pass the session.user.eeEnabled value resolved by the auth options.
+ * Falls back to true on EE SaaS sessions (session.user.eeEnabled is undefined
+ * until sessions regenerate after deploy).
+ */
+export function serverEeEnabled(sessionEeEnabled: boolean | undefined): boolean {
+  if (!isEnterprise) return false;
+  if (sessionEeEnabled === undefined) return true;
+  return sessionEeEnabled;
+}

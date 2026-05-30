@@ -19,16 +19,20 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.8",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
   }

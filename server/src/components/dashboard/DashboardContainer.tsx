@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboarding/components';
-import { isEnterprise } from '@/lib/features';
+import { useTier } from '@/context/TierContext';
 import MobileAppCard from '@/components/dashboard/MobileAppCard';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
 import {
@@ -147,6 +147,7 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
 const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
+  const { eeEnabled: isEnterprise } = useTier();
   const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
   const [isMobilePending, startMobileTransition] = useTransition();
 

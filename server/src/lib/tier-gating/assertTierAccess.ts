@@ -4,6 +4,7 @@ import {
   type TIER_FEATURES,
   FEATURE_MINIMUM_TIER,
   type TenantTier,
+  TIER_RANK,
   resolveTier,
   tierHasFeature,
   TIER_LABELS,
@@ -11,6 +12,7 @@ import {
 import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { isEnterprise } from '../features';
+import { getLicenseStateRow, resolveSelfHostTier } from './license-state';
 
 export class TierAccessError extends Error {
   public readonly feature: TIER_FEATURES;
@@ -68,6 +70,14 @@ function hasActiveSoloProTrial(value?: string | null): boolean {
 }
 
 async function getTenantTier(tenantId: string): Promise<TenantTier> {
+  // Self-host mode: consult license_state first; supersedes tenants.plan.
+  const licenseStateRow = await getLicenseStateRow();
+  const selfHostResolved = resolveSelfHostTier(licenseStateRow);
+  if (selfHostResolved !== null) {
+    return selfHostResolved.tier;
+  }
+
+  // SaaS mode: resolve from tenants.plan + Stripe trials (existing logic unchanged).
   const knex = await getAdminConnection();
   const tenantRecord = await knex('tenants')
     .where({ tenant: tenantId })
@@ -91,6 +101,18 @@ async function getTenantTier(tenantId: string): Promise<TenantTier> {
   }
 
   return resolvedTier;
+}
+
+/**
+ * Returns true when the current build is Enterprise AND the effective tier
+ * exceeds 'essentials'. Use this for EE surface/feature-exposure gates.
+ *
+ * Module-presence import guards (deciding whether to dynamically import an
+ * @enterprise module) must remain as the build-time `isEnterprise` check —
+ * the module is still compiled in at the essentials tier.
+ */
+export function eeRuntimeEnabled(effectiveTier: TenantTier): boolean {
+  return isEnterprise && TIER_RANK[effectiveTier] > TIER_RANK['essentials'];
 }
 
 export async function assertTenantTierAccess(tenantId: string, feature: TIER_FEATURES): Promise<void> {

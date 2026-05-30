@@ -30,6 +30,13 @@ interface TierContextValue {
   refreshTier: () => Promise<void>;
   /** True while session is loading */
   isLoading: boolean;
+  /**
+   * True when the EE feature surface is active for this install.
+   * Derived from the session: Enterprise build AND effective tier > essentials.
+   * Use for EE surface/feature-exposure gates in client components.
+   * Module-presence import guards must continue to use the build-time isEnterprise.
+   */
+  eeEnabled: boolean;
 
   // Trial state
   /** True if the subscription is in a trialing state */
@@ -100,6 +107,17 @@ export function TierProvider({ children }: TierProviderProps) {
 
   // CE edition: all compiled-in features are unlocked, no tier restrictions
   const isCommunityEdition = process.env.NEXT_PUBLIC_EDITION !== 'enterprise';
+
+  // eeEnabled: true when Enterprise build AND effective tier > essentials.
+  // Prefer session.user.eeEnabled (set by the auth options) when available;
+  // fall back to local computation for backward compat (e.g. SaaS sessions
+  // that haven't refreshed after this deploy).
+  const eeEnabled = useMemo(() => {
+    if (isCommunityEdition) return false;
+    if (session?.user?.eeEnabled !== undefined) return session.user.eeEnabled;
+    // Fallback: any tier other than essentials enables EE surfaces.
+    return effectiveTier !== 'essentials';
+  }, [isCommunityEdition, session?.user?.eeEnabled, effectiveTier]);
 
   // Feature access check
   const hasFeature = useCallback(
@@ -172,6 +190,7 @@ export function TierProvider({ children }: TierProviderProps) {
       hasAddOn,
       refreshTier,
       isLoading,
+      eeEnabled,
       isTrialing,
       trialDaysLeft,
       trialEndDate,
@@ -186,7 +205,7 @@ export function TierProvider({ children }: TierProviderProps) {
       subscriptionStatus,
       isPaymentFailed,
     }),
-    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isSoloProTrial, soloProTrialEndDate, soloProTrialDaysLeft, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
+    [tier, isMisconfigured, isSolo, isPro, isPremium, addOns, hasFeature, hasAddOn, refreshTier, isLoading, eeEnabled, isTrialing, trialDaysLeft, trialEndDate, isSoloProTrial, soloProTrialEndDate, soloProTrialDaysLeft, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;

@@ -32,8 +32,8 @@ import {
 } from '@alga-psa/integrations/actions';
 import {
   getVisibleMicrosoftConsumerTypes,
-  isMicrosoftConsumerEnterpriseEdition,
 } from '../../../lib/microsoftConsumerVisibility';
+import { useEeEnabled } from '@alga-psa/auth/client';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
 import {
   AlertTriangle,
@@ -148,8 +148,8 @@ function GuidanceBlock({
   );
 }
 
-function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn): MicrosoftConsumerDescriptor[] {
-  const visibleConsumers = getVisibleMicrosoftConsumerTypes(isMicrosoftConsumerEnterpriseEdition()).filter(
+function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn, isEnterpriseEdition: boolean): MicrosoftConsumerDescriptor[] {
+  const visibleConsumers = getVisibleMicrosoftConsumerTypes(isEnterpriseEdition).filter(
     (consumerType) => showTeamsUi || consumerType !== 'teams'
   );
 
@@ -237,7 +237,8 @@ function getGuidanceBlocks(
   status: MicrosoftIntegrationStatus | null,
   profile: MicrosoftProfile,
   showTeamsUi: boolean,
-  t: TranslateFn
+  t: TranslateFn,
+  isEnterpriseEdition: boolean
 ) {
   const teamsApplicationIdUri = showTeamsUi
     ? getTeamsApplicationIdUri(status?.baseUrl, profile.clientId)
@@ -255,7 +256,7 @@ function getGuidanceBlocks(
     },
   ];
 
-  if (isMicrosoftConsumerEnterpriseEdition()) {
+  if (isEnterpriseEdition) {
     blocks.push(
       {
         title: t('integrations.microsoft.settings.guidance.emailTitle', { defaultValue: 'Email Guidance' }),
@@ -319,7 +320,7 @@ export function MicrosoftIntegrationSettings() {
   const [formState, setFormState] = React.useState<ProfileFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
-  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
+  const isEnterpriseEdition = useEeEnabled();
   const profiles = status?.success ? status.profiles ?? [] : [];
   const hasProfiles = profiles.length > 0;
   const activeProfiles = profiles.filter((profile) => !profile.isArchived);
@@ -337,8 +338,8 @@ export function MicrosoftIntegrationSettings() {
   });
   const showTeamsUi = teamsAvailability.enabled;
   const consumerDescriptors = React.useMemo(
-    () => getConsumerDescriptors(showTeamsUi, t),
-    [showTeamsUi, t]
+    () => getConsumerDescriptors(showTeamsUi, t, isEnterpriseEdition),
+    [showTeamsUi, t, isEnterpriseEdition]
   );
 
   const load = React.useCallback(async () => {
@@ -947,7 +948,7 @@ export function MicrosoftIntegrationSettings() {
                           {t('integrations.microsoft.settings.profileCard.guidanceSummary', { defaultValue: 'Microsoft app registration guidance' })}
                         </summary>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                          {getGuidanceBlocks(status, profile, showTeamsUi, t).map((block) => (
+                          {getGuidanceBlocks(status, profile, showTeamsUi, t, isEnterpriseEdition).map((block) => (
                             <GuidanceBlock key={`${profile.profileId}-${block.title}`} title={block.title} items={block.items} />
                           ))}
                         </div>

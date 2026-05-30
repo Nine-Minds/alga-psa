@@ -504,6 +504,13 @@ export function validateSetupInputs(raw, options = {}) {
   const releaseRef = String(raw.releaseRef || '').trim();
   const initialTenant = options.requireInitialTenant === false ? null : normalizeInitialTenant(raw);
 
+  // Edition licensing fields (F078)
+  const editionChoice = String(raw.editionChoice || 'ee').trim();
+  if (!['ee', 'ce'].includes(editionChoice)) {
+    throw new Error('Invalid edition choice. Use ee or ce.');
+  }
+  const licenseKey = raw.licenseKey ? String(raw.licenseKey).trim() : null;
+
   if (!['stable', 'nightly'].includes(channel)) {
     throw new Error('Invalid channel. Use stable or nightly.');
   }
@@ -535,6 +542,8 @@ export function validateSetupInputs(raw, options = {}) {
     dnsServers,
     releaseRef,
     initialTenant,
+    editionChoice,
+    licenseKey,
     submittedAt: nowIso()
   };
 }
@@ -1002,6 +1011,11 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     }
   }
 
+  // Build appliance-license-seed secret command (F079-F080)
+  const licenseSeedArgs = `--from-literal=EDITION_CHOICE=${shellQuote(inputs.editionChoice || 'ee')}`;
+  const licenseKeyArg = inputs.licenseKey ? ` --from-literal=LICENSE_TOKEN=${shellQuote(inputs.licenseKey)}` : '';
+  const licenseSeedCmd = `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic appliance-license-seed ${licenseSeedArgs}${licenseKeyArg} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`;
+
   const commands = [
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace alga-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
@@ -1009,6 +1023,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     ...(hasInitialTenant ? [`kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f ${shellQuote(initialTenantSecretPath)}`] : []),
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic alga-psa-shared --from-literal=ALGA_AUTH_KEY=${shellQuote(authKey)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    licenseSeedCmd,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
   ];

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from '@/context/TierContext';
 
 function ExtensionSettingsLoading() {
   const { t } = useTranslation('common');
@@ -24,9 +25,9 @@ const FeaturePlaceholder = dynamic(
 );
 
 export default function ExtensionSettingsPage() {
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const { eeEnabled } = useTier();
 
-  if (!isEEAvailable) {
+  if (!eeEnabled) {
     return <FeaturePlaceholder />;
   }
 

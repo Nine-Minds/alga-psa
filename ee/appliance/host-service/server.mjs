@@ -552,6 +552,12 @@ const server = http.createServer(async (req, res) => {
       payload = req.headers['content-type']?.includes('application/json')
         ? JSON.parse(body || '{}')
         : Object.fromEntries(new URLSearchParams(body));
+      // Light well-formed JWS check for licenseKey (F077): three base64url-separated dots.
+      const rawLicenseKey = (payload.licenseKey || '').trim();
+      if (rawLicenseKey && !/^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(rawLicenseKey)) {
+        throw new Error('Invalid license key format.');
+      }
+
       const setupInputs = validateSetupInputs({
         channel: payload.channel || 'stable',
         appHostname: payload.appHostname || '',
@@ -563,7 +569,9 @@ const server = http.createServer(async (req, res) => {
         adminLastName: payload.adminLastName || '',
         adminEmail: payload.adminEmail || '',
         adminPassword: payload.adminPassword || '',
-        adminPasswordConfirm: payload.adminPasswordConfirm || ''
+        adminPasswordConfirm: payload.adminPasswordConfirm || '',
+        editionChoice: payload.editionChoice || 'ee',
+        licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
       fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });

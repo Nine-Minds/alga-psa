@@ -2,10 +2,12 @@
 
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
 import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 export function TeamsEnterpriseIntegrationSettings() {
+  const eeEnabled = useEeEnabled();
   const availability = resolveTeamsAvailability({
-    isEnterpriseEdition: process.env.NEXT_PUBLIC_EDITION === 'enterprise',
+    isEnterpriseEdition: eeEnabled,
     requireTenantContext: false,
   });
 

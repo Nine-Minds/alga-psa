@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import { useEeEnabled } from '@alga-psa/auth/client';
 import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import type { IClient, ITag } from '@alga-psa/types';
@@ -260,12 +261,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const isEEAvailable = useEeEnabled();
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
   const showEntraSyncAction = shouldShowEntraSyncAction(
-    isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
+    isEEAvailable ? 'enterprise' : 'community',
     entraClientSyncFlag.enabled,
     editedClient
   );

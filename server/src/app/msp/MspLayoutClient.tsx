@@ -11,6 +11,7 @@ import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
+import LicenseBanner from "@/components/licenses/LicenseBanner";
 import { ProductProvider } from "@/context/ProductContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -96,6 +97,7 @@ export function MspLayoutClient({
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
+          <LicenseBanner />
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider

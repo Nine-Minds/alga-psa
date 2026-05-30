@@ -3,6 +3,7 @@
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from '@/context/TierContext';
 
 interface RightSidebarProps {
   isOpen: boolean;
@@ -38,21 +39,26 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   ...props
 }) => {
   const { t } = useTranslation('msp/core');
+  const { eeEnabled } = useTier();
+  // Module-presence guard (isEnterpriseEditionEnv) ensures the lazy import
+  // target exists in the bundle. The rendering decision uses eeEnabled so the
+  // EE sidebar is hidden at the essentials tier.
   const [shouldUseEnterpriseSidebar, setShouldUseEnterpriseSidebar] = useState(
-    isEnterpriseEditionEnv
+    isEnterpriseEditionEnv && eeEnabled
   );
 
   useEffect(() => {
-    if (isEnterpriseEditionEnv) {
+    setShouldUseEnterpriseSidebar(isEnterpriseEditionEnv && eeEnabled);
+    if (isEnterpriseEditionEnv && eeEnabled) {
       return;
     }
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1') {
-        setShouldUseEnterpriseSidebar(true);
+        setShouldUseEnterpriseSidebar(isEnterpriseEditionEnv);
       }
     }
-  }, [isEnterpriseEditionEnv]);
+  }, [eeEnabled]);
 
   if (shouldUseEnterpriseSidebar) {
     return (

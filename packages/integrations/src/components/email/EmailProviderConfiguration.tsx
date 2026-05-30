@@ -38,7 +38,7 @@ import {
   ImapEmailProviderConfig,
   MicrosoftEmailProviderConfig,
 } from './types';
-import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 export interface EmailProviderConfigurationProps {
   onProviderAdded?: (provider: EmailProvider) => void;
@@ -52,7 +52,7 @@ function EmailProviderConfigurationContent({
   onProviderDeleted
 }: EmailProviderConfigurationProps) {
   const { t } = useTranslation('msp/email-providers');
-  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
+  const isEnterpriseEdition = useEeEnabled();
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -432,7 +432,7 @@ function EmailProviderConfigurationContent({
                 defaultValue: 'Gmail Setup',
               })}</h4>
               <p className="text-sm text-muted-foreground">
-                {process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
+                {isEnterpriseEdition ? (
                   <>
                     1. {t('configuration.setup.gmail.enterpriseSteps.enterAddress', {
                       defaultValue: 'Enter your Gmail address and provider name',

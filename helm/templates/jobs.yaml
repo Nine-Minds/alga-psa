@@ -417,6 +417,9 @@ spec:
             - secretRef:
                 name: appliance-initial-tenant
                 optional: true
+            - secretRef:
+                name: appliance-license-seed
+                optional: true
           volumeMounts:
             - name: appliance-bootstrap
               mountPath: /bootstrap

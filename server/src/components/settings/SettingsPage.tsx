@@ -98,11 +98,10 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const tabParam = searchParams?.get('tab') ?? initialTabParam;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const { hasFeature, eeEnabled: isEEAvailable } = useTier();
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
-  const { hasFeature } = useTier();
   const { productCode } = useProduct();
   const isAlgadesk = productCode === 'algadesk';
   const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);

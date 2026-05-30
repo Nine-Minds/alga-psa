@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { AlgadeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
-import { isEnterprise } from '@/lib/features';
+import { useTier } from '@/context/TierContext';
 
 interface AlgadeskDashboardProps {
   summary: AlgadeskDashboardSummary;
@@ -23,12 +23,13 @@ function MetricCard({ title, value, href }: { title: string; value: number; href
 
 export default function AlgadeskDashboard({ summary }: AlgadeskDashboardProps) {
   const { t } = useTranslation('msp/dashboard');
+  const { eeEnabled } = useTier();
 
   return (
     <div className="min-h-screen p-6" data-automation-id="algadesk-dashboard">
       <div className="mx-auto max-w-7xl space-y-6">
         <WelcomeBanner
-          variant={isEnterprise ? 'gradient' : 'plain'}
+          variant={eeEnabled ? 'gradient' : 'plain'}
           title={t('algadesk.welcome.title', { defaultValue: 'Welcome to AlgaDesk' })}
           description={t('algadesk.welcome.description', {
             defaultValue:

@@ -1,4 +1,5 @@
 export { AppSessionProvider } from './components/AppSessionProvider';
+export { useEeEnabled } from './hooks/useEeEnabled';
 export { default as Alert } from './components/Alert';
 export { default as ClientLoginForm } from './components/ClientLoginForm';
 export { default as ClientPortalSignIn } from './components/ClientPortalSignIn';

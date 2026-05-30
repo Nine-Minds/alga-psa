@@ -9,8 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTier } from '@/context/TierContext';
 
-const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+// Build-time guard: controls whether the dynamic import target exists in the bundle.
+const isEEBuild = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 function ExtensionsLoadingState() {
   const { t } = useTranslation('msp/extensions');
@@ -50,7 +52,7 @@ function ExtensionsUnavailableState() {
   );
 }
 
-const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
+const DynamicExtensionsComponent = isEEBuild ? dynamic(() =>
   import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
   {
     loading: ExtensionsLoadingState,
@@ -58,7 +60,7 @@ const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
   }
 ) : ExtensionsUnavailableState;
 
-const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
+const DynamicInstallComponent = isEEBuild ? dynamic(() =>
   import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as unknown as React.ComponentType),
   {
     loading: InstallerLoadingState,
@@ -68,6 +70,7 @@ const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
 
 export default function ExtensionManagement() {
   const { t } = useTranslation('msp/extensions');
+  const { eeEnabled } = useTier();
   return (
     <Card>
       <CardHeader>
@@ -79,7 +82,7 @@ export default function ExtensionManagement() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isEEAvailable ? (
+        {eeEnabled ? (
           <div className="space-y-4">
             <CustomTabs
               tabs={[

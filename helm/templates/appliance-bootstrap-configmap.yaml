@@ -311,6 +311,45 @@ data:
       log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
     fi
 
+    # Seed license_state from appliance-license-seed Secret (F082-F084).
+    # Idempotent: only inserts when no row exists. Preserves any existing
+    # trial_started_at or license_token so re-runs never reset an active entitlement.
+    if [ -n "${EDITION_CHOICE:-}" ]; then
+      pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      pg_password="$(get_admin_password)"
+      edition_choice="${EDITION_CHOICE:-ee}"
+      license_token="${LICENSE_TOKEN:-}"
+      log "Seeding license_state (edition_choice=${edition_choice})"
+
+      # Determine trial_started_at: set to NOW() only for 'ee' with no license key.
+      if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ]; then
+        trial_expr="NOW()"
+      else
+        trial_expr="NULL"
+      fi
+
+      # Build license_token SQL value (NULL if empty, else single-quoted).
+      if [ -z "${license_token}" ]; then
+        license_token_sql="NULL"
+      else
+        # Escape single quotes in the token (should never contain them, but be safe).
+        escaped_token=$(echo "${license_token}" | sed "s/'/''/g")
+        license_token_sql="'${escaped_token}'"
+      fi
+
+      PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" \
+        -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" <<SQL
+    INSERT INTO license_state (edition_choice, trial_started_at, license_token, updated_at)
+    SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM license_state);
+SQL
+      log "license_state seeded"
+    else
+      log "EDITION_CHOICE not set; skipping license_state seed"
+    fi
+
     if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
       ensure_initial_tenant
       resolve_seeds_dir
