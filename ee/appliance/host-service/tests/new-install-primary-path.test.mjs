@@ -11,16 +11,15 @@ test('F019 new-install primary host path is Kubernetes bootstrap, not legacy hos
 
   assert.match(service, /Description=Alga Appliance Kubernetes Control Plane Bootstrap/);
   assert.match(service, /ExecStartPre=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/init-token\.mjs/);
-  assert.match(service, /ExecStartPre=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/init-admin-credential\.mjs/);
+  assert.doesNotMatch(service, /init-admin-credential/);
   assert.match(service, /ExecStart=\/opt\/alga-appliance\/scripts\/bootstrap-control-plane\.sh/);
   assert.match(service, /RemainAfterExit=yes/);
 
   const tokenIndex = service.indexOf('ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-token.mjs');
-  const adminIndex = service.indexOf('ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-admin-credential.mjs');
   const bootstrapIndex = service.indexOf('ExecStart=/opt/alga-appliance/scripts/bootstrap-control-plane.sh');
   const consoleIndex = service.indexOf('ExecStartPost=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs');
-  assert.ok(tokenIndex !== -1 && adminIndex > tokenIndex && bootstrapIndex > adminIndex && consoleIndex > bootstrapIndex,
-    'bootstrap service must initialize the token/admin credential before rendering the console banner');
+  assert.ok(tokenIndex !== -1 && bootstrapIndex > tokenIndex && consoleIndex > bootstrapIndex,
+    'bootstrap service must initialize the token before rendering the console banner');
   assert.doesNotMatch(service, /host-service\/server\.mjs/);
   assert.doesNotMatch(service, /ALGA_APPLIANCE_STATE_FILE/);
   assert.match(readme, /legacy host API service is not part of the new-install primary path/);

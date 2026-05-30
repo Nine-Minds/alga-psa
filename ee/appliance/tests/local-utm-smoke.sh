@@ -33,6 +33,23 @@ http_code() {
   curl -sS -o /dev/null -w '%{http_code}' "$@" "$url" || true
 }
 
+# Establish an authenticated management session and echo a curl cookie-jar path.
+# On a fresh appliance this redeems the one-time token and sets the password; if
+# a password is already configured it logs in with the same smoke password.
+establish_session() {
+  local base="$1" token="$2" password="$3"
+  local jar; jar="$(mktemp)"
+  if curl -fsS -c "$jar" -X POST "${base}/api/auth/redeem-token" \
+       -H 'content-type: application/json' --data "{\"token\":\"${token}\"}" >/dev/null 2>&1; then
+    curl -fsS -c "$jar" -b "$jar" -X POST "${base}/api/auth/set-password" \
+      -H 'content-type: application/json' --data "{\"token\":\"${token}\",\"password\":\"${password}\"}" >/dev/null
+  else
+    curl -fsS -c "$jar" -X POST "${base}/api/auth/login" \
+      -H 'content-type: application/json' --data "{\"password\":\"${password}\"}" >/dev/null
+  fi
+  printf '%s' "$jar"
+}
+
 monitor_t020() {
   local status_url=""
   local app_url=""
@@ -76,8 +93,11 @@ monitor_t020() {
 
     if [ -z "$status_first_ts" ]; then
       local status_code
-      status_code="$(http_code "${status_url}?token=${token}")"
-      if [ "$status_code" = "200" ]; then
+      status_code="$(http_code "$status_url")"
+      # The control-plane is "reachable" once it answers at all; an
+      # unauthenticated /api/status now returns 401 (still a live response),
+      # which is a valid readiness signal for ordering vs. the app URL.
+      if [ "$status_code" = "200" ] || [ "$status_code" = "401" ]; then
         status_first_ts="$now"
         echo "[T020] status API first reachable at +$elapsed s"
       fi
@@ -145,8 +165,10 @@ verify_t021_t023() {
   echo "[T021] PASS: app reachable and seeded users=$users_count"
 
   echo "[T022] Checking background-degraded status classification"
+  local base="http://${node_ip}:8080"
+  local cookie_jar; cookie_jar="$(establish_session "$base" "$status_token" "Str0ng!Pass")"
   local status_json
-  status_json="$(curl -fsS "http://${node_ip}:8080/api/status?token=${status_token}")"
+  status_json="$(curl -fsS -b "$cookie_jar" "${base}/api/status")"
   printf '%s\n' "$status_json" | jq -e '.rollup.state == "ready_with_background_issues"' >/dev/null
   printf '%s\n' "$status_json" | jq -e '.topBlockers[]? | select(.component == "workflow-worker") | select(.loginBlocking == false)' >/dev/null
   printf '%s\n' "$status_json" | jq -e '.topBlockers[]? | select((.reason // "") | test("not found"; "i"))' >/dev/null

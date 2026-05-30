@@ -38,7 +38,7 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
 
   assert.match(workload, /kind: ConfigMap\nmetadata:\n\s+name: appliance-control-plane-config\n\s+namespace: alga-appliance-control-plane/);
   assert.match(workload, /ALGA_APPLIANCE_BUNDLE_ORIGIN: "baked-iso"/);
-  assert.match(workload, /ALGA_APPLIANCE_TOKEN_FILE: "\/var\/lib\/alga-appliance-token\/setup-token"/);
+  assert.match(workload, /ALGA_APPLIANCE_TOKEN_FILE: "\/var\/lib\/alga-appliance\/setup-token"/);
   assert.match(workload, /ALGA_APPLIANCE_KUBECONFIG: "\/tmp\/alga-appliance\/kubeconfig"/);
   assert.match(workload, /ALGA_APPLIANCE_HOST_AGENT_SOCKET: "\/run\/alga-appliance\/host-agent\.sock"/);
   assert.doesNotMatch(workload, /ALGA_APPLIANCE_SKIP_K3S_INSTALL/);
@@ -54,8 +54,9 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
   assert.match(workload, /image: localhost\/alga-appliance-control-plane:baked/);
   assert.match(workload, /imagePullPolicy: IfNotPresent/);
   assert.match(workload, /mountPath: \/var\/lib\/alga-appliance/);
-  assert.match(workload, /secretName: appliance-setup-token/);
-  assert.match(workload, /mountPath: \/var\/lib\/alga-appliance-token/);
+  // Token is read from the shared host volume, not a Kubernetes Secret.
+  assert.doesNotMatch(workload, /secretName: appliance-setup-token/);
+  assert.doesNotMatch(workload, /alga-appliance-token/);
   assert.match(workload, /mountPath: \/run\/alga-appliance/);
   assert.match(workload, /path: \/run\/alga-appliance/);
   assert.doesNotMatch(workload, /\/etc\/rancher\/k3s\/k3s\.yaml/);

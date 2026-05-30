@@ -10,7 +10,6 @@ Environment=ALGA_APPLIANCE_PORT=8080
 Environment=ALGA_APPLIANCE_TOKEN_FILE=/var/lib/alga-appliance/setup-token
 Environment=ALGA_APPLIANCE_CONSOLE_TTYS=/dev/tty1,/dev/console
 ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-token.mjs
-ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-admin-credential.mjs
 ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs
 StandardOutput=journal
 StandardError=journal

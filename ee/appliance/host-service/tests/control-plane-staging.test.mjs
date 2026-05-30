@@ -45,13 +45,13 @@ test('control-plane bundle staging writes installed-appliance paths for manifest
   const bootstrapService = fs.readFileSync(path.join(overlayRoot, 'etc', 'systemd', 'system', 'alga-appliance-bootstrap.service'), 'utf8');
   assert.doesNotMatch(bootstrapService, /ExecStartPre=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/console\.mjs/);
   assert.match(bootstrapService, /ExecStartPre=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/init-token\.mjs/);
-  assert.match(bootstrapService, /ExecStartPre=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/init-admin-credential\.mjs/);
+  assert.doesNotMatch(bootstrapService, /init-admin-credential/);
   assert.match(bootstrapService, /ExecStart=\/opt\/alga-appliance\/scripts\/bootstrap-control-plane\.sh/);
   assert.match(bootstrapService, /ALGA_APPLIANCE_CONSOLE_TTYS=\/dev\/tty1,\/dev\/console/);
   assert.match(bootstrapService, /ExecStartPost=\/usr\/bin\/env node \/opt\/alga-appliance\/host-service\/console\.mjs/);
   assert.ok(
-    bootstrapService.indexOf('init-admin-credential.mjs') < bootstrapService.indexOf('ExecStartPost=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs'),
-    'staged bootstrap service must initialize the admin credential before the post-bootstrap banner'
+    bootstrapService.indexOf('init-token.mjs') < bootstrapService.indexOf('ExecStartPost=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs'),
+    'staged bootstrap service must initialize the token before the post-bootstrap banner'
   );
   assert.match(bootstrapService, /StandardOutput=journal\+console/);
   assert.doesNotMatch(bootstrapService, /host-service\/server\.mjs/);

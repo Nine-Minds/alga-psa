@@ -93,6 +93,7 @@ TARGET_SYSTEMD="$OVERLAY_ROOT/etc/systemd/system"
 TARGET_SYSTEMD_WANTS="$TARGET_SYSTEMD/multi-user.target.wants"
 TARGET_SYSUSERS="$OVERLAY_ROOT/etc/sysusers.d"
 FALLBACK_SCRIPT="$REPO_ROOT/ee/appliance/bin/alga-control-plane-reapply"
+RESET_ADMIN_SCRIPT="$REPO_ROOT/ee/appliance/bin/alga-appliance-reset-admin"
 BOOTSTRAP_SCRIPT="$REPO_ROOT/ee/appliance/scripts/bootstrap-control-plane.sh"
 STORAGE_SCRIPT="$REPO_ROOT/ee/appliance/scripts/install-storage.sh"
 BOOTSTRAP_SERVICE="$REPO_ROOT/ee/appliance/systemd/alga-appliance-bootstrap.service"
@@ -150,6 +151,7 @@ cp "$HOST_SERVICE_DIR"/*.mjs "$TARGET_HOST_SERVICE"/
 chmod 0755 "$TARGET_HOST_SERVICE"/*.mjs
 cp "$LOCAL_STORAGE_MANIFEST" "$TARGET_APPLIANCE_MANIFESTS/local-path-storage.yaml"
 install -m 0755 "$FALLBACK_SCRIPT" "$TARGET_BIN/alga-control-plane-reapply"
+install -m 0755 "$RESET_ADMIN_SCRIPT" "$TARGET_BIN/alga-appliance-reset-admin"
 if [ -n "$K3S_BINARY" ]; then
   if [ ! -s "$K3S_BINARY" ]; then
     echo "k3s binary not found or empty: $K3S_BINARY" >&2

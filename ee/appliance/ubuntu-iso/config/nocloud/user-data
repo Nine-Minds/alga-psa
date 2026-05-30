@@ -4,6 +4,7 @@ autoinstall:
   interactive-sections:
     - network
     - storage
+    - identity
   locale: en_US.UTF-8
   keyboard:
     layout: us
@@ -13,10 +14,11 @@ autoinstall:
     geoip: true
     preserve_sources_list: false
 
-  identity:
-    hostname: alga-appliance
-    username: alga-admin
-    password: "$6$sN9bd8xq.7sVhY7A$R6Z4dM4mq8K/0WwNqNqQFNx0R8vAqA2sCY0T4yeiSxOhF9vDhcbPK26cv9YI6x8WoFI2hDCl9Imn8N8QZxozf."
+  # identity is collected interactively on the Subiquity "Profile setup" screen:
+  # the operator creates their own login account (name, server name, username,
+  # password). No credential is baked into the image, and nothing downstream
+  # depends on a fixed username — systemd units run as root and the management
+  # password for the setup UI is a separate, in-app credential.
 
   ssh:
     install-server: true
@@ -49,6 +51,7 @@ autoinstall:
     - curtin in-target --target=/target -- chmod 0750 /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
     - curtin in-target --target=/target -- find /opt/alga-appliance -type f -name '*.sh' -exec chmod 0755 {} \;
     - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance/appliance
+    - curtin in-target --target=/target -- bash -lc 'if [ -x /opt/alga-appliance/bin/alga-appliance-reset-admin ]; then ln -sf /opt/alga-appliance/bin/alga-appliance-reset-admin /usr/local/bin/alga-appliance-reset-admin; fi'
     - curtin in-target --target=/target -- bash -lc 'if command -v vgs >/dev/null 2>&1 && command -v lvextend >/dev/null 2>&1 && vgs --noheadings -o vg_free --units b --nosuffix ubuntu-vg 2>/dev/null | awk '\''{ exit !($1 > 0) }'\''; then lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv || true; fi'
     - mkdir -p /target/etc/alga-appliance
     - touch /target/etc/alga-appliance/booted-from-disk

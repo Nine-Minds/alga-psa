@@ -1,0 +1,110 @@
+.screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+  background: var(--appliance-background);
+}
+
+.card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  border: 1px solid var(--appliance-border);
+  border-radius: var(--radius-lg);
+  background: var(--appliance-card);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--appliance-sidebar-text) 94%, var(--operator-purple, #6d28d9) 6%);
+}
+
+.logoSvg { width: 22px; height: 22px; }
+
+.brandText { display: grid; line-height: 1.1; }
+.brandText strong { color: var(--appliance-text); font-weight: 700; }
+.brandText small { color: var(--appliance-text-muted); font-size: 0.75rem; }
+
+.heading { display: grid; gap: 6px; }
+.heading h1 { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; color: var(--appliance-text); }
+.heading p { margin: 0; color: var(--appliance-text-muted); font-size: 0.85rem; line-height: 1.45; }
+
+.form { display: grid; gap: var(--space-lg); }
+.field { display: grid; gap: 7px; }
+.field label { color: var(--appliance-text); font-weight: 650; font-size: 0.9rem; }
+.field input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--appliance-border);
+  border-radius: var(--radius-md);
+  background: var(--appliance-panel);
+  color: var(--appliance-text);
+  font-size: 0.95rem;
+}
+.field input:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklch, var(--operator-purple, #6d28d9) 55%, var(--appliance-border));
+}
+.helpText { color: var(--appliance-text-muted); font-size: 0.75rem; line-height: 1.45; }
+.fieldError { color: color-mix(in oklch, var(--error) 72%, var(--appliance-text)); font-size: 0.8rem; font-weight: 600; }
+
+/* PIN entry */
+.pinGroups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pinGroup { display: flex; gap: 6px; }
+.pinSep { color: var(--appliance-text-soft); font-weight: 700; user-select: none; }
+.pinBox {
+  width: 34px;
+  height: 44px;
+  text-align: center;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--appliance-border);
+  border-radius: var(--radius-sm);
+  background: var(--appliance-panel);
+  color: var(--appliance-text);
+}
+.pinBox:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklch, var(--operator-purple, #6d28d9) 62%, var(--appliance-border));
+}
+
+.button {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--operator-purple, #6d28d9);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.alert {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in oklch, var(--error) 45%, var(--appliance-border));
+  background: color-mix(in oklch, var(--error) 10%, transparent);
+  color: color-mix(in oklch, var(--error) 70%, var(--appliance-text));
+  font-size: 0.85rem;
+}
+
+.loading { color: var(--appliance-text-muted); font-size: 0.9rem; }

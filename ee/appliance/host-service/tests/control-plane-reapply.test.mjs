@@ -36,7 +36,8 @@ test('T007 fallback reapply is idempotent and non-destructive by plan', () => {
   assert.match(result.stdout, /k3s ctr images import/);
   assert.match(result.stdout, /kubectl --kubeconfig .* apply -f .*local-path-storage\.yaml/);
   assert.match(result.stdout, /kubectl --kubeconfig .* apply -f .*namespace\.yaml/);
-  assert.match(result.stdout, /create secret generic appliance-setup-token/);
+  // Token is read from the host volume; the reapply path no longer creates a Secret.
+  assert.doesNotMatch(result.stdout, /create secret generic appliance-setup-token/);
   assert.match(result.stdout, /kubectl --kubeconfig .* apply -k .*control-plane\/manifests/);
   assert.match(result.stdout, /kubectl --kubeconfig .* -n alga-appliance-control-plane get pods,svc,cm,secrets/);
   assert.match(result.stdout, /kubectl --kubeconfig .* get nodes/);

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Activity, SlidersHorizontal } from 'lucide-react';
 import { AlgaLogo } from '../AlgaLogo';
+import { LogoutButton } from '../auth/LogoutButton';
 import styles from '../status.module.css';
 
 type SetupConfig = {
@@ -22,16 +23,6 @@ type SetupConfig = {
 
 type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef' | 'licenseKey', string>>;
 
-function tokenQuery() {
-  if (typeof window === 'undefined') return '';
-  return window.location.search;
-}
-
-function withToken(path: string, query: string) {
-  if (!query) return path;
-  return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
-}
-
 function isValidIpv4(value: string) {
   const parts = value.split('.');
   return parts.length === 4 && parts.every((part) => /^\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
@@ -50,7 +41,7 @@ function isWellFormedJwt(value: string) {
   return /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value);
 }
 
-function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string; licenseKey: string }) {
+function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string; licenseKey?: string }) {
   const errors: FieldErrors = {};
 
   if (!payload.tenantName.trim()) errors.tenantName = 'Enter the company name for the initial tenant.';
@@ -107,7 +98,6 @@ function SkeletonCard() {
 }
 
 export default function SetupPage() {
-  const [query, setQuery] = useState('');
   const [config, setConfig] = useState<SetupConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -127,16 +117,12 @@ export default function SetupPage() {
   const [licenseKey, setLicenseKey] = useState('');
 
   useEffect(() => {
-    setQuery(tokenQuery());
-  }, []);
-
-  useEffect(() => {
-    if (!query) return;
     let cancelled = false;
     async function loadConfig() {
       try {
-        const response = await fetch(withToken('/api/setup/config', query), { cache: 'no-store' });
-        if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Unable to load setup defaults.');
+        const response = await fetch('/api/setup/config', { cache: 'no-store' });
+        if (response.status === 401) { window.location.reload(); return; }
+        if (!response.ok) throw new Error('Unable to load setup defaults.');
         const data = (await response.json()) as SetupConfig;
         if (cancelled) return;
         setConfig(data);
@@ -152,7 +138,7 @@ export default function SetupPage() {
     }
     loadConfig();
     return () => { cancelled = true; };
-  }, [query]);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -179,14 +165,15 @@ export default function SetupPage() {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(withToken('/api/setup', query), {
+      const response = await fetch('/api/setup', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Unable to save setup.');
-      window.location.href = withToken('/', query);
+      window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
@@ -213,9 +200,10 @@ export default function SetupPage() {
           <span className={styles.brandText}><span>Alga PSA</span><small>Setup</small></span>
         </div>
         <nav className={styles.nav} aria-label="Alga PSA setup pages">
-          <a className={styles.setupLink} aria-current="page" href={withToken('/setup/', query)}><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
-          <a className={styles.setupLink} href={withToken('/', query)}><Activity className={styles.navIcon} aria-hidden="true" /><span>Status</span></a>
+          <a className={styles.setupLink} aria-current="page" href="/setup/"><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+          <a className={styles.setupLink} href="/"><Activity className={styles.navIcon} aria-hidden="true" /><span>Status</span></a>
         </nav>
+        <LogoutButton />
       </aside>
 
       <section className={styles.workspace}>
@@ -378,7 +366,7 @@ export default function SetupPage() {
               {error ? <div className={styles.alert} role="alert">{error}</div> : null}
 
               <div className={styles.formFooter}>
-                <a className={`${styles.actionButton} ${styles.secondary}`} href={withToken('/', query)}>View status</a>
+                <a className={`${styles.actionButton} ${styles.secondary}`} href="/">View status</a>
                 <button id="setup-submit" className={styles.primaryButton} type="submit" disabled={busy || !config}>{busy ? 'Starting setup…' : 'Save and continue'}</button>
               </div>
             </form>

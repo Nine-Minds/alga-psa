@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Boxes, ScrollText, Server, SlidersHorizontal } from 'lucide-react';
 import { AlgaLogo } from './AlgaLogo';
+import { LogoutButton } from './auth/LogoutButton';
 import styles from './status.module.css';
 
 type RawTierMap = Record<string, boolean | { ready?: boolean; status?: string }>;
@@ -41,18 +42,8 @@ type Pod = {
 type Tab = 'overview' | 'deployments' | 'pods' | 'logs';
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
-function tokenQuery() {
-  if (typeof window === 'undefined') return '';
-  return window.location.search;
-}
-
-function withToken(path: string, query: string) {
-  if (!query) return path;
-  return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
-}
-
-function apiPath(path: string, query: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
-  const search = new URLSearchParams(query.startsWith('?') ? query.slice(1) : query);
+function apiPath(path: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
+  const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== null && value !== undefined && value !== '') search.set(key, String(value));
   }
@@ -131,7 +122,6 @@ function SkeletonBlock({ lines = 6 }: { lines?: number }) {
 }
 
 export default function StatusPage() {
-  const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -163,20 +153,17 @@ export default function StatusPage() {
   const statusRequestInFlight = useRef(false);
   const statusAbortController = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    setQuery(tokenQuery());
-  }, []);
-
   const loadStatus = useCallback(async () => {
-    if (!query || statusRequestInFlight.current) return;
+    if (statusRequestInFlight.current) return;
 
     const controller = new AbortController();
     statusRequestInFlight.current = true;
     statusAbortController.current = controller;
     setLoadingStatus(true);
     try {
-      const response = await fetch(apiPath('/api/status', query), { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Status API unavailable.');
+      const response = await fetch(apiPath('/api/status'), { cache: 'no-store', signal: controller.signal });
+      if (response.status === 401) { window.location.reload(); return; }
+      if (!response.ok) throw new Error('Status API unavailable.');
       setStatus(await response.json());
       setError(null);
     } catch (err) {
@@ -189,14 +176,14 @@ export default function StatusPage() {
         setLoadingStatus(false);
       }
     }
-  }, [query]);
+  }, []);
 
   const recoverBootstrap = useCallback(async () => {
-    if (!query || recovering) return;
+    if (recovering) return;
     setRecovering(true);
     setRecoverMsg(null);
     try {
-      const response = await fetch(apiPath('/api/recover', query), { method: 'POST', cache: 'no-store' });
+      const response = await fetch(apiPath('/api/recover'), { method: 'POST', cache: 'no-store' });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Failed to trigger recovery.');
       setRecoverMsg(data.message || 'Recovery triggered.');
@@ -206,25 +193,23 @@ export default function StatusPage() {
     } finally {
       setRecovering(false);
     }
-  }, [query, recovering, loadStatus]);
+  }, [recovering, loadStatus]);
 
   const loadNamespaces = useCallback(async () => {
-    if (!query) return;
     setLoadingNamespaces(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/namespaces', query), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/namespaces'), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setNamespaces(data.namespaces || []);
     } catch { /* cluster may not exist yet */ }
     finally { setLoadingNamespaces(false); }
-  }, [query]);
+  }, []);
 
   const loadPods = useCallback(async () => {
-    if (!query) return;
     setLoadingPods(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/pods', query, { namespace }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/pods', { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       const nextPods = data.pods || [];
@@ -235,19 +220,18 @@ export default function StatusPage() {
       }
     } catch { /* ignore transient Kubernetes failures */ }
     finally { setLoadingPods(false); }
-  }, [namespace, query, selectedPod]);
+  }, [namespace, selectedPod]);
 
   const loadDeployments = useCallback(async () => {
-    if (!query) return;
     setLoadingDeployments(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/deployments', query, { namespace }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/deployments', { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setDeployments(data.deployments || []);
     } catch { /* ignore transient Kubernetes failures */ }
     finally { setLoadingDeployments(false); }
-  }, [namespace, query]);
+  }, [namespace]);
 
   function applyPendingLogScroll() {
     const pending = pendingLogScroll.current;
@@ -262,14 +246,14 @@ export default function StatusPage() {
   }
 
   const loadLogs = useCallback(async (tail = logTail, options: LogLoadOptions = {}) => {
-    if (!query || !selectedPod) return;
+    if (!selectedPod) return;
     const pane = logPaneRef.current;
     const previousScrollHeight = pane?.scrollHeight || 0;
     const previousScrollTop = pane?.scrollTop || 0;
     setLoadingLogs(true);
     try {
       setLogError(null);
-      const response = await fetch(apiPath('/api/k8s/logs', query, { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/logs', { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
       if (!response.ok) throw new Error((await response.json()).error || 'Unable to read logs.');
       const data = await response.json();
       if (options.preserveScroll) {
@@ -286,7 +270,7 @@ export default function StatusPage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, [logTail, namespace, query, selectedContainer, selectedPod]);
+  }, [logTail, namespace, selectedContainer, selectedPod]);
 
   useEffect(() => {
     loadStatus();
@@ -371,7 +355,8 @@ export default function StatusPage() {
             </button>
           ))}
         </nav>
-        <a className={styles.setupLink} href={withToken('/setup/', query)}><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+        <a className={styles.setupLink} href="/setup/"><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+        <LogoutButton />
       </aside>
 
       <section className={styles.workspace}>

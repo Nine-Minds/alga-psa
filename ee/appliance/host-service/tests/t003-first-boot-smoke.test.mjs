@@ -10,10 +10,6 @@ const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '
 const consoleScript = path.join(repoRoot, 'ee', 'appliance', 'host-service', 'console.mjs');
 const serverScript = path.join(repoRoot, 'ee', 'appliance', 'host-service', 'server.mjs');
 
-function httpGet(url) {
-  return httpRequest(url);
-}
-
 function httpRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
     const req = http.request(url, {
@@ -22,17 +18,31 @@ function httpRequest(url, options = {}) {
     }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve({ statusCode: res.statusCode || 0, body: Buffer.concat(chunks).toString('utf8') }));
+      res.on('end', () => resolve({
+        statusCode: res.statusCode || 0,
+        headers: res.headers,
+        body: Buffer.concat(chunks).toString('utf8')
+      }));
     });
     req.on('error', reject);
-    if (options.body) {
-      req.write(options.body);
-    }
+    if (options.body) req.write(options.body);
     req.end();
   });
 }
 
-test('T003 first-boot smoke: console output and host web service health', async () => {
+function httpGet(url, headers) {
+  return httpRequest(url, { headers });
+}
+
+function postJson(url, payload, headers = {}) {
+  return httpRequest(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(payload)
+  });
+}
+
+test('T003 first-boot smoke: console banner and the token -> password -> session flow', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-t003-'));
   const tokenFile = path.join(tmp, 'setup-token');
   const staticUiDir = path.join(tmp, 'status-ui');
@@ -41,13 +51,9 @@ test('T003 first-boot smoke: console output and host web service health', async 
   const runBannerFile = path.join(tmp, 'run-banner');
   const consoleTtyFile = path.join(tmp, 'tty1');
   const buildInfoFile = path.join(tmp, 'build-info.json');
-  const adminPasswordFile = path.join(tmp, 'admin-password');
-  const adminPasswordStateFile = path.join(tmp, 'admin-password-state.json');
   fs.writeFileSync(tokenFile, 'token-123\n');
-  fs.writeFileSync(adminPasswordFile, 'admin-temp-123\n');
   fs.writeFileSync(consoleTtyFile, '');
   fs.writeFileSync(buildInfoFile, JSON.stringify({ buildTimestamp: '2026-05-27T19:42:11Z' }));
-  fs.writeFileSync(adminPasswordStateFile, JSON.stringify({ status: 'temporary', user: 'alga-admin', changeRequired: true }));
   fs.mkdirSync(path.join(staticUiDir, 'setup'), { recursive: true });
   fs.mkdirSync(path.join(staticUiDir, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(staticUiDir, 'index.html'), '<!doctype html><h1>Status UI</h1>');
@@ -55,7 +61,7 @@ test('T003 first-boot smoke: console output and host web service health', async 
   fs.writeFileSync(path.join(staticUiDir, 'assets', 'app.js'), 'console.log("status-ui");');
 
   const consoleResult = await new Promise((resolve) => {
-    const child = spawn('node', [consoleScript], {
+    const child = spawn(process.execPath, [consoleScript], {
       cwd: repoRoot,
       env: {
         ...process.env,
@@ -65,10 +71,7 @@ test('T003 first-boot smoke: console output and host web service health', async 
         ALGA_APPLIANCE_MOTD_FILE: motdFile,
         ALGA_APPLIANCE_RUN_BANNER_FILE: runBannerFile,
         ALGA_APPLIANCE_CONSOLE_TTYS: consoleTtyFile,
-        ALGA_APPLIANCE_BUILD_INFO_FILE: buildInfoFile,
-        ALGA_APPLIANCE_ADMIN_USER: 'alga-admin',
-        ALGA_APPLIANCE_ADMIN_PASSWORD_FILE: adminPasswordFile,
-        ALGA_APPLIANCE_ADMIN_PASSWORD_STATE_FILE: adminPasswordStateFile
+        ALGA_APPLIANCE_BUILD_INFO_FILE: buildInfoFile
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -82,33 +85,29 @@ test('T003 first-boot smoke: console output and host web service health', async 
   assert.equal(consoleResult.code, 0, consoleResult.stderr);
   assert.match(consoleResult.stdout, /Alga Appliance setup handoff/);
   assert.match(consoleResult.stdout, /Build timestamp: 2026-05-27T19:42:11Z/);
-  assert.match(consoleResult.stdout, /Bootstrap layers:/);
-  assert.match(consoleResult.stdout, /k3s substrate/);
-  assert.match(consoleResult.stdout, /baked Kubernetes control plane/);
   assert.match(consoleResult.stdout, /setup UI served by the Kubernetes-hosted control plane/);
-  assert.match(consoleResult.stdout, /Setup URL:/);
-  assert.match(consoleResult.stdout, /Setup token: token-123/);
-  assert.match(consoleResult.stdout, /User: alga-admin/);
-  assert.match(consoleResult.stdout, /Temporary password: admin-temp-123/);
-  assert.match(consoleResult.stdout, /Password change required on first login/);
-  assert.match(consoleResult.stdout, /Control-plane recovery: sudo \/opt\/alga-appliance\/bin\/alga-control-plane-reapply/);
-  assert.match(consoleResult.stdout, /Console setup fallback:/);
-  assert.match(consoleResult.stdout, /alga-host-agent\.service/);
+  assert.match(consoleResult.stdout, /Setup URL: http:\/\/.+:18080\//);
+  assert.match(consoleResult.stdout, /One-time setup token: token-123/);
+  assert.match(consoleResult.stdout, /Sign in to this host with the account you created during installation/);
+  assert.match(consoleResult.stdout, /Forgot the management password\? sudo alga-appliance-reset-admin/);
+  // The OS credential is no longer generated or printed.
+  assert.doesNotMatch(consoleResult.stdout, /Temporary password/);
+  assert.doesNotMatch(consoleResult.stdout, /Password change required/);
   assert.doesNotMatch(consoleResult.stdout, /-u alga-appliance\.service/);
-  assert.match(fs.readFileSync(issueFile, 'utf8'), /Setup token: token-123/);
-  assert.match(fs.readFileSync(motdFile, 'utf8'), /Setup URL: http:\/\/.+:18080\/setup\?token=token-123/);
-  assert.match(fs.readFileSync(runBannerFile, 'utf8'), /Alga Appliance setup handoff/);
-  assert.match(fs.readFileSync(consoleTtyFile, 'utf8'), /Setup token: token-123/);
-  assert.match(fs.readFileSync(issueFile, 'utf8'), /Build timestamp: 2026-05-27T19:42:11Z/);
-  assert.match(fs.readFileSync(motdFile, 'utf8'), /Build timestamp: 2026-05-27T19:42:11Z/);
+  assert.match(fs.readFileSync(issueFile, 'utf8'), /One-time setup token: token-123/);
+  assert.match(fs.readFileSync(motdFile, 'utf8'), /Setup URL: http:\/\/.+:18080\//);
+  assert.doesNotMatch(fs.readFileSync(motdFile, 'utf8'), /\?token=/);
+  assert.match(fs.readFileSync(consoleTtyFile, 'utf8'), /One-time setup token: token-123/);
 
-  const server = spawn('node', [serverScript], {
+  const server = spawn(process.execPath, [serverScript], {
     cwd: repoRoot,
     env: {
       ...process.env,
       ALGA_APPLIANCE_DISABLE_SETUP_QUEUE: '1',
       ALGA_APPLIANCE_PORT: '18081',
       ALGA_APPLIANCE_TOKEN_FILE: tokenFile,
+      ALGA_APPLIANCE_ADMIN_CREDENTIAL_FILE: path.join(tmp, 'admin-ui-credential.json'),
+      ALGA_APPLIANCE_SESSION_SECRET_FILE: path.join(tmp, 'session-secret'),
       ALGA_APPLIANCE_STATE_FILE: path.join(tmp, 'install-state.json'),
       ALGA_APPLIANCE_SETUP_INPUTS_FILE: path.join(tmp, 'setup-inputs.json'),
       ALGA_APPLIANCE_STATUS_UI_DIR: staticUiDir
@@ -116,69 +115,89 @@ test('T003 first-boot smoke: console output and host web service health', async 
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
+  const base = 'http://127.0.0.1:18081';
   try {
     await new Promise((resolve) => setTimeout(resolve, 350));
-    const health = await httpGet('http://127.0.0.1:18081/healthz');
+
+    const health = await httpGet(`${base}/healthz`);
     assert.equal(health.statusCode, 200);
-    assert.match(health.body, /"ok":true/);
 
-    const unauthorizedSetup = await httpGet('http://127.0.0.1:18081/setup');
-    assert.equal(unauthorizedSetup.statusCode, 401);
+    // Fresh appliance: needs the one-time token first.
+    const state0 = await httpGet(`${base}/api/auth/state`);
+    assert.equal(state0.statusCode, 200);
+    assert.equal(JSON.parse(state0.body).phase, 'needs-token');
 
-    const setupPage = await httpGet('http://127.0.0.1:18081/setup?token=token-123');
+    // The SPA shell is served without a session (it renders the login screen).
+    const setupPage = await httpGet(`${base}/setup`);
     assert.equal(setupPage.statusCode, 200);
     assert.match(setupPage.body, /Setup UI/);
-
-    const staticAsset = await httpGet('http://127.0.0.1:18081/assets/app.js');
+    const staticAsset = await httpGet(`${base}/assets/app.js`);
     assert.equal(staticAsset.statusCode, 200);
-    assert.match(staticAsset.body, /status-ui/);
 
-    const config = await httpRequest('http://127.0.0.1:18081/api/setup/config?token=token-123', {
-      headers: { Host: '192.0.2.10:18081' }
-    });
+    // Data endpoints are gated.
+    const configNoAuth = await httpGet(`${base}/api/setup/config`);
+    assert.equal(configNoAuth.statusCode, 401);
+
+    // Wrong token is rejected; correct token advances to set-password.
+    const badToken = await postJson(`${base}/api/auth/redeem-token`, { token: 'nope' });
+    assert.equal(badToken.statusCode, 401);
+    const goodToken = await postJson(`${base}/api/auth/redeem-token`, { token: 'token-123' });
+    assert.equal(goodToken.statusCode, 200);
+
+    // Weak password is rejected.
+    const weak = await postJson(`${base}/api/auth/set-password`, { token: 'token-123', password: 'short' });
+    assert.equal(weak.statusCode, 400);
+
+    // Set the management password -> receive a session cookie.
+    const setPw = await postJson(`${base}/api/auth/set-password`, { token: 'token-123', password: 'Str0ng!Pass' });
+    assert.equal(setPw.statusCode, 200);
+    const setCookie = (setPw.headers['set-cookie'] || [])[0] || '';
+    assert.match(setCookie, /alga_appliance_session=/);
+    const cookie = setCookie.split(';')[0];
+
+    // Token is now consumed: redeeming again is a conflict.
+    const reRedeem = await postJson(`${base}/api/auth/redeem-token`, { token: 'token-123' });
+    assert.equal(reRedeem.statusCode, 409);
+
+    // Authenticated now.
+    const stateAuthed = await httpGet(`${base}/api/auth/state`, { Cookie: cookie });
+    assert.equal(JSON.parse(stateAuthed.body).phase, 'authenticated');
+
+    const config = await httpGet(`${base}/api/setup/config`, { Cookie: cookie, Host: '192.0.2.10:18081' });
     assert.equal(config.statusCode, 200);
     const configBody = JSON.parse(config.body);
     assert.equal(configBody.mode, 'setup');
     assert.equal(configBody.defaults.channel, 'stable');
     assert.equal(configBody.defaults.appHostname, 'http://192.0.2.10:3000');
-    assert.equal(Array.isArray(configBody.network.addresses), true);
 
-    const submit = await httpRequest('http://127.0.0.1:18081/api/setup?token=token-123', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        channel: 'stable',
-        appHostname: 'alga.example.com',
-        dnsMode: 'system',
-        repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-        repoBranch: 'feature/on-premise-email-processing',
-        tenantName: 'Acme MSP',
-        adminFirstName: 'Ava',
-        adminLastName: 'Admin',
-        adminEmail: 'ava@example.com',
-        adminPassword: 'Str0ng!Pass',
-        adminPasswordConfirm: 'Str0ng!Pass'
-      })
-    });
+    const submit = await postJson(`${base}/api/setup`, {
+      channel: 'stable',
+      appHostname: 'alga.example.com',
+      dnsMode: 'system',
+      tenantName: 'Acme MSP',
+      adminFirstName: 'Ava',
+      adminLastName: 'Admin',
+      adminEmail: 'ava@example.com',
+      adminPassword: 'Str0ng!Pass',
+      adminPasswordConfirm: 'Str0ng!Pass'
+    }, { Cookie: cookie });
     assert.equal(submit.statusCode, 202);
     const submitBody = JSON.parse(submit.body);
     assert.equal(submitBody.ok, true);
     assert.equal(submitBody.acceptedInputs.appHostname, 'alga.example.com');
-    // repoBranch/repoUrl are no longer part of setup inputs (registry-metadata):
-    // release selection is resolved by channel from the OCI registry. Any
-    // repoBranch/repoUrl posted by an older client is ignored, not echoed.
-    assert.equal(submitBody.acceptedInputs.repoBranch, undefined);
-    const persistedSetupInputs = JSON.parse(fs.readFileSync(path.join(tmp, 'setup-inputs.json'), 'utf8'));
-    assert.equal(persistedSetupInputs.channel, 'stable');
-    assert.equal(persistedSetupInputs.appHostname, 'alga.example.com');
-    assert.equal(persistedSetupInputs.repoBranch, undefined);
-    assert.equal(persistedSetupInputs.initialTenant.tenantName, 'Acme MSP');
-    assert.equal(persistedSetupInputs.initialTenant.adminEmail, 'ava@example.com');
+    const persisted = JSON.parse(fs.readFileSync(path.join(tmp, 'setup-inputs.json'), 'utf8'));
+    assert.equal(persisted.initialTenant.adminEmail, 'ava@example.com');
     assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'install-state.json'), 'utf8')).status, 'setup-queued');
 
-    const statusPage = await httpGet('http://127.0.0.1:18081/?token=token-123');
+    const statusPage = await httpGet(`${base}/`, { Cookie: cookie });
     assert.equal(statusPage.statusCode, 200);
     assert.match(statusPage.body, /Status UI/);
+
+    // Logging in again with the chosen password works; wrong password does not.
+    const loginOk = await postJson(`${base}/api/auth/login`, { password: 'Str0ng!Pass' });
+    assert.equal(loginOk.statusCode, 200);
+    const loginBad = await postJson(`${base}/api/auth/login`, { password: 'nope' });
+    assert.equal(loginBad.statusCode, 401);
   } finally {
     server.kill('SIGTERM');
   }

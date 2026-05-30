@@ -10,7 +10,12 @@ data:
   ALGA_APPLIANCE_PORT: "8080"
   ALGA_APPLIANCE_MODE: "kubernetes-control-plane"
   ALGA_APPLIANCE_STATE_FILE: "/var/lib/alga-appliance/install-state.json"
-  ALGA_APPLIANCE_TOKEN_FILE: "/var/lib/alga-appliance-token/setup-token"
+  # Token is read directly from the shared host volume (written 0644 by
+  # init-token.mjs), not from a Kubernetes Secret. This lets the host-side reset
+  # CLI re-arm the token with no kubectl/secret-sync round trip.
+  ALGA_APPLIANCE_TOKEN_FILE: "/var/lib/alga-appliance/setup-token"
+  ALGA_APPLIANCE_ADMIN_CREDENTIAL_FILE: "/var/lib/alga-appliance/admin-ui-credential.json"
+  ALGA_APPLIANCE_SESSION_SECRET_FILE: "/var/lib/alga-appliance/session-secret"
   ALGA_APPLIANCE_KUBECONFIG: "/tmp/alga-appliance/kubeconfig"
   ALGA_APPLIANCE_HOST_AGENT_SOCKET: "/run/alga-appliance/host-agent.sock"
   ALGA_APPLIANCE_SETUP_INPUTS_FILE: "/var/lib/alga-appliance/setup-inputs.json"
@@ -73,9 +78,6 @@ spec:
           volumeMounts:
             - name: state
               mountPath: /var/lib/alga-appliance
-            - name: setup-token
-              mountPath: /var/lib/alga-appliance-token
-              readOnly: true
             - name: host-agent-socket
               mountPath: /run/alga-appliance
           readinessProbe:
@@ -105,10 +107,6 @@ spec:
           hostPath:
             path: /var/lib/alga-appliance
             type: DirectoryOrCreate
-        - name: setup-token
-          secret:
-            secretName: appliance-setup-token
-            defaultMode: 0444
         - name: host-agent-socket
           hostPath:
             path: /run/alga-appliance

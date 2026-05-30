@@ -10,10 +10,22 @@ import { createKubectlQueue } from './kubectl-queue.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
+import {
+  authPhase,
+  isAuthenticated,
+  getCredentialState,
+  tokensMatch,
+  setPassword,
+  verifyPassword,
+  sessionCookieHeader,
+  clearSessionCookieHeader,
+  checkLockout,
+  registerFailure,
+  registerSuccess,
+} from './auth.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-const tokenFile = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
 const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
@@ -259,6 +271,43 @@ function jsonResponse(res, statusCode, value) {
   res.end(JSON.stringify(value));
 }
 
+function jsonResponseWithCookie(res, statusCode, value, cookie) {
+  if (res.destroyed || res.writableEnded) return;
+  res.writeHead(statusCode, { 'content-type': 'application/json', 'set-cookie': cookie });
+  res.end(JSON.stringify(value));
+}
+
+// Every data-bearing endpoint now requires a valid session cookie instead of a
+// `?token=` query parameter. The token is only used once, at the PIN screen, to
+// bootstrap the management password.
+function requireAuth(req, res) {
+  if (isAuthenticated(req)) return true;
+  jsonResponse(res, 401, { error: 'Unauthorized: sign in to continue.' });
+  return false;
+}
+
+function clientIp(req) {
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
+async function readJsonBody(req) {
+  const body = await readRequestBody(req);
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('application/json')) {
+    try { return JSON.parse(body || '{}'); } catch { return {}; }
+  }
+  return Object.fromEntries(new URLSearchParams(body));
+}
+
+function passwordPolicyError(value) {
+  if (typeof value !== 'string' || value.length < 8) return 'Use at least 8 characters.';
+  if (!/[a-z]/.test(value)) return 'Include a lowercase letter.';
+  if (!/[A-Z]/.test(value)) return 'Include an uppercase letter.';
+  if (!/\d/.test(value)) return 'Include a number.';
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return 'Include a special character.';
+  return null;
+}
+
 function requestAbortSignal(req, res) {
   const controller = new AbortController();
   const abortIfUnfinished = () => {
@@ -489,9 +538,10 @@ function summarizePod(item) {
 }
 
 function tokenHelpHtml() {
-  return `<p>The setup/status token and temporary local admin password are printed on the VM console and persisted in the login banner.</p>
+  return `<p>The one-time setup token is printed on the VM console and persisted in the login banner. Enter it once to choose a management password; after that you sign in with the password.</p>
     <p>If the console was cleared, press Enter or reopen the VM console to display the banner again.</p>
-    <p>If you have host shell access, read the token with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>`;
+    <p>If you have host shell access, read the token with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>
+    <p>Forgot the management password? Run <code>sudo alga-appliance-reset-admin</code> to re-arm a fresh token.</p>`;
 }
 
 function preflightGuidanceForPhase(phase) {
@@ -510,19 +560,111 @@ function preflightGuidanceForPhase(phase) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const mode = currentMode();
-  const setupToken = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '';
 
   if (url.pathname === '/healthz') {
     jsonResponse(res, 200, { ok: true, mode });
     return;
   }
 
-  if (url.pathname === '/api/setup/config') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid setup token required.' });
+  // --- authentication ------------------------------------------------------
+  // The UI calls /api/auth/state on load to decide which screen to render:
+  // token entry (first run), password login (configured), or straight in.
+  if (url.pathname === '/api/auth/state') {
+    jsonResponse(res, 200, { phase: authPhase(req), mode });
+    return;
+  }
+
+  if (url.pathname === '/api/auth/redeem-token') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status === 'configured') {
+      jsonResponse(res, 409, { error: 'A management password is already set. Sign in with your password.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (tokensMatch(payload.token)) {
+      registerSuccess(ip);
+      jsonResponse(res, 200, { ok: true, next: 'set-password' });
+    } else {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect setup token.' });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/auth/set-password') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status === 'configured') {
+      jsonResponse(res, 409, { error: 'A management password is already set. Sign in with your password.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (!tokensMatch(payload.token)) {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect setup token.' });
+      return;
+    }
+    const pwError = passwordPolicyError(payload.password || '');
+    if (pwError) {
+      jsonResponse(res, 400, { error: pwError });
+      return;
+    }
+    setPassword(payload.password);
+    registerSuccess(ip);
+    jsonResponseWithCookie(res, 200, { ok: true }, sessionCookieHeader());
+    return;
+  }
+
+  if (url.pathname === '/api/auth/login') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status !== 'configured') {
+      jsonResponse(res, 409, { error: 'No management password is set yet. Enter the setup token.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (verifyPassword(payload.password || '')) {
+      registerSuccess(ip);
+      jsonResponseWithCookie(res, 200, { ok: true }, sessionCookieHeader());
+    } else {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect password.' });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/auth/logout') {
+    jsonResponseWithCookie(res, 200, { ok: true }, clearSessionCookieHeader());
+    return;
+  }
+
+  if (url.pathname === '/api/setup/config') {
+    if (!requireAuth(req, res)) return;
     jsonResponse(res, 200, {
       mode,
       defaults: readSetupDefaults(req.headers.host || ''),
@@ -532,17 +674,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/setup') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid setup token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
     if (mode === 'status') {
-      jsonResponse(res, 409, { error: 'Setup has already started.', redirectTo: `/?token=${encodeURIComponent(providedToken)}` });
+      jsonResponse(res, 409, { error: 'Setup has already started.', redirectTo: '/' });
       return;
     }
 
@@ -584,7 +722,7 @@ const server = http.createServer(async (req, res) => {
       queueSetupWorkflow();
       jsonResponse(res, 202, {
         ok: true,
-        redirectTo: `/?token=${encodeURIComponent(providedToken)}`,
+        redirectTo: '/',
         acceptedInputs: {
           ...setupInputs,
           initialTenant: setupInputs.initialTenant ? {
@@ -602,12 +740,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/status') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
-      return;
-    }
+    if (!requireAuth(req, res)) return;
 
     const signal = requestAbortSignal(req, res);
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
@@ -640,11 +773,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/namespaces') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const signal = requestAbortSignal(req, res);
     const result = await runKubectlJson('get namespaces', KUBECTL_API_TIMEOUT_MS, signal);
     if (!result.ok) {
@@ -662,11 +791,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/deployments') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
     if (!nsFlag) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
@@ -688,11 +813,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/pods') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
     if (!nsFlag) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
@@ -713,11 +834,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/logs') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const namespace = url.searchParams.get('namespace') || 'msp';
     const pod = url.searchParams.get('pod') || '';
     const container = url.searchParams.get('container') || '';
@@ -742,12 +859,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/support-bundle') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       res.writeHead(405, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
@@ -761,11 +873,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/recover') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
@@ -796,12 +904,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/updates') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       res.writeHead(405, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
@@ -824,17 +927,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/updates') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
+    if (!isAuthenticated(req)) {
       res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
+      res.end('Unauthorized: sign in to continue.');
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>App Channel Updates</h1>
       <p>Updates here only change Alga application channel/release state. Ubuntu and k3s updates are manual/support-run in v1.</p>
-      <form method="post" action="/api/updates?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/api/updates">
         <label>Channel</label>
         <select name="channel">
           <option value="stable" selected>stable</option>
@@ -847,17 +949,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/support-bundle') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
+    if (!isAuthenticated(req)) {
       res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
+      res.end('Unauthorized: sign in to continue.');
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>Generate Support Bundle</h1>
       <p>This bundle includes host service logs, setup state, Kubernetes/Flux/Helm diagnostics, network checks, disk usage, and redacted metadata.</p>
-      <form method="post" action="/api/support-bundle?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/api/support-bundle">
         <button type="submit">Generate Bundle</button>
       </form>
       <p>CLI fallback: <code>/usr/bin/env node /opt/alga-appliance/host-service/support-bundle.mjs</code> (or call the status API).</p>
@@ -866,20 +967,21 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/setup' || url.pathname === '/setup/') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid setup token required.');
-      return;
-    }
-
+    // The setup page is the SPA shell; it gates its own content via
+    // /api/auth/state. Only the legacy server-rendered POST mutates state, so
+    // that path requires a session.
     if (mode === 'status') {
-      res.writeHead(303, { location: `/?token=${encodeURIComponent(providedToken)}` });
+      res.writeHead(303, { location: '/' });
       res.end();
       return;
     }
 
     if ((req.method || 'GET').toUpperCase() === 'POST') {
+      if (!isAuthenticated(req)) {
+        res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Unauthorized: sign in to continue.');
+        return;
+      }
       const body = await readRequestBody(req);
       const params = new URLSearchParams(body);
       let setupInputs;
@@ -914,7 +1016,7 @@ const server = http.createServer(async (req, res) => {
       }, null, 2)}\n`, { mode: 0o600 });
       queueSetupWorkflow();
 
-      res.writeHead(303, { location: `/?token=${encodeURIComponent(providedToken)}` });
+      res.writeHead(303, { location: '/' });
       res.end();
       return;
     }
@@ -928,7 +1030,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>Alga Appliance Setup</h1>
-      <form method="post" action="/setup?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/setup">
         <label>Release channel</label><br />
         <select name="channel">
           <option value="stable" selected>stable (recommended)</option>
@@ -981,18 +1083,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Page routes: serve the SPA shell, which gates its own content via
+  // /api/auth/state. The login/PIN screen needs no server-side session.
+  const staticHome = safeStaticFileForPathname('/');
+  if (staticHome) {
+    serveStaticFile(res, staticHome);
+    return;
+  }
+
+  // No static bundle (dev/edge): the server-rendered fallbacks below expose
+  // live appliance data, so they require a session.
+  if (!isAuthenticated(req)) {
+    res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('Unauthorized: sign in to continue.');
+    return;
+  }
+
   if (mode === 'status') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
-      return;
-    }
-    const staticHome = safeStaticFileForPathname('/');
-    if (staticHome) {
-      serveStaticFile(res, staticHome);
-      return;
-    }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     const signal = requestAbortSignal(req, res);
     const installStateForProbe = readInstallStateSafe();
@@ -1042,7 +1149,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p>${tokenHelpHtml()}<p>Open <code>/setup?token=&lt;setup-token&gt;</code> to continue.</p></body></html>`);
+  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p>${tokenHelpHtml()}<p>Open <code>/setup</code> to continue.</p></body></html>`);
 });
 
 server.listen(port, '0.0.0.0', () => {

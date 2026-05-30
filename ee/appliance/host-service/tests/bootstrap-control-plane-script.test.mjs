@@ -49,10 +49,9 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
     `kubectl --kubeconfig ${path.join(tmp, 'k3s.yaml')} apply -f ${path.join(storageDir, 'local-path-storage.yaml')} || true`,
     'Control plane: applying Kubernetes-hosted setup/status manifests',
     `kubectl --kubeconfig ${path.join(tmp, 'k3s.yaml')} apply -f ${path.join(manifestDir, 'namespace.yaml')}`,
-    `kubectl --kubeconfig ${path.join(tmp, 'k3s.yaml')} -n alga-appliance-control-plane create secret generic appliance-setup-token`,
     `kubectl --kubeconfig ${path.join(tmp, 'k3s.yaml')} apply -k ${manifestDir}`,
     'Handoff: setup UI should be available from the Kubernetes-hosted control plane',
-    'Setup token: token-123',
+    'One-time setup token: token-123',
     `Fallback recovery: sudo ${applianceRoot}/bin/alga-control-plane-reapply`
   ];
 
@@ -65,5 +64,6 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   }
 
   assert.match(output, /Alga Appliance bootstrap layers:/);
-  assert.match(output, /setup handoff: http:\/\/.+:18080\/setup\?token=token-123/);
+  assert.match(output, /setup handoff: http:\/\/.+:18080\//);
+  assert.doesNotMatch(output, /\?token=/);
 });

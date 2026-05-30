@@ -2,7 +2,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 const tokenPath = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
@@ -10,9 +9,6 @@ const issueFile = process.env.ALGA_APPLIANCE_ISSUE_FILE || '/etc/issue';
 const motdFile = process.env.ALGA_APPLIANCE_MOTD_FILE || '/etc/motd';
 const runBannerFile = process.env.ALGA_APPLIANCE_RUN_BANNER_FILE || '/run/alga-appliance-setup.txt';
 const buildInfoFile = process.env.ALGA_APPLIANCE_BUILD_INFO_FILE || '/etc/alga-appliance/build-info.json';
-const adminUser = process.env.ALGA_APPLIANCE_ADMIN_USER || 'alga-admin';
-const adminPasswordFile = process.env.ALGA_APPLIANCE_ADMIN_PASSWORD_FILE || '/var/lib/alga-appliance/admin-password';
-const adminPasswordStateFile = process.env.ALGA_APPLIANCE_ADMIN_PASSWORD_STATE_FILE || '/var/lib/alga-appliance/admin-password-state.json';
 const consoleTtys = (process.env.ALGA_APPLIANCE_CONSOLE_TTYS || '')
   .split(',')
   .map((value) => value.trim())
@@ -27,60 +23,12 @@ function readJson(file) {
   }
 }
 
-function writeSecureJson(file, value) {
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o750 });
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  fs.chmodSync(path.dirname(file), 0o750);
-  fs.chmodSync(file, 0o600);
-}
-
-function passwordStillRequiresChange(user) {
-  const result = spawnSync('chage', ['-l', user], { encoding: 'utf8' });
-  if (result.status !== 0) {
-    return true;
-  }
-  return /password must be changed/i.test(`${result.stdout}\n${result.stderr}`);
-}
-
 function buildTimestampLine() {
   const buildInfo = readJson(buildInfoFile);
   if (buildInfo && typeof buildInfo.buildTimestamp === 'string' && buildInfo.buildTimestamp) {
     return `Build timestamp: ${buildInfo.buildTimestamp}`;
   }
   return 'Build timestamp: unavailable';
-}
-
-function adminCredentialLines() {
-  const state = readJson(adminPasswordStateFile);
-  if (state && state.status === 'temporary' && fs.existsSync(adminPasswordFile)) {
-    if (!passwordStillRequiresChange(adminUser)) {
-      try { fs.unlinkSync(adminPasswordFile); } catch {}
-      writeSecureJson(adminPasswordStateFile, Object.assign({}, state, {
-        status: 'configured',
-        configuredAt: new Date().toISOString(),
-        changeRequired: false
-      }));
-      return [
-        'Local administration:',
-        `  User: ${adminUser}`,
-        '  Password: configured'
-      ];
-    }
-
-    const temporaryPassword = fs.readFileSync(adminPasswordFile, 'utf8').trim();
-    return [
-      'Local administration:',
-      `  User: ${adminUser}`,
-      `  Temporary password: ${temporaryPassword}`,
-      '  Password change required on first login.'
-    ];
-  }
-
-  return [
-    'Local administration:',
-    `  User: ${adminUser}`,
-    state && state.status === 'configured' ? '  Password: configured' : '  Password: initialize pending'
-  ];
 }
 
 function detectIp() {
@@ -111,11 +59,13 @@ const lines = [
   '  1. k3s substrate starting/ready on this host',
   '  2. baked Kubernetes control plane applying from /opt/alga-appliance/control-plane',
   '  3. setup UI served by the Kubernetes-hosted control plane',
-  `Setup URL: http://${ip}:${port}/setup?token=${token}`,
-  `Setup token: ${token}`,
+  `Setup URL: http://${ip}:${port}/`,
+  `One-time setup token: ${token}`,
+  'Enter this token once at the setup page, then choose a management password.',
   'Web setup on port 8080 is the primary path.',
   '',
-  ...adminCredentialLines(),
+  'Sign in to this host with the account you created during installation.',
+  'Forgot the management password? sudo alga-appliance-reset-admin',
   '',
   'If the console is cleared, press Enter or reopen the VM console to redisplay this banner.',
   'Control-plane recovery: sudo /opt/alga-appliance/bin/alga-control-plane-reapply',

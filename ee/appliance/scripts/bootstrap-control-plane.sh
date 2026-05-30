@@ -305,12 +305,10 @@ apply_control_plane() {
     log "kubectl apply -f $CONTROL_PLANE_MANIFESTS/namespace.yaml"
     kubectl_cmd apply -f "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
   fi
-  if [ "$DRY_RUN" = "true" ]; then
-    plan "kubectl --kubeconfig $KUBECONFIG_PATH -n $CONTROL_PLANE_NAMESPACE create secret generic appliance-setup-token --from-file=setup-token=$TOKEN_FILE --dry-run=client -o yaml | kubectl --kubeconfig $KUBECONFIG_PATH apply -f -"
-  else
-    log "creating/updating appliance setup token Secret"
-    kubectl_cmd -n "$CONTROL_PLANE_NAMESPACE" create secret generic appliance-setup-token --from-file=setup-token="$TOKEN_FILE" --dry-run=client -o yaml | kubectl_cmd apply -f - >/dev/null
-  fi
+  # The setup token is read by the control-plane pod directly from the shared
+  # host volume (/var/lib/alga-appliance/setup-token, hostPath-mounted), so no
+  # Kubernetes Secret is created here. This keeps the host-side reset CLI a pure
+  # filesystem operation with no kubectl/secret-sync round trip.
   if [ "$DRY_RUN" = "true" ]; then
     plan "resolve channel-pinned control-plane image (fall back to baked baseline)"
     plan "kubectl --kubeconfig $KUBECONFIG_PATH apply -k $CONTROL_PLANE_MANIFESTS"
@@ -359,9 +357,9 @@ report_handoff() {
 Alga Appliance bootstrap layers:
   1. k3s substrate: ready
   2. baked control plane: applied from $CONTROL_PLANE_MANIFESTS
-  3. setup handoff: http://$ip:$SETUP_PORT/setup?token=$token
+  3. setup handoff: http://$ip:$SETUP_PORT/
 
-Setup token: $token
+One-time setup token: $token
 Fallback recovery: sudo $FALLBACK_COMMAND
 Logs: sudo journalctl -u alga-appliance-bootstrap.service -u k3s -f
 EOF

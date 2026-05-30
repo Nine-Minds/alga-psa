@@ -89,12 +89,16 @@ verify() {
   require_cmd jq
 
   local kube=(kubectl --kubeconfig "$kubeconfig")
-  local setup_url="http://${node_ip}:8080/setup?token=${token}"
-  local setup_api_url="http://${node_ip}:8080/api/setup?token=${token}"
-  local status_url="http://${node_ip}:8080/api/status?token=${token}"
+  local base="http://${node_ip}:8080"
+  local health_url="${base}/healthz"
+  local setup_api_url="${base}/api/setup"
+  local status_url="${base}/api/status"
+  local cookie_jar; cookie_jar="$(mktemp)"
+  local mgmt_password="Str0ng!Pass"
   local deadline=$((SECONDS + timeout_seconds))
 
-  until [ "$(http_code "$setup_url")" = "200" ]; do
+  # Readiness: /healthz is open (no session required).
+  until [ "$(http_code "$health_url")" = "200" ]; do
     [ "$SECONDS" -lt "$deadline" ] || { echo "setup UI did not become reachable" >&2; exit 1; }
     sleep 5
   done
@@ -103,18 +107,27 @@ verify() {
   "${kube[@]}" -n alga-appliance-control-plane get svc appliance-control-plane
   "${kube[@]}" -n msp get deploy >/dev/null 2>&1 || true
 
-  curl -fsS -X POST "$setup_api_url" \
+  # Authenticate: redeem the one-time setup token, then set the management
+  # password. The session cookie is stored in the jar and reused below.
+  curl -fsS -c "$cookie_jar" -X POST "${base}/api/auth/redeem-token" \
     -H 'content-type: application/json' \
-    --data '{"channel":"stable","appHostname":"http://'"$node_ip"':3000","dnsMode":"system","repoUrl":"https://github.com/Nine-Minds/alga-psa.git","tenantName":"Acme MSP","adminFirstName":"Ava","adminLastName":"Admin","adminEmail":"ava@example.com","adminPassword":"Str0ng!Pass","adminPasswordConfirm":"Str0ng!Pass"}' >/dev/null
+    --data '{"token":"'"$token"'"}' >/dev/null
+  curl -fsS -c "$cookie_jar" -b "$cookie_jar" -X POST "${base}/api/auth/set-password" \
+    -H 'content-type: application/json' \
+    --data '{"token":"'"$token"'","password":"'"$mgmt_password"'"}' >/dev/null
 
-  until curl -fsS "$status_url" | jq -e '.rollup.state == "ready_to_log_in" or .rollup.state == "ready_with_background_issues"' >/dev/null; do
+  curl -fsS -b "$cookie_jar" -X POST "$setup_api_url" \
+    -H 'content-type: application/json' \
+    --data '{"channel":"stable","appHostname":"http://'"$node_ip"':3000","dnsMode":"system","tenantName":"Acme MSP","adminFirstName":"Ava","adminLastName":"Admin","adminEmail":"ava@example.com","adminPassword":"Str0ng!Pass","adminPasswordConfirm":"Str0ng!Pass"}' >/dev/null
+
+  until curl -fsS -b "$cookie_jar" "$status_url" | jq -e '.rollup.state == "ready_to_log_in" or .rollup.state == "ready_with_background_issues"' >/dev/null; do
     [ "$SECONDS" -lt "$deadline" ] || { echo "login-ready status was not reached" >&2; exit 1; }
     sleep 10
   done
 
   "${kube[@]}" -n msp get secret appliance-initial-tenant
   ssh "root@${node_ip}" /opt/alga-appliance/bin/alga-control-plane-reapply
-  curl -fsS "$status_url" >/dev/null
+  curl -fsS -b "$cookie_jar" "$status_url" >/dev/null
   echo "PASS: fresh ISO install reached Kubernetes-hosted setup and login-ready status"
 }
 

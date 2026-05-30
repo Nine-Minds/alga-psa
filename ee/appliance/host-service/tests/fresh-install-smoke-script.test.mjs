@@ -44,10 +44,13 @@ test('T008 fresh-install smoke harness validates offline overlay assets and live
   assert.equal(buildInfo.buildTimestamp, '2026-05-27T19:42:11Z');
 
   const script = fs.readFileSync(smokeScript, 'utf8');
-  assert.match(script, /http:\/\/\$\{node_ip\}:8080\/setup\?token=\$\{token\}/);
+  // Session-based auth: redeem the one-time token, set a password, reuse the cookie.
+  assert.match(script, /api\/auth\/redeem-token/);
+  assert.match(script, /api\/auth\/set-password/);
+  assert.match(script, /local setup_api_url="\$\{base\}\/api\/setup"/);
+  assert.match(script, /curl -fsS -b "\$cookie_jar" -X POST "\$setup_api_url"/);
+  assert.doesNotMatch(script, /\?token=/);
   assert.match(script, /alga-appliance-control-plane get deploy appliance-control-plane/);
-  assert.match(script, /local setup_api_url="http:\/\/\$\{node_ip\}:8080\/api\/setup\?token=\$\{token\}"/);
-  assert.match(script, /curl -fsS -X POST "\$setup_api_url"/);
   assert.match(script, /appliance-initial-tenant/);
   assert.match(script, /alga-control-plane-reapply/);
   assert.match(script, /ready_to_log_in/);

@@ -132,14 +132,14 @@ else
   fi
 fi
 
+# The setup token is read by the control-plane pod directly from the shared
+# host volume (hostPath), so no appliance-setup-token Secret is created here.
 if [ "$DRY_RUN" = "true" ]; then
   run kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
-  run kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$CONTROL_PLANE_NAMESPACE" create secret generic appliance-setup-token --from-file=setup-token="$TOKEN_FILE" --dry-run=client -o yaml
   run kubectl --kubeconfig "$KUBECONFIG_PATH" apply -k "$CONTROL_PLANE_MANIFESTS"
 else
   printf '[reapply] kubectl apply -f %s\n' "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
   kubectl_cmd apply -f "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
-  kubectl_cmd -n "$CONTROL_PLANE_NAMESPACE" create secret generic appliance-setup-token --from-file=setup-token="$TOKEN_FILE" --dry-run=client -o yaml | kubectl_cmd apply -f - >/dev/null
   printf '[reapply] kubectl apply -k %s\n' "$CONTROL_PLANE_MANIFESTS"
   kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
 fi
