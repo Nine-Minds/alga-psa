@@ -65,6 +65,35 @@ CONFIG_DIGEST="$(oras manifest fetch "${CONFIG_REPO}:${RELEASE_VERSION}" --descr
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["digest"])')"
 echo "    config bundle digest: ${CONFIG_DIGEST}"
 
+echo "==> 2.5 control-plane image"
+# The Kubernetes-hosted control plane (setup UI + host-service). Publishing it to
+# ghcr lets the appliance roll to it from a channel (no ISO re-burn). CONTROL_PLANE_TAG
+# (a pre-pushed ref) wins; otherwise push the local CONTROL_PLANE_IMAGE if present.
+CONTROL_PLANE_IMAGE="${CONTROL_PLANE_IMAGE:-localhost/alga-appliance-control-plane:baked}"
+CONTROL_PLANE_REF="${CONTROL_PLANE_TAG:-}"
+CONTROL_PLANE_REPO="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/alga-appliance-control-plane"
+if [ -z "$CONTROL_PLANE_REF" ] && [ "${SKIP_CONTROL_PLANE:-}" != "1" ]; then
+  if command -v docker >/dev/null 2>&1 && docker image inspect "$CONTROL_PLANE_IMAGE" >/dev/null 2>&1; then
+    if [ -n "${ALGA_GHCR_TOKEN:-}" ]; then
+      printf '%s' "$ALGA_GHCR_TOKEN" | docker login "$REGISTRY_HOST" -u "${ALGA_GHCR_USER:-token}" --password-stdin >/dev/null
+    fi
+    echo "    push ${CONTROL_PLANE_IMAGE} -> ${CONTROL_PLANE_REPO}:${RELEASE_VERSION}"
+    docker tag "$CONTROL_PLANE_IMAGE" "${CONTROL_PLANE_REPO}:${RELEASE_VERSION}"
+    docker push "${CONTROL_PLANE_REPO}:${RELEASE_VERSION}" | sed 's/^/      /'
+    CP_DIGEST="$(docker image inspect "${CONTROL_PLANE_REPO}:${RELEASE_VERSION}" \
+      --format '{{range .RepoDigests}}{{println .}}{{end}}' 2>/dev/null \
+      | grep "/alga-appliance-control-plane@" | head -n1 | sed 's/.*@//')"
+    if [ -n "$CP_DIGEST" ]; then
+      CONTROL_PLANE_REF="${CONTROL_PLANE_REPO}@${CP_DIGEST}"
+    else
+      CONTROL_PLANE_REF="${CONTROL_PLANE_REPO}:${RELEASE_VERSION}"
+    fi
+    echo "    control-plane ref: ${CONTROL_PLANE_REF}"
+  else
+    echo "    no local ${CONTROL_PLANE_IMAGE} and no CONTROL_PLANE_TAG; manifest controlPlane will be empty"
+  fi
+fi
+
 echo "==> 3/3 building + pushing release manifest to oci://${RELEASE_REPO}:{${RELEASE_VERSION},${CHANNEL}}"
 MANIFEST="${WORK}/release-manifest.json"
 python3 "${REPO_ROOT}/ee/appliance/scripts/build-release-manifest.py" \
@@ -74,7 +103,7 @@ python3 "${REPO_ROOT}/ee/appliance/scripts/build-release-manifest.py" \
   --profile "${PROFILE}" \
   --config-repository "${CONFIG_REPO}" \
   --config-digest "${CONFIG_DIGEST}" \
-  --control-plane "${CONTROL_PLANE_TAG}" > "${MANIFEST}"
+  --control-plane "${CONTROL_PLANE_REF}" > "${MANIFEST}"
 
 # The manifest JSON is the artifact's config blob (the consume side reads
 # config.digest); also attach it as a layer so the artifact is well-formed.
@@ -87,4 +116,5 @@ oras tag "${RELEASE_REPO}:${RELEASE_VERSION}" "${CHANNEL}"
 echo "==> done."
 echo "    charts:   oci://${CHARTS_REPO}/{sebastian,pgbouncer,temporal,temporal-worker,workflow-worker,email-service}"
 echo "    bundle:   oci://${CONFIG_REPO}:${RELEASE_VERSION} (${CONFIG_DIGEST})"
+echo "    ctrlplane:${CONTROL_PLANE_REF:-<none>}"
 echo "    release:  oci://${RELEASE_REPO}:${RELEASE_VERSION} (channel tag: ${CHANNEL})"

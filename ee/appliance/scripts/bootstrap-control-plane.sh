@@ -70,6 +70,12 @@ STORAGE_INSTALL_SCRIPT="$APPLIANCE_ROOT/scripts/install-storage.sh"
 FALLBACK_COMMAND="$APPLIANCE_ROOT/bin/alga-control-plane-reapply"
 BUNDLED_K3S_BINARY="$APPLIANCE_ROOT/bin/k3s"
 CONTROL_PLANE_NAMESPACE="alga-appliance-control-plane"
+CONTROL_PLANE_DEPLOYMENT="appliance-control-plane"
+BAKED_CONTROL_PLANE_IMAGE="localhost/alga-appliance-control-plane"
+HOST_SERVICE_DIR="$APPLIANCE_ROOT/host-service"
+CONTROL_PLANE_RESOLVER="$HOST_SERVICE_DIR/resolve-control-plane-image.mjs"
+RELEASE_SELECTION_FILE="${ALGA_APPLIANCE_RELEASE_SELECTION_FILE:-/var/lib/alga-appliance/release-selection.json}"
+BUNDLED_NODE_BINARY="$APPLIANCE_ROOT/bin/node"
 
 log() {
   printf '[alga-bootstrap] %s\n' "$*"
@@ -237,6 +243,54 @@ apply_local_storage() {
   fi
 }
 
+node_bin() {
+  if [ -x "$BUNDLED_NODE_BINARY" ]; then
+    printf '%s\n' "$BUNDLED_NODE_BINARY"
+  elif command -v node >/dev/null 2>&1; then
+    command -v node
+  else
+    return 1
+  fi
+}
+
+# Best-effort: print the channel-pinned control-plane image ref from the OCI
+# release manifest, or nothing. Never fails the boot (registry-metadata design).
+resolve_control_plane_image() {
+  local node=""
+  if ! node="$(node_bin)"; then
+    log "node unavailable; using baked control-plane baseline" >&2
+    return 0
+  fi
+  if [ ! -f "$CONTROL_PLANE_RESOLVER" ]; then
+    log "resolver $CONTROL_PLANE_RESOLVER missing; using baked control-plane baseline" >&2
+    return 0
+  fi
+  "$node" "$CONTROL_PLANE_RESOLVER" --selection-file "$RELEASE_SELECTION_FILE" 2>/dev/null \
+    | head -n1 | tr -d '[:space:]'
+}
+
+# Generate a kustomize overlay (printed dir) that bases on the control-plane
+# manifests and overrides the baked image with $1 (repo:tag or repo@sha256:..).
+# A single apply with the right image avoids a baked->registry rollout flap.
+control_plane_image_overlay() {
+  local ref="$1" overlay name digest tag
+  overlay="$(mktemp -d -t alga-cp-overlay-XXXXXX)"
+  case "$ref" in
+    *@sha256:*) name="${ref%@*}"; digest="${ref##*@}" ;;
+    *) name="${ref%:*}"; tag="${ref##*:}" ;;
+  esac
+  {
+    printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - %s\nimages:\n  - name: %s\n    newName: %s\n' \
+      "$CONTROL_PLANE_MANIFESTS" "$BAKED_CONTROL_PLANE_IMAGE" "$name"
+    if [ -n "${digest:-}" ]; then
+      printf '    digest: %s\n' "$digest"
+    else
+      printf '    newTag: %s\n' "$tag"
+    fi
+  } > "$overlay/kustomization.yaml"
+  printf '%s\n' "$overlay"
+}
+
 apply_control_plane() {
   log "Control plane: applying Kubernetes-hosted setup/status manifests"
   require_dir "$CONTROL_PLANE_MANIFESTS"
@@ -254,11 +308,38 @@ apply_control_plane() {
     kubectl_cmd -n "$CONTROL_PLANE_NAMESPACE" create secret generic appliance-setup-token --from-file=setup-token="$TOKEN_FILE" --dry-run=client -o yaml | kubectl_cmd apply -f - >/dev/null
   fi
   if [ "$DRY_RUN" = "true" ]; then
+    plan "resolve channel-pinned control-plane image (fall back to baked baseline)"
     plan "kubectl --kubeconfig $KUBECONFIG_PATH apply -k $CONTROL_PLANE_MANIFESTS"
-  else
-    log "kubectl apply -k $CONTROL_PLANE_MANIFESTS"
-    kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
+    return 0
   fi
+
+  # Registry-metadata: prefer the channel-pinned control-plane image so setup-UI /
+  # host-service updates ship via the registry (no ISO re-burn). The baked image
+  # is the baseline/fallback -- it always serves if ghcr is unreachable.
+  local ref overlay
+  ref="$(resolve_control_plane_image || true)"
+  if [ -n "${ref:-}" ] && [ "$ref" != "$BAKED_CONTROL_PLANE_IMAGE:baked" ]; then
+    log "resolved channel control-plane image: $ref"
+    # Pre-pull into the kubelet's containerd so the Recreate rollout never blocks
+    # on a registry fetch (IfNotPresent finds it locally; baked stays if pull fails).
+    if k3s_cmd ctr images pull "$ref" >/dev/null 2>&1; then
+      overlay="$(control_plane_image_overlay "$ref")"
+      log "kubectl apply -k (control-plane image -> $ref)"
+      if kubectl_cmd apply -k "$overlay"; then
+        rm -rf "$overlay"
+        return 0
+      fi
+      rm -rf "$overlay"
+      log "registry-image apply failed; falling back to baked baseline"
+    else
+      log "could not pull $ref (registry unreachable / not public?); using baked baseline"
+    fi
+  else
+    log "no channel control-plane image resolved; using baked baseline"
+  fi
+
+  log "kubectl apply -k $CONTROL_PLANE_MANIFESTS (baked baseline)"
+  kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
 }
 
 report_handoff() {
