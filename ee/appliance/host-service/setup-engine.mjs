@@ -1075,7 +1075,7 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
 
   // Flux pulls the appliance config bundle (the rendered flux base overlay) as
   // an OCI artifact pinned to its digest -- no GitRepository, no branch.
-  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1beta2\nkind: OCIRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${ociUrl}\n  ref:\n    digest: ${configDigest}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: OCIRepository\n    name: ${sourceName}\n`;
+  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: OCIRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${ociUrl}\n  ref:\n    digest: ${configDigest}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: OCIRepository\n    name: ${sourceName}\n`;
 
   writeInstallState({
     status: 'flux-source-running',
