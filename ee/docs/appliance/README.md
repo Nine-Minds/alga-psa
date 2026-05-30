@@ -1,5 +1,10 @@
 # Alga PSA Appliance Docs
 
+> **Developers / contributors:** for a 10,000-foot overview of the appliance's
+> components, the setup flow, and a map of where things live in the codebase,
+> see [`architecture.md`](./architecture.md). The docs below are the user-facing
+> operator set.
+
 This section is the user-facing documentation set for operating the Alga PSA appliance.
 
 It is written for technical IT administrators and MSP technicians who need to install, operate, support, and understand the appliance without digging through internal repo structure first.

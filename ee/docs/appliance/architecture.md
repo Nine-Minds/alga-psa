@@ -6,10 +6,15 @@
 > tutorial: each section points at the real files that hold the details.
 >
 > This describes the current **Ubuntu + k3s + Kubernetes-hosted control plane +
-> registry-metadata** implementation. The older Talos-based design narrative in
-> [`README.md`](./README.md) and [`k8s-on-prem-deployment-plan.md`](./k8s-on-prem-deployment-plan.md)
-> is historical. The design rationale for the registry-metadata release model is
-> in [`ee/appliance/docs/registry-metadata-design.md`](../../appliance/docs/registry-metadata-design.md).
+> registry-metadata** implementation. The user-facing operator docs in this
+> directory ([`quick-start.md`](./quick-start.md),
+> [`operators-manual.md`](./operators-manual.md),
+> [`technical-reference.md`](./technical-reference.md),
+> [`kubernetes-hosted-setup.md`](./kubernetes-hosted-setup.md)) and the generic
+> Talos platform references under [`ee/docs/premise/`](../premise/) carry more
+> detail and some historical (Talos) narrative. The design rationale for the
+> registry-metadata release model is in
+> [`ee/appliance/docs/registry-metadata-design.md`](../../appliance/docs/registry-metadata-design.md).
 
 All paths are relative to the repo root. Everything for the appliance lives
 under [`ee/appliance/`](../../appliance/); its own
