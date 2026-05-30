@@ -103,6 +103,31 @@ async function main() {
       productCode
     });
 
+    // Put the new tenant into the onboarding-pending state so the admin lands in
+    // the in-app onboarding wizard on first login. createTenantComplete (the
+    // testing/CLI tenant path) does not create a tenant_settings row the way the
+    // SaaS provisioning path does, so without this the OnboardingProvider redirect
+    // (which requires onboarding_completed=false AND onboarding_skipped=false)
+    // never fires. Idempotent + best-effort so it never blocks tenant creation.
+    try {
+      const now = new Date();
+      await db('tenant_settings')
+        .insert({
+          tenant: result.tenantId,
+          onboarding_completed: false,
+          onboarding_skipped: false,
+          onboarding_data: null,
+          settings: null,
+          created_at: now,
+          updated_at: now
+        })
+        .onConflict('tenant')
+        .ignore();
+      console.log('Onboarding: tenant_settings initialized (onboarding pending)');
+    } catch (settingsError) {
+      console.warn('Warning: failed to initialize tenant_settings for onboarding:', settingsError);
+    }
+
     console.log('\n✅ Tenant created successfully!');
     console.log(`Tenant ID: ${result.tenantId}`);
     console.log(`Admin User ID: ${result.adminUserId}`);
