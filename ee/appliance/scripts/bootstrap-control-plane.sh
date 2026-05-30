@@ -275,13 +275,17 @@ resolve_control_plane_image() {
 control_plane_image_overlay() {
   local ref="$1" overlay name digest tag
   overlay="$(mktemp -d -t alga-cp-overlay-XXXXXX)"
+  # Copy the base manifests in as a relative resource -- kubectl apply -k forbids
+  # referencing paths outside the kustomization root (root-only load restriction).
+  mkdir -p "$overlay/base"
+  cp -R "$CONTROL_PLANE_MANIFESTS"/. "$overlay/base"/
   case "$ref" in
     *@sha256:*) name="${ref%@*}"; digest="${ref##*@}" ;;
     *) name="${ref%:*}"; tag="${ref##*:}" ;;
   esac
   {
-    printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - %s\nimages:\n  - name: %s\n    newName: %s\n' \
-      "$CONTROL_PLANE_MANIFESTS" "$BAKED_CONTROL_PLANE_IMAGE" "$name"
+    printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - base\nimages:\n  - name: %s\n    newName: %s\n' \
+      "$BAKED_CONTROL_PLANE_IMAGE" "$name"
     if [ -n "${digest:-}" ]; then
       printf '    digest: %s\n' "$digest"
     else
