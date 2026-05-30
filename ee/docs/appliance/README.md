@@ -1,9 +1,8 @@
 # Alga PSA Appliance Docs
 
-> **Developers / contributors:** for a 10,000-foot overview of the appliance's
-> components, the setup flow, and a map of where things live in the codebase,
-> see [`architecture.md`](./architecture.md). The docs below are the user-facing
-> operator set.
+> **Developers / contributors:** [`architecture.md`](./architecture.md) maps the
+> appliance's components, the setup flow, and where each part lives in the
+> codebase. The docs below are the user-facing operator set.
 
 This section is the user-facing documentation set for operating the Alga PSA appliance.
 

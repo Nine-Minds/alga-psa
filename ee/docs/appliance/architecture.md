@@ -1,9 +1,9 @@
 # Appliance Architecture & Codebase Map
 
-> **Scope.** A 10,000-foot overview of the on-prem **appliance** — what the
-> components are, how they fit together, how an install actually happens, and
-> **where in the codebase to look** for each piece. This is an index, not a
-> tutorial: each section points at the real files that hold the details.
+> Use this to get oriented in the on-prem **appliance** and find where each part
+> lives: the components and how they fit together, what happens during an
+> install, and the file to open for any given piece. Every section links the real
+> files.
 >
 > This describes the current **Ubuntu + k3s + Kubernetes-hosted control plane +
 > registry-metadata** implementation. The user-facing operator docs in this
