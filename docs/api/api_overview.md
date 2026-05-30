@@ -118,7 +118,7 @@ API keys can be managed through the user interface by navigating to your User Pr
 ## 6. Available APIs
 
 ### Community Edition APIs
-- [Future CE APIs will be documented here]
+- [Unified Full-Text Search](search.md)
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 
 ### Enterprise Edition APIs
