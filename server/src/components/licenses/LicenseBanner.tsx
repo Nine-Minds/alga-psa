@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTier } from '@/context/TierContext';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -17,7 +16,6 @@ import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
  * TierContext so it remains accurate regardless of session freshness.
  */
 export default function LicenseBanner() {
-  const { eeEnabled } = useTier();
   const router = useRouter();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);

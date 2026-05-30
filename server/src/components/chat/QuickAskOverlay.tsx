@@ -2,6 +2,7 @@
 'use client';
 
 import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { useTier } from '@/context/TierContext';
 
 interface QuickAskOverlayProps {
   isOpen: boolean;
@@ -31,19 +32,24 @@ const EnterpriseQuickAskOverlay = lazy(
 );
 
 export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = (props) => {
-  const [shouldUseEnterprise, setShouldUseEnterprise] = useState(isEnterpriseEditionEnv);
+  const { eeEnabled } = useTier();
+  // Module-presence guard (isEnterpriseEditionEnv) keeps the lazy import target
+  // in the bundle; the render decision uses eeEnabled so the EE overlay is hidden
+  // at the essentials tier.
+  const [shouldUseEnterprise, setShouldUseEnterprise] = useState(isEnterpriseEditionEnv && eeEnabled);
 
   useEffect(() => {
-    if (isEnterpriseEditionEnv) {
+    setShouldUseEnterprise(isEnterpriseEditionEnv && eeEnabled);
+    if (isEnterpriseEditionEnv && eeEnabled) {
       return;
     }
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1') {
-        setShouldUseEnterprise(true);
+        setShouldUseEnterprise(isEnterpriseEditionEnv);
       }
     }
-  }, []);
+  }, [eeEnabled]);
 
   if (!shouldUseEnterprise) {
     return null;

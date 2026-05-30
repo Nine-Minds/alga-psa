@@ -29,9 +29,16 @@ export function clearLicenseVerifyCache(): void {
  * expiry (with clock-skew tolerance), and tier validity.
  *
  * Results are memoized per token string for the lifetime of the process
- * (cleared on license update). This is safe because the token itself encodes
- * its expiry — a token that was valid at memoization time will correctly
- * return `expired` once we re-verify after the cache is cleared.
+ * (cleared on license update via clearLicenseVerifyCache). A 'valid' result is
+ * cached, so within a single process this function will keep returning
+ * { valid: true } for a token whose `exp` passes mid-process — it does NOT
+ * re-evaluate the clock until the cache is cleared.
+ *
+ * IMPORTANT: callers that need a point-in-time expiry decision MUST re-check
+ * `claims.exp` against the current time themselves (resolveSelfHostTier and
+ * submitLicense both do). Do not treat `valid: true` alone as "not expired".
+ * 'expired' results are never cached, so a token that is already expired on
+ * first verification is always reported as expired.
  */
 export function verifyLicense(token: string): LicenseVerifyResult {
   const cached = verifyCache.get(token);

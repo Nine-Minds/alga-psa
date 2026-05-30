@@ -29,7 +29,8 @@ import { InternalNotificationPreferences } from '@alga-psa/notifications/compone
 import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
 import { SessionManagement } from '@alga-psa/auth/components';
 import ApiKeysSetup from './ApiKeysSetup';
-import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
+import { resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
+import { useEeEnabled } from '@alga-psa/auth/client';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
@@ -90,7 +91,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const { isAlgadesk } = useProduct();
-  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgadesk;
+  const eeEnabled = useEeEnabled();
+  const isCalendarTabAvailable = eeEnabled && !isAlgadesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);

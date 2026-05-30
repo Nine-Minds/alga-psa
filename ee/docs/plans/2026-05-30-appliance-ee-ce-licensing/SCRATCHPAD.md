@@ -82,6 +82,28 @@ The `license_state` migration (20260530100000_create_license_state.cjs) will be 
 ### 9. `essentials` tier uses rank -1 (not shifting existing ranks)
 Solo/pro/premium keep their existing ranks (0/1/2). `essentials` is -1. Verified no code compares TIER_RANK values to hardcoded numbers — all comparisons go through `tierAtLeast()` or `TIER_RANK[tier] >= TIER_RANK[min]`.
 
+## Post-implementation review (2026-05-30) — findings + fixes
+
+Adversarial review (3 parallel audits + executable verification) found and FIXED:
+- **CRITICAL (build break):** `shared/workflow/runtime/services/workflowStepQuotaService.ts` `TIER_DEFAULT_LIMITS: Record<TenantTier, number>` was missing the new `essentials` key → repo-wide TS2741 compile failure. Added `essentials: 150`. (Confirmed it was the ONLY non-derived tier-keyed literal needing the key.)
+- **CRITICAL (deploy break):** `helm/templates/appliance-bootstrap-configmap.yaml` license_state heredoc closing `SQL` was at column 0 in YAML source; inside the `|` block scalar that under-indents below the block and breaks YAML parsing of the whole ConfigMap. Indented closer to 4 spaces (dedents to col 0 in the rendered script). Also added `-v ON_ERROR_STOP=1`. Verified rendered YAML parses + closer lands at col 0.
+- **HIGH:** test private key `v1-test.private.pem` was caught by blanket `*.pem` gitignore (untracked despite "committed" docs) → added negation + `git add -f`.
+- **HIGH:** `sign.mjs gen-fixture` used `../../` (wrong) → `../../../`; now runs. Fixed stale comments.
+- **HIGH (H1):** `TierContext`/`ServerTierGate` resolved tier from `session.user.plan` (NULL→pro), ignoring `effectiveTier` → at essentials the UI behaved as pro (Teams tab, Extensions menu leaked). Now resolve from `effectiveTier ?? plan`. SaaS unaffected (effectiveTier never essentials there).
+- **HIGH (H3):** `getTenantTier` called `getLicenseStateRow()` unguarded → 500s if `license_state` table absent during rolling deploy. Wrapped in try/catch (mirrors getActiveAddOns).
+- **HIGH (H2):** missed UI surface gates converted to `eeEnabled`: `IntegrationsSettingsPage`, `UserProfile` (calendar tab), `QuickAskOverlay`, `CalendarEnterpriseIntegrationSettings`.
+- **MEDIUM (F036):** classified inventory artifact didn't exist → created `CHOKE-POINT-INVENTORY.md`.
+- **NITs:** removed dead `eeEnabled` import in LicenseBanner; corrected verifyLicense memoization docstring.
+
+**DEFERRED (F038, now marked implemented:false):** server-side enforcement of edition-only EE features
+(calendarActions ×12, microsoftActions ×2, AI chat/ai API routes) still pass build-time edition checks
+and execute at essentials. UI for these IS hidden. Soft boundary for v1; precise follow-up documented in
+CHOKE-POINT-INVENTORY.md. AI routes are additionally add-on-gated.
+
+Verification after fixes: shared typecheck no longer reports the essentials TS2741 (only pre-existing
+missing-module errors remain); 18/18 licensing tests pass; CLI sign + gen-fixture round-trip OK; rendered
+bootstrap ConfigMap parses as YAML.
+
 ## TODO (fill as we go)
 - [x] Locate next-auth session callback that sets `session.user.plan` → found in `packages/auth/src/lib/nextAuthOptions.ts` ~L1685, L1802, L2435, L2547. Session callbacks at L1854, L2600.
 - [x] Produce the classified choke-point inventory (first task of Component 2) → ~14 surface gates, ~124 module guards.

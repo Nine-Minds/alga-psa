@@ -339,12 +339,12 @@ data:
         license_token_sql="'${escaped_token}'"
       fi
 
-      PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" \
+      PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" \
         -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" <<SQL
     INSERT INTO license_state (edition_choice, trial_started_at, license_token, updated_at)
     SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, NOW()
     WHERE NOT EXISTS (SELECT 1 FROM license_state);
-SQL
+    SQL
       log "license_state seeded"
     else
       log "EDITION_CHOICE not set; skipping license_state seed"

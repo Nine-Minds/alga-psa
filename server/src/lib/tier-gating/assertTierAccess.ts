@@ -71,10 +71,17 @@ function hasActiveSoloProTrial(value?: string | null): boolean {
 
 async function getTenantTier(tenantId: string): Promise<TenantTier> {
   // Self-host mode: consult license_state first; supersedes tenants.plan.
-  const licenseStateRow = await getLicenseStateRow();
-  const selfHostResolved = resolveSelfHostTier(licenseStateRow);
-  if (selfHostResolved !== null) {
-    return selfHostResolved.tier;
+  // Guard against the table not existing yet (e.g. a rolling deploy hitting an
+  // un-migrated DB), mirroring getActiveAddOns — fall through to SaaS resolution
+  // on any error rather than 500-ing every tier-gated action.
+  try {
+    const licenseStateRow = await getLicenseStateRow();
+    const selfHostResolved = resolveSelfHostTier(licenseStateRow);
+    if (selfHostResolved !== null) {
+      return selfHostResolved.tier;
+    }
+  } catch {
+    // license_state unavailable; fall through to Stripe/plan resolution.
   }
 
   // SaaS mode: resolve from tenants.plan + Stripe trials (existing logic unchanged).

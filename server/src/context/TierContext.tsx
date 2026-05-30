@@ -85,10 +85,13 @@ export function TierProvider({ children }: TierProviderProps) {
   const { data: session, status, update } = useSession();
   const isLoading = status === 'loading';
 
-  // Resolve tier from session plan
+  // Resolve tier from the server-resolved effective tier when present (this
+  // includes self-host licensing and the 'essentials' floor). Fall back to the
+  // raw plan for sessions issued before effectiveTier existed, preserving SaaS
+  // behavior (NULL plan -> pro).
   const { tier, isMisconfigured } = useMemo(() => {
-    return resolveTier(session?.user?.plan);
-  }, [session?.user?.plan]);
+    return resolveTier(session?.user?.effectiveTier ?? session?.user?.plan);
+  }, [session?.user?.effectiveTier, session?.user?.plan]);
 
   // Convenience tier checks
   const isSolo = tier === 'solo';

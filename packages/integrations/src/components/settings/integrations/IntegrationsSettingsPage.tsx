@@ -34,9 +34,9 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getVisibleIntegrationCategoryIds,
-  isCalendarEnterpriseEdition,
   resolveIntegrationSettingsCategory,
 } from '../../../lib/calendarAvailability';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
@@ -92,7 +92,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseTeams = true,
 }) => {
   const { t } = useTranslation('msp/settings');
-  const isEEAvailable = isCalendarEnterpriseEdition();
+  const isEEAvailable = useEeEnabled();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const searchParams = useSearchParams();

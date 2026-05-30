@@ -40,8 +40,10 @@ export async function ServerTierGate({
   }
 
   const session = await getSession();
-  const plan = session?.user?.plan;
-  const { tier } = resolveTier(plan);
+  // Prefer the server-resolved effective tier (includes self-host licensing /
+  // 'essentials'); fall back to plan for pre-existing sessions.
+  const baseTier = session?.user?.effectiveTier ?? session?.user?.plan;
+  const { tier } = resolveTier(baseTier);
 
   if (!tierHasFeature(tier, feature)) {
     if (fallback) {

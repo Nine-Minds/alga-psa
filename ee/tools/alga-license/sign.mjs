@@ -60,7 +60,7 @@ function loadPrivateKey() {
   if (keyStr) return keyStr.trim();
   const keyFile = process.env.ALGA_LICENSE_PRIVATE_KEY_FILE;
   if (keyFile) return readFileSync(resolve(keyFile), 'utf8').trim();
-  // Fall back to test fixture key (only useful for gen-fixture)
+  // No key configured. `sign` refuses; `gen-fixture` loads the test key directly.
   return null;
 }
 
@@ -74,7 +74,8 @@ function signJwt(payload, privateKeyPem, kid) {
   const payloadB64 = base64url(Buffer.from(JSON.stringify(payload)));
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Use Node's createSign for DER signature, then convert to JWS format (R||S).
+  // createSign with dsaEncoding 'ieee-p1363' emits the raw R||S signature that
+  // JWS/ES256 expects directly (no DER-to-JOSE conversion needed).
   const signer = createSign('SHA256');
   signer.update(signingInput);
   const derSig = signer.sign({ key: privateKeyPem, dsaEncoding: 'ieee-p1363' });
@@ -147,7 +148,8 @@ function cmdGenKeypair() {
 
 function cmdGenFixture() {
   // Uses the committed test private key — safe to run without env vars.
-  const testPrivKeyPath = resolve(__dirname, '../../packages/licensing/src/lib/__test-fixtures__/v1-test.private.pem');
+  // __dirname is ee/tools/alga-license, so the repo root is three levels up.
+  const testPrivKeyPath = resolve(__dirname, '../../../packages/licensing/src/lib/__test-fixtures__/v1-test.private.pem');
   let testPrivKey;
   try {
     testPrivKey = readFileSync(testPrivKeyPath, 'utf8').trim();

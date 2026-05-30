@@ -115,6 +115,8 @@ yarn-error.log*
 # misc
 .DS_Store
 *.pem
+# Throwaway test keypair for license verification unit tests (NOT a real signing key).
+!packages/licensing/src/lib/__test-fixtures__/v1-test.private.pem
 .ai/
 .env.local
 .env.development.local

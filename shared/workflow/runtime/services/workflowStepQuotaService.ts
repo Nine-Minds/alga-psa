@@ -11,6 +11,7 @@ const STATUS_PRIORITY: Record<string, number> = {
   unpaid: 3,
 };
 const TIER_DEFAULT_LIMITS: Record<TenantTier, number> = {
+  essentials: 150,
   solo: 150,
   pro: 750,
   premium: 10000,

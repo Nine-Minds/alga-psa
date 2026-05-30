@@ -300,10 +300,11 @@
   {
     "id": "F038",
     "description": "Convert surface gates in server/src API routes (return 404/placeholder when !eeRuntimeEnabled).",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": [
       "Requirements > Functional Requirements > FR12 \u2014 Exhaustive surface conversion"
-    ]
+    ],
+    "note": "UI surfaces are gated at essentials (see CHOKE-POINT-INVENTORY.md). NOT done: server-side enforcement for edition-only EE features (calendarActions, microsoftActions, AI chat/ai API routes) still check build-time edition and execute at essentials. Follow-up: add eeRuntimeEnabledServer() (isEnterprise && self-host tier != essentials) to those guards. Soft boundary for v1 single-tenant appliance."
   },
   {
     "id": "F039",

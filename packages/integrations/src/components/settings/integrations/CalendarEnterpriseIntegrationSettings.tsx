@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isCalendarEnterpriseEdition } from '../../../lib/calendarAvailability';
+import { useEeEnabled } from '@alga-psa/auth/client';
 
 function CalendarLoadingPlaceholder() {
   const { t } = useTranslation('msp/integrations');
@@ -31,7 +31,8 @@ const EnterpriseCalendarIntegrationsSettings = dynamic(
 );
 
 export function CalendarEnterpriseIntegrationSettings() {
-  if (!isCalendarEnterpriseEdition()) {
+  const eeEnabled = useEeEnabled();
+  if (!eeEnabled) {
     return null;
   }
 
