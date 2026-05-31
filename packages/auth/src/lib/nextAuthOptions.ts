@@ -504,6 +504,10 @@ interface ExtendedUser {
     contactId?: string;
     plan?: string;
     product_code?: 'psa' | 'algadesk';
+    /** Effective self-host tier resolved for the session (essentials/pro/premium). */
+    effectiveTier?: string;
+    /** Whether EE runtime features are enabled for this session (tier > essentials). */
+    eeEnabled?: boolean;
     deviceInfo?: {
         ip: string;
         userAgent: string;
