@@ -112,19 +112,21 @@ CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
 # Production stage
 FROM base AS production
 
+# Create the non-root user first so the copy below can set ownership in a single
+# pass (a separate `chown -R /app` is pathologically slow over the workspace
+# node_modules).
+RUN groupadd -r temporal && useradd -r -g temporal temporal
+
 # The development stage ran a single workspace install (deps hoisted under
 # /app/node_modules with @alga-psa/* workspace symlinks) and built every dist,
-# so copy the whole built tree wholesale. This replaces the old hand-rolled
-# per-package node_modules copies + manual @alga-psa symlinks, which assumed the
-# fragile per-package install layout.
-COPY --from=development /app /app
+# so copy the whole built tree wholesale (owned by temporal). This replaces the
+# old hand-rolled per-package node_modules copies + manual @alga-psa symlinks,
+# which assumed the fragile per-package install layout.
+COPY --from=development --chown=temporal:temporal /app /app
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
-# Create non-root user
-RUN groupadd -r temporal && useradd -r -g temporal temporal \
-    && chown -R temporal:temporal /app
 USER temporal
 
 WORKDIR /app/ee/temporal-workflows
