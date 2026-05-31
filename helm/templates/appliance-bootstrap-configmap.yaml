@@ -312,9 +312,18 @@ data:
     fi
 
     # Seed license_state from appliance-license-seed Secret (F082-F084).
-    # Idempotent: only inserts when no row exists. Preserves any existing
-    # trial_started_at or license_token so re-runs never reset an active entitlement.
-    if [ -n "${EDITION_CHOICE:-}" ]; then
+    # ALWAYS seeds a row on a self-hosted/appliance install (defaulting to an
+    # 'ee' 30-day trial when EDITION_CHOICE is absent). A missing/empty
+    # appliance-license-seed Secret previously left license_state empty, which
+    # silently bricks licensing: getLicenseStatus returns selfHostMode=false, so
+    # the in-app License page shows "only available for self-hosted" with NO
+    # airgap form (the form only renders once a row exists, so there is no UI
+    # path to apply a license) and addUser's seat check is skipped entirely.
+    # Idempotent: WHERE NOT EXISTS never resets an existing entitlement.
+    if [ -z "${EDITION_CHOICE:-}" ]; then
+      log "WARNING: EDITION_CHOICE unset (appliance-license-seed Secret missing/empty); defaulting license_state to an 'ee' trial so the License page and seat enforcement stay usable"
+    fi
+    {
       pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
       pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
       pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
@@ -345,10 +354,8 @@ data:
     SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, NOW()
     WHERE NOT EXISTS (SELECT 1 FROM license_state);
     SQL
-      log "license_state seeded"
-    else
-      log "EDITION_CHOICE not set; skipping license_state seed"
-    fi
+      log "license_state seeded (edition_choice=${edition_choice})"
+    }
 
     if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
       ensure_initial_tenant
