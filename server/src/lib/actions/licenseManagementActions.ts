@@ -45,7 +45,7 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
 
   const row = await getLicenseStateRow();
   if (!row) {
-    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false };
+    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null };
   }
 
   const resolved: ResolvedLicenseState = resolveSelfHostTier(row)!;
