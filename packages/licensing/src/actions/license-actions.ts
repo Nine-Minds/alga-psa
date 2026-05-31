@@ -1,8 +1,26 @@
 'use server';
 
+import { headers } from 'next/headers.js';
 import { getLicenseUsage, type LicenseUsage } from '../lib/get-license-usage';
-import { getConnection } from '@alga-psa/db';
-import { getTenantForCurrentRequest } from '@alga-psa/tenancy/server';
+import { getConnection, getTenantContext } from '@alga-psa/db';
+
+/**
+ * Resolve the current request's tenant from the async tenant context, falling
+ * back to the `x-tenant-id` header. Inlined here (rather than imported from
+ * `@alga-psa/tenancy`) to keep `@alga-psa/licensing` off the tenancy package:
+ * `auth` imports `@alga-psa/licensing`, and `tenancy → user-composition → auth`,
+ * so depending on tenancy would close an nx build cycle
+ * (auth→licensing→tenancy→user-composition→auth) that breaks the EE image build.
+ * `getTenantContext` already comes from `@alga-psa/db`, an existing dependency.
+ */
+async function getTenantForCurrentRequest(): Promise<string | null> {
+  const contextTenant = getTenantContext() ?? null;
+  if (contextTenant) {
+    return contextTenant;
+  }
+  const headerValues = await headers();
+  return headerValues.get('x-tenant-id') ?? null;
+}
 
 /**
  * Server action to get the current license usage for the session tenant
