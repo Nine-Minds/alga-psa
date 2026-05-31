@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { getConnection } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface ClientLicenseContractSummary {
@@ -21,12 +21,20 @@ export interface ClientLicenseContractSummary {
 /**
  * Returns the license contracts for the authenticated portal user's client.
  * Only returns contracts whose description contains the appliance license
- * marker (tier: and stripe_sub:), so MSP-internal contracts aren't exposed.
+ * marker (stripe_sub:), so MSP-internal contracts aren't exposed.
  */
-export async function getClientLicenses(): Promise<ClientLicenseContractSummary[]> {
-  return withAuth(async (user: IUserWithRoles) => {
-    const tenant = user.tenant;
-    const knex = await getConnection(tenant);
+export const getClientLicenses = withAuth(
+  async (user: IUserWithRoles): Promise<ClientLicenseContractSummary[]> => {
+    const { knex, tenant } = await createTenantKnex();
+
+    // Resolve the portal user's client_id from their contact (the user object
+    // does not carry client_id directly).
+    if (!user.contact_id) return [];
+    const contact = await knex('contacts')
+      .where({ tenant, contact_name_id: user.contact_id })
+      .first('client_id');
+    const clientId = contact?.client_id as string | undefined;
+    if (!clientId) return [];
 
     const rows = await knex('client_contracts as cc')
       .join('contracts as c', function () {
@@ -37,10 +45,7 @@ export async function getClientLicenses(): Promise<ClientLicenseContractSummary[
           .andOnVal('da.entity_type', 'contract')
           .andOn('da.tenant', 'c.tenant');
       })
-      .where({
-        'cc.client_id': user.client_id ?? '',
-        'cc.tenant': tenant,
-      })
+      .where({ 'cc.client_id': clientId, 'cc.tenant': tenant })
       .whereRaw("c.contract_description LIKE '%stripe_sub:%'")
       .select(
         'cc.client_contract_id as clientContractId',
@@ -50,7 +55,6 @@ export async function getClientLicenses(): Promise<ClientLicenseContractSummary[
         'cc.start_date as startDate',
         'cc.end_date as endDate',
         'cc.is_active as isActive',
-        knex.raw(`COALESCE(cc.status, CASE WHEN cc.is_active THEN 'active' ELSE 'inactive' END) as status`),
         'cc.renewal_mode as renewalMode',
         'da.document_id as licenseDocumentId'
       )
@@ -73,5 +77,5 @@ export async function getClientLicenses(): Promise<ClientLicenseContractSummary[
         licenseDocumentId: row.licenseDocumentId ?? null,
       };
     });
-  });
-}
+  }
+);

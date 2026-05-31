@@ -512,7 +512,7 @@ const licenseOrderTemplateProvider: ServiceRequestTemplateProvider = {
             },
             {
               key: 'seats',
-              type: 'number',
+              type: 'short-text',
               label: 'Number of seats',
               required: true,
               defaultValue: '10',

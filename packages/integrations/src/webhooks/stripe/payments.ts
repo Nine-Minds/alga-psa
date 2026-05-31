@@ -278,51 +278,58 @@ async function handleLicenseOrderWebhook(
     const metadata = session.metadata ?? {};
 
     const submissionId = metadata.service_request_submission_id;
-    const clientId = metadata.client_id;
     const tier = metadata.tier as 'pro' | 'premium';
     const seats = metadata.seats ? parseInt(metadata.seats, 10) : undefined;
     const transport = metadata.transport;
     const stripeSubId = (session.subscription as string) || session.id;
     const paymentIntentId = (session.payment_intent as string) || session.id;
 
-    if (!submissionId || !clientId || !tier || !transport) {
+    if (!submissionId || !tier || !transport) {
       logger.error('[License Order Webhook] Missing required metadata', { eventId: event.id, metadata });
       return { success: false, error: 'missing_metadata' };
     }
 
-    // Check idempotency via payment_webhook_events
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const knex = await getAdminConnection();
 
-    const existing = await knex('payment_webhook_events')
-      .where({ stripe_event_id: event.id })
-      .first();
-    if (existing) {
-      logger.info('[License Order Webhook] Already processed (idempotent)', { eventId: event.id });
-      return { success: true };
-    }
-
-    // Record the event for idempotency
-    await knex('payment_webhook_events').insert({
-      stripe_event_id: event.id,
-      event_type: event.type,
-      processed_at: knex.fn.now(),
-    }).onConflict('stripe_event_id').ignore();
-
-    // Derive the customer name from the submission payload
+    // Resolve the submission first — it carries the authoritative tenant + client_id.
     const submission = await knex('service_request_submissions')
       .where({ submission_id: submissionId })
       .first('submitted_payload', 'tenant', 'client_id');
 
-    const tenant = submission?.tenant;
-    if (!tenant) {
+    const tenant = submission?.tenant as string | undefined;
+    const clientId = (submission?.client_id as string | undefined) ?? metadata.client_id;
+    if (!tenant || !clientId) {
       logger.error('[License Order Webhook] Submission not found', { submissionId });
       return { success: false, error: 'submission_not_found' };
     }
 
-    // Get the client name to use as the license customer
-    const client = await knex('companies').where({ company_id: clientId, tenant }).first('company_name');
-    const customer = client?.company_name ?? 'Unknown';
+    // Idempotency via payment_webhook_events (unique on tenant+provider+external id).
+    // Temporal's workflow id (license-issue:{paymentIntentId}) is the exactly-once
+    // backstop; this insert prevents redundant pre-workflow work.
+    const inserted = await knex('payment_webhook_events')
+      .insert({
+        tenant,
+        provider_type: 'stripe',
+        external_event_id: event.id,
+        event_type: event.type,
+        event_data: JSON.stringify(event),
+        processed: true,
+        processing_status: 'completed',
+        processed_at: knex.fn.now(),
+      })
+      .onConflict(['tenant', 'provider_type', 'external_event_id'])
+      .ignore()
+      .returning('event_id');
+
+    if (!inserted || inserted.length === 0) {
+      logger.info('[License Order Webhook] Already processed (idempotent)', { eventId: event.id });
+      return { success: true };
+    }
+
+    // Client name → license customer (table is `clients`, PK client_id).
+    const client = await knex('clients').where({ client_id: clientId, tenant }).first('client_name');
+    const customer = (client?.client_name as string | undefined) ?? 'Unknown';
 
     // Start the issuance Temporal workflow (idempotent via workflow id)
     const { startApplianceLicenseIssuance } = await import('@enterprise/lib/workflows/applianceLicenseIssuanceTemporal');

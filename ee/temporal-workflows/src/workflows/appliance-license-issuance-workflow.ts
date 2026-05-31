@@ -97,15 +97,14 @@ export async function applianceLicenseIssuanceWorkflow(
     claimCode = result.code;
   }
 
-  // 5. Deliver
-  const licenseExpiry = new Date(exp * 1000).toISOString().split('T')[0];
+  // 5. Deliver (date formatting happens inside the activity for determinism)
   await deliverLicenseEmail({
     tenant,
     submissionId,
     transport,
     jwt,
     claimCode,
-    licenseExpiry,
+    exp,
     tier,
   });
 }

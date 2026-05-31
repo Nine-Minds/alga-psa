@@ -150,4 +150,39 @@ Verified 2026-05-30 by a thorough Explore pass.
 4. `~/alga-license` prod deploy: configure Dockerfile, k8s secrets (private key, service secret), PVC.
 5. Portal purchase flow: the portal currently links to /request-services for license purchase. A dedicated purchase page that calls `purchaseApplianceLicense()` and redirects to Stripe still needs a UI wrapper (the server action exists, the frontend form needs to be wired up in the portal).
 
+## REVIEW PASS (2026-05-31, Opus) — fixed runtime-blocking bugs from the first implementation
+
+The first implementation compiled but was written against GUESSED schemas, a wrong
+import alias, and the wrong Temporal task queue. A top-to-bottom review (4 schema/alias
+subagents) found and fixed the following. All verified: C4 tsc clean + 23/23 jest;
+licensing 18/18; host-service 55/55; no real type errors in the edited alga-psa files
+(only environmental module-resolution noise, identical to pre-existing siblings).
+
+BLOCKING (would fail at runtime), now fixed:
+1. Import alias: helper moved `ee/packages/workflows/src/lib/` → `ee/server/src/lib/workflows/applianceLicenseIssuanceTemporal.ts`; webhook imports `@enterprise/lib/workflows/...` (resolves in EE like `loadEnterprisePayments`). The old package had no `/lib/*` export.
+2. Temporal task queue: was `'alga-workflows'` (nonexistent); non-authored workflows run on `tenant-workflows` (+ portal/email/jobs/sla). Now `tenant-workflows`.
+3. Customer table: was `companies`/`company_id`/`company_name`; correct is `clients`/`client_id`/`client_name` (post company→client rename). Webhook fixed.
+4. `payment_webhook_events` idempotency: correct columns (`tenant`,`provider_type`,`external_event_id`,`event_type`,`event_data`), reordered AFTER tenant lookup, onConflict on the real unique key `(tenant,provider_type,external_event_id)`. (Temporal workflow-id is the exactly-once backstop.)
+5. `documents` insert: required `user_id`+`created_by` (real users — there is NO service user); resolve via `resolveSystemUserId` (inbound_ticket_defaults.entered_by → first tenant user, mirrors the email-attachment background path). Use `entered_at` (no `created_at` column); `type_id: null` is allowed.
+6. `document_associations`: removed `created_by` (column doesn't exist on that table).
+7. Portal `getClientLicenses`: was `return withAuth(...)` (returned the wrapper uninvoked!) and used nonexistent `user.client_id`. Now a proper `export const ... = withAuth(...)` that resolves client_id via `contacts.contact_name_id = user.contact_id`.
+8. Stripe `apiVersion`: '2024-04-10' → '2024-12-18.acacia' (installed Stripe v19).
+9. **C4 connected refresh was inert** — `/check-in` returned the stored fixed-exp token forever, so a connected box expired after 31 days. Now re-signs a fresh token (stable `license_sub`, rolled exp) when the held token is >~1 day old. Added `entitlements.license_sub` column; `/sign` stores the sub; pure `connectedTokenNeedsResign()` helper + 4 unit tests.
+
+CORRECTNESS (off happy path / latent), fixed:
+10. `revokeLicenseEntitlement` used an UPDATE-with-JOIN across two tables (invalid PG) → split into resolve-ids + two updates.
+11. EE action `getConnection('@/lib/db/db')` → `createTenantKnex()`.
+12. Contract lookup join made composite `(tenant, contract_id)`.
+13. License-order form field `'number'` (unsupported) → `'short-text'`.
+14. Workflow date formatting moved into the `deliverLicenseEmail` activity (determinism).
+
+Verified FINE (later ALTER migrations had added them — not bugs): `contracts.status/owner_client_id/is_template`, `client_contracts.renewal_mode/renewal_term_months`, `contract_lines.contract_id`, `document_associations.entity_type IN ('client','contract')`.
+
+RESIDUAL (non-blocking, still TODO — unchanged from before):
+- "Download key" links to /client-portal/documents?highlight=<id>; a content-only document (no file_id) may need a dedicated download affordance — verify the Documents page renders inline `content`.
+- Email delivery still records notes only (no transactional email yet).
+- Portal purchase UI (calling `purchaseApplianceLicense`) not wired.
+- Stripe appliance SKUs not provisioned; daily refresh cron not scheduled; ~/alga-license not deployed.
+- C4 uses `CREATE TABLE IF NOT EXISTS` (no migration framework) — fine for the new service; an already-deployed instance would need the `license_sub` column added manually (none deployed yet).
+
 - NEXT (when implementing): start with C4 scaffold in the new `~/alga-license` repo (port `ee/tools/alga-license/sign.mjs`), since it unblocks both transports.

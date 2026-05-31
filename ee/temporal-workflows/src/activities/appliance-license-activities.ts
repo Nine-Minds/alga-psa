@@ -9,6 +9,7 @@
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { v4 as uuidv4 } from 'uuid';
+import type { Knex } from 'knex';
 
 const logger = () => Context.current().log;
 
@@ -101,7 +102,7 @@ export interface DeliverLicenseEmailInput {
   transport: string;
   jwt: string;
   claimCode?: string;
-  licenseExpiry: string; // ISO date string
+  exp: number; // unix seconds — formatted to a date inside the activity
   tier: string;
 }
 
@@ -142,13 +143,16 @@ export async function upsertLicenseContract(
 
   // Check for existing contract for this subscription
   const existing = await knex('client_contracts')
-    .join('contracts', 'client_contracts.contract_id', 'contracts.contract_id')
+    .join('contracts', function () {
+      this.on('client_contracts.contract_id', 'contracts.contract_id')
+        .andOn('client_contracts.tenant', 'contracts.tenant');
+    })
     .where({
       'client_contracts.client_id': input.clientId,
       'client_contracts.tenant': input.tenant,
     })
     .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`])
-    .first('client_contracts.client_contract_id', 'contracts.contract_id');
+    .first('client_contracts.client_contract_id as client_contract_id', 'contracts.contract_id as contract_id');
 
   const startDate = new Date();
   const endDate = new Date(input.exp * 1000);
@@ -202,7 +206,7 @@ export async function upsertLicenseContract(
     updated_at: knex.fn.now(),
   });
 
-  // Upsert a license contract_line (informational — tier + seats)
+  // Insert a license contract_line (informational — tier + seats)
   const lineId = uuidv4();
   await knex('contract_lines').insert({
     contract_line_id: lineId,
@@ -213,9 +217,31 @@ export async function upsertLicenseContract(
     billing_frequency: isAirgap ? 'annually' : 'monthly',
     created_at: knex.fn.now(),
     updated_at: knex.fn.now(),
-  }).onConflict().ignore();
+  });
 
   return { contractId, clientContractId };
+}
+
+/**
+ * Resolve a real user id to attribute system-created rows to.
+ * The `documents` table requires non-null `user_id` and `created_by`, and there
+ * is no dedicated service user — mirror the email-attachment background pattern:
+ * prefer inbound_ticket_defaults.entered_by, else the tenant's first user.
+ */
+async function resolveSystemUserId(knex: Knex, tenant: string): Promise<string | null> {
+  const inbound = await knex('inbound_ticket_defaults')
+    .where({ tenant, is_active: true })
+    .whereNotNull('entered_by')
+    .orderBy('updated_at', 'desc')
+    .first('entered_by')
+    .catch(() => undefined);
+  if (inbound?.entered_by) return inbound.entered_by as string;
+
+  const user = await knex('users')
+    .where({ tenant })
+    .orderBy('created_at', 'asc')
+    .first('user_id');
+  return (user?.user_id as string) ?? null;
 }
 
 /** Store the signed JWT as a document attached to the client. */
@@ -229,25 +255,32 @@ export async function storeLicenseDocument(
   const documentId = uuidv4();
   const expDate = new Date(input.exp * 1000).toISOString().split('T')[0];
 
+  const systemUserId = await resolveSystemUserId(knex, input.tenant);
+  if (!systemUserId) {
+    throw new Error(`No user available to attribute the license document (tenant ${input.tenant})`);
+  }
+
+  // documents requires user_id + created_by (real users); content is inline text;
+  // the timestamp column is entered_at (there is no created_at on documents).
   await knex('documents').insert({
     document_id: documentId,
     tenant: input.tenant,
     document_name: `Alga Appliance License — ${input.tier} (expires ${expDate})`,
     type_id: null,
+    user_id: systemUserId,
+    created_by: systemUserId,
     content: input.jwt,
-    created_by: null, // system-generated
-    created_at: knex.fn.now(),
+    entered_at: knex.fn.now(),
     updated_at: knex.fn.now(),
   });
 
-  // Associate to client (so it shows in portal Documents)
+  // Associate to client (so it shows in portal Documents). No created_by column.
   await knex('document_associations').insert({
     association_id: uuidv4(),
     tenant: input.tenant,
     document_id: documentId,
     entity_id: input.clientId,
     entity_type: 'client',
-    created_by: null,
     created_at: knex.fn.now(),
   });
 
@@ -259,7 +292,6 @@ export async function storeLicenseDocument(
       document_id: documentId,
       entity_id: input.contractId,
       entity_type: 'contract',
-      created_by: null,
       created_at: knex.fn.now(),
     });
   }
@@ -290,16 +322,17 @@ export async function deliverLicenseEmail(
 
   // Record delivery on the submission
   const knex = await getAdminConnection();
+  const licenseExpiry = new Date(input.exp * 1000).toISOString().split('T')[0];
   const notes = input.transport.startsWith('connected')
     ? `License claim code: ${input.claimCode} (paste into /msp/licenses → Connect this appliance)`
-    : `License JWT delivered. Paste into /msp/licenses → Enter license key. Expires: ${input.licenseExpiry}`;
+    : `License JWT delivered. Paste into /msp/licenses → Enter license key. Expires: ${licenseExpiry}`;
 
   await knex('service_request_submissions')
     .where({ submission_id: input.submissionId, tenant: input.tenant })
     .update({
       workflow_execution_id: input.claimCode
         ? `license-issued-connected:${input.claimCode}`
-        : `license-issued-airgap:${input.licenseExpiry}`,
+        : `license-issued-airgap:${licenseExpiry}`,
       updated_at: knex.fn.now(),
     });
 
@@ -317,18 +350,23 @@ export async function revokeLicenseEntitlement(
   // Revoke in C4
   await c4Post('/revoke', { stripe_sub_id: input.stripeSubId });
 
-  // Mark the contract terminated
+  // Mark the contract terminated. PG can't UPDATE two tables at once, so resolve
+  // the matching contract(s) first, then update each table separately.
   const knex = await getAdminConnection();
+  const matches = await knex('contracts')
+    .where({ tenant: input.tenant, owner_client_id: input.clientId })
+    .whereRaw('contract_description LIKE ?', [`%stripe_sub:${input.stripeSubId}%`])
+    .select('contract_id');
+  const contractIds = matches.map((m: { contract_id: string }) => m.contract_id);
+  if (contractIds.length === 0) return;
+
+  await knex('contracts')
+    .where({ tenant: input.tenant })
+    .whereIn('contract_id', contractIds)
+    .update({ status: 'terminated', updated_at: knex.fn.now() });
+
   await knex('client_contracts')
-    .join('contracts', 'client_contracts.contract_id', 'contracts.contract_id')
-    .where({
-      'client_contracts.client_id': input.clientId,
-      'client_contracts.tenant': input.tenant,
-    })
-    .whereRaw("contracts.contract_description LIKE ?", [`%stripe_sub:${input.stripeSubId}%`])
-    .update({
-      'client_contracts.is_active': false,
-      'contracts.status': 'terminated',
-      'client_contracts.updated_at': knex.fn.now(),
-    });
+    .where({ tenant: input.tenant })
+    .whereIn('contract_id', contractIds)
+    .update({ is_active: false, updated_at: knex.fn.now() });
 }

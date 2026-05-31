@@ -1,7 +1,7 @@
 'use server';
 
 import { getSession } from '@alga-psa/auth';
-import { getConnection } from '@/lib/db/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
@@ -74,7 +74,7 @@ export async function purchaseApplianceLicense(
   }
 
   const secretKey = await getStripeSecretKey();
-  const stripe = new Stripe(secretKey, { apiVersion: '2024-04-10' });
+  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
 
   const isSubscription = transport !== 'airgap-annual';
   const baseUrl = getAppBaseUrl();
@@ -99,9 +99,9 @@ export async function purchaseApplianceLicense(
   }
 
   // Record the checkout session id on the submission
-  const knex = await getConnection();
+  const { knex, tenant } = await createTenantKnex();
   await knex('service_request_submissions')
-    .where({ submission_id: submissionId })
+    .where({ submission_id: submissionId, tenant })
     .update({ workflow_execution_id: `stripe_session_${checkoutSession.id}`, updated_at: knex.fn.now() });
 
   logger.info('[applianceLicense] checkout session created', {
