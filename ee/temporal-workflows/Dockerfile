@@ -23,45 +23,39 @@ COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
 COPY tsconfig.json /app/tsconfig.json
 
-WORKDIR /app/packages/integrations
-RUN npm install --ignore-scripts
-
-WORKDIR /app/ee/temporal-workflows
-# Install global build tooling required by shared package scripts
+# Install global build tooling used by package build scripts.
 RUN npm install -g typescript
-# Install dependencies (skip prepare scripts to avoid building shared during base stage)
-RUN npm install --ignore-scripts
 
 # Development stage
 FROM base AS development
 
-# First, we need to copy and build shared
-# Note: This assumes the Docker build context is set to project root
-# with -f ee/temporal-workflows/Dockerfile
-WORKDIR /app/shared
-RUN npm install
-RUN npm run build
-RUN npm run build
-
-# Now build temporal-workflows
+# Bring in the full sources (the base stage only copied package.jsons + some src).
 WORKDIR /app
 COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 COPY ee/packages/workflows/ /app/ee/packages/workflows/
-# Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
 COPY package*.json /app/
 COPY .npmrc /app/
 
-WORKDIR /app/ee/temporal-workflows
-# Ensure tsc-alias is available for the build
-RUN npm install
-WORKDIR /app
-RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
-    && npm install --no-save openai@^4.104.0
+# Single workspace-aware install. The root `workspaces` glob references members
+# this Dockerfile doesn't copy (ee/server, services/*, sdk/*, tools/generators),
+# so trim it to the members actually present in the image. A proper workspace
+# install links every @alga-psa/* package locally and installs all members'
+# deps in one consistent pass (build tooling like tsup, transitive deps like
+# google-auth-library/openai), replacing the previous fragile per-package
+# installs that resolved @alga-psa/* against the public registry and 404'd.
+# --no-package-lock avoids reconciling against the committed root lock, which
+# still records the trimmed-out workspaces.
+RUN node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.workspaces=['packages/*','shared','ee/packages/workflows','ee/temporal-workflows'];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');console.log('trimmed workspaces to image-present members');"
+RUN npm install --ignore-scripts --legacy-peer-deps --no-package-lock
+
+# Build shared (its deps were installed by the workspace install above).
+WORKDIR /app/shared
+RUN npm run build
+RUN npm run build
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
-
 RUN npx tsup
 
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
@@ -118,34 +112,19 @@ CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
 # Production stage
 FROM base AS production
 
-# Copy built shared module
-COPY --from=development /app/shared /app/shared
-
-# Copy built temporal-workflows
-COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
-COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
-COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
-# Copy event-schemas dist (runtime dependency of shared/workflow/streams)
-COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
-# Copy integrations node_modules to both locations for module resolution
-COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
-COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
-# Expose all local monorepo packages under @alga-psa/* for runtime resolution.
-RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules/@alga-psa \
-    && for pkg in /app/packages/*; do \
-      name="$(basename "$pkg")"; \
-      ln -sfn "$pkg" "/app/node_modules/@alga-psa/$name"; \
-    done \
-    && ln -sfn /app/ee/packages/workflows /app/node_modules/@alga-psa/workflows \
-    && ln -sfn /app/ee/packages/workflows /app/ee/temporal-workflows/node_modules/@alga-psa/workflows \
-    && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
+# The development stage ran a single workspace install (deps hoisted under
+# /app/node_modules with @alga-psa/* workspace symlinks) and built every dist,
+# so copy the whole built tree wholesale. This replaces the old hand-rolled
+# per-package node_modules copies + manual @alga-psa symlinks, which assumed the
+# fragile per-package install layout.
+COPY --from=development /app /app
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
 # Create non-root user
-RUN groupadd -r temporal && useradd -r -g temporal temporal
-RUN chown -R temporal:temporal /app
+RUN groupadd -r temporal && useradd -r -g temporal temporal \
+    && chown -R temporal:temporal /app
 USER temporal
 
 WORKDIR /app/ee/temporal-workflows
