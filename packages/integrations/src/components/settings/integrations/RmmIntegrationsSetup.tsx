@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useEeEnabled } from '@alga-psa/auth/client';
 import type { RmmProvider } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
