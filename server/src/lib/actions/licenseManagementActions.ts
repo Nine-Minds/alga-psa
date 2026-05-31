@@ -1,6 +1,6 @@
 'use server';
 
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUser } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   getLicenseStateRow,
@@ -29,10 +29,13 @@ export interface LicenseStatus {
 }
 
 async function assertAdminPermission(): Promise<void> {
-  const session = await getSession();
-  const user = session?.user;
+  // Must use getCurrentUser (returns a full IUserWithRoles with user_id) — the
+  // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
+  // binds user_roles.user_id, so passing session.user yields an undefined-binding
+  // SQL error rather than a permission check.
+  const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
-  const allowed = await hasPermission(user as any, 'account_management', 'read');
+  const allowed = await hasPermission(user, 'account_management', 'read');
   if (!allowed) throw new Error('Forbidden: account_management permission required');
 }
 
