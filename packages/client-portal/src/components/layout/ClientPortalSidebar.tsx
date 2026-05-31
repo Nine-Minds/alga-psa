@@ -17,6 +17,7 @@ import {
   CreditCard,
   Settings,
   User,
+  KeyRound,
 } from 'lucide-react';
 import type { ProductCode } from '@alga-psa/types';
 import { useBranding } from '@alga-psa/tenancy/components';
@@ -148,6 +149,12 @@ export function ClientPortalSidebar({
                     icon: CreditCard,
                   }]
                 : []),
+              {
+                key: 'licenses',
+                href: '/client-portal/licenses',
+                label: t('nav.licenses', 'Licenses'),
+                icon: KeyRound,
+              },
             ]),
         ...(permissions.hasClientSettingsAccess
           ? [{

@@ -228,6 +228,31 @@ export const addUser = withAuth(async (
           };
         }
 
+        // Self-host mode: check the license `seats` claim.
+        // `essentials` tier is unmetered; EE tiers (pro/premium) enforce `seats`.
+        try {
+          const adminKnex = await getAdminConnection();
+          const licenseRow = await adminKnex('license_state').orderBy('id').first();
+          if (licenseRow) {
+            const { resolveSelfHostTier, verifyLicense } = await import('@alga-psa/licensing');
+            const resolved = resolveSelfHostTier(licenseRow);
+            if (resolved && resolved.tier !== 'essentials' && licenseRow.license_token) {
+              const v = verifyLicense(licenseRow.license_token);
+              if (v.valid && typeof v.claims.seats === 'number') {
+                if (used >= v.claims.seats) {
+                  return {
+                    success: false,
+                    code: 'LICENSE_LIMIT_REACHED',
+                    error: `You've reached the seat limit (${v.claims.seats}) of your Alga appliance license.`,
+                  };
+                }
+              }
+            }
+          }
+        } catch {
+          // Don't block user creation on a transient license_state read failure
+        }
+
       }
 
       const [newUser] = await trx('users')

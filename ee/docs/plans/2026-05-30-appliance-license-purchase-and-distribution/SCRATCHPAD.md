@@ -102,4 +102,52 @@ Verified 2026-05-30 by a thorough Explore pass.
 - TESTING APPROACH (per Robert): light automated testing for ~80% confidence, smoke-validate the rest live afterward. tests.json items are tagged `kind: auto|smoke` — **53 auto** (silent-failure-prone logic: sign↔verify + exp/grace math, idempotency/exactly-once, auth/authz, claim-code single-use+concurrency, seat math, SaaS-unchanged regression, no-private-key guards) and **85 smoke** (UI/nav/redirects/email/container/e2e happy paths) captured as a live checklist in `SMOKE.md`. Lean toward smoke for appliance-side work; don't over-unit-test.
 - Feature spread: C4=30, C3=18, C5=13, C2=12, C1=9, C6=8, Seat=5, Xcut=5.
 - Build order (PRD §10): prerequisites done → C4 (`~/alga-license`) → C1+C2+C3+C6 (air-gap shippable) → C5 (connected) → seat enforcement alongside.
+## IMPLEMENTATION NOTES (2026-05-30/31)
+
+### C4 (~/alga-license) — DONE
+- Uses `node:sqlite` (built-in Node 22+) — no native deps needed, bypasses Python 3.14 / node-gyp issue on this machine.
+- Credential stored as PLAINTEXT in `license_state.appliance_credential` (high-entropy 64-hex random; DB access-controlled). The C4 side stores a SHA-256 hash of the same credential for lookup. The refresh route sends the plaintext to C4 /check-in.
+- 19/19 automated tests passing.
+- **TODO when deploying:** set ALGA_LICENSE_PRIVATE_KEY_FILE, ALGA_LICENSE_SERVICE_SECRET, PORT, DB_PATH env vars. The v1-test key is only for automated tests.
+
+### C1 (license-order SR template) — DONE
+- Added `licenseOrderTemplateProvider` + `licenseOrderExecutionProvider` to `ee/server/src/lib/service-requests/providers.ts`. The execution provider marks the submission as succeeded immediately (the Stripe redirect is handled by `purchaseApplianceLicense()` server action, not the execution provider).
+
+### C2 (Stripe checkout + webhook) — DONE
+- New `purchaseApplianceLicense()` server action in `ee/server/src/lib/actions/applianceLicenseActions.ts` creates the Checkout Session and stamps `is_license_order:'true'` + correlation metadata into session.metadata.
+- Webhook extension in `packages/integrations/src/webhooks/stripe/payments.ts`: detects `is_license_order:'true'` BEFORE tenant_id routing. Idempotency via `payment_webhook_events`. Fires `startApplianceLicenseIssuance()`.
+- Appliance-license Stripe prices use separate env keys (`STRIPE_APPLIANCE_*`) distinct from SaaS seat keys.
+- **TODO:** provision Stripe products/prices and set the env keys.
+
+### C3 (Temporal issuance workflow) — DONE
+- New workflow `applianceLicenseIssuanceWorkflow` in `ee/temporal-workflows/src/workflows/appliance-license-issuance-workflow.ts`. Workflow id = `license-issue:{paymentIntentId}` (idempotent).
+- Activities in `ee/temporal-workflows/src/activities/appliance-license-activities.ts`: `signApplianceLicense`, `upsertLicenseContract`, `storeLicenseDocument`, `mintClaimCode`, `deliverLicenseEmail`, `revokeLicenseEntitlement`.
+- Issuance client helper at `ee/packages/workflows/src/lib/applianceLicenseIssuanceTemporal.ts`.
+- `deliverLicenseEmail` records delivery notes on the submission — full email templating is a TODO (marked in the code).
+- Contract lines: uses `contracts.contract_description` to embed tier/transport/stripe_sub metadata for correlation (avoids a separate join table in v1).
+- GOTCHA: `document_associations` `created_by` can be null (system-generated rows from issuance). Confirmed the schema allows it.
+
+### C5 (connected-appliance client) — DONE
+- Migration `server/migrations/20260531000000_license_state_connected_client.cjs` adds `appliance_id`, `check_in_url`, `appliance_credential`, `last_checkin_at` to `license_state`.
+- `connectAppliance()` server action in `licenseManagementActions.ts` redeems a claim code against C4 /register, stores the plaintext credential + first JWT + check_in_url.
+- `LicenseManagementPage.tsx` updated with "Connect this appliance" claim-code entry + connected status display.
+- Daily refresh at `server/src/app/api/internal/license-refresh/route.ts` (POST, auth via INTERNAL_API_SECRET). Call this daily from cron/Temporal scheduler.
+
+### C6 (portal Licenses view) — DONE
+- `getClientLicenses()` server action in `packages/client-portal/src/actions/client-portal-actions/client-licenses.ts`. Filters by `contract_description LIKE '%stripe_sub:%'`.
+- `ClientLicensesPage.tsx` in `packages/client-portal/src/components/licenses/`.
+- Route: `server/src/app/client-portal/licenses/page.tsx`.
+- Nav: `KeyRound` icon + "Licenses" added to `ClientPortalSidebar.tsx` in the "more" section (outside algadesk portal, always visible).
+- "Download key" links to `/client-portal/documents?highlight=<documentId>` — relies on the existing Documents page.
+
+### Seat enforcement — DONE
+- Added self-host seat check in `createUser` in `packages/users/src/actions/user-actions/userActions.ts`. Reads `license_state` from admin DB; if row exists and effective tier is not essentials and license has a `seats` claim, enforces it. Essentials is unmetered. SaaS path (no `license_state` row) unchanged. Failures are non-blocking on DB errors (try/catch).
+
+### Known TODOs for production readiness
+1. Email delivery: `deliverLicenseEmail` currently writes notes to the submission — wire to the actual email-activities transactional email once template is designed.
+2. Stripe SKUs: provision the 6 appliance-license products/prices and set STRIPE_APPLIANCE_* env vars.
+3. Daily refresh cron: set up a Temporal schedule or k8s CronJob to POST to /api/internal/license-refresh daily.
+4. `~/alga-license` prod deploy: configure Dockerfile, k8s secrets (private key, service secret), PVC.
+5. Portal purchase flow: the portal currently links to /request-services for license purchase. A dedicated purchase page that calls `purchaseApplianceLicense()` and redirects to Stripe still needs a UI wrapper (the server action exists, the frontend form needs to be wired up in the portal).
+
 - NEXT (when implementing): start with C4 scaffold in the new `~/alga-license` repo (port `ee/tools/alga-license/sign.mjs`), since it unblocks both transports.

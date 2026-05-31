@@ -484,12 +484,90 @@ const enterpriseTemplateProvider: ServiceRequestTemplateProvider = {
   listTemplates: () => [],
 };
 
+const licenseOrderTemplateProvider: ServiceRequestTemplateProvider = {
+  key: 'appliance-license',
+  displayName: 'Appliance License',
+  listTemplates: () => [
+    {
+      id: 'appliance-license-order',
+      name: 'Appliance License Purchase',
+      description: 'Purchase or renew an Alga appliance Enterprise license.',
+      buildDraft: () => ({
+        metadata: {
+          name: 'Appliance License Purchase',
+          description: 'Purchase or renew an Alga appliance Enterprise license.',
+          icon: 'key-round',
+        },
+        formSchema: {
+          fields: [
+            {
+              key: 'tier',
+              type: 'select',
+              label: 'Tier',
+              required: true,
+              options: [
+                { label: 'Pro', value: 'pro' },
+                { label: 'Premium', value: 'premium' },
+              ],
+            },
+            {
+              key: 'seats',
+              type: 'number',
+              label: 'Number of seats',
+              required: true,
+              defaultValue: '10',
+            },
+            {
+              key: 'transport',
+              type: 'select',
+              label: 'License delivery',
+              required: true,
+              options: [
+                { label: 'Connected (monthly auto-refresh)', value: 'connected-monthly' },
+                { label: 'Connected (annual, auto-refresh)', value: 'connected-annual' },
+                { label: 'Air-gapped (annual, paste license key)', value: 'airgap-annual' },
+              ],
+            },
+          ],
+        },
+        providers: {
+          executionProvider: 'license-order-stripe',
+          executionConfig: {},
+          formBehaviorProvider: 'basic',
+          formBehaviorConfig: {},
+          visibilityProvider: 'all-authenticated-client-users',
+          visibilityConfig: {},
+        },
+      }),
+    },
+  ],
+};
+
+/**
+ * Execution provider for license-order service requests.
+ * Stores the order; the actual Stripe Checkout Session is created by the
+ * purchaseApplianceLicense() server action which is called directly by the
+ * portal UI. This provider marks the submission succeeded immediately so the
+ * SR system tracks the order record, while the portal handles the redirect.
+ */
+const licenseOrderExecutionProvider: ServiceRequestExecutionProvider = {
+  key: 'license-order-stripe',
+  displayName: 'License Order (Stripe)',
+  executionMode: SERVICE_REQUEST_EXECUTION_MODES.WORKFLOW_ONLY,
+  validateConfig: () => ({ isValid: true }),
+  async execute(_context): Promise<ServiceRequestExecutionResult> {
+    // Submission is the order record; Stripe session created by the dedicated
+    // purchaseApplianceLicense() server action. Mark as pending-payment.
+    return { status: 'succeeded', workflowExecutionId: 'license-order-pending-payment' };
+  },
+};
+
 export async function getServiceRequestEnterpriseProviderRegistrations(): Promise<ServiceRequestProviderRegistrations> {
   return {
-    executionProviders: [workflowOnlyExecutionProvider, ticketPlusWorkflowExecutionProvider],
+    executionProviders: [workflowOnlyExecutionProvider, ticketPlusWorkflowExecutionProvider, licenseOrderExecutionProvider],
     formBehaviorProviders: [advancedFormBehaviorProvider],
     visibilityProviders: [advancedVisibilityProvider],
-    templateProviders: [enterpriseTemplateProvider],
+    templateProviders: [enterpriseTemplateProvider, licenseOrderTemplateProvider],
     adminExtensionProviders: [],
   };
 }

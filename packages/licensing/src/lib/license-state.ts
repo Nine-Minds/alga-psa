@@ -17,6 +17,12 @@ export interface LicenseStateRow {
   trial_started_at: Date | null;
   license_token: string | null;
   updated_at: Date;
+  /** Connected-appliance columns (added by migration 20260531000000) */
+  appliance_id: string | null;
+  check_in_url: string | null;
+  /** SHA-256 hex hash of the per-appliance credential; plaintext is never stored. */
+  appliance_credential: string | null;
+  last_checkin_at: Date | null;
 }
 
 /** Derived licensing state for an install. */

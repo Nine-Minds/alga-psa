@@ -7,6 +7,7 @@ export * from './onboarding-seeds-activities';
 export * from './customer-tracking-activities';
 export * from './extension-domain-activities';
 export * from './license-management-activities';
+export * from './appliance-license-activities';
 export * from './portal-domain-activities';
 export * from './email-domain-activities';
 export * from './job-activities';
