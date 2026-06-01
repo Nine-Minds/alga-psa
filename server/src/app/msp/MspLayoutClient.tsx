@@ -12,6 +12,7 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
+import LicenseBanner from "@/components/licenses/LicenseBanner";
 import { ProductProvider } from "@/context/ProductContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -30,6 +31,8 @@ interface Props {
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
+  /** Self-host install (license_state row present). Hosted/SaaS = false. */
+  selfHostLicensing?: boolean;
 }
 
 function OnboardingRedirectFallback() {
@@ -64,6 +67,7 @@ export function MspLayoutClient({
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
+  selfHostLicensing = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -123,6 +127,7 @@ export function MspLayoutClient({
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
+          {selfHostLicensing && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider
