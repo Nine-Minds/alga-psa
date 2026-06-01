@@ -44,6 +44,7 @@ function LayoutShell({
     hasBillingAccess: false,
     hasUserManagementAccess: false,
     hasAccountAccess: false,
+    isLicenseDistributor: false,
   });
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const { branding } = useBranding();
@@ -80,6 +81,7 @@ function LayoutShell({
             hasBillingAccess: perms.hasBillingAccess,
             hasUserManagementAccess: perms.hasUserManagementAccess,
             hasAccountAccess: perms.hasAccountAccess,
+            isLicenseDistributor: perms.isLicenseDistributor,
           });
         }
       } finally {
@@ -107,6 +109,7 @@ function LayoutShell({
         permissions={{
           hasClientSettingsAccess: permissions.hasClientSettingsAccess,
           hasBillingAccess: permissions.hasBillingAccess,
+          isLicenseDistributor: permissions.isLicenseDistributor,
         }}
         permissionsLoaded={permissionsLoaded}
         initialCollapsed={initialSidebarCollapsed}

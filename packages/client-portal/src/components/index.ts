@@ -46,3 +46,6 @@ export { default as ClientPortalTenantDiscovery } from './auth/ClientPortalTenan
 
 // Knowledge Base
 export { ClientKBPage, ClientKBArticleView } from './kb';
+
+// Appliance Licenses (C6)
+export { default as ClientLicensesPage } from './licenses/ClientLicensesPage';
