@@ -78,10 +78,13 @@ export function TierProvider({ children }: TierProviderProps) {
   const { data: session, status, update } = useSession();
   const isLoading = status === 'loading';
 
-  // Resolve tier from session plan
+  // Resolve tier from the server-resolved effectiveTier when present (this
+  // includes self-host licensing and the 'essentials' floor), falling back to
+  // the raw Stripe plan for SaaS sessions (and sessions issued before
+  // effectiveTier existed — NULL plan still resolves to 'pro').
   const { tier, isMisconfigured } = useMemo(() => {
-    return resolveTier(session?.user?.plan);
-  }, [session?.user?.plan]);
+    return resolveTier(session?.user?.effectiveTier ?? session?.user?.plan);
+  }, [session?.user?.effectiveTier, session?.user?.plan]);
 
   // Convenience tier checks
   const isSolo = tier === 'solo';
