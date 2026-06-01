@@ -8,6 +8,11 @@ import type {
   ServiceRequestVisibilityProvider,
 } from 'server/src/lib/service-requests/providers/contracts';
 import { ticketOnlyExecutionProvider } from 'server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider';
+import {
+  createApplianceLicenseCheckout,
+  type ApplianceLicenseTier,
+  type ApplianceLicenseTransport,
+} from '../actions/applianceLicenseActions';
 
 interface WorkflowExecutionConfig {
   workflowId?: string;
@@ -484,12 +489,116 @@ const enterpriseTemplateProvider: ServiceRequestTemplateProvider = {
   listTemplates: () => [],
 };
 
+const licenseOrderTemplateProvider: ServiceRequestTemplateProvider = {
+  key: 'appliance-license',
+  displayName: 'Appliance License',
+  listTemplates: () => [
+    {
+      id: 'appliance-license-order',
+      name: 'Appliance License Purchase',
+      description: 'Purchase or renew an Alga appliance Enterprise license.',
+      buildDraft: () => ({
+        metadata: {
+          name: 'Appliance License Purchase',
+          description: 'Purchase or renew an Alga appliance Enterprise license.',
+          icon: 'key-round',
+        },
+        formSchema: {
+          fields: [
+            {
+              key: 'tier',
+              type: 'select',
+              label: 'Tier',
+              required: true,
+              options: [
+                { label: 'Pro', value: 'pro' },
+                { label: 'Premium', value: 'premium' },
+              ],
+            },
+            {
+              key: 'seats',
+              type: 'short-text',
+              label: 'Number of seats',
+              required: true,
+              defaultValue: '10',
+            },
+            {
+              key: 'transport',
+              type: 'select',
+              label: 'License delivery',
+              required: true,
+              options: [
+                { label: 'Connected (monthly auto-refresh)', value: 'connected-monthly' },
+                { label: 'Connected (annual, auto-refresh)', value: 'connected-annual' },
+                { label: 'Air-gapped (annual, paste license key)', value: 'airgap-annual' },
+              ],
+            },
+          ],
+        },
+        providers: {
+          executionProvider: 'license-order-stripe',
+          executionConfig: {},
+          formBehaviorProvider: 'basic',
+          formBehaviorConfig: {},
+          visibilityProvider: 'all-authenticated-client-users',
+          visibilityConfig: {},
+        },
+      }),
+    },
+  ],
+};
+
+/**
+ * Execution provider for license-order service requests.
+ *
+ * On submit it creates the Stripe Checkout Session directly from the submission
+ * context (tier/seats/transport in the payload) and returns the checkout URL as
+ * `redirectUrl`, so the portal submit action redirects the customer to payment.
+ * The `stripe_session_<id>` value is returned as `workflowExecutionId` so the
+ * submit service persists it on the submission; the `checkout.session.completed`
+ * webhook then correlates (by metadata) and fires issuance.
+ */
+const licenseOrderExecutionProvider: ServiceRequestExecutionProvider = {
+  key: 'license-order-stripe',
+  displayName: 'License Order (Stripe)',
+  executionMode: SERVICE_REQUEST_EXECUTION_MODES.WORKFLOW_ONLY,
+  validateConfig: () => ({ isValid: true }),
+  async execute(context): Promise<ServiceRequestExecutionResult> {
+    try {
+      const tier = String(context.payload.tier ?? '') as ApplianceLicenseTier;
+      const seats = Number.parseInt(String(context.payload.seats ?? ''), 10);
+      const transport = String(context.payload.transport ?? '') as ApplianceLicenseTransport;
+
+      const { checkoutUrl, checkoutSessionId } = await createApplianceLicenseCheckout({
+        knex: context.knex,
+        tenant: context.tenant,
+        submissionId: context.submissionId,
+        clientId: context.clientId,
+        tier,
+        seats,
+        transport,
+      });
+
+      return {
+        status: 'succeeded',
+        workflowExecutionId: `stripe_session_${checkoutSessionId}`,
+        redirectUrl: checkoutUrl,
+      };
+    } catch (error) {
+      return {
+        status: 'failed',
+        errorSummary: error instanceof Error ? error.message : 'Checkout creation failed.',
+      };
+    }
+  },
+};
+
 export async function getServiceRequestEnterpriseProviderRegistrations(): Promise<ServiceRequestProviderRegistrations> {
   return {
-    executionProviders: [workflowOnlyExecutionProvider, ticketPlusWorkflowExecutionProvider],
+    executionProviders: [workflowOnlyExecutionProvider, ticketPlusWorkflowExecutionProvider, licenseOrderExecutionProvider],
     formBehaviorProviders: [advancedFormBehaviorProvider],
     visibilityProviders: [advancedVisibilityProvider],
-    templateProviders: [enterpriseTemplateProvider],
+    templateProviders: [enterpriseTemplateProvider, licenseOrderTemplateProvider],
     adminExtensionProviders: [],
   };
 }
