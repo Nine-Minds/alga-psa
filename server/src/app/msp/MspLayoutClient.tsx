@@ -28,6 +28,8 @@ interface Props {
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
+  /** Self-host install (license_state row present). Hosted/SaaS = false. */
+  selfHostLicensing?: boolean;
 }
 
 export function MspLayoutClient({
@@ -37,6 +39,7 @@ export function MspLayoutClient({
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
+  selfHostLicensing = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -97,7 +100,7 @@ export function MspLayoutClient({
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
-          <LicenseBanner />
+          {selfHostLicensing && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
             <ClientUIStateProvider

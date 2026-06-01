@@ -165,3 +165,23 @@ export async function eeRuntimeEnabledServer(): Promise<boolean> {
     return true; // EE build; don't disable features if license_state is unavailable
   }
 }
+
+/**
+ * True when this install manages its own entitlement via a self-host
+ * `license_state` row (offline appliance / self-hosted). SaaS/hosted has no row
+ * → false.
+ *
+ * Use to gate the self-host licensing UI — the License page, the purchase flow,
+ * and the trial/expiry banner — so none of it surfaces on hosted/SaaS
+ * deployments. Mirrors the `resolveSelfHostTier(...) === null` SaaS check used
+ * by getLicenseStatus/eeRuntimeEnabledServer. Defaults to false on any DB error
+ * so the licensing UI is hidden (not shown to SaaS) when license_state can't be
+ * read.
+ */
+export async function isSelfHostLicensing(): Promise<boolean> {
+  try {
+    return resolveSelfHostTier(await getLicenseStateRow()) !== null;
+  } catch {
+    return false;
+  }
+}

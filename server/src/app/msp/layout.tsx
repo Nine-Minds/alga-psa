@@ -7,6 +7,7 @@ import { MspLayoutClient } from "./MspLayoutClient";
 import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { registerScheduleEntryIntegration } from "@alga-psa/msp-composition/workflows/registerScheduleEntryIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
 
 // This template overrides the root layout's template for all /msp/* pages.
@@ -57,6 +58,9 @@ export default async function MspLayout({
 
   const locale = await getHierarchicalLocaleAction();
   const productCode = await getCurrentTenantProduct();
+  // Only self-host installs carry a license_state row; gate the trial/expiry
+  // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
+  const selfHostLicensing = await isSelfHostLicensing();
 
   if (productCode === 'psa') {
     // Keep PSA-only integrations out of Algadesk composition.
@@ -71,6 +75,7 @@ export default async function MspLayout({
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
+      selfHostLicensing={selfHostLicensing}
     >
       {children}
     </MspLayoutClient>

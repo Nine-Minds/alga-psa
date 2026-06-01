@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   ChevronRight,
+  ExternalLink,
   Home,
   PlusCircle,
   Settings,
@@ -29,6 +30,8 @@ import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import { isSelfHostLicensingAction } from '@alga-psa/licensing/actions';
+import { NINEMINDS_PORTAL_URL } from '@/lib/ninemindsPortal';
 import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
@@ -364,6 +367,9 @@ export default function Header({
   const { t } = useTranslation('msp/core');
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
+  // Self-host/on-prem installs manage billing via the Nine Minds client portal,
+  // not the in-app Stripe account page.
+  const [isOnPrem, setIsOnPrem] = useState<boolean>(false);
   const router = useRouter();
 
   // Use SWR hooks for avatar - only one will be active based on user type
@@ -385,8 +391,12 @@ export default function Header({
       if (user) {
         setUserData(user);
 
-        const hasAccountPermission = await checkAccountManagementPermission();
+        const [hasAccountPermission, onPrem] = await Promise.all([
+          checkAccountManagementPermission(),
+          isSelfHostLicensingAction(),
+        ]);
         setCanManageAccount(hasAccountPermission);
+        setIsOnPrem(onPrem);
       }
     };
 
@@ -532,10 +542,15 @@ export default function Header({
             {canManageAccount && (
               <DropdownMenuItem
                 id="user-account-menu-item"
-                onSelect={() => router.push('/msp/account')}
+                onSelect={() =>
+                  isOnPrem
+                    ? window.open(NINEMINDS_PORTAL_URL, '_blank', 'noopener,noreferrer')
+                    : router.push('/msp/account')
+                }
               >
                 <Settings className="mr-2 h-4 w-4" />
                 {t('header.account', { defaultValue: 'Account' })}
+                {isOnPrem && <ExternalLink className="ml-2 h-3 w-3 opacity-60" />}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
