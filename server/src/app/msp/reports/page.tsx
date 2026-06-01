@@ -13,7 +13,7 @@ export default async function ReportsPage() {
     getSession(),
     getCurrentTenantProduct(),
   ]);
-  const { tier } = resolveTier(session?.user?.plan);
+  const { tier } = resolveTier(session?.user?.effectiveTier ?? session?.user?.plan);
 
   return <Reports productCode={productCode} tier={tier} />;
 }

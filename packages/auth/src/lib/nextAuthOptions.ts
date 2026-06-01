@@ -19,6 +19,7 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
+import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
@@ -45,6 +46,22 @@ import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
+
+/**
+ * Effective tier override for self-host installs. Returns the tier resolved from
+ * the offline `license_state` row (essentials/pro/premium/...) when present, or
+ * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
+ * on any error (e.g. an un-migrated `license_state`) — returns undefined.
+ */
+async function resolveSelfHostEffectiveTier(): Promise<string | undefined> {
+    try {
+        const selfHost = resolveSelfHostTier(await getLicenseStateRow());
+        if (selfHost !== null) return selfHost.tier;
+    } catch {
+        // Non-fatal — fall through to plan-based resolution.
+    }
+    return undefined;
+}
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -1695,6 +1712,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -1809,6 +1827,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -1878,6 +1897,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2442,6 +2462,7 @@ export const options: NextAuthConfig = {
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2556,6 +2577,7 @@ export const options: NextAuthConfig = {
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2624,6 +2646,7 @@ export const options: NextAuthConfig = {
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
