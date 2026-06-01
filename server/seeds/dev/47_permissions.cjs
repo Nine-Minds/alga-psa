@@ -69,9 +69,6 @@ exports.seed = async function(knex) {
         { resource: 'notification', action: 'read', msp: true, client: false, description: 'Read notifications' },
         { resource: 'notification', action: 'manage', msp: true, client: false, description: 'Manage notifications' },
 
-        // Teams integration permissions
-        { resource: 'teams_integration', action: 'read', msp: true, client: false, description: 'View Teams integration observability' },
-        
         // Invoice permissions
         { resource: 'invoice', action: 'create', msp: true, client: false, description: 'Create invoices' },
         { resource: 'invoice', action: 'read', msp: true, client: false, description: 'View invoices' },

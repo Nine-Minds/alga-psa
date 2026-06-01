@@ -219,7 +219,7 @@ describe('Teams observability actions', () => {
     expect(page.nextCursor).toBeTruthy();
     expect(hoisted.hasPermissionMock).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'user-1' }),
-      'teams_integration',
+      'system_settings',
       'read',
       knex
     );
@@ -243,7 +243,7 @@ describe('Teams observability actions', () => {
     expect(second.rows.map((row) => row.delivery_id)).toEqual(['delivery-001', 'delivery-000']);
   });
 
-  it('rejects callers without teams_integration:read', async () => {
+  it('rejects callers without system_settings:read', async () => {
     const knex = makeKnex({ teams_notification_deliveries: [] });
     hoisted.createTenantKnexMock.mockResolvedValue({ knex, tenant: 'tenant-a' });
     hoisted.hasPermissionMock.mockResolvedValue(false);

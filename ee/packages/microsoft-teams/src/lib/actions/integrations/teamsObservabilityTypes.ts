@@ -148,7 +148,7 @@ export function decodeTeamsObservabilityCursor(cursor: string | undefined | null
 }
 
 async function assertTeamsReadPermission(user: unknown, knex: any): Promise<void> {
-  if (!(await hasPermission(user as any, 'teams_integration', 'read', knex))) {
+  if (!(await hasPermission(user as any, 'system_settings', 'read', knex))) {
     throw new Error('Forbidden');
   }
 }
