@@ -696,24 +696,40 @@ export default function TaskListView({
     return groups;
   }, [phases, filteredTasks, statuses, statusesByPhase]);
 
-  // Auto-expand phases and statuses that have tasks
-  useEffect(() => {
-    const phasesWithTasks = new Set<string>();
-    const statusesWithTasks = new Set<string>();
+  // Auto-expand phases/statuses. By default we only expand the FIRST phase that
+  // has tasks: rendering every phase's rows at once (each with its own assignee
+  // picker, avatars, etc.) is what makes the list view slow and floods the
+  // network with per-row requests. This mirrors the kanban, which only ever
+  // renders one phase at a time. While a search/filter is active we instead
+  // expand every phase that still has matching tasks, otherwise matches in
+  // later phases would be hidden behind collapsed headers.
+  const hasActiveFilter = Boolean(
+    searchQuery.trim() ||
+    selectedPriorityFilter !== 'all' ||
+    selectedTaskTags.length > 0 ||
+    selectedAgentFilter.length > 0 ||
+    selectedTeamFilter.length > 0 ||
+    includeUnassignedAgents
+  );
 
-    phaseGroups.forEach(group => {
-      if (group.totalTasks > 0) {
-        phasesWithTasks.add(group.phase.phase_id);
-        group.statusGroups.forEach(statusGroup => {
-          const statusKey = `${group.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
-          statusesWithTasks.add(statusKey);
-        });
-      }
+  useEffect(() => {
+    const phasesToExpand = new Set<string>();
+    const statusesToExpand = new Set<string>();
+
+    const groupsWithTasks = phaseGroups.filter(group => group.totalTasks > 0);
+    const groupsToExpand = hasActiveFilter ? groupsWithTasks : groupsWithTasks.slice(0, 1);
+
+    groupsToExpand.forEach(group => {
+      phasesToExpand.add(group.phase.phase_id);
+      group.statusGroups.forEach(statusGroup => {
+        const statusKey = `${group.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
+        statusesToExpand.add(statusKey);
+      });
     });
 
-    setExpandedPhases(phasesWithTasks);
-    setExpandedStatuses(statusesWithTasks);
-  }, [phaseGroups]);
+    setExpandedPhases(phasesToExpand);
+    setExpandedStatuses(statusesToExpand);
+  }, [phaseGroups, hasActiveFilter]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
@@ -1725,6 +1741,8 @@ export default function TaskListView({
                                                 teams={teams}
                                                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                                                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                                                initialUserAvatarUrls={avatarUrls}
+                                                initialTeamAvatarUrls={teamAvatarUrls}
                                               />
                                             ) : (
                                               (() => {
