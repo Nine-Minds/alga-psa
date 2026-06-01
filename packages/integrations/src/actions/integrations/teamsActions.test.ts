@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -587,7 +588,10 @@ describe('Teams integration actions', () => {
   });
 
   it('T042: exports Teams diagnostics actions through the integrations action boundary', () => {
-    const repoRoot = path.resolve(process.cwd(), '..');
+    // Resolve the repo root from this file's location so the test is independent
+    // of the working directory the suite runs from.
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const repoRoot = path.resolve(testDir, '../../../../..');
     const integrationsIndex = fs.readFileSync(
       path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
       'utf8'
