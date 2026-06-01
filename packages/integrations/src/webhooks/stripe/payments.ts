@@ -120,6 +120,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check for license-order events FIRST (before tenant_id routing).
+    // License orders carry is_license_order: 'true' in session metadata.
+    if (isLicenseOrderEvent(event)) {
+      const licenseResult = await handleLicenseOrderWebhook(event);
+      const processingTime = Date.now() - startTime;
+      logger.info('[Stripe Payment Webhook] License order event processed', {
+        eventId: event.id,
+        eventType: event.type,
+        success: licenseResult.success,
+        processingTimeMs: processingTime,
+      });
+      return NextResponse.json({
+        received: true,
+        processed: licenseResult.success,
+        purpose: 'license_order',
+        processingTimeMs: processingTime,
+        ...(licenseResult.error ? { error: licenseResult.error } : {}),
+      });
+    }
+
     // Extract tenant ID from event metadata
     const tenantId = extractTenantId(event);
     if (!tenantId) {
@@ -240,6 +260,102 @@ function extractTenantId(event: Stripe.Event): string | null {
   }
 
   return null;
+}
+
+// ── License-order webhook handling ───────────────────────────────────────────
+
+function isLicenseOrderEvent(event: Stripe.Event): boolean {
+  if (event.type !== 'checkout.session.completed') return false;
+  const session = event.data.object as Stripe.Checkout.Session;
+  return session.metadata?.is_license_order === 'true';
+}
+
+async function handleLicenseOrderWebhook(
+  event: Stripe.Event
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const metadata = session.metadata ?? {};
+
+    const submissionId = metadata.service_request_submission_id;
+    const tier = metadata.tier as 'pro' | 'premium';
+    const seats = metadata.seats ? parseInt(metadata.seats, 10) : undefined;
+    const transport = metadata.transport;
+    const stripeSubId = (session.subscription as string) || session.id;
+    const paymentIntentId = (session.payment_intent as string) || session.id;
+
+    if (!submissionId || !tier || !transport) {
+      logger.error('[License Order Webhook] Missing required metadata', { eventId: event.id, metadata });
+      return { success: false, error: 'missing_metadata' };
+    }
+
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
+    const knex = await getAdminConnection();
+
+    // Resolve the submission first — it carries the authoritative tenant + client_id.
+    const submission = await knex('service_request_submissions')
+      .where({ submission_id: submissionId })
+      .first('submitted_payload', 'tenant', 'client_id');
+
+    const tenant = submission?.tenant as string | undefined;
+    const clientId = (submission?.client_id as string | undefined) ?? metadata.client_id;
+    if (!tenant || !clientId) {
+      logger.error('[License Order Webhook] Submission not found', { submissionId });
+      return { success: false, error: 'submission_not_found' };
+    }
+
+    // Idempotency via payment_webhook_events (unique on tenant+provider+external id).
+    // Temporal's workflow id (license-issue:{paymentIntentId}) is the exactly-once
+    // backstop; this insert prevents redundant pre-workflow work.
+    const inserted = await knex('payment_webhook_events')
+      .insert({
+        tenant,
+        provider_type: 'stripe',
+        external_event_id: event.id,
+        event_type: event.type,
+        event_data: JSON.stringify(event),
+        processed: true,
+        processing_status: 'completed',
+        processed_at: knex.fn.now(),
+      })
+      .onConflict(['tenant', 'provider_type', 'external_event_id'])
+      .ignore()
+      .returning('event_id');
+
+    if (!inserted || inserted.length === 0) {
+      logger.info('[License Order Webhook] Already processed (idempotent)', { eventId: event.id });
+      return { success: true };
+    }
+
+    // Client name → license customer (table is `clients`, PK client_id).
+    const client = await knex('clients').where({ client_id: clientId, tenant }).first('client_name');
+    const customer = (client?.client_name as string | undefined) ?? 'Unknown';
+
+    // Start the issuance Temporal workflow (idempotent via workflow id)
+    const { startApplianceLicenseIssuance } = await import('@enterprise/lib/workflows/applianceLicenseIssuanceTemporal');
+    await startApplianceLicenseIssuance(paymentIntentId, {
+      tenant,
+      submissionId,
+      clientId,
+      customer,
+      tier,
+      seats,
+      transport,
+      stripeSubId,
+    });
+
+    logger.info('[License Order Webhook] Issuance workflow started', {
+      eventId: event.id,
+      workflowId: `license-issue:${paymentIntentId}`,
+      submissionId,
+    });
+
+    return { success: true };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error('[License Order Webhook] Failed', { error: msg });
+    return { success: false, error: msg };
+  }
 }
 
 /**
