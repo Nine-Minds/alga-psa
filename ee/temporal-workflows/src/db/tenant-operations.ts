@@ -1,4 +1,4 @@
-import { Context } from '@temporalio/activity';
+import { Context, ApplicationFailure } from '@temporalio/activity';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type {
@@ -28,6 +28,22 @@ export async function createTenantInDB(
 
   try {
     const knex = await getAdminConnection();
+
+    // Durable idempotency guard: refuse to mint a second tenant for a Stripe
+    // subscription that was already provisioned. Backstops the Temporal reuse
+    // policy for the case where the prior run has aged out of retention and the
+    // subscription metadata stamp was never written.
+    if (input.stripeSubscriptionId) {
+      const existing = await knex('stripe_subscriptions')
+        .where('stripe_subscription_external_id', input.stripeSubscriptionId)
+        .first('tenant');
+      if (existing?.tenant) {
+        throw ApplicationFailure.nonRetryable(
+          `Tenant ${existing.tenant} already provisioned for Stripe subscription ${input.stripeSubscriptionId}; refusing to create a duplicate`,
+          'DuplicateError',
+        );
+      }
+    }
 
     const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
@@ -340,6 +356,11 @@ export async function createTenantInDB(
     };
 
   } catch (error) {
+    // Preserve structured failures (e.g. the non-retryable DuplicateError guard)
+    // so Temporal's retry/non-retry classification survives.
+    if (error instanceof ApplicationFailure) {
+      throw error;
+    }
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('Failed to create tenant', { error: errorMessage });
     throw new Error(`Failed to create tenant: ${errorMessage}`);
