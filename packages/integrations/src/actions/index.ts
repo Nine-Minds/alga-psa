@@ -125,7 +125,11 @@ export {
 } from './integrations/mspSsoDomainActions';
 export {
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
+  sendTeamsTestMessage,
   saveTeamsIntegrationSettings,
+  type TeamsDiagnosticsReport,
+  type TeamsTestMessageResult,
 } from './integrations/teamsActions';
 export {
   getTeamsAppPackageStatus,

@@ -1,0 +1,406 @@
+[
+  {
+    "id": "T001",
+    "description": "getLatestTeamsConversationReferenceImpl returns the row with the most recent last_activity_at for a (tenant, microsoftUserId).",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Reader filters by conversation_type (default 'personal') and ignores groupChat/channel rows for that user.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Reader is tenant-scoped: a reference for the same microsoftUserId under a different tenant is never returned.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Reader returns null (does not throw) when no matching row exists.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "resolveTeamsRecipientLink maps a PSA user id to the Microsoft provider_account_id, which is reused as teams_conversation_references.microsoft_user_id.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "resolveTeamsRecipientLink returns null when the PSA user has no Microsoft account link.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "sendTeamsTestMessageImpl rejects/denies when the caller lacks the teams settings permission (withAuth gate).",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Test message returns skipped reason 'addon_inactive' and records a skipped delivery row when the addon is not active; sendBotActivity is never called.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F006",
+      "F012"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Test message returns 'integration_inactive' when install_status != 'active'.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Test message returns 'capability_disabled' when personal_bot is not in enabled_capabilities.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Test message returns 'bot_not_configured' (and never requests a Bot Framework token) when isBotConnectorConfigured() is false.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Test message returns 'missing_user_linkage' when the admin has no Microsoft account link.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Test message returns 'missing_conversation_reference' with the actionable hint when no conversation reference exists for the admin.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Happy path: test message calls sendBotActivity with the serviceUrl and conversationId from the stored reference and a test activity payload.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "On successful send, a teams_notification_deliveries row is written with status='sent', category='test', destination_type='bot_test', destination_id=microsoft_user_id.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "When sendBotActivity throws, the action records a status='failed' row with the error message and returns a failed result.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Two consecutive test sends record two distinct delivery rows (attempt nonce in idempotency_key prevents ON CONFLICT collapse).",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "All test-message DB writes are tenant-scoped (no cross-tenant row written or read).",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "runTeamsDiagnostics is permission-gated via withAuth and denies unauthorized callers.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Diagnostics report has the expected step ids/titles in order and each step carries a valid status.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Addon check fails with recommendation when getTeamsAvailability returns addon_required.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Integration check fails when no teams_integrations row exists and warns when present but not active.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Capability check warns and names the missing capability when personal_bot or activity_notifications is absent.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Profile check fails when the selected profile is missing, archived, or lacks client_secret_ref.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Package check fails with no package metadata and warns when base URL is unresolvable.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Bot connector check fails with the TEAMS_BOT_APP_* recommendation when isBotConnectorConfigured() is false.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "User-linkage check warns with the link recommendation when the admin has no Microsoft link.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Conversation-reference check warns with the 'message the bot first' recommendation when none exists for the admin.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Recent-delivery check reports the latest success and latest failure and warns when the most recent attempt failed.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Recent-delivery check reads only the current tenant's teams_notification_deliveries rows.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "overallStatus = 'fail' when any check fails, 'warn' when none fail but some warn, 'pass' when all pass/skip.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Recommendations are deduplicated across checks.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Fully healthy tenant fixture yields overallStatus='pass' and no recommendations.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Diagnostics panel renders the step list with the correct status badge per step after Run diagnostics resolves.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Recommendations bullet list renders when the report includes recommendations and is hidden when empty.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Send test message button shows a success confirmation on a sent result.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "missing_conversation_reference skip renders the 'open the bot and message it first' guidance.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Diagnostics and test-message buttons are disabled when the addon is missing or the integration is not active.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Recent delivery summary (last success / last failure) renders from report data.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "All new UI strings resolve through i18n with their defaultValue fallbacks (no raw key leaks).",
+    "implemented": true,
+    "commitGroup": "i18n",
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Skip/fail reason codes each map to a defined i18n key.",
+    "implemented": true,
+    "commitGroup": "i18n",
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "runTeamsDiagnostics and sendTeamsTestMessage are importable through the packages/integrations boundary used by TeamsIntegrationSettings.",
+    "implemented": true,
+    "commitGroup": "wiring",
+    "featureIds": [
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Built dist of @alga-psa/microsoft-teams exposes the two new exports (smoke import).",
+    "implemented": true,
+    "commitGroup": "wiring",
+    "featureIds": [
+      "F038"
+    ]
+  }
+]

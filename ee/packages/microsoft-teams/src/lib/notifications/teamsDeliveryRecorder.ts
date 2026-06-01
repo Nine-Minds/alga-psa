@@ -3,7 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 
 export type TeamsDeliveryStatus = 'skipped' | 'sent' | 'delivered' | 'failed';
-export type TeamsDeliveryDestinationType = 'user_activity' | 'chat' | 'channel';
+export type TeamsDeliveryDestinationType = 'user_activity' | 'chat' | 'channel' | 'bot_test';
 export type TeamsDeliveryErrorCode =
   | 'graph_throttled'
   | 'graph_unauthorized'
@@ -38,11 +38,12 @@ export interface TeamsDeliveryRow {
 
 export interface WriteTeamsDeliveryRowInput {
   tenant: string;
-  internalNotificationId: string;
+  internalNotificationId?: string | null;
   category?: string | null;
   destinationType: TeamsDeliveryDestinationType;
   destinationId: string;
   attemptNumber?: number | null;
+  idempotencyNonce?: string | null;
   status: TeamsDeliveryStatus;
   errorCode?: TeamsDeliveryErrorCode | null;
   errorMessage?: string | null;
@@ -100,21 +101,23 @@ export function truncateTeamsDeliveryErrorMessage(value: string | null | undefin
 }
 
 export function computeTeamsDeliveryIdempotencyKey(input: {
-  internalNotificationId: string;
+  internalNotificationId?: string | null;
   tenant: string;
   destinationType: TeamsDeliveryDestinationType;
   destinationId: string;
   attemptNumber?: number | null;
+  idempotencyNonce?: string | null;
 }): string {
   const attemptNumber = normalizeAttemptNumber(input.attemptNumber);
   return crypto
     .createHash('sha256')
     .update([
-      input.internalNotificationId,
+      input.internalNotificationId ?? '',
       input.tenant,
       input.destinationType,
       input.destinationId,
       String(attemptNumber),
+      input.idempotencyNonce ?? '',
     ].join('|'))
     .digest('hex');
 }
@@ -127,6 +130,7 @@ export async function writeTeamsDeliveryRow(input: WriteTeamsDeliveryRowInput): 
     destinationType: input.destinationType,
     destinationId: input.destinationId,
     attemptNumber,
+    idempotencyNonce: input.idempotencyNonce ?? null,
   });
   const deliveryId = crypto.randomUUID();
 
@@ -137,7 +141,7 @@ export async function writeTeamsDeliveryRow(input: WriteTeamsDeliveryRowInput): 
     const row: TeamsDeliveryRow = {
       tenant: scopedTenant,
       delivery_id: deliveryId,
-      internal_notification_id: input.internalNotificationId,
+      internal_notification_id: normalizeOptionalString(input.internalNotificationId ?? null),
       category: normalizeOptionalString(input.category ?? null),
       destination_type: input.destinationType,
       destination_id: input.destinationId,

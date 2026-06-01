@@ -1466,7 +1466,67 @@
           "packageGenerated": "Teams app package generated.",
           "saved": "Teams setup saved."
         },
-        "title": "Microsoft Teams"
+        "title": "Microsoft Teams",
+        "diagnostics": {
+          "title": "Diagnostics & Test Message",
+          "description": "Verify the Teams setup and send a proactive test message to your Teams bot conversation.",
+          "run": "Run diagnostics",
+          "running": "Running...",
+          "sendTest": "Send test message",
+          "sending": "Sending...",
+          "disabled": "Diagnostics and test messages are available after the Teams integration is active.",
+          "completedAt": "Completed {{time}}",
+          "lastSuccess": "Last success",
+          "lastFailure": "Last failure",
+          "noneRecorded": "None recorded",
+          "recommendations": "Recommendations",
+          "status": {
+            "pass": "Pass",
+            "warn": "Warn",
+            "fail": "Fail",
+            "skip": "Skip"
+          },
+          "errors": {
+            "run": "Failed to run Teams diagnostics",
+            "testMessage": "Failed to send Teams test message"
+          },
+          "test": {
+            "sent": "Teams test message sent.",
+            "failed": "Teams test message failed.",
+            "addonInactive": "The Teams add-on is not active for this tenant.",
+            "integrationInactive": "Activate the Teams integration before sending a test message.",
+            "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
+            "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
+            "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
+            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
+            "skipped": "Teams test message was skipped."
+          },
+          "steps": {
+            "addonEntitlement": "Teams add-on entitlement",
+            "integrationStatus": "Teams integration status",
+            "capabilities": "Teams capabilities",
+            "microsoftProfile": "Microsoft profile readiness",
+            "packageMetadata": "Teams package metadata",
+            "botConnector": "Bot connector credentials",
+            "userLinkage": "Admin Microsoft account linkage",
+            "conversationReference": "Admin Teams conversation reference",
+            "recentDeliveryHealth": "Recent Teams delivery health"
+          },
+          "recommendation": {
+            "addon": "Enable the Microsoft Teams add-on for this tenant.",
+            "activate": "Activate the Teams integration in settings.",
+            "capabilities": "Enable personal bot and activity notifications for Teams.",
+            "profile": "Select a ready Microsoft profile for Teams.",
+            "activeProfile": "Select an active Microsoft profile for Teams.",
+            "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
+            "package": "Generate the Teams app package before running end-to-end validation.",
+            "baseUrl": "Regenerate the Teams package with a reachable base URL.",
+            "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
+            "userLinkage": "Link your Microsoft account in your profile settings.",
+            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
+            "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+          }
+        }
       }
     },
     "xero": {

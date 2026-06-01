@@ -20,7 +20,11 @@ export {
 } from './mspSsoDomainActions';
 export {
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
+  sendTeamsTestMessage,
   saveTeamsIntegrationSettings,
+  type TeamsDiagnosticsReport,
+  type TeamsTestMessageResult,
 } from './teamsActions';
 export {
   getTeamsAppPackageStatus,
