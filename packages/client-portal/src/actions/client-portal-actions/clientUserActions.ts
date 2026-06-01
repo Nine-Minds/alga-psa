@@ -482,6 +482,7 @@ export const checkClientPortalPermissions = withAuth(async (
   hasClientSettingsAccess: boolean;
   hasAccountAccess: boolean;
   hasVisibilityGroupAccess: boolean;
+  isLicenseDistributor: boolean;
 }> => {
   try {
     const { knex } = await createTenantKnex();
@@ -513,13 +514,20 @@ export const checkClientPortalPermissions = withAuth(async (
       hasVisibilityGroupAccess = !!actorContact?.is_client_admin;
     }
 
+    // Appliance-license distribution is Enterprise-only; resolved via the
+    // @enterprise seam (no-op stub on CE), so no licensing logic ships in CE.
+    const { isLicenseDistributionTenant } = await import('@enterprise/lib/license/distributionTenant');
+
     return {
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
       hasClientSettingsAccess: hasClient,
       // Account access requires both hosted tenant and settings permission
       hasAccountAccess: isHosted && hasSettings,
-      hasVisibilityGroupAccess
+      hasVisibilityGroupAccess,
+      // Only the Nine Minds distribution tenant (with distribution enabled) sees
+      // the appliance-license surface.
+      isLicenseDistributor: isLicenseDistributionTenant(tenant)
     };
   } catch (error) {
     console.error('Error checking client portal permissions:', error);
@@ -528,7 +536,8 @@ export const checkClientPortalPermissions = withAuth(async (
       hasUserManagementAccess: false,
       hasClientSettingsAccess: false,
       hasAccountAccess: false,
-      hasVisibilityGroupAccess: false
+      hasVisibilityGroupAccess: false,
+      isLicenseDistributor: false
     };
   }
 });

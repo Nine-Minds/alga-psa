@@ -188,20 +188,21 @@ export async function isSelfHostLicensing(): Promise<boolean> {
 }
 
 /**
- * True only for the Nine Minds license-distribution tenant — the single tenant
- * permitted to author and sell appliance licenses in-app. Identified by the
- * established `MASTER_BILLING_TENANT_ID` env var (the same master-tenant gate used
- * by platform reports).
+ * True only for the Nine Minds appliance-license distribution tenant WHEN in-app
+ * distribution is switched on. Gated by two env vars:
+ *   - `MASTER_BILLING_TENANT_ID` — identifies the Nine Minds tenant (the same
+ *     master-tenant gate platform reports use);
+ *   - `ALGA_LICENSE_DISTRIBUTION_ENABLED` — the dark-launch switch. The whole
+ *     distribution stack (purchase template authoring, checkout creation, and the
+ *     client-portal license surface) stays off until this is set to 'true', so
+ *     the surface can ship dark and be activated once C4 + Stripe prices are live.
  *
- * Synchronous env compare — no DB. Use to gate the in-app appliance-license
- * purchase surface (client-portal nav, the licenses page, and template authoring)
- * so it appears in no other tenant's client portal.
- *
- * Fails closed: when `MASTER_BILLING_TENANT_ID` is unset (appliance / self-host,
- * or a misconfigured SaaS box) no tenant matches, so the distribution surface
- * stays hidden everywhere.
+ * Synchronous env compare — no DB. Fails closed: with either var unset (every
+ * appliance / self-host, and any SaaS box before distribution is switched on) no
+ * tenant matches, so the distribution surface stays hidden everywhere.
  */
 export function isLicenseDistributionTenant(tenant: string | null | undefined): boolean {
   const master = process.env.MASTER_BILLING_TENANT_ID;
-  return !!master && !!tenant && tenant === master;
+  const enabled = process.env.ALGA_LICENSE_DISTRIBUTION_ENABLED === 'true';
+  return enabled && !!master && !!tenant && tenant === master;
 }
