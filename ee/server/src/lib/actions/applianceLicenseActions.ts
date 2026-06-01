@@ -3,7 +3,9 @@
 import { getSession } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import Stripe from 'stripe';
+import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 
 export type ApplianceLicenseTier = 'pro' | 'premium';
@@ -19,6 +21,22 @@ export interface PurchaseApplianceLicenseInput {
 
 export interface PurchaseApplianceLicenseResult {
   checkoutUrl: string;
+}
+
+/** Context-driven inputs for {@link createApplianceLicenseCheckout}. */
+export interface CreateApplianceLicenseCheckoutInput {
+  knex: Knex;
+  tenant: string;
+  submissionId: string;
+  clientId: string;
+  tier: ApplianceLicenseTier;
+  seats: number;
+  transport: ApplianceLicenseTransport;
+}
+
+export interface ApplianceLicenseCheckout {
+  checkoutUrl: string;
+  checkoutSessionId: string;
 }
 
 /** Map tier × transport to the env key that holds the Stripe price id. */
@@ -48,17 +66,28 @@ function getAppBaseUrl(): string {
 /**
  * Creates a Stripe Checkout Session for an appliance license purchase.
  *
- * Called by the portal UI after the SR submission is created.
- * Stamps the submission_id + order params into session metadata so the
- * checkout.session.completed webhook can correlate back and fire issuance.
+ * Context-driven: the caller supplies `knex`/`tenant` and the already-validated
+ * order params (the SR submission has already authenticated the requester), so
+ * this does NOT re-auth. Stamps the submission_id + order params into session
+ * metadata so the `checkout.session.completed` webhook can correlate back and
+ * fire issuance. Persistence of the session id onto the submission is the
+ * caller's responsibility (the SR submit service overwrites
+ * `workflow_execution_id` from the execution result, so the provider returns the
+ * stamp rather than writing it here).
  */
-export async function purchaseApplianceLicense(
-  input: PurchaseApplianceLicenseInput
-): Promise<PurchaseApplianceLicenseResult> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Unauthorized');
-
+export async function createApplianceLicenseCheckout(
+  input: CreateApplianceLicenseCheckoutInput
+): Promise<ApplianceLicenseCheckout> {
   const { submissionId, clientId, tier, seats, transport } = input;
+
+  // Hard gate: only the Nine Minds distribution tenant may create a license
+  // checkout. This is the execution-layer chokepoint — it holds no matter how a
+  // definition was authored (template, manual execution-provider selection, or a
+  // direct action call), so another tenant can never run Checkout sessions
+  // against Nine Minds' Stripe account.
+  if (!isLicenseDistributionTenant(input.tenant)) {
+    throw new Error('Appliance license checkout is not available for this tenant');
+  }
 
   // Validate
   if (tier !== 'pro' && tier !== 'premium') throw new Error('Invalid tier');
@@ -98,12 +127,6 @@ export async function purchaseApplianceLicense(
     throw new Error('Stripe did not return a checkout URL');
   }
 
-  // Record the checkout session id on the submission
-  const { knex, tenant } = await createTenantKnex();
-  await knex('service_request_submissions')
-    .where({ submission_id: submissionId, tenant })
-    .update({ workflow_execution_id: `stripe_session_${checkoutSession.id}`, updated_at: knex.fn.now() });
-
   logger.info('[applianceLicense] checkout session created', {
     submissionId,
     checkoutSessionId: checkoutSession.id,
@@ -112,5 +135,36 @@ export async function purchaseApplianceLicense(
     transport,
   });
 
-  return { checkoutUrl: checkoutSession.url };
+  return { checkoutUrl: checkoutSession.url, checkoutSessionId: checkoutSession.id };
+}
+
+/**
+ * Authenticated direct-call entry: creates the checkout for the current session's
+ * user and records the `stripe_session_<id>` stamp on the submission. The wired
+ * path is the `license-order-stripe` SR execution provider (which calls
+ * {@link createApplianceLicenseCheckout} and returns the stamp through the submit
+ * service); this wrapper remains for any UI that creates the checkout directly.
+ */
+export async function purchaseApplianceLicense(
+  input: PurchaseApplianceLicenseInput
+): Promise<PurchaseApplianceLicenseResult> {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Unauthorized');
+
+  const { knex, tenant } = await createTenantKnex();
+  const { checkoutUrl, checkoutSessionId } = await createApplianceLicenseCheckout({
+    knex,
+    tenant,
+    submissionId: input.submissionId,
+    clientId: input.clientId,
+    tier: input.tier,
+    seats: input.seats,
+    transport: input.transport,
+  });
+
+  await knex('service_request_submissions')
+    .where({ submission_id: input.submissionId, tenant })
+    .update({ workflow_execution_id: `stripe_session_${checkoutSessionId}`, updated_at: knex.fn.now() });
+
+  return { checkoutUrl };
 }

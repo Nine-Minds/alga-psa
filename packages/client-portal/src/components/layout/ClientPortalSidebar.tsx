@@ -35,6 +35,7 @@ const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
 interface SidebarPermissions {
   hasClientSettingsAccess: boolean;
   hasBillingAccess: boolean;
+  isLicenseDistributor: boolean;
 }
 
 interface SidebarProps {
@@ -149,12 +150,16 @@ export function ClientPortalSidebar({
                     icon: CreditCard,
                   }]
                 : []),
-              {
-                key: 'licenses',
-                href: '/client-portal/licenses',
-                label: t('nav.licenses', 'Licenses'),
-                icon: KeyRound,
-              },
+              // Appliance-license purchase/management is only for the Nine Minds
+              // distribution tenant; hidden in every other tenant's portal.
+              ...(permissions.isLicenseDistributor
+                ? [{
+                    key: 'licenses',
+                    href: '/client-portal/licenses',
+                    label: t('nav.licenses', 'Licenses'),
+                    icon: KeyRound,
+                  }]
+                : []),
             ]),
         ...(permissions.hasClientSettingsAccess
           ? [{

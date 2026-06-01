@@ -29,6 +29,11 @@ export interface SubmitPortalServiceRequestResult {
   executionStatus: 'pending' | 'succeeded' | 'failed';
   createdTicketId?: string;
   workflowExecutionId?: string;
+  /**
+   * Transient post-submit redirect target surfaced by the execution provider
+   * (e.g. a Stripe Checkout URL). Not persisted on the submission.
+   */
+  redirectUrl?: string;
 }
 
 function isMissingRequiredValue(value: unknown): boolean {
@@ -237,6 +242,7 @@ export async function submitPortalServiceRequest(
         executionStatus: 'succeeded',
         createdTicketId: executionResult.createdTicketId,
         workflowExecutionId: executionResult.workflowExecutionId,
+        redirectUrl: executionResult.redirectUrl,
       };
     }
 

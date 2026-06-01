@@ -35,7 +35,7 @@ describe('service request definition management', () => {
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    const templates = listServiceRequestTemplateOptions();
+    const templates = listServiceRequestTemplateOptions(tenant);
     expect(templates).toHaveLength(6);
     const starterTemplate = templates.find(
       (template) => template.providerKey === 'ce-starter-pack' && template.templateId === 'new-hire'

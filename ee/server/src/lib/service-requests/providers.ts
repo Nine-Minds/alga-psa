@@ -8,6 +8,11 @@ import type {
   ServiceRequestVisibilityProvider,
 } from 'server/src/lib/service-requests/providers/contracts';
 import { ticketOnlyExecutionProvider } from 'server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider';
+import {
+  createApplianceLicenseCheckout,
+  type ApplianceLicenseTier,
+  type ApplianceLicenseTransport,
+} from '../actions/applianceLicenseActions';
 
 interface WorkflowExecutionConfig {
   workflowId?: string;
@@ -545,20 +550,46 @@ const licenseOrderTemplateProvider: ServiceRequestTemplateProvider = {
 
 /**
  * Execution provider for license-order service requests.
- * Stores the order; the actual Stripe Checkout Session is created by the
- * purchaseApplianceLicense() server action which is called directly by the
- * portal UI. This provider marks the submission succeeded immediately so the
- * SR system tracks the order record, while the portal handles the redirect.
+ *
+ * On submit it creates the Stripe Checkout Session directly from the submission
+ * context (tier/seats/transport in the payload) and returns the checkout URL as
+ * `redirectUrl`, so the portal submit action redirects the customer to payment.
+ * The `stripe_session_<id>` value is returned as `workflowExecutionId` so the
+ * submit service persists it on the submission; the `checkout.session.completed`
+ * webhook then correlates (by metadata) and fires issuance.
  */
 const licenseOrderExecutionProvider: ServiceRequestExecutionProvider = {
   key: 'license-order-stripe',
   displayName: 'License Order (Stripe)',
   executionMode: SERVICE_REQUEST_EXECUTION_MODES.WORKFLOW_ONLY,
   validateConfig: () => ({ isValid: true }),
-  async execute(_context): Promise<ServiceRequestExecutionResult> {
-    // Submission is the order record; Stripe session created by the dedicated
-    // purchaseApplianceLicense() server action. Mark as pending-payment.
-    return { status: 'succeeded', workflowExecutionId: 'license-order-pending-payment' };
+  async execute(context): Promise<ServiceRequestExecutionResult> {
+    try {
+      const tier = String(context.payload.tier ?? '') as ApplianceLicenseTier;
+      const seats = Number.parseInt(String(context.payload.seats ?? ''), 10);
+      const transport = String(context.payload.transport ?? '') as ApplianceLicenseTransport;
+
+      const { checkoutUrl, checkoutSessionId } = await createApplianceLicenseCheckout({
+        knex: context.knex,
+        tenant: context.tenant,
+        submissionId: context.submissionId,
+        clientId: context.clientId,
+        tier,
+        seats,
+        transport,
+      });
+
+      return {
+        status: 'succeeded',
+        workflowExecutionId: `stripe_session_${checkoutSessionId}`,
+        redirectUrl: checkoutUrl,
+      };
+    } catch (error) {
+      return {
+        status: 'failed',
+        errorSummary: error instanceof Error ? error.message : 'Checkout creation failed.',
+      };
+    }
   },
 };
 

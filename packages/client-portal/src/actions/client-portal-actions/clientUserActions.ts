@@ -16,6 +16,7 @@ import {
 } from '@shared/models/userModel';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 
 /**
  * Get available client portal roles
@@ -482,6 +483,7 @@ export const checkClientPortalPermissions = withAuth(async (
   hasClientSettingsAccess: boolean;
   hasAccountAccess: boolean;
   hasVisibilityGroupAccess: boolean;
+  isLicenseDistributor: boolean;
 }> => {
   try {
     const { knex } = await createTenantKnex();
@@ -519,7 +521,9 @@ export const checkClientPortalPermissions = withAuth(async (
       hasClientSettingsAccess: hasClient,
       // Account access requires both hosted tenant and settings permission
       hasAccountAccess: isHosted && hasSettings,
-      hasVisibilityGroupAccess
+      hasVisibilityGroupAccess,
+      // Only the Nine Minds distribution tenant may see the appliance-license surface.
+      isLicenseDistributor: isLicenseDistributionTenant(tenant)
     };
   } catch (error) {
     console.error('Error checking client portal permissions:', error);
@@ -528,7 +532,8 @@ export const checkClientPortalPermissions = withAuth(async (
       hasUserManagementAccess: false,
       hasClientSettingsAccess: false,
       hasAccountAccess: false,
-      hasVisibilityGroupAccess: false
+      hasVisibilityGroupAccess: false,
+      isLicenseDistributor: false
     };
   }
 });

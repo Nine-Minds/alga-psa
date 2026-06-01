@@ -185,3 +185,22 @@ export async function isSelfHostLicensing(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * True only for the Nine Minds license-distribution tenant — the single tenant
+ * permitted to author and sell appliance licenses in-app. Identified by the
+ * established `MASTER_BILLING_TENANT_ID` env var (the same master-tenant gate used
+ * by platform reports).
+ *
+ * Synchronous env compare — no DB. Use to gate the in-app appliance-license
+ * purchase surface (client-portal nav, the licenses page, and template authoring)
+ * so it appears in no other tenant's client portal.
+ *
+ * Fails closed: when `MASTER_BILLING_TENANT_ID` is unset (appliance / self-host,
+ * or a misconfigured SaaS box) no tenant matches, so the distribution surface
+ * stays hidden everywhere.
+ */
+export function isLicenseDistributionTenant(tenant: string | null | undefined): boolean {
+  const master = process.env.MASTER_BILLING_TENANT_ID;
+  return !!master && !!tenant && tenant === master;
+}

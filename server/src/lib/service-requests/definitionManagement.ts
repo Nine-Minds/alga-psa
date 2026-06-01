@@ -6,6 +6,16 @@ import {
 } from './definitionLifecycle';
 import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
+import { isLicenseDistributionTenant } from '@alga-psa/licensing';
+
+/**
+ * Template provider whose templates author the in-app appliance-license purchase
+ * flow. Only the Nine Minds distribution tenant may create from it — otherwise a
+ * non-distribution tenant could stand up a purchase definition that runs real
+ * Stripe Checkout sessions against Nine Minds' account (price ids are
+ * instance-level env). Matches `licenseOrderTemplateProvider.key`.
+ */
+const DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY = 'appliance-license';
 
 export interface ServiceRequestDefinitionManagementRow {
   tenant: string;
@@ -170,16 +180,22 @@ export async function listServiceRequestDefinitionsForManagement(
     )) as ServiceRequestDefinitionManagementRow[];
 }
 
-export function listServiceRequestTemplateOptions(): ServiceRequestTemplateOption[] {
-  return listServiceRequestTemplateProviders().flatMap((provider) =>
-    provider.listTemplates().map((template) => ({
-      providerKey: provider.key,
-      providerDisplayName: provider.displayName,
-      templateId: template.id,
-      templateName: template.name,
-      templateDescription: template.description,
-    }))
-  );
+export function listServiceRequestTemplateOptions(tenant: string): ServiceRequestTemplateOption[] {
+  const allowDistributionOnly = isLicenseDistributionTenant(tenant);
+  return listServiceRequestTemplateProviders()
+    .filter(
+      (provider) =>
+        allowDistributionOnly || provider.key !== DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY
+    )
+    .flatMap((provider) =>
+      provider.listTemplates().map((template) => ({
+        providerKey: provider.key,
+        providerDisplayName: provider.displayName,
+        templateId: template.id,
+        templateName: template.name,
+        templateDescription: template.description,
+      }))
+    );
 }
 
 function findTemplateDefinition(
@@ -241,6 +257,13 @@ export async function createServiceRequestDefinitionFromTemplate({
   templateId,
   createdBy = null,
 }: CreateDefinitionFromTemplateInput): Promise<ServiceRequestDefinitionManagementRow> {
+  if (
+    templateProviderKey === DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY &&
+    !isLicenseDistributionTenant(tenant)
+  ) {
+    throw new Error('This template is not available for this tenant');
+  }
+
   const template = findTemplateDefinition(templateProviderKey, templateId);
   const draft = template.buildDraft();
 
