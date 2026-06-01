@@ -235,28 +235,23 @@ export const addUser = withAuth(async (
           };
         }
 
-        // Self-host mode: enforce the appliance license `seats` claim.
-        // No-op on SaaS (no license_state row). 'essentials' is unmetered;
-        // EE tiers (pro/premium) enforce the signed `seats` count.
-        try {
-          const adminKnex = await getAdminConnection();
-          const licenseRow = await adminKnex('license_state').orderBy('id').first();
-          if (licenseRow) {
-            const { resolveSelfHostTier, verifyLicense } = await import('@alga-psa/licensing');
-            const resolved = resolveSelfHostTier(licenseRow);
-            if (resolved && resolved.tier !== 'essentials' && licenseRow.license_token) {
-              const v = verifyLicense(licenseRow.license_token);
-              if (v.valid && typeof v.claims.seats === 'number' && used >= v.claims.seats) {
-                return {
-                  success: false,
-                  code: 'LICENSE_LIMIT_REACHED',
-                  error: `You've reached the seat limit (${v.claims.seats}) of your Alga appliance license.`,
-                };
-              }
-            }
+        // Appliance license seat limit — Enterprise Edition only. Resolves to a
+        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
+        // licensing concept ships in or runs on Community Edition.
+        const seatLimit = await (async () => {
+          try {
+            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
+            return await checkApplianceLicenseSeatLimit(used);
+          } catch {
+            return null;
           }
-        } catch {
-          // Don't block user creation on a transient license_state read failure.
+        })();
+        if (seatLimit) {
+          return {
+            success: false,
+            code: 'LICENSE_LIMIT_REACHED',
+            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license.`,
+          };
         }
 
       }
