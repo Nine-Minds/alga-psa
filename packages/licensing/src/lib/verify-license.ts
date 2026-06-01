@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { LICENSE_PUBLIC_KEYS } from './license-keys';
+import { isLicenseVerifyFailure } from './license-types';
 import type { LicenseClaims, LicenseVerifyResult } from './license-types';
 
 /** Clock-skew tolerance in seconds. */
@@ -47,7 +48,7 @@ export function verifyLicense(token: string): LicenseVerifyResult {
   const result = verifyLicenseUncached(token);
   // Only cache valid results and permanent failures (bad_signature, unknown_kid, malformed).
   // Do NOT cache 'expired' — clocks advance.
-  if (result.valid || result.reason !== 'expired') {
+  if (!(isLicenseVerifyFailure(result) && result.reason === 'expired')) {
     verifyCache.set(token, result);
   }
   return result;

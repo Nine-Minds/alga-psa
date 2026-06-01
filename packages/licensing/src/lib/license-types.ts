@@ -35,3 +35,14 @@ export type LicenseVerifyFailReason =
 export type LicenseVerifyResult =
   | { valid: true; claims: LicenseClaims }
   | { valid: false; reason: LicenseVerifyFailReason };
+
+/**
+ * Type guard for a failed verification result (the member carrying `reason`).
+ * Use this instead of relying on control-flow narrowing of `result.valid`, which
+ * the `ee/server` tsconfig's module resolution doesn't apply consistently.
+ */
+export function isLicenseVerifyFailure(
+  result: LicenseVerifyResult,
+): result is { valid: false; reason: LicenseVerifyFailReason } {
+  return !result.valid;
+}

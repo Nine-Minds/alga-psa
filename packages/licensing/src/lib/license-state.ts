@@ -9,6 +9,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import type { TenantTier } from '@alga-psa/types';
 import { isEnterprise } from '@alga-psa/core/features';
 import { verifyLicense, clearLicenseVerifyCache } from './verify-license';
+import { isLicenseVerifyFailure } from './license-types';
 
 /** Raw row from the license_state table. */
 export interface LicenseStateRow {
@@ -109,7 +110,7 @@ export function resolveSelfHostTier(row: LicenseStateRow | null): ResolvedLicens
       return { state: 'license_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
     }
     // Expired token: surface as license_expired, not trial_expired.
-    if (result.reason === 'expired') {
+    if (isLicenseVerifyFailure(result) && result.reason === 'expired') {
       return { state: 'license_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
     }
     // Malformed/bad_signature/unknown_kid — treat as if no token stored.
