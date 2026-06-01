@@ -32,7 +32,7 @@ describe('service request template instantiation', () => {
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    const templates = listServiceRequestTemplateOptions();
+    const templates = listServiceRequestTemplateOptions(tenant);
     expect(templates).toHaveLength(6);
     expect(templates.map((template) => template.templateName)).toEqual([
       'New Hire Onboarding',
