@@ -2086,7 +2086,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         email: user.email,
         name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
         username: user.username,
-        image: user.image,
+        image: user.icon,
         proToken: '', // Not available in user, using empty string
         tenant: user.tenant,
         user_type: user.user_type,

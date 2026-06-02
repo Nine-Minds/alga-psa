@@ -45,6 +45,12 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import {
+  createBundleSchema,
+  addBundleChildrenSchema,
+  promoteBundleMasterSchema,
+  updateBundleSettingsSchema
+} from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
 
 export class ApiTicketController extends ApiBaseController {
@@ -703,7 +709,7 @@ export class ApiTicketController extends ApiBaseController {
 
           await this.ticketService.deleteTicketDocument(ticketId, documentId, apiRequest.context!);
 
-          return NextResponse.json(createSuccessResponse(null), { status: 200 });
+          return createSuccessResponse(null, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1263,6 +1269,168 @@ export class ApiTicketController extends ApiBaseController {
           );
 
           return createSuccessResponse(ticket, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Ticket bundling
+  // -------------------------------------------------------------------------
+
+  /**
+   * GET /api/v1/tickets/{id}/bundle - Get bundle membership for a ticket
+   */
+  getBundle() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const bundle = await this.ticketService.getBundle(apiRequest.context, ticketId);
+          return createSuccessResponse(bundle, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * POST /api/v1/tickets/{id}/bundle - Create a bundle with {id} as master
+   */
+  bundleTickets() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const masterTicketId = await this.extractIdFromPath(apiRequest);
+          const data = await this.validateData(apiRequest, createBundleSchema);
+          const result = await this.ticketService.bundleTickets(apiRequest.context, {
+            masterTicketId,
+            childTicketIds: data.child_ticket_ids,
+            mode: data.mode,
+          });
+          return createSuccessResponse(result, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * DELETE /api/v1/tickets/{id}/bundle - Unbundle the master {id}
+   */
+  unbundleMaster() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const masterTicketId = await this.extractIdFromPath(apiRequest);
+          const result = await this.ticketService.unbundleMaster(apiRequest.context, { masterTicketId });
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * POST /api/v1/tickets/{id}/bundle/children - Add children to the bundle
+   */
+  addBundleChildren() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const masterTicketId = await this.extractIdFromPath(apiRequest);
+          const data = await this.validateData(apiRequest, addBundleChildrenSchema);
+          const result = await this.ticketService.addBundleChildren(apiRequest.context, {
+            masterTicketId,
+            childTicketIds: data.child_ticket_ids,
+          });
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * DELETE /api/v1/tickets/{id}/bundle/children/{childId} - Remove a child
+   */
+  removeBundleChild() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const segments = new URL(req.url).pathname.split('/');
+          const childrenIndex = segments.indexOf('children');
+          const childTicketId = childrenIndex >= 0 ? segments[childrenIndex + 1] : undefined;
+          if (!childTicketId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['childId'], message: 'child ticket ID is required' },
+            ]);
+          }
+          const result = await this.ticketService.removeBundleChild(apiRequest.context, { childTicketId });
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * POST /api/v1/tickets/{id}/bundle/promote - Promote a child to master
+   */
+  promoteBundleMaster() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const oldMasterTicketId = await this.extractIdFromPath(apiRequest);
+          const data = await this.validateData(apiRequest, promoteBundleMasterSchema);
+          const result = await this.ticketService.promoteBundleMaster(apiRequest.context, {
+            oldMasterTicketId,
+            newMasterTicketId: data.new_master_ticket_id,
+          });
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * PUT /api/v1/tickets/{id}/bundle/settings - Update bundle settings
+   */
+  updateBundleSettings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const masterTicketId = await this.extractIdFromPath(apiRequest);
+          const data = await this.validateData(apiRequest, updateBundleSettingsSchema);
+          const result = await this.ticketService.updateBundleSettings(apiRequest.context, {
+            masterTicketId,
+            mode: data.mode,
+            reopenOnChildReply: data.reopen_on_child_reply,
+          });
+          return createSuccessResponse(result, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

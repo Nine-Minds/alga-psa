@@ -10,7 +10,7 @@ const USER_RESPONSE_FIELD_NAMES_TUPLE = [
   'timezone',
   'user_type',
   'contact_id',
-  'image',
+  'icon',
   'created_at',
   'updated_at',
   'two_factor_enabled',
