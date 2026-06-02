@@ -20,7 +20,7 @@ import {
   bulkAssetStatusSchema
 } from '../schemas/asset';
 import { z } from 'zod';
-import { createApiResponse, createErrorResponse } from '../utils/response';
+import { createApiResponse, createErrorResponse, createPaginatedResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
@@ -76,24 +76,11 @@ export class ApiAssetController {
       _links: getHateoasLinks('asset', asset.asset_id)
     }));
 
-    const response = createApiResponse({
-      data: assetsWithLinks,
-      pagination: {
-        page: parseInt(page as string) || 1,
-        limit: parseInt(limit as string) || 25,
-        total: result.total,
-        totalPages: Math.ceil(result.total / (parseInt(limit as string) || 25))
-      },
-      _links: {
-        self: { href: `/api/v2/assets` },
-        create: { href: `/api/v2/assets`, method: 'POST' },
-        search: { href: `/api/v2/assets/search` },
-        export: { href: `/api/v2/assets/export` },
-        stats: { href: `/api/v2/assets/stats` }
-      }
+    return createPaginatedResponse(assetsWithLinks, {
+      page: parseInt(page as string) || 1,
+      limit: parseInt(limit as string) || 25,
+      total: result.total
     });
-
-    return NextResponse.json(response);
   }
 
   /**
@@ -108,14 +95,10 @@ export class ApiAssetController {
       return createErrorResponse('Asset not found', 404);
     }
 
-    const response = createApiResponse({
-      data: {
-        ...asset,
-        _links: getHateoasLinks('asset', asset.asset_id)
-      }
+    return createApiResponse({
+      ...asset,
+      _links: getHateoasLinks('asset', asset.asset_id)
     });
-
-    return NextResponse.json(response);
   }
 
   /**
@@ -133,14 +116,10 @@ export class ApiAssetController {
 
     const asset = await this.assetService.create(validation.data, context);
     
-    const response = createApiResponse({
-      data: {
-        ...asset,
-        _links: getHateoasLinks('asset', asset.asset_id)
-      }
+    return createApiResponse({
+      ...asset,
+      _links: getHateoasLinks('asset', asset.asset_id)
     }, 201);
-
-    return NextResponse.json(response);
   }
 
   /**
@@ -158,14 +137,10 @@ export class ApiAssetController {
 
     const asset = await this.assetService.update(params.id, validation.data, context);
     
-    const response = createApiResponse({
-      data: {
-        ...asset,
-        _links: getHateoasLinks('asset', asset.asset_id)
-      }
+    return createApiResponse({
+      ...asset,
+      _links: getHateoasLinks('asset', asset.asset_id)
     });
-
-    return NextResponse.json(response);
   }
 
   /**
@@ -176,7 +151,7 @@ export class ApiAssetController {
     
     await this.assetService.delete(params.id, context);
     
-    return NextResponse.json(createApiResponse(null, 204));
+    return new NextResponse(null, { status: 204 });
   }
 
   /**
@@ -187,16 +162,7 @@ export class ApiAssetController {
     
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
     
-    const response = createApiResponse({
-      data: relationships,
-      _links: {
-        self: { href: `/api/v2/assets/${params.id}/relationships` },
-        create: { href: `/api/v2/assets/${params.id}/relationships`, method: 'POST' },
-        parent: { href: `/api/v2/assets/${params.id}` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(relationships);
   }
 
   /**
@@ -214,8 +180,7 @@ export class ApiAssetController {
 
     const relationship = await this.assetService.createRelationship(params.id, validation.data, context);
     
-    const response = createApiResponse({ data: relationship }, 201);
-    return NextResponse.json(response);
+    return createApiResponse(relationship, 201);
   }
 
   /**
@@ -226,7 +191,7 @@ export class ApiAssetController {
     
     await this.assetService.deleteRelationship(params.relationshipId, context);
     
-    return NextResponse.json(createApiResponse(null, 204));
+    return new NextResponse(null, { status: 204 });
   }
 
   /**
@@ -237,16 +202,7 @@ export class ApiAssetController {
     
     const documents = await this.assetService.getAssetDocuments(params.id, context);
     
-    const response = createApiResponse({
-      data: documents,
-      _links: {
-        self: { href: `/api/v2/assets/${params.id}/documents` },
-        create: { href: `/api/v2/assets/${params.id}/documents`, method: 'POST' },
-        parent: { href: `/api/v2/assets/${params.id}` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(documents);
   }
 
   /**
@@ -264,8 +220,7 @@ export class ApiAssetController {
 
     const association = await this.assetService.associateDocument(params.id, validation.data, context);
     
-    const response = createApiResponse({ data: association }, 201);
-    return NextResponse.json(response);
+    return createApiResponse(association, 201);
   }
 
   /**
@@ -276,7 +231,7 @@ export class ApiAssetController {
     
     await this.assetService.removeDocumentAssociation(params.associationId, context);
     
-    return NextResponse.json(createApiResponse(null, 204));
+    return new NextResponse(null, { status: 204 });
   }
 
   /**
@@ -287,17 +242,7 @@ export class ApiAssetController {
     
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
-    const response = createApiResponse({
-      data: schedules,
-      _links: {
-        self: { href: `/api/v2/assets/${params.id}/maintenance` },
-        create: { href: `/api/v2/assets/${params.id}/maintenance`, method: 'POST' },
-        history: { href: `/api/v2/assets/${params.id}/history` },
-        parent: { href: `/api/v2/assets/${params.id}` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(schedules);
   }
 
   /**
@@ -315,8 +260,7 @@ export class ApiAssetController {
 
     const schedule = await this.assetService.createMaintenanceSchedule(params.id, validation.data, context);
     
-    const response = createApiResponse({ data: schedule }, 201);
-    return NextResponse.json(response);
+    return createApiResponse(schedule, 201);
   }
 
   /**
@@ -334,8 +278,7 @@ export class ApiAssetController {
 
     const schedule = await this.assetService.updateMaintenanceSchedule(params.scheduleId, validation.data, context);
     
-    const response = createApiResponse({ data: schedule });
-    return NextResponse.json(response);
+    return createApiResponse(schedule);
   }
 
   /**
@@ -346,7 +289,7 @@ export class ApiAssetController {
     
     await this.assetService.deleteMaintenanceSchedule(params.scheduleId, context);
     
-    return NextResponse.json(createApiResponse(null, 204));
+    return new NextResponse(null, { status: 204 });
   }
 
   /**
@@ -364,8 +307,7 @@ export class ApiAssetController {
 
     const maintenance = await this.assetService.recordMaintenance(params.id, validation.data, context);
     
-    const response = createApiResponse({ data: maintenance }, 201);
-    return NextResponse.json(response);
+    return createApiResponse(maintenance, 201);
   }
 
   /**
@@ -376,16 +318,7 @@ export class ApiAssetController {
     
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
-    const response = createApiResponse({
-      data: history,
-      _links: {
-        self: { href: `/api/v2/assets/${params.id}/history` },
-        schedules: { href: `/api/v2/assets/${params.id}/maintenance` },
-        parent: { href: `/api/v2/assets/${params.id}` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(history);
   }
 
   /**
@@ -408,14 +341,7 @@ export class ApiAssetController {
       _links: getHateoasLinks('asset', asset.asset_id)
     }));
 
-    const response = createApiResponse({
-      data: assetsWithLinks,
-      _links: {
-        self: { href: `/api/v2/assets/search` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(assetsWithLinks);
   }
 
   /**
@@ -446,7 +372,7 @@ export class ApiAssetController {
       });
     }
 
-    return NextResponse.json(createApiResponse({ data: assets.data }));
+    return createApiResponse(assets.data);
   }
 
   /**
@@ -457,15 +383,7 @@ export class ApiAssetController {
     
     const stats = await this.assetService.getStatistics(context);
     
-    const response = createApiResponse({
-      data: stats,
-      _links: {
-        self: { href: `/api/v2/assets/stats` },
-        assets: { href: `/api/v2/assets` }
-      }
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(stats);
   }
 
   /**
@@ -487,12 +405,7 @@ export class ApiAssetController {
       )
     );
 
-    const response = createApiResponse({
-      data: results,
-      message: `Updated ${results.length} assets`
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(results, 200, { message: `Updated ${results.length} assets` });
   }
 
   /**
@@ -514,12 +427,7 @@ export class ApiAssetController {
       )
     );
 
-    const response = createApiResponse({
-      data: results,
-      message: `Updated status for ${results.length} assets`
-    });
-
-    return NextResponse.json(response);
+    return createApiResponse(results, 200, { message: `Updated status for ${results.length} assets` });
   }
 
   // Helper method to convert data to CSV

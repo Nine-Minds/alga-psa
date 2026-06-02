@@ -1321,9 +1321,9 @@ export class UserService extends BaseService<IUser> {
           break;
         case 'has_avatar':
           if (value) {
-            query.whereNotNull('image');
+            query.whereNotNull('icon');
           } else {
-            query.whereNull('image');
+            query.whereNull('icon');
           }
           break;
         case 'timezone':

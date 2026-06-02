@@ -15,7 +15,7 @@ export interface IUser {
   email: string;
   hashed_password?: string;
   password?: string; // Some tables use 'password' field
-  image?: string;
+  icon?: string; // Avatar reference column on the users table
   created_at?: Date | string;
   updated_at?: Date | string;
   two_factor_enabled?: boolean;
