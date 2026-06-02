@@ -31,7 +31,7 @@
     "build:webpack": "npm run build:assemblyscript && cd server && EDITION=community NEXT_PUBLIC_EDITION=community npm run build",
     "build:prebuilt": "npm run build:assemblyscript && npx nx build-deps server && cd server && USE_PREBUILT=true npm run build",
     "build:ce": "npm run build:assemblyscript && npx nx build-deps server && cd server && USE_PREBUILT=true EDITION=community NEXT_PUBLIC_EDITION=community npm run build:turbo",
-    "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise:turbo",
+    "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
     "build:assemblyscript": "node scripts/build-assemblyscript-if-needed.mjs",
     "build:assemblyscript:force": "cd server/src/invoice-templates/assemblyscript && npm install --cache ../../../../.npm-cache && npm run build",
     "build:perf": "node scripts/build-perf-harness.mjs",
