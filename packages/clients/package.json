@@ -30,6 +30,10 @@
       "import": "./dist/models/index.js",
       "require": "./dist/models/index.js"
     },
+    "./lib/onlineMeetingArtifactCapture": {
+      "types": "./src/lib/onlineMeetingArtifactCapture.ts",
+      "import": "./src/lib/onlineMeetingArtifactCapture.ts"
+    },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
       "import": "./dist/context/ClientCrossFeatureContext.js",

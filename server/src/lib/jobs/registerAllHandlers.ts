@@ -40,6 +40,12 @@ import {
   GooglePubSubVerificationJobData,
 } from './handlers/calendarWebhookMaintenanceHandler';
 import {
+  renewTeamsMeetingArtifactSubscriptions,
+  processTeamsMeetingArtifactNotification,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
+} from './handlers/teamsMeetingArtifactWebhookHandler';
+import {
   renewGoogleGmailWatchSubscriptions,
   GoogleGmailWatchRenewalJobData,
 } from './handlers/googleGmailWatchRenewalHandler';
@@ -365,6 +371,30 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  if (includeEnterprise) {
+    JobHandlerRegistry.register<TeamsMeetingArtifactSubscriptionRenewalJobData & BaseJobData>(
+      {
+        name: 'renew-teams-meeting-artifact-subscriptions',
+        handler: async (_jobId, data) => {
+          await renewTeamsMeetingArtifactSubscriptions(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TeamsMeetingArtifactNotificationJobData & BaseJobData>(
+      {
+        name: 'process-teams-meeting-artifact-notification',
+        handler: async (_jobId, data) => {
+          await processTeamsMeetingArtifactNotification(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+  }
+
   // Google Gmail watch renewal handler
   JobHandlerRegistry.register<GoogleGmailWatchRenewalJobData & BaseJobData>(
     {
@@ -460,6 +490,13 @@ export function getAvailableJobHandlers(): string[] {
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',
     'renew-google-gmail-watch',
+    ...(
+      process.env.EDITION === 'enterprise'
+      || process.env.EDITION === 'ee'
+      || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification']
+        : []
+    ),
     // SLA
     'sla-timer',
     // Enterprise-only

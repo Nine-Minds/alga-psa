@@ -629,7 +629,7 @@
   },
   {
     "id": "T078",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ],
@@ -637,7 +637,7 @@
   },
   {
     "id": "T079",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ],
@@ -645,7 +645,7 @@
   },
   {
     "id": "T080",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ],
@@ -653,7 +653,7 @@
   },
   {
     "id": "T081",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ],
@@ -661,7 +661,7 @@
   },
   {
     "id": "T082",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ],

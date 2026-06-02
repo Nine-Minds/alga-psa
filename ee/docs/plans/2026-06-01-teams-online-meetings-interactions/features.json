@@ -436,7 +436,7 @@
   },
   {
     "id": "F054",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ],
@@ -444,7 +444,7 @@
   },
   {
     "id": "F055",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ],
@@ -452,7 +452,7 @@
   },
   {
     "id": "F056",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ],
@@ -460,7 +460,7 @@
   },
   {
     "id": "F057",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ],

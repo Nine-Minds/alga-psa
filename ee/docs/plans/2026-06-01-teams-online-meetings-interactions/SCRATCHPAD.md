@@ -370,3 +370,34 @@ flip `implemented:true`, repeat.
   `server/`; `npm -w @alga-psa/clients run typecheck`; `npm -w server run typecheck` all passed.
   `npm -w @alga-psa/msp-composition run typecheck` is unavailable because that workspace has no
   `typecheck` script; the server typecheck covers the composition import edge.
+
+## 2026-06-02 — F054-F057 Phase 2 recording/transcript subscriptions
+- Added EE migration `20260601123000_add_teams_meeting_artifact_subscription_columns.cjs` with
+  `recordings_subscription_id`, `recordings_subscription_expires_at`, `transcripts_subscription_id`, and
+  `transcripts_subscription_expires_at` on `teams_integrations`. Rationale: Phase 2 needs independent
+  Graph subscription state per collection.
+- Added `ee/packages/microsoft-teams/src/lib/meetings/artifactSubscriptions.ts`:
+  - Creates Graph subscriptions for `communications/onlineMeetings/getAllRecordings` and
+    `communications/onlineMeetings/getAllTranscripts`.
+  - Persists subscription id/expiry on `teams_integrations`.
+  - Renews near-expiry subscriptions and recreates a subscription when Graph returns 404.
+  - Uses clientState only as routing data: `teams-online-meeting-artifacts:<tenant>:<recordings|transcripts>`.
+  - Resolves the affected meeting id from `resourceData['@odata.id']`, with a dependency-injected
+    encrypted resource-data decrypt path for encrypted notifications.
+- Added server job wrapper `teamsMeetingArtifactWebhookHandler.ts`, gated by the same Enterprise edition
+  check as calendar webhooks. The notification job resolves the meeting, skips cancelled/missing rows,
+  then calls the shared `fetchAndPersistMeetingArtifacts` handler so manual refresh and webhook refresh
+  are idempotent.
+- Added job registration/scheduling:
+  - `renew-teams-meeting-artifact-subscriptions` recurring job, scheduled per tenant only in Enterprise.
+  - `process-teams-meeting-artifact-notification` immediate job for webhook payloads.
+  - Exported `@alga-psa/clients/lib/onlineMeetingArtifactCapture` so server jobs can reuse the capture
+    helper without copying capture logic.
+- Added route `server/src/app/api/teams/webhooks/recordings/route.ts`: echoes `validationToken` as
+  `text/plain`, responds 202 for notifications, and enqueues one job per notification whose clientState
+  contains tenant routing.
+- Verification:
+  - `npx vitest run src/test/unit/teamsMeetingArtifactSubscriptions.test.ts src/test/unit/api/teamsRecordingWebhookRoute.test.ts` from `server/` passed.
+  - `npm -w @alga-psa/ee-microsoft-teams run typecheck` passed.
+  - `npm -w @alga-psa/clients run typecheck` passed.
+  - `npm -w server run typecheck` passed.
