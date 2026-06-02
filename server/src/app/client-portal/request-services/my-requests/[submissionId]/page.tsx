@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -5,6 +6,10 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
+
+export const metadata: Metadata = {
+  title: 'Request Details',
+};
 
 interface MyRequestDetailPageProps {
   params: Promise<{
