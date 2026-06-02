@@ -1,0 +1,87 @@
+# SCRATCHPAD — Teams Online Meetings → Interactions
+
+Working memory for this plan. Append decisions, discoveries, gotchas, and commands.
+
+## Source of truth
+- Long-form design: `.ai/teams-meetings-interactions-consolidated-plan.md` (incorporates two external
+  review rounds).
+- This plan folder lives in `ee/docs/plans/` (per project convention) even though some artifacts are
+  core — most of the meaningful logic (capture, subscriptions, Graph) is EE.
+
+## Key decisions (with rationale)
+- **Calendar-backed creation** (`POST /users/{upn}/events`, `isOnlineMeeting:true`) instead of standalone
+  `POST /onlineMeetings`. Reason: Graph recordings/transcripts APIs only work reliably for
+  calendar-backed meetings. Cost: new `Calendars.ReadWrite` app permission + onlineMeeting-id resolution
+  from joinUrl + invite-behavior decision.
+- **Provider-agnostic** "Online Meeting" interaction type (icon `video`), NOT "Teams Meeting" — the
+  `online_meetings.provider` column allows future zoom/google_meet.
+- **One table, two creation paths.** Appointment approval and MSP-initiated both write `online_meetings`
+  + an interaction; differ only by `appointment_request_id` vs `schedule_entry_id`. No backfill.
+- **Storage:** transcript → durable internal **document**; recording → internal **proxy/download**
+  (Graph content URLs are auth-protected, not clickable), with opt-in blob download. Artifacts are a
+  **collection** → `online_meeting_artifacts` child table (NOT singular columns).
+- **Single service-account organizer** in v1; per-user organizer + co-organizer roles deferred.
+- **Retrieval:** manual "Refresh recordings" (Phase 1) ships first; change-notification subscriptions
+  (Phase 2) follow (encrypted resource data + protected/metered API approval).
+
+## Must-fix items confirmed by review (do not regress) → mapped features
+1. Scope `Calendars.ReadWrite` to the organizer mailbox via **Exchange** Application Access Policy / RBAC
+   (Teams policy does NOT scope calendar). → F051, F052, T075.
+2. Update/delete use `provider_event_id` for new rows; legacy `online_meeting_id` handling preserved. →
+   F027, T038, T039.
+3. Invite behavior locked: appointment approval = no external attendees; MSP-initiated = attendees
+   allowed. → F018, T025, T026.
+4. No "co-organizer" claim unless a real Graph meeting-options step is added (deferred). → F018 (attendee
+   only), §9 deferred.
+5. All Graph create/update/delete OUTSIDE DB transactions, with create→DB-fail compensation. → F028,
+   F029, T040, T041.
+
+## Discoveries about existing code (verified)
+- `approveAppointmentRequest` wraps work in `withTransaction`; existing `if (createdMeeting)` block
+  ~`appointmentRequestManagementActions.ts:790-793`; writes `online_meeting_*` columns.
+- Reschedule `updateAppointmentRequestDateTime` calls `updateTeamsMeeting` **inside** `withTransaction`
+  (~:1321) — MUST move out (F028). Cancel/delete paths (`scheduleActions.ts:732`,
+  client-portal `appointmentRequestActions.ts:1337`) already call Graph outside the tx.
+- Facade `CreateTeamsMeetingResult` returns only `{joinWebUrl, meetingId}` (`teamsMeetingService.ts`),
+  EE same (`createTeamsMeeting.ts:107`). Must add organizer UPN + AAD id + eventId (F020).
+- `InteractionModel.addInteraction/getById` open their own `createTenantKnex` connection
+  (`interactions.ts:225`), so the action's `withTransaction` does NOT cover the model insert today —
+  latent bug fixed by F012. Defaulting/resolution/events/revalidate live in the ACTION
+  (`interactionActions.ts:~86-150`) — must be replicated in the shared helper (F013).
+- `uploadDocument` is `withAuth` + `FormData` (`documentActions.ts:2642`) — unusable from a job; need an
+  internal helper (F038). Internal users inherit folder `is_client_visible` (`documentActions.ts:2764`)
+  — set false explicitly.
+- `system_interaction_types` modification trigger was REMOVED by
+  `server/migrations/20250613000000_remove_system_interaction_types_trigger.cjs` — no workaround needed.
+- `Meeting` (icon users) already seeded by `20241223015715_create_system_interaction_types.cjs`; we add a
+  separate `Online Meeting` (icon video).
+- `ScheduleEntry.create` stores `work_item_id` for non-`ad_hoc` (`scheduleEntry.ts:407`) → set to
+  interaction id (F033).
+- Calendar mapping uses `entry.notes` as description in BOTH `server/src/utils/calendar/eventMapping.ts:82`
+  and `packages/integrations/src/utils/calendar/eventMapping.ts:80` (F036).
+- EE calendar sync (`ee/packages/calendar/`) auto-pushes schedule_entries to the user's connected
+  calendar via `calendarSyncSubscriber` — partially compensates for the service-account-organizer model
+  (meeting still shows on the creating user's own calendar). Possible Phase-2 reuse:
+  `CalendarWebhookProcessor.ts` for the encrypted subscription machinery.
+- `scheduleRecurringJob` exists (`server/src/lib/jobs/jobScheduler.ts` + `index.ts`); there is already a
+  `MicrosoftWebhookRenewalJobData` recurring job to mirror for Phase 2 (F055).
+- `microsoft_profiles` are tenant-level service accounts; `users` has no AAD columns → no per-user
+  organizer today.
+
+## Open questions
+- Exact `hasPermission` resource/action for `scheduleTeamsMeeting` (verify repo catalog) — F031.
+- Should MSP-initiated default to adding the contact as an attendee, or leave optional in the UI?
+
+## Phasing for the implementation loop
+- Phase A (data + model): F001–F013.
+- Phase B (creation, both paths): F016–F036.
+- Phase C (capture Phase 1 + UI): F037–F052.
+- Phase D (gating): F053.
+- Phase E (Phase 2 subscriptions): F054–F057.
+Recommend the /loop pick the lowest-id `implemented:false` feature whose deps are met, implement + test,
+flip `implemented:true`, repeat.
+
+## Commands / runbooks
+- Validate plan JSON: `python3 ~/.claude/skills/software-planner/scripts/validate_plan.py <folder>` (if present).
+- Tests: `npm run test:unit` (unit), `npm run test:integration`.
+- Migrations: `npm run migrate`.
