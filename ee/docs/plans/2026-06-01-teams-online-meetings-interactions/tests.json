@@ -9,7 +9,7 @@
   { "id": "T008", "implemented": false, "featureIds": ["F005", "F011"], "description": "upsertArtifact with the same (tenant, meeting_id, artifact_type, provider_artifact_id) updates rather than duplicates." },
   { "id": "T009", "implemented": true, "featureIds": ["F007"], "description": "Migration inserts an 'Online Meeting' system interaction type with icon 'video'." },
   { "id": "T010", "implemented": true, "featureIds": ["F007"], "description": "Re-running the type migration is idempotent (no duplicate row, no trigger error)." },
-  { "id": "T011", "implemented": false, "featureIds": ["F008", "F009"], "description": "@alga-psa/types exports IOnlineMeeting and IOnlineMeetingArtifact, and IInteraction has optional online_meeting." },
+  { "id": "T011", "implemented": true, "featureIds": ["F008", "F009"], "description": "@alga-psa/types exports IOnlineMeeting and IOnlineMeetingArtifact, and IInteraction has optional online_meeting." },
   { "id": "T012", "implemented": false, "featureIds": ["F010"], "description": "OnlineMeetingModel.create + getById round-trips a row including its artifacts array." },
   { "id": "T013", "implemented": false, "featureIds": ["F010"], "description": "getByProviderMeetingId / getByInteractionId / getByAppointmentRequestId return the expected row scoped by tenant." },
   { "id": "T014", "implemented": false, "featureIds": ["F010"], "description": "listPendingRecordings returns only rows in pending-eligible statuses and excludes terminal (no_recording/cancelled/failed)." },

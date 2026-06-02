@@ -105,3 +105,10 @@ flip `implemented:true`, repeat.
   passed (8 tests). An earlier `npm -w server run test:unit -- ...` accidentally ran the entire unit suite
   due to the package script prepending `src/test/unit`; it was terminated after unrelated existing failures
   and should not be treated as signal for this batch.
+- Completed F008-F009/T011 in `packages/types/src/interfaces/online-meeting.interfaces.ts` and
+  `packages/types/src/interfaces/interaction.interfaces.ts`: added `IOnlineMeetingArtifact`,
+  `IOnlineMeeting`, status/artifact/provider type aliases, `artifacts[]`, and optional
+  `IInteraction.online_meeting`. Exported via `packages/types/src/interfaces/index.ts` and added
+  `@alga-psa/types` smoke imports to `packages/types/src/exports.typecheck.test.ts`.
+- Verification: `npm -w @alga-psa/types test -- src/exports.typecheck.test.ts src/interfaces/barrel.test.ts`
+  passed (2 tests).
