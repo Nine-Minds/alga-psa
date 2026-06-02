@@ -1,3 +1,9 @@
+// Neutralise Node 26's throwing fs.Stats Temporal *Instant getters BEFORE
+// node-vault loads — it transitively runs bluebird's promisifyAll(require('fs'))
+// (via postman-request -> stream-length), which crashes at module load on
+// Node 26.2.x. This side-effect import MUST stay above the node-vault import;
+// ESM evaluates imports in source order, so it runs first on every load path.
+import './fixNode26FsStats';
 import vault from 'node-vault';
 import logger from '../logger';
 import type { ISecretProvider } from './ISecretProvider';
