@@ -30,6 +30,7 @@ export interface TenantCreationInput {
     firstName: string;
     lastName: string;
     email: string;
+    password?: string;
   };
   companyName?: string;
   clientName?: string;
@@ -113,6 +114,7 @@ export async function createAdminUser(
     lastName: string;
     email: string;
     clientId?: string;
+    password?: string;
   }
 ): Promise<CreateAdminUserResult> {
   return await db.transaction(async (trx) => {
@@ -125,8 +127,8 @@ export async function createAdminUser(
       throw new Error(`User with email ${input.email} already exists`);
     }
 
-    // Generate temporary password
-    const temporaryPassword = generateSecurePassword();
+    // Use the supplied admin password when provided; otherwise generate a temporary one.
+    const temporaryPassword = input.password ?? generateSecurePassword();
     const hashedPassword = await hashPassword(temporaryPassword);
     
     // Create user
@@ -261,6 +263,7 @@ export async function createTenantComplete(
       lastName: input.adminUser.lastName,
       email: input.adminUser.email,
       clientId: tenantResult.clientId,
+      password: input.adminUser.password,
     });
 
     // Step 3: Setup tenant data
