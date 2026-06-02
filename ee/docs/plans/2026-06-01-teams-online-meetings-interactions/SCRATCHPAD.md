@@ -170,3 +170,23 @@ flip `implemented:true`, repeat.
   - A full `npx vitest run src/test/integration/appointmentRequests.integration.test.ts` run was attempted
     before the fixture compatibility fix and failed on the pre-existing `service_types.billing_method`
     fixture/schema mismatch across many unrelated tests; targeted coverage now passes.
+- Completed F025-F027:
+  - `updateAppointmentRequestDateTime` now syncs linked `online_meetings` start/end fields and the
+    generated interaction's date/start/end/duration, then calls `updateTeamsMeeting` after the DB
+    transaction with `provider_event_id` for modern rows. Legacy appointment-only meetings pass
+    `eventId: null` and keep the standalone-compatible fallback path.
+  - Decline, MSP schedule deletion, and client-portal cancellation now mark linked `online_meetings`
+    rows as `cancelled`, which keeps them out of later capture/polling flows.
+  - Delete paths prefer `online_meetings.provider_meeting_id` + `provider_event_id`; legacy rows without
+    `provider_event_id` still pass the appointment request's existing `online_meeting_id`.
+  - F028/F029 intentionally remain open: reschedule update is now outside the transaction, but approval
+    Graph create/DB compensation has not been reworked yet.
+- Completed T035-T036/T038-T039 in `server/src/test/integration/appointmentRequests.integration.test.ts`:
+  reschedule asserts event-id updates plus local meeting/interaction time sync, legacy reschedule asserts
+  `eventId: null`, and decline/cancel/delete tests assert `online_meetings.status='cancelled'`.
+- Verification:
+  - `npm -w @alga-psa/scheduling run typecheck` passed.
+  - `npm -w @alga-psa/client-portal run typecheck` passed.
+  - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "should update status correctly when declined|reschedules the linked Teams meeting|reschedules a legacy Teams meeting|deletes the linked Teams meeting"` from `server/` passed (5 tests, 37 skipped).
+  - The focused integration run still logs pre-existing non-fatal warnings in decline event publishing
+    (`requestedDate` Date vs string) and client cancellation notifications (`contact_id` binding).

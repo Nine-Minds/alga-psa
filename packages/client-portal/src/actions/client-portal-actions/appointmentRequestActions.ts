@@ -185,6 +185,7 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
 async function deleteTeamsMeetingIfAvailable(params: {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   appointmentRequestId: string;
 }): Promise<boolean> {
   if (!isEnterprise) {
@@ -200,6 +201,7 @@ async function deleteTeamsMeetingIfAvailable(params: {
     return teamsModule.deleteTeamsMeeting({
       tenantId: params.tenantId,
       meetingId: params.meetingId,
+      eventId: params.eventId ?? null,
       appointmentRequestId: params.appointmentRequestId,
     });
   } catch (error) {
@@ -1189,6 +1191,12 @@ export const cancelAppointmentRequest = withAuth(async (
       }
 
       const now = new Date();
+      const onlineMeeting = await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .first();
 
       if (request.schedule_entry_id) {
         await trx('schedule_entry_assignees')
@@ -1220,6 +1228,16 @@ export const cancelAppointmentRequest = withAuth(async (
           online_meeting_url: null,
           online_meeting_id: null,
           updated_at: now
+        });
+
+      await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .update({
+          status: 'cancelled',
+          updated_at: now,
         });
 
       try {
@@ -1333,10 +1351,12 @@ export const cancelAppointmentRequest = withAuth(async (
 
       return {
         appointmentRequestId: request.appointment_request_id,
-        meetingId:
-          request.online_meeting_provider === 'teams' && request.online_meeting_id
+        meetingId: onlineMeeting?.provider === 'teams'
+          ? onlineMeeting.provider_meeting_id
+          : request.online_meeting_provider === 'teams' && request.online_meeting_id
             ? request.online_meeting_id
             : null,
+        eventId: onlineMeeting?.provider_event_id ?? null,
       };
     });
 
@@ -1346,6 +1366,7 @@ export const cancelAppointmentRequest = withAuth(async (
       const deletedMeeting = await deleteTeamsMeetingIfAvailable({
         tenantId: tenant,
         meetingId: cancellationContext.meetingId,
+        eventId: cancellationContext.eventId,
         appointmentRequestId: cancellationContext.appointmentRequestId,
       });
 

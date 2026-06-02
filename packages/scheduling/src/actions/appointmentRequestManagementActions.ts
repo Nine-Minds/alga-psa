@@ -1154,6 +1154,16 @@ export const declineAppointmentRequest = withAuth(async (
           updated_at: now
         });
 
+      await trx('online_meetings')
+        .where({
+          appointment_request_id: validatedData.appointment_request_id,
+          tenant,
+        })
+        .update({
+          status: 'cancelled',
+          updated_at: now,
+        });
+
       // Get service details
       const service = await trx('service_catalog')
         .where({
@@ -1312,7 +1322,14 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       const now = new Date();
       const effectiveTimezone = validatedData.new_timezone ?? request.requester_timezone ?? 'UTC';
       const effectiveDuration = validatedData.new_duration ?? request.requested_duration;
-      let teamsMeetingWarning: string | undefined;
+      let teamsMeetingUpdateInput: {
+        tenantId: string;
+        meetingId: string;
+        eventId?: string | null;
+        startDateTime: string;
+        endDateTime: string;
+        appointmentRequestId: string;
+      } | null = null;
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
@@ -1389,19 +1406,58 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         }
       }
 
-      if (request.online_meeting_id && request.online_meeting_provider === 'teams') {
-        const teamsMeetingService = await resolveTeamsMeetingService();
-        const updatedMeeting = await teamsMeetingService.updateTeamsMeeting({
+      const onlineMeeting = await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .first();
+
+      if (onlineMeeting) {
+        await trx('online_meetings')
+          .where({
+            meeting_id: onlineMeeting.meeting_id,
+            tenant,
+          })
+          .update({
+            start_time: scheduledStart,
+            end_time: scheduledEnd,
+            updated_at: now,
+          });
+
+        if (onlineMeeting.interaction_id) {
+          await trx('interactions')
+            .where({
+              interaction_id: onlineMeeting.interaction_id,
+              tenant,
+            })
+            .update({
+              interaction_date: scheduledStart,
+              start_time: scheduledStart,
+              end_time: scheduledEnd,
+              duration: effectiveDuration,
+            });
+        }
+
+        if (onlineMeeting.provider === 'teams' && onlineMeeting.provider_meeting_id) {
+          teamsMeetingUpdateInput = {
+            tenantId: tenant,
+            meetingId: onlineMeeting.provider_meeting_id,
+            eventId: onlineMeeting.provider_event_id ?? null,
+            startDateTime: scheduledStart.toISOString(),
+            endDateTime: scheduledEnd.toISOString(),
+            appointmentRequestId: request.appointment_request_id,
+          };
+        }
+      } else if (request.online_meeting_id && request.online_meeting_provider === 'teams') {
+        teamsMeetingUpdateInput = {
           tenantId: tenant,
           meetingId: request.online_meeting_id,
+          eventId: null,
           startDateTime: scheduledStart.toISOString(),
           endDateTime: scheduledEnd.toISOString(),
           appointmentRequestId: request.appointment_request_id,
-        });
-
-        if (!updatedMeeting) {
-          teamsMeetingWarning = 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
-        }
+        };
       }
 
       // Get updated request
@@ -1414,14 +1470,24 @@ export const updateAppointmentRequestDateTime = withAuth(async (
 
       return {
         updatedRequest,
-        teamsMeetingWarning,
+        teamsMeetingUpdateInput,
       };
     });
+
+    let teamsMeetingWarning: string | undefined;
+    if (result.teamsMeetingUpdateInput) {
+      const teamsMeetingService = await resolveTeamsMeetingService();
+      const updatedMeeting = await teamsMeetingService.updateTeamsMeeting(result.teamsMeetingUpdateInput);
+
+      if (!updatedMeeting) {
+        teamsMeetingWarning = 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+      }
+    }
 
     return {
       success: true,
       data: result.updatedRequest as IAppointmentRequest,
-      teamsMeetingWarning: result.teamsMeetingWarning,
+      teamsMeetingWarning,
     };
   } catch (error) {
     console.error('Error updating appointment request date/time:', error);

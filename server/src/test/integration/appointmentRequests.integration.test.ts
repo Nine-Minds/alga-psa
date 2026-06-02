@@ -1094,6 +1094,19 @@ describe('Appointment Request Integration Tests', () => {
       expect(createResult.success).toBe(true);
       createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
       const originalScheduleEntryId = createResult.data?.schedule_entry_id;
+      const meetingId = uuidv4();
+      await db('online_meetings').insert({
+        tenant: tenantId,
+        meeting_id: meetingId,
+        provider: 'teams',
+        provider_meeting_id: `pending-meeting-${meetingId}`,
+        subject: 'Pending meeting',
+        join_url: 'https://teams.example.com/pending',
+        start_time: new Date(`${requestDate}T14:00:00.000Z`),
+        end_time: new Date(`${requestDate}T15:00:00.000Z`),
+        status: 'scheduled',
+        appointment_request_id: createResult.data!.appointment_request_id,
+      });
 
       const staffUser = createMockUser('internal', {
         user_id: STAFF_USER_ID,
@@ -1122,6 +1135,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.declined_reason).toBe('No technician available at requested time');
       expect(updatedRequest.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(updatedRequest.schedule_entry_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: meetingId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
 
       // Verify schedule entry was deleted
       const scheduleEntry = await db('schedule_entries')
@@ -1978,10 +1999,30 @@ describe('Appointment Request Integration Tests', () => {
           tenantId,
           appointmentRequestId: fixture.appointmentRequestId,
           meetingId: 'meeting-123',
+          eventId: 'event-123',
           startDateTime: '2026-04-30T16:45:00.000Z',
           endDateTime: '2026-04-30T18:15:00.000Z',
         })
       );
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(new Date(onlineMeeting.start_time).toISOString()).toBe('2026-04-30T16:45:00.000Z');
+      expect(new Date(onlineMeeting.end_time).toISOString()).toBe('2026-04-30T18:15:00.000Z');
+
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: onlineMeeting.interaction_id,
+        })
+        .first();
+      expect(new Date(interaction.start_time).toISOString()).toBe('2026-04-30T16:45:00.000Z');
+      expect(new Date(interaction.end_time).toISOString()).toBe('2026-04-30T18:15:00.000Z');
+      expect(interaction.duration).toBe(90);
     });
 
     it('returns a warning when the Teams reschedule PATCH fails', async () => {
@@ -2032,6 +2073,44 @@ describe('Appointment Request Integration Tests', () => {
       expect(updateResult.success).toBe(true);
       expect(updateTeamsMeetingMock).not.toHaveBeenCalled();
     });
+
+    it('reschedules a legacy Teams meeting without a provider event id using the standalone fallback', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .delete();
+      updateTeamsMeetingMock.mockClear();
+
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
+      const updateResult = await updateAppointmentRequestDateTime({
+        appointment_request_id: fixture.appointmentRequestId,
+        new_date: '2026-05-04',
+        new_time: '14:30',
+        new_duration: 30,
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateTeamsMeetingMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          appointmentRequestId: fixture.appointmentRequestId,
+          meetingId: 'meeting-123',
+          eventId: null,
+        })
+      );
+    });
   });
 
   describe('Teams meeting deletion lifecycle', () => {
@@ -2057,8 +2136,17 @@ describe('Appointment Request Integration Tests', () => {
       expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
         tenantId,
         meetingId: 'meeting-123',
+        eventId: 'event-123',
         appointmentRequestId: fixture.appointmentRequestId,
       });
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
     });
 
     it('deletes the linked Teams meeting when MSP staff deletes the schedule entry', async () => {
@@ -2079,8 +2167,17 @@ describe('Appointment Request Integration Tests', () => {
       expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
         tenantId,
         meetingId: 'meeting-123',
+        eventId: 'event-123',
         appointmentRequestId: fixture.appointmentRequestId,
       });
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
     });
 
     it('surfaces a warning when Teams meeting deletion fails during cancellation', async () => {
@@ -2490,6 +2587,10 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.appointmentRequestId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      appointment_request_id: ids.appointmentRequestId
+    });
     await safeDelete('appointment_requests', {
       tenant: tenantId,
       appointment_request_id: ids.appointmentRequestId
