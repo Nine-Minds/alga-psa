@@ -444,6 +444,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             teams={teams}
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+            initialUserAvatarUrls={avatarUrls}
+            initialTeamAvatarUrls={teamAvatarUrls}
           />
         </div>
         {task.assigned_team_id && teamNames[task.assigned_team_id] && (
