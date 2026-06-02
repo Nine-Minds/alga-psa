@@ -124,6 +124,10 @@ COPY --from=builder /app/server/index.ts ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
+# server/scripts holds runtime entrypoints invoked at boot, notably
+# create-tenant.ts which the appliance bootstrap runs to seed the initial
+# tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
+COPY --from=builder /app/server/scripts/ ./server/scripts/
 COPY --from=builder /app/secrets ./secrets
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
