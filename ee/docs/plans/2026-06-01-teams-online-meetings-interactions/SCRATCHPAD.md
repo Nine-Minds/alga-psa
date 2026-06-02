@@ -103,6 +103,18 @@ flip `implemented:true`, repeat.
   - Exported the action from `packages/clients/src/actions/index.ts`.
   - Corrected T037's description: it was assigned to F014 but described cancelled refresh/list-pending behavior already covered by T014; it now describes the F014 action contract.
   - Added `packages/clients/src/actions/onlineMeetingActions.test.ts` covering tenant-scoped lookup, absent rows, and missing id validation.
+- Implemented F016-F022:
+  - `createTeamsMeeting` now creates calendar-backed Graph events through `POST /users/{organizerUpn}/events` with `isOnlineMeeting: true` and `onlineMeetingProvider: teamsForBusiness`.
+  - It resolves the `onlineMeeting.id` from the event join URL via a URL-encoded `JoinWebUrl` filter, then returns `joinWebUrl`, `meetingId`, `organizerUpn`, `organizerUserId`, and `eventId`.
+  - `organizerUserId` is read from `teams_integrations.default_meeting_organizer_object_id` when present; until F048 migration/UI lands, the config falls back to organizer UPN to preserve existing tenants/tests.
+  - Appointment approval keeps the default no-attendee payload; MSP-created meetings can pass attendees explicitly.
+  - `updateTeamsMeeting`/`deleteTeamsMeeting` now call `/events/{eventId}` (falling back to `meetingId` only for temporary compatibility until F027 legacy branching is implemented).
+  - Added EE `fetchMeetingArtifacts` and facade `fetchMeetingArtifacts` no-op off enterprise. The EE implementation fetches recordings/transcripts collections, downloads transcript content with `Accept: text/vtt`, and URL-encodes organizer/meeting/artifact path segments.
+  - T028's online_meetings persistence portion will become concrete in F023/F032 when creation paths write the returned facade fields into `online_meetings`; current coverage verifies the facade returns the fields required for persistence.
+- Verification:
+  - `npx vitest run src/test/unit/teamsMeetingHelpers.test.ts` from `server/` passed 23 tests.
+  - `npm -w @alga-psa/scheduling run typecheck` passed.
+  - `npm -w @alga-psa/ee-microsoft-teams run typecheck` passed.
 
 ## 2026-06-01 implementation notes
 - Completed F001-F006 in `server/migrations/20260601120000_create_online_meetings.cjs`: added CE/core

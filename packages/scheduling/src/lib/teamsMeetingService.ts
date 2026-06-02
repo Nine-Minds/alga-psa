@@ -11,17 +11,22 @@ export interface CreateTeamsMeetingInput {
   subject: string;
   startDateTime: string;
   endDateTime: string;
+  attendees?: TeamsMeetingAttendee[];
   appointmentRequestId?: string | null;
 }
 
 export interface CreateTeamsMeetingResult {
   joinWebUrl: string;
   meetingId: string;
+  organizerUpn: string;
+  organizerUserId: string;
+  eventId: string;
 }
 
 export interface UpdateTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   startDateTime: string;
   endDateTime: string;
   appointmentRequestId?: string | null;
@@ -30,7 +35,30 @@ export interface UpdateTeamsMeetingInput {
 export interface DeleteTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   appointmentRequestId?: string | null;
+}
+
+export interface TeamsMeetingAttendee {
+  emailAddress: {
+    address: string;
+    name?: string;
+  };
+  type?: 'required' | 'optional' | 'resource';
+}
+
+export interface FetchMeetingArtifactsInput {
+  tenantId: string;
+  meetingId: string;
+  organizerUserId: string;
+}
+
+export interface TeamsMeetingArtifact {
+  artifactType: 'recording' | 'transcript';
+  providerArtifactId: string;
+  contentUrl: string | null;
+  createdDateTime: string | null;
+  transcriptContent?: string;
 }
 
 export interface TeamsMeetingService {
@@ -38,6 +66,7 @@ export interface TeamsMeetingService {
   createTeamsMeeting: (input: CreateTeamsMeetingInput) => Promise<CreateTeamsMeetingResult | null>;
   updateTeamsMeeting: (input: UpdateTeamsMeetingInput) => Promise<boolean>;
   deleteTeamsMeeting: (input: DeleteTeamsMeetingInput) => Promise<boolean>;
+  fetchMeetingArtifacts: (input: FetchMeetingArtifactsInput) => Promise<TeamsMeetingArtifact[]>;
 }
 
 type EeTeamsMeetingModule = Partial<TeamsMeetingService>;
@@ -59,6 +88,9 @@ const noOpTeamsMeetingService: TeamsMeetingService = {
   },
   async deleteTeamsMeeting() {
     return false;
+  },
+  async fetchMeetingArtifacts() {
+    return [];
   },
 };
 
@@ -91,5 +123,6 @@ export async function resolveTeamsMeetingService(): Promise<TeamsMeetingService>
     createTeamsMeeting: ee.createTeamsMeeting ?? noOpTeamsMeetingService.createTeamsMeeting,
     updateTeamsMeeting: ee.updateTeamsMeeting ?? noOpTeamsMeetingService.updateTeamsMeeting,
     deleteTeamsMeeting: ee.deleteTeamsMeeting ?? noOpTeamsMeetingService.deleteTeamsMeeting,
+    fetchMeetingArtifacts: ee.fetchMeetingArtifacts ?? noOpTeamsMeetingService.fetchMeetingArtifacts,
   };
 }

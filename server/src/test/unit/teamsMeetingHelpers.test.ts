@@ -35,6 +35,7 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib/graphAuth', () => ({
 import { createTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/createTeamsMeeting';
 import { updateTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/updateTeamsMeeting';
 import { deleteTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/deleteTeamsMeeting';
+import { fetchMeetingArtifacts } from '@alga-psa/ee-microsoft-teams/lib/meetings/fetchMeetingArtifacts';
 import { getTeamsMeetingCapability } from '@alga-psa/ee-microsoft-teams/lib/actions/meetings/meetingCapabilityActions';
 import { resolveTeamsMeetingService } from '@alga-psa/scheduling/lib/teamsMeetingService';
 
@@ -101,16 +102,27 @@ describe('Teams meeting helpers', () => {
         install_status: 'active',
         selected_profile_id: 'profile-1',
         default_meeting_organizer_upn: 'organizer@example.com',
+        default_meeting_organizer_object_id: 'organizer-object-1',
       });
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-      fetchMock.mockResolvedValue({
-        ok: true,
-        status: 201,
-        json: async () => ({
-          id: 'meeting-123',
-          joinWebUrl: 'https://teams.example.com/meeting/123',
-        }),
-      });
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'event-123',
+            onlineMeeting: {
+              joinUrl: 'https://teams.example.com/meeting/123',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{ id: 'meeting-123', joinWebUrl: 'https://teams.example.com/meeting/123' }],
+          }),
+        });
 
       const result = await createTeamsMeeting({
         tenantId: 'tenant-1',
@@ -123,16 +135,33 @@ describe('Teams meeting helpers', () => {
       expect(result).toEqual({
         joinWebUrl: 'https://teams.example.com/meeting/123',
         meetingId: 'meeting-123',
+        organizerUpn: 'organizer@example.com',
+        organizerUserId: 'organizer-object-1',
+        eventId: 'event-123',
       });
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/onlineMeetings',
+        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/events',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({
             subject: 'Virtual consultation',
-            startDateTime: '2026-04-24T14:00:00.000Z',
-            endDateTime: '2026-04-24T14:30:00.000Z',
+            start: {
+              dateTime: '2026-04-24T14:00:00.000Z',
+              timeZone: 'UTC',
+            },
+            end: {
+              dateTime: '2026-04-24T14:30:00.000Z',
+              timeZone: 'UTC',
+            },
+            isOnlineMeeting: true,
+            onlineMeetingProvider: 'teamsForBusiness',
           }),
+        })
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://graph.microsoft.com/v1.0/users/organizer%40example.com/onlineMeetings?$filter=${encodeURIComponent("JoinWebUrl eq 'https://teams.example.com/meeting/123'")}`,
+        expect.objectContaining({
+          method: 'GET',
         })
       );
       expect(loggerInfoMock).toHaveBeenCalledWith(
@@ -144,6 +173,88 @@ describe('Teams meeting helpers', () => {
           status: 201,
         })
       );
+    });
+
+    it('creates appointment-approval meetings without external attendees by default', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'event-123',
+            onlineMeeting: { joinUrl: 'https://teams.example.com/meeting/123' },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ value: [{ id: 'meeting-123' }] }),
+        });
+
+      await createTeamsMeeting({
+        tenantId: 'tenant-1',
+        subject: 'Appointment approval',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+        appointmentRequestId: 'request-1',
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body);
+      expect(body).not.toHaveProperty('attendees');
+    });
+
+    it('includes provided attendees for MSP-initiated meetings', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'event-123',
+            onlineMeeting: { joinUrl: 'https://teams.example.com/meeting/123' },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ value: [{ id: 'meeting-123' }] }),
+        });
+
+      await createTeamsMeeting({
+        tenantId: 'tenant-1',
+        subject: 'MSP meeting',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+        attendees: [{
+          emailAddress: {
+            address: 'client@example.com',
+            name: 'Client Contact',
+          },
+          type: 'required',
+        }],
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body);
+      expect(body.attendees).toEqual([{
+        emailAddress: {
+          address: 'client@example.com',
+          name: 'Client Contact',
+        },
+        type: 'required',
+      }]);
     });
 
     it('returns null without calling Graph when the Teams add-on is inactive', async () => {
@@ -316,14 +427,24 @@ describe('Teams meeting helpers', () => {
         microsoftTenantId: `microsoft-${tenantId}`,
       }));
 
-      fetchMock.mockResolvedValue({
-        ok: true,
-        status: 201,
-        json: async () => ({
-          id: 'meeting-tenant-a',
-          joinWebUrl: 'https://teams.example.com/meeting/tenant-a',
-        }),
-      });
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'event-tenant-a',
+            onlineMeeting: {
+              joinUrl: 'https://teams.example.com/meeting/tenant-a',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{ id: 'meeting-tenant-a' }],
+          }),
+        });
 
       await createTeamsMeeting({
         tenantId: 'tenant-a',
@@ -340,7 +461,7 @@ describe('Teams meeting helpers', () => {
         clientSecret: 'secret-tenant-a',
       });
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://graph.microsoft.com/v1.0/users/organizer-a%40example.com/onlineMeetings',
+        'https://graph.microsoft.com/v1.0/users/organizer-a%40example.com/events',
         expect.any(Object)
       );
       expect(fetchMock).not.toHaveBeenCalledWith(
@@ -368,17 +489,24 @@ describe('Teams meeting helpers', () => {
       await expect(updateTeamsMeeting({
         tenantId: 'tenant-1',
         meetingId: 'meeting-123',
+        eventId: 'event-123',
         startDateTime: '2026-04-24T15:00:00.000Z',
         endDateTime: '2026-04-24T15:30:00.000Z',
       })).resolves.toBe(true);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/onlineMeetings/meeting-123',
+        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/events/event-123',
         expect.objectContaining({
           method: 'PATCH',
           body: JSON.stringify({
-            startDateTime: '2026-04-24T15:00:00.000Z',
-            endDateTime: '2026-04-24T15:30:00.000Z',
+            start: {
+              dateTime: '2026-04-24T15:00:00.000Z',
+              timeZone: 'UTC',
+            },
+            end: {
+              dateTime: '2026-04-24T15:30:00.000Z',
+              timeZone: 'UTC',
+            },
           }),
         })
       );
@@ -436,7 +564,15 @@ describe('Teams meeting helpers', () => {
       await expect(deleteTeamsMeeting({
         tenantId: 'tenant-1',
         meetingId: 'meeting-123',
+        eventId: 'event-123',
       })).resolves.toBe(true);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer%40example.com/events/event-123',
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
 
       fetchMock.mockResolvedValueOnce({
         ok: false,
@@ -448,6 +584,7 @@ describe('Teams meeting helpers', () => {
       await expect(deleteTeamsMeeting({
         tenantId: 'tenant-1',
         meetingId: 'meeting-123',
+        eventId: 'event-123',
       })).resolves.toBe(false);
 
       expect(loggerWarnMock).toHaveBeenCalledWith(
@@ -474,8 +611,17 @@ describe('Teams meeting helpers', () => {
           ok: true,
           status: 201,
           json: async () => ({
-            id: 'meeting-123',
-            joinWebUrl: 'https://teams.example.com/meeting/123',
+            id: 'event-123',
+            onlineMeeting: {
+              joinUrl: 'https://teams.example.com/meeting/123',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{ id: 'meeting-123' }],
           }),
         })
         .mockResolvedValueOnce({
@@ -537,6 +683,123 @@ describe('Teams meeting helpers', () => {
           operation: 'delete',
           status: 204,
         })
+      );
+    });
+  });
+
+  describe('fetchMeetingArtifacts', () => {
+    it('parses recordings and transcripts and fetches transcript content as text/vtt', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{
+              id: 'recording-1',
+              contentUrl: 'https://graph.example/recording-content',
+              createdDateTime: '2026-04-24T15:35:00.000Z',
+            }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{
+              id: 'transcript-1',
+              contentUrl: 'https://graph.example/transcript-content',
+              createdDateTime: '2026-04-24T15:36:00.000Z',
+            }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () => 'WEBVTT\n\n00:00.000 --> 00:01.000\nHello',
+        });
+
+      await expect(fetchMeetingArtifacts({
+        tenantId: 'tenant-1',
+        organizerUserId: 'organizer-object-1',
+        meetingId: 'meeting-123',
+      })).resolves.toEqual([
+        {
+          artifactType: 'recording',
+          providerArtifactId: 'recording-1',
+          contentUrl: 'https://graph.example/recording-content',
+          createdDateTime: '2026-04-24T15:35:00.000Z',
+        },
+        {
+          artifactType: 'transcript',
+          providerArtifactId: 'transcript-1',
+          contentUrl: 'https://graph.example/transcript-content',
+          createdDateTime: '2026-04-24T15:36:00.000Z',
+          transcriptContent: 'WEBVTT\n\n00:00.000 --> 00:01.000\nHello',
+        },
+      ]);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer-object-1/onlineMeetings/meeting-123/recordings',
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer-object-1/onlineMeetings/meeting-123/transcripts/transcript-1/content',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Accept: 'text/vtt',
+          }),
+        })
+      );
+    });
+
+    it('URL-encodes organizer, meeting, and artifact path segments', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ value: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ value: [{ id: 'transcript/id 1' }] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () => 'WEBVTT',
+        });
+
+      await fetchMeetingArtifacts({
+        tenantId: 'tenant-1',
+        organizerUserId: 'organizer/object 1',
+        meetingId: 'meeting/id 1',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer%2Fobject%201/onlineMeetings/meeting%2Fid%201/recordings',
+        expect.any(Object)
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/organizer%2Fobject%201/onlineMeetings/meeting%2Fid%201/transcripts/transcript%2Fid%201/content',
+        expect.any(Object)
       );
     });
   });
@@ -648,6 +911,11 @@ describe('Teams meeting helpers', () => {
         tenantId: 'tenant-1',
         meetingId: 'meeting-123',
       })).resolves.toBe(false);
+      await expect(service.fetchMeetingArtifacts({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        organizerUserId: 'organizer-object-1',
+      })).resolves.toEqual([]);
     });
   });
 });
