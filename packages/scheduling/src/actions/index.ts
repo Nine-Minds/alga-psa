@@ -21,6 +21,7 @@ export {
 export * from './time-period-settings-actions';
 export * from './appointmentHelpers';
 export * from './appointmentRequestManagementActions';
+export * from './onlineMeetingSchedulingActions';
 export * from './availabilitySettingsActions';
 export * from './scheduleActions';
 export * from './serviceCatalogActions';

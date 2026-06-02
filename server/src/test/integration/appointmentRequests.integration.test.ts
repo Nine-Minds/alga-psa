@@ -12,6 +12,7 @@ let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').c
 let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
 let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
 let deleteScheduleEntry: typeof import('@alga-psa/scheduling/actions').deleteScheduleEntry;
+let scheduleTeamsMeeting: typeof import('@alga-psa/scheduling/actions').scheduleTeamsMeeting;
 
 const enterpriseState = vi.hoisted(() => ({ value: true }));
 const teamsMeetingCapabilityMock = vi.hoisted(() => vi.fn());
@@ -32,6 +33,8 @@ type CreatedIds = {
   technicianUserId?: string;
   appointmentRequestId?: string;
   scheduleEntryId?: string;
+  interactionId?: string;
+  onlineMeetingId?: string;
   contractId?: string;
   clientContractId?: string;
   contractLineId?: string;
@@ -141,6 +144,11 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(() => Promise.resolve())
 }));
 
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(() => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(() => Promise.resolve())
+}));
+
 // Mock internal notification actions
 vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: vi.fn(() => Promise.resolve())
@@ -213,7 +221,7 @@ describe('Appointment Request Integration Tests', () => {
 
     // Import the actions after mocks are set up
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
-    ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry } = await import('@alga-psa/scheduling/actions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry, scheduleTeamsMeeting } = await import('@alga-psa/scheduling/actions'));
   }, 120_000);
 
   beforeEach(() => {
@@ -1072,6 +1080,231 @@ describe('Appointment Request Integration Tests', () => {
       const createArgs = createTeamsMeetingMock.mock.calls.at(-1)?.[0];
       expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 14:30');
       expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 15:30');
+    });
+  });
+
+  describe('Schedule Teams Meeting (MSP)', () => {
+    const startDateTime = '2026-08-25T14:00:00.000Z';
+    const endDateTime = '2026-08-25T14:30:00.000Z';
+
+    async function setupMspMeetingContext() {
+      const setup = await setupTestData(db, tenantId, { skipService: true });
+      createdIds.clientId = setup.clientId;
+      createdIds.contactId = setup.contactId;
+      createdIds.clientUserId = setup.clientUserId;
+      createdIds.technicianUserId = setup.technicianUserId;
+      setStaffSchedulingContext(tenantId);
+      return setup;
+    }
+
+    it('creates a Teams meeting for a contact/client and persists the interaction plus online_meetings row', async () => {
+      const { clientId, contactId } = await setupMspMeetingContext();
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Account review',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+        attendees: [
+          {
+            emailAddress: {
+              address: 'client-attendee@example.com',
+              name: 'Client Attendee',
+            },
+            type: 'required',
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      createdIds.onlineMeetingId = result.data.meeting_id;
+      createdIds.interactionId = result.data.interaction_id;
+
+      expect(createTeamsMeetingMock).toHaveBeenCalledWith({
+        tenantId,
+        subject: 'Account review',
+        startDateTime,
+        endDateTime,
+        appointmentRequestId: null,
+        attendees: [
+          {
+            emailAddress: {
+              address: 'client-attendee@example.com',
+              name: 'Client Attendee',
+            },
+            type: 'required',
+          },
+        ],
+      });
+      expect(createTeamsMeetingMock.mock.calls[0][0]).not.toHaveProperty('organizerUpn');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: result.data.meeting_id,
+        })
+        .first();
+
+      expect(onlineMeeting).toMatchObject({
+        provider: 'teams',
+        provider_meeting_id: 'meeting-123',
+        provider_event_id: 'event-123',
+        organizer_upn: 'organizer@example.com',
+        organizer_user_id: 'organizer-object-1',
+        subject: 'Account review',
+        join_url: 'https://teams.example.com/meeting/123',
+        status: 'scheduled',
+        appointment_request_id: null,
+        schedule_entry_id: null,
+        created_by: STAFF_USER_ID,
+      });
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: result.data.interaction_id,
+        })
+        .first();
+
+      expect(interaction).toMatchObject({
+        type_id: onlineMeetingType.type_id,
+        client_id: clientId,
+        contact_name_id: contactId,
+        user_id: STAFF_USER_ID,
+        title: 'Online Meeting: Account review',
+        notes: 'Join Teams Meeting: https://teams.example.com/meeting/123',
+      });
+      expect(onlineMeeting.interaction_id).toBe(interaction.interaction_id);
+    });
+
+    it('denies a user lacking user_schedule:update and creates no meeting rows', async () => {
+      const setup = await setupTestData(db, tenantId, { skipService: true });
+      createdIds.clientId = setup.clientId;
+      createdIds.contactId = setup.contactId;
+      createdIds.clientUserId = setup.clientUserId;
+      createdIds.technicianUserId = setup.technicianUserId;
+
+      const staffUser = createMockUser('internal', {
+        user_id: STAFF_USER_ID,
+        tenant: tenantId,
+      });
+      setMockUser(staffUser, ['user_schedule:read']);
+      setupCommonMocks({
+        tenantId,
+        userId: STAFF_USER_ID,
+        user: staffUser,
+        permissionCheck: (_user, resource, action) => !(resource === 'user_schedule' && action === 'update'),
+      });
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Permission check',
+        startDateTime,
+        endDateTime,
+        client_id: setup.clientId,
+        contact_name_id: setup.contactId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/permission denied/i);
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const interactionCount = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: setup.clientId,
+          contact_name_id: setup.contactId,
+        })
+        .where('title', 'Online Meeting: Permission check')
+        .count<{ count: string }[]>('* as count');
+      expect(Number(interactionCount[0].count)).toBe(0);
+    });
+
+    it('fails gracefully and creates no local rows when Teams capability is unavailable', async () => {
+      const { clientId, contactId } = await setupMspMeetingContext();
+      teamsMeetingCapabilityMock.mockResolvedValue({ available: false, reason: 'no_organizer' });
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Capability check',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('no default organizer');
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const interactionCount = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: clientId,
+          contact_name_id: contactId,
+        })
+        .where('title', 'Online Meeting: Capability check')
+        .count<{ count: string }[]>('* as count');
+      expect(Number(interactionCount[0].count)).toBe(0);
+    });
+
+    it('optionally creates a schedule entry linked to the created interaction', async () => {
+      const { clientId, contactId, technicianUserId } = await setupMspMeetingContext();
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Scheduled Teams consult',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+        createScheduleEntry: true,
+        assignedUserIds: [technicianUserId],
+      });
+
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      createdIds.onlineMeetingId = result.data.meeting_id;
+      createdIds.interactionId = result.data.interaction_id;
+      createdIds.scheduleEntryId = result.data.schedule_entry_id ?? undefined;
+
+      expect(result.data.schedule_entry_id).toBeTruthy();
+
+      const scheduleEntry = await db('schedule_entries')
+        .where({
+          tenant: tenantId,
+          entry_id: result.data.schedule_entry_id,
+        })
+        .first();
+      expect(scheduleEntry).toMatchObject({
+        title: 'Scheduled Teams consult',
+        work_item_type: 'interaction',
+        work_item_id: result.data.interaction_id,
+        status: 'scheduled',
+        notes: 'Join Teams Meeting: https://teams.example.com/meeting/123',
+      });
+
+      const assignees = await db('schedule_entry_assignees')
+        .where({
+          tenant: tenantId,
+          entry_id: result.data.schedule_entry_id,
+        })
+        .select('user_id');
+      expect(assignees.map((row) => row.user_id)).toEqual([technicianUserId]);
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: result.data.meeting_id,
+        })
+        .first();
+      expect(onlineMeeting.schedule_entry_id).toBe(result.data.schedule_entry_id);
     });
   });
 
@@ -2681,6 +2914,20 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   };
 
   // Delete appointment request and related data
+  if (ids.onlineMeetingId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      meeting_id: ids.onlineMeetingId
+    });
+  }
+
+  if (ids.scheduleEntryId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      schedule_entry_id: ids.scheduleEntryId
+    });
+  }
+
   if (ids.scheduleEntryId) {
     await safeDelete('schedule_entry_assignees', {
       tenant: tenantId,
@@ -2700,6 +2947,13 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
     await safeDelete('appointment_requests', {
       tenant: tenantId,
       appointment_request_id: ids.appointmentRequestId
+    });
+  }
+
+  if (ids.interactionId) {
+    await safeDelete('interactions', {
+      tenant: tenantId,
+      interaction_id: ids.interactionId
     });
   }
 

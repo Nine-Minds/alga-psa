@@ -219,3 +219,29 @@ flip `implemented:true`, repeat.
   - Added the coverage to `server/src/test/integration/appointmentRequests.integration.test.ts`.
 - Verification:
   - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "does not backfill legacy approved Teams appointment links"` from `server/` passed (1 test, 43 skipped).
+- Completed F031-F033:
+  - Added `packages/scheduling/src/actions/onlineMeetingSchedulingActions.ts` and exported
+    `scheduleTeamsMeeting` from `@alga-psa/scheduling/actions`.
+  - The action is `withAuth` and explicitly requires `user_schedule:update` (confirmed as the local
+    schedule-create/update permission already used by schedule actions).
+  - Teams Graph create happens before the DB write transaction; if the local transaction fails, the
+    created calendar-backed Teams event is deleted via the facade using both `meetingId` and `eventId`.
+  - The DB transaction creates the shared `Online Meeting` interaction, inserts the `online_meetings`
+    row with organizer UPN/object id and event id, and optionally creates a `schedule_entries` row with
+    `work_item_type='interaction'` and `work_item_id=<interaction_id>`, linked from
+    `online_meetings.schedule_entry_id`.
+  - MSP-created meetings pass through provided attendees to the facade; appointment approval remains
+    separate and still sends no attendees.
+- Completed T043-T048 in `server/src/test/integration/appointmentRequests.integration.test.ts`:
+  - Happy path asserts Graph facade input, attendee pass-through, default organizer persistence from the
+    facade result, interaction creation, and `online_meetings` persistence.
+  - Permission-denied and capability-unavailable paths assert no Graph create and no local interaction.
+  - Schedule-entry option asserts `work_item_type='interaction'`, `work_item_id` equals the created
+    interaction id, assignee row creation, and `online_meetings.schedule_entry_id` linkage.
+  - Test cleanup now tracks standalone online meeting and interaction ids because these rows are not
+    appointment-request-linked.
+- Verification:
+  - `npm -w @alga-psa/scheduling run typecheck` passed.
+  - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "Schedule Teams Meeting"` from
+    `server/` passed twice (4 tests, 44 skipped). The second run includes a package-level
+    `@alga-psa/event-bus/publishers` mock so the new action tests do not touch Redis.
