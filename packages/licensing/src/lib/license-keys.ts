@@ -21,9 +21,11 @@ w+XSD+4BU0TGN1T0O/xc6IpIjnnxZ+FIDbgMjUP2VO1FMly5BDLsMOejKA==
 -----END PUBLIC KEY-----`,
 
   /**
-   * v1-test: throwaway test keypair committed to the repo.
-   * ONLY for automated tests — do not issue real licenses with this kid.
-   * Private key: packages/licensing/src/lib/__test-fixtures__/v1-test.private.pem
+   * v1-test: throwaway test keypair. ONLY for automated tests — do not issue
+   * real licenses with this kid. The private key is intentionally NOT committed
+   * (a PEM private key trips secret scanners); the fixture tokens in
+   * verify-license.test.ts are pre-signed with it. To regenerate fixtures, mint
+   * a fresh ES256 keypair, replace this public key, and re-sign the test tokens.
    */
   'v1-test': `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEv1wbPfZJVePUOzgtwSOaKN5dWDWX
