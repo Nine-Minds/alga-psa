@@ -98,6 +98,11 @@ flip `implemented:true`, repeat.
 - Verification:
   - `npx vitest run ../packages/clients/src/models/interactions.transaction.test.ts ../packages/clients/src/actions/interactionCreateHelper.test.ts` from `server/` passed 6 tests.
   - `npm -w @alga-psa/clients run typecheck` passed.
+- Implemented F014:
+  - Added `packages/clients/src/actions/onlineMeetingActions.ts` with `getOnlineMeetingForInteraction` under `withAuth`, delegating to `OnlineMeetingModel.getByInteractionId(interactionId, tenant)`.
+  - Exported the action from `packages/clients/src/actions/index.ts`.
+  - Corrected T037's description: it was assigned to F014 but described cancelled refresh/list-pending behavior already covered by T014; it now describes the F014 action contract.
+  - Added `packages/clients/src/actions/onlineMeetingActions.test.ts` covering tenant-scoped lookup, absent rows, and missing id validation.
 
 ## 2026-06-01 implementation notes
 - Completed F001-F006 in `server/migrations/20260601120000_create_online_meetings.cjs`: added CE/core

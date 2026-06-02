@@ -35,7 +35,7 @@
   { "id": "T034", "implemented": false, "featureIds": ["F024"], "description": "approve still writes appointment_requests.online_meeting_* columns." },
   { "id": "T035", "implemented": false, "featureIds": ["F025"], "description": "Reschedule updates the calendar event via provider_event_id and updates online_meetings + interaction start/end." },
   { "id": "T036", "implemented": false, "featureIds": ["F026"], "description": "Declining/cancelling an appointment sets online_meetings.status='cancelled'." },
-  { "id": "T037", "implemented": false, "featureIds": ["F014"], "description": "listPendingRecordings/refresh ignores rows with status='cancelled'." },
+  { "id": "T037", "implemented": true, "featureIds": ["F014"], "description": "getOnlineMeetingForInteraction returns the meeting for an interaction scoped to the authenticated tenant, returns null when absent, and rejects missing interaction ids before querying." },
   { "id": "T038", "implemented": false, "featureIds": ["F027"], "description": "A row WITH provider_event_id updates/deletes via the events endpoint." },
   { "id": "T039", "implemented": false, "featureIds": ["F027"], "description": "A legacy row WITHOUT provider_event_id (online_meeting_id only) uses the standalone onlineMeeting handling / warning path." },
   { "id": "T040", "implemented": false, "featureIds": ["F028"], "description": "No Graph create/update/delete call executes inside an open DB transaction (reschedule call is outside withTransaction)." },
