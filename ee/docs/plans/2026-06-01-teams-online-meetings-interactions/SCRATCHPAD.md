@@ -327,3 +327,8 @@ flip `implemented:true`, repeat.
 - Added artifact buttons to `AppointmentsPage`, `AppointmentRequestDetailsPage`, and `EntryPopup`. Transcript buttons use `/api/documents/{documentId}/download`; recording buttons use `/api/online-meetings/recordings/{artifactId}` with `?portal=true` for portal surfaces so the proxy enforces portal visibility.
 - Stable ids added for artifact actions (`client-portal-appointment-artifact-*`, `entry-popup-online-meeting-artifact-*`), and all new labels use `t(...)` keys with defaults.
 - Verification: `npx vitest run ../packages/client-portal/src/components/appointments/onlineMeetingArtifacts.contract.test.ts ../packages/scheduling/src/components/schedule/EntryPopup.onlineMeetingArtifacts.contract.test.ts` from `server/`; `npm -w @alga-psa/client-portal run typecheck`; `npm -w @alga-psa/scheduling run typecheck`.
+
+## 2026-06-01 - F048 / T071
+- Added EE migration `ee/server/migrations/20260601120200_add_online_meeting_capture_settings_to_teams_integrations.cjs`.
+- Migration is idempotent and skips cleanly if `teams_integrations` is absent. It adds `default_meeting_organizer_object_id` as nullable text, plus `download_recordings` and `expose_recordings_in_portal` as non-null booleans defaulting to false; rollback drops those columns in reverse order if present.
+- Verification: `npx vitest run src/test/unit/migrations/teamsIntegrationCaptureSettingsMigration.test.ts` from `server/`.
