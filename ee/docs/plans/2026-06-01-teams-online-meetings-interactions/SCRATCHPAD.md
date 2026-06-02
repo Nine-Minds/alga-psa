@@ -87,6 +87,19 @@ flip `implemented:true`, repeat.
 - Migrations: `npm run migrate`.
 
 ## 2026-06-01 implementation notes
+- Implemented F012/F013:
+  - `InteractionModel.addInteraction` and `getById` now accept an optional `Knex`/transaction and use it for both the insert and follow-up read; the default path still uses `createTenantKnex(tenantId)`.
+  - Added `packages/clients/src/actions/interactionCreateHelper.ts` as the shared interaction creation path. It centralizes user/client/contact validation, default interaction status resolution, contact -> client resolution, `INTERACTION_LOGGED`, `INTERACTION_CREATED`, and cache revalidation.
+  - `addInteraction` now uses the helper inside its transaction but defers the helper-provided side effects until after `withTransaction` returns, preserving post-commit event/revalidate behavior.
+  - `getInteractionById` now passes its active transaction into `InteractionModel.getById`.
+- Implemented T017-T022 with focused unit tests:
+  - `packages/clients/src/models/interactions.transaction.test.ts` covers trx-backed insertion and no-trx back-compat.
+  - `packages/clients/src/actions/interactionCreateHelper.test.ts` covers default status, contact-client resolution/failure, event publishing, and revalidation.
+- Verification:
+  - `npx vitest run ../packages/clients/src/models/interactions.transaction.test.ts ../packages/clients/src/actions/interactionCreateHelper.test.ts` from `server/` passed 6 tests.
+  - `npm -w @alga-psa/clients run typecheck` passed.
+
+## 2026-06-01 implementation notes
 - Completed F001-F006 in `server/migrations/20260601120000_create_online_meetings.cjs`: added CE/core
   `online_meetings` and `online_meeting_artifacts` with tenant-first PKs, PRD status/artifact type
   checks, provider-meeting uniqueness, tenant-leading lookup indexes, Citus `transaction:false`

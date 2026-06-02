@@ -1,5 +1,17 @@
 import type { IInteraction, IInteractionType } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import type { Knex } from 'knex';
+
+type DbOrTransaction = Knex | Knex.Transaction;
+
+async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {
+  if (trx) {
+    return { db: trx, tenant: tenantId };
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(tenantId);
+  return { db, tenant: tenant ?? tenantId };
+}
 
 class InteractionModel {
   static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
@@ -222,8 +234,12 @@ class InteractionModel {
     }
   }
 
-  static async addInteraction(interactionData: Omit<IInteraction, 'interaction_id'>, tenantId: string): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
+  static async addInteraction(
+    interactionData: Omit<IInteraction, 'interaction_id'>,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const [newInteraction] = await db('interactions')
@@ -233,7 +249,7 @@ class InteractionModel {
         })
         .returning('*');
 
-      const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId);
+      const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId, db);
       if (!fullInteraction) {
         throw new Error('Failed to fetch created interaction');
       }
@@ -286,8 +302,12 @@ class InteractionModel {
     }
   }
 
-  static async getById(interactionId: string, tenantId: string): Promise<IInteraction | null> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
+  static async getById(
+    interactionId: string,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction | null> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const result = await db('interactions')

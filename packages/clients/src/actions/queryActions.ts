@@ -565,7 +565,7 @@ export const getInteractionById = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getById(interactionId, tenant);
+      return await InteractionModel.getById(interactionId, tenant, trx);
     });
     if (!interaction) {
       throw new Error('Interaction not found');

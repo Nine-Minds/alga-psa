@@ -8,62 +8,12 @@ import { revalidatePath } from 'next/cache'
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
+import {
+  createInteractionWithSideEffects,
+  publishInteractionSearchEvent,
+} from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
-
-// Helper function to get default status ID for interactions
-async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<string> {
-  const defaultStatus = await trx('statuses')
-    .where({
-      tenant,
-      is_default: true,
-      status_type: 'interaction'
-    })
-    .first();
-
-  if (!defaultStatus) {
-    throw new Error('No default status found for interactions');
-  }
-
-  return defaultStatus.status_id;
-}
-
-function maybeUserActor(user: any) {
-  const userId = user?.user_id;
-  if (typeof userId !== 'string' || !userId) return undefined;
-  return { actorType: 'USER' as const, actorUserId: userId };
-}
-
-async function publishInteractionSearchEvent(
-  eventType: 'INTERACTION_CREATED' | 'INTERACTION_UPDATED' | 'INTERACTION_DELETED',
-  tenant: string,
-  interactionId: string,
-  options: {
-    clientId?: string | null;
-    contactId?: string | null;
-    userId?: string | null;
-    changedFields?: string[];
-  } = {},
-): Promise<void> {
-  try {
-    await publishEvent({
-      eventType,
-      payload: {
-        tenantId: tenant,
-        interactionId,
-        clientId: options.clientId ?? undefined,
-        contactId: options.contactId ?? undefined,
-        userId: options.userId ?? undefined,
-        changedFields: options.changedFields,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (eventError) {
-    console.error(`[interactionActions] Failed to publish ${eventType} search event:`, eventError);
-  }
-}
 
 export const addInteraction = withAuth(async (
   user,
@@ -83,71 +33,20 @@ export const addInteraction = withAuth(async (
       throw new Error('Either client_id or contact_name_id must be provided');
     }
 
+    let publishSideEffects: (() => Promise<void>) | undefined;
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Set default status if none provided
-      const status_id = interactionData.status_id || await getDefaultInteractionStatusId(trx, tenant);
-
-      let resolvedClientId = interactionData.client_id;
-      if (!resolvedClientId && interactionData.contact_name_id) {
-        const contact = await trx('contacts')
-          .where({ tenant, contact_name_id: interactionData.contact_name_id })
-          .select('client_id')
-          .first();
-        resolvedClientId = contact?.client_id ?? null;
-      }
-
-      if (!resolvedClientId) {
-        throw new Error('Interactions must be linked to a client');
-      }
-
-      return await InteractionModel.addInteraction({
-        ...interactionData,
-        client_id: resolvedClientId,
-        status_id,
+      const result = await createInteractionWithSideEffects({
         tenant,
-        interaction_date: new Date(),
-      }, tenant);
+        trx,
+        user,
+        interactionData,
+      });
+      publishSideEffects = result.publishSideEffects;
+      return result.interaction;
     });
 
     console.log('New interaction created:', newInteraction);
-
-    const occurredAt =
-      newInteraction.interaction_date instanceof Date
-        ? newInteraction.interaction_date.toISOString()
-        : new Date(newInteraction.interaction_date as any).toISOString();
-
-    const interactionType =
-      typeof (newInteraction as any).type_name === 'string' && (newInteraction as any).type_name
-        ? String((newInteraction as any).type_name)
-        : 'interaction';
-
-    await publishWorkflowEvent({
-      eventType: 'INTERACTION_LOGGED',
-      payload: buildInteractionLoggedPayload({
-        interactionId: newInteraction.interaction_id,
-        clientId: newInteraction.client_id as string,
-        ...(newInteraction.contact_name_id ? { contactId: newInteraction.contact_name_id } : {}),
-        interactionType,
-        interactionOccurredAt: occurredAt,
-        loggedByUserId: newInteraction.user_id,
-        ...(typeof newInteraction.title === 'string' && newInteraction.title ? { subject: newInteraction.title } : {}),
-        ...(typeof (newInteraction as any).status_name === 'string' && (newInteraction as any).status_name
-          ? { outcome: String((newInteraction as any).status_name) }
-          : {}),
-      }),
-      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
-      idempotencyKey: `interaction_logged:${newInteraction.interaction_id}:${occurredAt}`,
-    });
-
-    await publishInteractionSearchEvent('INTERACTION_CREATED', tenant, newInteraction.interaction_id, {
-      clientId: newInteraction.client_id,
-      contactId: newInteraction.contact_name_id,
-      userId: newInteraction.user_id,
-      changedFields: ['title', 'notes', 'client_id', 'contact_name_id', 'ticket_id'],
-    });
-
-    revalidatePath('/msp/contacts/[id]', 'page')
-    revalidatePath('/msp/clients/[id]', 'page')
+    await publishSideEffects?.();
     return newInteraction;
   } catch (error) {
     console.error('Error adding interaction:', error)
