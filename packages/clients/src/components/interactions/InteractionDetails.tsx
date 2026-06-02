@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { IInteraction, ITicket, IWorkItem, WorkItemType } from '@alga-psa/types';
-import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
+import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2, Download, ExternalLink, RefreshCw } from 'lucide-react';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -17,13 +17,15 @@ import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
-import { deleteInteraction } from '@alga-psa/clients/actions';
+import { deleteInteraction, refreshMeetingRecordings } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
+import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -45,9 +47,45 @@ const formatDuration = (totalMinutes: number): string => {
   }
 };
 
+const getOnlineMeetingStatusKey = (status?: string): string => {
+  switch (status) {
+    case 'no_recording':
+      return 'noRecording';
+    case 'recording_ready':
+      return 'recordingReady';
+    case 'cancelled':
+      return 'cancelled';
+    case 'failed':
+      return 'failed';
+    case 'scheduled':
+    case 'ended':
+    case 'recording_pending':
+    default:
+      return 'recordingPending';
+  }
+};
+
+const getOnlineMeetingStatusFallback = (status?: string): string => {
+  switch (status) {
+    case 'no_recording':
+      return 'No recording';
+    case 'recording_ready':
+      return 'Recording ready';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'failed':
+      return 'Recording unavailable';
+    case 'scheduled':
+    case 'ended':
+    case 'recording_pending':
+    default:
+      return 'Recording pending';
+  }
+};
 
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
+  const { t } = useTranslation('msp/clients');
   const { openDrawer, goBack, closeDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
   const { launchTimeEntry, renderAgentSchedule } = useSchedulingCallbacks();
@@ -55,6 +93,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRefreshingRecordings, setIsRefreshingRecordings] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
 
   // UI Reflection System Integration
@@ -245,6 +284,32 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
   };
 
+  const handleRefreshMeetingRecordings = async () => {
+    if (!interaction.online_meeting?.meeting_id) {
+      return;
+    }
+
+    setIsRefreshingRecordings(true);
+    try {
+      const onlineMeeting = await refreshMeetingRecordings(interaction.online_meeting.meeting_id);
+      const updatedInteraction = {
+        ...interaction,
+        online_meeting: onlineMeeting,
+      };
+      setInteraction(updatedInteraction);
+      onInteractionUpdated?.(updatedInteraction);
+    } catch (error) {
+      handleError(error, t('interactions.onlineMeeting.refreshFailed', {
+        defaultValue: 'Failed to refresh recordings. Please try again.',
+      }));
+    } finally {
+      setIsRefreshingRecordings(false);
+    }
+  };
+
+  const onlineMeeting = interaction.online_meeting;
+  const onlineMeetingStatusKey = getOnlineMeetingStatusKey(onlineMeeting?.status);
+
   return (
     <ReflectionContainer id="interaction-details" label="Interaction Details">
       <div className="p-6 relative bg-white shadow rounded-lg">
@@ -309,6 +374,101 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 }] : [];
               })()} />
             </div>
+          </div>
+        )}
+
+        {onlineMeeting && (
+          <div
+            id="interaction-online-meeting-section"
+            className="space-y-4 rounded-md border border-gray-200 p-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <InteractionIcon icon={interaction.icon || 'video'} typeName={interaction.type_name || 'Online Meeting'} />
+                <div className="min-w-0">
+                  <Text size="2" weight="bold">
+                    {t('interactions.onlineMeeting.sectionTitle', { defaultValue: 'Online Meeting' })}
+                  </Text>
+                  <div className="text-sm text-gray-600">
+                    {t(`interactions.onlineMeeting.status.${onlineMeetingStatusKey}`, {
+                      defaultValue: getOnlineMeetingStatusFallback(onlineMeeting.status),
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  id="online-meeting-join-button"
+                  asChild
+                  variant="outline"
+                  size="sm"
+                >
+                  <a href={onlineMeeting.join_url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
+                  </a>
+                </Button>
+                <Button
+                  id="online-meeting-refresh-recordings-button"
+                  onClick={handleRefreshMeetingRecordings}
+                  disabled={isRefreshingRecordings}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingRecordings ? 'animate-spin' : ''}`} />
+                  {t('interactions.onlineMeeting.refreshRecordings', { defaultValue: 'Refresh recordings' })}
+                </Button>
+              </div>
+            </div>
+
+            {onlineMeeting.artifacts?.length > 0 ? (
+              <div className="space-y-2">
+                {onlineMeeting.artifacts.map((artifact) => {
+                  const createdAt = artifact.created_date_time
+                    ? new Date(artifact.created_date_time).toLocaleString()
+                    : null;
+                  const artifactLabel = artifact.artifact_type === 'transcript'
+                    ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
+                    : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
+                  const artifactUrl = artifact.artifact_type === 'transcript' && artifact.document_id
+                    ? `/api/documents/${encodeURIComponent(artifact.document_id)}/download`
+                    : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
+
+                  return (
+                    <div
+                      key={artifact.artifact_id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-2 text-sm">
+                        {artifact.artifact_type === 'transcript' ? (
+                          <FileText className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <Download className="h-4 w-4 text-gray-500" />
+                        )}
+                        <span className="font-medium">{artifactLabel}</span>
+                        {createdAt && <span className="text-gray-500">{createdAt}</span>}
+                      </div>
+                      <Button
+                        id={`online-meeting-${artifact.artifact_type}-${artifact.artifact_id}`}
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <a href={artifactUrl} target="_blank" rel="noopener noreferrer">
+                          {artifactLabel}
+                        </a>
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <Text size="2" className="text-gray-600">
+                {t('interactions.onlineMeeting.noArtifacts', {
+                  defaultValue: 'No recordings or transcripts are available yet.',
+                })}
+              </Text>
+            )}
           </div>
         )}
 

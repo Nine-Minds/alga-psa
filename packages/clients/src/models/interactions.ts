@@ -1,6 +1,7 @@
 import type { IInteraction, IInteractionType } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import OnlineMeetingModel from './onlineMeeting';
 
 type DbOrTransaction = Knex | Knex.Transaction;
 
@@ -14,6 +15,26 @@ async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db:
 }
 
 class InteractionModel {
+  private static async withOnlineMeeting(
+    interaction: IInteraction,
+    tenantId: string,
+  ): Promise<IInteraction> {
+    const onlineMeeting = await OnlineMeetingModel.getByInteractionId(interaction.interaction_id, tenantId);
+    return {
+      ...interaction,
+      online_meeting: onlineMeeting,
+    };
+  }
+
+  private static async withOnlineMeetings(
+    interactions: IInteraction[],
+    tenantId: string,
+  ): Promise<IInteraction[]> {
+    return await Promise.all(
+      interactions.map((interaction) => this.withOnlineMeeting(interaction, tenantId)),
+    );
+  }
+
   static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
 
@@ -75,10 +96,12 @@ class InteractionModel {
 
       const result = await query;
 
-      return result.map((row): IInteraction => ({
+      const interactions = result.map((row): IInteraction => ({
         ...row,
         type_name: row.type_name?.toLowerCase() || null,
       }));
+
+      return await this.withOnlineMeetings(interactions, tenant ?? tenantId);
     } catch (error) {
       console.error(`Error fetching interactions for ${entityType}:`, error);
       throw error;
@@ -352,10 +375,10 @@ class InteractionModel {
         return null;
       }
 
-      return {
+      return await this.withOnlineMeeting({
         ...result,
         type_name: result.type_name?.toLowerCase() || null,
-      };
+      }, tenant);
     } catch (error) {
       console.error('Error fetching interaction by ID:', error);
       throw error;

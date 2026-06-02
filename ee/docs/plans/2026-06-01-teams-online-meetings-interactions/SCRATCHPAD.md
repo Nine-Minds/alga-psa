@@ -313,3 +313,10 @@ flip `implemented:true`, repeat.
   - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "Schedule Teams Meeting"` from
     `server/` passed twice (4 tests, 44 skipped). The second run includes a package-level
     `@alga-psa/event-bus/publishers` mock so the new action tests do not touch Redis.
+
+## 2026-06-01 - F043-F045 / T066-T068
+- Implemented interaction read enrichment: `InteractionModel.getById` and `getForEntity` attach `online_meeting` by calling `OnlineMeetingModel.getByInteractionId`, which returns artifacts newest-first via the model helper. Kept the implementation scoped to interaction reads instead of duplicating artifact aggregation SQL.
+- Added the MSP `InteractionDetails` online meeting section with Join, status, Refresh recordings, transcript document links, and recording proxy links. Artifact links use internal routes only: `/api/documents/{documentId}/download` for transcripts and `/api/online-meetings/recordings/{artifactId}` for recordings.
+- Fixed `InteractionIcon` fallback so `online meeting` maps to the `video` icon before the generic meeting/users fallback.
+- Added source contract tests for model enrichment and UI wiring: `packages/clients/src/models/interactions.onlineMeeting.contract.test.ts` and `packages/clients/src/components/interactions/InteractionDetails.onlineMeeting.contract.test.ts`.
+- Verification: `npx vitest run ../packages/clients/src/models/interactions.onlineMeeting.contract.test.ts ../packages/clients/src/components/interactions/InteractionDetails.onlineMeeting.contract.test.ts` from `server/`; `npm -w @alga-psa/clients run typecheck`; `npm -w @alga-psa/ui run typecheck`.
