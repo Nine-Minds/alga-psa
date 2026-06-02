@@ -32,30 +32,27 @@ test('runAppChannelUpdate applies channel update and persists history without OS
     stateFile,
     releaseSelectionFile,
     updateHistoryFile,
-    channelMetadataOverride: {
-      releaseVersion: '2.0.0-nightly.1',
-      repoBranch: 'main'
-    },
     releaseManifestOverride: {
-      app: {
-        version: '2.0.0',
-        releaseBranch: 'main',
-        valuesProfile: 'test-profile',
-        images: {
-          algaCore: 'core1234',
-          workflowWorker: 'worker1234',
-          emailService: 'email1234',
-          temporalWorker: 'temporal1234'
-        }
+      schema: 'alga.appliance.release/v1',
+      version: '2.0.0-nightly.1',
+      valuesProfile: 'test-profile',
+      images: {
+        algaCore: 'core1234',
+        workflowWorker: 'worker1234',
+        emailService: 'email1234',
+        temporalWorker: 'temporal1234'
+      },
+      controlPlane: 'cp1234',
+      config: { repository: 'ghcr.io/nine-minds/alga-appliance-config', tag: '2.0.0-nightly.1', digest: 'sha256:feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface' },
+      charts: { sebastian: '0.0.1' },
+      profileValues: {
+        'alga-core.test-profile.yaml': coreYaml,
+        'pgbouncer.test-profile.yaml': valueYaml,
+        'temporal.test-profile.yaml': valueYaml,
+        'workflow-worker.test-profile.yaml': valueYaml,
+        'email-service.test-profile.yaml': valueYaml,
+        'temporal-worker.test-profile.yaml': valueYaml
       }
-    },
-    profileValuesOverride: {
-      'alga-core.test-profile.yaml': coreYaml,
-      'pgbouncer.test-profile.yaml': valueYaml,
-      'temporal.test-profile.yaml': valueYaml,
-      'workflow-worker.test-profile.yaml': valueYaml,
-      'email-service.test-profile.yaml': valueYaml,
-      'temporal-worker.test-profile.yaml': valueYaml
     },
     tokenFile: path.join(tmp, 'setup-token'),
     fluxSourceApplyCommand: `cat > ${fluxManifestPath}`,
@@ -84,5 +81,5 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   assert.equal(history.history[0].ok, true);
 
   const fluxManifest = fs.readFileSync(fluxManifestPath, 'utf8');
-  assert.match(fluxManifest, /kind: GitRepository/);
+  assert.match(fluxManifest, /kind: OCIRepository/);
 });

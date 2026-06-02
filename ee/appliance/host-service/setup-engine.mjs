@@ -8,10 +8,20 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
-const DEFAULT_SETUP_FILE = '/etc/alga-appliance/setup-inputs.json';
-const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
+// Path defaults honor the ALGA_APPLIANCE_* environment the control plane runs
+// with, falling back to the bare-host locations. This keeps the setup workflow
+// aligned with the pod's mounted paths (token secret, in-cluster kubeconfig,
+// hostPath state) instead of hardcoded bare-host defaults.
+const DEFAULT_SETUP_FILE = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
-const DEFAULT_RELEASES_DIR = '/opt/alga-appliance/releases';
+// Registry-metadata source of truth: the appliance resolves a channel to an
+// immutable release manifest published as an OCI artifact in this registry/repo.
+const DEFAULT_REGISTRY_HOST = process.env.ALGA_APPLIANCE_REGISTRY_HOST || 'ghcr.io';
+const DEFAULT_RELEASE_REPOSITORY = process.env.ALGA_APPLIANCE_RELEASE_REPOSITORY || 'nine-minds/alga-appliance-release';
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
+const DEFAULT_TOKEN_FILE = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 
 function isValidIpv4(value) {
   const parts = value.split('.');
@@ -27,54 +37,6 @@ function isValidIpv4(value) {
     const n = Number(part);
     return n >= 0 && n <= 255;
   });
-}
-
-function normalizeGithubRepoUrl(repoUrl) {
-  if (/^https:\/\/github\.com\//i.test(repoUrl)) {
-    return repoUrl.replace(/\.git$/i, '');
-  }
-
-  const scpMatch = repoUrl.match(/^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/i);
-  if (scpMatch) {
-    return `https://github.com/${scpMatch[1]}/${scpMatch[2]}`;
-  }
-
-  throw new Error('Repo URL must target github.com via HTTPS or git@github.com:owner/repo.git format.');
-}
-
-function extractRepoParts(normalizedRepoUrl) {
-  const match = normalizedRepoUrl.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/i);
-  if (!match) {
-    throw new Error('Unable to parse GitHub owner/repo from repo URL.');
-  }
-
-  return { owner: match[1], repo: match[2] };
-}
-
-function readChannelRelease(channelData) {
-  const releaseVersion = (channelData.releaseVersion || channelData.release || '').trim();
-  const repoBranch = (channelData.repoBranch || channelData.branch || '').trim();
-
-  if (!releaseVersion) {
-    throw new Error('Channel metadata is missing releaseVersion.');
-  }
-
-  return {
-    releaseVersion,
-    repoBranch: repoBranch || 'main'
-  };
-}
-
-function applyRepoBranchOverride(releaseSelection, inputs) {
-  const requestedBranch = (inputs.repoBranch || '').trim();
-  if (!requestedBranch) {
-    return releaseSelection;
-  }
-
-  return {
-    ...releaseSelection,
-    repoBranch: requestedBranch
-  };
 }
 
 function readSystemResolvers(resolvConfPath = DEFAULT_RESOLV_CONF) {
@@ -111,28 +73,105 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function httpsRequest(url, timeoutMs = 8000, lookupServers = []) {
-  return new Promise((resolve, reject) => {
-    const requestOptions = { method: 'GET', timeout: timeoutMs };
-    if (lookupServers && lookupServers.length > 0) {
-      const resolver = new dns.promises.Resolver();
-      resolver.setServers(lookupServers);
-      requestOptions.lookup = async (hostname, _options, callback) => {
-        try {
-          const addresses = await resolver.resolve4(hostname);
-          callback(null, addresses[0], 4);
-        } catch (error) {
-          callback(error);
+async function resolveAddressesWithServers(servers, hostname, family = 0) {
+  const resolver = new dns.promises.Resolver();
+  resolver.setServers(servers);
+
+  const records = [];
+  if (family !== 6) {
+    try {
+      for (const address of await resolver.resolve4(hostname)) {
+        records.push({ address, family: 4 });
+      }
+    } catch {
+      // No IPv4 records (or query error); fall through to IPv6 before giving up.
+    }
+  }
+  if (family !== 4 && records.length === 0) {
+    try {
+      for (const address of await resolver.resolve6(hostname)) {
+        records.push({ address, family: 6 });
+      }
+    } catch {
+      // Surfaced by the empty-result check below.
+    }
+  }
+
+  if (records.length === 0) {
+    throw new Error(`No A or AAAA records resolved for ${hostname} via DNS server(s) ${servers.join(', ')}`);
+  }
+
+  return records;
+}
+
+// Custom DNS lookup for https.request that resolves against explicit servers.
+// Guards against empty results (which previously yielded "Invalid IP address:
+// undefined") and honors Node's all/family lookup options.
+function resolverLookup(servers) {
+  return (hostname, options, callback) => {
+    const done = typeof options === 'function' ? options : callback;
+    const opts = typeof options === 'object' && options ? options : {};
+    resolveAddressesWithServers(servers, hostname, opts.family || 0)
+      .then((records) => {
+        if (opts.all) {
+          done(null, records);
+        } else {
+          done(null, records[0].address, records[0].family);
         }
-      };
+      })
+      .catch((error) => done(error));
+  };
+}
+
+function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = {}) {
+  return new Promise((resolve, reject) => {
+    const requestOptions = {
+      method: extra.method || 'GET',
+      timeout: timeoutMs,
+      headers: extra.headers || {}
+    };
+    if (lookupServers && lookupServers.length > 0) {
+      requestOptions.lookup = resolverLookup(lookupServers);
     }
 
     const req = https.request(url, requestOptions, (res) => {
+      const status = res.statusCode || 0;
+      // Opt-in redirect following (OCI blob fetches 307 to a CDN). On a
+      // cross-host redirect, drop Authorization — the redirect target is a
+      // pre-signed URL and forwarding a bearer to a third party is unsafe.
+      const redirectsLeft = extra.followRedirects ? (extra.maxRedirects ?? 5) : 0;
+      if (status >= 300 && status < 400 && res.headers.location && redirectsLeft > 0) {
+        res.resume();
+        let nextUrl;
+        try {
+          nextUrl = new URL(res.headers.location, url).toString();
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        const nextHeaders = { ...(extra.headers || {}) };
+        try {
+          if (new URL(nextUrl).host !== new URL(url).host) {
+            delete nextHeaders.Authorization;
+            delete nextHeaders.authorization;
+          }
+        } catch {
+          // keep headers if URL parsing fails; the next request will surface errors
+        }
+        httpsRequest(nextUrl, timeoutMs, lookupServers, {
+          ...extra,
+          headers: nextHeaders,
+          maxRedirects: redirectsLeft - 1
+        }).then(resolve, reject);
+        return;
+      }
+
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => {
         resolve({
-          statusCode: res.statusCode || 0,
+          statusCode: status,
+          headers: res.headers || {},
           body: Buffer.concat(chunks).toString('utf8')
         });
       });
@@ -188,21 +227,206 @@ function ensureFluxCli(options = {}) {
   return { ok: true, installed: true };
 }
 
-function rawGithubUrl(repo, branch, filePath) {
-  return `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/${filePath}`;
+// --- OCI registry client -----------------------------------------------------
+// Release metadata is pulled from an OCI registry (ghcr) instead of git. The
+// release manifest is the artifact's config blob; everything it references
+// (chart versions, the flux base bundle digest, image tags) is content-pinned.
+
+const OCI_MANIFEST_ACCEPT = [
+  'application/vnd.oci.image.manifest.v1+json',
+  'application/vnd.oci.image.index.v1+json',
+  'application/vnd.docker.distribution.manifest.v2+json'
+].join(', ');
+
+const RELEASE_MANIFEST_SCHEMA = 'alga.appliance.release/v1';
+
+// ghcr and Docker-style registries hand out an anonymous pull token for public
+// repositories via the token endpoint advertised in the 401 challenge.
+async function fetchRegistryPullToken(registryHost, repository, timeoutMs, lookupServers = []) {
+  const scope = encodeURIComponent(`repository:${repository}:pull`);
+  const url = `https://${registryHost}/token?service=${encodeURIComponent(registryHost)}&scope=${scope}`;
+  const response = await httpsRequest(url, timeoutMs, lookupServers, { headers: { Accept: 'application/json' } });
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`Registry token request to ${registryHost} returned ${response.statusCode}`);
+  }
+  let token;
+  try {
+    const parsed = JSON.parse(response.body);
+    token = parsed.token || parsed.access_token;
+  } catch (error) {
+    throw new Error(`Registry token response was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!token) {
+    throw new Error('Registry token response did not include a token.');
+  }
+  return token;
 }
 
-async function fetchGithubText(repo, branch, filePath, timeoutMs, lookupServers = []) {
-  const url = rawGithubUrl(repo, branch, filePath);
-  const response = await httpsRequest(url, timeoutMs, lookupServers);
-  if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw new Error(`GET ${url} returned ${response.statusCode}`);
+function ociV2Url(registryHost, repository, kind, reference) {
+  return `https://${registryHost}/v2/${repository}/${kind}/${reference}`;
+}
+
+// Resolve an OCI artifact reference (tag or digest) to its config blob parsed as
+// JSON. The blob fetch follows the registry's redirect to its CDN.
+async function fetchOciConfigJson(registryHost, repository, reference, timeoutMs, lookupServers = []) {
+  const token = await fetchRegistryPullToken(registryHost, repository, timeoutMs, lookupServers);
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  const manifestUrl = ociV2Url(registryHost, repository, 'manifests', reference);
+  const manifestResponse = await httpsRequest(manifestUrl, timeoutMs, lookupServers, {
+    headers: { ...authHeaders, Accept: OCI_MANIFEST_ACCEPT }
+  });
+  if (manifestResponse.statusCode < 200 || manifestResponse.statusCode >= 300) {
+    throw new Error(`GET ${manifestUrl} returned ${manifestResponse.statusCode}`);
   }
-  return response.body;
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestResponse.body);
+  } catch (error) {
+    throw new Error(`OCI manifest for ${repository}:${reference} was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const configDigest = manifest?.config?.digest;
+  if (!configDigest) {
+    throw new Error(`OCI manifest for ${repository}:${reference} has no config descriptor.`);
+  }
+  const manifestDigest = manifestResponse.headers['docker-content-digest'] || null;
+
+  const blobUrl = ociV2Url(registryHost, repository, 'blobs', configDigest);
+  const blobResponse = await httpsRequest(blobUrl, timeoutMs, lookupServers, {
+    headers: { ...authHeaders, Accept: 'application/json' },
+    followRedirects: true
+  });
+  if (blobResponse.statusCode < 200 || blobResponse.statusCode >= 300) {
+    throw new Error(`GET ${blobUrl} returned ${blobResponse.statusCode}`);
+  }
+  let config;
+  try {
+    config = JSON.parse(blobResponse.body);
+  } catch (error) {
+    throw new Error(`OCI config blob ${configDigest} was not JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return { config, configDigest, manifestDigest };
+}
+
+// Validate + normalize a release manifest into the shape the engine consumes.
+export function validateReleaseManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object') {
+    throw new Error('Release manifest is empty or not an object.');
+  }
+  if (manifest.schema && manifest.schema !== RELEASE_MANIFEST_SCHEMA) {
+    throw new Error(`Unsupported release manifest schema "${manifest.schema}" (expected ${RELEASE_MANIFEST_SCHEMA}).`);
+  }
+  const version = String(manifest.version || '').trim();
+  if (!version) {
+    throw new Error('Release manifest is missing "version".');
+  }
+  const images = manifest.images && typeof manifest.images === 'object' ? manifest.images : null;
+  if (!images || !String(images.algaCore || '').trim()) {
+    throw new Error('Release manifest is missing images.algaCore.');
+  }
+  const config = manifest.config && typeof manifest.config === 'object' ? manifest.config : null;
+  if (!config || !String(config.repository || '').trim() || !String(config.digest || '').trim()) {
+    throw new Error('Release manifest is missing config.repository/config.digest (the flux base OCI bundle).');
+  }
+  return {
+    schema: RELEASE_MANIFEST_SCHEMA,
+    version,
+    valuesProfile: String(manifest.valuesProfile || 'single-node').trim() || 'single-node',
+    images,
+    controlPlane: manifest.controlPlane ? String(manifest.controlPlane).trim() : null,
+    config: {
+      repository: String(config.repository).trim(),
+      tag: config.tag ? String(config.tag).trim() : version,
+      digest: String(config.digest).trim()
+    },
+    charts: manifest.charts && typeof manifest.charts === 'object' ? manifest.charts : {},
+    // Per-service profile values (e.g. "alga-core.single-node.yaml" -> yaml text)
+    // are carried in the manifest so the host can render the runtime-values
+    // ConfigMaps without fetching anything from git.
+    profileValues: manifest.profileValues && typeof manifest.profileValues === 'object' ? manifest.profileValues : {}
+  };
+}
+
+// Resolve a channel (or an explicit version/digest reference) to a validated,
+// immutable release manifest pulled from the OCI registry. No git involved.
+export async function resolveReleaseManifest(reference, options = {}) {
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const repository = options.releaseRepository || DEFAULT_RELEASE_REPOSITORY;
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const lookupServers = options.lookupServers || [];
+
+  if (options.releaseManifestOverride) {
+    return {
+      manifest: validateReleaseManifest(options.releaseManifestOverride),
+      registryHost,
+      repository,
+      reference,
+      manifestDigest: null
+    };
+  }
+
+  const { config, manifestDigest } = await fetchOciConfigJson(registryHost, repository, reference, timeoutMs, lookupServers);
+  return {
+    manifest: validateReleaseManifest(config),
+    registryHost,
+    repository,
+    reference,
+    manifestDigest
+  };
 }
 
 function yamlString(value) {
   return JSON.stringify(String(value));
+}
+
+function validatePassword(value) {
+  if (value.length < 8) return 'Initial admin password must be at least 8 characters.';
+  if (!/[a-z]/.test(value)) return 'Initial admin password must include a lowercase letter.';
+  if (!/[A-Z]/.test(value)) return 'Initial admin password must include an uppercase letter.';
+  if (!/\d/.test(value)) return 'Initial admin password must include a number.';
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return 'Initial admin password must include a special character.';
+  return null;
+}
+
+function requiredText(raw, label) {
+  const value = String(raw || '').trim();
+  if (!value) {
+    throw new Error(`${label} is required.`);
+  }
+  return value;
+}
+
+function normalizeInitialTenant(raw) {
+  const source = raw.initialTenant && typeof raw.initialTenant === 'object' ? raw.initialTenant : raw;
+  const tenantName = requiredText(source.tenantName ?? source.initialTenantName ?? source.companyName, 'Company name');
+  const adminFirstName = requiredText(source.adminFirstName ?? source.initialAdminFirstName, 'Admin first name');
+  const adminLastName = requiredText(source.adminLastName ?? source.initialAdminLastName, 'Admin last name');
+  const adminEmail = requiredText(source.adminEmail ?? source.initialAdminEmail, 'Admin email').toLowerCase();
+  const adminPassword = String(source.adminPassword ?? source.initialAdminPassword ?? '');
+  const adminPasswordConfirm = source.adminPasswordConfirm ?? source.initialAdminPasswordConfirm;
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
+    throw new Error('Enter a valid admin email address.');
+  }
+  if (adminPasswordConfirm !== undefined && adminPassword !== String(adminPasswordConfirm)) {
+    throw new Error('Initial admin password confirmation does not match.');
+  }
+  const passwordError = validatePassword(adminPassword);
+  if (passwordError) {
+    throw new Error(passwordError);
+  }
+
+  return {
+    tenantName,
+    adminFirstName,
+    adminLastName,
+    adminEmail,
+    adminPassword
+  };
+}
+
+function initialTenantSecretYaml(initialTenant) {
+  return `apiVersion: v1\nkind: Secret\nmetadata:\n  name: appliance-initial-tenant\n  namespace: msp\ntype: Opaque\nstringData:\n  INITIAL_TENANT_NAME: ${yamlString(initialTenant.tenantName)}\n  INITIAL_ADMIN_FIRST_NAME: ${yamlString(initialTenant.adminFirstName)}\n  INITIAL_ADMIN_LAST_NAME: ${yamlString(initialTenant.adminLastName)}\n  INITIAL_ADMIN_EMAIL: ${yamlString(initialTenant.adminEmail)}\n  INITIAL_ADMIN_PASSWORD: ${yamlString(initialTenant.adminPassword)}\n`;
 }
 
 function appUrlFromInput(value) {
@@ -263,21 +487,29 @@ function resolverServersForInputs(inputs, resolvConfPath = DEFAULT_RESOLV_CONF) 
 
 async function dnsLookup(hostname, servers) {
   if (servers && servers.length > 0) {
-    const resolver = new dns.promises.Resolver();
-    resolver.setServers(servers);
-    return resolver.resolve4(hostname);
+    return (await resolveAddressesWithServers(servers, hostname)).map((record) => record.address);
   }
 
   return dns.promises.resolve4(hostname);
 }
 
-export function validateSetupInputs(raw) {
+export function validateSetupInputs(raw, options = {}) {
   const channel = String(raw.channel || 'stable').trim();
   const appHostname = String(raw.appHostname || '').trim();
   const dnsMode = String(raw.dnsMode || 'system').trim();
   const dnsServers = String(raw.dnsServers || '').trim();
-  const repoUrl = String(raw.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git').trim();
-  const repoBranch = String(raw.repoBranch || '').trim();
+  // Optional advanced override: pin to a specific release version or digest
+  // instead of following the channel tag. There is no repoUrl/repoBranch any
+  // more -- release metadata is resolved from the OCI registry by channel.
+  const releaseRef = String(raw.releaseRef || '').trim();
+  const initialTenant = options.requireInitialTenant === false ? null : normalizeInitialTenant(raw);
+
+  // Edition licensing fields (F078)
+  const editionChoice = String(raw.editionChoice || 'ee').trim();
+  if (!['ee', 'ce'].includes(editionChoice)) {
+    throw new Error('Invalid edition choice. Use ee or ce.');
+  }
+  const licenseKey = raw.licenseKey ? String(raw.licenseKey).trim() : null;
 
   if (!['stable', 'nightly'].includes(channel)) {
     throw new Error('Invalid channel. Use stable or nightly.');
@@ -308,8 +540,10 @@ export function validateSetupInputs(raw) {
     appHostname,
     dnsMode,
     dnsServers,
-    repoUrl,
-    repoBranch,
+    releaseRef,
+    initialTenant,
+    editionChoice,
+    licenseKey,
     submittedAt: nowIso()
   };
 }
@@ -344,8 +578,11 @@ function baseState(inputs) {
     setupInputs: {
       channel: inputs.channel,
       dnsMode: inputs.dnsMode,
-      repoUrl: inputs.repoUrl,
-      repoBranch: inputs.repoBranch || 'main'
+      releaseRef: inputs.releaseRef || undefined,
+      initialTenant: inputs.initialTenant ? {
+        tenantName: inputs.initialTenant.tenantName,
+        adminEmail: inputs.initialTenant.adminEmail
+      } : undefined
     }
   };
 }
@@ -354,9 +591,8 @@ export async function runSetupPreflight(inputs, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const resolvConfPath = options.resolvConfPath || DEFAULT_RESOLV_CONF;
   const timeoutMs = Number(options.timeoutMs || 8000);
-  const repoBranch = (inputs.repoBranch || 'main').trim() || 'main';
-  const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const releaseReference = (inputs.releaseRef || inputs.channel || 'stable').trim();
   const proxySet = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy']
     .filter((name) => (process.env[name] || '').trim().length > 0);
 
@@ -377,54 +613,35 @@ export async function runSetupPreflight(inputs, options = {}) {
   }
 
   try {
-    await dnsLookup('raw.githubusercontent.com', servers);
+    await dnsLookup(registryHost, servers);
   } catch (error) {
     const failure = preflightFailure(
       'dns',
-      'resolve-raw-githubusercontent-com',
-      'DNS lookup failed for raw.githubusercontent.com.',
+      'resolve-registry-host',
+      `DNS lookup failed for ${registryHost}.`,
       `Verify DNS resolver reachability and split-horizon policy. ${error instanceof Error ? error.message : String(error)}`
     );
     writeInstallState({ ...state, status: 'preflight-blocked', phase: 'dns', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
-  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repoBranch}/ee/appliance/releases/channels/${inputs.channel}.json`;
-  let channelBody = '';
+  let resolvedRelease;
   try {
-    const channelResponse = await httpsRequest(channelUrl, timeoutMs, servers);
-    channelBody = channelResponse.body;
-    if (channelResponse.statusCode < 200 || channelResponse.statusCode >= 300) {
-      const failure = preflightFailure(
-        'github-release-source',
-        'fetch-channel-metadata',
-        `Unable to fetch channel metadata (${channelResponse.statusCode}) from GitHub.`,
-        'Verify repo URL/branch, outbound HTTPS to GitHub, and proxy/firewall policy.'
-      );
-      writeInstallState({ ...state, status: 'preflight-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
-      return failure;
-    }
+    resolvedRelease = await resolveReleaseManifest(releaseReference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: servers,
+      releaseManifestOverride: options.releaseManifestOverride
+    });
   } catch (error) {
     const failure = preflightFailure(
-      'network',
-      'fetch-channel-metadata',
-      'Network failure while fetching GitHub channel metadata.',
-      `Check outbound HTTPS and proxy settings. ${error instanceof Error ? error.message : String(error)}`
+      'registry-release-source',
+      'resolve-release-manifest',
+      `Unable to resolve release manifest for "${releaseReference}" from ${registryHost}.`,
+      `Verify the channel/release exists in the registry and outbound HTTPS to ${registryHost} is allowed by firewall/proxy policy. ${error instanceof Error ? error.message : String(error)}`
     );
-    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'network', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
-    return failure;
-  }
-
-  try {
-    JSON.parse(channelBody);
-  } catch {
-    const failure = preflightFailure(
-      'github-release-source',
-      'parse-channel-metadata',
-      'Channel metadata is not valid JSON.',
-      'Verify the selected branch and channel file format before retrying.'
-    );
-    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ ...state, status: 'preflight-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
@@ -460,10 +677,10 @@ export async function runSetupPreflight(inputs, options = {}) {
         mode: inputs.dnsMode,
         resolvers: servers
       },
-      github: {
-        channelUrl,
-        repoUrl: normalizedRepoUrl,
-        branch: repoBranch
+      release: {
+        registryHost,
+        reference: releaseReference,
+        version: resolvedRelease.manifest.version
       },
       ghcr: {
         endpoint: 'https://ghcr.io/v2/'
@@ -486,171 +703,62 @@ export async function runSetupPreflight(inputs, options = {}) {
   return success;
 }
 
-export function installK3sSingleNode(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const installScriptUrl = options.installScriptUrl || 'https://get.k3s.io';
-  const k3sVersion = options.k3sVersion || process.env.ALGA_APPLIANCE_K3S_VERSION || 'v1.31.4+k3s1';
-  const installExec = options.installExec || process.env.ALGA_APPLIANCE_K3S_EXEC || `server --write-kubeconfig ${kubeconfigPath} --write-kubeconfig-mode 600 --disable traefik --disable servicelb`;
-  const installCommand = options.installCommand || `curl -sfL ${installScriptUrl} | sh -s -`;
+// Read-only network reachability checks (DNS + GitHub channel + GHCR).
+// Unlike runSetupPreflight, this writes no install-state and has no side
+// effects, so it is safe to call repeatedly from the live status path to
+// re-validate a previously recorded network failure instead of trusting a
+// stale record forever.
+export async function runNetworkChecks(inputs, options = {}) {
+  const resolvConfPath = options.resolvConfPath || DEFAULT_RESOLV_CONF;
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const checkedAt = nowIso();
+  const errText = (error) => (error instanceof Error ? error.message : String(error));
 
-  writeInstallState({
-    status: 'k3s-install-running',
-    phase: 'k3s',
-    lastAction: `Installing k3s ${k3sVersion}`,
-    updatedAt: nowIso()
-  }, stateFile);
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  const releaseReference = (inputs.releaseRef || inputs.channel || 'stable').trim();
 
-  const env = {
-    ...process.env,
-    INSTALL_K3S_VERSION: k3sVersion,
-    INSTALL_K3S_EXEC: installExec
-  };
-
-  const result = spawnSync('sh', ['-c', installCommand], {
-    env,
-    encoding: 'utf8'
-  });
-
-  if (result.status !== 0) {
-    const stderr = (result.stderr || '').trim();
-    const stdout = (result.stdout || '').trim();
-    const message = stderr || stdout || `k3s install command failed with exit code ${result.status ?? 1}`;
-
-    const failure = preflightFailure(
-      'k3s',
-      'install-k3s-server',
-      'k3s installation command failed.',
-      `Inspect installer output and host networking/firewall state. ${message}`
-    );
-
-    writeInstallState({
-      status: 'k3s-install-blocked',
-      phase: 'k3s',
-      lastAction: failure.message,
-      failure,
-      installerOutput: {
-        stdout: result.stdout || '',
-        stderr: result.stderr || ''
-      },
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  const servers = resolverServersForInputs(inputs, resolvConfPath);
+  if (inputs.dnsMode === 'system' && servers.length === 0) {
+    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-system-resolvers', 'No system DNS resolvers detected from /etc/resolv.conf.', 'Confirm DHCP/static resolver configuration and retry setup.') };
   }
 
-  if (!fs.existsSync(kubeconfigPath)) {
-    const failure = preflightFailure(
-      'k3s',
-      'verify-kubeconfig-path',
-      `k3s install completed but kubeconfig was not found at ${kubeconfigPath}.`,
-      'Validate k3s service startup and kubeconfig path configuration, then retry.'
-    );
-
-    writeInstallState({
-      status: 'k3s-install-blocked',
-      phase: 'k3s',
-      lastAction: failure.message,
-      failure,
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  try {
+    await dnsLookup(registryHost, servers);
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('dns', 'resolve-registry-host', `DNS lookup failed for ${registryHost}.`, `Verify DNS resolver reachability and split-horizon policy. ${errText(error)}`) };
   }
 
-  const success = {
-    ok: true,
-    phase: 'k3s',
-    message: `k3s installed successfully with kubeconfig at ${kubeconfigPath}.`,
-    k3sVersion,
-    kubeconfigPath
-  };
-
-  writeInstallState({
-    status: 'k3s-install-complete',
-    phase: 'k3s',
-    lastAction: success.message,
-    k3s: {
-      version: k3sVersion,
-      kubeconfigPath
-    },
-    updatedAt: nowIso()
-  }, stateFile);
-
-  return success;
-}
-
-export function ensureLocalPathStorage(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const storageInstallScript = options.storageInstallScript || '/opt/alga-appliance/scripts/install-storage.sh';
-  const storageInstallCommand = options.storageInstallCommand || `${storageInstallScript} --kubeconfig ${kubeconfigPath}`;
-
-  writeInstallState({
-    status: 'storage-config-running',
-    phase: 'storage',
-    lastAction: 'Ensuring local-path storage class is installed as default',
-    updatedAt: nowIso()
-  }, stateFile);
-
-  const result = spawnSync('sh', ['-c', storageInstallCommand], {
-    env: process.env,
-    encoding: 'utf8'
-  });
-
-  if (result.status !== 0) {
-    const stderr = (result.stderr || '').trim();
-    const stdout = (result.stdout || '').trim();
-    const message = stderr || stdout || `storage install command failed with exit code ${result.status ?? 1}`;
-    const failure = preflightFailure(
-      'storage',
-      'install-local-path-storage',
-      'Failed to install local-path storage defaults.',
-      `Inspect storage installer output and retry. ${message}`
-    );
-
-    writeInstallState({
-      status: 'storage-config-blocked',
-      phase: 'storage',
-      lastAction: failure.message,
-      failure,
-      installerOutput: {
-        stdout: result.stdout || '',
-        stderr: result.stderr || ''
-      },
-      updatedAt: nowIso()
-    }, stateFile);
-
-    return failure;
+  try {
+    const ghcrResponse = await httpsRequest('https://ghcr.io/v2/', timeoutMs, servers);
+    if (![200, 401].includes(ghcrResponse.statusCode)) {
+      return { ok: false, checkedAt, failure: preflightFailure('network', 'reach-ghcr', `GHCR reachability check returned ${ghcrResponse.statusCode}.`, 'Ensure outbound HTTPS to ghcr.io is allowed by firewall/proxy policy.') };
+    }
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('network', 'reach-ghcr', 'Network failure while contacting ghcr.io.', `Check outbound HTTPS and proxy settings for GHCR. ${errText(error)}`) };
   }
 
-  const success = {
-    ok: true,
-    phase: 'storage',
-    message: 'local-path storage installer completed successfully.',
-    kubeconfigPath
-  };
+  let resolvedRelease;
+  try {
+    resolvedRelease = await resolveReleaseManifest(releaseReference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: servers,
+      releaseManifestOverride: options.releaseManifestOverride
+    });
+  } catch (error) {
+    return { ok: false, checkedAt, failure: preflightFailure('registry-release-source', 'resolve-release-manifest', `Unable to resolve release manifest for "${releaseReference}" from ${registryHost}.`, `Verify the channel/release exists in the registry and outbound HTTPS to ${registryHost} is allowed by firewall/proxy policy. ${errText(error)}`) };
+  }
 
-  writeInstallState({
-    status: 'storage-config-complete',
-    phase: 'storage',
-    lastAction: success.message,
-    storage: {
-      installer: storageInstallScript,
-      kubeconfigPath
-    },
-    updatedAt: nowIso()
-  }, stateFile);
-
-  return success;
+  return { ok: true, checkedAt, failure: null, checks: { registryHost, reference: releaseReference, version: resolvedRelease.manifest.version } };
 }
 
 export function installFlux(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxInstallCommand = options.fluxInstallCommand || `flux install --namespace flux-system --kubeconfig ${kubeconfigPath}`;
 
-  const cli = ensureFluxCli(options);
+  const cli = options.fluxInstallCommand ? { ok: true, installed: false } : ensureFluxCli(options);
   if (!cli.ok) {
     const failure = preflightFailure(
       'flux',
@@ -730,59 +838,38 @@ export function installFlux(options = {}) {
 export async function resolveChannelMetadata(inputs, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const timeoutMs = Number(options.timeoutMs || 8000);
-  const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
-  const branch = (inputs.repoBranch || 'main').trim() || 'main';
-  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
-  const localChannelFile = path.join(releasesDir, 'channels', `${inputs.channel}.json`);
-  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/ee/appliance/releases/channels/${inputs.channel}.json`;
+  const registryHost = options.registryHost || DEFAULT_REGISTRY_HOST;
+  // Single source of truth: an immutable release manifest published as an OCI
+  // artifact in the registry, resolved by channel tag (or an explicit
+  // version/digest pin via inputs.releaseRef). No git, no branch.
+  const reference = (inputs.releaseRef || inputs.channel || 'stable').trim();
 
   writeInstallState({
     status: 'release-resolve-running',
-    phase: 'github-release-source',
-    lastAction: `Resolving ${inputs.channel} channel metadata`,
+    phase: 'registry-release-source',
+    lastAction: `Resolving ${inputs.channel} release manifest from ${registryHost}`,
     updatedAt: nowIso()
   }, stateFile);
 
-  let channelData;
-  if (options.channelMetadataOverride) {
-    channelData = options.channelMetadataOverride;
-  } else if (fs.existsSync(localChannelFile)) {
-    channelData = JSON.parse(fs.readFileSync(localChannelFile, 'utf8'));
-  } else {
-    const response = await httpsRequest(channelUrl, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      const failure = preflightFailure(
-        'github-release-source',
-        'resolve-channel-metadata',
-        `Unable to resolve channel metadata from ${channelUrl} (${response.statusCode}).`,
-        'Verify release channel file exists for the selected branch and retry.'
-      );
-      writeInstallState({
-        status: 'release-resolve-blocked',
-        phase: 'github-release-source',
-        lastAction: failure.message,
-        failure,
-        updatedAt: nowIso()
-      }, stateFile);
-      return failure;
-    }
-    channelData = JSON.parse(response.body);
-  }
-
-  let releaseSelection;
+  let resolved;
   try {
-    releaseSelection = applyRepoBranchOverride(readChannelRelease(channelData), inputs);
+    resolved = await resolveReleaseManifest(reference, {
+      registryHost,
+      releaseRepository: options.releaseRepository,
+      timeoutMs,
+      lookupServers: resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF),
+      releaseManifestOverride: options.releaseManifestOverride
+    });
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
-      'parse-channel-release',
-      'Channel metadata does not contain required release fields.',
+      'registry-release-source',
+      'resolve-release-manifest',
+      `Unable to resolve release manifest for "${reference}" from ${registryHost}.`,
       error instanceof Error ? error.message : String(error)
     );
     writeInstallState({
       status: 'release-resolve-blocked',
-      phase: 'github-release-source',
+      phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
@@ -790,25 +877,30 @@ export async function resolveChannelMetadata(inputs, options = {}) {
     return failure;
   }
 
+  const manifest = resolved.manifest;
   const success = {
     ok: true,
-    phase: 'github-release-source',
-    message: `Resolved channel ${inputs.channel} to release ${releaseSelection.releaseVersion}.`,
-    repoUrl: normalizedRepoUrl,
+    phase: 'registry-release-source',
+    message: `Resolved channel ${inputs.channel} to release ${manifest.version}.`,
     channel: inputs.channel,
-    repoBranch: releaseSelection.repoBranch,
-    releaseVersion: releaseSelection.releaseVersion
+    reference,
+    releaseVersion: manifest.version,
+    registryHost,
+    repository: resolved.repository,
+    manifestDigest: resolved.manifestDigest,
+    manifest
   };
 
   writeInstallState({
     status: 'release-resolve-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     release: {
       selectedChannel: success.channel,
       selectedReleaseVersion: success.releaseVersion,
-      repoUrl: success.repoUrl,
-      repoBranch: success.repoBranch
+      registryHost,
+      repository: resolved.repository,
+      manifestDigest: resolved.manifestDigest
     },
     updatedAt: nowIso()
   }, stateFile);
@@ -818,46 +910,32 @@ export async function resolveChannelMetadata(inputs, options = {}) {
 
 export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const timeoutMs = Number(options.timeoutMs || 8000);
-  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
-  const repo = extractRepoParts(normalizedRepoUrl);
-  const branch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const releaseVersion = releaseSelection.releaseVersion;
+  const manifest = options.releaseManifestOverride
+    ? validateReleaseManifest(options.releaseManifestOverride)
+    : releaseSelection.manifest;
   const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
   const valuesDir = path.join(tempDir, 'values');
-  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
-  const localReleaseFile = path.join(releasesDir, releaseVersion, 'release.json');
-  const localFluxDir = options.fluxDir || '/opt/alga-appliance/flux';
-
   writeInstallState({
     status: 'runtime-values-running',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: 'Creating Kubernetes runtime values and release selection',
     updatedAt: nowIso()
   }, stateFile);
 
-  let releaseManifest;
-  try {
-    const lookupServers = resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF);
-    const releaseBody = options.releaseManifestOverride
-      ? JSON.stringify(options.releaseManifestOverride)
-      : fs.existsSync(localReleaseFile)
-        ? fs.readFileSync(localReleaseFile, 'utf8')
-        : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
-    releaseManifest = JSON.parse(releaseBody);
-  } catch (error) {
+  if (!manifest) {
     const failure = preflightFailure(
-      'github-release-source',
-      'fetch-release-manifest',
-      `Unable to fetch release manifest ${releaseVersion}.`,
-      error instanceof Error ? error.message : String(error)
+      'registry-release-source',
+      'missing-release-manifest',
+      'Release selection did not include a resolved manifest.',
+      'resolveChannelMetadata must run (and succeed) before applyRuntimeValuesAndReleaseSelection.'
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
-  const profile = releaseManifest.app?.valuesProfile || 'single-node';
+  const profile = manifest.valuesProfile || 'single-node';
   const names = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
   const values = {};
 
@@ -865,14 +943,14 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     fs.mkdirSync(valuesDir, { recursive: true, mode: 0o700 });
     for (const name of names) {
       const key = `${name}.${profile}.yaml`;
-      const override = options.profileValuesOverride?.[key];
-      const localProfileValuesFile = path.join(localFluxDir, 'profiles', profile, 'values', key);
-      values[key] = override
-        ?? (fs.existsSync(localProfileValuesFile) ? fs.readFileSync(localProfileValuesFile, 'utf8') : null)
-        ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
+      const value = options.profileValuesOverride?.[key] ?? manifest.profileValues?.[key];
+      if (typeof value !== 'string') {
+        throw new Error(`Release manifest is missing profileValues["${key}"].`);
+      }
+      values[key] = value;
     }
 
-    const images = releaseManifest.app?.images || {};
+    const images = manifest.images || {};
     const bootstrapMode = options.bootstrapMode || 'recover';
     values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['bootstrap', 'mode'], yamlString(bootstrapMode));
     const appUrl = appUrlFromInput(inputs.appHostname);
@@ -902,47 +980,71 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     fs.writeFileSync(path.join(tempDir, 'kustomization.yaml'), `apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\ngeneratorOptions:\n  disableNameSuffixHash: true\nconfigMapGenerator:\n${names.map((name) => `  - name: appliance-values-${name}\n    namespace: alga-system\n    files:\n      - ${name}.${profile}.yaml=values/${name}.${profile}.yaml`).join('\n')}\n`, { mode: 0o600 });
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
+      'registry-release-source',
       'render-runtime-values',
       'Unable to render runtime values for the selected release.',
       error instanceof Error ? error.message : String(error)
     );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
     return failure;
   }
 
   const authKey = options.algaAuthKey || crypto.randomBytes(32).toString('base64url');
-  const statusToken = fs.existsSync(options.tokenFile || '/var/lib/alga-appliance/setup-token')
-    ? fs.readFileSync(options.tokenFile || '/var/lib/alga-appliance/setup-token', 'utf8').trim()
+  const statusToken = fs.existsSync(options.tokenFile || DEFAULT_TOKEN_FILE)
+    ? fs.readFileSync(options.tokenFile || DEFAULT_TOKEN_FILE, 'utf8').trim()
     : crypto.randomBytes(24).toString('base64url');
+  const initialTenantSecretPath = path.join(tempDir, 'initial-tenant-secret.yaml');
+  const hasInitialTenant = Boolean(inputs.initialTenant);
+
+  if (hasInitialTenant) {
+    try {
+      fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant), { mode: 0o600 });
+    } catch (error) {
+      const failure = preflightFailure(
+        'registry-release-source',
+        'render-initial-tenant-secret',
+        'Unable to render initial tenant Secret for appliance bootstrap.',
+        error instanceof Error ? error.message : String(error)
+      );
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      return failure;
+    }
+  }
+
+  // Build appliance-license-seed secret command (F079-F080)
+  const licenseSeedArgs = `--from-literal=EDITION_CHOICE=${shellQuote(inputs.editionChoice || 'ee')}`;
+  const licenseKeyArg = inputs.licenseKey ? ` --from-literal=LICENSE_TOKEN=${shellQuote(inputs.licenseKey)}` : '';
+  const licenseSeedCmd = `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic appliance-license-seed ${licenseSeedArgs}${licenseKeyArg} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`;
 
   const commands = [
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace alga-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace appliance-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    ...(hasInitialTenant ? [`kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f ${shellQuote(initialTenantSecretPath)}`] : []),
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic alga-psa-shared --from-literal=ALGA_AUTH_KEY=${shellQuote(authKey)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    licenseSeedCmd,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
-    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(releaseManifest.app?.version || '')} --from-literal=releaseBranch=${shellQuote(releaseManifest.app?.releaseBranch || branch)} --from-literal=algaCoreTag=${shellQuote(releaseManifest.app?.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(releaseManifest.app?.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(releaseManifest.app?.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(releaseManifest.app?.images?.temporalWorker || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
   ];
 
   for (const command of commands) {
     const result = runShell(command);
     if (!result.ok) {
       const failure = preflightFailure(
-        'github-release-source',
+        'registry-release-source',
         'apply-runtime-values',
         'Failed to apply Kubernetes runtime values or release selection.',
         (result.stderr || result.stdout || `exit ${result.status}`).trim()
       );
-      writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
       return failure;
     }
   }
 
   const success = {
     ok: true,
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     message: `Runtime values and release selection applied for ${releaseVersion}.`,
     releaseVersion,
     profile
@@ -950,7 +1052,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
 
   writeInstallState({
     status: 'runtime-values-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     runtimeValues: { profile, releaseVersion },
     updatedAt: nowIso()
@@ -961,20 +1063,39 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
 
 export function applyFluxSource(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
-  const fluxPath = options.fluxPath || './ee/appliance/flux/base';
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
+  const fluxPath = options.fluxPath || './base';
   const sourceName = options.fluxSourceName || 'alga-appliance';
   const sourceNamespace = options.fluxNamespace || 'flux-system';
   const applyCommand = options.fluxSourceApplyCommand || `kubectl --kubeconfig ${kubeconfigPath} apply -f -`;
-  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
-  const sourceBranch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
+  const releaseManifest = options.releaseManifestOverride
+    ? validateReleaseManifest(options.releaseManifestOverride)
+    : releaseSelection.manifest;
 
-  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: GitRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${normalizedRepoUrl}\n  ref:\n    branch: ${sourceBranch}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: GitRepository\n    name: ${sourceName}\n`;
+  if (!releaseManifest) {
+    const failure = preflightFailure(
+      'flux',
+      'missing-release-manifest',
+      'Release selection did not include a resolved manifest.',
+      'resolveChannelMetadata must run (and succeed) before applyFluxSource.'
+    );
+    writeInstallState({ status: 'flux-source-blocked', phase: 'flux', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    return failure;
+  }
+
+  const configRepository = releaseManifest.config.repository;
+  const configDigest = releaseManifest.config.digest;
+  const configTag = releaseManifest.config.tag;
+  const ociUrl = `oci://${configRepository}`;
+
+  // Flux pulls the appliance config bundle (the rendered flux base overlay) as
+  // an OCI artifact pinned to its digest -- no GitRepository, no branch.
+  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: OCIRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${ociUrl}\n  ref:\n    digest: ${configDigest}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: OCIRepository\n    name: ${sourceName}\n`;
 
   writeInstallState({
     status: 'flux-source-running',
     phase: 'flux',
-    lastAction: 'Applying Flux GitRepository/Kustomization source configuration',
+    lastAction: 'Applying Flux OCIRepository/Kustomization source configuration',
     updatedAt: nowIso()
   }, stateFile);
 
@@ -991,7 +1112,7 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
     const failure = preflightFailure(
       'flux',
       'apply-flux-source',
-      'Failed to apply Flux GitRepository/Kustomization manifests.',
+      'Failed to apply Flux OCIRepository/Kustomization manifests.',
       message
     );
 
@@ -1013,8 +1134,9 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
     source: {
       name: sourceName,
       namespace: sourceNamespace,
-      repoUrl: normalizedRepoUrl,
-      branch: sourceBranch,
+      url: ociUrl,
+      digest: configDigest,
+      tag: configTag,
       path: fluxPath
     }
   };
@@ -1032,11 +1154,11 @@ export function applyFluxSource(inputs, releaseSelection, options = {}) {
 
 export function applyReleaseSelectionConfiguration(inputs, releaseSelection, options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
+  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
 
   writeInstallState({
     status: 'release-config-running',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: 'Persisting runtime values and selected release configuration',
     updatedAt: nowIso()
   }, stateFile);
@@ -1045,8 +1167,9 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     updatedAt: nowIso(),
     selectedChannel: releaseSelection.channel || inputs.channel,
     selectedReleaseVersion: releaseSelection.releaseVersion,
-    repoUrl: releaseSelection.repoUrl,
-    repoBranch: releaseSelection.repoBranch,
+    registryHost: releaseSelection.registryHost || DEFAULT_REGISTRY_HOST,
+    repository: releaseSelection.repository,
+    manifestDigest: releaseSelection.manifestDigest,
     runtime: {
       appHostname: inputs.appHostname,
       dnsMode: inputs.dnsMode,
@@ -1058,14 +1181,14 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     writeSecureJsonFile(releaseSelectionFile, payload);
   } catch (error) {
     const failure = preflightFailure(
-      'github-release-source',
+      'registry-release-source',
       'write-release-selection',
       'Unable to persist release selection configuration.',
       error instanceof Error ? error.message : String(error)
     );
     writeInstallState({
       status: 'release-config-blocked',
-      phase: 'github-release-source',
+      phase: 'registry-release-source',
       lastAction: failure.message,
       failure,
       updatedAt: nowIso()
@@ -1075,14 +1198,14 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
 
   const success = {
     ok: true,
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     message: `Release selection persisted to ${releaseSelectionFile}.`,
     releaseSelectionFile
   };
 
   writeInstallState({
     status: 'release-config-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: success.message,
     releaseSelection: {
       file: releaseSelectionFile,
@@ -1101,24 +1224,10 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return preflight;
   }
 
-  if (options.skipK3sInstall === true) {
-    return {
-      ok: true,
-      phase: 'preflight',
-      message: 'Preflight succeeded; k3s install skipped by option override.'
-    };
-  }
-
-  const k3sResult = installK3sSingleNode(options);
-  if (!k3sResult.ok) {
-    return k3sResult;
-  }
-
-  const storageResult = ensureLocalPathStorage(options);
-  if (!storageResult.ok) {
-    return storageResult;
-  }
-
+  // The k3s substrate and local-path storage are provisioned by the host
+  // bootstrap (bootstrap-control-plane.sh) before this control-plane workflow
+  // ever runs. The setup workflow only layers Flux and the application release
+  // on top of that substrate.
   const fluxResult = installFlux(options);
   if (!fluxResult.ok) {
     return fluxResult;

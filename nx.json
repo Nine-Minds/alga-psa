@@ -93,7 +93,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     },
     {
@@ -108,7 +109,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     },
     {
@@ -127,7 +129,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     }
   ],

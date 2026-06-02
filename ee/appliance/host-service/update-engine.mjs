@@ -53,7 +53,7 @@ function reconcileFluxAndHelm(options = {}) {
   const reconcileTimeout = options.reconcileTimeout || '15m';
 
   const reconcileSourceCmd = options.reconcileSourceCommand
-    || `flux --kubeconfig ${kubeconfigPath} reconcile source git ${fluxSourceName} -n flux-system --timeout ${reconcileTimeout}`;
+    || `flux --kubeconfig ${kubeconfigPath} reconcile source oci ${fluxSourceName} -n flux-system --timeout ${reconcileTimeout}`;
   const reconcileHelmCmd = options.reconcileHelmCommand
     || `flux --kubeconfig ${kubeconfigPath} reconcile helmrelease alga-core -n alga-system --with-source --timeout ${reconcileTimeout}`;
 
@@ -64,7 +64,7 @@ function reconcileFluxAndHelm(options = {}) {
       phase: 'flux',
       message: 'Flux source reconcile failed during app update.',
       suspectedCause: (source.stderr || source.stdout || '').trim() || `exit ${source.status ?? 1}`,
-      suggestedNextStep: 'Verify Flux source-controller health and GitRepository readiness.',
+      suggestedNextStep: 'Verify Flux source-controller health and OCIRepository readiness.',
       retrySafe: true
     };
   }
@@ -95,13 +95,12 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     appHostname: rawInputs.appHostname || previousSelection.runtime?.appHostname || '',
     dnsMode: rawInputs.dnsMode || previousSelection.runtime?.dnsMode || 'system',
     dnsServers: rawInputs.dnsServers || previousSelection.runtime?.dnsServers || '',
-    repoUrl: rawInputs.repoUrl || previousSelection.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: rawInputs.repoBranch || previousSelection.repoBranch || 'main'
-  });
+    releaseRef: rawInputs.releaseRef || ''
+  }, { requireInitialTenant: false });
 
   writeInstallState({
     status: 'update-running',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: `Starting app-channel update to ${validated.channel}`,
     updatedAt: nowIso(),
     update: {
@@ -186,7 +185,7 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
 
   const result = {
     ok: true,
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     message: `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
     releaseVersion: releaseSelection.releaseVersion,
     selectedChannel: validated.channel,
@@ -195,7 +194,7 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
 
   writeInstallState({
     status: 'update-complete',
-    phase: 'github-release-source',
+    phase: 'registry-release-source',
     lastAction: result.message,
     updatedAt: nowIso(),
     update: {

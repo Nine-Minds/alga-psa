@@ -16,7 +16,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: alga-local-path-provisioner-namespaced-role
+  name: local-path-provisioner-role
   namespace: local-path-storage
 rules:
   - apiGroups: [""]
@@ -29,7 +29,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: alga-local-path-provisioner-cluster-role
+  name: alga-local-path-provisioner-role
 rules:
   - apiGroups: [""]
     resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
@@ -47,12 +47,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: alga-local-path-provisioner-namespaced-bind
+  name: local-path-provisioner-bind
   namespace: local-path-storage
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: alga-local-path-provisioner-namespaced-role
+  name: local-path-provisioner-role
 subjects:
   - kind: ServiceAccount
     name: local-path-provisioner-service-account
@@ -61,11 +61,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: alga-local-path-provisioner-cluster-bind
+  name: alga-local-path-provisioner-bind
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: alga-local-path-provisioner-cluster-role
+  name: alga-local-path-provisioner-role
 subjects:
   - kind: ServiceAccount
     name: local-path-provisioner-service-account
@@ -118,7 +118,7 @@ metadata:
   name: local-path
 provisioner: rancher.io/local-path
 volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
+reclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: ConfigMap
