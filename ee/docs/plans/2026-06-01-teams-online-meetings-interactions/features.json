@@ -411,7 +411,7 @@
   },
   {
     "id": "F051",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],
@@ -419,7 +419,7 @@
   },
   {
     "id": "F052",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration"

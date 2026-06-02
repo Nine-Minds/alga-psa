@@ -3,7 +3,9 @@ import { isEnterprise } from '@alga-psa/core/features';
 
 export interface TeamsMeetingCapabilityResult {
   available: boolean;
-  reason?: 'ee_disabled' | 'not_configured' | 'no_organizer';
+  reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'no_organizer';
+  recordingsAvailable: boolean;
+  recordingReason?: 'meeting_unavailable' | 'missing_organizer_object_id';
 }
 
 export interface CreateTeamsMeetingInput {
@@ -74,6 +76,8 @@ type EeTeamsMeetingModule = Partial<TeamsMeetingService>;
 const eeDisabledCapability: TeamsMeetingCapabilityResult = {
   available: false,
   reason: 'ee_disabled',
+  recordingsAvailable: false,
+  recordingReason: 'meeting_unavailable',
 };
 
 const noOpTeamsMeetingService: TeamsMeetingService = {

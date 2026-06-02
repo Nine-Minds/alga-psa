@@ -71,6 +71,8 @@ export interface ContractQuickAddRenderProps {
 export interface TeamsMeetingCapability {
   available: boolean;
   reason?: string;
+  recordingsAvailable?: boolean;
+  recordingReason?: string;
 }
 
 export interface ScheduleTeamsMeetingFromClientInput {

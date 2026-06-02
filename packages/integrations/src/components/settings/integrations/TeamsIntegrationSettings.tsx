@@ -231,6 +231,8 @@ function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): st
       return t('integrations.teams.settings.diagnostics.steps.capabilities', { defaultValue: 'Teams capabilities' });
     case 'microsoft_profile':
       return t('integrations.teams.settings.diagnostics.steps.microsoftProfile', { defaultValue: 'Microsoft profile readiness' });
+    case 'recording_permissions':
+      return t('integrations.teams.settings.diagnostics.steps.recordingPermissions', { defaultValue: 'Teams recording and transcript permissions' });
     case 'package_metadata':
       return t('integrations.teams.settings.diagnostics.steps.packageMetadata', { defaultValue: 'Teams package metadata' });
     case 'bot_connector':
@@ -260,6 +262,10 @@ function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn
       return t('integrations.teams.settings.diagnostics.recommendation.activeProfile', { defaultValue: recommendation });
     case 'Complete Microsoft profile credentials before activating Teams.':
       return t('integrations.teams.settings.diagnostics.recommendation.profileCredentials', { defaultValue: recommendation });
+    case 'Configure the default Teams meeting organizer in Teams settings.':
+      return t('integrations.teams.settings.diagnostics.recommendation.meetingOrganizer', { defaultValue: recommendation });
+    case 'Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.':
+      return t('integrations.teams.settings.diagnostics.recommendation.meetingOrganizerObjectId', { defaultValue: recommendation });
     case 'Generate the Teams app package before running end-to-end validation.':
       return t('integrations.teams.settings.diagnostics.recommendation.package', { defaultValue: recommendation });
     case 'Regenerate the Teams package with a reachable base URL.':

@@ -817,6 +817,8 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'addon_required',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
     });
 
@@ -827,6 +829,8 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'not_configured',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
     });
 
@@ -842,6 +846,8 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'not_configured',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
     });
 
@@ -857,6 +863,8 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'no_organizer',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
     });
 
@@ -871,6 +879,24 @@ describe('Teams meeting helpers', () => {
 
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: true,
+        recordingsAvailable: false,
+        recordingReason: 'missing_organizer_object_id',
+      });
+    });
+
+    it('returns recordingsAvailable when the organizer object id is set', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+        default_meeting_organizer_object_id: 'organizer-object-1',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
+        available: true,
+        recordingsAvailable: true,
       });
     });
 
@@ -880,6 +906,8 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'ee_disabled',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
       expect(createTenantKnexMock).not.toHaveBeenCalled();
     });
@@ -894,6 +922,8 @@ describe('Teams meeting helpers', () => {
       await expect(service.getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
         reason: 'ee_disabled',
+        recordingsAvailable: false,
+        recordingReason: 'meeting_unavailable',
       });
       await expect(service.createTeamsMeeting({
         tenantId: 'tenant-1',
