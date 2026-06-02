@@ -68,6 +68,31 @@ export interface ContractQuickAddRenderProps {
   clientId: string;
 }
 
+export interface TeamsMeetingCapability {
+  available: boolean;
+  reason?: string;
+}
+
+export interface ScheduleTeamsMeetingFromClientInput {
+  subject: string;
+  startDateTime: string | Date;
+  endDateTime: string | Date;
+  client_id?: string | null;
+  contact_name_id?: string | null;
+  attendees?: Array<{ emailAddress: string; name?: string }>;
+}
+
+export interface ScheduleTeamsMeetingFromClientResult {
+  success: boolean;
+  data?: {
+    interaction_id: string;
+    meeting_id: string;
+    schedule_entry_id: string | null;
+    join_url: string;
+  };
+  error?: string;
+}
+
 export interface ClientCrossFeatureCallbacks {
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;
@@ -77,6 +102,8 @@ export interface ClientCrossFeatureCallbacks {
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;
+  scheduleTeamsMeeting?: (input: ScheduleTeamsMeetingFromClientInput) => Promise<ScheduleTeamsMeetingFromClientResult>;
   getSlaPolicies: () => Promise<ISlaPolicy[]>;
 }
 
@@ -91,6 +118,10 @@ export function useClientCrossFeature(): ClientCrossFeatureCallbacks {
     );
   }
   return ctx;
+}
+
+export function useOptionalClientCrossFeature(): ClientCrossFeatureCallbacks | null {
+  return useContext(ClientCrossFeatureContext);
 }
 
 export function ClientCrossFeatureProvider({

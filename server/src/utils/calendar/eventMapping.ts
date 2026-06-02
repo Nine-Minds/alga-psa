@@ -73,13 +73,14 @@ export async function mapScheduleEntryToExternalEvent(
   const status = entry.status === 'cancelled' ? 'cancelled' as const :
                  entry.status === 'tentative' ? 'tentative' as const :
                  'confirmed' as const;
+  const description = await buildScheduleEntryDescription(entry);
 
   // Build event object
   const event: ExternalCalendarEvent = {
     id: '', // Will be set by external calendar
     provider,
     title: entry.title,
-    description: entry.notes || '',
+    description,
     start: isAllDay ? {
       date: formatDateOnly(startDate),
       timeZone: 'UTC'
@@ -253,6 +254,34 @@ function formatDateOnly(date: Date): string {
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+async function buildScheduleEntryDescription(entry: IScheduleEntry): Promise<string> {
+  const baseDescription = entry.notes || '';
+  if (!entry.tenant || !entry.entry_id) {
+    return baseDescription;
+  }
+
+  try {
+    const { knex } = await createTenantKnex();
+    const meeting = await knex('online_meetings')
+      .where({
+        tenant: entry.tenant,
+        schedule_entry_id: entry.entry_id,
+      })
+      .first('join_url');
+
+    const joinUrl = meeting?.join_url;
+    if (!joinUrl || baseDescription.includes(joinUrl)) {
+      return baseDescription;
+    }
+
+    const joinLine = `Join Teams Meeting: ${joinUrl}`;
+    return baseDescription ? `${baseDescription}\n\n${joinLine}` : joinLine;
+  } catch (error) {
+    console.error('Failed to append online meeting join URL to calendar event description:', error);
+    return baseDescription;
+  }
 }
 
 /**

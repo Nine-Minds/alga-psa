@@ -86,6 +86,32 @@ flip `implemented:true`, repeat.
 - Tests: `npm run test:unit` (unit), `npm run test:integration`.
 - Migrations: `npm run migrate`.
 
+## 2026-06-01 — F034-F036 / T049-T051
+- Implemented QuickAddInteraction Online Meeting scheduling without adding a clients -> scheduling package
+  dependency: added optional Teams callbacks to `ClientCrossFeatureContext`, supplied them in
+  `MspClientCrossFeatureProvider`, and had QuickAdd call `scheduleTeamsMeeting` only when the Online
+  Meeting type is selected and `getTeamsMeetingCapability` reports available. Rationale: keeps clients
+  package reusable while MSP composition owns cross-feature wiring.
+- Implemented direct schedule-entry Teams generation by having `EntryPopup` add a
+  `generate_teams_meeting` save payload for new entries and `ScheduleCalendar` route that payload to
+  `scheduleTeamsMeeting({ createScheduleEntry: true })`. Constraint: the backend requires client/contact
+  context, so the UI requires a selected client-backed work item and shows a translated validation
+  message otherwise.
+- Tightened `scheduleTeamsMeeting` notes behavior: stored interaction/schedule notes now append
+  `Join Teams Meeting: <url>` even when caller-supplied notes exist.
+- Updated both calendar mappers (`server/src/utils/calendar/eventMapping.ts` and
+  `packages/integrations/src/utils/calendar/eventMapping.ts`) to append the join URL from
+  `online_meetings` by `schedule_entry_id` as a fallback/field mapping for external calendar pushes.
+- Added source-contract tests for QuickAdd Teams wiring, EntryPopup/ScheduleCalendar routing, and both
+  eventMapping copies.
+- Verification:
+  - `npm -w @alga-psa/clients run typecheck`
+  - `npm -w @alga-psa/scheduling run typecheck`
+  - `npm -w @alga-psa/integrations run typecheck`
+  - `npx vitest run ../packages/clients/src/components/interactions/QuickAddInteraction.quick-add-contact.contract.test.ts ../packages/scheduling/src/components/schedule/EntryPopup.teams-meeting.contract.test.ts src/test/unit/calendar/eventMapping.onlineMeetingDescription.contract.test.ts src/test/integration/appointmentRequests.integration.test.ts -t "Schedule Teams Meeting|quick add|EntryPopup offers|online meeting calendar"` from `server/`
+  - `packages/msp-composition` has no package typecheck script or tsconfig; composition compile coverage
+    is indirect through package consumers.
+
 ## 2026-06-01 implementation notes
 - Implemented F012/F013:
   - `InteractionModel.addInteraction` and `getById` now accept an optional `Knex`/transaction and use it for both the insert and follow-up read; the default path still uses `createTenantKnex(tenantId)`.

@@ -73,6 +73,17 @@ function capabilityError(reason?: string): string {
   }
 }
 
+function appendJoinUrlToNotes(notes: string | null | undefined, joinUrl: string): string {
+  const baseNotes = notes?.trim() ?? '';
+  if (!baseNotes) {
+    return `Join Teams Meeting: ${joinUrl}`;
+  }
+  if (baseNotes.includes(joinUrl)) {
+    return baseNotes;
+  }
+  return `${baseNotes}\n\nJoin Teams Meeting: ${joinUrl}`;
+}
+
 export const scheduleTeamsMeeting = withAuth(async (
   user,
   { tenant },
@@ -149,7 +160,7 @@ export const scheduleTeamsMeeting = withAuth(async (
             user_id: user.user_id,
             ticket_id: input.ticket_id ?? input.ticketId ?? null,
             title: `Online Meeting: ${subject}`,
-            notes: input.notes ?? `Join Teams Meeting: ${createdMeeting.joinWebUrl}`,
+            notes: appendJoinUrlToNotes(input.notes, createdMeeting.joinWebUrl),
             start_time: start,
             end_time: end,
             duration: Math.ceil((end.getTime() - start.getTime()) / 60000),
@@ -166,7 +177,7 @@ export const scheduleTeamsMeeting = withAuth(async (
               : input.assignedUserIds?.length
                 ? input.assignedUserIds
                 : [user.user_id];
-          const scheduleNotes = input.scheduleEntry?.notes ?? input.notes ?? `Join Teams Meeting: ${createdMeeting.joinWebUrl}`;
+          const scheduleNotes = appendJoinUrlToNotes(input.scheduleEntry?.notes ?? input.notes, createdMeeting.joinWebUrl);
           const entry = await ScheduleEntry.create(
             trx,
             tenant,
