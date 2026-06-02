@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core/features';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 type EeTeamsMeetingModule = {
@@ -39,6 +40,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ artifactId: string }> },
 ) {
+  if (!isEnterprise) {
+    return new NextResponse('Teams recording proxy is available in Enterprise Edition only', { status: 404 });
+  }
+
   const { artifactId } = await params;
   if (!artifactId) {
     return new NextResponse('Artifact ID is required', { status: 400 });

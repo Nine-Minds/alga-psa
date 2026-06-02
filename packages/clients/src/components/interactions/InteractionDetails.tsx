@@ -83,6 +83,9 @@ const getOnlineMeetingStatusFallback = (status?: string): string => {
   }
 };
 
+export const onlineMeetingArtifactsEnabled = (edition = process.env.NEXT_PUBLIC_EDITION): boolean =>
+  edition === 'enterprise';
+
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { t } = useTranslation('msp/clients');
@@ -95,6 +98,9 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRefreshingRecordings, setIsRefreshingRecordings] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
+  const onlineMeeting = interaction.online_meeting;
+  const showOnlineMeetingRecordingControls = onlineMeetingArtifactsEnabled();
+  const onlineMeetingStatusKey = getOnlineMeetingStatusKey(onlineMeeting?.status);
 
   // UI Reflection System Integration
   const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -285,7 +291,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   };
 
   const handleRefreshMeetingRecordings = async () => {
-    if (!interaction.online_meeting?.meeting_id) {
+    if (!showOnlineMeetingRecordingControls || !interaction.online_meeting?.meeting_id) {
       return;
     }
 
@@ -306,9 +312,6 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       setIsRefreshingRecordings(false);
     }
   };
-
-  const onlineMeeting = interaction.online_meeting;
-  const onlineMeetingStatusKey = getOnlineMeetingStatusKey(onlineMeeting?.status);
 
   return (
     <ReflectionContainer id="interaction-details" label="Interaction Details">
@@ -389,11 +392,13 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                   <Text size="2" weight="bold">
                     {t('interactions.onlineMeeting.sectionTitle', { defaultValue: 'Online Meeting' })}
                   </Text>
-                  <div className="text-sm text-gray-600">
-                    {t(`interactions.onlineMeeting.status.${onlineMeetingStatusKey}`, {
-                      defaultValue: getOnlineMeetingStatusFallback(onlineMeeting.status),
-                    })}
-                  </div>
+                  {showOnlineMeetingRecordingControls && (
+                    <div className="text-sm text-gray-600">
+                      {t(`interactions.onlineMeeting.status.${onlineMeetingStatusKey}`, {
+                        defaultValue: getOnlineMeetingStatusFallback(onlineMeeting.status),
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -408,66 +413,70 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                     {t('interactions.onlineMeeting.join', { defaultValue: 'Join' })}
                   </a>
                 </Button>
-                <Button
-                  id="online-meeting-refresh-recordings-button"
-                  onClick={handleRefreshMeetingRecordings}
-                  disabled={isRefreshingRecordings}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingRecordings ? 'animate-spin' : ''}`} />
-                  {t('interactions.onlineMeeting.refreshRecordings', { defaultValue: 'Refresh recordings' })}
-                </Button>
+                {showOnlineMeetingRecordingControls && (
+                  <Button
+                    id="online-meeting-refresh-recordings-button"
+                    onClick={handleRefreshMeetingRecordings}
+                    disabled={isRefreshingRecordings}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingRecordings ? 'animate-spin' : ''}`} />
+                    {t('interactions.onlineMeeting.refreshRecordings', { defaultValue: 'Refresh recordings' })}
+                  </Button>
+                )}
               </div>
             </div>
 
-            {onlineMeeting.artifacts?.length > 0 ? (
-              <div className="space-y-2">
-                {onlineMeeting.artifacts.map((artifact) => {
-                  const createdAt = artifact.created_date_time
-                    ? new Date(artifact.created_date_time).toLocaleString()
-                    : null;
-                  const artifactLabel = artifact.artifact_type === 'transcript'
-                    ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
-                    : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
-                  const artifactUrl = artifact.artifact_type === 'transcript' && artifact.document_id
-                    ? `/api/documents/${encodeURIComponent(artifact.document_id)}/download`
-                    : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
+            {showOnlineMeetingRecordingControls && (
+              onlineMeeting.artifacts?.length > 0 ? (
+                <div className="space-y-2">
+                  {onlineMeeting.artifacts.map((artifact) => {
+                    const createdAt = artifact.created_date_time
+                      ? new Date(artifact.created_date_time).toLocaleString()
+                      : null;
+                    const artifactLabel = artifact.artifact_type === 'transcript'
+                      ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
+                      : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
+                    const artifactUrl = artifact.artifact_type === 'transcript' && artifact.document_id
+                      ? `/api/documents/${encodeURIComponent(artifact.document_id)}/download`
+                      : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
 
-                  return (
-                    <div
-                      key={artifact.artifact_id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
-                    >
-                      <div className="flex min-w-0 items-center gap-2 text-sm">
-                        {artifact.artifact_type === 'transcript' ? (
-                          <FileText className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <Download className="h-4 w-4 text-gray-500" />
-                        )}
-                        <span className="font-medium">{artifactLabel}</span>
-                        {createdAt && <span className="text-gray-500">{createdAt}</span>}
-                      </div>
-                      <Button
-                        id={`online-meeting-${artifact.artifact_type}-${artifact.artifact_id}`}
-                        asChild
-                        variant="ghost"
-                        size="sm"
+                    return (
+                      <div
+                        key={artifact.artifact_id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
                       >
-                        <a href={artifactUrl} target="_blank" rel="noopener noreferrer">
-                          {artifactLabel}
-                        </a>
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <Text size="2" className="text-gray-600">
-                {t('interactions.onlineMeeting.noArtifacts', {
-                  defaultValue: 'No recordings or transcripts are available yet.',
-                })}
-              </Text>
+                        <div className="flex min-w-0 items-center gap-2 text-sm">
+                          {artifact.artifact_type === 'transcript' ? (
+                            <FileText className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Download className="h-4 w-4 text-gray-500" />
+                          )}
+                          <span className="font-medium">{artifactLabel}</span>
+                          {createdAt && <span className="text-gray-500">{createdAt}</span>}
+                        </div>
+                        <Button
+                          id={`online-meeting-${artifact.artifact_type}-${artifact.artifact_id}`}
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <a href={artifactUrl} target="_blank" rel="noopener noreferrer">
+                            {artifactLabel}
+                          </a>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Text size="2" className="text-gray-600">
+                  {t('interactions.onlineMeeting.noArtifacts', {
+                    defaultValue: 'No recordings or transcripts are available yet.',
+                  })}
+                </Text>
+              )
             )}
           </div>
         )}

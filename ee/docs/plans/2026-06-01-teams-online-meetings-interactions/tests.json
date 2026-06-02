@@ -613,7 +613,7 @@
   },
   {
     "id": "T076",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],
@@ -621,7 +621,7 @@
   },
   {
     "id": "T077",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],

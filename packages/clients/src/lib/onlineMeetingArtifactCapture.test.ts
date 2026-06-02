@@ -98,6 +98,7 @@ function createDeps(options: {
         updates.push(input);
         return { ...currentMeeting, ...input, artifacts };
       }),
+      isEnterpriseEdition: vi.fn(() => true),
       fetchArtifacts: vi.fn(async () => options.fetchedArtifacts ?? []),
       loadSettings: vi.fn(async () => ({
         downloadRecordings: options.downloadRecordings ?? false,
@@ -228,5 +229,29 @@ describe('online meeting artifact capture', () => {
     expect(source).toContain('refreshMeetingRecordings');
     expect(source).toContain('fetchAndPersistMeetingArtifacts');
     expect(source).toContain('actorUserId: user.user_id');
+  });
+
+  it('T077 does not fetch or mutate artifacts when Enterprise capture is disabled', async () => {
+    const harness = createDeps({
+      fetchedArtifacts: [
+        { artifactType: 'recording', providerArtifactId: 'rec-1', contentUrl: 'https://graph/rec-1', createdDateTime: null },
+        { artifactType: 'transcript', providerArtifactId: 'tr-1', contentUrl: null, createdDateTime: null, transcriptContent: 'WEBVTT' },
+      ],
+    });
+
+    const result = await fetchAndPersistMeetingArtifacts(
+      { tenantId: 'tenant-1', meetingId: 'meeting-1', actorUserId: 'actor-1' },
+      {
+        ...harness.deps,
+        isEnterpriseEdition: () => false,
+      } as any,
+    );
+
+    expect(result.meeting_id).toBe('meeting-1');
+    expect(harness.deps.fetchArtifacts).not.toHaveBeenCalled();
+    expect(harness.deps.loadSettings).not.toHaveBeenCalled();
+    expect(harness.deps.upsertArtifact).not.toHaveBeenCalled();
+    expect(harness.deps.updateMeeting).not.toHaveBeenCalled();
+    expect(harness.artifacts).toHaveLength(0);
   });
 });

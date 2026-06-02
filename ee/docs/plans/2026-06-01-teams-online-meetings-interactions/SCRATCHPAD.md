@@ -349,3 +349,24 @@ flip `implemented:true`, repeat.
 - Updated `docs/integrations/teams-meetings-setup.md` and the browser-served `server/public/docs/integrations/teams-meetings-setup.md` to document calendar-backed events, protected recording/transcript API consent, and Exchange Application Access Policy/RBAC scoping. Rationale: Teams Application Access Policy scopes online meetings, not calendar/mailbox access.
 - Added docs contract coverage in `server/src/test/unit/docs/teamsMeetingsSetupRecordingPermissions.contract.test.ts` and expanded diagnostics/capability unit coverage.
 - Verification: `npx vitest run src/test/unit/teamsMeetingHelpers.test.ts src/test/unit/lib/teams/actions/teamsDiagnosticsActions.test.ts src/test/unit/docs/teamsMeetingsSetupRecordingPermissions.contract.test.ts`; `npm -w @alga-psa/ee-microsoft-teams run typecheck`; `npm -w @alga-psa/scheduling run typecheck`; `npm -w @alga-psa/integrations run typecheck`; `npm -w @alga-psa/clients run typecheck` all passed.
+
+## 2026-06-02 — F053 edition gating
+- Made recording capture truly inert in CE: `fetchAndPersistMeetingArtifacts` now returns the existing
+  online meeting before loading settings, fetching Graph artifacts, upserting artifacts, incrementing
+  `recording_fetch_attempts`, or changing status when `isEnterprise` is false. Added an injectable
+  `isEnterpriseEdition` dependency so the boundary is runtime-tested.
+- Gated the internal recording proxy route with `isEnterprise` before loading EE Teams code; CE returns a
+  controlled 404 instead of attempting Graph token/config resolution.
+- Kept online meeting records and join links edition-agnostic in `InteractionDetails`, but hid recording
+  status, refresh, and artifact links unless `NEXT_PUBLIC_EDITION='enterprise'`. Rationale: CE must show
+  the interaction join link without recording UI or runtime EE dependencies.
+- Fixed the MSP composition adapter for client-originated Teams scheduling: client UI attendees are
+  converted from `{ emailAddress: string }` to the Graph attendee shape expected by the scheduling action.
+- Added `server/src/test/unit/onlineMeetingEditionGating.contract.test.ts` for CE UI/proxy/facade
+  contracts and expanded `packages/clients/src/lib/onlineMeetingArtifactCapture.test.ts` with the CE
+  capture no-op assertion.
+- Verification: `npx vitest run src/lib/onlineMeetingArtifactCapture.test.ts` from
+  `packages/clients/`; `npx vitest run src/test/unit/onlineMeetingEditionGating.contract.test.ts` from
+  `server/`; `npm -w @alga-psa/clients run typecheck`; `npm -w server run typecheck` all passed.
+  `npm -w @alga-psa/msp-composition run typecheck` is unavailable because that workspace has no
+  `typecheck` script; the server typecheck covers the composition import edge.

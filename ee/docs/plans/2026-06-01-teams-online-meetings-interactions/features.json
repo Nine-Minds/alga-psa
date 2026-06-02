@@ -428,7 +428,7 @@
   },
   {
     "id": "F053",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ],

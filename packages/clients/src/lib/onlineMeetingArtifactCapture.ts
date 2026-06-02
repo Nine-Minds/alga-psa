@@ -38,6 +38,7 @@ export interface FetchAndPersistMeetingArtifactsDependencies {
   listArtifacts?: typeof OnlineMeetingModel.listArtifacts;
   upsertArtifact?: typeof OnlineMeetingModel.upsertArtifact;
   updateMeeting?: typeof OnlineMeetingModel.update;
+  isEnterpriseEdition?: () => boolean;
   fetchArtifacts?: (input: { tenantId: string; meetingId: string; organizerUserId: string }) => Promise<TeamsMeetingArtifactPayload[]>;
   loadSettings?: (tenantId: string) => Promise<CaptureSettings>;
   loadMeetingEntity?: (tenantId: string, meeting: IOnlineMeeting) => Promise<MeetingEntity>;
@@ -275,6 +276,7 @@ export async function fetchAndPersistMeetingArtifacts(
   const listArtifacts = dependencies.listArtifacts ?? OnlineMeetingModel.listArtifacts.bind(OnlineMeetingModel);
   const upsertArtifact = dependencies.upsertArtifact ?? OnlineMeetingModel.upsertArtifact.bind(OnlineMeetingModel);
   const updateMeeting = dependencies.updateMeeting ?? OnlineMeetingModel.update.bind(OnlineMeetingModel);
+  const isEnterpriseEdition = dependencies.isEnterpriseEdition ?? (() => isEnterprise);
   const fetchArtifacts = dependencies.fetchArtifacts ?? defaultFetchArtifacts;
   const loadSettings = dependencies.loadSettings ?? loadCaptureSettings;
   const resolveMeetingEntity = dependencies.loadMeetingEntity ?? loadMeetingEntity;
@@ -288,6 +290,9 @@ export async function fetchAndPersistMeetingArtifacts(
     throw new Error('Online meeting not found');
   }
   if (meeting.status === 'cancelled') {
+    return meeting;
+  }
+  if (!isEnterpriseEdition()) {
     return meeting;
   }
   if (!meeting.organizer_user_id) {
