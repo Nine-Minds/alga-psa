@@ -85,3 +85,23 @@ flip `implemented:true`, repeat.
 - Validate plan JSON: `python3 ~/.claude/skills/software-planner/scripts/validate_plan.py <folder>` (if present).
 - Tests: `npm run test:unit` (unit), `npm run test:integration`.
 - Migrations: `npm run migrate`.
+
+## 2026-06-01 implementation notes
+- Completed F001-F006 in `server/migrations/20260601120000_create_online_meetings.cjs`: added CE/core
+  `online_meetings` and `online_meeting_artifacts` with tenant-first PKs, PRD status/artifact type
+  checks, provider-meeting uniqueness, tenant-leading lookup indexes, Citus `transaction:false`
+  distribution on `tenant`, and artifact colocation with `online_meetings`. Chose no SQL FKs in these
+  tables to match the PRD's Citus/application-level integrity constraint.
+- Completed F007 in `server/migrations/20260601120100_add_online_meeting_interaction_type.cjs`: added an
+  idempotent insert-only `Online Meeting` system interaction type with `video` icon, following the
+  existing `add_general_interaction_type` guard style.
+- Completed T001-T007/T009-T010 in
+  `server/src/test/unit/migrations/onlineMeetingsMigration.test.ts`: tests execute the migration against
+  mocked Knex raw calls for plain Postgres and Citus paths, assert tenant-first keys, enum checks,
+  uniqueness/index contracts, child-table colocation, rollback order, and idempotent interaction-type
+  insertion. T008 intentionally remains open because it covers the later `OnlineMeetingModel.upsertArtifact`
+  helper, not just the unique constraint.
+- Verification: `npx vitest run src/test/unit/migrations/onlineMeetingsMigration.test.ts` from `server/`
+  passed (8 tests). An earlier `npm -w server run test:unit -- ...` accidentally ran the entire unit suite
+  due to the package script prepending `src/test/unit`; it was terminated after unrelated existing failures
+  and should not be treated as signal for this batch.
