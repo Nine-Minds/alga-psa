@@ -139,6 +139,21 @@ flip `implemented:true`, repeat.
   - `npm -w @alga-psa/ee-microsoft-teams run typecheck`
   - `npx vitest run ../packages/clients/src/lib/onlineMeetingArtifactCapture.test.ts` from `server/`
 
+## 2026-06-01 — F042 / T063-T065
+- Added internal recording proxy route:
+  `server/src/app/api/online-meetings/recordings/[artifactId]/route.ts`.
+- Security shape: requires `getCurrentUser`, uses the authenticated user's tenant to create the DB
+  context, looks up `online_meeting_artifacts` joined to `online_meetings` by `(tenant, meeting_id)`,
+  and returns 404 for cross-tenant artifact ids because the query is tenant-scoped.
+- Proxy behavior: fetches the raw Graph `content_url` server-side with the EE Teams Graph config +
+  app token, forwards `Range` when present, streams `graphResponse.body` with content headers, and never
+  redirects or serializes the raw Graph URL to the caller.
+- Portal guard: `?portal=true` is denied unless `teams_integrations.expose_recordings_in_portal` is true;
+  missing column/table defaults to false until F048 lands.
+- Verification:
+  - `npx vitest run src/test/unit/onlineMeetingRecordingProxy.contract.test.ts` from `server/`
+  - `npm -w @alga-psa/ee-microsoft-teams run typecheck`
+
 ## 2026-06-01 implementation notes
 - Implemented F012/F013:
   - `InteractionModel.addInteraction` and `getById` now accept an optional `Knex`/transaction and use it for both the insert and follow-up read; the default path still uses `createTenantKnex(tenantId)`.
