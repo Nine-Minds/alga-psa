@@ -237,6 +237,36 @@ spec:
             - name: SECRET_ENV_PREFIX
               value: "{{ .Values.secrets_provider.envPrefix }}"
             {{- end }}
+
+            {{- if .Values.setup.applianceBootstrap.enabled }}
+            # Appliance bootstrap hashes the initial admin password with PBKDF2
+            # peppered by getSecret('nextauth_secret','NEXTAUTH_SECRET'); getSecret
+            # consults the env provider FIRST, which looks up the *lowercase*
+            # secret name. Bind both names to the shared cluster secret so the
+            # bootstrap and the server resolve the identical pepper.
+            - name: nextauth_secret
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: NEXTAUTH_SECRET
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "sebastian.fullname" . }}-secrets"
+                  key: NEXTAUTH_SECRET
+            # PBKDF2 params MUST match the server deployment (.Values.crypto),
+            # else the bootstrap hashes with the hardcoded defaults (10000/64/
+            # 12/sha512) while the server verifies with the configured values --
+            # a permanent "Invalid email or password" at first login.
+            - name: SALT_BYTES
+              value: "{{ .Values.crypto.salt_bytes }}"
+            - name: ITERATIONS
+              value: "{{ .Values.crypto.iteration }}"
+            - name: KEY_LENGTH
+              value: "{{ .Values.crypto.key_length }}"
+            - name: ALGORITHM
+              value: "{{ .Values.crypto.algorithm }}"
+            {{- end }}
             
             # Vault configuration for setup jobs (only if vault is used)
             {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
@@ -385,6 +415,13 @@ spec:
             {{- end }}
             {{- end }}
           {{- if .Values.setup.applianceBootstrap.enabled }}
+          envFrom:
+            - secretRef:
+                name: appliance-initial-tenant
+                optional: true
+            - secretRef:
+                name: appliance-license-seed
+                optional: true
           volumeMounts:
             - name: appliance-bootstrap
               mountPath: /bootstrap

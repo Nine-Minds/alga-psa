@@ -56,17 +56,6 @@ data:
       PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@"
     }
 
-    createdb_admin() {
-      local database="$1"
-      local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
-      local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
-      local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
-      local pg_password
-
-      pg_password="$(get_admin_password)"
-      PGPASSWORD="${pg_password}" createdb -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" "${database}"
-    }
-
     psql_quiet() {
       local database="$1"
       shift
@@ -77,65 +66,6 @@ data:
 
       pg_password="$(get_admin_password)"
       PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@" 2>&1
-    }
-
-    ensure_bootstrap_lock_table() {
-      psql_admin postgres <<'SQL'
-    CREATE TABLE IF NOT EXISTS public.alga_appliance_bootstrap_lock (
-      id integer PRIMARY KEY,
-      holder text NOT NULL,
-      heartbeat_at timestamptz NOT NULL DEFAULT now()
-    );
-    SQL
-    }
-
-    acquire_bootstrap_lock() {
-      local started_at
-      local now
-      local timeout_seconds="${BOOTSTRAP_LOCK_TIMEOUT_SECONDS:-1800}"
-      local stale_seconds="${BOOTSTRAP_LOCK_STALE_SECONDS:-120}"
-      local heartbeat_seconds="${BOOTSTRAP_LOCK_HEARTBEAT_SECONDS:-10}"
-      local retry_seconds="${BOOTSTRAP_WAIT_RETRY_SECONDS:-2}"
-      local acquired
-
-      BOOTSTRAP_LOCK_HOLDER="${HOSTNAME:-bootstrap}-$$-$(date +%s)"
-      started_at="$(date +%s)"
-      ensure_bootstrap_lock_table
-
-      while true; do
-        acquired="$(psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -v stale_seconds="${stale_seconds}" -Atqc "WITH stale AS (DELETE FROM public.alga_appliance_bootstrap_lock WHERE id = 1 AND heartbeat_at < now() - (:'stale_seconds' || ' seconds')::interval RETURNING 1), inserted AS (INSERT INTO public.alga_appliance_bootstrap_lock (id, holder, heartbeat_at) VALUES (1, :'holder', now()) ON CONFLICT DO NOTHING RETURNING 1) SELECT EXISTS (SELECT 1 FROM inserted);")"
-        if echo "${acquired}" | grep -q '^t$'; then
-          log "Acquired appliance bootstrap lock (${BOOTSTRAP_LOCK_HOLDER})"
-          (
-            while true; do
-              sleep "${heartbeat_seconds}"
-              psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -c "UPDATE public.alga_appliance_bootstrap_lock SET heartbeat_at = now() WHERE id = 1 AND holder = :'holder';" >/dev/null || true
-            done
-          ) &
-          BOOTSTRAP_LOCK_HEARTBEAT_PID="$!"
-          trap release_bootstrap_lock EXIT INT TERM
-          return 0
-        fi
-
-        now="$(date +%s)"
-        if [ $((now - started_at)) -ge "${timeout_seconds}" ]; then
-          log "ERROR: Timed out waiting for another appliance bootstrap attempt to finish after ${timeout_seconds}s"
-          exit 1
-        fi
-
-        log "Another appliance bootstrap attempt is active; waiting for lock"
-        sleep "${retry_seconds}"
-      done
-    }
-
-    release_bootstrap_lock() {
-      if [ -n "${BOOTSTRAP_LOCK_HEARTBEAT_PID:-}" ]; then
-        kill "${BOOTSTRAP_LOCK_HEARTBEAT_PID}" 2>/dev/null || true
-      fi
-      if [ -n "${BOOTSTRAP_LOCK_HOLDER:-}" ]; then
-        psql_quiet postgres -v holder="${BOOTSTRAP_LOCK_HOLDER}" -c "DELETE FROM public.alga_appliance_bootstrap_lock WHERE id = 1 AND holder = :'holder';" >/dev/null || true
-        log "Released appliance bootstrap lock (${BOOTSTRAP_LOCK_HOLDER})"
-      fi
     }
 
     wait_for_postgres() {
@@ -232,43 +162,56 @@ data:
       PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
     }
 
-    ensure_database() {
-      local db_name="$1"
-      local output
-
-      if database_exists "${db_name}"; then
-        log "Database ${db_name} already exists"
-        return 0
+    require_initial_tenant_value() {
+      local name="$1"
+      eval "value=\${${name}:-}"
+      if [ -z "${value}" ]; then
+        log "ERROR: ${name} is required to create the initial appliance tenant"
+        log "ERROR: Reopen appliance setup and provide the initial company/admin fields."
+        exit 1
       fi
-
-      if output="$(createdb_admin "${db_name}" 2>&1)"; then
-        log "Created database ${db_name}"
-        return 0
-      fi
-
-      if database_exists "${db_name}"; then
-        log "Database ${db_name} was created by another bootstrap attempt"
-        return 0
-      fi
-
-      log "ERROR: Failed to create database ${db_name}"
-      log "ERROR: ${output}"
-      exit 1
     }
 
-    clear_stale_knex_migration_lock() {
-      local db_name="${DB_NAME_SERVER:-server}"
-      local locked_count
-
-      if ! psql_quiet "${db_name}" -Atqc "SELECT to_regclass('public.knex_migrations_lock') IS NOT NULL;" | grep -q '^t$'; then
+    ensure_initial_tenant() {
+      if check_seeds_status; then
+        log "Initial user already exists; skipping initial tenant creation"
         return 0
       fi
 
-      locked_count="$(psql_quiet "${db_name}" -Atqc "SELECT COUNT(*) FROM knex_migrations_lock WHERE is_locked = 1;" | tr -d '[:space:]')"
-      if [ "${locked_count:-0}" -gt 0 ]; then
-        log "Clearing stale Knex migration lock before appliance-owned migration run"
-        psql_admin "${db_name}" -c "UPDATE knex_migrations_lock SET is_locked = 0 WHERE is_locked = 1;"
+      require_initial_tenant_value INITIAL_TENANT_NAME
+      require_initial_tenant_value INITIAL_ADMIN_FIRST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_LAST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_EMAIL
+      require_initial_tenant_value INITIAL_ADMIN_PASSWORD
+
+      log "Creating initial appliance tenant and admin user"
+      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" npx tsx /app/server/scripts/create-tenant.ts \
+        --tenant "${INITIAL_TENANT_NAME}" \
+        --companyName "${INITIAL_TENANT_NAME}" \
+        --clientName "${INITIAL_TENANT_NAME}" \
+        --email "${INITIAL_ADMIN_EMAIL}" \
+        --firstName "${INITIAL_ADMIN_FIRST_NAME}" \
+        --lastName "${INITIAL_ADMIN_LAST_NAME}" \
+        --productCode psa
+      log "Initial appliance tenant and admin user created"
+    }
+
+    resolve_seeds_dir() {
+      if [ -n "${SEEDS_DIR:-}" ] && [ -d "${SEEDS_DIR}/psa" ] && ! find "${SEEDS_DIR}" -maxdepth 1 -name '*.cjs' -print -quit | grep -q .; then
+        SEEDS_DIR="${SEEDS_DIR}/psa"
+        export SEEDS_DIR
       fi
+    }
+
+    ensure_database() {
+      local db_name="$1"
+      psql_admin postgres -v db_name="${db_name}" <<'SQL'
+    SELECT CASE
+      WHEN EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name')
+        THEN NULL
+      ELSE format('CREATE DATABASE %I', :'db_name')
+    END \gexec
+    SQL
     }
 
     ensure_role() {
@@ -331,7 +274,6 @@ data:
     }
 
     wait_for_postgres
-    acquire_bootstrap_lock
     preflight_database_state
 
     log "Creating appliance databases and roles"
@@ -363,24 +305,70 @@ data:
       log "Granting necessary permissions"
       PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
-      clear_stale_knex_migration_lock
-
       log "Running migrations"
       NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose
     else
       log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
     fi
 
-    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
-      if check_seeds_status; then
-        log "Seeds already exist; skipping"
+    # Seed license_state from appliance-license-seed Secret (F082-F084).
+    # ALWAYS seeds a row on a self-hosted/appliance install (defaulting to an
+    # 'ee' 30-day trial when EDITION_CHOICE is absent). A missing/empty
+    # appliance-license-seed Secret previously left license_state empty, which
+    # silently bricks licensing: getLicenseStatus returns selfHostMode=false, so
+    # the in-app License page shows "only available for self-hosted" with NO
+    # airgap form (the form only renders once a row exists, so there is no UI
+    # path to apply a license) and addUser's seat check is skipped entirely.
+    # Idempotent: WHERE NOT EXISTS never resets an existing entitlement.
+    if [ -z "${EDITION_CHOICE:-}" ]; then
+      log "WARNING: EDITION_CHOICE unset (appliance-license-seed Secret missing/empty); defaulting license_state to an 'ee' trial so the License page and seat enforcement stay usable"
+    fi
+    {
+      pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      pg_password="$(get_admin_password)"
+      edition_choice="${EDITION_CHOICE:-ee}"
+      license_token="${LICENSE_TOKEN:-}"
+      log "Seeding license_state (edition_choice=${edition_choice})"
+
+      # Determine trial_started_at: set to NOW() only for 'ee' with no license key.
+      if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ]; then
+        trial_expr="NOW()"
       else
-        if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
-          log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
-          exit 1
-        fi
-        log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
-        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+        trial_expr="NULL"
+      fi
+
+      # Build license_token SQL value (NULL if empty, else single-quoted).
+      if [ -z "${license_token}" ]; then
+        license_token_sql="NULL"
+      else
+        # Escape single quotes in the token (should never contain them, but be safe).
+        escaped_token=$(echo "${license_token}" | sed "s/'/''/g")
+        license_token_sql="'${escaped_token}'"
+      fi
+
+      PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" \
+        -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" <<SQL
+    INSERT INTO license_state (edition_choice, trial_started_at, license_token, updated_at)
+    SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM license_state);
+    SQL
+      log "license_state seeded (edition_choice=${edition_choice})"
+    }
+
+    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+      ensure_initial_tenant
+      resolve_seeds_dir
+      if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
+        log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
+        exit 1
+      fi
+      log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
+      NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      if ! check_seeds_status; then
+        log "ERROR: Appliance bootstrap finished seed execution but no admin users exist"
+        exit 1
       fi
     else
       log "SETUP_RUN_SEEDS is disabled; skipping seeds"

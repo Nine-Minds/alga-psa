@@ -555,6 +555,17 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          {{- if .Values.setup.applianceBootstrap.enabled }}
+          # Lowercase alias (appliance bootstrap): getSecret()/EnvSecretProvider
+          # resolves secrets by lowercase name ahead of the uppercase fallback,
+          # so the server verifies admin password hashes with the same pepper the
+          # bootstrap job used to create them (see helm/templates/jobs.yaml).
+          - name: nextauth_secret
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: NEXTAUTH_SECRET
+          {{- end }}
           - name: IMAP_WEBHOOK_SECRET
             valueFrom:
               secretKeyRef:
