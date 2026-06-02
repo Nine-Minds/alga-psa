@@ -501,8 +501,136 @@ export const approveAppointmentRequest = withAuth(async (
     // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
     const interactionSideEffects: Array<() => Promise<void>> = [];
+    const teamsMeetingService = validatedData.generate_teams_meeting
+      ? await resolveTeamsMeetingService()
+      : null;
+    let preparedTeamsMeeting: any = null;
+    let createdMeetingForCompensation: any = null;
+    let teamsMeetingWarning: string | undefined;
 
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+    if (validatedData.generate_teams_meeting && teamsMeetingService) {
+      const meetingInput = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const request = await trx('appointment_requests')
+          .where({
+            appointment_request_id: validatedData.appointment_request_id,
+            tenant
+          })
+          .first();
+
+        if (!request) {
+          throw new Error('Appointment request not found');
+        }
+
+        if (request.status !== 'pending') {
+          throw new Error(`Cannot approve request with status: ${request.status}`);
+        }
+
+        if (!canUpdate) {
+          const isApprover = await isConfiguredApproverFor(
+            trx,
+            tenant,
+            user.user_id,
+            request.preferred_assigned_user_id ?? null
+          );
+          if (!isApprover) {
+            throw new Error('Insufficient permissions to approve appointment requests');
+          }
+        }
+
+        const assignedUser = await trx('users')
+          .where({
+            user_id: validatedData.assigned_user_id,
+            tenant
+          })
+          .first();
+
+        if (!assignedUser) {
+          throw new Error('Assigned user not found');
+        }
+
+        const service = await trx('service_catalog')
+          .where({
+            service_id: request.service_id,
+            tenant
+          })
+          .first();
+
+        if (!service) {
+          throw new Error('Service not found');
+        }
+
+        const fallbackDate = normalizeDateValue(request.requested_date);
+        const fallbackTime = normalizeTimeValue(request.requested_time);
+
+        if (!fallbackDate || !fallbackTime) {
+          throw new Error('Invalid requested date/time on appointment request');
+        }
+
+        const finalDate = validatedData.final_date ?? fallbackDate;
+        const finalTime = (validatedData.final_time ?? fallbackTime).slice(0, 5);
+        const approvalUsesRequestedFallback = !validatedData.final_date && !validatedData.final_time;
+        const dateStr = normalizeDateValue(finalDate);
+
+        if (!dateStr) {
+          throw new Error('Invalid final date provided for approval');
+        }
+
+        const scheduledStart = approvalUsesRequestedFallback
+          ? fromZonedTime(`${dateStr}T${finalTime}:00`, request.requester_timezone || 'UTC')
+          : new Date(`${dateStr}T${finalTime}:00Z`);
+
+        if (isNaN(scheduledStart.getTime())) {
+          throw new Error(`Invalid date/time: ${dateStr}T${finalTime}`);
+        }
+
+        const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
+
+        return {
+          appointmentRequestId: request.appointment_request_id,
+          subject: `Appointment: ${service.service_name}`,
+          startDateTime: scheduledStart.toISOString(),
+          endDateTime: scheduledEnd.toISOString(),
+        };
+      });
+
+      const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
+
+      if (!capability.available) {
+        switch (capability.reason) {
+          case 'no_organizer':
+            teamsMeetingWarning = 'Microsoft Teams meeting was not created because no default organizer is configured.';
+            break;
+          case 'ee_disabled':
+            teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
+            break;
+          case 'addon_required':
+            teamsMeetingWarning = 'Microsoft Teams meeting was not created because the Teams add-on is not active for this tenant.';
+            break;
+          case 'not_configured':
+          default:
+            teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
+            break;
+        }
+      } else {
+        preparedTeamsMeeting = await teamsMeetingService.createTeamsMeeting({
+          tenantId: tenant,
+          subject: meetingInput.subject,
+          startDateTime: meetingInput.startDateTime,
+          endDateTime: meetingInput.endDateTime,
+          appointmentRequestId: meetingInput.appointmentRequestId,
+        });
+
+        if (!preparedTeamsMeeting) {
+          teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
+        } else {
+          createdMeetingForCompensation = preparedTeamsMeeting;
+        }
+      }
+    }
+
+    let result;
+    try {
+      result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
       const request = await trx('appointment_requests')
         .where({
@@ -587,7 +715,6 @@ export const approveAppointmentRequest = withAuth(async (
       let onlineMeetingEventId: string | null = null;
       let onlineMeetingOrganizerUpn: string | null = null;
       let onlineMeetingOrganizerUserId: string | null = null;
-      let teamsMeetingWarning: string | undefined;
 
       let scheduleEntry;
 
@@ -763,45 +890,12 @@ export const approveAppointmentRequest = withAuth(async (
 
       const now = new Date();
 
-      if (validatedData.generate_teams_meeting) {
-        const teamsMeetingService = await resolveTeamsMeetingService();
-        const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
-
-        if (!capability.available) {
-          switch (capability.reason) {
-            case 'no_organizer':
-              teamsMeetingWarning = 'Microsoft Teams meeting was not created because no default organizer is configured.';
-              break;
-            case 'ee_disabled':
-              teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
-              break;
-            case 'addon_required':
-              teamsMeetingWarning = 'Microsoft Teams meeting was not created because the Teams add-on is not active for this tenant.';
-              break;
-            case 'not_configured':
-            default:
-              teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
-              break;
-          }
-        } else {
-          const createdMeeting = await teamsMeetingService.createTeamsMeeting({
-            tenantId: tenant,
-            subject: `Appointment: ${service.service_name}`,
-            startDateTime: scheduledStart.toISOString(),
-            endDateTime: scheduledEnd.toISOString(),
-            appointmentRequestId: request.appointment_request_id,
-          });
-
-          if (createdMeeting) {
-            onlineMeetingUrl = createdMeeting.joinWebUrl;
-            onlineMeetingId = createdMeeting.meetingId;
-            onlineMeetingEventId = createdMeeting.eventId ?? null;
-            onlineMeetingOrganizerUpn = createdMeeting.organizerUpn ?? null;
-            onlineMeetingOrganizerUserId = createdMeeting.organizerUserId ?? null;
-          } else {
-            teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
-          }
-        }
+      if (preparedTeamsMeeting) {
+        onlineMeetingUrl = preparedTeamsMeeting.joinWebUrl;
+        onlineMeetingId = preparedTeamsMeeting.meetingId;
+        onlineMeetingEventId = preparedTeamsMeeting.eventId ?? null;
+        onlineMeetingOrganizerUpn = preparedTeamsMeeting.organizerUpn ?? null;
+        onlineMeetingOrganizerUserId = preparedTeamsMeeting.organizerUserId ?? null;
       }
 
       let onlineMeetingInteractionId: string | null = null;
@@ -1048,7 +1142,24 @@ export const approveAppointmentRequest = withAuth(async (
         updatedRequest,
         teamsMeetingWarning,
       };
-    });
+      });
+      createdMeetingForCompensation = null;
+    } catch (transactionError) {
+      if (createdMeetingForCompensation && teamsMeetingService) {
+        try {
+          await teamsMeetingService.deleteTeamsMeeting({
+            tenantId: tenant,
+            meetingId: createdMeetingForCompensation.meetingId,
+            eventId: createdMeetingForCompensation.eventId ?? null,
+            appointmentRequestId: validatedData.appointment_request_id,
+          });
+        } catch (compensationError) {
+          console.error('Failed to delete orphaned Teams meeting after approval failure:', compensationError);
+        }
+      }
+
+      throw transactionError;
+    }
 
     for (const publishSideEffects of interactionSideEffects) {
       try {

@@ -831,6 +831,66 @@ describe('Appointment Request Integration Tests', () => {
       );
     });
 
+    it('deletes the orphaned Teams event when the local approval transaction fails after Graph create', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+      expect(onlineMeetingType).toBeTruthy();
+
+      await db('system_interaction_types')
+        .where({ type_id: onlineMeetingType.type_id })
+        .update({ type_name: `Online Meeting Hidden ${uuidv4()}` });
+
+      try {
+        const approveResult = await approveAppointmentRequest({
+          appointment_request_id: fixture.appointmentRequestId,
+          assigned_user_id: fixture.technicianUserId,
+          generate_teams_meeting: true,
+        });
+
+        expect(approveResult.success).toBe(false);
+        expect(approveResult.error).toContain('Online Meeting interaction type is not configured');
+        expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tenantId,
+            appointmentRequestId: fixture.appointmentRequestId,
+          })
+        );
+        expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
+          tenantId,
+          meetingId: 'meeting-123',
+          eventId: 'event-123',
+          appointmentRequestId: fixture.appointmentRequestId,
+        });
+
+        const updatedRequest = await db('appointment_requests')
+          .where({
+            appointment_request_id: fixture.appointmentRequestId,
+            tenant: tenantId,
+          })
+          .first();
+        expect(updatedRequest.status).toBe('pending');
+        expect(updatedRequest.online_meeting_provider).toBeNull();
+        expect(updatedRequest.online_meeting_url).toBeNull();
+        expect(updatedRequest.online_meeting_id).toBeNull();
+
+        const onlineMeeting = await db('online_meetings')
+          .where({
+            tenant: tenantId,
+            appointment_request_id: fixture.appointmentRequestId,
+          })
+          .first();
+        expect(onlineMeeting).toBeUndefined();
+      } finally {
+        await db('system_interaction_types')
+          .where({ type_id: onlineMeetingType.type_id })
+          .update({ type_name: 'Online Meeting' });
+      }
+    });
+
     it('skips Teams meeting creation when the toggle is off', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       setStaffSchedulingContext(tenantId);
@@ -933,7 +993,7 @@ describe('Appointment Request Integration Tests', () => {
 
     it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId, {
-        requestedDate: '2026-04-25',
+        requestedDate: '2026-08-25',
         requestedTime: '14:30',
         requestedDuration: 60,
       });
@@ -958,14 +1018,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.success).toBe(true);
       expect(createTeamsMeetingMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          startDateTime: '2026-04-25T21:30:00.000Z',
-          endDateTime: '2026-04-25T22:30:00.000Z',
+          startDateTime: '2026-08-25T21:30:00.000Z',
+          endDateTime: '2026-08-25T22:30:00.000Z',
         })
       );
 
       const createArgs = createTeamsMeetingMock.mock.calls.at(-1)?.[0];
-      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 14:30');
-      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 15:30');
+      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 14:30');
+      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 15:30');
     });
   });
 

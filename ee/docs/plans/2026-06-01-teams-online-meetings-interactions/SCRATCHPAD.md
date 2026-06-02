@@ -190,3 +190,25 @@ flip `implemented:true`, repeat.
   - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "should update status correctly when declined|reschedules the linked Teams meeting|reschedules a legacy Teams meeting|deletes the linked Teams meeting"` from `server/` passed (5 tests, 37 skipped).
   - The focused integration run still logs pre-existing non-fatal warnings in decline event publishing
     (`requestedDate` Date vs string) and client cancellation notifications (`contact_id` binding).
+- Completed F028-F029:
+  - Appointment approval now performs a read/validation preflight, calls `createTeamsMeeting` outside
+    the write transaction, then consumes the prepared Graph result inside the DB transaction.
+  - If the post-create DB transaction fails, the action calls `deleteTeamsMeeting` with the created
+    `meetingId` and `eventId`, leaving the appointment pending and without local meeting rows/links.
+  - Existing update/delete paths are now covered by source-level transaction-discipline guards:
+    reschedule updates happen after the DB transaction returns, and schedule deletion calls Teams after
+    the appointment cleanup transaction returns.
+- Completed T040-T041:
+  - Added `server/src/test/unit/scheduling/appointmentRequestTeamsTransaction.test.ts` to guard that
+    create/update/delete Graph calls are outside transaction bodies.
+  - Added an approval integration test that hides the `Online Meeting` interaction type after Graph
+    create, forcing the DB transaction to fail and asserting the orphan Teams event is deleted.
+  - Moved the requester-timezone conversion fixture from `2026-04-25` to `2026-08-25`; the old date is
+    now in the past relative to the 2026-06-02 runtime clock and fails request creation before approval.
+- Verification:
+  - `npm -w @alga-psa/scheduling run typecheck` passed.
+  - `npx vitest run src/test/unit/scheduling/appointmentRequestTeamsTransaction.test.ts` from `server/`
+    passed (3 tests).
+  - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "creates and stores a Teams meeting|deletes the orphaned Teams event|capability is unavailable|creation fails|converts requester-local approval times"` from `server/` passed (5 tests, 38 skipped).
+  - Gotcha: do not run two server Vitest commands with coverage in parallel; one parallel attempt hit a
+    `coverage/.tmp/coverage-0.json` race even though the targeted assertions had passed.
