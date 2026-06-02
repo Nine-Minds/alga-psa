@@ -212,3 +212,10 @@ flip `implemented:true`, repeat.
   - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "creates and stores a Teams meeting|deletes the orphaned Teams event|capability is unavailable|creation fails|converts requester-local approval times"` from `server/` passed (5 tests, 38 skipped).
   - Gotcha: do not run two server Vitest commands with coverage in parallel; one parallel attempt hit a
     `coverage/.tmp/coverage-0.json` race even though the targeted assertions had passed.
+- Completed F030/T042:
+  - Confirmed the rollout remains no-backfill: a legacy approved appointment with existing
+    `appointment_requests.online_meeting_*` values keeps those links, but no `online_meetings` row and no
+    `Online Meeting` timeline interaction are created just because the new schema exists.
+  - Added the coverage to `server/src/test/integration/appointmentRequests.integration.test.ts`.
+- Verification:
+  - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "does not backfill legacy approved Teams appointment links"` from `server/` passed (1 test, 43 skipped).

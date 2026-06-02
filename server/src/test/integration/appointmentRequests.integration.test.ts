@@ -891,6 +891,52 @@ describe('Appointment Request Integration Tests', () => {
       }
     });
 
+    it('does not backfill legacy approved Teams appointment links into online meeting records or timeline interactions', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      const approvedAt = new Date('2026-06-01T12:00:00.000Z');
+
+      await db('appointment_requests')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .update({
+          status: 'approved',
+          approved_by_user_id: STAFF_USER_ID,
+          approved_at: approvedAt,
+          online_meeting_provider: 'teams',
+          online_meeting_url: 'https://teams.example.com/legacy',
+          online_meeting_id: 'legacy-meeting-123',
+        });
+
+      const legacyRequest = await db('appointment_requests')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(legacyRequest.online_meeting_provider).toBe('teams');
+      expect(legacyRequest.online_meeting_url).toBe('https://teams.example.com/legacy');
+      expect(legacyRequest.online_meeting_id).toBe('legacy-meeting-123');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
+
+      const timelineInteractions = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: fixture.clientId,
+          contact_name_id: fixture.contactId,
+        })
+        .whereILike('title', 'Online Meeting:%');
+      expect(timelineInteractions).toHaveLength(0);
+    });
+
     it('skips Teams meeting creation when the toggle is off', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId);
       setStaffSchedulingContext(tenantId);
