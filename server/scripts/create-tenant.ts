@@ -57,17 +57,17 @@ async function main() {
   // Create database connection
   // For local development, use localhost instead of Docker service names
   const isDocker = process.env.DOCKER_ENV === 'true';
-  const dbHost = isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost';
-  const dbPort = isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432';
-  
+  const dbHost = process.env.DB_HOST || (isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost');
+  const dbPort = process.env.DB_PORT || (isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432');
+
   const db = knex({
     client: 'pg',
     connection: {
       host: dbHost,
       port: parseInt(dbPort),
       database: process.env.DB_NAME_SERVER || 'server',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD_ADMIN || process.env.POSTGRES_PASSWORD || 'abcd1234!'
+      user: process.env.DB_USER_ADMIN || process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD_SUPERUSER || process.env.POSTGRES_PASSWORD || 'abcd1234!'
     }
   });
 
