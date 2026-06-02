@@ -44,6 +44,9 @@ type TeamsFormState = {
   enabledCapabilities: string[];
   notificationCategories: string[];
   allowedActions: string[];
+  defaultMeetingOrganizerUpn: string;
+  downloadRecordings: boolean;
+  exposeRecordingsInPortal: boolean;
 };
 
 type TeamsCheckboxGroupField = 'enabledCapabilities' | 'notificationCategories' | 'allowedActions';
@@ -89,6 +92,9 @@ const EMPTY_FORM_STATE: TeamsFormState = {
   enabledCapabilities: [],
   notificationCategories: [],
   allowedActions: [],
+  defaultMeetingOrganizerUpn: '',
+  downloadRecordings: false,
+  exposeRecordingsInPortal: false,
 };
 
 function isTeamsEligible(profile: MicrosoftProfile): boolean {
@@ -277,6 +283,9 @@ function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormS
     enabledCapabilities: integration?.enabledCapabilities ?? [...TEAMS_CAPABILITY_VALUES],
     notificationCategories: integration?.notificationCategories ?? [...TEAMS_NOTIFICATION_VALUES],
     allowedActions: integration?.allowedActions ?? [...TEAMS_ALLOWED_ACTION_VALUES],
+    defaultMeetingOrganizerUpn: integration?.defaultMeetingOrganizerUpn ?? '',
+    downloadRecordings: Boolean(integration?.downloadRecordings),
+    exposeRecordingsInPortal: Boolean(integration?.exposeRecordingsInPortal),
   };
 }
 
@@ -440,6 +449,10 @@ export function TeamsIntegrationSettings() {
         enabledCapabilities: formState.enabledCapabilities as any,
         notificationCategories: formState.notificationCategories as any,
         allowedActions: formState.allowedActions as any,
+        defaultMeetingOrganizerUpn: formState.defaultMeetingOrganizerUpn.trim() || null,
+        downloadRecordings: formState.downloadRecordings,
+        exposeRecordingsInPortal: formState.exposeRecordingsInPortal,
+        lastError: null,
       });
 
       if (!result.success) {
@@ -654,6 +667,89 @@ export function TeamsIntegrationSettings() {
                 </AlertDescription>
               </Alert>
             ) : null}
+
+            <div className="rounded-md border p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">
+                  {t('integrations.teams.settings.meetings.title', { defaultValue: 'Online meetings and recordings' })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.teams.settings.meetings.description', { defaultValue: 'Use one Microsoft service account to organize Teams meetings and control how recordings are retained.' })}
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <Label htmlFor="teams-default-meeting-organizer-upn">
+                    {t('integrations.teams.settings.meetings.organizer.label', { defaultValue: 'Default meeting organizer UPN' })}
+                  </Label>
+                  <input
+                    id="teams-default-meeting-organizer-upn"
+                    className="mt-2 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    value={formState.defaultMeetingOrganizerUpn}
+                    onChange={(event) => {
+                      setFormState((current) => ({
+                        ...current,
+                        defaultMeetingOrganizerUpn: event.target.value,
+                      }));
+                    }}
+                    placeholder={t('integrations.teams.settings.meetings.organizer.placeholder', { defaultValue: 'scheduler@acme.com' })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {currentIntegration?.defaultMeetingOrganizerObjectId
+                      ? t('integrations.teams.settings.meetings.organizer.resolved', {
+                          defaultValue: 'Resolved object ID: {{objectId}}',
+                          objectId: currentIntegration.defaultMeetingOrganizerObjectId,
+                        })
+                      : t('integrations.teams.settings.meetings.organizer.help', {
+                          defaultValue: 'Saving resolves and stores the Microsoft Entra object ID used for Graph meeting calls.',
+                        })}
+                  </p>
+                </div>
+
+                <label className="flex items-start gap-3 rounded-md border p-3">
+                  <Checkbox
+                    id="teams-download-recordings"
+                    checked={formState.downloadRecordings}
+                    onChange={(event) => {
+                      setFormState((current) => ({
+                        ...current,
+                        downloadRecordings: event.target.checked,
+                      }));
+                    }}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">
+                      {t('integrations.teams.settings.meetings.downloadRecordings.label', { defaultValue: 'Download recordings to internal storage' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('integrations.teams.settings.meetings.downloadRecordings.description', { defaultValue: 'When enabled, recording blobs are copied into tenant storage in addition to the authenticated Graph proxy.' })}
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-md border p-3">
+                  <Checkbox
+                    id="teams-expose-recordings-in-portal"
+                    checked={formState.exposeRecordingsInPortal}
+                    onChange={(event) => {
+                      setFormState((current) => ({
+                        ...current,
+                        exposeRecordingsInPortal: event.target.checked,
+                      }));
+                    }}
+                  />
+                  <div>
+                    <div className="text-sm font-medium">
+                      {t('integrations.teams.settings.meetings.exposeRecordingsInPortal.label', { defaultValue: 'Show recordings and transcripts in the client portal' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('integrations.teams.settings.meetings.exposeRecordingsInPortal.description', { defaultValue: 'Off by default; MSP users can still view artifacts from interaction and appointment details.' })}
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-3">

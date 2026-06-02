@@ -1,84 +1,670 @@
 [
-  { "id": "T001", "implemented": true, "featureIds": ["F001", "F006"], "description": "Migration up creates online_meetings with PK (tenant, meeting_id) on plain Postgres." },
-  { "id": "T002", "implemented": true, "featureIds": ["F001", "F006"], "description": "Migration up distributes online_meetings on tenant on Citus (transaction:false, distributeIfNeeded)." },
-  { "id": "T003", "implemented": true, "featureIds": ["F001", "F006"], "description": "Migration down drops online_meetings cleanly on both Postgres and Citus." },
-  { "id": "T004", "implemented": true, "featureIds": ["F002"], "description": "Inserting an out-of-enum status value is rejected by the CHECK constraint." },
-  { "id": "T005", "implemented": true, "featureIds": ["F002"], "description": "Each of scheduled/ended/recording_pending/recording_ready/no_recording/cancelled/failed is accepted." },
-  { "id": "T006", "implemented": true, "featureIds": ["F003"], "description": "Duplicate (tenant, provider, provider_meeting_id) insert violates the unique constraint." },
-  { "id": "T007", "implemented": true, "featureIds": ["F004", "F006"], "description": "Migration creates online_meeting_artifacts colocated with online_meetings on Citus and rolls back cleanly." },
-  { "id": "T008", "implemented": true, "featureIds": ["F005", "F011"], "description": "upsertArtifact with the same (tenant, meeting_id, artifact_type, provider_artifact_id) updates rather than duplicates." },
-  { "id": "T009", "implemented": true, "featureIds": ["F007"], "description": "Migration inserts an 'Online Meeting' system interaction type with icon 'video'." },
-  { "id": "T010", "implemented": true, "featureIds": ["F007"], "description": "Re-running the type migration is idempotent (no duplicate row, no trigger error)." },
-  { "id": "T011", "implemented": true, "featureIds": ["F008", "F009"], "description": "@alga-psa/types exports IOnlineMeeting and IOnlineMeetingArtifact, and IInteraction has optional online_meeting." },
-  { "id": "T012", "implemented": true, "featureIds": ["F010"], "description": "OnlineMeetingModel.create + getById round-trips a row including its artifacts array." },
-  { "id": "T013", "implemented": true, "featureIds": ["F010"], "description": "getByProviderMeetingId / getByInteractionId / getByAppointmentRequestId return the expected row scoped by tenant." },
-  { "id": "T014", "implemented": true, "featureIds": ["F010"], "description": "listPendingRecordings returns only rows in pending-eligible statuses and excludes terminal (no_recording/cancelled/failed)." },
-  { "id": "T015", "implemented": true, "featureIds": ["F010"], "description": "All model queries are tenant-scoped (a different tenant cannot read another tenant's meeting)." },
-  { "id": "T016", "implemented": true, "featureIds": ["F011"], "description": "listArtifacts returns a meeting's artifacts newest-first." },
-  { "id": "T017", "implemented": true, "featureIds": ["F012"], "description": "InteractionModel.addInteraction(trx) writes inside the passed transaction (rolled back -> no row persisted)." },
-  { "id": "T018", "implemented": true, "featureIds": ["F012"], "description": "InteractionModel.addInteraction without trx still works via createTenantKnex (back-compat)." },
-  { "id": "T019", "implemented": true, "featureIds": ["F013"], "description": "Shared helper resolves default status_id when none provided." },
-  { "id": "T020", "implemented": true, "featureIds": ["F013"], "description": "Shared helper resolves client_id from contact_name_id when client_id is absent; throws if neither resolves." },
-  { "id": "T021", "implemented": true, "featureIds": ["F013"], "description": "Shared helper publishes INTERACTION_LOGGED and INTERACTION_CREATED for meeting-created interactions." },
-  { "id": "T022", "implemented": true, "featureIds": ["F013"], "description": "Shared helper triggers revalidatePath for contacts and clients pages." },
-  { "id": "T023", "implemented": true, "featureIds": ["F016"], "description": "createTeamsMeeting issues POST /users/{organizerUpn}/events with isOnlineMeeting:true and onlineMeetingProvider teamsForBusiness (mocked fetch)." },
-  { "id": "T024", "implemented": true, "featureIds": ["F017"], "description": "onlineMeeting id is resolved from the event joinUrl with a URL-encoded JoinWebUrl filter." },
-  { "id": "T025", "implemented": true, "featureIds": ["F018"], "description": "Appointment-approval creation sends NO external attendees in the event payload." },
-  { "id": "T026", "implemented": true, "featureIds": ["F018"], "description": "MSP-initiated creation includes the provided attendees in the event payload." },
-  { "id": "T027", "implemented": true, "featureIds": ["F019"], "description": "updateTeamsMeeting/deleteTeamsMeeting call the events endpoints with the event id (mocked fetch)." },
-  { "id": "T028", "implemented": true, "featureIds": ["F020"], "description": "Facade result includes organizerUpn, organizerUserId (AAD object id), and eventId, and these persist on online_meetings." },
-  { "id": "T029", "implemented": true, "featureIds": ["F021"], "description": "fetchMeetingArtifacts parses recording and transcript collections and fetches transcript content with Accept text/vtt." },
-  { "id": "T030", "implemented": true, "featureIds": ["F021"], "description": "fetchMeetingArtifacts URL-encodes organizerUserId, meeting id, and artifact id path segments." },
-  { "id": "T031", "implemented": true, "featureIds": ["F022", "F053"], "description": "Off-enterprise, the facade fetchMeetingArtifacts binding no-ops (returns nothing / does not call Graph)." },
-  { "id": "T032", "implemented": true, "featureIds": ["F023"], "description": "approveAppointmentRequest creates an Online Meeting interaction + online_meetings row linking appointment_request_id and interaction_id when creation succeeds." },
-  { "id": "T033", "implemented": true, "featureIds": ["F023"], "description": "When capability is unavailable, approve does NOT create an online_meetings row or interaction." },
-  { "id": "T034", "implemented": true, "featureIds": ["F024"], "description": "approve still writes appointment_requests.online_meeting_* columns." },
-  { "id": "T035", "implemented": true, "featureIds": ["F025"], "description": "Reschedule updates the calendar event via provider_event_id and updates online_meetings + interaction start/end." },
-  { "id": "T036", "implemented": true, "featureIds": ["F026"], "description": "Declining/cancelling an appointment sets online_meetings.status='cancelled'." },
-  { "id": "T037", "implemented": true, "featureIds": ["F014"], "description": "getOnlineMeetingForInteraction returns the meeting for an interaction scoped to the authenticated tenant, returns null when absent, and rejects missing interaction ids before querying." },
-  { "id": "T038", "implemented": true, "featureIds": ["F027"], "description": "A row WITH provider_event_id updates/deletes via the events endpoint." },
-  { "id": "T039", "implemented": true, "featureIds": ["F027"], "description": "A legacy row WITHOUT provider_event_id (online_meeting_id only) uses the standalone onlineMeeting handling / warning path." },
-  { "id": "T040", "implemented": true, "featureIds": ["F028"], "description": "No Graph create/update/delete call executes inside an open DB transaction (reschedule call is outside withTransaction)." },
-  { "id": "T041", "implemented": true, "featureIds": ["F029"], "description": "If Graph event creation succeeds but the DB transaction throws, the orphaned calendar event is deleted/cancelled." },
-  { "id": "T042", "implemented": true, "featureIds": ["F030"], "description": "An appointment approved before launch has no online_meetings row and is not shown on the timeline; its existing links remain." },
-  { "id": "T043", "implemented": true, "featureIds": ["F031"], "description": "scheduleTeamsMeeting happy path creates a meeting for a contact/client." },
-  { "id": "T044", "implemented": true, "featureIds": ["F031"], "description": "scheduleTeamsMeeting denies a user lacking the required permission." },
-  { "id": "T045", "implemented": true, "featureIds": ["F031"], "description": "scheduleTeamsMeeting defaults the organizer to the tenant service account when none is passed." },
-  { "id": "T046", "implemented": true, "featureIds": ["F031", "F051"], "description": "scheduleTeamsMeeting fails gracefully (no row) when capability is unavailable." },
-  { "id": "T047", "implemented": true, "featureIds": ["F032"], "description": "scheduleTeamsMeeting creates the Online Meeting interaction + online_meetings row via the shared helper." },
-  { "id": "T048", "implemented": true, "featureIds": ["F033"], "description": "When a schedule entry is requested, it is created with work_item_type 'interaction' and work_item_id = the created interaction id, linked via schedule_entry_id." },
-  { "id": "T049", "implemented": true, "featureIds": ["F034"], "description": "QuickAddInteraction shows the 'Create Teams meeting' toggle only when capability is available and routes save to scheduleTeamsMeeting." },
-  { "id": "T050", "implemented": true, "featureIds": ["F035"], "description": "EntryPopup offers 'Generate Teams meeting' when creating a schedule entry and creates a meeting on save." },
-  { "id": "T051", "implemented": true, "featureIds": ["F036"], "description": "A schedule entry created with a Teams meeting includes the join URL in its notes/description in both eventMapping copies." },
-  { "id": "T052", "implemented": true, "featureIds": ["F037", "F041"], "description": "Fetch handler upserts one artifact row per recording and per transcript; re-run does not duplicate rows." },
-  { "id": "T053", "implemented": true, "featureIds": ["F037"], "description": "Multiple recordings + multiple transcripts each produce a distinct artifact row." },
-  { "id": "T054", "implemented": true, "featureIds": ["F038"], "description": "Transcript content is stored via the internal document helper (NOT uploadDocument) with explicit tenant/user metadata." },
-  { "id": "T055", "implemented": true, "featureIds": ["F038"], "description": "Transcript document is associated to client and contact and defaults is_client_visible=false." },
-  { "id": "T056", "implemented": true, "featureIds": ["F038", "F046"], "description": "Transcript document is created is_client_visible=true only when expose_recordings_in_portal is enabled." },
-  { "id": "T057", "implemented": true, "featureIds": ["F039"], "description": "Recording artifact stores content_url; with download_recordings off, no blob is stored (file_id null)." },
-  { "id": "T058", "implemented": true, "featureIds": ["F039"], "description": "With download_recordings on, the recording blob is stored and the artifact file_id is set." },
-  { "id": "T059", "implemented": true, "featureIds": ["F040"], "description": "Status becomes recording_ready when at least one artifact exists." },
-  { "id": "T060", "implemented": true, "featureIds": ["F040"], "description": "Status becomes no_recording after recording_fetch_attempts reaches the cap with empty results." },
-  { "id": "T061", "implemented": true, "featureIds": ["F041"], "description": "Re-running the handler when a transcript artifact already has a document_id does not create a second document." },
-  { "id": "T062", "implemented": true, "featureIds": ["F015"], "description": "refreshMeetingRecordings invokes the shared fetch handler and returns updated artifacts." },
-  { "id": "T063", "implemented": true, "featureIds": ["F042"], "description": "Recording proxy streams a playable file and never returns the raw Graph content_url to the client." },
-  { "id": "T064", "implemented": true, "featureIds": ["F042"], "description": "Recording proxy rejects unauthenticated or cross-tenant requests." },
-  { "id": "T065", "implemented": true, "featureIds": ["F042", "F046"], "description": "Recording proxy denies client-portal access when expose_recordings_in_portal is off." },
-  { "id": "T066", "implemented": true, "featureIds": ["F043"], "description": "InteractionModel.getById/getForEntity returns online_meeting with its artifacts array populated." },
-  { "id": "T067", "implemented": true, "featureIds": ["F044"], "description": "InteractionDetails renders Join, status, Refresh recordings, and lists transcript/recording artifacts with correct actions." },
-  { "id": "T068", "implemented": true, "featureIds": ["F045"], "description": "InteractionDetails shows 'Recording pending' and 'No recording' states and the video icon for Online Meeting." },
-  { "id": "T069", "implemented": true, "featureIds": ["F046"], "description": "Client portal shows recording/transcript only when expose_recordings_in_portal is on; hidden by default." },
-  { "id": "T070", "implemented": true, "featureIds": ["F047"], "description": "New interactive elements have stable kebab-case ids and new copy resolves via i18n keys (no hardcoded strings)." },
-  { "id": "T071", "implemented": true, "featureIds": ["F048"], "description": "EE migration adds default_meeting_organizer_object_id, download_recordings (default false), expose_recordings_in_portal (default false)." },
-  { "id": "T072", "implemented": false, "featureIds": ["F049"], "description": "Saving the organizer in the Teams settings UI resolves and persists the AAD object id; the value is read from teams_integrations." },
-  { "id": "T073", "implemented": false, "featureIds": ["F050"], "description": "Toggling download_recordings / expose_recordings_in_portal in the Teams settings UI persists to teams_integrations." },
-  { "id": "T074", "implemented": false, "featureIds": ["F051"], "description": "Capability check reports recordingsAvailable=false (with a UI warning) when recording/transcript consent is missing." },
-  { "id": "T075", "implemented": false, "featureIds": ["F051", "F052"], "description": "Capability diagnostics warn when Calendars.ReadWrite lacks Exchange-side mailbox scoping." },
-  { "id": "T076", "implemented": false, "featureIds": ["F053"], "description": "CE build: interaction shows the join link only; no recording UI and no runtime errors." },
-  { "id": "T077", "implemented": false, "featureIds": ["F053"], "description": "Capture/subscription/job code paths are gated on isEnterprise and inert in CE." },
-  { "id": "T078", "implemented": false, "featureIds": ["F054"], "description": "[Phase 2] Subscription creation persists subscription id/expiry on teams_integrations (mocked Graph)." },
-  { "id": "T079", "implemented": false, "featureIds": ["F055"], "description": "[Phase 2] Renewal job renews a near-expiry subscription and recreates one returning 404 (reuse email webhook renewal test approach)." },
-  { "id": "T080", "implemented": false, "featureIds": ["F056"], "description": "[Phase 2] Webhook route echoes validationToken, responds fast, and enqueues a job." },
-  { "id": "T081", "implemented": false, "featureIds": ["F057"], "description": "[Phase 2] Notification handler resolves the meeting from resourceData/@odata.id (not clientState) and decrypts encrypted resource data." },
-  { "id": "T082", "implemented": false, "featureIds": ["F057"], "description": "[Phase 2] clientState is used only for tenant/subscription routing." }
+  {
+    "id": "T001",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006"
+    ],
+    "description": "Migration up creates online_meetings with PK (tenant, meeting_id) on plain Postgres."
+  },
+  {
+    "id": "T002",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006"
+    ],
+    "description": "Migration up distributes online_meetings on tenant on Citus (transaction:false, distributeIfNeeded)."
+  },
+  {
+    "id": "T003",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006"
+    ],
+    "description": "Migration down drops online_meetings cleanly on both Postgres and Citus."
+  },
+  {
+    "id": "T004",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "description": "Inserting an out-of-enum status value is rejected by the CHECK constraint."
+  },
+  {
+    "id": "T005",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "description": "Each of scheduled/ended/recording_pending/recording_ready/no_recording/cancelled/failed is accepted."
+  },
+  {
+    "id": "T006",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "description": "Duplicate (tenant, provider, provider_meeting_id) insert violates the unique constraint."
+  },
+  {
+    "id": "T007",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006"
+    ],
+    "description": "Migration creates online_meeting_artifacts colocated with online_meetings on Citus and rolls back cleanly."
+  },
+  {
+    "id": "T008",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F011"
+    ],
+    "description": "upsertArtifact with the same (tenant, meeting_id, artifact_type, provider_artifact_id) updates rather than duplicates."
+  },
+  {
+    "id": "T009",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "description": "Migration inserts an 'Online Meeting' system interaction type with icon 'video'."
+  },
+  {
+    "id": "T010",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "description": "Re-running the type migration is idempotent (no duplicate row, no trigger error)."
+  },
+  {
+    "id": "T011",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ],
+    "description": "@alga-psa/types exports IOnlineMeeting and IOnlineMeetingArtifact, and IInteraction has optional online_meeting."
+  },
+  {
+    "id": "T012",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "OnlineMeetingModel.create + getById round-trips a row including its artifacts array."
+  },
+  {
+    "id": "T013",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "getByProviderMeetingId / getByInteractionId / getByAppointmentRequestId return the expected row scoped by tenant."
+  },
+  {
+    "id": "T014",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "listPendingRecordings returns only rows in pending-eligible statuses and excludes terminal (no_recording/cancelled/failed)."
+  },
+  {
+    "id": "T015",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "All model queries are tenant-scoped (a different tenant cannot read another tenant's meeting)."
+  },
+  {
+    "id": "T016",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "description": "listArtifacts returns a meeting's artifacts newest-first."
+  },
+  {
+    "id": "T017",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "description": "InteractionModel.addInteraction(trx) writes inside the passed transaction (rolled back -> no row persisted)."
+  },
+  {
+    "id": "T018",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "description": "InteractionModel.addInteraction without trx still works via createTenantKnex (back-compat)."
+  },
+  {
+    "id": "T019",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "description": "Shared helper resolves default status_id when none provided."
+  },
+  {
+    "id": "T020",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "description": "Shared helper resolves client_id from contact_name_id when client_id is absent; throws if neither resolves."
+  },
+  {
+    "id": "T021",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "description": "Shared helper publishes INTERACTION_LOGGED and INTERACTION_CREATED for meeting-created interactions."
+  },
+  {
+    "id": "T022",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "description": "Shared helper triggers revalidatePath for contacts and clients pages."
+  },
+  {
+    "id": "T023",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "description": "createTeamsMeeting issues POST /users/{organizerUpn}/events with isOnlineMeeting:true and onlineMeetingProvider teamsForBusiness (mocked fetch)."
+  },
+  {
+    "id": "T024",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "description": "onlineMeeting id is resolved from the event joinUrl with a URL-encoded JoinWebUrl filter."
+  },
+  {
+    "id": "T025",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "description": "Appointment-approval creation sends NO external attendees in the event payload."
+  },
+  {
+    "id": "T026",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "description": "MSP-initiated creation includes the provided attendees in the event payload."
+  },
+  {
+    "id": "T027",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "description": "updateTeamsMeeting/deleteTeamsMeeting call the events endpoints with the event id (mocked fetch)."
+  },
+  {
+    "id": "T028",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "description": "Facade result includes organizerUpn, organizerUserId (AAD object id), and eventId, and these persist on online_meetings."
+  },
+  {
+    "id": "T029",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "description": "fetchMeetingArtifacts parses recording and transcript collections and fetches transcript content with Accept text/vtt."
+  },
+  {
+    "id": "T030",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "description": "fetchMeetingArtifacts URL-encodes organizerUserId, meeting id, and artifact id path segments."
+  },
+  {
+    "id": "T031",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F053"
+    ],
+    "description": "Off-enterprise, the facade fetchMeetingArtifacts binding no-ops (returns nothing / does not call Graph)."
+  },
+  {
+    "id": "T032",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "description": "approveAppointmentRequest creates an Online Meeting interaction + online_meetings row linking appointment_request_id and interaction_id when creation succeeds."
+  },
+  {
+    "id": "T033",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "description": "When capability is unavailable, approve does NOT create an online_meetings row or interaction."
+  },
+  {
+    "id": "T034",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ],
+    "description": "approve still writes appointment_requests.online_meeting_* columns."
+  },
+  {
+    "id": "T035",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "description": "Reschedule updates the calendar event via provider_event_id and updates online_meetings + interaction start/end."
+  },
+  {
+    "id": "T036",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "description": "Declining/cancelling an appointment sets online_meetings.status='cancelled'."
+  },
+  {
+    "id": "T037",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "description": "getOnlineMeetingForInteraction returns the meeting for an interaction scoped to the authenticated tenant, returns null when absent, and rejects missing interaction ids before querying."
+  },
+  {
+    "id": "T038",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "description": "A row WITH provider_event_id updates/deletes via the events endpoint."
+  },
+  {
+    "id": "T039",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "description": "A legacy row WITHOUT provider_event_id (online_meeting_id only) uses the standalone onlineMeeting handling / warning path."
+  },
+  {
+    "id": "T040",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "description": "No Graph create/update/delete call executes inside an open DB transaction (reschedule call is outside withTransaction)."
+  },
+  {
+    "id": "T041",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "description": "If Graph event creation succeeds but the DB transaction throws, the orphaned calendar event is deleted/cancelled."
+  },
+  {
+    "id": "T042",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ],
+    "description": "An appointment approved before launch has no online_meetings row and is not shown on the timeline; its existing links remain."
+  },
+  {
+    "id": "T043",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "description": "scheduleTeamsMeeting happy path creates a meeting for a contact/client."
+  },
+  {
+    "id": "T044",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "description": "scheduleTeamsMeeting denies a user lacking the required permission."
+  },
+  {
+    "id": "T045",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "description": "scheduleTeamsMeeting defaults the organizer to the tenant service account when none is passed."
+  },
+  {
+    "id": "T046",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F051"
+    ],
+    "description": "scheduleTeamsMeeting fails gracefully (no row) when capability is unavailable."
+  },
+  {
+    "id": "T047",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "description": "scheduleTeamsMeeting creates the Online Meeting interaction + online_meetings row via the shared helper."
+  },
+  {
+    "id": "T048",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "description": "When a schedule entry is requested, it is created with work_item_type 'interaction' and work_item_id = the created interaction id, linked via schedule_entry_id."
+  },
+  {
+    "id": "T049",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "description": "QuickAddInteraction shows the 'Create Teams meeting' toggle only when capability is available and routes save to scheduleTeamsMeeting."
+  },
+  {
+    "id": "T050",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "description": "EntryPopup offers 'Generate Teams meeting' when creating a schedule entry and creates a meeting on save."
+  },
+  {
+    "id": "T051",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "description": "A schedule entry created with a Teams meeting includes the join URL in its notes/description in both eventMapping copies."
+  },
+  {
+    "id": "T052",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F041"
+    ],
+    "description": "Fetch handler upserts one artifact row per recording and per transcript; re-run does not duplicate rows."
+  },
+  {
+    "id": "T053",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "description": "Multiple recordings + multiple transcripts each produce a distinct artifact row."
+  },
+  {
+    "id": "T054",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ],
+    "description": "Transcript content is stored via the internal document helper (NOT uploadDocument) with explicit tenant/user metadata."
+  },
+  {
+    "id": "T055",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ],
+    "description": "Transcript document is associated to client and contact and defaults is_client_visible=false."
+  },
+  {
+    "id": "T056",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F046"
+    ],
+    "description": "Transcript document is created is_client_visible=true only when expose_recordings_in_portal is enabled."
+  },
+  {
+    "id": "T057",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ],
+    "description": "Recording artifact stores content_url; with download_recordings off, no blob is stored (file_id null)."
+  },
+  {
+    "id": "T058",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ],
+    "description": "With download_recordings on, the recording blob is stored and the artifact file_id is set."
+  },
+  {
+    "id": "T059",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ],
+    "description": "Status becomes recording_ready when at least one artifact exists."
+  },
+  {
+    "id": "T060",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ],
+    "description": "Status becomes no_recording after recording_fetch_attempts reaches the cap with empty results."
+  },
+  {
+    "id": "T061",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ],
+    "description": "Re-running the handler when a transcript artifact already has a document_id does not create a second document."
+  },
+  {
+    "id": "T062",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "description": "refreshMeetingRecordings invokes the shared fetch handler and returns updated artifacts."
+  },
+  {
+    "id": "T063",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ],
+    "description": "Recording proxy streams a playable file and never returns the raw Graph content_url to the client."
+  },
+  {
+    "id": "T064",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ],
+    "description": "Recording proxy rejects unauthenticated or cross-tenant requests."
+  },
+  {
+    "id": "T065",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F046"
+    ],
+    "description": "Recording proxy denies client-portal access when expose_recordings_in_portal is off."
+  },
+  {
+    "id": "T066",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ],
+    "description": "InteractionModel.getById/getForEntity returns online_meeting with its artifacts array populated."
+  },
+  {
+    "id": "T067",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "description": "InteractionDetails renders Join, status, Refresh recordings, and lists transcript/recording artifacts with correct actions."
+  },
+  {
+    "id": "T068",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ],
+    "description": "InteractionDetails shows 'Recording pending' and 'No recording' states and the video icon for Online Meeting."
+  },
+  {
+    "id": "T069",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ],
+    "description": "Client portal shows recording/transcript only when expose_recordings_in_portal is on; hidden by default."
+  },
+  {
+    "id": "T070",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ],
+    "description": "New interactive elements have stable kebab-case ids and new copy resolves via i18n keys (no hardcoded strings)."
+  },
+  {
+    "id": "T071",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ],
+    "description": "EE migration adds default_meeting_organizer_object_id, download_recordings (default false), expose_recordings_in_portal (default false)."
+  },
+  {
+    "id": "T072",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ],
+    "description": "Saving the organizer in the Teams settings UI resolves and persists the AAD object id; the value is read from teams_integrations."
+  },
+  {
+    "id": "T073",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ],
+    "description": "Toggling download_recordings / expose_recordings_in_portal in the Teams settings UI persists to teams_integrations."
+  },
+  {
+    "id": "T074",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ],
+    "description": "Capability check reports recordingsAvailable=false (with a UI warning) when recording/transcript consent is missing."
+  },
+  {
+    "id": "T075",
+    "implemented": false,
+    "featureIds": [
+      "F051",
+      "F052"
+    ],
+    "description": "Capability diagnostics warn when Calendars.ReadWrite lacks Exchange-side mailbox scoping."
+  },
+  {
+    "id": "T076",
+    "implemented": false,
+    "featureIds": [
+      "F053"
+    ],
+    "description": "CE build: interaction shows the join link only; no recording UI and no runtime errors."
+  },
+  {
+    "id": "T077",
+    "implemented": false,
+    "featureIds": [
+      "F053"
+    ],
+    "description": "Capture/subscription/job code paths are gated on isEnterprise and inert in CE."
+  },
+  {
+    "id": "T078",
+    "implemented": false,
+    "featureIds": [
+      "F054"
+    ],
+    "description": "[Phase 2] Subscription creation persists subscription id/expiry on teams_integrations (mocked Graph)."
+  },
+  {
+    "id": "T079",
+    "implemented": false,
+    "featureIds": [
+      "F055"
+    ],
+    "description": "[Phase 2] Renewal job renews a near-expiry subscription and recreates one returning 404 (reuse email webhook renewal test approach)."
+  },
+  {
+    "id": "T080",
+    "implemented": false,
+    "featureIds": [
+      "F056"
+    ],
+    "description": "[Phase 2] Webhook route echoes validationToken, responds fast, and enqueues a job."
+  },
+  {
+    "id": "T081",
+    "implemented": false,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "[Phase 2] Notification handler resolves the meeting from resourceData/@odata.id (not clientState) and decrypts encrypted resource data."
+  },
+  {
+    "id": "T082",
+    "implemented": false,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "[Phase 2] clientState is used only for tenant/subscription routing."
+  }
 ]

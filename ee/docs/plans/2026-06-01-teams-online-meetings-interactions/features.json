@@ -1,59 +1,469 @@
 [
-  { "id": "F001", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Core migration: create online_meetings table (PK (tenant, meeting_id), all columns per PRD), distributed on tenant with transaction:false Citus helper pattern." },
-  { "id": "F002", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "online_meetings status CHECK includes scheduled, ended, recording_pending, recording_ready, no_recording, cancelled, failed." },
-  { "id": "F003", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "online_meetings unique (tenant, provider, provider_meeting_id) and indexes on (tenant, interaction_id), (tenant, appointment_request_id), (tenant, status, end_time)." },
-  { "id": "F004", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Core migration: create online_meeting_artifacts child table (PK (tenant, artifact_id), artifact_type, provider_artifact_id, content_url, document_id, file_id, created_date_time), colocated with online_meetings." },
-  { "id": "F005", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "online_meeting_artifacts unique (tenant, meeting_id, artifact_type, provider_artifact_id) for idempotent upserts; index (tenant, meeting_id)." },
-  { "id": "F006", "implemented": true, "prdRefs": ["Rollout / Migration"], "description": "Both new tables apply and roll back cleanly on plain Postgres (no Citus) and on Citus." },
-  { "id": "F007", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "Core migration: insert 'Online Meeting' system interaction type with icon 'video' (INSERT-only, follows add_general_interaction_type pattern)." },
-  { "id": "F008", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Types: add IOnlineMeeting and IOnlineMeetingArtifact (with artifacts[] on IOnlineMeeting), exported from @alga-psa/types barrel." },
-  { "id": "F009", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Types: add optional read-only online_meeting?: IOnlineMeeting | null to IInteraction." },
-  { "id": "F010", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "OnlineMeetingModel (session-agnostic, createTenantKnex-based): create, getById (with artifacts), getByProviderMeetingId, getByInteractionId, getByAppointmentRequestId, update, listPendingRecordings." },
-  { "id": "F011", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "OnlineMeetingModel artifact helpers: upsertArtifact (idempotent on unique key), listArtifacts(meetingId)." },
-  { "id": "F012", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "InteractionModel.addInteraction/getById accept an optional trx (default createTenantKnex), fixing the existing gap where the model opened its own connection outside the action transaction." },
-  { "id": "F013", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Shared create-interaction helper replicates the action's status defaulting, contact->client resolution, INTERACTION_LOGGED + INTERACTION_CREATED publishing, and revalidatePath; both addInteraction action and meeting paths call it." },
-  { "id": "F014", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "onlineMeetingActions: getOnlineMeetingForInteraction (withAuth)." },
-  { "id": "F015", "implemented": true, "prdRefs": ["Functional Requirements", "Functional Requirements"], "description": "onlineMeetingActions: refreshMeetingRecordings(meetingId) (withAuth) invoking the shared fetch handler." },
-  { "id": "F016", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "EE: change createTeamsMeeting to create a calendar-backed event (POST /users/{organizerUpn}/events, isOnlineMeeting:true, onlineMeetingProvider:teamsForBusiness); capture event id." },
-  { "id": "F017", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "EE: resolve the onlineMeeting id from the event joinUrl (filter on JoinWebUrl, URL-encoded) for later artifact calls." },
-  { "id": "F018", "implemented": true, "prdRefs": ["Security / Permissions", "Functional Requirements"], "description": "EE: appointment-approval meetings created with NO external attendees; MSP-initiated meetings MAY include attendees." },
-  { "id": "F019", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "EE: updateTeamsMeeting and deleteTeamsMeeting move to the events endpoints (PATCH/DELETE /users/{organizerUpn}/events/{eventId})." },
-  { "id": "F020", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Facade CreateTeamsMeetingResult (and EE return) extended with organizerUpn, organizerUserId (AAD object id), and eventId; persisted on online_meetings." },
-  { "id": "F021", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "EE fetchMeetingArtifacts: GET .../users/{organizerUserId}/onlineMeetings/{id}/recordings and /transcripts (collections) + transcript content (Accept: text/vtt); URL-encoded path segments; returns content URLs not clickable links." },
-  { "id": "F022", "implemented": true, "prdRefs": ["Data / API / Integrations"], "description": "Add fetchMeetingArtifacts to the TeamsMeetingService facade interface with a no-op binding off-enterprise; export from EE lib index." },
-  { "id": "F023", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Appointment approval path: inside the existing createdMeeting block, create the Online Meeting interaction (via trx helper) and the online_meetings row linking appointment_request_id + interaction_id." },
-  { "id": "F024", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Appointment approval path: keep writing appointment_requests.online_meeting_* columns (email/portal still read them)." },
-  { "id": "F025", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Reschedule (updateAppointmentRequestDateTime): update the calendar event via provider_event_id and keep online_meetings + interaction times in sync." },
-  { "id": "F026", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Decline/cancel paths: set online_meetings.status = 'cancelled' and stop capture/polling." },
-  { "id": "F027", "implemented": true, "prdRefs": ["Functional Requirements", "Data / API / Integrations"], "description": "Update/delete branch explicitly on presence of provider_event_id: new rows use the events endpoint; legacy rows (online_meeting_id only) keep standalone onlineMeeting handling or show a controlled warning." },
-  { "id": "F028", "implemented": true, "prdRefs": ["Non-functional Requirements"], "description": "All Graph create/update/delete calls run OUTSIDE DB transactions (move the reschedule updateTeamsMeeting call out of withTransaction)." },
-  { "id": "F029", "implemented": true, "prdRefs": ["Non-functional Requirements"], "description": "Compensation: if Graph event creation succeeds but the subsequent DB transaction fails, delete/cancel the orphaned calendar event." },
-  { "id": "F030", "implemented": true, "prdRefs": ["Rollout / Migration"], "description": "No backfill: pre-existing approved appointments get no online_meetings row or interaction; existing columns/links untouched." },
-  { "id": "F031", "implemented": true, "prdRefs": ["Functional Requirements", "Security / Permissions"], "description": "scheduleTeamsMeeting action (withAuth + explicit hasPermission): inputs subject, start/end, organizer default, and one of contact/client and/or schedule entry; calls the facade (calendar-backed)." },
-  { "id": "F032", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "scheduleTeamsMeeting creates the Online Meeting interaction + online_meetings row via the shared helper." },
-  { "id": "F033", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "scheduleTeamsMeeting optionally creates a schedule_entries row with work_item_type 'interaction' and work_item_id = created interaction id, linked via online_meetings.schedule_entry_id." },
-  { "id": "F034", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "QuickAddInteraction: when type = Online Meeting, show a capability-gated 'Create Teams meeting' toggle with start/end; on save call scheduleTeamsMeeting." },
-  { "id": "F035", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "EntryPopup: add a 'Generate Teams meeting' option when creating a schedule entry directly, reusing the existing teamsMeetingCapability plumbing." },
-  { "id": "F036", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Calendar-sync: write the join URL into the schedule entry notes (or add a field mapping) in BOTH eventMapping.ts copies so it appears in the pushed external event." },
-  { "id": "F037", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Shared fetch handler (no withAuth/session): resolves meeting, calls fetchMeetingArtifacts, upserts one online_meeting_artifacts row per artifact." },
-  { "id": "F038", "implemented": true, "prdRefs": ["Functional Requirements", "Security / Permissions"], "description": "Fetch handler stores transcript content via an INTERNAL document helper (buffer/string + explicit tenant/user) — not the withAuth uploadDocument — associated to client + contact, is_client_visible=false unless expose_recordings_in_portal is on." },
-  { "id": "F039", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Fetch handler records recording artifacts with content_url; when download_recordings is on, also streams the blob into the file store and sets the artifact file_id." },
-  { "id": "F040", "implemented": true, "prdRefs": ["Functional Requirements", "Non-functional Requirements"], "description": "Fetch handler sets online_meetings.status (recording_ready when any artifact exists; no_recording after the recording_fetch_attempts cap) and refreshes the interaction." },
-  { "id": "F041", "implemented": true, "prdRefs": ["Functional Requirements"], "description": "Fetch handler is idempotent: re-run upserts artifacts and skips transcript document creation when an artifact with a document_id already exists for that provider_artifact_id." },
-  { "id": "F042", "implemented": true, "prdRefs": ["UX / UI Notes", "Security / Permissions"], "description": "Recording proxy route (internal, authenticated, tenant-scoped, streaming/backpressure): resolves the artifact content_url server-side with the app token; never exposes the raw Graph URL." },
-  { "id": "F043", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "InteractionModel.getById/getForEntity join online_meetings on (tenant, interaction_id) and its artifacts, populating IInteraction.online_meeting with an artifacts array." },
-  { "id": "F044", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "InteractionDetails: 'Online Meeting' section with Join, status, 'Refresh recordings' button, and an artifacts list (transcripts -> View transcript document; recordings -> Download recording via proxy)." },
-  { "id": "F045", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "InteractionDetails uses InteractionIcon (Online Meeting -> video) and renders 'Recording pending' / 'No recording' states." },
-  { "id": "F046", "implemented": true, "prdRefs": ["UX / UI Notes", "Security / Permissions"], "description": "Appointment/portal views (EntryPopup, AppointmentRequestDetailsPage, AppointmentsPage) show recording/transcript links next to Join, gated on expose_recordings_in_portal (default MSP-only)." },
-  { "id": "F047", "implemented": true, "prdRefs": ["UX / UI Notes"], "description": "All new interactive elements have stable kebab-case ids and all new copy uses t('...') i18n keys." },
-  { "id": "F048", "implemented": true, "prdRefs": ["Security / Permissions", "Data / API / Integrations"], "description": "EE migration: add default_meeting_organizer_object_id, download_recordings (default false), expose_recordings_in_portal (default false) to teams_integrations." },
-  { "id": "F049", "implemented": false, "prdRefs": ["Functional Requirements", "UX / UI Notes"], "description": "Move the organizer setting UI from AvailabilitySettings into the Teams integration settings page (UI move only; value already on teams_integrations); resolve and persist organizer AAD object id on save." },
-  { "id": "F050", "implemented": false, "prdRefs": ["Functional Requirements"], "description": "Tenant-settings UI controls for download_recordings and expose_recordings_in_portal in the Teams integration settings page." },
-  { "id": "F051", "implemented": false, "prdRefs": ["Security / Permissions"], "description": "Capability check (meetingCapabilityActions) gains a recordingsAvailable flag; UI warns when recording/transcript consent or Exchange-side mailbox scoping is missing instead of failing silently." },
-  { "id": "F052", "implemented": false, "prdRefs": ["Security / Permissions", "Rollout / Migration"], "description": "Setup docs: document Calendars.ReadWrite (application) WITH Exchange Application Access Policy/RBAC scoping to the organizer mailbox, plus the protected/metered recording & transcript permissions and Application Access Policy." },
-  { "id": "F053", "implemented": false, "prdRefs": ["Non-functional Requirements"], "description": "Feature gating: online_meetings, artifacts, and the interaction type are edition-agnostic; capture, subscriptions, and jobs gated on isEnterprise; facade no-ops off-enterprise." },
-  { "id": "F054", "implemented": false, "prdRefs": ["Functional Requirements"], "description": "[Phase 2] Create tenant-wide Graph change-notification subscriptions on getAllRecordings and getAllTranscripts; persist subscription id/expiry on teams_integrations." },
-  { "id": "F055", "implemented": false, "prdRefs": ["Functional Requirements"], "description": "[Phase 2] Recurring renewal job (scheduleRecurringJob, isEnterprise-gated) renews/recreates expiring subscriptions, mirroring the Microsoft email webhook renewal." },
-  { "id": "F056", "implemented": false, "prdRefs": ["Functional Requirements"], "description": "[Phase 2] Webhook route /api/teams/webhooks/recordings: echo validationToken, respond fast, enqueue a job that calls the shared fetch handler." },
-  { "id": "F057", "implemented": false, "prdRefs": ["Functional Requirements"], "description": "[Phase 2] clientState carries tenant/subscription routing only; the specific meeting is resolved from notification resourceData/@odata.id matched to provider_meeting_id; decrypt encrypted resource data." }
+  {
+    "id": "F001",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Core migration: create online_meetings table (PK (tenant, meeting_id), all columns per PRD), distributed on tenant with transaction:false Citus helper pattern."
+  },
+  {
+    "id": "F002",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "online_meetings status CHECK includes scheduled, ended, recording_pending, recording_ready, no_recording, cancelled, failed."
+  },
+  {
+    "id": "F003",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "online_meetings unique (tenant, provider, provider_meeting_id) and indexes on (tenant, interaction_id), (tenant, appointment_request_id), (tenant, status, end_time)."
+  },
+  {
+    "id": "F004",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Core migration: create online_meeting_artifacts child table (PK (tenant, artifact_id), artifact_type, provider_artifact_id, content_url, document_id, file_id, created_date_time), colocated with online_meetings."
+  },
+  {
+    "id": "F005",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "online_meeting_artifacts unique (tenant, meeting_id, artifact_type, provider_artifact_id) for idempotent upserts; index (tenant, meeting_id)."
+  },
+  {
+    "id": "F006",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ],
+    "description": "Both new tables apply and roll back cleanly on plain Postgres (no Citus) and on Citus."
+  },
+  {
+    "id": "F007",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Core migration: insert 'Online Meeting' system interaction type with icon 'video' (INSERT-only, follows add_general_interaction_type pattern)."
+  },
+  {
+    "id": "F008",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Types: add IOnlineMeeting and IOnlineMeetingArtifact (with artifacts[] on IOnlineMeeting), exported from @alga-psa/types barrel."
+  },
+  {
+    "id": "F009",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Types: add optional read-only online_meeting?: IOnlineMeeting | null to IInteraction."
+  },
+  {
+    "id": "F010",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "OnlineMeetingModel (session-agnostic, createTenantKnex-based): create, getById (with artifacts), getByProviderMeetingId, getByInteractionId, getByAppointmentRequestId, update, listPendingRecordings."
+  },
+  {
+    "id": "F011",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "OnlineMeetingModel artifact helpers: upsertArtifact (idempotent on unique key), listArtifacts(meetingId)."
+  },
+  {
+    "id": "F012",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "InteractionModel.addInteraction/getById accept an optional trx (default createTenantKnex), fixing the existing gap where the model opened its own connection outside the action transaction."
+  },
+  {
+    "id": "F013",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Shared create-interaction helper replicates the action's status defaulting, contact->client resolution, INTERACTION_LOGGED + INTERACTION_CREATED publishing, and revalidatePath; both addInteraction action and meeting paths call it."
+  },
+  {
+    "id": "F014",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "onlineMeetingActions: getOnlineMeetingForInteraction (withAuth)."
+  },
+  {
+    "id": "F015",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Functional Requirements"
+    ],
+    "description": "onlineMeetingActions: refreshMeetingRecordings(meetingId) (withAuth) invoking the shared fetch handler."
+  },
+  {
+    "id": "F016",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "EE: change createTeamsMeeting to create a calendar-backed event (POST /users/{organizerUpn}/events, isOnlineMeeting:true, onlineMeetingProvider:teamsForBusiness); capture event id."
+  },
+  {
+    "id": "F017",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "EE: resolve the onlineMeeting id from the event joinUrl (filter on JoinWebUrl, URL-encoded) for later artifact calls."
+  },
+  {
+    "id": "F018",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Functional Requirements"
+    ],
+    "description": "EE: appointment-approval meetings created with NO external attendees; MSP-initiated meetings MAY include attendees."
+  },
+  {
+    "id": "F019",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "EE: updateTeamsMeeting and deleteTeamsMeeting move to the events endpoints (PATCH/DELETE /users/{organizerUpn}/events/{eventId})."
+  },
+  {
+    "id": "F020",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Facade CreateTeamsMeetingResult (and EE return) extended with organizerUpn, organizerUserId (AAD object id), and eventId; persisted on online_meetings."
+  },
+  {
+    "id": "F021",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "EE fetchMeetingArtifacts: GET .../users/{organizerUserId}/onlineMeetings/{id}/recordings and /transcripts (collections) + transcript content (Accept: text/vtt); URL-encoded path segments; returns content URLs not clickable links."
+  },
+  {
+    "id": "F022",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "Add fetchMeetingArtifacts to the TeamsMeetingService facade interface with a no-op binding off-enterprise; export from EE lib index."
+  },
+  {
+    "id": "F023",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Appointment approval path: inside the existing createdMeeting block, create the Online Meeting interaction (via trx helper) and the online_meetings row linking appointment_request_id + interaction_id."
+  },
+  {
+    "id": "F024",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Appointment approval path: keep writing appointment_requests.online_meeting_* columns (email/portal still read them)."
+  },
+  {
+    "id": "F025",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Reschedule (updateAppointmentRequestDateTime): update the calendar event via provider_event_id and keep online_meetings + interaction times in sync."
+  },
+  {
+    "id": "F026",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Decline/cancel paths: set online_meetings.status = 'cancelled' and stop capture/polling."
+  },
+  {
+    "id": "F027",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ],
+    "description": "Update/delete branch explicitly on presence of provider_event_id: new rows use the events endpoint; legacy rows (online_meeting_id only) keep standalone onlineMeeting handling or show a controlled warning."
+  },
+  {
+    "id": "F028",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "description": "All Graph create/update/delete calls run OUTSIDE DB transactions (move the reschedule updateTeamsMeeting call out of withTransaction)."
+  },
+  {
+    "id": "F029",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "description": "Compensation: if Graph event creation succeeds but the subsequent DB transaction fails, delete/cancel the orphaned calendar event."
+  },
+  {
+    "id": "F030",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ],
+    "description": "No backfill: pre-existing approved appointments get no online_meetings row or interaction; existing columns/links untouched."
+  },
+  {
+    "id": "F031",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ],
+    "description": "scheduleTeamsMeeting action (withAuth + explicit hasPermission): inputs subject, start/end, organizer default, and one of contact/client and/or schedule entry; calls the facade (calendar-backed)."
+  },
+  {
+    "id": "F032",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "scheduleTeamsMeeting creates the Online Meeting interaction + online_meetings row via the shared helper."
+  },
+  {
+    "id": "F033",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "scheduleTeamsMeeting optionally creates a schedule_entries row with work_item_type 'interaction' and work_item_id = created interaction id, linked via online_meetings.schedule_entry_id."
+  },
+  {
+    "id": "F034",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "QuickAddInteraction: when type = Online Meeting, show a capability-gated 'Create Teams meeting' toggle with start/end; on save call scheduleTeamsMeeting."
+  },
+  {
+    "id": "F035",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "EntryPopup: add a 'Generate Teams meeting' option when creating a schedule entry directly, reusing the existing teamsMeetingCapability plumbing."
+  },
+  {
+    "id": "F036",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Calendar-sync: write the join URL into the schedule entry notes (or add a field mapping) in BOTH eventMapping.ts copies so it appears in the pushed external event."
+  },
+  {
+    "id": "F037",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Shared fetch handler (no withAuth/session): resolves meeting, calls fetchMeetingArtifacts, upserts one online_meeting_artifacts row per artifact."
+  },
+  {
+    "id": "F038",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ],
+    "description": "Fetch handler stores transcript content via an INTERNAL document helper (buffer/string + explicit tenant/user) \u2014 not the withAuth uploadDocument \u2014 associated to client + contact, is_client_visible=false unless expose_recordings_in_portal is on."
+  },
+  {
+    "id": "F039",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Fetch handler records recording artifacts with content_url; when download_recordings is on, also streams the blob into the file store and sets the artifact file_id."
+  },
+  {
+    "id": "F040",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-functional Requirements"
+    ],
+    "description": "Fetch handler sets online_meetings.status (recording_ready when any artifact exists; no_recording after the recording_fetch_attempts cap) and refreshes the interaction."
+  },
+  {
+    "id": "F041",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Fetch handler is idempotent: re-run upserts artifacts and skips transcript document creation when an artifact with a document_id already exists for that provider_artifact_id."
+  },
+  {
+    "id": "F042",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ],
+    "description": "Recording proxy route (internal, authenticated, tenant-scoped, streaming/backpressure): resolves the artifact content_url server-side with the app token; never exposes the raw Graph URL."
+  },
+  {
+    "id": "F043",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "InteractionModel.getById/getForEntity join online_meetings on (tenant, interaction_id) and its artifacts, populating IInteraction.online_meeting with an artifacts array."
+  },
+  {
+    "id": "F044",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "InteractionDetails: 'Online Meeting' section with Join, status, 'Refresh recordings' button, and an artifacts list (transcripts -> View transcript document; recordings -> Download recording via proxy)."
+  },
+  {
+    "id": "F045",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "InteractionDetails uses InteractionIcon (Online Meeting -> video) and renders 'Recording pending' / 'No recording' states."
+  },
+  {
+    "id": "F046",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ],
+    "description": "Appointment/portal views (EntryPopup, AppointmentRequestDetailsPage, AppointmentsPage) show recording/transcript links next to Join, gated on expose_recordings_in_portal (default MSP-only)."
+  },
+  {
+    "id": "F047",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "All new interactive elements have stable kebab-case ids and all new copy uses t('...') i18n keys."
+  },
+  {
+    "id": "F048",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ],
+    "description": "EE migration: add default_meeting_organizer_object_id, download_recordings (default false), expose_recordings_in_portal (default false) to teams_integrations."
+  },
+  {
+    "id": "F049",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ],
+    "description": "Move the organizer setting UI from AvailabilitySettings into the Teams integration settings page (UI move only; value already on teams_integrations); resolve and persist organizer AAD object id on save."
+  },
+  {
+    "id": "F050",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "Tenant-settings UI controls for download_recordings and expose_recordings_in_portal in the Teams integration settings page."
+  },
+  {
+    "id": "F051",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "description": "Capability check (meetingCapabilityActions) gains a recordingsAvailable flag; UI warns when recording/transcript consent or Exchange-side mailbox scoping is missing instead of failing silently."
+  },
+  {
+    "id": "F052",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration"
+    ],
+    "description": "Setup docs: document Calendars.ReadWrite (application) WITH Exchange Application Access Policy/RBAC scoping to the organizer mailbox, plus the protected/metered recording & transcript permissions and Application Access Policy."
+  },
+  {
+    "id": "F053",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "description": "Feature gating: online_meetings, artifacts, and the interaction type are edition-agnostic; capture, subscriptions, and jobs gated on isEnterprise; facade no-ops off-enterprise."
+  },
+  {
+    "id": "F054",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "[Phase 2] Create tenant-wide Graph change-notification subscriptions on getAllRecordings and getAllTranscripts; persist subscription id/expiry on teams_integrations."
+  },
+  {
+    "id": "F055",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "[Phase 2] Recurring renewal job (scheduleRecurringJob, isEnterprise-gated) renews/recreates expiring subscriptions, mirroring the Microsoft email webhook renewal."
+  },
+  {
+    "id": "F056",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "[Phase 2] Webhook route /api/teams/webhooks/recordings: echo validationToken, respond fast, enqueue a job that calls the shared fetch handler."
+  },
+  {
+    "id": "F057",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "description": "[Phase 2] clientState carries tenant/subscription routing only; the specific meeting is resolved from notification resourceData/@odata.id matched to provider_meeting_id; decrypt encrypted resource data."
+  }
 ]

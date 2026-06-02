@@ -332,3 +332,12 @@ flip `implemented:true`, repeat.
 - Added EE migration `ee/server/migrations/20260601120200_add_online_meeting_capture_settings_to_teams_integrations.cjs`.
 - Migration is idempotent and skips cleanly if `teams_integrations` is absent. It adds `default_meeting_organizer_object_id` as nullable text, plus `download_recordings` and `expose_recordings_in_portal` as non-null booleans defaulting to false; rollback drops those columns in reverse order if present.
 - Verification: `npx vitest run src/test/unit/migrations/teamsIntegrationCaptureSettingsMigration.test.ts` from `server/`.
+
+## 2026-06-02 — F049/F050 Teams meeting settings UI
+- Moved the Teams meeting organizer controls out of `packages/scheduling/src/components/schedule/AvailabilitySettings.tsx`; the scheduling dialog no longer loads `getTeamsMeetingsTabState` or exposes the old `default-meeting-organizer-upn` / save / verify controls.
+- Added organizer + recording settings to the Teams integration settings page: `teams-default-meeting-organizer-upn`, `teams-download-recordings`, and `teams-expose-recordings-in-portal`, all using `integrations.teams.settings.*` i18n keys.
+- Extended Teams integration contracts/actions in both shared and EE packages with `defaultMeetingOrganizerUpn`, `defaultMeetingOrganizerObjectId`, `downloadRecordings`, and `exposeRecordingsInPortal`.
+- Save now resolves the organizer UPN to a Microsoft Entra object id via Graph `/users/{upn}` using the selected Microsoft profile app credentials, then persists `default_meeting_organizer_object_id`. Rationale: meeting execution can prefer object id while admins can enter a UPN.
+- Added runtime coverage in `packages/integrations/src/actions/integrations/teamsActions.test.ts` for organizer object-id resolution and recording toggle persistence; added source contract `server/src/test/unit/integrations/teamsIntegrationMeetingSettings.contract.test.ts` for backend/UI placement.
+- Verification: `npm -w @alga-psa/integrations run typecheck`, `npm -w @alga-psa/ee-microsoft-teams run typecheck`, `npm -w @alga-psa/scheduling run typecheck`, and `npx vitest run src/actions/integrations/teamsActions.test.ts` passed. The server source-contract Vitest assertions passed, but one parallel run ended after coverage with `ENOENT ... server/coverage/.tmp`; rerun before commit.
+- Rerun note: source-contract test passed cleanly when run alone; the earlier coverage `.tmp` error was from concurrent Vitest runs.
