@@ -26,6 +26,7 @@ import {
   UserPermissionsResponse
 } from '../schemas/userSchemas';
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
+import { verifyAuthenticator } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
@@ -34,12 +35,32 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
+import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
 const NotFoundError = Error;
 const ForbiddenError = Error;
 const ValidationError = Error;
+
+function createValidationError(message: string): Error & { statusCode: number; code: string } {
+  const error = new Error(message) as Error & { statusCode: number; code: string };
+  error.name = 'ValidationError';
+  error.statusCode = 400;
+  error.code = 'VALIDATION_ERROR';
+  return error;
+}
+
+function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
+  username?: string;
+  user_type?: CreateUserData['user_type'];
+} {
+  return {
+    email: userData.email,
+    username: userData.username,
+    user_type: userData.user_type
+  };
+}
 
 // Extended interfaces for service operations
 export interface UserWithFullDetails extends IUserWithRoles {
@@ -171,6 +192,7 @@ export class UserService extends BaseService<IUser> {
 
     const user = await knex('users')
       .where({ user_id: id, tenant: context.tenant })
+      .select(USER_RESPONSE_COLUMNS)
       .first();
 
     if (!user) {
@@ -209,6 +231,7 @@ export class UserService extends BaseService<IUser> {
         .where('tenant', context.tenant)
         .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
+        .select('user_id')
         .first();
 
       if (existingUserByEmail) {
@@ -220,6 +243,7 @@ export class UserService extends BaseService<IUser> {
         .where('tenant', context.tenant)
         .andWhere('username', data.username.toLowerCase())
         .andWhere('user_type', targetUserType)
+        .select('user_id')
         .first();
 
       if (existingUserByUsername) {
@@ -258,7 +282,7 @@ export class UserService extends BaseService<IUser> {
       };
 
       // Insert user
-      const [createdUser] = await trx('users').insert(userData).returning('*');
+      const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES);
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
@@ -304,6 +328,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
+        .select('user_id', 'email', 'user_type')
         .first();
 
       if (!existingUser) {
@@ -317,6 +342,7 @@ export class UserService extends BaseService<IUser> {
           .where('email', data.email.toLowerCase())
           .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
+          .select('user_id')
           .first();
 
         if (emailExists) {
@@ -343,7 +369,7 @@ export class UserService extends BaseService<IUser> {
       const [updatedUser] = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
         .update(updateData)
-        .returning('*');
+        .returning(USER_RESPONSE_FIELD_NAMES);
 
       // Log user update activity
       await this.logUserActivity({
@@ -379,6 +405,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
+        .select('user_id')
         .first();
 
       if (!existingUser) {
@@ -466,6 +493,7 @@ export class UserService extends BaseService<IUser> {
       // Get user
       const user = await trx('users')
         .where({ user_id: targetUserId, tenant: context.tenant })
+        .select('user_id', 'hashed_password')
         .first();
 
       if (!user) {
@@ -529,8 +557,9 @@ export class UserService extends BaseService<IUser> {
         await this.ensurePermission(context, 'user', 'update');
       }
 
-      // TODO: Implement 2FA token verification logic here
-      // This would typically involve verifying the TOTP token against the secret
+      if (!verifyAuthenticator(token, secret)) {
+        throw createValidationError('Invalid two-factor authentication token');
+      }
 
       // Update user 2FA settings
       await trx('users')
@@ -616,6 +645,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists
       const user = await trx('users')
         .where({ user_id: userId, tenant: context.tenant })
+        .select('user_id')
         .first();
 
       if (!user) {
@@ -943,7 +973,7 @@ export class UserService extends BaseService<IUser> {
           errors.push({
             index,
             error: error.message,
-            data: userData
+            data: toSafeBulkErrorData(userData)
           });
         }
       });
@@ -971,7 +1001,7 @@ export class UserService extends BaseService<IUser> {
           errors.push({
             index: i,
             error: error.message,
-            data: userData
+            data: toSafeBulkErrorData(userData)
           });
 
           if (!options.skip_invalid) {
@@ -1251,7 +1281,7 @@ export class UserService extends BaseService<IUser> {
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
     return knex('users')
       .where('tenant', context.tenant)
-      .select('users.*');
+      .select(USER_RESPONSE_COLUMNS);
   }
 
   /**
@@ -1381,7 +1411,7 @@ export class UserService extends BaseService<IUser> {
     const enhancedUsers: UserWithFullDetails[] = [];
 
     for (const user of users) {
-      let enhancedUser: UserWithFullDetails = { ...user, roles: [] };
+      let enhancedUser: UserWithFullDetails = { ...sanitizeUserForResponse(user), roles: [] };
 
       // Include roles
       if (options.includeRoles) {

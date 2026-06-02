@@ -82033,7 +82033,7 @@
     "/api/v1/test-auth": {
       "get": {
         "summary": "Test API key auth",
-        "description": "Debug endpoint wrapping withApiKeyAuth middleware; returns authenticated request context payload.",
+        "description": "Debug endpoint wrapping withApiKeyAuth middleware; returns only non-sensitive authenticated context identifiers.",
         "tags": [
           "Meta & Utility v1"
         ],
