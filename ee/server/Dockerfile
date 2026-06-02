@@ -67,6 +67,10 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+# server/scripts holds runtime entrypoints invoked at boot, notably
+# create-tenant.ts which the appliance bootstrap runs to seed the initial
+# tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
+COPY ./server/scripts/ ./server/scripts/
 
 # Copy EE-specific files
 COPY ./ee/server/src /app/ee/server/src
