@@ -9,12 +9,38 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Billing',
-};
-
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+// Browser tab titles for each billing section. Billing is a single route whose
+// sections are selected via the `?tab=` query param, so the title is derived from
+// that param to mirror the active section. Keep in sync with `billingTabDefinitions`
+// in packages/billing/src/components/billing-dashboard/billingTabsConfig.ts.
+const BILLING_TAB_TITLES: Record<string, string> = {
+  quotes: 'Quotes',
+  'quote-templates': 'Quote Layouts',
+  'quote-business-templates': 'Quote Templates',
+  'client-contracts': 'Client Contracts',
+  'accounting-exports': 'Accounting Exports',
+  'contract-templates': 'Contract Templates',
+  invoicing: 'Invoicing',
+  'invoice-templates': 'Invoice Layouts',
+  'tax-rates': 'Tax Rates',
+  'contract-lines': 'Contract Line Presets',
+  'billing-cycles': 'Billing Cycles',
+  'service-periods': 'Service Periods',
+  'usage-tracking': 'Usage Tracking',
+  reports: 'Reports',
+  'service-types': 'Service Types',
+  'service-catalog': 'Services',
+  products: 'Products',
+};
+
+export async function generateMetadata({ searchParams }: BillingPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const tab = typeof params.tab === 'string' ? params.tab : undefined;
+  return { title: (tab && BILLING_TAB_TITLES[tab]) || 'Billing' };
 }
 
 const BillingPage = async ({ searchParams }: BillingPageProps) => {

@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { listMyServiceRequestSubmissionsAction } from './actions';
 import { MyRequestsTable, type MyRequestsTableRow } from './MyRequestsTable';
+
+export const metadata: Metadata = {
+  title: 'My Requests',
+};
 
 export default async function MyServiceRequestsPage() {
   const [submissions, { t }] = await Promise.all([
