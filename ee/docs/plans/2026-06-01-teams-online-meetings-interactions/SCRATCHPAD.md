@@ -112,3 +112,10 @@ flip `implemented:true`, repeat.
   `@alga-psa/types` smoke imports to `packages/types/src/exports.typecheck.test.ts`.
 - Verification: `npm -w @alga-psa/types test -- src/exports.typecheck.test.ts src/interfaces/barrel.test.ts`
   passed (2 tests).
+- Completed F010-F011/T008/T012-T016 in `packages/clients/src/models/onlineMeeting.ts`: added
+  session-agnostic `OnlineMeetingModel` using `createTenantKnex`, tenant guard, create/get/update/provider
+  and interaction/appointment lookups with artifacts, pending-recording listing for ended eligible statuses,
+  idempotent artifact upsert on `(tenant, meeting_id, artifact_type, provider_artifact_id)`, and newest-first
+  artifact listing. Exported from `packages/clients/src/models/index.ts`.
+- Verification: `npx vitest run ../packages/clients/src/models/onlineMeeting.test.ts` from `server/`
+  passed (6 tests); `npm -w @alga-psa/clients run typecheck` passed.
