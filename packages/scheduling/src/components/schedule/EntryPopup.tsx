@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ExternalLink, Check, X } from 'lucide-react';
+import { ExternalLink, Check, X, Download, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
@@ -433,6 +433,53 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone.',
       });
 
+  const renderOnlineMeetingArtifacts = () => {
+    const artifacts = appointmentRequestData?.online_meeting_artifacts ?? [];
+    if (artifacts.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {artifacts.map((artifact) => {
+          if (artifact.artifact_type === 'transcript' && !artifact.document_id) {
+            return null;
+          }
+
+          const label = artifact.artifact_type === 'transcript'
+            ? t('entryPopup.appointmentRequest.approved.viewTranscript', {
+                defaultValue: 'View transcript',
+              })
+            : t('entryPopup.appointmentRequest.approved.downloadRecording', {
+                defaultValue: 'Download recording',
+              });
+          const href = artifact.artifact_type === 'transcript'
+            ? `/api/documents/${encodeURIComponent(artifact.document_id!)}/download`
+            : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
+
+          return (
+            <Button
+              key={artifact.artifact_id}
+              id={`entry-popup-online-meeting-artifact-${artifact.artifact_type}-${artifact.artifact_id}`}
+              asChild
+              variant="outline"
+              size="sm"
+            >
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {artifact.artifact_type === 'transcript' ? (
+                  <FileText className="h-4 w-4 mr-2" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {label}
+              </a>
+            </Button>
+          );
+        })}
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (!isDeleteDialogOpen || !event) {
       return;
@@ -829,6 +876,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       defaultValue: 'Join Teams Meeting',
                     })}
                   </Button>
+                  {renderOnlineMeetingArtifacts()}
                 </div>
               )}
             </AlertDescription>

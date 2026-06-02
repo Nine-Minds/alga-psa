@@ -66,6 +66,7 @@ export interface IAppointmentRequest {
   online_meeting_provider?: string | null;
   online_meeting_url?: string | null;
   online_meeting_id?: string | null;
+  online_meeting_artifacts?: OnlineMeetingAppointmentArtifact[];
   created_at: Date;
   updated_at: Date;
 }
@@ -75,6 +76,55 @@ export interface AppointmentRequestResult<T> {
   data?: T;
   error?: string;
   teamsMeetingWarning?: string;
+}
+
+export interface OnlineMeetingAppointmentArtifact {
+  artifact_id: string;
+  artifact_type: 'recording' | 'transcript';
+  document_id: string | null;
+  created_date_time: Date | null;
+}
+
+async function loadOnlineMeetingArtifactsForAppointments(
+  trx: Knex.Transaction,
+  tenant: string,
+  appointmentRequestIds: string[],
+): Promise<Map<string, OnlineMeetingAppointmentArtifact[]>> {
+  const result = new Map<string, OnlineMeetingAppointmentArtifact[]>();
+  const ids = [...new Set(appointmentRequestIds.filter(Boolean))];
+  if (ids.length === 0) {
+    return result;
+  }
+
+  const rows = await trx('online_meeting_artifacts as artifact')
+    .join('online_meetings as meeting', function joinMeeting() {
+      this.on('artifact.tenant', '=', 'meeting.tenant')
+        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
+    })
+    .where('meeting.tenant', tenant)
+    .whereIn('meeting.appointment_request_id', ids)
+    .select(
+      'meeting.appointment_request_id',
+      'artifact.artifact_id',
+      'artifact.artifact_type',
+      'artifact.document_id',
+      'artifact.created_date_time',
+    )
+    .orderBy('artifact.created_date_time', 'desc');
+
+  for (const row of rows) {
+    const appointmentRequestId = row.appointment_request_id as string;
+    const artifacts = result.get(appointmentRequestId) ?? [];
+    artifacts.push({
+      artifact_id: row.artifact_id,
+      artifact_type: row.artifact_type,
+      document_id: row.document_id ?? null,
+      created_date_time: row.created_date_time ?? null,
+    });
+    result.set(appointmentRequestId, artifacts);
+  }
+
+  return result;
 }
 
 export const getTeamsMeetingCapability = withAuth(async (
@@ -179,7 +229,7 @@ export const getAppointmentRequestById = withAuth(async (
     }
 
     const request = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests as ar')
+      const row = await trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
             .andOn('ar.tenant', 'sc.tenant');
@@ -216,6 +266,21 @@ export const getAppointmentRequestById = withAuth(async (
           'approver.last_name as approver_last_name'
         )
         .first();
+
+      if (!row) {
+        return row;
+      }
+
+      const artifacts = await loadOnlineMeetingArtifactsForAppointments(
+        trx,
+        tenant,
+        [row.appointment_request_id],
+      );
+
+      return {
+        ...row,
+        online_meeting_artifacts: artifacts.get(row.appointment_request_id) ?? [],
+      };
     });
 
     if (!request) {

@@ -320,3 +320,10 @@ flip `implemented:true`, repeat.
 - Fixed `InteractionIcon` fallback so `online meeting` maps to the `video` icon before the generic meeting/users fallback.
 - Added source contract tests for model enrichment and UI wiring: `packages/clients/src/models/interactions.onlineMeeting.contract.test.ts` and `packages/clients/src/components/interactions/InteractionDetails.onlineMeeting.contract.test.ts`.
 - Verification: `npx vitest run ../packages/clients/src/models/interactions.onlineMeeting.contract.test.ts ../packages/clients/src/components/interactions/InteractionDetails.onlineMeeting.contract.test.ts` from `server/`; `npm -w @alga-psa/clients run typecheck`; `npm -w @alga-psa/ui run typecheck`.
+
+## 2026-06-01 - F046-F047 / T069-T070
+- Added sanitized online meeting artifact metadata to client-portal appointment actions. Portal actions return `online_meeting_artifacts` only when `teams_integrations.expose_recordings_in_portal=true`; missing settings/columns default to hidden. Returned rows intentionally omit raw Graph `content_url`.
+- Added MSP EntryPopup artifact metadata through `getAppointmentRequestById` without portal gating, so internal users can see recordings/transcripts next to the existing Join Teams Meeting action.
+- Added artifact buttons to `AppointmentsPage`, `AppointmentRequestDetailsPage`, and `EntryPopup`. Transcript buttons use `/api/documents/{documentId}/download`; recording buttons use `/api/online-meetings/recordings/{artifactId}` with `?portal=true` for portal surfaces so the proxy enforces portal visibility.
+- Stable ids added for artifact actions (`client-portal-appointment-artifact-*`, `entry-popup-online-meeting-artifact-*`), and all new labels use `t(...)` keys with defaults.
+- Verification: `npx vitest run ../packages/client-portal/src/components/appointments/onlineMeetingArtifacts.contract.test.ts ../packages/scheduling/src/components/schedule/EntryPopup.onlineMeetingArtifacts.contract.test.ts` from `server/`; `npm -w @alga-psa/client-portal run typecheck`; `npm -w @alga-psa/scheduling run typecheck`.
