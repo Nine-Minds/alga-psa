@@ -149,3 +149,24 @@ flip `implemented:true`, repeat.
   artifact listing. Exported from `packages/clients/src/models/index.ts`.
 - Verification: `npx vitest run ../packages/clients/src/models/onlineMeeting.test.ts` from `server/`
   passed (6 tests); `npm -w @alga-psa/clients run typecheck` passed.
+- Completed F023-F024 in `packages/scheduling/src/actions/appointmentRequestManagementActions.ts`:
+  approval now uses the shared interaction helper to create an `Online Meeting` interaction and inserts a
+  linked `online_meetings` row when Teams creation succeeds. The row stores the Graph calendar event id,
+  organizer UPN/object id, join URL, schedule entry id, appointment request id, interaction id, and
+  scheduled status. The legacy `appointment_requests.online_meeting_*` columns remain populated for
+  existing email/portal consumers.
+- Package wiring: `@alga-psa/scheduling` now depends on `@alga-psa/clients`, and
+  `@alga-psa/clients` exposes the narrow `./actions/interactionCreateHelper` subpath used by scheduling.
+  `@alga-psa/licensing` exports were pointed at `src` to make Vite resolve the workspace package in the
+  appointment integration test environment.
+- Completed T032-T034 in `server/src/test/integration/appointmentRequests.integration.test.ts`: the Teams
+  approval test now asserts the interaction and `online_meetings` row, the capability-unavailable path
+  asserts no row is written, and the legacy appointment request columns remain asserted. The fixture now
+  tolerates current schemas where `service_types.billing_method` has been removed and seeds the staff user
+  needed by the new interaction FK.
+- Verification:
+  - `npx vitest run src/test/integration/appointmentRequests.integration.test.ts -t "creates and stores a Teams meeting|capability is unavailable|creation fails"` from `server/` passed (3 tests, 38 skipped).
+  - `npm -w @alga-psa/scheduling run typecheck` passed.
+  - A full `npx vitest run src/test/integration/appointmentRequests.integration.test.ts` run was attempted
+    before the fixture compatibility fix and failed on the pre-existing `service_types.billing_method`
+    fixture/schema mismatch across many unrelated tests; targeted coverage now passes.

@@ -38,6 +38,7 @@ import {
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import { createInteractionWithSideEffects } from '@alga-psa/clients/actions/interactionCreateHelper';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -499,6 +500,7 @@ export const approveAppointmentRequest = withAuth(async (
     // for this specific request. The latter is checked inside the transaction so we can
     // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
+    const interactionSideEffects: Array<() => Promise<void>> = [];
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
@@ -582,6 +584,9 @@ export const approveAppointmentRequest = withAuth(async (
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
       let onlineMeetingUrl: string | null = null;
       let onlineMeetingId: string | null = null;
+      let onlineMeetingEventId: string | null = null;
+      let onlineMeetingOrganizerUpn: string | null = null;
+      let onlineMeetingOrganizerUserId: string | null = null;
       let teamsMeetingWarning: string | undefined;
 
       let scheduleEntry;
@@ -790,10 +795,68 @@ export const approveAppointmentRequest = withAuth(async (
           if (createdMeeting) {
             onlineMeetingUrl = createdMeeting.joinWebUrl;
             onlineMeetingId = createdMeeting.meetingId;
+            onlineMeetingEventId = createdMeeting.eventId ?? null;
+            onlineMeetingOrganizerUpn = createdMeeting.organizerUpn ?? null;
+            onlineMeetingOrganizerUserId = createdMeeting.organizerUserId ?? null;
           } else {
             teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
           }
         }
+      }
+
+      let onlineMeetingInteractionId: string | null = null;
+      if (onlineMeetingUrl && onlineMeetingId) {
+        const onlineMeetingType = await trx('system_interaction_types')
+          .where({ type_name: 'Online Meeting' })
+          .first('type_id');
+
+        if (!onlineMeetingType?.type_id) {
+          throw new Error('Online Meeting interaction type is not configured');
+        }
+
+        const interactionResult = await createInteractionWithSideEffects({
+          tenant,
+          trx,
+          user,
+          interactionData: {
+            type_id: onlineMeetingType.type_id,
+            client_id: request.client_id ?? null,
+            contact_name_id: request.contact_id ?? null,
+            user_id: user.user_id,
+            ticket_id: validatedData.ticket_id || request.ticket_id || null,
+            title: `Online Meeting: ${service.service_name}`,
+            notes: `Join Teams Meeting: ${onlineMeetingUrl}`,
+            start_time: scheduledStart,
+            end_time: scheduledEnd,
+            duration: request.requested_duration,
+          },
+        });
+
+        onlineMeetingInteractionId = interactionResult.interaction.interaction_id;
+        interactionSideEffects.push(interactionResult.publishSideEffects);
+
+        await trx('online_meetings').insert({
+          meeting_id: uuidv4(),
+          tenant,
+          provider: 'teams',
+          provider_meeting_id: onlineMeetingId,
+          provider_event_id: onlineMeetingEventId,
+          organizer_upn: onlineMeetingOrganizerUpn,
+          organizer_user_id: onlineMeetingOrganizerUserId,
+          subject: `Appointment: ${service.service_name}`,
+          join_url: onlineMeetingUrl,
+          start_time: scheduledStart,
+          end_time: scheduledEnd,
+          status: 'scheduled',
+          recording_fetch_attempts: 0,
+          last_fetch_at: null,
+          appointment_request_id: request.appointment_request_id,
+          interaction_id: onlineMeetingInteractionId,
+          schedule_entry_id: scheduleEntry.entry_id,
+          created_by: user.user_id,
+          created_at: now,
+          updated_at: now,
+        });
       }
 
       // Update appointment request
@@ -986,6 +1049,14 @@ export const approveAppointmentRequest = withAuth(async (
         teamsMeetingWarning,
       };
     });
+
+    for (const publishSideEffects of interactionSideEffects) {
+      try {
+        await publishSideEffects();
+      } catch (eventError) {
+        console.error('[AppointmentApproval] Failed to publish Online Meeting interaction side effects', eventError);
+      }
+    }
 
     return {
       success: true,

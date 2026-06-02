@@ -16,6 +16,10 @@
       "import": "./dist/actions/index.js",
       "require": "./dist/actions/index.js"
     },
+    "./actions/interactionCreateHelper": {
+      "types": "./src/actions/interactionCreateHelper.ts",
+      "import": "./src/actions/interactionCreateHelper.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",

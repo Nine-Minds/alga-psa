@@ -39,6 +39,46 @@ type CreatedIds = {
 };
 let createdIds: CreatedIds = { availabilitySettingIds: [] };
 
+async function insertServiceType(
+  db: Knex,
+  values: {
+    id: string;
+    tenant: string;
+    name: string;
+    order_number: number;
+  }
+) {
+  const hasBillingMethod = await db.schema.hasColumn('service_types', 'billing_method');
+  await db('service_types').insert({
+    ...values,
+    ...(hasBillingMethod ? { billing_method: 'fixed' } : {}),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+}
+
+async function ensureStaffUser(db: Knex, tenant: string) {
+  await db('users')
+    .insert({
+      tenant,
+      user_id: STAFF_USER_ID,
+      username: 'staff_online_meeting_test',
+      first_name: 'Staff',
+      last_name: 'User',
+      email: 'staff-online-meeting-test@example.com',
+      hashed_password: 'hashed',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    })
+    .onConflict(['tenant', 'user_id'])
+    .merge({
+      is_inactive: false,
+      updated_at: db.fn.now()
+    });
+}
+
 // Mock the database module to return test database
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
@@ -74,6 +114,11 @@ vi.mock('@alga-psa/core/features', async () => {
     }
   };
 });
+
+vi.mock('@alga-psa/licensing', () => ({
+  getLicenseStateRow: vi.fn(async () => null),
+  resolveSelfHostTier: vi.fn(() => null),
+}));
 
 // Mock SystemEmailService to prevent actual email sending
 const mockEmailInstance = {
@@ -143,6 +188,9 @@ describe('Appointment Request Integration Tests', () => {
     createTeamsMeetingMock.mockResolvedValue({
       joinWebUrl: 'https://teams.example.com/meeting/123',
       meetingId: 'meeting-123',
+      organizerUpn: 'organizer@example.com',
+      organizerUserId: 'organizer-object-1',
+      eventId: 'event-123',
     });
     updateTeamsMeetingMock.mockResolvedValue(true);
     deleteTeamsMeetingMock.mockResolvedValue(true);
@@ -161,6 +209,7 @@ describe('Appointment Request Integration Tests', () => {
 
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
+    await ensureStaffUser(db, tenantId);
 
     // Import the actions after mocks are set up
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
@@ -255,14 +304,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create a service without any availability settings
       const serviceTypeId = uuidv4();
-      await db('service_types').insert({
+      await insertServiceType(db, {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        billing_method: 'fixed',
-        order_number: Math.floor(Math.random() * 1000000),
-        created_at: db.fn.now(),
-        updated_at: db.fn.now()
+        order_number: Math.floor(Math.random() * 1000000)
       });
       createdIds.serviceTypeId = serviceTypeId;
 
@@ -738,6 +784,45 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBe('teams');
       expect(updatedRequest.online_meeting_url).toBe('https://teams.example.com/meeting/123');
       expect(updatedRequest.online_meeting_id).toBe('meeting-123');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+
+      expect(onlineMeeting).toMatchObject({
+        tenant: tenantId,
+        provider: 'teams',
+        provider_meeting_id: 'meeting-123',
+        provider_event_id: 'event-123',
+        organizer_upn: 'organizer@example.com',
+        organizer_user_id: 'organizer-object-1',
+        join_url: 'https://teams.example.com/meeting/123',
+        status: 'scheduled',
+        schedule_entry_id: approveResult.data?.schedule_entry_id,
+      });
+
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: onlineMeeting.interaction_id,
+        })
+        .first();
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+
+      expect(interaction).toMatchObject({
+        tenant: tenantId,
+        type_id: onlineMeetingType.type_id,
+        client_id: fixture.clientId,
+        contact_name_id: fixture.contactId,
+        user_id: STAFF_USER_ID,
+        title: 'Online Meeting: Test Service',
+      });
       expect(mockEmailInstance.sendAppointmentRequestApproved).toHaveBeenCalledWith(
         expect.objectContaining({
           onlineMeetingUrl: 'https://teams.example.com/meeting/123',
@@ -796,6 +881,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBeNull();
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
     });
 
     it('keeps approval successful when Teams meeting creation fails', async () => {
@@ -828,6 +921,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBeNull();
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
     });
 
     it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
@@ -2235,14 +2336,11 @@ async function setupTestData(
   if (!options.skipService) {
     // Create service type
     serviceTypeId = uuidv4();
-    await db('service_types').insert({
+    await insertServiceType(db, {
       id: serviceTypeId,
       tenant: tenantId,
       name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-      billing_method: 'fixed',
-      order_number: Math.floor(Math.random() * 1000000),
-      created_at: db.fn.now(),
-      updated_at: db.fn.now()
+      order_number: Math.floor(Math.random() * 1000000)
     });
 
     // Create service
