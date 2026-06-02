@@ -112,6 +112,33 @@ flip `implemented:true`, repeat.
   - `packages/msp-composition` has no package typecheck script or tsconfig; composition compile coverage
     is indirect through package consumers.
 
+## 2026-06-01 — F015, F037-F041 / T052-T062
+- Implemented Phase-1 artifact capture in `packages/clients/src/lib/onlineMeetingArtifactCapture.ts`.
+  Package-boundary decision: put the handler next to `OnlineMeetingModel` and dynamically load the EE
+  Teams module instead of importing scheduling from clients, because scheduling already depends on
+  clients and a static clients -> scheduling import would create a cycle.
+- `fetchAndPersistMeetingArtifacts` is session-agnostic and takes explicit `tenantId`, `meetingId`, and
+  optional `actorUserId`. It resolves the meeting, skips cancelled rows, calls EE
+  `fetchMeetingArtifacts`, upserts recording/transcript artifacts idempotently, updates bounded fetch
+  status (`recording_ready`, `recording_pending`, `no_recording`, `failed`), and revalidates interaction
+  + linked client/contact paths.
+- Transcript storage uses an internal document helper, not `uploadDocument`: inserts `documents`,
+  `document_block_content`, and `document_associations` directly inside a transaction with explicit
+  tenant/user metadata. Client/contact associations are resolved from the linked interaction because
+  `online_meetings` intentionally stores `interaction_id`, not duplicate client/contact columns.
+- Recording capture stores `content_url` by default. When `download_recordings` is enabled, it resolves
+  the EE Teams Graph config, fetches an app token, downloads the Graph content URL server-side, stores
+  the blob with `StorageService.uploadFile`, and sets `file_id`.
+- `refreshMeetingRecordings(meetingId)` was added to `packages/clients/src/actions/onlineMeetingActions.ts`
+  under `withAuth`, passing the authenticated user id to the shared handler.
+- Exported `meetings/meetingConfig` from `@alga-psa/ee-microsoft-teams/lib` so the recording download
+  helper can reuse the existing Graph config resolver.
+- Verification:
+  - `npm -w @alga-psa/clients run typecheck`
+  - `npm -w @alga-psa/scheduling run typecheck`
+  - `npm -w @alga-psa/ee-microsoft-teams run typecheck`
+  - `npx vitest run ../packages/clients/src/lib/onlineMeetingArtifactCapture.test.ts` from `server/`
+
 ## 2026-06-01 implementation notes
 - Implemented F012/F013:
   - `InteractionModel.addInteraction` and `getById` now accept an optional `Knex`/transaction and use it for both the insert and follow-up read; the default path still uses `createTenantKnex(tenantId)`.
