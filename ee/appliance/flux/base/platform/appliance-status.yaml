@@ -25,7 +25,7 @@ rules:
     resources: ["jobs"]
     verbs: ["get", "list", "watch", "create"]
   - apiGroups: ["source.toolkit.fluxcd.io"]
-    resources: ["gitrepositories"]
+    resources: ["ocirepositories", "helmrepositories"]
     verbs: ["get", "list", "watch", "patch"]
   - apiGroups: ["kustomize.toolkit.fluxcd.io"]
     resources: ["kustomizations"]
@@ -710,7 +710,7 @@ spec:
                     component: row.name,
                     loginBlocking: !loginReady,
                     reason: row.message || 'One or more Flux resources are not Ready',
-                    nextAction: 'Review Flux GitRepository and Kustomization conditions.',
+                    nextAction: 'Review Flux OCIRepository and Kustomization conditions.',
                   };
                 }
                 const stuckHelm = (state.helmReleases || []).find((entry) => !entry.ready && isHelmStorageStuck(entry));
@@ -752,7 +752,7 @@ spec:
 
                 const [nodesJson, sourcesJson, kustomizationsJson, helmJson, selectionJson, valuesJson, jobsJson, eventsJson, podsJson] = await Promise.all([
                   kubeGet('/api/v1/nodes'),
-                  kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories'),
+                  kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/ocirepositories'),
                   kubeGet('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations'),
                   kubeGet('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases'),
                   kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection'),
@@ -1049,9 +1049,9 @@ spec:
               }
 
               async function sourceTree() {
-                const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance');
+                const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/ocirepositories/alga-appliance');
                 const artifactUrl = git?.status?.artifact?.url;
-                if (!artifactUrl) throw new Error('GitRepository alga-appliance does not have a source artifact yet');
+                if (!artifactUrl) throw new Error('OCIRepository alga-appliance does not have a source artifact yet');
                 const work = fs.mkdtempSync('/tmp/appliance-update-');
                 const archive = path.join(work, 'source.tar.gz');
                 const extractDir = path.join(work, 'src');
@@ -1139,7 +1139,7 @@ spec:
               }
 
               async function requestReconciles() {
-                await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance', 'GitRepository/alga-appliance');
+                await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/ocirepositories/alga-appliance', 'OCIRepository/alga-appliance');
                 for (const name of ['alga-platform', 'alga-core', 'alga-background', 'alga-appliance']) {
                   await patchAnnotation('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/' + name, 'Kustomization/' + name);
                 }

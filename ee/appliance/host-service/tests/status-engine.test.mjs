@@ -3,7 +3,22 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectStatusSnapshot } from '../status-engine.mjs';
+import { collectStatusSnapshot, collectStatusSnapshotAsync } from '../status-engine.mjs';
+
+const kubectlUnavailableRunner = (command) => Promise.resolve({
+  ok: false,
+  status: 127,
+  command,
+  stdout: '',
+  stderr: 'sh: 1: kubectl: not found'
+});
+
+function writeStateFile(state) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-net-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  fs.writeFileSync(stateFile, JSON.stringify(state));
+  return stateFile;
+}
 
 test('collectStatusSnapshot reads local state and kubeconfig-driven kubectl output', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-'));
@@ -556,6 +571,89 @@ test('collectStatusSnapshot classifies persisted k3s failures', () => {
   } finally {
     process.env.PATH = originalPath;
   }
+});
+
+test('live network probe clears a stale recorded network failure and unpoisons k8s suppression', async () => {
+  const stateFile = writeStateFile({
+    phase: 'network',
+    status: 'preflight-blocked',
+    lastAction: 'Network failure while fetching GitHub channel metadata.',
+    failure: {
+      phase: 'network',
+      step: 'fetch-channel-metadata',
+      message: 'Network failure while fetching GitHub channel metadata.',
+      suspectedCause: 'Network failure while fetching GitHub channel metadata.',
+      suggestedNextStep: 'Check outbound HTTPS and proxy settings. Invalid IP address: undefined',
+      retrySafe: true
+    }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:00.000Z', failure: null }
+  });
+
+  // The stale "Invalid IP address: undefined" text is gone; one accurate retry blocker remains.
+  assert.equal(snapshot.network.ok, true);
+  assert.equal(snapshot.lastRecordedError.resolvedByLiveCheck, true);
+  assert.equal(snapshot.failures.length, 1);
+  assert.equal(snapshot.failures[0].category, 'network');
+  assert.equal(snapshot.failures[0].resolved, true);
+  assert.equal(snapshot.failures.some((f) => String(f.suggestedNextStep).includes('Invalid IP address')), false);
+  // The cleared network failure no longer poisons early-kubernetes suppression.
+  assert.equal(snapshot.kubernetes.warnings.length, 0);
+  assert.equal(snapshot.kubernetes.suppressedWarnings.length >= 1, true);
+  assert.equal(snapshot.rollup.state, 'blocked');
+});
+
+test('live network probe failure surfaces a fresh blocker instead of the recorded one', async () => {
+  const stateFile = writeStateFile({
+    phase: 'network',
+    status: 'preflight-blocked',
+    failure: { phase: 'network', step: 'fetch-channel-metadata', message: 'old recorded text', suspectedCause: 'old recorded text', suggestedNextStep: 'old', retrySafe: true }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    networkProbe: {
+      ok: false,
+      checkedAt: '2026-05-28T23:59:30.000Z',
+      failure: { phase: 'network', step: 'reach-ghcr', message: 'Network failure while contacting ghcr.io.', suspectedCause: 'Network failure while contacting ghcr.io.', suggestedNextStep: 'Check outbound HTTPS and proxy settings for GHCR.', retrySafe: true }
+    }
+  });
+
+  assert.equal(snapshot.network.ok, false);
+  assert.equal(snapshot.failures.length, 1);
+  assert.equal(snapshot.failures[0].category, 'network');
+  assert.equal(snapshot.failures[0].checkedAt, '2026-05-28T23:59:30.000Z');
+  assert.equal(snapshot.failures[0].suspectedCause, 'Network failure while contacting ghcr.io.');
+  assert.equal(snapshot.rollup.state, 'blocked');
+});
+
+test('live network probe does not alter a recorded non-network (k3s) failure', async () => {
+  const stateFile = writeStateFile({
+    phase: 'k3s',
+    status: 'k3s-install-blocked',
+    failure: { phase: 'k3s', step: 'install-k3s-server', message: 'k3s installation command failed.', suspectedCause: 'k3s install failed', suggestedNextStep: 'inspect logs', retrySafe: true }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:45.000Z', failure: null }
+  });
+
+  assert.equal(snapshot.network.ok, true);
+  assert.equal(snapshot.lastRecordedError, null);
+  assert.equal(snapshot.failures.some((f) => f.category === 'k3s'), true);
 });
 
 test('collectStatusSnapshot maps failure phases to expected categories', () => {

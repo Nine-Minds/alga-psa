@@ -5,10 +5,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSetupPreflight, validateSetupInputs } from '../setup-engine.mjs';
 
+const initialTenant = {
+  tenantName: 'Acme MSP',
+  adminFirstName: 'Ava',
+  adminLastName: 'Admin',
+  adminEmail: 'ava@example.com',
+  adminPassword: 'Str0ng!Pass',
+  adminPasswordConfirm: 'Str0ng!Pass'
+};
+
 test('validateSetupInputs rejects invalid custom DNS values', () => {
   assert.throws(
-    () => validateSetupInputs({ channel: 'stable', dnsMode: 'custom', dnsServers: '8.8.8.8,not-an-ip', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git' }),
+    () => validateSetupInputs({ channel: 'stable', dnsMode: 'custom', dnsServers: '8.8.8.8,not-an-ip', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git', ...initialTenant }),
     /Invalid custom DNS server/
+  );
+});
+
+test('validateSetupInputs requires matching initial admin password confirmation', () => {
+  assert.throws(
+    () => validateSetupInputs({ channel: 'stable', dnsMode: 'system', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git', ...initialTenant, adminPasswordConfirm: 'Different!1' }),
+    /confirmation does not match/
   );
 });
 
@@ -24,7 +40,8 @@ test('runSetupPreflight blocks early when no system resolvers are present', asyn
     dnsMode: 'system',
     dnsServers: '',
     repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: 'main'
+    repoBranch: 'main',
+    ...initialTenant
   });
 
   const result = await runSetupPreflight(inputs, { stateFile, resolvConfPath: resolvConf });

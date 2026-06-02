@@ -20,13 +20,17 @@ function generateToken() {
   return Array.from({ length: 5 }, () => String(crypto.randomInt(0, 10_000)).padStart(4, '0')).join('-');
 }
 
+// The token is read by the control-plane pod (UID 10001) from the shared
+// hostPath volume, so it is written world-readable (0644). It is a single-use,
+// soon-inert setup token on a single-admin appliance — once a management
+// password is set it is no longer accepted.
 if (!fs.existsSync(tokenFile)) {
   const token = generateToken();
-  fs.writeFileSync(tokenFile, `${token}\n`, { mode: 0o600 });
+  fs.writeFileSync(tokenFile, `${token}\n`, { mode: 0o644 });
 }
 
 try {
-  fs.chmodSync(tokenFile, 0o600);
+  fs.chmodSync(tokenFile, 0o644);
 } catch {
   // Best-effort in local dev.
 }

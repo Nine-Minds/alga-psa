@@ -10,9 +10,9 @@ spec:
   prune: true
   wait: true
   sourceRef:
-    kind: GitRepository
+    kind: OCIRepository
     name: alga-appliance
-  path: ./ee/appliance/flux/base/platform
+  path: ./base/platform
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -28,9 +28,9 @@ spec:
   dependsOn:
     - name: alga-platform
   sourceRef:
-    kind: GitRepository
+    kind: OCIRepository
     name: alga-appliance
-  path: ./ee/appliance/flux/base/core
+  path: ./base/core
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -46,6 +46,6 @@ spec:
   dependsOn:
     - name: alga-core
   sourceRef:
-    kind: GitRepository
+    kind: OCIRepository
     name: alga-appliance
-  path: ./ee/appliance/flux/base/background
+  path: ./base/background
