@@ -30,7 +30,11 @@ describe('phase-aware MSP project UI contracts', () => {
 
   it('T037: KanbanBoard renders from the phase-effective statuses it receives via props', () => {
     expect(projectDetailSource).toContain('<KanbanBoard');
-    expect(projectDetailSource).toContain('statuses={visibleKanbanStatuses}');
+    // KanbanBoard renders from the phase-effective visible statuses minus the
+    // per-user hidden-column layer (displayedKanbanStatuses).
+    expect(projectDetailSource).toContain('statuses={displayedKanbanStatuses}');
+    expect(projectDetailSource).toContain('const displayedKanbanStatuses = useMemo(');
+    expect(projectDetailSource).toContain('!hiddenStatusIdSet.has(status.project_status_mapping_id)');
     expect(kanbanBoardSource).toContain('statuses: ProjectStatus[];');
     expect(kanbanBoardSource).toContain('{statuses.filter(status => status.is_visible).map((status, index)');
     expect(kanbanBoardSource).toContain(
