@@ -5,7 +5,7 @@ import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Circle, Plus } from 'lucide-react';
+import { Circle, Plus, EyeOff } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from '@alga-psa/types';
@@ -62,6 +62,7 @@ interface StatusColumnProps {
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
+  onHideColumn?: (status: ProjectStatus) => void;
 }
 
 export const StatusColumn: React.FC<StatusColumnProps> = ({
@@ -111,6 +112,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   onEditTaskClick,
   onDeleteTaskClick,
   onTaskTagsChange,
+  onHideColumn,
   taskTypes,
 }) => {
   const { resolvedTheme } = useTheme();
@@ -395,6 +397,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               >
                 {displayTasks.length}
               </span>
+              {onHideColumn && (
+                <Button
+                  id={`hide-column-button-${status.status_id}`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onHideColumn(status)}
+                  tooltipText="Hide column"
+                  tooltip={true}
+                  className={`${zoomLevel <= 30 ? '!w-5 !h-5' : '!w-6 !h-6'} !p-0 !min-w-0 text-gray-400 hover:text-gray-600`}
+                >
+                  <EyeOff className={zoomLevel <= 30 ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+                </Button>
+              )}
             </div>
           </div>
         </div>

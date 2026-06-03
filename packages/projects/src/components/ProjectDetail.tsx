@@ -48,9 +48,10 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
@@ -66,6 +67,10 @@ const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+// Per-user, per-project list of status columns the user has chosen to hide from
+// the kanban board. Purely visual (does not change the admin `is_visible`
+// config) — it just declutters the board to make dragging across columns easier.
+const PROJECT_KANBAN_HIDDEN_STATUSES_SETTING = 'project_kanban_hidden_statuses';
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
 const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // Legacy localStorage key previously used by TaskListView; reused for one-time
@@ -215,12 +220,16 @@ export default function ProjectDetail({
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
+  // Hidden kanban columns are scoped per project (each project has its own
+  // statuses), so the preference key includes the project id.
+  const hiddenStatusesPrefKey = `${PROJECT_KANBAN_HIDDEN_STATUSES_SETTING}:${project.project_id}`;
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
     { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: hiddenStatusesPrefKey, defaultValue: [] as string[], debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
     {
       key: columnWidthsPrefKey,
@@ -234,6 +243,7 @@ export default function ProjectDetail({
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
+  const { value: hiddenKanbanStatusIds, setValue: setHiddenKanbanStatusIds } = prefs[hiddenStatusesPrefKey];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
   const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
   const listDensity = useMemo(() => {
@@ -731,6 +741,37 @@ export default function ProjectDetail({
       .sort((a, b) => a.display_order - b.display_order),
     [projectStatuses]
   );
+  // Per-user "hidden" columns are a purely visual filter layered on top of the
+  // admin-configured visible statuses. Guard against stale ids (status deleted
+  // or made invisible after being hidden) by only counting ids that still map
+  // to a currently-visible status.
+  const hiddenStatusIdSet = useMemo(
+    () => new Set<string>(Array.isArray(hiddenKanbanStatusIds) ? hiddenKanbanStatusIds : []),
+    [hiddenKanbanStatusIds]
+  );
+  const displayedKanbanStatuses = useMemo(
+    () => visibleKanbanStatuses.filter(
+      (status) => !hiddenStatusIdSet.has(status.project_status_mapping_id)
+    ),
+    [visibleKanbanStatuses, hiddenStatusIdSet]
+  );
+  const hiddenVisibleStatusCount = useMemo(
+    () => visibleKanbanStatuses.filter(
+      (status) => hiddenStatusIdSet.has(status.project_status_mapping_id)
+    ).length,
+    [visibleKanbanStatuses, hiddenStatusIdSet]
+  );
+  const toggleKanbanStatusHidden = useCallback((statusMappingId: string) => {
+    setHiddenKanbanStatusIds((prev: string[]) => {
+      const current = Array.isArray(prev) ? prev : [];
+      return current.includes(statusMappingId)
+        ? current.filter((id) => id !== statusMappingId)
+        : [...current, statusMappingId];
+    });
+  }, [setHiddenKanbanStatusIds]);
+  const showAllKanbanStatuses = useCallback(() => {
+    setHiddenKanbanStatusIds([]);
+  }, [setHiddenKanbanStatusIds]);
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
@@ -1028,7 +1069,7 @@ export default function ProjectDetail({
       dragAbortRef.current?.abort();
       dragAbortRef.current = null;
     };
-  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
+  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, displayedKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
   // Track header height so the sticky status strip can stack below it when both are active
   useEffect(() => {
@@ -3211,6 +3252,79 @@ export default function ProjectDetail({
               zoomLevel={kanbanZoomLevel}
               onZoomChange={setKanbanZoomLevel}
             />
+            <Popover>
+              <Tooltip content={t('projectDetail.showHideColumns', 'Show/hide columns')}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="kanban-column-visibility-toggle"
+                    variant="ghost"
+                    size="sm"
+                    className={`relative p-1.5 h-auto w-auto transition-colors ${
+                      hiddenVisibleStatusCount > 0
+                        ? 'bg-primary-100 text-primary-600'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    aria-label={t('projectDetail.showHideColumns', 'Show/hide columns')}
+                  >
+                    <EyeOff className="h-4 w-4" />
+                    {hiddenVisibleStatusCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-500 px-1 text-[10px] font-semibold leading-none text-white">
+                        {hiddenVisibleStatusCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+              </Tooltip>
+              <PopoverContent align="end" className="w-64 p-2">
+                <div className="flex items-center justify-between px-1 pb-1.5">
+                  <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+                    {t('projectDetail.columns', 'Columns')}
+                  </span>
+                  <Button
+                    id="kanban-show-all-columns"
+                    variant="ghost"
+                    size="xs"
+                    onClick={showAllKanbanStatuses}
+                    disabled={hiddenVisibleStatusCount === 0}
+                    className="text-xs"
+                  >
+                    {t('projectDetail.showAll', 'Show all')}
+                  </Button>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {visibleKanbanStatuses.length === 0 ? (
+                    <p className="px-1 py-2 text-sm text-gray-500">
+                      {t('projectDetail.noColumns', 'No columns available')}
+                    </p>
+                  ) : (
+                    visibleKanbanStatuses.map((status) => {
+                      const isHidden = hiddenStatusIdSet.has(status.project_status_mapping_id);
+                      return (
+                        <button
+                          key={status.project_status_mapping_id}
+                          type="button"
+                          onClick={() => toggleKanbanStatusHidden(status.project_status_mapping_id)}
+                          className="flex w-full items-center gap-2 rounded-sm px-1.5 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                        >
+                          {isHidden
+                            ? <EyeOff className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                            : <Eye className="h-4 w-4 flex-shrink-0 text-primary-600" />}
+                          {status.color && (
+                            <span
+                              className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                              style={{ backgroundColor: status.color }}
+                            />
+                          )}
+                          <span className={`min-w-0 flex-1 truncate ${isHidden ? 'text-gray-400' : 'text-[rgb(var(--color-text-900))]'}`}>
+                            {status.custom_name || status.name}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Tooltip content={showStickyStatusNames ? t('projectDetail.hideStickyStatusNames', 'Hide sticky status names') : t('projectDetail.showStickyStatusNames', 'Show sticky status names')}>
               <Button
                 id="sticky-status-names-toggle-kanban"
@@ -3540,7 +3654,7 @@ export default function ProjectDetail({
             phaseTasks={filteredTasks}
             users={users}
             taskTypes={taskTypes}
-            statuses={visibleKanbanStatuses}
+            statuses={displayedKanbanStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
@@ -3576,6 +3690,7 @@ export default function ProjectDetail({
             onEditTaskClick={handleTaskSelected}
             onDeleteTaskClick={handleDeleteTaskClick}
             onTaskTagsChange={handleTaskTagsChange}
+            onHideColumn={(status) => toggleKanbanStatusHidden(status.project_status_mapping_id)}
           />
         )}
       </div>
@@ -3688,7 +3803,7 @@ export default function ProjectDetail({
               >
                 <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
                   <div className={styles.kanbanStatusStripTrack}>
-                    {visibleKanbanStatuses.map((status, index) => {
+                    {displayedKanbanStatuses.map((status, index) => {
                       const { itemStyle, countStyle } = getStatusStripStyles(status, index);
                       const stripTaskIds = filteredTasks
                         .filter(t => t.project_status_mapping_id === status.project_status_mapping_id)

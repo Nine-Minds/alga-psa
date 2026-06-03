@@ -53,6 +53,7 @@ interface KanbanBoardProps {
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
+  onHideColumn?: (status: ProjectStatus) => void;
 }
 
 // Helper function to get the configured icon or fallback to auto-detected icon
@@ -134,6 +135,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onEditTaskClick,
   onDeleteTaskClick,
   onTaskTagsChange,
+  onHideColumn,
   taskTypes,
 }) => {
   // Calculate column width and card gap based on zoom level
@@ -236,6 +238,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onEditTaskClick={onEditTaskClick}
             onDeleteTaskClick={onDeleteTaskClick}
             onTaskTagsChange={onTaskTagsChange}
+            onHideColumn={onHideColumn}
           />
         );
       })}
