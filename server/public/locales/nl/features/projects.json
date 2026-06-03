@@ -231,6 +231,8 @@
     "columns": "Kolommen",
     "showAll": "Alles tonen",
     "noColumns": "Geen kolommen beschikbaar",
+    "hideColumn": "Kolom verbergen",
+    "addTask": "Taak toevoegen",
     "taskUpdatedSuccess": "Taak succesvol bijgewerkt!",
     "hiddenColumnsAlert": "{{count}} kolommen verborgen wegens beperkte ruimte. Wijzig browsergrootte om meer te zien.",
     "listViewEmptyMessage": "Maak fasen en voeg taken toe om ze hier te zien",

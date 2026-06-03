@@ -231,6 +231,8 @@
     "columns": "Colunas",
     "showAll": "Mostrar tudo",
     "noColumns": "Nenhuma coluna disponível",
+    "hideColumn": "Ocultar coluna",
+    "addTask": "Adicionar tarefa",
     "taskUpdatedSuccess": "Task updated successfully!",
     "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
     "listViewEmptyMessage": "Create phases and add tasks to see them here",

@@ -231,6 +231,8 @@
     "columns": "11111",
     "showAll": "11111",
     "noColumns": "11111",
+    "hideColumn": "11111",
+    "addTask": "11111",
     "taskUpdatedSuccess": "11111",
     "hiddenColumnsAlert": "11111 {{count}} 11111",
     "listViewEmptyMessage": "11111",

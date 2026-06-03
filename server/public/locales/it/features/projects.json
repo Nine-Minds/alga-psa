@@ -231,6 +231,8 @@
     "columns": "Colonne",
     "showAll": "Mostra tutto",
     "noColumns": "Nessuna colonna disponibile",
+    "hideColumn": "Nascondi colonna",
+    "addTask": "Aggiungi attività",
     "taskUpdatedSuccess": "Attività aggiornata con successo!",
     "hiddenColumnsAlert": "{{count}} colonne nascoste per spazio limitato. Ridimensiona il browser per vederne altre.",
     "listViewEmptyMessage": "Crea fasi e aggiungi attività per vederle qui",

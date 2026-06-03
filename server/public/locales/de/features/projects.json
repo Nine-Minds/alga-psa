@@ -231,6 +231,8 @@
     "columns": "Spalten",
     "showAll": "Alle anzeigen",
     "noColumns": "Keine Spalten verfügbar",
+    "hideColumn": "Spalte ausblenden",
+    "addTask": "Aufgabe hinzufügen",
     "taskUpdatedSuccess": "Aufgabe erfolgreich aktualisiert!",
     "hiddenColumnsAlert": "{{count}} Spalten aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen.",
     "listViewEmptyMessage": "Erstellen Sie Phasen und fügen Sie Aufgaben hinzu, um sie hier zu sehen",

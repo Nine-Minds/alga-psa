@@ -11,6 +11,7 @@ import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { useTaskSelection } from './TaskSelectionContext';
 
@@ -115,6 +116,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   onHideColumn,
   taskTypes,
 }) => {
+  const { t } = useTranslation(['features/projects', 'common']);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const { isSelected, setTasksSelected } = useTaskSelection();
@@ -381,7 +383,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
                 size="sm"
                 onClick={() => onAddCard(status)}
                 disabled={isAddingTask || !selectedPhase}
-                tooltipText="Add Task"
+                tooltipText={t('projectDetail.addTask', 'Add Task')}
                 tooltip={true}
                 className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
                 data-project-tree-data={JSON.stringify(projectTreeData)}
@@ -403,7 +405,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onHideColumn(status)}
-                  tooltipText="Hide column"
+                  tooltipText={t('projectDetail.hideColumn', 'Hide column')}
                   tooltip={true}
                   className={`${zoomLevel <= 30 ? '!w-5 !h-5' : '!w-6 !h-6'} !p-0 !min-w-0 text-gray-400 hover:text-gray-600`}
                 >

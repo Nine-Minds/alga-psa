@@ -233,6 +233,8 @@
     "columns": "Kolumny",
     "showAll": "Pokaż wszystko",
     "noColumns": "Brak dostępnych kolumn",
+    "hideColumn": "Ukryj kolumnę",
+    "addTask": "Dodaj zadanie",
     "taskUpdatedSuccess": "Zadanie zaktualizowano pomyślnie!",
     "hiddenColumnsAlert": "{{count}} kolumn ukrytych z powodu ograniczonego miejsca. Zmień rozmiar przeglądarki, aby zobaczyć więcej.",
     "listViewEmptyMessage": "Utwórz fazy i dodaj zadania, aby je tu zobaczyć",
