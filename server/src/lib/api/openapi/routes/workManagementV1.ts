@@ -218,6 +218,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/tickets/{id}/comments', summary: 'Add ticket comment', description: 'Adds comment to ticket UUID.', family: 'ticket' },
     { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates status for ticket UUID.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/time-entries', summary: 'List ticket time entries', description: 'Returns the caller\'s time entries on the ticket plus, when permitted, other team members\' entries (or an anonymized aggregate when the caller lacks timesheet:read_all).', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets/{id}/bundle', summary: 'Get ticket bundle', description: 'Returns bundle membership for the ticket: role (master, child, or standalone), the master ticket, child tickets, and bundle settings.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.', family: 'ticket' },
+    { method: 'delete', path: '/api/v1/tickets/{id}/bundle', summary: 'Unbundle ticket', description: 'Unbundles master {id}, detaching all child tickets and removing bundle settings.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}.', family: 'ticket' },
+    { method: 'delete', path: '/api/v1/tickets/{id}/bundle/children/{childId}', summary: 'Remove bundle child', description: 'Removes child {childId} from its bundle; removes bundle settings when no children remain.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle/promote', summary: 'Promote bundle master', description: 'Promotes a child ticket to be the new bundle master, re-pointing the remaining children.', family: 'ticket' },
+    { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.', family: 'ticket' },
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates time entry.', family: 'time_entry' },
@@ -281,6 +288,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'get /api/v1/time-sheets/{id}/summary',
   ]);
 
+  // Delete endpoints whose service runs deleteEntityWithValidation and can
+  // therefore return 409 when blocking dependencies exist.
+  const DEPENDENCY_VALIDATED_DELETES = new Set([
+    'delete /api/v1/tickets/{id}',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -333,6 +346,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'delete') {
       responses[204] = { description: 'Delete-like operation can return no content when implemented that way.', emptyBody: true };
+    }
+
+    // Deletes that run dependency validation (deleteEntityWithValidation) reject
+    // with 409 when the resource still has blocking records (e.g. time entries,
+    // schedule entries). The error body's `details` enumerates the blocking
+    // dependencies so the caller knows what to remove or reassign first.
+    if (DEPENDENCY_VALIDATED_DELETES.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.',
+        schema: ApiError,
+      };
     }
 
     if (def.path.includes('/{id}') || def.path.includes('/{taskId}') || def.path.includes('/{sessionId}') || def.path.includes('/{entityId}')) {

@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import { Card } from '@alga-psa/ui/components/Card';
 import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
+
+export const metadata: Metadata = {
+  title: 'Teams',
+};
 
 interface TeamsTabPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

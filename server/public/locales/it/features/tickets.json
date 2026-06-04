@@ -1261,5 +1261,10 @@
       "reconnecting": "Aggiornamenti in tempo reale offline - riconnessione...",
       "unavailable": "Aggiornamenti in tempo reale non disponibili"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} eliminato con successo.",
+    "error": "Impossibile eliminare il ticket. Riprova.",
+    "validationError": "Impossibile convalidare l'eliminazione. Riprova."
   }
 }

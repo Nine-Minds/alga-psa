@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+'use strict';
+
+// Reset the appliance management-UI password.
+//
+//   sudo alga-appliance-reset-admin
+//
+// Use this when the operator has forgotten the management password for the
+// setup/status UI (port 8080). It:
+//   1. clears the stored password credential,
+//   2. deletes the session secret so any active sessions stop verifying,
+//   3. re-arms a fresh one-time setup token (world-readable so the
+//      control-plane pod can read it from the shared host volume),
+//   4. reprints the console banner with the new token.
+//
+// Everything lives in the host volume, so the running control-plane pod sees
+// the change immediately — no kubectl, no pod restart.
+
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+
+const stateDir = process.env.ALGA_APPLIANCE_STATE_DIR || '/var/lib/alga-appliance';
+const tokenFile = process.env.ALGA_APPLIANCE_TOKEN_FILE || path.join(stateDir, 'setup-token');
+const credentialFile = process.env.ALGA_APPLIANCE_ADMIN_CREDENTIAL_FILE || path.join(stateDir, 'admin-ui-credential.json');
+const sessionSecretFile = process.env.ALGA_APPLIANCE_SESSION_SECRET_FILE || path.join(stateDir, 'session-secret');
+const consoleScript = process.env.ALGA_APPLIANCE_CONSOLE_SCRIPT || '/opt/alga-appliance/host-service/console.mjs';
+
+function generateToken() {
+  // 5 groups of 4 digits — easy to type from a VM console PIN field, ~66 bits.
+  return Array.from({ length: 5 }, () => String(crypto.randomInt(0, 10_000)).padStart(4, '0')).join('-');
+}
+
+function removeIfPresent(file, label) {
+  try {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  } catch (error) {
+    if (error && error.code === 'EACCES') {
+      process.stderr.write('Permission denied. Re-run with sudo: sudo alga-appliance-reset-admin\n');
+      process.exit(1);
+    }
+    process.stderr.write(`Failed to remove ${label} (${file}): ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
+}
+
+// 1 + 2. Clear the management password and invalidate live sessions.
+removeIfPresent(credentialFile, 'management credential');
+removeIfPresent(sessionSecretFile, 'session secret');
+
+// 3. Re-arm a fresh one-time token (0644: the pod reads it from the hostPath).
+const token = generateToken();
+try {
+  fs.mkdirSync(path.dirname(tokenFile), { recursive: true, mode: 0o750 });
+  fs.writeFileSync(tokenFile, `${token}\n`, { mode: 0o644 });
+  fs.chmodSync(tokenFile, 0o644);
+} catch (error) {
+  if (error && error.code === 'EACCES') {
+    process.stderr.write('Permission denied. Re-run with sudo: sudo alga-appliance-reset-admin\n');
+    process.exit(1);
+  }
+  process.stderr.write(`Failed to write setup token (${tokenFile}): ${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
+}
+
+// 4. Reprint the console banner (best effort — the token is also printed below).
+if (fs.existsSync(consoleScript)) {
+  spawnSync('node', [consoleScript], { stdio: 'inherit', env: process.env });
+}
+
+process.stdout.write(`\nManagement password cleared.\nNew one-time setup token: ${token}\n`);
+process.stdout.write('Open the setup page on port 8080 and enter this token to choose a new management password.\n');

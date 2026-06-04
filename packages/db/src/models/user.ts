@@ -257,13 +257,13 @@ const User = {
     return rows.map((row: { user_id: string }) => row.user_id);
   },
 
-  updatePassword: async (email: string, hashed_password: string): Promise<void> => {
+  updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ email: email.toLowerCase() }).update({ hashed_password });
-      logger.system(`Password updated for user with email ${email}`);
+      await db<IUser>('users').where({ user_id, tenant }).update({ hashed_password });
+      logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
-      logger.error(`Error updating password for user with email ${email}:`, error);
+      logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
       throw error;
     }
   },
@@ -303,12 +303,18 @@ const User = {
     }
   },
 
-  getUserRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IRole[]> => {
-    const tenant = await requireTenantId(knexOrTrx);
+  getUserRoles: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    user_id: string,
+    tenantOverride?: string
+  ): Promise<IRole[]> => {
+    const tenant = tenantOverride ?? (await requireTenantId(knexOrTrx));
     try {
       const query = knexOrTrx<IRole>('roles')
         .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id').andOn('roles.tenant', '=', 'user_roles.tenant');
+          this.on('roles.role_id', '=', 'user_roles.role_id')
+            .andOn('roles.tenant', '=', 'user_roles.tenant')
+            .andOnVal('user_roles.tenant', tenant);
         })
         .where('user_roles.user_id', user_id)
         .where('roles.tenant', tenant);

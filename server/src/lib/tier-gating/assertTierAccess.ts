@@ -10,6 +10,7 @@ import {
 } from '@alga-psa/types';
 import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { getLicenseStateRow, resolveSelfHostTier } from '@alga-psa/licensing';
 import { isEnterprise } from '../features';
 
 export class TierAccessError extends Error {
@@ -50,7 +51,9 @@ export async function assertTierAccess(feature: TIER_FEATURES): Promise<void> {
   const effectiveTier = tenantId
     ? await getTenantTier(tenantId)
     : (() => {
-        const { tier } = resolveTier(session?.user?.plan);
+        // No tenant in session: resolve from the session's effectiveTier
+        // (self-host override) when present, else the Stripe plan.
+        const { tier } = resolveTier(session?.user?.effectiveTier ?? session?.user?.plan);
         return tier === 'solo' && hasActiveSoloProTrial(session?.user?.solo_pro_trial_end)
           ? 'pro'
           : tier;
@@ -68,6 +71,19 @@ function hasActiveSoloProTrial(value?: string | null): boolean {
 }
 
 async function getTenantTier(tenantId: string): Promise<TenantTier> {
+  // Self-host mode: a license_state row supersedes tenants.plan (offline
+  // license / trial / 'essentials' floor). Guard against the table not existing
+  // yet (rolling deploy hitting an un-migrated DB) — fall through to the SaaS
+  // plan/Stripe resolution rather than 500-ing every tier-gated action.
+  try {
+    const selfHost = resolveSelfHostTier(await getLicenseStateRow());
+    if (selfHost !== null) {
+      return selfHost.tier;
+    }
+  } catch {
+    // license_state unavailable; fall through to plan/Stripe resolution.
+  }
+
   const knex = await getAdminConnection();
   const tenantRecord = await knex('tenants')
     .where({ tenant: tenantId })

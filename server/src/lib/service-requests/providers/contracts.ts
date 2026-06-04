@@ -28,6 +28,8 @@ export interface ServiceRequestExecutionResult {
   status: 'succeeded' | 'failed';
   createdTicketId?: string;
   workflowExecutionId?: string;
+  /** Where the portal should send the user next (e.g. a Stripe Checkout URL). Transient. */
+  redirectUrl?: string;
   errorSummary?: string;
 }
 

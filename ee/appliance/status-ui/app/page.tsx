@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Boxes, ScrollText, Server, SlidersHorizontal } from 'lucide-react';
 import { AlgaLogo } from './AlgaLogo';
+import { LogoutButton } from './auth/LogoutButton';
 import styles from './status.module.css';
 
 type RawTierMap = Record<string, boolean | { ready?: boolean; status?: string }>;
@@ -41,18 +42,8 @@ type Pod = {
 type Tab = 'overview' | 'deployments' | 'pods' | 'logs';
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
-function tokenQuery() {
-  if (typeof window === 'undefined') return '';
-  return window.location.search;
-}
-
-function withToken(path: string, query: string) {
-  if (!query) return path;
-  return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
-}
-
-function apiPath(path: string, query: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
-  const search = new URLSearchParams(query.startsWith('?') ? query.slice(1) : query);
+function apiPath(path: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
+  const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== null && value !== undefined && value !== '') search.set(key, String(value));
   }
@@ -131,10 +122,12 @@ function SkeletonBlock({ lines = 6 }: { lines?: number }) {
 }
 
 export default function StatusPage() {
-  const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
+  const [confirmRecover, setConfirmRecover] = useState(false);
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
   const [namespace, setNamespace] = useState('msp');
   const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -160,20 +153,17 @@ export default function StatusPage() {
   const statusRequestInFlight = useRef(false);
   const statusAbortController = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    setQuery(tokenQuery());
-  }, []);
-
   const loadStatus = useCallback(async () => {
-    if (!query || statusRequestInFlight.current) return;
+    if (statusRequestInFlight.current) return;
 
     const controller = new AbortController();
     statusRequestInFlight.current = true;
     statusAbortController.current = controller;
     setLoadingStatus(true);
     try {
-      const response = await fetch(apiPath('/api/status', query), { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Status API unavailable.');
+      const response = await fetch(apiPath('/api/status'), { cache: 'no-store', signal: controller.signal });
+      if (response.status === 401) { window.location.reload(); return; }
+      if (!response.ok) throw new Error('Status API unavailable.');
       setStatus(await response.json());
       setError(null);
     } catch (err) {
@@ -186,25 +176,40 @@ export default function StatusPage() {
         setLoadingStatus(false);
       }
     }
-  }, [query]);
+  }, []);
+
+  const recoverBootstrap = useCallback(async () => {
+    if (recovering) return;
+    setRecovering(true);
+    setRecoverMsg(null);
+    try {
+      const response = await fetch(apiPath('/api/recover'), { method: 'POST', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to trigger recovery.');
+      setRecoverMsg(data.message || 'Recovery triggered.');
+      loadStatus();
+    } catch (err) {
+      setRecoverMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecovering(false);
+    }
+  }, [recovering, loadStatus]);
 
   const loadNamespaces = useCallback(async () => {
-    if (!query) return;
     setLoadingNamespaces(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/namespaces', query), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/namespaces'), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setNamespaces(data.namespaces || []);
     } catch { /* cluster may not exist yet */ }
     finally { setLoadingNamespaces(false); }
-  }, [query]);
+  }, []);
 
   const loadPods = useCallback(async () => {
-    if (!query) return;
     setLoadingPods(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/pods', query, { namespace }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/pods', { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       const nextPods = data.pods || [];
@@ -215,19 +220,18 @@ export default function StatusPage() {
       }
     } catch { /* ignore transient Kubernetes failures */ }
     finally { setLoadingPods(false); }
-  }, [namespace, query, selectedPod]);
+  }, [namespace, selectedPod]);
 
   const loadDeployments = useCallback(async () => {
-    if (!query) return;
     setLoadingDeployments(true);
     try {
-      const response = await fetch(apiPath('/api/k8s/deployments', query, { namespace }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/deployments', { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setDeployments(data.deployments || []);
     } catch { /* ignore transient Kubernetes failures */ }
     finally { setLoadingDeployments(false); }
-  }, [namespace, query]);
+  }, [namespace]);
 
   function applyPendingLogScroll() {
     const pending = pendingLogScroll.current;
@@ -242,14 +246,14 @@ export default function StatusPage() {
   }
 
   const loadLogs = useCallback(async (tail = logTail, options: LogLoadOptions = {}) => {
-    if (!query || !selectedPod) return;
+    if (!selectedPod) return;
     const pane = logPaneRef.current;
     const previousScrollHeight = pane?.scrollHeight || 0;
     const previousScrollTop = pane?.scrollTop || 0;
     setLoadingLogs(true);
     try {
       setLogError(null);
-      const response = await fetch(apiPath('/api/k8s/logs', query, { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/k8s/logs', { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
       if (!response.ok) throw new Error((await response.json()).error || 'Unable to read logs.');
       const data = await response.json();
       if (options.preserveScroll) {
@@ -266,7 +270,7 @@ export default function StatusPage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, [logTail, namespace, query, selectedContainer, selectedPod]);
+  }, [logTail, namespace, selectedContainer, selectedPod]);
 
   useEffect(() => {
     loadStatus();
@@ -351,7 +355,8 @@ export default function StatusPage() {
             </button>
           ))}
         </nav>
-        <a className={styles.setupLink} href={withToken('/setup/', query)}><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+        <a className={styles.setupLink} href="/setup/"><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+        <LogoutButton />
       </aside>
 
       <section className={styles.workspace}>
@@ -424,6 +429,23 @@ export default function StatusPage() {
               ))}
             </article>
 
+            <article className={styles.panel}>
+              <h2>Recovery</h2>
+              <p className={styles.muted}>Re-runs the application bootstrap — database migrations, onboarding seeds, and creation of the initial tenant and admin user (only when no user exists yet). Use this if setup finished but you cannot log in because the initial account was never created.</p>
+              <div className={styles.toolbar}>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  disabled={recovering}
+                  onClick={() => { if (!confirmRecover) { setConfirmRecover(true); } else { setConfirmRecover(false); recoverBootstrap(); } }}
+                >
+                  {recovering ? 'Triggering…' : confirmRecover ? 'Confirm re-run' : 'Re-run application bootstrap'}
+                </button>
+                {confirmRecover && !recovering ? <button type="button" onClick={() => setConfirmRecover(false)}>Cancel</button> : null}
+              </div>
+              {recoverMsg ? <p className={styles.helpText}>{recoverMsg}</p> : null}
+            </article>
+
             <article className={`${styles.panel} ${styles.wide}`}>
               <h2>Recent Kubernetes events</h2>
               {loadingStatus && !status ? <SkeletonBlock lines={5} /> : <div className={styles.eventList}>{(status?.recentEvents || []).slice(-10).reverse().map((event, index) => (
@@ -460,9 +482,9 @@ export default function StatusPage() {
         {activeTab === 'logs' ? (
           <section id="appliance-panel-logs" role="tabpanel" aria-labelledby="appliance-tab-logs" className={styles.panel}>
             <div className={styles.logControls}>
-              <select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
-              <select aria-label="Pod" value={selectedPod} disabled={loadingPods} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
-              <select aria-label="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
+              <Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(value) => { setNamespace(value); setSelectedPod(''); }} options={[{ value: 'msp', label: 'msp' }, ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))]} />
+              <Dropdown ariaLabel="Pod" value={selectedPod} disabled={loadingPods} placeholder="Select pod" onChange={(value) => { setSelectedPod(value); setSelectedContainer(''); }} options={pods.map((pod) => ({ value: pod.name, label: pod.name }))} />
+              <Dropdown ariaLabel="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} placeholder="Select container" onChange={setSelectedContainer} options={(selectedPodData?.containers || []).map((container) => ({ value: container.name, label: container.name }))} />
               <button type="button" onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
               <span className={styles.muted}>tail {logTail} · scroll up for older lines</span>
             </div>
@@ -488,6 +510,72 @@ export default function StatusPage() {
   );
 }
 
+type DropdownOption = { value: string; label: string };
+
+// Custom dropdown used instead of a native <select>. Native select popups are
+// unreliable inside the Electron browser pane (they fail to open or are
+// dismissed by the 15s status-poll re-render). This renders the option list in
+// the page DOM and keeps its open state across parent re-renders.
+function Dropdown({ value, options, onChange, disabled, ariaLabel, placeholder }: {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
+
+  return (
+    <div className={styles.dropdown} ref={ref}>
+      <button type="button" className={styles.dropdownButton} aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} disabled={disabled} onClick={() => setOpen((prev) => !prev)}>
+        <span className={styles.dropdownLabel}>{selected?.label ?? (value || placeholder || '—')}</span>
+        <span className={styles.dropdownCaret} aria-hidden="true">▾</span>
+      </button>
+      {open && !disabled ? (
+        <ul className={styles.dropdownMenu} role="listbox" aria-label={ariaLabel}>
+          {options.length === 0 ? (
+            <li className={styles.dropdownOption} aria-disabled="true">No options</li>
+          ) : options.map((option) => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              className={`${styles.dropdownOption} ${option.value === value ? styles.dropdownOptionActive : ''}`}
+              onClick={() => { onChange(option.value); setOpen(false); }}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function Toolbar({ namespace, namespaces, loadingNamespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; loadingNamespaces?: boolean; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
-  return <div className={styles.toolbar}><select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
+  const options: DropdownOption[] = [
+    { value: 'all', label: 'all namespaces' },
+    { value: 'msp', label: 'msp' },
+    ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))
+  ];
+  return <div className={styles.toolbar}><Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={onNamespace} options={options} /><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
 }

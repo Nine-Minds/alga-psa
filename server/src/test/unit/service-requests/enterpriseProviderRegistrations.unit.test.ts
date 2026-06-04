@@ -7,12 +7,16 @@ describe('enterprise service request provider registrations', () => {
     const registrations = await getServiceRequestEnterpriseProviderRegistrations();
 
     expect(registrations.executionProviders.map((provider) => provider.key).sort()).toEqual([
+      'license-order-stripe',
       'ticket-plus-workflow',
       'workflow-only',
     ]);
 
     expect(registrations.formBehaviorProviders.map((provider) => provider.key)).toEqual(['advanced']);
     expect(registrations.visibilityProviders.map((provider) => provider.key)).toEqual(['advanced-visibility']);
-    expect(registrations.templateProviders.map((provider) => provider.key)).toEqual(['ee-starter-pack']);
+    expect(registrations.templateProviders.map((provider) => provider.key)).toEqual([
+      'ee-starter-pack',
+      'appliance-license',
+    ]);
   });
 });

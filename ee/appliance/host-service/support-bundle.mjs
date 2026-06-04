@@ -48,6 +48,48 @@ function captureCommand(file, command, runCommand = shellRun) {
   return result.ok;
 }
 
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function safeRelativePath(value) {
+  const normalized = path.normalize(String(value || '')).replace(/^([/\\])+/, '');
+  if (!normalized || normalized.startsWith('..') || path.isAbsolute(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+function captureHostAgentDiagnostics(tempDir, socketPath, runCommand = shellRun) {
+  const command = `curl --silent --show-error --max-time 30 --unix-socket ${shellQuote(socketPath)} -X POST http://localhost/v1/support-bundle`;
+  const result = runCommand(command);
+  if (!result.ok) {
+    writeRedactedFile(path.join(tempDir, 'host', 'host-agent-error.txt'), [`$ ${command}`, result.stdout || '', result.stderr || '', `status=${result.status}`].filter(Boolean).join('\n'));
+    return false;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(result.stdout || '{}');
+  } catch (error) {
+    writeRedactedFile(path.join(tempDir, 'host', 'host-agent-error.txt'), `Host agent returned invalid JSON: ${error instanceof Error ? error.message : String(error)}\n${result.stdout || ''}`);
+    return false;
+  }
+
+  if (!payload.ok || !Array.isArray(payload.files)) {
+    writeRedactedFile(path.join(tempDir, 'host', 'host-agent-error.txt'), `Host agent returned an unsuccessful response.\n${JSON.stringify(payload, null, 2)}`);
+    return false;
+  }
+
+  writeRedactedFile(path.join(tempDir, 'host', 'host-agent-summary.txt'), `generatedAt=${payload.generatedAt || ''}\nagent=${payload.agent || 'alga-host-agent'}\nfiles=${payload.files.length}`);
+  for (const file of payload.files) {
+    const relative = safeRelativePath(file.path);
+    if (!relative) continue;
+    writeRedactedFile(path.join(tempDir, relative), file.content || '');
+  }
+  return true;
+}
+
 export function generateSupportBundle(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const outputDir = options.outputDir || DEFAULT_OUTPUT_DIR;
@@ -55,11 +97,13 @@ export function generateSupportBundle(options = {}) {
   const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
   const setupInputsFile = options.setupInputsFile || '/etc/alga-appliance/setup-inputs.json';
   const runCommand = options.runCommand || shellRun;
+  const hostAgentSocket = options.hostAgentSocket || process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
   const tempDir = options.tempDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-ubuntu-support-'));
 
   fs.mkdirSync(tempDir, { recursive: true, mode: 0o750 });
   fs.mkdirSync(path.join(tempDir, 'host'), { recursive: true, mode: 0o750 });
   fs.mkdirSync(path.join(tempDir, 'cluster'), { recursive: true, mode: 0o750 });
+  fs.mkdirSync(path.join(tempDir, 'pod'), { recursive: true, mode: 0o750 });
   fs.mkdirSync(path.join(tempDir, 'meta'), { recursive: true, mode: 0o750 });
 
   writeRedactedFile(path.join(tempDir, 'meta', 'summary.txt'), [
@@ -81,16 +125,32 @@ export function generateSupportBundle(options = {}) {
     }
   }
 
-  captureCommand(path.join(tempDir, 'host', 'appliance-journal.txt'), 'journalctl -u alga-appliance.service -u alga-appliance-console.service -n 800 --no-pager', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'k3s-service-status.txt'), 'systemctl status k3s --no-pager', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'disk-usage.txt'), 'df -h', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'ip-addresses.txt'), 'ip addr', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'routes.txt'), 'ip route', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'resolv-conf.txt'), 'cat /etc/resolv.conf', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'dns-lookup-github.txt'), 'getent hosts raw.githubusercontent.com', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'dns-lookup-ghcr.txt'), 'getent hosts ghcr.io', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'https-github.txt'), 'curl -I --max-time 10 https://raw.githubusercontent.com', runCommand);
-  captureCommand(path.join(tempDir, 'host', 'https-ghcr.txt'), 'curl -I --max-time 10 https://ghcr.io/v2/', runCommand);
+  if (process.env.ALGA_APPLIANCE_MODE === 'kubernetes-control-plane') {
+    if (!fs.existsSync(hostAgentSocket) || !captureHostAgentDiagnostics(tempDir, hostAgentSocket, runCommand)) {
+      writeRedactedFile(path.join(tempDir, 'host', 'host-diagnostics-note.txt'), [
+        'Support bundle was generated from the Kubernetes-hosted appliance control-plane pod.',
+        `Host diagnostics agent socket was not available or did not return diagnostics: ${hostAgentSocket}`,
+        'For host bootstrap logs, run on the appliance host:',
+        '  sudo journalctl -u alga-appliance-bootstrap.service -u alga-appliance-console.service -u k3s -n 1000 --no-pager',
+        '  sudo /usr/bin/env node /opt/alga-appliance/host-service/support-bundle.mjs'
+      ].join('\n'));
+    }
+    captureCommand(path.join(tempDir, 'pod', 'disk-usage.txt'), 'df -h', runCommand);
+    captureCommand(path.join(tempDir, 'pod', 'ip-addresses.txt'), 'ip addr', runCommand);
+    captureCommand(path.join(tempDir, 'pod', 'routes.txt'), 'ip route', runCommand);
+    captureCommand(path.join(tempDir, 'pod', 'resolv-conf.txt'), 'cat /etc/resolv.conf', runCommand);
+  } else {
+    captureCommand(path.join(tempDir, 'host', 'appliance-journal.txt'), 'journalctl -u alga-appliance-bootstrap.service -u alga-appliance.service -u alga-appliance-console.service -u k3s -n 1000 --no-pager', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'k3s-service-status.txt'), 'systemctl status k3s --no-pager', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'disk-usage.txt'), 'df -h', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'ip-addresses.txt'), 'ip addr', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'routes.txt'), 'ip route', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'resolv-conf.txt'), 'cat /etc/resolv.conf', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'dns-lookup-github.txt'), 'getent hosts raw.githubusercontent.com', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'dns-lookup-ghcr.txt'), 'getent hosts ghcr.io', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'https-github.txt'), 'curl -I --max-time 10 https://raw.githubusercontent.com', runCommand);
+    captureCommand(path.join(tempDir, 'host', 'https-ghcr.txt'), 'curl -I --max-time 10 https://ghcr.io/v2/', runCommand);
+  }
 
   const k = `kubectl --kubeconfig ${kubeconfigPath}`;
   captureCommand(path.join(tempDir, 'cluster', 'version.txt'), `${k} version`, runCommand);
@@ -105,6 +165,11 @@ export function generateSupportBundle(options = {}) {
   captureCommand(path.join(tempDir, 'cluster', 'flux-sources.txt'), `${k} -n flux-system get gitrepositories.source.toolkit.fluxcd.io -o yaml`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'flux-kustomizations.txt'), `${k} -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o yaml`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'helmreleases.txt'), `${k} -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o yaml`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'control-plane-resources.txt'), `${k} -n alga-appliance-control-plane get deploy,po,svc,cm,secrets -o wide`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'control-plane-describe.txt'), `${k} -n alga-appliance-control-plane describe deploy appliance-control-plane`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'control-plane-logs.txt'), `${k} -n alga-appliance-control-plane logs deploy/appliance-control-plane --all-containers --tail=400`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'control-plane-previous-logs.txt'), `${k} -n alga-appliance-control-plane logs deploy/appliance-control-plane --all-containers --previous --tail=400`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'app-bootstrap-resources.txt'), `${k} -n msp get jobs,pods,secrets,cm -l app.kubernetes.io/part-of=alga-psa -o wide`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'bootstrap-jobs.txt'), `${k} -n msp get jobs -o wide`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'bootstrap-job-logs.txt'), `${k} -n msp logs jobs/alga-bootstrap --tail=400`, runCommand);
 

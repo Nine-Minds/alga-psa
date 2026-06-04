@@ -53,7 +53,7 @@ interface TeamsPackageMetadata {
   baseUrl?: unknown;
 }
 
-interface TeamsRecipientLink {
+export interface TeamsRecipientLink {
   providerAccountId: string;
 }
 
@@ -318,7 +318,7 @@ async function getMicrosoftProfileRow(
   return row || undefined;
 }
 
-async function resolveTeamsRecipientLink(
+export async function resolveTeamsRecipientLink(
   tenant: string,
   userId: string
 ): Promise<TeamsRecipientLink | null> {

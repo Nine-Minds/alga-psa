@@ -118,8 +118,37 @@ API keys can be managed through the user interface by navigating to your User Pr
 ## 6. Available APIs
 
 ### Community Edition APIs
-- [Unified Full-Text Search](search.md)
+
+=======
+
+The following REST API groups are available in the Community Edition under the base path `/api/v1/`:
+
+
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
+- [Unified Full-Text Search](search.md)
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling (see below).
+- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, and drive RMM actions.
+- **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
+- **Billing** — Access contracts, contract lines, invoices, and billing analytics.
+- Additional endpoints: companies (clients), contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
+
+#### Ticket Bundling
+
+When multiple tickets describe the same underlying issue, they can be grouped under one *master* ticket using the bundle sub-resource at `/api/v1/tickets/{id}/bundle`. This feature is available to both PSA and AlgaDesk tenants.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tickets/{id}/bundle` | Return the ticket's bundle role (`master`, `child`, or `standalone`), the master ticket, children, and settings |
+| `POST` | `/tickets/{id}/bundle` | Create a bundle with `{id}` as master. Requires `child_ticket_ids` (array of UUIDs); accepts optional `mode` (`link_only` or `sync_updates`, default `sync_updates`) |
+| `DELETE` | `/tickets/{id}/bundle` | Detach all children and remove bundle settings |
+| `POST` | `/tickets/{id}/bundle/children` | Add additional child tickets to an existing bundle |
+| `DELETE` | `/tickets/{id}/bundle/children/{childId}` | Remove one child; bundle settings are cleaned up when the last child is removed |
+| `POST` | `/tickets/{id}/bundle/promote` | Promote a child ticket to become the new master |
+| `PUT` | `/tickets/{id}/bundle/settings` | Update `mode` and/or `reopen_on_child_reply` for the bundle |
+
+**Bundle modes:**
+- `link_only` — links tickets visually without propagating state changes to children
+- `sync_updates` — propagates the master ticket's status changes to all children (default)
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

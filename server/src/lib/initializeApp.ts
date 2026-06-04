@@ -607,7 +607,7 @@ async function setupDevelopmentEnvironment() {
   if (glinda) {
     newPassword = generateSecurePassword();
     const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.email, hashedPassword);
+    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
   } else {
     logger.info('Glinda not found. Skipping password update.');
   }

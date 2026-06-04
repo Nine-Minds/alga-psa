@@ -40,7 +40,6 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -58,7 +57,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   private async assertManualProductAccess(
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
-    user: NonNullable<ApiRequest['context']>['user'],
+    user: AuthenticatedApiRequest['context']['user'],
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {

@@ -244,7 +244,10 @@ const assignTaskInputSchema = z.object({
 });
 
 const duplicateTaskInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for source task picker scope', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for source task picker scope', 'project-phase', ['project_id']),
   source_task_id: withWorkflowPicker(uuidSchema, 'Source project task id', 'project-task', ['project_id', 'phase_id']),
+  target_project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional target project id', 'project'),
   target_phase_id: withWorkflowPicker(uuidSchema, 'Target project phase id', 'project-phase', ['target_project_id']),
   target_project_status_mapping_id: withWorkflowPicker(
     uuidSchema.optional(),
@@ -2019,6 +2022,7 @@ export function registerProjectActions(): void {
     id: 'projects.update_phase',
     version: 1,
     inputSchema: z.object({
+      project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for phase picker scope', 'project'),
       phase_id: withWorkflowPicker(uuidSchema, 'Project phase id', 'project-phase', ['project_id']),
       patch: phaseUpdatePatchSchema,
     }),
@@ -2081,6 +2085,8 @@ export function registerProjectActions(): void {
     id: 'projects.update_task',
     version: 1,
     inputSchema: z.object({
+      project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for task picker scope', 'project'),
+      phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for task picker scope', 'project-phase', ['project_id']),
       task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
       patch: taskUpdatePatchSchema,
     }),

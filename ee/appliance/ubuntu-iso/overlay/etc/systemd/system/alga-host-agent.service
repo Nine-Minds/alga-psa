@@ -1,0 +1,21 @@
+[Unit]
+Description=Alga Appliance Host Diagnostics Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=ALGA_HOST_AGENT_SOCKET=/run/alga-appliance/host-agent.sock
+Environment=ALGA_HOST_AGENT_SOCKET_GID=10001
+ExecStartPre=/usr/bin/systemd-sysusers /etc/sysusers.d/alga-appliance.conf
+ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/host-agent.mjs
+Restart=on-failure
+RestartSec=2s
+WorkingDirectory=/opt/alga-appliance
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -10,10 +10,14 @@
  */
 
 /**
- * Tenant tiers as a const tuple.
+ * Tenant tiers as a const tuple (ordered lowest to highest).
  * Used to derive the TenantTier type.
+ *
+ * 'essentials' — the floor tier used by self-hosted appliance installs when
+ * no active license or trial is present. Mirrors the Community Edition feature
+ * set on an Enterprise build; never sold as a standalone license tier.
  */
-export const TENANT_TIERS = ['solo', 'pro', 'premium'] as const;
+export const TENANT_TIERS = ['essentials', 'solo', 'pro', 'premium'] as const;
 
 /**
  * Valid tenant tier values.
@@ -24,6 +28,7 @@ export type TenantTier = (typeof TENANT_TIERS)[number];
  * Display labels for each tier.
  */
 export const TIER_LABELS: Record<TenantTier, string> = {
+  essentials: 'Essentials',
   solo: 'Solo',
   pro: 'Pro',
   premium: 'Premium',
@@ -32,8 +37,10 @@ export const TIER_LABELS: Record<TenantTier, string> = {
 /**
  * Numeric rank for comparing tiers.
  * Higher rank means broader access.
+ * 'essentials' is ranked below 'solo' (-1) so every paid tier exceeds it.
  */
 export const TIER_RANK: Record<TenantTier, number> = {
+  essentials: -1,
   solo: 0,
   pro: 1,
   premium: 2,

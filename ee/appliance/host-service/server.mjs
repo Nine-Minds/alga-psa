@@ -7,14 +7,27 @@ import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
-import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, validateSetupInputs, runNetworkChecks } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
+import {
+  authPhase,
+  isAuthenticated,
+  getCredentialState,
+  tokensMatch,
+  setPassword,
+  verifyPassword,
+  sessionCookieHeader,
+  clearSessionCookieHeader,
+  checkLockout,
+  registerFailure,
+  registerSuccess,
+} from './auth.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
-const tokenFile = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
@@ -22,9 +35,194 @@ const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQ
 const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
 const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIMEOUT_MS || 30_000);
 const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
+const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
+const NETWORK_PROBE_FAILURE_DEBOUNCE = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_DEBOUNCE || 2);
 const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
+let cachedNetworkProbe = null;
+let cachedNetworkProbeAt = 0;
+let networkProbeConsecutiveFailures = 0;
+let networkProbeInFlight = null;
+
+function readInstallStateSafe() {
+  try {
+    return fs.existsSync(stateFile) ? JSON.parse(fs.readFileSync(stateFile, 'utf8')) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Only spend outbound network egress on the live probe when a network-class
+// outcome is actually relevant: during early install phases or when a
+// network/dns/github failure is recorded. A healthy, progressed install does
+// not get probed.
+function networkProbeRelevant(installState) {
+  if (!installState) return false;
+  const phase = String(installState.phase || '').toLowerCase();
+  const failurePhase = String(installState.failure?.phase || '').toLowerCase();
+  const earlyPhases = ['setup', 'dns', 'network', 'github-release-source', 'release'];
+  return earlyPhases.includes(phase) || ['network', 'dns', 'github-release-source'].includes(failurePhase);
+}
+
+function networkProbeInputs() {
+  let inputs = {};
+  try {
+    if (fs.existsSync(setupInputsFile)) inputs = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+  } catch {
+    inputs = {};
+  }
+  return {
+    channel: inputs.channel || 'stable',
+    dnsMode: inputs.dnsMode || 'system',
+    dnsServers: inputs.dnsServers || '',
+    releaseRef: inputs.releaseRef || ''
+  };
+}
+
+// Cached + debounced live network probe. The TTL bounds egress regardless of
+// poll rate; the debounce requires consecutive failures before flipping a
+// previously-healthy result to failing, to avoid flapping the UI on a blip.
+async function getNetworkProbe() {
+  const now = Date.now();
+  if (cachedNetworkProbe && now - cachedNetworkProbeAt < NETWORK_PROBE_TTL_MS) return cachedNetworkProbe;
+  if (networkProbeInFlight) return networkProbeInFlight;
+
+  networkProbeInFlight = (async () => {
+    let raw;
+    try {
+      raw = await runNetworkChecks(networkProbeInputs(), { timeoutMs: 8_000 });
+    } catch (error) {
+      raw = {
+        ok: false,
+        checkedAt: new Date().toISOString(),
+        failure: {
+          phase: 'network',
+          step: 'network-probe',
+          message: 'Live network probe failed to run.',
+          suspectedCause: 'Live network probe failed to run.',
+          suggestedNextStep: error instanceof Error ? error.message : String(error),
+          retrySafe: true
+        }
+      };
+    }
+
+    networkProbeConsecutiveFailures = raw.ok ? 0 : networkProbeConsecutiveFailures + 1;
+    const debounced = !raw.ok && cachedNetworkProbe?.ok && networkProbeConsecutiveFailures < NETWORK_PROBE_FAILURE_DEBOUNCE;
+    const reported = debounced
+      ? { ok: true, checkedAt: raw.checkedAt, failure: null }
+      : raw;
+
+    cachedNetworkProbe = reported;
+    cachedNetworkProbeAt = Date.now();
+    networkProbeInFlight = null;
+    return reported;
+  })();
+
+  return networkProbeInFlight;
+}
+
+// --- Self-healing reconcile loop -------------------------------------------
+// The setup workflow is fire-once: on a failure it records a blocked state and
+// exits. Rather than asking an operator to manually re-run setup (the inputs
+// are already persisted), the control plane re-runs the workflow on its own for
+// retry-safe blocked states, with exponential backoff and an attempt cap.
+// Network-class blockers are only retried once the live probe is healthy again,
+// so a real outage waits instead of hammering.
+const AUTO_RETRY_DISABLED = process.env.ALGA_APPLIANCE_DISABLE_AUTO_RETRY === '1'
+  || process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1';
+const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_ATTEMPTS || 10);
+const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
+const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
+const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
+const NETWORK_CLASS_PHASES = ['network', 'dns', 'github-release-source'];
+const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
+let reconcileRunning = false;
+
+function installStateBlocked(state) {
+  return Boolean(state?.failure) && state.failure.retrySafe !== false && String(state.status || '').includes('blocked');
+}
+
+function installStateRunning(state) {
+  const status = String(state?.status || '');
+  return status === 'setup-queued' || status.endsWith('-running');
+}
+
+function failureCategory(state) {
+  const phase = String(state?.failure?.phase || state?.phase || '').toLowerCase();
+  return NETWORK_CLASS_PHASES.find((candidate) => phase.includes(candidate)) || phase;
+}
+
+function backoffMs(attempts) {
+  return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
+}
+
+function readRetryState() {
+  try {
+    return fs.existsSync(retryStateFile) ? JSON.parse(fs.readFileSync(retryStateFile, 'utf8')) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeRetryState(value) {
+  try {
+    fs.mkdirSync(path.dirname(retryStateFile), { recursive: true });
+    fs.writeFileSync(retryStateFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  } catch { /* best effort */ }
+}
+
+function clearRetryState() {
+  try {
+    if (fs.existsSync(retryStateFile)) fs.unlinkSync(retryStateFile);
+  } catch { /* best effort */ }
+}
+
+// Summary used by the status snapshot so the UI shows "retrying automatically"
+// instead of a dead-end "re-run setup" instruction.
+function computeAutoRetrySummary(state) {
+  if (AUTO_RETRY_DISABLED || !installStateBlocked(state)) return undefined;
+  const retry = readRetryState();
+  const attempts = Number(retry.attempts || 0);
+  if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) {
+    return { willRetry: false, exhausted: true, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS };
+  }
+  const nextAttemptInSeconds = retry.nextAttemptAt ? Math.max(0, Math.round((retry.nextAttemptAt - Date.now()) / 1000)) : 0;
+  return { willRetry: true, exhausted: false, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, nextAttemptInSeconds };
+}
+
+async function reconcileBlockedSetup() {
+  if (AUTO_RETRY_DISABLED || reconcileRunning) return;
+  reconcileRunning = true;
+  try {
+    const state = readInstallStateSafe();
+    if (!state || !installStateBlocked(state)) {
+      clearRetryState();
+      return;
+    }
+    if (installStateRunning(state)) return;
+
+    const retry = readRetryState();
+    const attempts = Number(retry.attempts || 0);
+    if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) return; // exhausted; leave for manual action
+    const now = Date.now();
+    if (retry.nextAttemptAt && now < retry.nextAttemptAt) return; // still in backoff window
+
+    if (NETWORK_CLASS_PHASES.includes(failureCategory(state))) {
+      const probe = await getNetworkProbe();
+      if (!probe.ok) {
+        writeRetryState({ attempts, nextAttemptAt: now + backoffMs(attempts || 1), lastReason: 'network still unhealthy' });
+        return;
+      }
+    }
+
+    const nextAttempts = attempts + 1;
+    writeRetryState({ attempts: nextAttempts, lastAttemptAt: new Date(now).toISOString(), nextAttemptAt: now + backoffMs(nextAttempts) });
+    queueSetupWorkflow();
+  } finally {
+    reconcileRunning = false;
+  }
+}
 
 function currentMode() {
   if (!fs.existsSync(stateFile)) {
@@ -71,6 +269,43 @@ function jsonResponse(res, statusCode, value) {
   if (res.destroyed || res.writableEnded) return;
   res.writeHead(statusCode, { 'content-type': 'application/json' });
   res.end(JSON.stringify(value));
+}
+
+function jsonResponseWithCookie(res, statusCode, value, cookie) {
+  if (res.destroyed || res.writableEnded) return;
+  res.writeHead(statusCode, { 'content-type': 'application/json', 'set-cookie': cookie });
+  res.end(JSON.stringify(value));
+}
+
+// Every data-bearing endpoint now requires a valid session cookie instead of a
+// `?token=` query parameter. The token is only used once, at the PIN screen, to
+// bootstrap the management password.
+function requireAuth(req, res) {
+  if (isAuthenticated(req)) return true;
+  jsonResponse(res, 401, { error: 'Unauthorized: sign in to continue.' });
+  return false;
+}
+
+function clientIp(req) {
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
+async function readJsonBody(req) {
+  const body = await readRequestBody(req);
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('application/json')) {
+    try { return JSON.parse(body || '{}'); } catch { return {}; }
+  }
+  return Object.fromEntries(new URLSearchParams(body));
+}
+
+function passwordPolicyError(value) {
+  if (typeof value !== 'string' || value.length < 8) return 'Use at least 8 characters.';
+  if (!/[a-z]/.test(value)) return 'Include a lowercase letter.';
+  if (!/[A-Z]/.test(value)) return 'Include an uppercase letter.';
+  if (!/\d/.test(value)) return 'Include a number.';
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return 'Include a special character.';
+  return null;
 }
 
 function requestAbortSignal(req, res) {
@@ -148,8 +383,7 @@ function readSetupDefaults(requestHost) {
     appHostname: defaultAppUrlForRequest(requestHost),
     dnsMode: 'system',
     dnsServers: '',
-    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
-    repoBranch: ''
+    releaseRef: ''
   };
   if (!fs.existsSync(setupInputsFile)) return fallback;
   try {
@@ -186,7 +420,9 @@ function queueSetupWorkflow() {
     new URL('./setup-engine.mjs', import.meta.url).pathname,
     'run',
     '--setup-inputs', setupInputsFile,
-    '--state-file', stateFile
+    '--state-file', stateFile,
+    '--release-selection-file', releaseSelectionFile,
+    '--kubeconfig', kubeconfigPath
   ], {
     detached: true,
     stdio: 'ignore',
@@ -302,9 +538,10 @@ function summarizePod(item) {
 }
 
 function tokenHelpHtml() {
-  return `<p>The setup/status token and temporary local admin password are printed on the VM console and persisted in the login banner.</p>
+  return `<p>The one-time setup token is printed on the VM console and persisted in the login banner. Enter it once to choose a management password; after that you sign in with the password.</p>
     <p>If the console was cleared, press Enter or reopen the VM console to display the banner again.</p>
-    <p>If you have host shell access, read the token with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>`;
+    <p>If you have host shell access, read the token with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>
+    <p>Forgot the management password? Run <code>sudo alga-appliance-reset-admin</code> to re-arm a fresh token.</p>`;
 }
 
 function preflightGuidanceForPhase(phase) {
@@ -323,19 +560,111 @@ function preflightGuidanceForPhase(phase) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const mode = currentMode();
-  const setupToken = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '';
 
   if (url.pathname === '/healthz') {
     jsonResponse(res, 200, { ok: true, mode });
     return;
   }
 
-  if (url.pathname === '/api/setup/config') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid setup token required.' });
+  // --- authentication ------------------------------------------------------
+  // The UI calls /api/auth/state on load to decide which screen to render:
+  // token entry (first run), password login (configured), or straight in.
+  if (url.pathname === '/api/auth/state') {
+    jsonResponse(res, 200, { phase: authPhase(req), mode });
+    return;
+  }
+
+  if (url.pathname === '/api/auth/redeem-token') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status === 'configured') {
+      jsonResponse(res, 409, { error: 'A management password is already set. Sign in with your password.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (tokensMatch(payload.token)) {
+      registerSuccess(ip);
+      jsonResponse(res, 200, { ok: true, next: 'set-password' });
+    } else {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect setup token.' });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/auth/set-password') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status === 'configured') {
+      jsonResponse(res, 409, { error: 'A management password is already set. Sign in with your password.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (!tokensMatch(payload.token)) {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect setup token.' });
+      return;
+    }
+    const pwError = passwordPolicyError(payload.password || '');
+    if (pwError) {
+      jsonResponse(res, 400, { error: pwError });
+      return;
+    }
+    setPassword(payload.password);
+    registerSuccess(ip);
+    jsonResponseWithCookie(res, 200, { ok: true }, sessionCookieHeader());
+    return;
+  }
+
+  if (url.pathname === '/api/auth/login') {
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const ip = clientIp(req);
+    const lock = checkLockout(ip);
+    if (lock.locked) {
+      jsonResponse(res, 429, { error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterMs / 1000)}s.` });
+      return;
+    }
+    if (getCredentialState().status !== 'configured') {
+      jsonResponse(res, 409, { error: 'No management password is set yet. Enter the setup token.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    if (verifyPassword(payload.password || '')) {
+      registerSuccess(ip);
+      jsonResponseWithCookie(res, 200, { ok: true }, sessionCookieHeader());
+    } else {
+      registerFailure(ip);
+      jsonResponse(res, 401, { error: 'Incorrect password.' });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/auth/logout') {
+    jsonResponseWithCookie(res, 200, { ok: true }, clearSessionCookieHeader());
+    return;
+  }
+
+  if (url.pathname === '/api/setup/config') {
+    if (!requireAuth(req, res)) return;
     jsonResponse(res, 200, {
       mode,
       defaults: readSetupDefaults(req.headers.host || ''),
@@ -345,17 +674,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/setup') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid setup token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
     if (mode === 'status') {
-      jsonResponse(res, 409, { error: 'Setup has already started.', redirectTo: `/?token=${encodeURIComponent(providedToken)}` });
+      jsonResponse(res, 409, { error: 'Setup has already started.', redirectTo: '/' });
       return;
     }
 
@@ -365,13 +690,26 @@ const server = http.createServer(async (req, res) => {
       payload = req.headers['content-type']?.includes('application/json')
         ? JSON.parse(body || '{}')
         : Object.fromEntries(new URLSearchParams(body));
+      // Light well-formed JWS check for licenseKey (F077): three base64url-separated dots.
+      const rawLicenseKey = (payload.licenseKey || '').trim();
+      if (rawLicenseKey && !/^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(rawLicenseKey)) {
+        throw new Error('Invalid license key format.');
+      }
+
       const setupInputs = validateSetupInputs({
         channel: payload.channel || 'stable',
         appHostname: payload.appHostname || '',
         dnsMode: payload.dnsMode || 'system',
         dnsServers: payload.dnsServers || '',
-        repoUrl: payload.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
-        repoBranch: payload.repoBranch || ''
+        releaseRef: payload.releaseRef || '',
+        tenantName: payload.tenantName || '',
+        adminFirstName: payload.adminFirstName || '',
+        adminLastName: payload.adminLastName || '',
+        adminEmail: payload.adminEmail || '',
+        adminPassword: payload.adminPassword || '',
+        adminPasswordConfirm: payload.adminPasswordConfirm || '',
+        editionChoice: payload.editionChoice || 'ee',
+        licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
       fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
@@ -384,8 +722,16 @@ const server = http.createServer(async (req, res) => {
       queueSetupWorkflow();
       jsonResponse(res, 202, {
         ok: true,
-        redirectTo: `/?token=${encodeURIComponent(providedToken)}`,
-        acceptedInputs: setupInputs
+        redirectTo: '/',
+        acceptedInputs: {
+          ...setupInputs,
+          initialTenant: setupInputs.initialTenant ? {
+            tenantName: setupInputs.initialTenant.tenantName,
+            adminFirstName: setupInputs.initialTenant.adminFirstName,
+            adminLastName: setupInputs.initialTenant.adminLastName,
+            adminEmail: setupInputs.initialTenant.adminEmail
+          } : undefined
+        }
       });
     } catch (error) {
       jsonResponse(res, 400, { error: error instanceof Error ? error.message : 'Invalid setup inputs.' });
@@ -394,27 +740,29 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/status') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
-      return;
-    }
+    if (!requireAuth(req, res)) return;
 
     const signal = requestAbortSignal(req, res);
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
     const now = Date.now();
     const cacheUsable = !includeDiagnostics && cachedStatusSnapshot && now - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS;
+    const installStateForProbe = readInstallStateSafe();
+    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
     const snapshot = cacheUsable
       ? cachedStatusSnapshot
       : await collectStatusSnapshotAsync({
         stateFile,
+        setupInputsFile,
+        releaseSelectionFile,
+        kubeconfigPath,
         includeDiagnostics,
         kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
         kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+        networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
+        autoRetry: computeAutoRetrySummary(installStateForProbe),
         runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
       });
-    if (!includeDiagnostics) {
+    if (!includeDiagnostics && !cacheUsable) {
       cachedStatusSnapshot = snapshot;
       cachedStatusSnapshotAt = now;
     }
@@ -425,11 +773,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/namespaces') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const signal = requestAbortSignal(req, res);
     const result = await runKubectlJson('get namespaces', KUBECTL_API_TIMEOUT_MS, signal);
     if (!result.ok) {
@@ -447,11 +791,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/deployments') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
     if (!nsFlag) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
@@ -473,11 +813,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/pods') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
     if (!nsFlag) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
@@ -498,11 +834,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/k8s/logs') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     const namespace = url.searchParams.get('namespace') || 'msp';
     const pod = url.searchParams.get('pod') || '';
     const container = url.searchParams.get('container') || '';
@@ -527,31 +859,52 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/support-bundle') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
-      return;
-    }
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       res.writeHead(405, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
       return;
     }
 
-    const result = generateSupportBundle();
+    const result = generateSupportBundle({ stateFile, setupInputsFile, releaseSelectionFile });
     res.writeHead(result.ok ? 200 : 500, { 'content-type': 'application/json' });
     res.end(JSON.stringify(result));
     return;
   }
 
-  if (url.pathname === '/api/updates') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
+  if (url.pathname === '/api/recover') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
+
+    // Force a Flux reconcile of the alga-core HelmRelease (same as
+    // `flux reconcile helmrelease alga-core --force`): bumping requestedAt and
+    // forceAt to the same value makes the helm-controller run a forced upgrade,
+    // which creates a fresh bootstrap Job. That job re-runs migrations,
+    // onboarding seeds, and creates the initial tenant/admin if no users exist.
+    const namespace = 'alga-system';
+    const name = 'alga-core';
+    const requestedAt = new Date().toISOString();
+    const signal = requestAbortSignal(req, res);
+    const command = kubectlCommand(`-n ${shellQuote(namespace)} annotate helmrelease ${shellQuote(name)} reconcile.fluxcd.io/requestedAt=${shellQuote(requestedAt)} reconcile.fluxcd.io/forceAt=${shellQuote(requestedAt)} --overwrite`, KUBECTL_API_TIMEOUT_MS);
+    const result = await runQueuedKubectl(command, { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal });
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Failed to trigger reconcile.', helmRelease: `${namespace}/${name}` });
+      return;
+    }
+    jsonResponse(res, 200, {
+      ok: true,
+      helmRelease: `${namespace}/${name}`,
+      requestedAt,
+      message: 'Forced a Flux reconcile of alga-core. A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes about a minute.'
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/updates') {
+    if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
       res.writeHead(405, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
@@ -574,17 +927,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/updates') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
+    if (!isAuthenticated(req)) {
       res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
+      res.end('Unauthorized: sign in to continue.');
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>App Channel Updates</h1>
       <p>Updates here only change Alga application channel/release state. Ubuntu and k3s updates are manual/support-run in v1.</p>
-      <form method="post" action="/api/updates?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/api/updates">
         <label>Channel</label>
         <select name="channel">
           <option value="stable" selected>stable</option>
@@ -597,17 +949,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/support-bundle') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
+    if (!isAuthenticated(req)) {
       res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
+      res.end('Unauthorized: sign in to continue.');
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>Generate Support Bundle</h1>
       <p>This bundle includes host service logs, setup state, Kubernetes/Flux/Helm diagnostics, network checks, disk usage, and redacted metadata.</p>
-      <form method="post" action="/api/support-bundle?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/api/support-bundle">
         <button type="submit">Generate Bundle</button>
       </form>
       <p>CLI fallback: <code>/usr/bin/env node /opt/alga-appliance/host-service/support-bundle.mjs</code> (or call the status API).</p>
@@ -616,20 +967,21 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/setup' || url.pathname === '/setup/') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid setup token required.');
-      return;
-    }
-
+    // The setup page is the SPA shell; it gates its own content via
+    // /api/auth/state. Only the legacy server-rendered POST mutates state, so
+    // that path requires a session.
     if (mode === 'status') {
-      res.writeHead(303, { location: `/?token=${encodeURIComponent(providedToken)}` });
+      res.writeHead(303, { location: '/' });
       res.end();
       return;
     }
 
     if ((req.method || 'GET').toUpperCase() === 'POST') {
+      if (!isAuthenticated(req)) {
+        res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Unauthorized: sign in to continue.');
+        return;
+      }
       const body = await readRequestBody(req);
       const params = new URLSearchParams(body);
       let setupInputs;
@@ -640,8 +992,13 @@ const server = http.createServer(async (req, res) => {
           appHostname: params.get('appHostname') || '',
           dnsMode: params.get('dnsMode') || 'system',
           dnsServers: params.get('dnsServers') || '',
-          repoUrl: params.get('repoUrl') || 'https://github.com/Nine-Minds/alga-psa.git',
-          repoBranch: params.get('repoBranch') || ''
+          releaseRef: params.get('releaseRef') || '',
+          tenantName: params.get('tenantName') || '',
+          adminFirstName: params.get('adminFirstName') || '',
+          adminLastName: params.get('adminLastName') || '',
+          adminEmail: params.get('adminEmail') || '',
+          adminPassword: params.get('adminPassword') || '',
+          adminPasswordConfirm: params.get('adminPasswordConfirm') || ''
         });
         persistSetupInputs(setupInputs, setupInputsFile);
       } catch (error) {
@@ -659,7 +1016,7 @@ const server = http.createServer(async (req, res) => {
       }, null, 2)}\n`, { mode: 0o600 });
       queueSetupWorkflow();
 
-      res.writeHead(303, { location: `/?token=${encodeURIComponent(providedToken)}` });
+      res.writeHead(303, { location: '/' });
       res.end();
       return;
     }
@@ -673,7 +1030,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(`<!doctype html><html><body>
       <h1>Alga Appliance Setup</h1>
-      <form method="post" action="/setup?token=${encodeURIComponent(providedToken)}">
+      <form method="post" action="/setup">
         <label>Release channel</label><br />
         <select name="channel">
           <option value="stable" selected>stable (recommended)</option>
@@ -683,6 +1040,23 @@ const server = http.createServer(async (req, res) => {
         <label>App URL</label><br />
         <input type="text" name="appHostname" value="${defaultAppUrlForRequest(req.headers.host || '')}" placeholder="http://192.168.1.50:3000" /><br />
         <small>Use the full URL users will enter in their browser. The default local URL works out of the box.</small><br /><br />
+
+        <fieldset>
+          <legend>Initial account</legend>
+          <label>Company name</label><br />
+          <input type="text" name="tenantName" required /><br /><br />
+          <label>Admin first name</label><br />
+          <input type="text" name="adminFirstName" required /><br /><br />
+          <label>Admin last name</label><br />
+          <input type="text" name="adminLastName" required /><br /><br />
+          <label>Admin email</label><br />
+          <input type="email" name="adminEmail" required /><br /><br />
+          <label>Admin password</label><br />
+          <input type="password" name="adminPassword" autocomplete="new-password" required /><br /><br />
+          <label>Confirm admin password</label><br />
+          <input type="password" name="adminPasswordConfirm" autocomplete="new-password" required /><br />
+          <small>Use at least 8 characters with uppercase, lowercase, number, and special character.</small><br /><br />
+        </fieldset>
 
         <label>DNS mode</label><br />
         <select name="dnsMode">
@@ -694,11 +1068,8 @@ const server = http.createServer(async (req, res) => {
         <label>Custom DNS servers (comma-separated)</label><br />
         <input type="text" name="dnsServers" placeholder="8.8.8.8,8.8.4.4" /><br /><br />
 
-        <label>Repo URL override (support/testing only)</label><br />
-        <input type="text" name="repoUrl" value="https://github.com/Nine-Minds/alga-psa.git" /><br /><br />
-
-        <label>Repo branch override (support/testing only)</label><br />
-        <input type="text" name="repoBranch" placeholder="main" /><br /><br />
+        <label>Release pin (advanced; blank follows the channel)</label><br />
+        <input type="text" name="releaseRef" placeholder="e.g. 1.0.3 or sha256:..." /><br /><br />
 
         <button type="submit">Save and continue</button>
       </form>
@@ -712,24 +1083,36 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Page routes: serve the SPA shell, which gates its own content via
+  // /api/auth/state. The login/PIN screen needs no server-side session.
+  const staticHome = safeStaticFileForPathname('/');
+  if (staticHome) {
+    serveStaticFile(res, staticHome);
+    return;
+  }
+
+  // No static bundle (dev/edge): the server-rendered fallbacks below expose
+  // live appliance data, so they require a session.
+  if (!isAuthenticated(req)) {
+    res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('Unauthorized: sign in to continue.');
+    return;
+  }
+
   if (mode === 'status') {
-    const providedToken = url.searchParams.get('token') || '';
-    if (!setupToken || providedToken !== setupToken) {
-      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('Unauthorized: valid status token required.');
-      return;
-    }
-    const staticHome = safeStaticFileForPathname('/');
-    if (staticHome) {
-      serveStaticFile(res, staticHome);
-      return;
-    }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     const signal = requestAbortSignal(req, res);
+    const installStateForProbe = readInstallStateSafe();
+    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
     const snapshot = await collectStatusSnapshotAsync({
       stateFile,
+      setupInputsFile,
+      releaseSelectionFile,
+        kubeconfigPath,
       kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
       kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+      networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
+      autoRetry: computeAutoRetrySummary(installStateForProbe),
       runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
     });
     const failureItems = (snapshot.failures || [])
@@ -766,9 +1149,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p>${tokenHelpHtml()}<p>Open <code>/setup?token=&lt;setup-token&gt;</code> to continue.</p></body></html>`);
+  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p>${tokenHelpHtml()}<p>Open <code>/setup</code> to continue.</p></body></html>`);
 });
 
 server.listen(port, '0.0.0.0', () => {
   process.stdout.write(`alga-appliance host service listening on :${port}\n`);
 });
+
+if (!AUTO_RETRY_DISABLED) {
+  const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);
+  reconcileTimer.unref();
+  process.stdout.write(`alga-appliance auto-retry reconciler enabled (every ${RECONCILE_INTERVAL_MS}ms, max ${AUTO_RETRY_MAX_ATTEMPTS} attempts)\n`);
+}

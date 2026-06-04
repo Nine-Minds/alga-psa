@@ -19,6 +19,7 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
+import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
@@ -45,6 +46,22 @@ import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
+
+/**
+ * Effective tier override for self-host installs. Returns the tier resolved from
+ * the offline `license_state` row (essentials/pro/premium/...) when present, or
+ * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
+ * on any error (e.g. an un-migrated `license_state`) — returns undefined.
+ */
+async function resolveSelfHostEffectiveTier(): Promise<string | undefined> {
+    try {
+        const selfHost = resolveSelfHostTier(await getLicenseStateRow());
+        if (selfHost !== null) return selfHost.tier;
+    } catch {
+        // Non-fatal — fall through to plan-based resolution.
+    }
+    return undefined;
+}
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -1343,7 +1360,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -1488,7 +1505,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -1695,6 +1712,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -1777,6 +1795,25 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
             }
 
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
+                }
+            }
+
             // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
             // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
             // - With max 20 connections, pool exhausted instantly with multiple users
@@ -1809,6 +1846,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -1878,6 +1916,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2141,7 +2180,7 @@ export const options: NextAuthConfig = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -2284,7 +2323,7 @@ export const options: NextAuthConfig = {
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -2442,6 +2481,7 @@ export const options: NextAuthConfig = {
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2524,6 +2564,25 @@ export const options: NextAuthConfig = {
                 }
             }
 
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
+                }
+            }
+
             // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
             // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
             // - With max 20 connections, pool exhausted instantly with multiple users
@@ -2556,6 +2615,7 @@ export const options: NextAuthConfig = {
                         token.premium_trial_end = subInfo.premium_trial_end;
                         token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
                         token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2624,6 +2684,7 @@ export const options: NextAuthConfig = {
                 (user as any).premium_trial_end = token.premium_trial_end ?? null;
                 (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
                 (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
+                (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

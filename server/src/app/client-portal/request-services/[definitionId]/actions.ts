@@ -203,6 +203,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         status: 'success' as const,
         submissionId: result.submissionId,
         createdTicketId: result.createdTicketId ?? null,
+        redirectUrl: result.redirectUrl ?? null,
       };
     } catch (error) {
       await Promise.allSettled(
@@ -224,6 +225,13 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         error: outcome.message,
       })
     );
+  }
+
+  // Execution providers that need a post-submit redirect (e.g. license-order
+  // → Stripe Checkout) surface an absolute URL; send the customer straight
+  // there. Next's redirect() supports absolute/external URLs.
+  if (outcome.redirectUrl) {
+    redirect(outcome.redirectUrl);
   }
 
   redirect(

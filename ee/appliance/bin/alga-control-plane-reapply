@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPLIANCE_ROOT="${ALGA_APPLIANCE_ROOT:-/opt/alga-appliance}"
+KUBECONFIG_PATH="${ALGA_APPLIANCE_KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+TOKEN_FILE="${ALGA_APPLIANCE_TOKEN_FILE:-/var/lib/alga-appliance/setup-token}"
+CONTROL_PLANE_NAMESPACE="alga-appliance-control-plane"
+DRY_RUN=false
+
+usage() {
+  cat <<'EOF'
+Usage:
+  alga-control-plane-reapply [options]
+
+Emergency host fallback for new Ubuntu/k3s appliance installs. Re-imports the
+baked control-plane image archive(s), reapplies local-path storage and the
+Kubernetes-hosted setup/status control plane, then prints basic diagnostics.
+
+This command is intentionally non-destructive: it does not delete namespaces,
+PVCs, Secrets, HelmReleases, or application data.
+
+Options:
+  --appliance-root <path>  Installed appliance root (default: /opt/alga-appliance)
+  --kubeconfig <path>      k3s kubeconfig path (default: /etc/rancher/k3s/k3s.yaml)
+  --token-file <path>      Setup token file (default: /var/lib/alga-appliance/setup-token)
+  --dry-run                Print operations without mutating the host
+  --help                   Show this help
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --appliance-root)
+      APPLIANCE_ROOT="$2"
+      shift 2
+      ;;
+    --kubeconfig)
+      KUBECONFIG_PATH="$2"
+      shift 2
+      ;;
+    --token-file)
+      TOKEN_FILE="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+BUNDLED_K3S_BINARY="$APPLIANCE_ROOT/bin/k3s"
+IMAGE_DIR="$APPLIANCE_ROOT/control-plane/images"
+CONTROL_PLANE_MANIFESTS="$APPLIANCE_ROOT/control-plane/manifests"
+LOCAL_STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
+
+run() {
+  if [ "$DRY_RUN" = "true" ]; then
+    printf '[plan] %s\n' "$*"
+  else
+    printf '[reapply] %s\n' "$*"
+    "$@"
+  fi
+}
+
+require_file() {
+  if [ ! -f "$1" ]; then
+    echo "Required file not found: $1" >&2
+    exit 1
+  fi
+}
+
+require_dir() {
+  if [ ! -d "$1" ]; then
+    echo "Required directory not found: $1" >&2
+    exit 1
+  fi
+}
+
+k3s_cmd() {
+  if [ -x "$BUNDLED_K3S_BINARY" ]; then
+    "$BUNDLED_K3S_BINARY" "$@"
+  elif command -v k3s >/dev/null 2>&1; then
+    k3s "$@"
+  else
+    echo "k3s command is unavailable" >&2
+    return 127
+  fi
+}
+
+kubectl_cmd() {
+  if command -v kubectl >/dev/null 2>&1; then
+    kubectl --kubeconfig "$KUBECONFIG_PATH" "$@"
+  else
+    k3s_cmd kubectl --kubeconfig "$KUBECONFIG_PATH" "$@"
+  fi
+}
+
+require_dir "$IMAGE_DIR"
+require_dir "$CONTROL_PLANE_MANIFESTS"
+require_file "$LOCAL_STORAGE_MANIFEST"
+require_file "$TOKEN_FILE"
+
+if ! compgen -G "$IMAGE_DIR/*.tar" >/dev/null; then
+  echo "No control-plane image archives found in $IMAGE_DIR" >&2
+  exit 1
+fi
+
+for archive in "$IMAGE_DIR"/*.tar; do
+  if [ "$DRY_RUN" = "true" ]; then
+    run k3s ctr images import "$archive"
+  else
+    printf '[reapply] k3s ctr images import %s\n' "$archive"
+    k3s_cmd ctr images import "$archive"
+  fi
+done
+
+if [ "$DRY_RUN" = "true" ]; then
+  run kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f "$LOCAL_STORAGE_MANIFEST" || true
+else
+  if ! kubectl_cmd apply -f "$LOCAL_STORAGE_MANIFEST"; then
+    printf '[reapply] local-path storage manifest apply was not clean; continuing so setup UI can recover\n' >&2
+  fi
+fi
+
+# The setup token is read by the control-plane pod directly from the shared
+# host volume (hostPath), so no appliance-setup-token Secret is created here.
+if [ "$DRY_RUN" = "true" ]; then
+  run kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
+  run kubectl --kubeconfig "$KUBECONFIG_PATH" apply -k "$CONTROL_PLANE_MANIFESTS"
+else
+  printf '[reapply] kubectl apply -f %s\n' "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
+  kubectl_cmd apply -f "$CONTROL_PLANE_MANIFESTS/namespace.yaml"
+  printf '[reapply] kubectl apply -k %s\n' "$CONTROL_PLANE_MANIFESTS"
+  kubectl_cmd apply -k "$CONTROL_PLANE_MANIFESTS"
+fi
+
+if [ "$DRY_RUN" = "true" ]; then
+  run kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-appliance-control-plane get pods,svc,cm,secrets
+  run kubectl --kubeconfig "$KUBECONFIG_PATH" get nodes
+else
+  printf '\nDiagnostics:\n'
+  systemctl --no-pager --full status k3s || true
+  kubectl_cmd -n alga-appliance-control-plane get pods,svc,cm,secrets || true
+  kubectl_cmd get nodes || true
+fi

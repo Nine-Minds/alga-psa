@@ -11,8 +11,10 @@ import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -85,6 +87,24 @@ function applyDefaultContactPhoneJoin(
     });
 }
 
+export type BundleMode = 'link_only' | 'sync_updates';
+
+export interface BundleMemberTicket {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  status_id: string | null;
+  client_id: string | null;
+}
+
+export interface BundleView {
+  role: 'master' | 'child' | 'standalone';
+  master_ticket_id: string;
+  master: BundleMemberTicket | null;
+  children: BundleMemberTicket[];
+  settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -94,6 +114,62 @@ export class TicketService extends BaseService<ITicket> {
       searchableFields: ['title', 'ticket_number'],
       defaultSort: 'entered_at',
       defaultOrder: 'desc'
+    });
+  }
+
+  /**
+   * Delete a ticket and all of its dependent rows.
+   *
+   * BaseService.delete() issues a bare `DELETE FROM tickets`, which both trips
+   * the foreign keys on child tables (CitusDB has no ON DELETE CASCADE) and
+   * would let the API force-delete a ticket that still has blocking records
+   * such as time entries. We override it to run the same dependency validation
+   * and child-row cleanup as the MSP server-action delete path: deletion is
+   * refused (409) when blocking dependencies exist, otherwise the dependent
+   * rows are cleaned up before the ticket is removed.
+   */
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const result = await deleteEntityWithValidation(
+      'ticket',
+      id,
+      knex,
+      context.tenant,
+      async (trx, tenant) => {
+        const ticket = await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .first();
+
+        if (!ticket) {
+          throw new NotFoundError('Ticket not found');
+        }
+
+        await deleteTicketChildRecords(trx, id, tenant, ticket);
+
+        await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .delete();
+      }
+    );
+
+    if (!result.deleted) {
+      throw new ConflictError(
+        result.message || 'Ticket cannot be deleted while dependent records exist',
+        {
+          code: result.code,
+          dependencies: result.dependencies,
+          alternatives: result.alternatives,
+        }
+      );
+    }
+
+    // Mirror the MSP server-action delete path: notify downstream consumers
+    // (e.g. the search indexer removes the ticket from the index) once the
+    // delete has committed. Publishing is best-effort and never fails the request.
+    await this.safePublishEvent('TICKET_DELETED', context, {
+      ticketId: id,
+      userId: context.userId,
     });
   }
 
@@ -1983,5 +2059,418 @@ export class TicketService extends BaseService<ITicket> {
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Ticket bundling
+  //
+  // Mirrors the behaviour of the in-app bundle server actions
+  // (packages/tickets/src/actions/ticketBundleActions.ts) for the public REST
+  // surface. Permission is enforced by the controller (ticket:update / :read);
+  // these methods own tenant-scoped persistence, invariants, and workflow events.
+  // -------------------------------------------------------------------------
+
+  private async findBundleMasterIds(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<string[]> {
+    if (ticketIds.length === 0) return [];
+    const rows = await trx('tickets')
+      .distinct('master_ticket_id')
+      .where({ tenant })
+      .whereIn('master_ticket_id', ticketIds);
+    return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
+  }
+
+  private async assertChildrenAreNotMasters(trx: Knex.Transaction, tenant: string, childIds: string[]): Promise<void> {
+    const offending = await this.findBundleMasterIds(trx, tenant, childIds);
+    if (offending.length === 0) return;
+
+    const rows = await trx('tickets')
+      .select('ticket_number')
+      .where({ tenant })
+      .whereIn('ticket_id', offending);
+    const labels = rows
+      .map((r: any) => r.ticket_number)
+      .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
+    const listText = labels.length > 0 ? labels.join(', ') : offending.join(', ');
+    const prefix = offending.length === 1
+      ? `Ticket ${listText} is already a bundle master`
+      : `Tickets ${listText} are already bundle masters`;
+    throw new ConflictError(
+      `${prefix} and cannot be added as children. Unbundle them first, or use one of them as the master.`
+    );
+  }
+
+  async bundleTickets(
+    context: ServiceContext,
+    params: { masterTicketId: string; childTicketIds: string[]; mode: BundleMode }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[]; mode: BundleMode }> {
+    const uniqueChildIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
+    if (uniqueChildIds.length === 0) {
+      throw new ValidationError('Select at least one child ticket different from the master.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const tickets = await trx('tickets')
+        .select('ticket_id', 'ticket_number', 'master_ticket_id')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
+
+      const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
+      if (!byId.has(params.masterTicketId)) {
+        throw new NotFoundError('Master ticket not found.');
+      }
+      for (const childId of uniqueChildIds) {
+        if (!byId.has(childId)) {
+          throw new NotFoundError(`Child ticket not found: ${childId}`);
+        }
+      }
+
+      const master = byId.get(params.masterTicketId);
+      if (master.master_ticket_id) {
+        throw new ValidationError('Cannot select a child ticket as the master.');
+      }
+
+      await this.assertChildrenAreNotMasters(trx, context.tenant, uniqueChildIds);
+
+      for (const childId of uniqueChildIds) {
+        const child = byId.get(childId);
+        if (child.master_ticket_id) {
+          throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
+        }
+      }
+
+      const updatedChildrenCount = await trx('tickets')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', uniqueChildIds)
+        .whereNull('master_ticket_id')
+        .update({
+          master_ticket_id: params.masterTicketId,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        });
+      if (updatedChildrenCount !== uniqueChildIds.length) {
+        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+      }
+
+      await trx('ticket_bundle_settings')
+        .insert({
+          tenant: context.tenant,
+          master_ticket_id: params.masterTicketId,
+          mode: params.mode,
+          reopen_on_child_reply: false,
+        })
+        .onConflict(['tenant', 'master_ticket_id'])
+        .merge({ mode: params.mode });
+
+      return { masterTicketId: params.masterTicketId, childTicketIds: uniqueChildIds, mode: params.mode };
+    });
+
+    const occurredAt = new Date().toISOString();
+    for (const childTicketId of result.childTicketIds) {
+      await this.safePublishEvent('TICKET_MERGED', context, {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: `bundle:${result.mode}`,
+      });
+    }
+
+    return result;
+  }
+
+  async addBundleChildren(
+    context: ServiceContext,
+    params: { masterTicketId: string; childTicketIds: string[] }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
+    const childIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
+    if (childIds.length === 0) {
+      throw new ValidationError('No child tickets provided.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const master = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .first();
+      if (!master) throw new NotFoundError('Master ticket not found.');
+      if (master.master_ticket_id) throw new ValidationError('Cannot add children to a bundled child ticket.');
+
+      const children = await trx('tickets')
+        .select('ticket_id', 'ticket_number', 'master_ticket_id')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', childIds);
+      const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
+      for (const childId of childIds) {
+        const child = byId.get(childId);
+        if (!child) throw new NotFoundError(`Child ticket not found: ${childId}`);
+        if (child.master_ticket_id) throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
+      }
+
+      await this.assertChildrenAreNotMasters(trx, context.tenant, childIds);
+
+      const updatedChildrenCount = await trx('tickets')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', childIds)
+        .whereNull('master_ticket_id')
+        .update({
+          master_ticket_id: params.masterTicketId,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        });
+      if (updatedChildrenCount !== childIds.length) {
+        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+      }
+
+      return { masterTicketId: params.masterTicketId, childTicketIds: childIds };
+    });
+
+    const occurredAt = new Date().toISOString();
+    for (const childTicketId of result.childTicketIds) {
+      await this.safePublishEvent('TICKET_MERGED', context, {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: 'bundle:added_children',
+      });
+    }
+
+    return result;
+  }
+
+  async promoteBundleMaster(
+    context: ServiceContext,
+    params: { oldMasterTicketId: string; newMasterTicketId: string }
+  ): Promise<{ oldMasterTicketId: string; newMasterTicketId: string }> {
+    if (params.oldMasterTicketId === params.newMasterTicketId) {
+      throw new ValidationError('New master ticket must be different from the current master.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const oldMaster = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .first();
+      if (!oldMaster) throw new NotFoundError('Old master ticket not found');
+      if (oldMaster.master_ticket_id) throw new ValidationError('Old master ticket is not a master');
+
+      const newMaster = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .first();
+      if (!newMaster) throw new NotFoundError('New master ticket not found');
+      if (newMaster.master_ticket_id !== params.oldMasterTicketId) {
+        throw new ValidationError('New master ticket must be a child of the current master');
+      }
+
+      const promotedMasterConflicts = await this.findBundleMasterIds(trx, context.tenant, [params.newMasterTicketId]);
+      if (promotedMasterConflicts.length > 0) {
+        throw new ConflictError('Promoted ticket already has children of its own.');
+      }
+
+      const now = new Date().toISOString();
+
+      const settings = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        .first();
+      if (settings) {
+        await trx('ticket_bundle_settings')
+          .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+          .delete();
+        await trx('ticket_bundle_settings')
+          .insert({ ...settings, master_ticket_id: params.newMasterTicketId })
+          .onConflict(['tenant', 'master_ticket_id'])
+          .merge({ mode: settings.mode, reopen_on_child_reply: settings.reopen_on_child_reply });
+      }
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        .andWhereNot({ ticket_id: params.newMasterTicketId })
+        .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: now });
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
+
+      return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
+    });
+
+    await this.safePublishEvent('TICKET_MERGED', context, {
+      sourceTicketId: result.oldMasterTicketId,
+      targetTicketId: result.newMasterTicketId,
+      mergedAt: new Date().toISOString(),
+      reason: 'bundle:promote_master',
+    });
+
+    return result;
+  }
+
+  async updateBundleSettings(
+    context: ServiceContext,
+    params: { masterTicketId: string; mode?: BundleMode; reopenOnChildReply?: boolean }
+  ): Promise<{ master_ticket_id: string; mode: BundleMode; reopen_on_child_reply: boolean }> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .first();
+      if (!existing) throw new NotFoundError('Bundle settings not found');
+
+      const update: any = {};
+      if (params.mode) update.mode = params.mode;
+      if (params.reopenOnChildReply !== undefined) update.reopen_on_child_reply = params.reopenOnChildReply;
+
+      if (Object.keys(update).length === 0) {
+        return {
+          master_ticket_id: existing.master_ticket_id,
+          mode: existing.mode,
+          reopen_on_child_reply: existing.reopen_on_child_reply,
+        };
+      }
+
+      const [updated] = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .update(update)
+        .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
+
+      return updated;
+    });
+  }
+
+  async removeBundleChild(
+    context: ServiceContext,
+    params: { childTicketId: string }
+  ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const child = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .first();
+
+      if (!child) throw new NotFoundError('Ticket not found');
+      if (!child.master_ticket_id) throw new ValidationError('Ticket is not bundled');
+
+      const masterTicketId = child.master_ticket_id;
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      const [{ count }] = await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .count('ticket_id as count');
+      const remaining = Number.parseInt(String(count), 10) || 0;
+      if (remaining === 0) {
+        await trx('ticket_bundle_settings')
+          .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+          .delete();
+      }
+
+      return { masterTicketId, childTicketId: params.childTicketId, remainingChildren: remaining };
+    });
+
+    await this.safePublishEvent('TICKET_SPLIT', context, {
+      originalTicketId: result.masterTicketId,
+      newTicketIds: [result.childTicketId],
+      splitAt: new Date().toISOString(),
+      reason: 'bundle:remove_child',
+    });
+
+    return result;
+  }
+
+  async unbundleMaster(
+    context: ServiceContext,
+    params: { masterTicketId: string }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const master = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .first();
+      if (!master) throw new NotFoundError('Master ticket not found');
+      if (master.master_ticket_id) throw new ValidationError('Cannot unbundle from a child ticket id');
+
+      const childTicketRows = await trx('tickets')
+        .select('ticket_id')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId });
+      const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .delete();
+
+      return { masterTicketId: params.masterTicketId, childTicketIds };
+    });
+
+    if (result.childTicketIds.length > 0) {
+      await this.safePublishEvent('TICKET_SPLIT', context, {
+        originalTicketId: result.masterTicketId,
+        newTicketIds: result.childTicketIds,
+        splitAt: new Date().toISOString(),
+        reason: 'bundle:unbundle_master',
+      });
+    }
+
+    return result;
+  }
+
+  async getBundle(context: ServiceContext, ticketId: string): Promise<BundleView> {
+    const { knex } = await this.getKnex();
+    const memberColumns = ['ticket_id', 'ticket_number', 'title', 'status_id', 'client_id'];
+
+    return withTransaction(knex, async (trx) => {
+      const ticket = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: ticketId })
+        .first();
+      if (!ticket) throw new NotFoundError('Ticket not found');
+
+      const masterTicketId: string = ticket.master_ticket_id || ticket.ticket_id;
+
+      const master = await trx('tickets')
+        .select(memberColumns)
+        .where({ tenant: context.tenant, ticket_id: masterTicketId })
+        .first();
+
+      const children = await trx('tickets')
+        .select(memberColumns)
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .orderBy('ticket_number', 'asc');
+
+      const settingsRow = await trx('ticket_bundle_settings')
+        .select('mode', 'reopen_on_child_reply')
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .first();
+
+      let role: BundleView['role'];
+      if (ticket.master_ticket_id) {
+        role = 'child';
+      } else {
+        role = children.length > 0 ? 'master' : 'standalone';
+      }
+
+      return {
+        role,
+        master_ticket_id: masterTicketId,
+        master: master ?? null,
+        children,
+        settings: settingsRow
+          ? { mode: settingsRow.mode, reopen_on_child_reply: settingsRow.reopen_on_child_reply }
+          : null,
+      };
+    });
   }
 }
