@@ -119,9 +119,13 @@ API keys can be managed through the user interface by navigating to your User Pr
 
 ### Community Edition APIs
 
+=======
+
 The following REST API groups are available in the Community Edition under the base path `/api/v1/`:
 
+
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
+- [Unified Full-Text Search](search.md)
 - **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling (see below).
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, and drive RMM actions.
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
