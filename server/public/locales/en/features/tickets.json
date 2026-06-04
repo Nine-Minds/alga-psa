@@ -1261,5 +1261,10 @@
       "reconnecting": "Live updates offline - reconnecting...",
       "unavailable": "Live updates unavailable"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} deleted successfully.",
+    "error": "Failed to delete ticket. Please try again.",
+    "validationError": "Failed to validate deletion. Please try again."
   }
 }

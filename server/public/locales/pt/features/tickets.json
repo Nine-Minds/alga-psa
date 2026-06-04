@@ -1261,5 +1261,10 @@
       "reconnecting": "Atualizações ao vivo offline - reconectando...",
       "unavailable": "Atualizações ao vivo indisponíveis"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} excluído com sucesso.",
+    "error": "Falha ao excluir o ticket. Tente novamente.",
+    "validationError": "Falha ao validar a exclusão. Tente novamente."
   }
 }

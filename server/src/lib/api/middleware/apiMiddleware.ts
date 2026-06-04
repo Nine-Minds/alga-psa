@@ -93,10 +93,12 @@ export class NotFoundError extends Error implements ApiError {
 export class ConflictError extends Error implements ApiError {
   statusCode = 409;
   code = 'CONFLICT';
+  details: any;
 
-  constructor(message: string = 'Resource conflict') {
+  constructor(message: string = 'Resource conflict', details?: any) {
     super(message);
     this.name = 'ConflictError';
+    this.details = details;
   }
 }
 

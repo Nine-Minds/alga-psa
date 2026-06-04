@@ -1261,5 +1261,10 @@
       "reconnecting": "Live-updates offline - opnieuw verbinden...",
       "unavailable": "Live-updates niet beschikbaar"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} succesvol verwijderd.",
+    "error": "Verwijderen van ticket is mislukt. Probeer het opnieuw.",
+    "validationError": "Kan verwijdering niet valideren. Probeer het opnieuw."
   }
 }

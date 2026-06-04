@@ -11,6 +11,8 @@ import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -112,6 +114,62 @@ export class TicketService extends BaseService<ITicket> {
       searchableFields: ['title', 'ticket_number'],
       defaultSort: 'entered_at',
       defaultOrder: 'desc'
+    });
+  }
+
+  /**
+   * Delete a ticket and all of its dependent rows.
+   *
+   * BaseService.delete() issues a bare `DELETE FROM tickets`, which both trips
+   * the foreign keys on child tables (CitusDB has no ON DELETE CASCADE) and
+   * would let the API force-delete a ticket that still has blocking records
+   * such as time entries. We override it to run the same dependency validation
+   * and child-row cleanup as the MSP server-action delete path: deletion is
+   * refused (409) when blocking dependencies exist, otherwise the dependent
+   * rows are cleaned up before the ticket is removed.
+   */
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const result = await deleteEntityWithValidation(
+      'ticket',
+      id,
+      knex,
+      context.tenant,
+      async (trx, tenant) => {
+        const ticket = await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .first();
+
+        if (!ticket) {
+          throw new NotFoundError('Ticket not found');
+        }
+
+        await deleteTicketChildRecords(trx, id, tenant, ticket);
+
+        await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .delete();
+      }
+    );
+
+    if (!result.deleted) {
+      throw new ConflictError(
+        result.message || 'Ticket cannot be deleted while dependent records exist',
+        {
+          code: result.code,
+          dependencies: result.dependencies,
+          alternatives: result.alternatives,
+        }
+      );
+    }
+
+    // Mirror the MSP server-action delete path: notify downstream consumers
+    // (e.g. the search indexer removes the ticket from the index) once the
+    // delete has committed. Publishing is best-effort and never fails the request.
+    await this.safePublishEvent('TICKET_DELETED', context, {
+      ticketId: id,
+      userId: context.userId,
     });
   }
 
