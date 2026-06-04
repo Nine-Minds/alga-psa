@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Implement `workflowDataStoreModel.ts`: tenant-scoped KV get, set (insert-or-update with revision bump and optional `if_revision` compare-and-set), delete, atomic increment, list (namespace + prefix + cursor), listNamespaces, and deleteExpired",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Persistence models",
       "Data model"
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Implement `workflowEntityLinkModel.ts`: tenant-scoped upsert (onConflict on the typed-edge unique key), lookup (forward/reverse/either with optional relation/right_type filter returning matches[]), delete by partial criteria, list, and listNamespaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Persistence models",
       "Data model"

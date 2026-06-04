@@ -52,3 +52,20 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - Link table includes N:M typed-edge uniqueness `(tenant, namespace, left_type, left_id, right_type, right_id, relation)`, forward/reverse lookup indexes, JSONB `attributes`, soft `created_by_run_id`, and timestamps.
 - Distribution follows the asset facts pattern: `exports.config = { transaction: false }`, Citus extension guard, already-distributed guard via `pg_dist_partition`, and `create_distributed_table(..., 'tenant', colocate_with => 'workflow_runs')`. Non-Citus CE/dev path logs a warning and leaves plain Postgres tables.
 - Down migration drops links before KV. No FK to workflow runs was added by design, because persisted store/link data must outlive run retention.
+
+### F002 — KV persistence model
+
+- Added `shared/workflow/persistence/workflowDataStoreModel.ts` and exported it from the persistence index.
+- Implemented tenant-explicit `get`, `set`, `delete`, `increment`, `list`, `listNamespaces`, and `deleteExpired`.
+- `set` uses insert-ignore then update, returning `{record, created, conflict}` so callers can translate CAS mismatch into the action-layer `CONFLICT`. `if_revision: 0` is create-only; other `if_revision` values update only matching revisions.
+- `increment` is a single Postgres upsert and updates only existing numeric JSONB values, so concurrent increments are atomic and non-numeric values fail instead of being silently coerced.
+- `get` already performs lazy TTL behavior: expired rows are deleted opportunistically and returned as not-found. The worker sweep remains open under F014.
+- `list` uses offset cursors to match existing workflow list patterns and filters expired rows; namespace counts also ignore expired rows.
+
+### F003 — entity-link persistence model
+
+- Added `shared/workflow/persistence/workflowEntityLinkModel.ts` and exported it from the persistence index.
+- Implemented tenant-explicit `upsert`, `lookup`, `delete`, `list`, and `listNamespaces`.
+- `upsert` de-duplicates only the full typed edge `(tenant, namespace, left_type, left_id, right_type, right_id, relation)` and updates `attributes` on replay, preserving the PRD's N:M behavior and allowing the same pair under different relations.
+- `lookup` supports `forward`, `reverse`, and `either`, returning target-side `{link_id,type,id,relation,attributes}` matches and applying `relation` plus target-type filtering.
+- `delete` enforces the safety rule that at least one side (`left` or `right`) must be provided; namespace and optional relation always scope the deletion.
