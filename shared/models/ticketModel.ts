@@ -1279,6 +1279,22 @@ export class TicketModel {
     // Publish comment event if publisher provided
     if (eventPublisher) {
       try {
+        // Resolve a display name so notification templates render the author/body.
+        let authorName: string | undefined;
+        if (validatedData.contact_id) {
+          const c = await trx('contacts')
+            .select('full_name')
+            .where({ tenant, contact_name_id: validatedData.contact_id })
+            .first();
+          authorName = c?.full_name || undefined;
+        } else if (validatedData.author_id) {
+          const u = await trx('users')
+            .select('first_name', 'last_name')
+            .where({ tenant, user_id: validatedData.author_id })
+            .first();
+          authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
+        }
+
         await eventPublisher.publishCommentCreated({
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
@@ -1287,7 +1303,10 @@ export class TicketModel {
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
-            is_resolution: validatedData.is_resolution
+            isInternal: commentIsInternal,
+            is_resolution: validatedData.is_resolution,
+            content: validatedData.content,
+            author: authorName
           }
         });
       } catch (error) {
