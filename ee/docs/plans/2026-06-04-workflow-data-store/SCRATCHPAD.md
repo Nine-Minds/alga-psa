@@ -155,3 +155,11 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - Added `useWorkflowEntityTypeOptions()` and `useWorkflowLinkRelationOptions()` in `ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts`, following the existing enum-label hook pattern. The stored values remain canonical tokens (for example `project_task`, `mirrors`) while labels come from `msp/workflows`.
 - Updated the Data Store soft-enum renderer to use those localized hooks for `workflow-entity-type` and `workflow-link-relation` metadata, preserving custom values as literal labels.
 - Removed the duplicated curated type/relation arrays from `shared/workflow/runtime/actions/businessOperations/entityLinks.ts`; shared schema metadata now identifies the suggestion kind and the client owns localized display labels.
+
+### F020 — project-task mirror reference workflows
+
+- Added `ee/test-data/workflow-bundles/workflow-data-store-task-mirror.v1.json` with two workflow-bundle entries:
+  - `reference.project-task-mirror-link-setup`: `PROJECT_TASK_CREATED` -> `projects.create_task` -> `links.upsert`, saving the created mirror task as `vars.createdMirrorTask` and using that same-run output to persist the source/target edge.
+  - `reference.project-task-mirror-sync`: `PROJECT_TASK_UPDATED` -> `links.lookup` -> `control.forEach` over `vars.linkedTasks.matches` -> `projects.update_task`.
+- Added `payload.ProjectTaskUpdated.v1` to the workflow payload schema registry via `projectTaskUpdatedEventPayloadSchema`; `PROJECT_TASK_UPDATED` already exists as a project task domain/webhook event, but workflow schemas previously exposed only created/status/assignment/completion task variants.
+- Verification: JSON fixture parses; focused ESLint and `tsc --noEmit` checks passed for `shared/workflow/runtime/schemas/projectEventSchemas.ts` and `workflowEventPayloadSchemas.ts`.

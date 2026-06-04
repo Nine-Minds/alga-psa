@@ -1,0 +1,438 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-06-04T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "reference.project-task-mirror-link-setup",
+      "metadata": {
+        "name": "Reference: Project Task Mirror Link Setup",
+        "description": "Create a mirror task in a target project and persist the source-to-target task link.",
+        "payloadSchemaRef": "payload.ProjectTaskCreated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskCreated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_TASK_CREATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "projects.create_task",
+            "version": 1
+          },
+          {
+            "actionId": "links.upsert",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.return",
+          "state.set"
+        ],
+        "schemaRefs": [
+          "payload.ProjectTaskCreated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000d501",
+          "version": 1,
+          "name": "Reference: Project Task Mirror Link Setup",
+          "description": "Create a mirror task in a target project and persist the source-to-target task link.",
+          "payloadSchemaRef": "payload.ProjectTaskCreated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_TASK_CREATED"
+          },
+          "steps": [
+            {
+              "id": "state-create-mirror",
+              "type": "state.set",
+              "config": {
+                "state": "CREATING_MIRROR_TASK"
+              }
+            },
+            {
+              "id": "create-mirror-task",
+              "type": "action.call",
+              "config": {
+                "actionId": "projects.create_task",
+                "version": 1,
+                "inputMapping": {
+                  "project_id": {
+                    "$expr": "payload.targetProjectId"
+                  },
+                  "title": {
+                    "$expr": "payload.title"
+                  },
+                  "description": {
+                    "$expr": "payload.description"
+                  },
+                  "due_date": {
+                    "$expr": "payload.dueDate"
+                  }
+                },
+                "saveAs": "vars.createdMirrorTask"
+              }
+            },
+            {
+              "id": "persist-task-link",
+              "type": "action.call",
+              "config": {
+                "actionId": "links.upsert",
+                "version": 1,
+                "inputMapping": {
+                  "namespace": "project-task-mirror",
+                  "left": {
+                    "type": "project_task",
+                    "id": {
+                      "$expr": "payload.taskId"
+                    }
+                  },
+                  "right": {
+                    "type": "project_task",
+                    "id": {
+                      "$expr": "vars.createdMirrorTask.task_id"
+                    }
+                  },
+                  "relation": "mirrors",
+                  "attributes": {
+                    "sourceProjectId": {
+                      "$expr": "payload.projectId"
+                    },
+                    "targetProjectId": {
+                      "$expr": "payload.targetProjectId"
+                    },
+                    "fieldMap": {
+                      "title": "task_name",
+                      "description": "description",
+                      "dueDate": "due_date"
+                    }
+                  },
+                  "idempotency_key": {
+                    "$expr": "'project-task-mirror:' & payload.taskId & ':' & vars.createdMirrorTask.task_id"
+                  }
+                },
+                "saveAs": "vars.persistedMirrorLink"
+              }
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000d501",
+            "version": 1,
+            "name": "Reference: Project Task Mirror Link Setup",
+            "description": "Create a mirror task in a target project and persist the source-to-target task link.",
+            "payloadSchemaRef": "payload.ProjectTaskCreated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_TASK_CREATED"
+            },
+            "steps": [
+              {
+                "id": "state-create-mirror",
+                "type": "state.set",
+                "config": {
+                  "state": "CREATING_MIRROR_TASK"
+                }
+              },
+              {
+                "id": "create-mirror-task",
+                "type": "action.call",
+                "config": {
+                  "actionId": "projects.create_task",
+                  "version": 1,
+                  "inputMapping": {
+                    "project_id": {
+                      "$expr": "payload.targetProjectId"
+                    },
+                    "title": {
+                      "$expr": "payload.title"
+                    },
+                    "description": {
+                      "$expr": "payload.description"
+                    },
+                    "due_date": {
+                      "$expr": "payload.dueDate"
+                    }
+                  },
+                  "saveAs": "vars.createdMirrorTask"
+                }
+              },
+              {
+                "id": "persist-task-link",
+                "type": "action.call",
+                "config": {
+                  "actionId": "links.upsert",
+                  "version": 1,
+                  "inputMapping": {
+                    "namespace": "project-task-mirror",
+                    "left": {
+                      "type": "project_task",
+                      "id": {
+                        "$expr": "payload.taskId"
+                      }
+                    },
+                    "right": {
+                      "type": "project_task",
+                      "id": {
+                        "$expr": "vars.createdMirrorTask.task_id"
+                      }
+                    },
+                    "relation": "mirrors",
+                    "attributes": {
+                      "sourceProjectId": {
+                        "$expr": "payload.projectId"
+                      },
+                      "targetProjectId": {
+                        "$expr": "payload.targetProjectId"
+                      },
+                      "fieldMap": {
+                        "title": "task_name",
+                        "description": "description",
+                        "dueDate": "due_date"
+                      }
+                    },
+                    "idempotency_key": {
+                      "$expr": "'project-task-mirror:' & payload.taskId & ':' & vars.createdMirrorTask.task_id"
+                    }
+                  },
+                  "saveAs": "vars.persistedMirrorLink"
+                }
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "reference.project-task-mirror-sync",
+      "metadata": {
+        "name": "Reference: Project Task Mirror Sync",
+        "description": "Look up persisted mirror links for an updated source task and update every linked target task.",
+        "payloadSchemaRef": "payload.ProjectTaskUpdated.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.ProjectTaskUpdated.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "PROJECT_TASK_UPDATED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "links.lookup",
+            "version": 1
+          },
+          {
+            "actionId": "projects.update_task",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.forEach",
+          "control.return",
+          "state.set"
+        ],
+        "schemaRefs": [
+          "payload.ProjectTaskUpdated.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000d502",
+          "version": 1,
+          "name": "Reference: Project Task Mirror Sync",
+          "description": "Look up persisted mirror links for an updated source task and update every linked target task.",
+          "payloadSchemaRef": "payload.ProjectTaskUpdated.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "PROJECT_TASK_UPDATED"
+          },
+          "steps": [
+            {
+              "id": "state-lookup-links",
+              "type": "state.set",
+              "config": {
+                "state": "LOOKING_UP_MIRROR_LINKS"
+              }
+            },
+            {
+              "id": "lookup-linked-tasks",
+              "type": "action.call",
+              "config": {
+                "actionId": "links.lookup",
+                "version": 1,
+                "inputMapping": {
+                  "namespace": "project-task-mirror",
+                  "from": {
+                    "type": "project_task",
+                    "id": {
+                      "$expr": "payload.taskId"
+                    }
+                  },
+                  "direction": "forward",
+                  "relation": "mirrors",
+                  "limit": 200
+                },
+                "saveAs": "vars.linkedTasks"
+              }
+            },
+            {
+              "id": "for-each-linked-task",
+              "type": "control.forEach",
+              "items": {
+                "$expr": "vars.linkedTasks.matches"
+              },
+              "itemVar": "match",
+              "body": [
+                {
+                  "id": "update-linked-task",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "projects.update_task",
+                    "version": 1,
+                    "inputMapping": {
+                      "task_id": {
+                        "$expr": "vars.match.id"
+                      },
+                      "patch": {
+                        "task_name": {
+                          "$expr": "payload.changes.title.new ? payload.changes.title.new : payload.changes.task_name.new"
+                        },
+                        "description": {
+                          "$expr": "payload.changes.description.new"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "onItemError": "fail"
+            },
+            {
+              "id": "done",
+              "type": "control.return"
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000d502",
+            "version": 1,
+            "name": "Reference: Project Task Mirror Sync",
+            "description": "Look up persisted mirror links for an updated source task and update every linked target task.",
+            "payloadSchemaRef": "payload.ProjectTaskUpdated.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "PROJECT_TASK_UPDATED"
+            },
+            "steps": [
+              {
+                "id": "state-lookup-links",
+                "type": "state.set",
+                "config": {
+                  "state": "LOOKING_UP_MIRROR_LINKS"
+                }
+              },
+              {
+                "id": "lookup-linked-tasks",
+                "type": "action.call",
+                "config": {
+                  "actionId": "links.lookup",
+                  "version": 1,
+                  "inputMapping": {
+                    "namespace": "project-task-mirror",
+                    "from": {
+                      "type": "project_task",
+                      "id": {
+                        "$expr": "payload.taskId"
+                      }
+                    },
+                    "direction": "forward",
+                    "relation": "mirrors",
+                    "limit": 200
+                  },
+                  "saveAs": "vars.linkedTasks"
+                }
+              },
+              {
+                "id": "for-each-linked-task",
+                "type": "control.forEach",
+                "items": {
+                  "$expr": "vars.linkedTasks.matches"
+                },
+                "itemVar": "match",
+                "body": [
+                  {
+                    "id": "update-linked-task",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "projects.update_task",
+                      "version": 1,
+                      "inputMapping": {
+                        "task_id": {
+                          "$expr": "vars.match.id"
+                        },
+                        "patch": {
+                          "task_name": {
+                            "$expr": "payload.changes.title.new ? payload.changes.title.new : payload.changes.task_name.new"
+                          },
+                          "description": {
+                            "$expr": "payload.changes.description.new"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "onItemError": "fail"
+              },
+              {
+                "id": "done",
+                "type": "control.return"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

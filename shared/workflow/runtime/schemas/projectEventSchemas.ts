@@ -46,6 +46,16 @@ export const projectTaskCreatedEventPayloadSchema = BaseDomainEventPayloadSchema
 
 export type ProjectTaskCreatedEventPayload = z.infer<typeof projectTaskCreatedEventPayloadSchema>;
 
+export const projectTaskUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  taskId: taskIdSchema,
+  projectId: projectIdSchema,
+  updatedAt: z.string().datetime().optional(),
+  updatedFields: updatedFieldsSchema,
+  changes: changesSchema,
+}).describe('Payload for PROJECT_TASK_UPDATED');
+
+export type ProjectTaskUpdatedEventPayload = z.infer<typeof projectTaskUpdatedEventPayloadSchema>;
+
 export const projectTaskAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   taskId: taskIdSchema,
   projectId: projectIdSchema,

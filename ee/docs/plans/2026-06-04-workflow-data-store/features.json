@@ -164,7 +164,7 @@
   {
     "id": "F020",
     "description": "Provide the two reference workflow definitions (link-setup on `PROJECT_TASK_CREATED`, mirror on `PROJECT_TASK_UPDATED` with `forEach` over `links.lookup` matches) as examples/fixtures demonstrating cross-run mapping and same-run referencing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Appendix — reference workflow sketches",
       "Users and Primary Flows"
