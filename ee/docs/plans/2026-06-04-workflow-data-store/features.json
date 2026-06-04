@@ -1,0 +1,189 @@
+[
+  {
+    "id": "F001",
+    "description": "Create `workflow_data_store` and `workflow_entity_links` in a single CE migration: `tenant uuid` first (FK to tenants), composite PK and all unique/index keys leading with `tenant`, distributed inline behind an `isCitusEnabled` guard with `colocate_with => 'workflow_runs'`, `exports.config = { transaction: false }`",
+    "implemented": false,
+    "prdRefs": [
+      "Migration (single CE file, no split)",
+      "Data model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement `workflowDataStoreModel.ts`: tenant-scoped KV get, set (insert-or-update with revision bump and optional `if_revision` compare-and-set), delete, atomic increment, list (namespace + prefix + cursor), listNamespaces, and deleteExpired",
+    "implemented": false,
+    "prdRefs": [
+      "Persistence models",
+      "Data model"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement `workflowEntityLinkModel.ts`: tenant-scoped upsert (onConflict on the typed-edge unique key), lookup (forward/reverse/either with optional relation/right_type filter returning matches[]), delete by partial criteria, list, and listNamespaces",
+    "implemented": false,
+    "prdRefs": [
+      "Persistence models",
+      "Data model"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register and implement `store.get` (read, `workflow:read`) returning `{found, value, value_type, revision, expires_at}`, treating an expired row as not-found (lazy TTL)",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "TTL / janitor"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Register and implement `store.set` (write, `workflow:manage`) with `value_type`, `ttl_seconds`, and `if_revision` compare-and-set that raises `ActionError CONFLICT` on revision mismatch",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "Write model & referencing (vars vs. store)"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Register and implement `store.delete` (write, `workflow:manage`) returning `{deleted}`",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Register and implement `store.increment` (write, `workflow:manage`) performing an atomic numeric update with `by`/`initial`, returning `{value, revision}`",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Register and implement `store.list` (read, `workflow:read`) with namespace/prefix/cursor pagination and `store.list_namespaces` returning distinct namespaces with key counts",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "Namespaces"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Register and implement `links.upsert` (write, `workflow:manage`): idempotent on the typed edge `(namespace,left,right,relation)`, updating `attributes`/`relation` on conflict, returning `{link_id, created}`",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "Data model"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Register and implement `links.lookup` (read, `workflow:read`) with `direction` forward/reverse/either and optional `relation`/`right_type` filters, returning `{matches:[{link_id,type,id,relation,attributes}]}`",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Register and implement `links.delete` (write, `workflow:manage`) by partial criteria (requires at least one of left/right; optional relation) returning `{deleted_count}`, plus `links.list` and `links.list_namespaces`",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "Namespaces"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Apply shared action conventions: write actions run in `withTenantTransaction`, enforce `requirePermission` (`workflow:read` for reads, `workflow:manage` for writes against the workflow actor), call `writeRunAudit`, and use `actionProvidedKey` idempotency; reads stay non-side-effectful and tenant-scoped",
+    "implemented": false,
+    "prdRefs": [
+      "Security / RBAC",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Enforce limits: `value` capped at `WORKFLOW_STORE_MAX_VALUE_BYTES` (default 256 KB) and namespace/key/id length caps, rejecting oversize input with `ValidationError`; no per-tenant row quota",
+    "implemented": false,
+    "prdRefs": [
+      "Limits / abuse guards"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement TTL handling: lazy expiry on read (expired treated as not-found and opportunistically deleted) plus a periodic batched `deleteExpired` sweep bolted onto the existing `WorkflowRuntimeV2Worker` poll loop",
+    "implemented": false,
+    "prdRefs": [
+      "TTL / janitor"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Register the new `store.*`/`links.*` modules from `runtime/init.ts` (via the business-operations registration path) so they load into the action registry at runtime init and become available to executor, worker, and designer",
+    "implemented": false,
+    "prdRefs": [
+      "Actions (registry)",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add a \"Data Store\" catalog group in `runtime/designer/actionCatalog.ts` exposing `store.*`/`links.*` with field metadata: `saveAs`, expression-sourced id/value inputs, soft-enum metadata for namespace/type/relation, and fixed selects for `direction`/`value_type`",
+    "implemented": false,
+    "prdRefs": [
+      "Designer integration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Build the designer node config UI using `@alga-psa/ui` design-system components only (no native HTML controls): creatable-combobox for namespace/type/relation, `CustomSelect` for direction/value_type, `ExpressionAutocomplete` for ids, and the existing fixed-value/JSON editor for `value`",
+    "implemented": false,
+    "prdRefs": [
+      "Designer integration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Localize every Data Store designer string under the `msp/workflows` namespace via `t()` (palette group, node labels/descriptions, field labels/placeholders, empty and validation states); add keys to all nine locales plus pseudo-locales `xx`/`yy`",
+    "implemented": false,
+    "prdRefs": [
+      "Localization (i18n)"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Drive the entity-`type` and `relation` suggestion lists through the `enum-labels-pattern.md` option-hook pattern (`VALUES` + `LABEL_DEFAULTS` + `useEntityTypeOptions()`/`useRelationOptions()`) storing the canonical token while translating the label, and resolve action `ui.label`/`description` through i18n keys; `validate-translations.cjs` passes across 9 locales",
+    "implemented": false,
+    "prdRefs": [
+      "Localization (i18n)"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Provide the two reference workflow definitions (link-setup on `PROJECT_TASK_CREATED`, mirror on `PROJECT_TASK_UPDATED` with `forEach` over `links.lookup` matches) as examples/fixtures demonstrating cross-run mapping and same-run referencing",
+    "implemented": false,
+    "prdRefs": [
+      "Appendix — reference workflow sketches",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Add model and action test suites covering KV CRUD/CAS/increment/TTL, link upsert/lookup/delete/N:M semantics, tenant isolation, value-size cap, RBAC denial, and idempotent replay",
+    "implemented": false,
+    "prdRefs": [
+      "Test plan (high level)"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add Citus colocation tests (both tables in the `workflow_runs` colocation group; CE/no-Citus path works), the cross-run task-mirror integration test, and i18n validation/pseudo-locale QA for the Data Store nodes",
+    "implemented": false,
+    "prdRefs": [
+      "Test plan (high level)"
+    ]
+  }
+]
