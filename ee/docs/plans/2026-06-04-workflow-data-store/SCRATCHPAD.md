@@ -135,4 +135,10 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - Added a Data Store palette icon mapping in `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` using the existing lucide `Database` icon.
 - Extended workflow JSON-schema editor metadata with a typed `softEnum` block for creatable combobox fields. The metadata supports namespace suggestions via `store.list_namespaces`/`links.list_namespaces`, curated entity type/relation token suggestions, custom free-text values, and namespace-scoped suggestion hints.
 - Updated `store.*` and `links.*` schemas so namespace/type/relation/id/value fields expose designer editor hints: soft-enum custom inputs for labels, expression-capable text inputs for ids/keys, JSON editor hint for `store.set.value`, and enum-backed fields (`direction`, `value_type`) remain fixed-select compatible through existing enum handling.
-- F017 remains open: the actual custom soft-enum combobox renderer still needs to consume this metadata. Current generic rendering falls back to a string input for `kind:'custom'`.
+
+### F017 — designer soft-enum UI
+
+- Updated `ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx` so string fields with `x-workflow-editor.softEnum.component === 'soft-enum-combobox'` render the design-system `SearchableSelect` with `allowCustomValue`.
+- Curated token suggestions from metadata are shown for entity `type` and link `relation`; the current custom value is preserved as an option. Namespace fields accept free text and are ready for dynamic namespace suggestions once an autocomplete data source is wired.
+- Fixed choices (`direction`, `value_type`) continue through the existing enum path, which renders `CustomSelect`; ids/keys use the existing source-mode/expression editor plus `@alga-psa/ui` `Input` in fixed mode; JSON values use the existing JSON editor path.
+- No native HTML controls were added in the workflow designer code for Data Store fields.

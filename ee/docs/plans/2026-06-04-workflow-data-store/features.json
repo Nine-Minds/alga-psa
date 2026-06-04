@@ -140,7 +140,7 @@
   {
     "id": "F017",
     "description": "Build the designer node config UI using `@alga-psa/ui` design-system components only (no native HTML controls): creatable-combobox for namespace/type/relation, `CustomSelect` for direction/value_type, `ExpressionAutocomplete` for ids, and the existing fixed-value/JSON editor for `value`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Designer integration"
     ]

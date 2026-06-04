@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import {
   Dialog,
   DialogContent,
@@ -1069,6 +1070,7 @@ const LiteralValueEditor: React.FC<{
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
+  const softEnum = fieldEditor?.softEnum;
   const pickerResource = fieldEditor?.picker?.resource;
   const hasMultiUserPickerEditor =
     hasPickerEditor &&
@@ -1196,6 +1198,37 @@ const LiteralValueEditor: React.FC<{
             disabled={disabled}
           />
         }
+      />
+    );
+  }
+
+  if (fieldType === 'string' && softEnum?.component === 'soft-enum-combobox') {
+    const currentValue = typeof value === 'string' ? value : '';
+    const optionValues = Array.from(new Set([
+      ...(softEnum.curatedValues ?? []),
+      ...(currentValue ? [currentValue] : []),
+    ].filter((item): item is string => typeof item === 'string' && item.trim().length > 0)));
+    const options: SelectOption[] = optionValues.map((optionValue) => ({
+      value: optionValue,
+      label: optionValue,
+    }));
+
+    return wrapNullableEditor(
+      <SearchableSelect
+        id={`${idPrefix}-literal-soft-enum`}
+        options={options}
+        value={currentValue}
+        onChange={(nextValue) => onChange(nextValue)}
+        placeholder={fieldEditor?.fixedValueHint ?? t('inputMappingEditor.softEnumPlaceholder', { defaultValue: 'Select or enter value' })}
+        searchPlaceholder={t('inputMappingEditor.softEnumSearchPlaceholder', { defaultValue: 'Search or enter a custom value' })}
+        emptyMessage={t('inputMappingEditor.softEnumNoResults', { defaultValue: 'No suggestions' })}
+        allowCustomValue={softEnum.allowCustomValue !== false}
+        customValueLabel={(nextValue) => t('inputMappingEditor.softEnumUseCustom', {
+          defaultValue: 'Use "{{value}}"',
+          value: nextValue,
+        })}
+        dropdownMode="overlay"
+        disabled={disabled}
       />
     );
   }
