@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Create `workflow_data_store` and `workflow_entity_links` in a single CE migration: `tenant uuid` first (FK to tenants), composite PK and all unique/index keys leading with `tenant`, distributed inline behind an `isCitusEnabled` guard with `colocate_with => 'workflow_runs'`, `exports.config = { transaction: false }`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Migration (single CE file, no split)",
       "Data model"

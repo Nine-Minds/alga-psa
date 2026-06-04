@@ -41,3 +41,14 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 ## Notes
 
 - Knowledge from analysis: V1 (event-sourced) runtime was removed (`20260308173000`); everything here targets V2 (Temporal interpreter + DB-poll fallback + Redis event stream). The store is read/written purely through actions, so it is engine-agnostic.
+
+## 2026-06-04 implementation log
+
+### F001 — CE migration
+
+- Added `server/migrations/20260604120000_create_workflow_data_store_tables.cjs`.
+- Migration creates both `workflow_data_store` and `workflow_entity_links` with `tenant uuid` as the first column and FK to `tenants.tenant`, composite PKs including `tenant`, and all unique/index keys tenant-leading.
+- KV table includes unique logical identity `(tenant, namespace, key)`, namespace index, partial TTL sweep index `(tenant, expires_at) WHERE expires_at IS NOT NULL`, `revision`, optional `expires_at`, soft `created_by_run_id`, and timestamps.
+- Link table includes N:M typed-edge uniqueness `(tenant, namespace, left_type, left_id, right_type, right_id, relation)`, forward/reverse lookup indexes, JSONB `attributes`, soft `created_by_run_id`, and timestamps.
+- Distribution follows the asset facts pattern: `exports.config = { transaction: false }`, Citus extension guard, already-distributed guard via `pg_dist_partition`, and `create_distributed_table(..., 'tenant', colocate_with => 'workflow_runs')`. Non-Citus CE/dev path logs a warning and leaves plain Postgres tables.
+- Down migration drops links before KV. No FK to workflow runs was added by design, because persisted store/link data must outlive run retention.
