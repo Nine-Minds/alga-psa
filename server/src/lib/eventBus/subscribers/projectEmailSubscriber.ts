@@ -17,6 +17,9 @@ import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent, convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
+import type { Knex } from 'knex';
+import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -24,6 +27,94 @@ import { isValidEmail } from '@alga-psa/core';
 function getBaseUrl(): string {
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function normalizeHost(host: string): string {
+  return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+type PortalLinkContext = {
+  internalBase: string;
+  portalHost: string | null;
+  isActiveVanityDomain: boolean;
+  tenantSlug: string;
+};
+
+/**
+ * Resolve the tenant-level portal-domain context once per handler invocation.
+ * Mirrors the ticket subscriber so project emails to external (client/contact)
+ * recipients link to the client portal, while internal recipients link to MSP.
+ */
+async function resolvePortalLinkContext(
+  knex: Knex,
+  tenantId: string
+): Promise<PortalLinkContext> {
+  const internalBase = getBaseUrl();
+  let portalHost: string | null = null;
+  let isActiveVanityDomain = false;
+
+  try {
+    const portalDomain = await getPortalDomain(knex, tenantId);
+    // Only use a portal-specific host when the tenant has an *active* custom
+    // (vanity) domain. Otherwise leave portalHost null so we emit
+    // https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
+    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
+      portalHost = portalDomain.domain;
+      isActiveVanityDomain = true;
+    }
+  } catch (error) {
+    logger.warn('[ProjectEmailSubscriber] Failed to resolve portal domain for project link', {
+      tenantId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+
+  return {
+    internalBase,
+    portalHost,
+    isActiveVanityDomain,
+    tenantSlug: buildTenantPortalSlug(tenantId),
+  };
+}
+
+/**
+ * Build both the MSP (internal) and client-portal (external) URLs for a project.
+ * Internal recipients (assigned users) get /msp/projects/...; external
+ * recipients (client contacts) get /client-portal/projects/....
+ */
+function buildProjectLinks(
+  ctx: PortalLinkContext,
+  projectId: string
+): { internalUrl: string; portalUrl: string } {
+  const internalUrl = `${ctx.internalBase}/msp/projects/${projectId}`;
+  const baseParams = new URLSearchParams();
+  const clientPortalPath = `/client-portal/projects/${projectId}`;
+  let portalUrl: string;
+
+  if (ctx.portalHost) {
+    const sanitizedHost = normalizeHost(ctx.portalHost);
+    if (ctx.isActiveVanityDomain) {
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}${baseParams.toString() ? '?' + baseParams.toString() : ''}`;
+    } else {
+      baseParams.set('tenant', ctx.tenantSlug);
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+    }
+  } else {
+    const fallbackBase = ctx.internalBase.endsWith('/') ? ctx.internalBase.slice(0, -1) : ctx.internalBase;
+    baseParams.set('tenant', ctx.tenantSlug);
+    portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
+  }
+
+  return { internalUrl, portalUrl };
+}
+
+async function resolveProjectLinks(
+  knex: Knex,
+  tenantId: string,
+  projectId: string
+): Promise<{ internalUrl: string; portalUrl: string }> {
+  const ctx = await resolvePortalLinkContext(knex, tenantId);
+  return buildProjectLinks(ctx, projectId);
 }
 
 /**
@@ -499,7 +590,8 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
-    const emailContext = {
+    const { internalUrl, portalUrl } = await resolveProjectLinks(db, tenantId, project.project_id);
+    const buildContext = (url: string) => ({
       project: {
         id: project.project_number,
         name: project.project_name,
@@ -512,23 +604,23 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         startDate: project.start_date,
         endDate: project.end_date,
         createdBy: payload.userId,
-        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
+        url,
         client: project.client_name || 'No Client'
       }
-    };
+    });
 
     const replyContext = {
       projectId: project.project_id || payload.projectId
     };
 
-    // Send to contact or client (external users - no userId check)
+    // Send to contact or client (external users - no userId check) - client portal link
     if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
         subject: `Project Created: ${project.project_name}`,
         template: 'project-created',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Project Created');
     } else if (isValidEmail(project.client_email)) {
@@ -537,19 +629,19 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         to: project.client_email,
         subject: `Project Created: ${project.project_name}`,
         template: 'project-created',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Project Created');
     }
 
-    // Send to assigned user (internal user - check preferences)
+    // Send to assigned user (internal user - check preferences) - MSP link
     if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
         subject: `Project Created: ${project.project_name}`,
         template: 'project-created',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
       }, 'Project Created', project.assigned_to);
     }
@@ -759,7 +851,8 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
           .first()
       : null;
 
-    const emailContext = {
+    const { internalUrl, portalUrl } = await resolveProjectLinks(db, tenantId, project.project_id);
+    const buildContext = (url: string) => ({
       project: {
         id: project.project_number,
         name: project.project_name,
@@ -768,23 +861,23 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
         changes: formattedChanges,
         updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : updaterUserId,
-        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
+        url,
         client: project.client_name || 'No Client'
       }
-    };
+    });
 
     const replyContext = {
       projectId: project.project_id || payload.projectId
     };
 
-    // Send to contact or client (external users - no userId check)
+    // Send to contact or client (external users - no userId check) - client portal link
     if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
         subject: `Project Updated: ${project.project_name}`,
         template: 'project-updated',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Project Updated');
     } else if (isValidEmail(project.client_email)) {
@@ -793,19 +886,19 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         to: project.client_email,
         subject: `Project Updated: ${project.project_name}`,
         template: 'project-updated',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Project Updated');
     }
 
-    // Send to assigned user (internal user - check preferences)
+    // Send to assigned user (internal user - check preferences) - MSP link
     if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
         subject: `Project Updated: ${project.project_name}`,
         template: 'project-updated',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
       }, 'Project Updated', project.assigned_to);
     }
@@ -951,7 +1044,11 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const closedDescriptionText = closedDescriptionFormatting ? closedDescriptionFormatting.text : '';
     const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
 
-    const emailContext = {
+    const { internalUrl, portalUrl } = await resolveProjectLinks(db, tenantId, project.project_id);
+    const formattedClosedChanges = await formatChanges(db, payload.changes || {});
+    const closedByValue = await resolveValue(db, 'closed_by', closedByUserId);
+    const closedAtValue = new Date().toISOString();
+    const buildContext = (url: string) => ({
       project: {
         id: project.project_number,
         name: project.project_name,
@@ -963,26 +1060,29 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         descriptionHtml: closedDescriptionHtml,
         startDate: project.start_date,
         endDate: project.end_date,
-        changes: await formatChanges(db, payload.changes || {}),
-        closedBy: await resolveValue(db, 'closed_by', closedByUserId),
-        closedAt: new Date().toISOString(),
-        url: `${getBaseUrl()}/msp/projects/${project.project_id}`,
+        changes: formattedClosedChanges,
+        closedBy: closedByValue,
+        closedAt: closedAtValue,
+        url,
         client: project.client_name || 'No Client'
       }
-    };
+    });
+
+    const closedContextPortal = buildContext(portalUrl);
+    const closedContextInternal = buildContext(internalUrl);
 
     const replyContext = {
       projectId: project.project_id || payload.projectId
     };
 
-    // Send to contact or client (external users - no userId check)
+    // Send to contact or client (external users - no userId check) - client portal link
     if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
         subject: `Project Closed: ${project.project_name}`,
         template: 'project-closed',
-        context: emailContext,
+        context: closedContextPortal,
         replyContext
       }, 'Project Closed');
     } else if (isValidEmail(project.client_email)) {
@@ -991,19 +1091,19 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         to: project.client_email,
         subject: `Project Closed: ${project.project_name}`,
         template: 'project-closed',
-        context: emailContext,
+        context: closedContextPortal,
         replyContext
       }, 'Project Closed');
     }
 
-    // Send to assigned user (internal user - check preferences)
+    // Send to assigned user (internal user - check preferences) - MSP link
     if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
         subject: `Project Closed: ${project.project_name}`,
         template: 'project-closed',
-        context: emailContext,
+        context: closedContextInternal,
         replyContext
       }, 'Project Closed', project.assigned_to);
     }
