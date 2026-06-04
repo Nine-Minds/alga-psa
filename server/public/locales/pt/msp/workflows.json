@@ -787,6 +787,50 @@
       "ai.infer": {
         "label": "Infer Structured Output",
         "description": "Generate structured workflow data from a prompt using the configured AI provider."
+      },
+      "store.get": {
+        "label": "Get Stored Value",
+        "description": "Read a persisted workflow key/value entry."
+      },
+      "store.set": {
+        "label": "Set Stored Value",
+        "description": "Persist a workflow key/value entry."
+      },
+      "store.delete": {
+        "label": "Delete Stored Value",
+        "description": "Delete a persisted workflow key/value entry."
+      },
+      "store.increment": {
+        "label": "Increment Stored Number",
+        "description": "Atomically increment a persisted workflow number."
+      },
+      "store.list": {
+        "label": "List Stored Values",
+        "description": "List persisted workflow key/value entries in a namespace."
+      },
+      "store.list_namespaces": {
+        "label": "List Store Namespaces",
+        "description": "List workflow data-store namespaces used by this tenant."
+      },
+      "links.upsert": {
+        "label": "Upsert Entity Link",
+        "description": "Create or update a persisted link between two workflow entities."
+      },
+      "links.lookup": {
+        "label": "Lookup Entity Links",
+        "description": "Find persisted entity links by source entity and direction."
+      },
+      "links.delete": {
+        "label": "Delete Entity Links",
+        "description": "Delete persisted entity links by side and optional relation."
+      },
+      "links.list": {
+        "label": "List Entity Links",
+        "description": "List persisted entity links in a namespace."
+      },
+      "links.list_namespaces": {
+        "label": "List Link Namespaces",
+        "description": "List workflow entity-link namespaces used by this tenant."
       }
     },
     "validation": {
@@ -931,6 +975,10 @@
         "ai": {
           "label": "AI",
           "description": "AI actions"
+        },
+        "data-store": {
+          "label": "Data Store",
+          "description": "Read and write durable workflow state across runs."
         }
       }
     },
@@ -1408,7 +1456,11 @@
       "ariaLabel": "Pedir ajuda à IA para transformações",
       "title": "Perguntar à IA",
       "shortcutHint": "Abrir Quick Ask para obter ajuda com transformações"
-    }
+    },
+    "softEnumPlaceholder": "Select or enter value",
+    "softEnumSearchPlaceholder": "Search or enter a custom value",
+    "softEnumNoResults": "No suggestions",
+    "softEnumUseCustom": "Use \"{{value}}\""
   },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
@@ -1984,6 +2036,23 @@
     "workflowWaitTiming": {
       "fixed": "Specific date & time",
       "expression": "Advanced expression"
+    },
+    "workflowEntityType": {
+      "project_task": "Project task",
+      "ticket": "Ticket",
+      "contact": "Contact",
+      "client": "Client",
+      "project": "Project",
+      "appointment": "Appointment",
+      "quote": "Quote"
+    },
+    "workflowLinkRelation": {
+      "related": "Related",
+      "mirrors": "Mirrors",
+      "maps_to": "Maps to",
+      "blocks": "Blocks",
+      "duplicate_of": "Duplicate of",
+      "synced_with": "Synced with"
     }
   },
   "automation": {

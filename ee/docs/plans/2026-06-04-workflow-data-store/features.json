@@ -148,7 +148,7 @@
   {
     "id": "F018",
     "description": "Localize every Data Store designer string under the `msp/workflows` namespace via `t()` (palette group, node labels/descriptions, field labels/placeholders, empty and validation states); add keys to all nine locales plus pseudo-locales `xx`/`yy`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Localization (i18n)"
     ]
@@ -156,7 +156,7 @@
   {
     "id": "F019",
     "description": "Drive the entity-`type` and `relation` suggestion lists through the `enum-labels-pattern.md` option-hook pattern (`VALUES` + `LABEL_DEFAULTS` + `useEntityTypeOptions()`/`useRelationOptions()`) storing the canonical token while translating the label, and resolve action `ui.label`/`description` through i18n keys; `validate-translations.cjs` passes across 9 locales",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Localization (i18n)"
     ]

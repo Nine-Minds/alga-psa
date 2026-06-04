@@ -19,6 +19,10 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
+  useWorkflowEntityTypeOptions,
+  useWorkflowLinkRelationOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import {
   ExpressionEditorField,
   type ExpressionContext,
   type JsonSchema
@@ -1067,6 +1071,8 @@ const LiteralValueEditor: React.FC<{
   referenceBrowseContext,
 }) => {
   const { t } = useTranslation('msp/workflows');
+  const workflowEntityTypeOptions = useWorkflowEntityTypeOptions();
+  const workflowLinkRelationOptions = useWorkflowLinkRelationOptions();
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
@@ -1204,13 +1210,31 @@ const LiteralValueEditor: React.FC<{
 
   if (fieldType === 'string' && softEnum?.component === 'soft-enum-combobox') {
     const currentValue = typeof value === 'string' ? value : '';
-    const optionValues = Array.from(new Set([
-      ...(softEnum.curatedValues ?? []),
-      ...(currentValue ? [currentValue] : []),
-    ].filter((item): item is string => typeof item === 'string' && item.trim().length > 0)));
-    const options: SelectOption[] = optionValues.map((optionValue) => ({
+    const localizedCuratedOptions =
+      softEnum.suggestionKind === 'workflow-entity-type'
+        ? workflowEntityTypeOptions
+        : softEnum.suggestionKind === 'workflow-link-relation'
+          ? workflowLinkRelationOptions
+          : [];
+    const optionLabels = new Map<string, string>();
+
+    for (const option of localizedCuratedOptions) {
+      optionLabels.set(option.value, option.label);
+    }
+
+    for (const optionValue of softEnum.curatedValues ?? []) {
+      if (typeof optionValue === 'string' && optionValue.trim().length > 0 && !optionLabels.has(optionValue)) {
+        optionLabels.set(optionValue, optionValue);
+      }
+    }
+
+    if (currentValue && !optionLabels.has(currentValue)) {
+      optionLabels.set(currentValue, currentValue);
+    }
+
+    const options: SelectOption[] = Array.from(optionLabels, ([optionValue, label]) => ({
       value: optionValue,
-      label: optionValue,
+      label,
     }));
 
     return wrapNullableEditor(

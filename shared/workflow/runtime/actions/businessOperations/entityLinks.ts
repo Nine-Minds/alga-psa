@@ -16,25 +16,6 @@ const workflowPermission = {
   manage: { resource: 'workflow', action: 'manage' },
 } as const;
 
-const CURATED_ENTITY_TYPES = [
-  'project_task',
-  'ticket',
-  'contact',
-  'client',
-  'project',
-  'appointment',
-  'quote',
-] as const;
-
-const CURATED_LINK_RELATIONS = [
-  'related',
-  'mirrors',
-  'maps_to',
-  'blocks',
-  'duplicate_of',
-  'synced_with',
-] as const;
-
 const softEnumText = (
   description: string,
   hint: string,
@@ -60,14 +41,12 @@ const entityTypeSchema = softEnumText('Entity type', 'Entity type', {
   component: 'soft-enum-combobox',
   suggestionKind: 'workflow-entity-type',
   namespaceField: 'namespace',
-  curatedValues: [...CURATED_ENTITY_TYPES],
   allowCustomValue: true,
 });
 const relationSchema = softEnumText('Entity-link relation', 'Relation', {
   component: 'soft-enum-combobox',
   suggestionKind: 'workflow-link-relation',
   namespaceField: 'namespace',
-  curatedValues: [...CURATED_LINK_RELATIONS],
   allowCustomValue: true,
 });
 const entityIdSchema = withWorkflowJsonSchemaMetadata(z.string().trim().min(1).max(MAX_LABEL_LENGTH), 'Entity id', {

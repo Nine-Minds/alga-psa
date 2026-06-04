@@ -142,3 +142,16 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - Curated token suggestions from metadata are shown for entity `type` and link `relation`; the current custom value is preserved as an option. Namespace fields accept free text and are ready for dynamic namespace suggestions once an autocomplete data source is wired.
 - Fixed choices (`direction`, `value_type`) continue through the existing enum path, which renders `CustomSelect`; ids/keys use the existing source-mode/expression editor plus `@alga-psa/ui` `Input` in fixed mode; JSON values use the existing JSON editor path.
 - No native HTML controls were added in the workflow designer code for Data Store fields.
+
+### F018 — Data Store designer localization
+
+- Added Data Store palette group keys, all `store.*`/`links.*` action label/description keys, soft-enum combobox placeholder/empty/custom-value keys, and entity type/relation enum label keys to every `server/public/locales/*/msp/workflows.json` file.
+- Pseudo-locales `xx` and `yy` use marker text for the new Data Store keys instead of English fallback text, so the designer surface exposes missing i18n wiring during pseudo-locale QA.
+- `node scripts/validate-translations.cjs` passed with zero errors; it still reports eight pre-existing extra-key warnings in Polish `msp/admin.json` and `msp/settings.json`, unrelated to workflow Data Store keys.
+
+### F019 — localized entity type/relation options
+
+- Added `WORKFLOW_ENTITY_TYPE_VALUES`/`WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS` and `WORKFLOW_LINK_RELATION_VALUES`/`WORKFLOW_LINK_RELATION_LABEL_DEFAULTS` in `ee/packages/workflows/src/constants/workflowEnums.ts`.
+- Added `useWorkflowEntityTypeOptions()` and `useWorkflowLinkRelationOptions()` in `ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts`, following the existing enum-label hook pattern. The stored values remain canonical tokens (for example `project_task`, `mirrors`) while labels come from `msp/workflows`.
+- Updated the Data Store soft-enum renderer to use those localized hooks for `workflow-entity-type` and `workflow-link-relation` metadata, preserving custom values as literal labels.
+- Removed the duplicated curated type/relation arrays from `shared/workflow/runtime/actions/businessOperations/entityLinks.ts`; shared schema metadata now identifies the suggestion kind and the client owns localized display labels.
