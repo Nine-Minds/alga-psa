@@ -1261,5 +1261,10 @@
       "reconnecting": "Actualizaciones en vivo sin conexión - reconectando...",
       "unavailable": "Actualizaciones en vivo no disponibles"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} eliminado correctamente.",
+    "error": "No se pudo eliminar el ticket. Inténtalo de nuevo.",
+    "validationError": "No se pudo validar la eliminación. Inténtalo de nuevo."
   }
 }

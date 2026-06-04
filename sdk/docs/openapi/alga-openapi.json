@@ -72004,6 +72004,16 @@
               }
             }
           },
+          "409": {
+            "description": "Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {

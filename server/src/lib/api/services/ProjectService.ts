@@ -430,14 +430,22 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
+  // TODO: This bare DELETE has the same gap that was fixed for tickets — it
+  // skips dependency validation and child-row cleanup. A project with blocking
+  // records (phases, ticket links, interactions, materials, asset associations)
+  // will FK-crash (500) instead of returning a clean 409, and there's no
+  // safeguard against the API force-deleting a project that shouldn't be deleted.
+  // Mirror TicketService.delete: route through deleteEntityWithValidation('project', ...)
+  // (config already exists in @alga-psa/core), clean up child rows, and throw
+  // ConflictError when blocking dependencies exist.
   async delete(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
-      
+
       await withTransaction(knex, async (trx) => {
         const result = await trx(this.tableName)
           .where({ [this.primaryKey]: id, tenant: context.tenant })
           .del();
-  
+
         if (result === 0) {
           throw new NotFoundError('Project not found');
         }

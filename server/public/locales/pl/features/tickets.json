@@ -1261,5 +1261,10 @@
       "reconnecting": "Aktualizacje na żywo offline - ponowne łączenie...",
       "unavailable": "Aktualizacje na żywo niedostępne"
     }
+  },
+  "delete": {
+    "success": "Zgłoszenie #{{number}} zostało usunięte.",
+    "error": "Nie udało się usunąć zgłoszenia. Spróbuj ponownie.",
+    "validationError": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie."
   }
 }

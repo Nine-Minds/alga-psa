@@ -1261,5 +1261,10 @@
       "reconnecting": "Mises à jour en direct hors ligne - reconnexion...",
       "unavailable": "Mises à jour en direct indisponibles"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} supprimé avec succès.",
+    "error": "Échec de la suppression du ticket. Veuillez réessayer.",
+    "validationError": "Échec de la validation de la suppression. Veuillez réessayer."
   }
 }

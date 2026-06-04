@@ -1261,5 +1261,10 @@
       "reconnecting": "55555",
       "unavailable": "55555"
     }
+  },
+  "delete": {
+    "success": "55555 {{number}} 55555",
+    "error": "55555",
+    "validationError": "55555"
   }
 }

@@ -1261,5 +1261,10 @@
       "reconnecting": "Live-Aktualisierungen offline - Verbindung wird wiederhergestellt...",
       "unavailable": "Live-Aktualisierungen nicht verfügbar"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} erfolgreich gelöscht.",
+    "error": "Ticket konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    "validationError": "Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut."
   }
 }

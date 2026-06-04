@@ -288,6 +288,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'get /api/v1/time-sheets/{id}/summary',
   ]);
 
+  // Delete endpoints whose service runs deleteEntityWithValidation and can
+  // therefore return 409 when blocking dependencies exist.
+  const DEPENDENCY_VALIDATED_DELETES = new Set([
+    'delete /api/v1/tickets/{id}',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -340,6 +346,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'delete') {
       responses[204] = { description: 'Delete-like operation can return no content when implemented that way.', emptyBody: true };
+    }
+
+    // Deletes that run dependency validation (deleteEntityWithValidation) reject
+    // with 409 when the resource still has blocking records (e.g. time entries,
+    // schedule entries). The error body's `details` enumerates the blocking
+    // dependencies so the caller knows what to remove or reassign first.
+    if (DEPENDENCY_VALIDATED_DELETES.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.',
+        schema: ApiError,
+      };
     }
 
     if (def.path.includes('/{id}') || def.path.includes('/{taskId}') || def.path.includes('/{sessionId}') || def.path.includes('/{entityId}')) {
