@@ -173,7 +173,7 @@
   {
     "id": "F021",
     "description": "Add model and action test suites covering KV CRUD/CAS/increment/TTL, link upsert/lookup/delete/N:M semantics, tenant isolation, value-size cap, RBAC denial, and idempotent replay",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test plan (high level)"
     ]
@@ -181,7 +181,7 @@
   {
     "id": "F022",
     "description": "Add Citus colocation tests (both tables in the `workflow_runs` colocation group; CE/no-Citus path works), the cross-run task-mirror integration test, and i18n validation/pseudo-locale QA for the Data Store nodes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test plan (high level)"
     ]

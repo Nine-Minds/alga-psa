@@ -163,3 +163,23 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
   - `reference.project-task-mirror-sync`: `PROJECT_TASK_UPDATED` -> `links.lookup` -> `control.forEach` over `vars.linkedTasks.matches` -> `projects.update_task`.
 - Added `payload.ProjectTaskUpdated.v1` to the workflow payload schema registry via `projectTaskUpdatedEventPayloadSchema`; `PROJECT_TASK_UPDATED` already exists as a project task domain/webhook event, but workflow schemas previously exposed only created/status/assignment/completion task variants.
 - Verification: JSON fixture parses; focused ESLint and `tsc --noEmit` checks passed for `shared/workflow/runtime/schemas/projectEventSchemas.ts` and `workflowEventPayloadSchemas.ts`.
+
+### F021/F022 — model/action/designer/i18n test coverage
+
+- Added DB-backed persistence model tests in `shared/workflow/runtime/actions/__tests__/workflowDataStoreModels.db.test.ts` covering KV CRUD/revision/CAS, atomic increment, TTL lazy expiry + `deleteExpired`, link idempotent upsert/N:M lookup/delete, and tenant isolation.
+- Added DB-backed business-operation action tests in `shared/workflow/runtime/actions/__tests__/businessOperations.workflowDataStore.db.test.ts` covering `store.*` and `links.*` handlers, audit writes, oversize value rejection, permission denial, and action-provided idempotency key behavior.
+- Added action registration/schema metadata tests in `shared/workflow/runtime/actions/__tests__/registerDataStoreActionsMetadata.test.ts`, designer catalog coverage in `shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts`, and migration contract coverage in `shared/workflow/runtime/__tests__/workflowDataStoreMigration.test.ts`.
+- Added runnable designer/i18n/reference workflow contracts:
+  - `workflowDataStoreDesignerComponents.test.ts` asserts the soft-enum branch uses design-system `SearchableSelect` with custom values and no native `<select>`.
+  - `workflowDataStoreEnumLocalization.test.ts` checks all workflow locales/pseudo-locales contain Data Store action/group/enum keys and that pseudo-locales do not fall back to English labels.
+  - `workflowDataStoreReferenceWorkflows.test.ts` validates the link-setup and mirror workflow bundle plus payload schema refs.
+- Test-discovered implementation fix: `WorkflowDataStoreModel.set` now JSON-encodes values before writing `jsonb`, so string values persist as valid JSON strings; `increment` now casts bound `initial`/`by` parameters before addition to avoid Postgres ambiguous-operator errors.
+- Commands run:
+  - `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerDataStoreActionsMetadata.test.ts workflow/runtime/__tests__/workflowDataStoreMigration.test.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
+  - `DB_PASSWORD_ADMIN=devpassword123 DB_PASSWORD_SERVER=devpassword123 npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/workflowDataStoreModels.db.test.ts workflow/runtime/actions/__tests__/businessOperations.workflowDataStore.db.test.ts --reporter=dot`
+  - `npx vitest run --config shared/vitest.config.ts workflow/runtime/__tests__/workflowDataStoreEnumLocalization.test.ts workflow/runtime/__tests__/workflowDataStoreReferenceWorkflows.test.ts --reporter=dot`
+  - `npx vitest run --config shared/vitest.config.ts workflow/runtime/__tests__/workflowDataStoreDesignerComponents.test.ts --reporter=dot`
+  - `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerDataStoreActionsMetadata.test.ts workflow/runtime/__tests__/workflowDataStoreMigration.test.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts workflow/runtime/__tests__/workflowDataStoreEnumLocalization.test.ts workflow/runtime/__tests__/workflowDataStoreReferenceWorkflows.test.ts workflow/runtime/__tests__/workflowDataStoreDesignerComponents.test.ts --reporter=dot`
+  - `node scripts/validate-translations.cjs` (passed; eight pre-existing Polish extra-key warnings remain outside workflow Data Store keys).
+  - Focused ESLint on touched model/test files passed with warnings only (`no-explicit-any`/non-null assertions in test files).
+- Gotcha: the EE server jsdom harness currently resolves `next-auth` -> `next/server` before a focused `InputMappingEditorStructuredLiterals.test.tsx` invocation can run, so the Data Store designer guard lives in the shared source-level component contract instead of adding a non-running render test to that EE file.

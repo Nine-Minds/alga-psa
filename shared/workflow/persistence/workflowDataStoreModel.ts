@@ -75,6 +75,10 @@ const normalizeRevision = (record: WorkflowDataStoreRecord): WorkflowDataStoreRe
   revision: Number(record.revision),
 });
 
+const encodeJsonbValue = (value: WorkflowDataStoreValue): string => (
+  JSON.stringify(value === undefined ? null : value)
+);
+
 const activeRows = (query: Knex.QueryBuilder): void => {
   query.where((builder) => {
     builder.whereNull('expires_at').orWhere('expires_at', '>', nowIso());
@@ -110,7 +114,7 @@ const WorkflowDataStoreModel = {
       tenant,
       namespace: input.namespace,
       key: input.key,
-      value: input.value,
+      value: encodeJsonbValue(input.value),
       value_type: input.value_type ?? 'json',
       revision: 1,
       expires_at: normalizeTimestamp(input.expires_at),
@@ -144,7 +148,7 @@ const WorkflowDataStoreModel = {
 
     const [record] = await query
       .update({
-        value: input.value,
+        value: encodeJsonbValue(input.value),
         value_type: input.value_type ?? 'json',
         expires_at: normalizeTimestamp(input.expires_at),
         revision: knex.raw('revision + 1'),
@@ -188,7 +192,7 @@ const WorkflowDataStoreModel = {
           created_by_run_id, created_at, updated_at
         )
         VALUES (
-          ?, ?, ?, to_jsonb((? + ?)::numeric), 'number', 1, ?, ?, ?, ?
+          ?, ?, ?, to_jsonb((?::numeric + ?::numeric)), 'number', 1, ?, ?, ?, ?
         )
         ON CONFLICT (tenant, namespace, key)
         DO UPDATE SET
