@@ -14,6 +14,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: 'NZD', label: 'NZD (NZ$)', symbol: 'NZ$' },
   { value: 'ARS', label: 'ARS ($)', symbol: '$' },
   { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
+  { value: 'CHF', label: 'CHF (Fr.)', symbol: 'Fr.' },
 ];
 
 export const getCurrencySymbol = (code: string): string => {
