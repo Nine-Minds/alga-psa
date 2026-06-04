@@ -34,8 +34,8 @@ The ITIL integration enhances Alga PSA's ticketing system with comprehensive ITI
 #### ITIL Priority Matrix
 The system uses a standard 5×5 Impact × Urgency matrix to calculate priority:
 
-| Impact \\ Urgency | High (1) | Medium-High (2) | Medium (3) | Medium-Low (4) | Low (5) |
-|-------------------|----------|------------------|------------|----------------|---------|
+| Impact \ Urgency | High (1) | Medium-High (2) | Medium (3) | Medium-Low (4) | Low (5) |
+|-------------------|----------|------------------|------------|----------------|--------|
 | **High (1)**      | Critical | High            | High       | Medium         | Medium  |
 | **Medium-High (2)** | High   | High            | Medium     | Medium         | Low     |
 | **Medium (3)**    | High     | Medium          | Medium     | Low            | Low     |
@@ -108,12 +108,14 @@ The system uses a standard 5×5 Impact × Urgency matrix to calculate priority:
 #### Priority-Based SLA Targets
 
 | Priority | Target Resolution Time |
-|----------|----------------------|
+|----------|-----------------------|
 | Critical | 1 hour              |
 | High     | 4 hours             |
 | Medium   | 24 hours (1 day)    |
 | Low      | 72 hours (3 days)   |
 | Planning | 168 hours (1 week)  |
+
+> **Product note:** The "ITIL Standard" SLA policy is automatically created only for Alga PSA tenants. AlgaDesk tenants that select ITIL priority mode still benefit from the Impact × Urgency priority matrix for ticket classification and prioritisation, but the SLA policy is not auto-created and SLA breach notifications are not emitted. This prevents AlgaDesk — which does not include SLA management — from generating spurious breach alerts. All other ITIL workflows (priority calculation, categories, escalation) apply equally to both products.
 
 #### Escalation Thresholds
 
@@ -183,7 +185,7 @@ server/src/
 1. **Set Impact and Urgency**: Select appropriate impact and urgency levels
 2. **Auto-Priority Calculation**: Priority is automatically calculated using the matrix
 3. **Category Selection**: Choose from standard ITIL categories
-4. **SLA Assignment**: SLA targets are automatically assigned based on priority
+4. **SLA Assignment**: SLA targets are automatically assigned based on priority (Alga PSA only — see [SLA Management](#sla-management))
 
 ### Using ITIL Fields Component
 
@@ -250,8 +252,8 @@ const escalationRules = {
 ```json
 {
   "ticketId": "uuid",
-  "impact": 1-5,
-  "urgency": 1-5
+  "impact": 1,
+  "urgency": 5
 }
 ```
 
@@ -391,6 +393,7 @@ Manages the complete ITIL incident lifecycle:
 - Verify priority calculation is working
 - Check database constraints
 - Review workflow execution logs
+- Note: SLA auto-configuration only applies to Alga PSA tenants, not AlgaDesk
 
 #### Escalation Not Triggering
 - Confirm escalation workflow is active
