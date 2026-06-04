@@ -69,3 +69,55 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - `upsert` de-duplicates only the full typed edge `(tenant, namespace, left_type, left_id, right_type, right_id, relation)` and updates `attributes` on replay, preserving the PRD's N:M behavior and allowing the same pair under different relations.
 - `lookup` supports `forward`, `reverse`, and `either`, returning target-side `{link_id,type,id,relation,attributes}` matches and applying `relation` plus target-type filtering.
 - `delete` enforces the safety rule that at least one side (`left` or `right`) must be provided; namespace and optional relation always scope the deletion.
+
+### F004 — store.get action
+
+- Added `store.get` in `shared/workflow/runtime/actions/businessOperations/dataStore.ts`.
+- Read action is non-side-effectful, tenant-scoped through `withTenantTransaction`, checks `workflow:read`, and returns `{found,value,value_type,revision,expires_at}`. The model handles lazy TTL deletion, so expired rows return `found:false`.
+
+### F005 — store.set action
+
+- Added `store.set` with `value_type`, `ttl_seconds`, `if_revision`, optional `idempotency_key`, action-provided idempotency, `workflow:manage`, and audit operation `store.set`.
+- CAS conflicts from the model are translated to `ActionError` code `CONFLICT`.
+
+### F006 — store.delete action
+
+- Added `store.delete` with action-provided idempotency, `workflow:manage`, audit operation `store.delete`, and `{deleted}` output.
+
+### F007 — store.increment action
+
+- Added `store.increment` with atomic model increment, `by`/`initial`, action-provided idempotency, `workflow:manage`, audit operation `store.increment`, and `{value,revision}` output.
+- Existing non-numeric values are rejected as validation errors instead of coerced.
+
+### F008 — store list actions
+
+- Added `store.list` with namespace/prefix/limit/cursor pagination and `store.list_namespaces` with key counts.
+- Both are non-side-effectful reads and require `workflow:read`.
+
+### F009 — links.upsert action
+
+- Added `links.upsert` in `shared/workflow/runtime/actions/businessOperations/entityLinks.ts`.
+- Write action is idempotent on the typed edge through the model, uses action-provided idempotency, requires `workflow:manage`, audits `links.upsert`, and returns `{link_id,created}`.
+
+### F010 — links.lookup action
+
+- Added `links.lookup` with `direction`, optional `relation`/target-type filtering, `limit`, `workflow:read`, and `{matches:[{link_id,type,id,relation,attributes}]}` output.
+
+### F011 — links delete/list actions
+
+- Added `links.delete` with left/right criteria validation, optional relation, `workflow:manage`, audit operation `links.delete`, and `{deleted_count}`.
+- Added `links.list` and `links.list_namespaces` as non-side-effectful reads requiring `workflow:read`.
+
+### F012 — shared action conventions
+
+- All write actions use `withTenantTransaction`, `requirePermission(... workflow:manage)`, `writeRunAudit`, `sideEffectful:true`, and `actionProvidedKey`.
+- Read actions are `sideEffectful:false`, use `withTenantTransaction`, require `workflow:read`, and do not write audit rows.
+
+### F013 — action limits
+
+- Added Zod length caps of 256 chars for namespace/key/entity ids/type/relation/idempotency inputs.
+- Added `WORKFLOW_STORE_MAX_VALUE_BYTES` (default 256 KiB) enforcement for `store.set` before persistence, returning `ValidationError` when exceeded.
+
+### F015 — runtime registration
+
+- Registered `registerDataStoreActions()` and `registerEntityLinkActions()` from `shared/workflow/runtime/actions/registerBusinessOperationsActions.ts`, so `initializeWorkflowRuntimeV2()` loads them with the rest of business operations.

@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Register and implement `store.get` (read, `workflow:read`) returning `{found, value, value_type, revision, expires_at}`, treating an expired row as not-found (lazy TTL)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "TTL / janitor"
@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Register and implement `store.set` (write, `workflow:manage`) with `value_type`, `ttl_seconds`, and `if_revision` compare-and-set that raises `ActionError CONFLICT` on revision mismatch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "Write model & referencing (vars vs. store)"
@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "description": "Register and implement `store.delete` (write, `workflow:manage`) returning `{deleted}`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)"
     ]
@@ -55,7 +55,7 @@
   {
     "id": "F007",
     "description": "Register and implement `store.increment` (write, `workflow:manage`) performing an atomic numeric update with `by`/`initial`, returning `{value, revision}`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)"
     ]
@@ -63,7 +63,7 @@
   {
     "id": "F008",
     "description": "Register and implement `store.list` (read, `workflow:read`) with namespace/prefix/cursor pagination and `store.list_namespaces` returning distinct namespaces with key counts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "Namespaces"
@@ -72,7 +72,7 @@
   {
     "id": "F009",
     "description": "Register and implement `links.upsert` (write, `workflow:manage`): idempotent on the typed edge `(namespace,left,right,relation)`, updating `attributes`/`relation` on conflict, returning `{link_id, created}`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "Data model"
@@ -81,7 +81,7 @@
   {
     "id": "F010",
     "description": "Register and implement `links.lookup` (read, `workflow:read`) with `direction` forward/reverse/either and optional `relation`/`right_type` filters, returning `{matches:[{link_id,type,id,relation,attributes}]}`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)"
     ]
@@ -89,7 +89,7 @@
   {
     "id": "F011",
     "description": "Register and implement `links.delete` (write, `workflow:manage`) by partial criteria (requires at least one of left/right; optional relation) returning `{deleted_count}`, plus `links.list` and `links.list_namespaces`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "Namespaces"
@@ -98,7 +98,7 @@
   {
     "id": "F012",
     "description": "Apply shared action conventions: write actions run in `withTenantTransaction`, enforce `requirePermission` (`workflow:read` for reads, `workflow:manage` for writes against the workflow actor), call `writeRunAudit`, and use `actionProvidedKey` idempotency; reads stay non-side-effectful and tenant-scoped",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / RBAC",
       "Observability"
@@ -107,7 +107,7 @@
   {
     "id": "F013",
     "description": "Enforce limits: `value` capped at `WORKFLOW_STORE_MAX_VALUE_BYTES` (default 256 KB) and namespace/key/id length caps, rejecting oversize input with `ValidationError`; no per-tenant row quota",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Limits / abuse guards"
     ]
@@ -123,7 +123,7 @@
   {
     "id": "F015",
     "description": "Register the new `store.*`/`links.*` modules from `runtime/init.ts` (via the business-operations registration path) so they load into the action registry at runtime init and become available to executor, worker, and designer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Actions (registry)",
       "Goals"
