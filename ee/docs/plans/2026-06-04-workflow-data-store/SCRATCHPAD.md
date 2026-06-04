@@ -121,3 +121,10 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 ### F015 — runtime registration
 
 - Registered `registerDataStoreActions()` and `registerEntityLinkActions()` from `shared/workflow/runtime/actions/registerBusinessOperationsActions.ts`, so `initializeWorkflowRuntimeV2()` loads them with the rest of business operations.
+
+### F014 — TTL worker sweep
+
+- Added a throttled expired-row sweep to `shared/workflow/workers/WorkflowRuntimeV2Worker.ts`.
+- Each tick calls `sweepExpiredWorkflowDataStore()` only after `WORKFLOW_STORE_EXPIRY_SWEEP_INTERVAL_MS` (default 60s). It selects tenants with expired `workflow_data_store` rows and calls `WorkflowDataStoreModel.deleteExpired(knex, tenant, batchSize)` per tenant.
+- Sweep bounds are configurable with `WORKFLOW_STORE_EXPIRY_SWEEP_TENANT_LIMIT` (default 50 tenants per sweep) and `WORKFLOW_STORE_EXPIRY_SWEEP_BATCH_SIZE` (default 1000 rows per tenant). Errors are logged as warnings and do not fail workflow polling.
+- This completes TTL behavior together with the previously implemented lazy read expiry in `WorkflowDataStoreModel.get`/`store.get`.

@@ -1,23 +1,50 @@
 import { getAdminConnection } from '@alga-psa/db/admin';
 import logger from '@alga-psa/core/logger';
+import { env } from 'process';
 import { WorkflowRuntimeV2 } from '../runtime';
 import WorkflowRunWaitModelV2 from '../persistence/workflowRunWaitModelV2';
 import WorkflowRunModelV2 from '../persistence/workflowRunModelV2';
 import WorkflowRunLogModelV2 from '../persistence/workflowRunLogModelV2';
+import WorkflowDataStoreModel from '../persistence/workflowDataStoreModel';
+
+const DEFAULT_STORE_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
+const DEFAULT_STORE_EXPIRY_SWEEP_TENANT_LIMIT = 50;
+const DEFAULT_STORE_EXPIRY_SWEEP_BATCH_SIZE = 1000;
+
+const readPositiveIntEnv = (name: string, fallback: number): number => {
+  const parsed = Number(env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
+};
 
 export class WorkflowRuntimeV2Worker {
-  private intervalId: NodeJS.Timeout | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   private readonly runtime: WorkflowRuntimeV2;
   private readonly workerId: string;
   private readonly verbose: boolean;
+  private lastStoreExpirySweepAt = 0;
+  private readonly storeExpirySweepIntervalMs: number;
+  private readonly storeExpirySweepTenantLimit: number;
+  private readonly storeExpirySweepBatchSize: number;
 
   constructor(workerId: string) {
     this.workerId = workerId;
     this.verbose =
-      process.env.WORKFLOW_WORKER_VERBOSE === 'true' ||
-      process.env.WORKFLOW_WORKER_VERBOSE === '1' ||
-      process.env.WORKFLOW_WORKER_VERBOSE === 'yes';
+      env.WORKFLOW_WORKER_VERBOSE === 'true' ||
+      env.WORKFLOW_WORKER_VERBOSE === '1' ||
+      env.WORKFLOW_WORKER_VERBOSE === 'yes';
     this.runtime = new WorkflowRuntimeV2();
+    this.storeExpirySweepIntervalMs = readPositiveIntEnv(
+      'WORKFLOW_STORE_EXPIRY_SWEEP_INTERVAL_MS',
+      DEFAULT_STORE_EXPIRY_SWEEP_INTERVAL_MS
+    );
+    this.storeExpirySweepTenantLimit = readPositiveIntEnv(
+      'WORKFLOW_STORE_EXPIRY_SWEEP_TENANT_LIMIT',
+      DEFAULT_STORE_EXPIRY_SWEEP_TENANT_LIMIT
+    );
+    this.storeExpirySweepBatchSize = readPositiveIntEnv(
+      'WORKFLOW_STORE_EXPIRY_SWEEP_BATCH_SIZE',
+      DEFAULT_STORE_EXPIRY_SWEEP_BATCH_SIZE
+    );
   }
 
   async start(pollIntervalMs = 5000): Promise<void> {
@@ -41,6 +68,7 @@ export class WorkflowRuntimeV2Worker {
     const knex = await getAdminConnection();
 
     const tickStartedAt = Date.now();
+    const expiredStoreRowsDeleted = await this.sweepExpiredWorkflowDataStore(knex);
 
     // Process due retries
     const retryWaits = await WorkflowRunWaitModelV2.listDueRetries(knex);
@@ -208,7 +236,51 @@ export class WorkflowRuntimeV2Worker {
       dueTimeouts: timeoutWaits.length,
       dueTimeWaits: timeWaits.length,
       acquiredRuns: runnableCount,
+      expiredStoreRowsDeleted,
       durationMs: Date.now() - tickStartedAt,
     });
+  }
+
+  private async sweepExpiredWorkflowDataStore(knex: Awaited<ReturnType<typeof getAdminConnection>>): Promise<number> {
+    const now = Date.now();
+    if (now - this.lastStoreExpirySweepAt < this.storeExpirySweepIntervalMs) {
+      return 0;
+    }
+    this.lastStoreExpirySweepAt = now;
+
+    try {
+      const tenants = await knex('workflow_data_store')
+        .whereNotNull('expires_at')
+        .andWhere('expires_at', '<=', new Date(now).toISOString())
+        .distinct<{ tenant: string }[]>('tenant')
+        .limit(this.storeExpirySweepTenantLimit);
+
+      let deleted = 0;
+      for (const row of tenants) {
+        deleted += await WorkflowDataStoreModel.deleteExpired(knex, row.tenant, this.storeExpirySweepBatchSize);
+      }
+
+      if (deleted > 0) {
+        logger.info('[WorkflowRuntimeV2Worker] Deleted expired workflow data-store rows', {
+          workerId: this.workerId,
+          tenantCount: tenants.length,
+          deleted,
+        });
+      } else {
+        logger.debug('[WorkflowRuntimeV2Worker] Expired workflow data-store sweep complete', {
+          workerId: this.workerId,
+          tenantCount: tenants.length,
+          deleted,
+        });
+      }
+
+      return deleted;
+    } catch (error) {
+      logger.warn('[WorkflowRuntimeV2Worker] Expired workflow data-store sweep failed', {
+        workerId: this.workerId,
+        error,
+      });
+      return 0;
+    }
   }
 }

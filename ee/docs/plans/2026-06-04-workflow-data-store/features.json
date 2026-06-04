@@ -115,7 +115,7 @@
   {
     "id": "F014",
     "description": "Implement TTL handling: lazy expiry on read (expired treated as not-found and opportunistically deleted) plus a periodic batched `deleteExpired` sweep bolted onto the existing `WorkflowRuntimeV2Worker` poll loop",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TTL / janitor"
     ]
