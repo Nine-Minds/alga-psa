@@ -47,9 +47,11 @@ COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-# Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist/ ./shared/dist/
-COPY ./shared/package.json ./shared/package.json
+# Copy the shared workspace: pre-built dist AND source. The source is required so
+# the appliance tenant bootstrap (npx tsx server/scripts/create-tenant.ts) can
+# resolve createTenantComplete -> shared/utils/encryption -> shared/core/getSecret
+# at runtime; the webpack app uses shared/dist, but the tsx script reads the source.
+COPY ./shared/ ./shared/
 
 # Copy packages directory for webpack aliases
 COPY ./packages/ ./packages/
