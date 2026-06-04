@@ -128,3 +128,11 @@ Working notes, locked decisions, and implementation sequence. See `PRD.md` for t
 - Each tick calls `sweepExpiredWorkflowDataStore()` only after `WORKFLOW_STORE_EXPIRY_SWEEP_INTERVAL_MS` (default 60s). It selects tenants with expired `workflow_data_store` rows and calls `WorkflowDataStoreModel.deleteExpired(knex, tenant, batchSize)` per tenant.
 - Sweep bounds are configurable with `WORKFLOW_STORE_EXPIRY_SWEEP_TENANT_LIMIT` (default 50 tenants per sweep) and `WORKFLOW_STORE_EXPIRY_SWEEP_BATCH_SIZE` (default 1000 rows per tenant). Errors are logged as warnings and do not fail workflow polling.
 - This completes TTL behavior together with the previously implemented lazy read expiry in `WorkflowDataStoreModel.get`/`store.get`.
+
+### F016 — designer catalog and schema metadata
+
+- Added a built-in `data-store` designer catalog group in `shared/workflow/runtime/designer/actionCatalog.ts` with modules `store` and `links`, default action `store.get`, and a `data-store` icon token.
+- Added a Data Store palette icon mapping in `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` using the existing lucide `Database` icon.
+- Extended workflow JSON-schema editor metadata with a typed `softEnum` block for creatable combobox fields. The metadata supports namespace suggestions via `store.list_namespaces`/`links.list_namespaces`, curated entity type/relation token suggestions, custom free-text values, and namespace-scoped suggestion hints.
+- Updated `store.*` and `links.*` schemas so namespace/type/relation/id/value fields expose designer editor hints: soft-enum custom inputs for labels, expression-capable text inputs for ids/keys, JSON editor hint for `store.set.value`, and enum-backed fields (`direction`, `value_type`) remain fixed-select compatible through existing enum handling.
+- F017 remains open: the actual custom soft-enum combobox renderer still needs to consume this metadata. Current generic rendering falls back to a string input for `kind:'custom'`.

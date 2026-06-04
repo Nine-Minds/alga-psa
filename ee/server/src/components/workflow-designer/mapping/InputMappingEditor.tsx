@@ -166,6 +166,7 @@ export interface ActionInputField {
     picker?: {
       resource: string;
     };
+    softEnum?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorSoftEnumMetadata;
   };
   picker?: {
     kind: string;

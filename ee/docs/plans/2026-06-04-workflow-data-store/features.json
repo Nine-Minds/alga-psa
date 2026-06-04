@@ -132,7 +132,7 @@
   {
     "id": "F016",
     "description": "Add a \"Data Store\" catalog group in `runtime/designer/actionCatalog.ts` exposing `store.*`/`links.*` with field metadata: `saveAs`, expression-sourced id/value inputs, soft-enum metadata for namespace/type/relation, and fixed selects for `direction`/`value_type`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Designer integration"
     ]

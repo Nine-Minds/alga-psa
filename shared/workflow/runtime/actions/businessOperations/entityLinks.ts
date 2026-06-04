@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import WorkflowEntityLinkModel, { type WorkflowEntityRef } from '../../../persistence/workflowEntityLinkModel';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   actionProvidedKey,
@@ -16,21 +16,64 @@ const workflowPermission = {
   manage: { resource: 'workflow', action: 'manage' },
 } as const;
 
-const softEnumText = (description: string, hint: string): z.ZodString =>
+const CURATED_ENTITY_TYPES = [
+  'project_task',
+  'ticket',
+  'contact',
+  'client',
+  'project',
+  'appointment',
+  'quote',
+] as const;
+
+const CURATED_LINK_RELATIONS = [
+  'related',
+  'mirrors',
+  'maps_to',
+  'blocks',
+  'duplicate_of',
+  'synced_with',
+] as const;
+
+const softEnumText = (
+  description: string,
+  hint: string,
+  softEnum: NonNullable<NonNullable<WorkflowJsonSchemaMetadata['x-workflow-editor']>['softEnum']>
+): z.ZodString =>
   withWorkflowJsonSchemaMetadata(z.string().trim().min(1).max(MAX_LABEL_LENGTH), description, {
     'x-workflow-editor': {
       kind: 'custom',
+      inline: { mode: 'input' },
       allowsDynamicReference: true,
       fixedValueHint: hint,
+      softEnum,
     },
   });
 
-const namespaceSchema = softEnumText('Entity-link namespace', 'Namespace');
-const entityTypeSchema = softEnumText('Entity type', 'Entity type');
-const relationSchema = softEnumText('Entity-link relation', 'Relation');
+const namespaceSchema = softEnumText('Entity-link namespace', 'Namespace', {
+  component: 'soft-enum-combobox',
+  suggestionKind: 'workflow-data-store-namespace',
+  suggestionActionIds: ['links.list_namespaces', 'store.list_namespaces'],
+  allowCustomValue: true,
+});
+const entityTypeSchema = softEnumText('Entity type', 'Entity type', {
+  component: 'soft-enum-combobox',
+  suggestionKind: 'workflow-entity-type',
+  namespaceField: 'namespace',
+  curatedValues: [...CURATED_ENTITY_TYPES],
+  allowCustomValue: true,
+});
+const relationSchema = softEnumText('Entity-link relation', 'Relation', {
+  component: 'soft-enum-combobox',
+  suggestionKind: 'workflow-link-relation',
+  namespaceField: 'namespace',
+  curatedValues: [...CURATED_LINK_RELATIONS],
+  allowCustomValue: true,
+});
 const entityIdSchema = withWorkflowJsonSchemaMetadata(z.string().trim().min(1).max(MAX_LABEL_LENGTH), 'Entity id', {
   'x-workflow-editor': {
     kind: 'text',
+    inline: { mode: 'input' },
     allowsDynamicReference: true,
     fixedValueHint: 'Entity id',
   },

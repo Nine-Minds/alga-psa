@@ -17,6 +17,15 @@ export type WorkflowEditorKind = 'text' | 'picker' | 'color' | 'json' | 'custom'
 export type WorkflowEditorInlineMode = 'input' | 'textarea' | 'picker-summary' | 'swatch';
 export type WorkflowEditorDialogMode = 'large-text';
 
+export type WorkflowEditorSoftEnumMetadata = {
+  component: 'soft-enum-combobox';
+  suggestionKind: 'workflow-data-store-namespace' | 'workflow-entity-type' | 'workflow-link-relation';
+  suggestionActionIds?: string[];
+  namespaceField?: string;
+  curatedValues?: string[];
+  allowCustomValue?: boolean;
+};
+
 export type WorkflowEditorJsonSchemaMetadata = {
   kind: WorkflowEditorKind;
   inline?: {
@@ -31,6 +40,7 @@ export type WorkflowEditorJsonSchemaMetadata = {
   picker?: {
     resource: string;
   };
+  softEnum?: WorkflowEditorSoftEnumMetadata;
 };
 
 export type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {

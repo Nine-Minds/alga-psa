@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { Buffer } from 'buffer';
 import { env } from 'process';
 import WorkflowDataStoreModel from '../../../persistence/workflowDataStoreModel';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   actionProvidedKey,
@@ -22,16 +22,25 @@ const workflowPermission = {
   manage: { resource: 'workflow', action: 'manage' },
 } as const;
 
+const storeNamespaceEditorMetadata: WorkflowJsonSchemaMetadata = {
+  'x-workflow-editor': {
+    kind: 'custom',
+    inline: { mode: 'input' },
+    allowsDynamicReference: true,
+    fixedValueHint: 'Namespace',
+    softEnum: {
+      component: 'soft-enum-combobox',
+      suggestionKind: 'workflow-data-store-namespace',
+      suggestionActionIds: ['store.list_namespaces', 'links.list_namespaces'],
+      allowCustomValue: true,
+    },
+  },
+};
+
 const namespaceSchema = withWorkflowJsonSchemaMetadata(
   z.string().trim().min(1).max(MAX_LABEL_LENGTH),
   'Data-store namespace',
-  {
-    'x-workflow-editor': {
-      kind: 'custom',
-      allowsDynamicReference: true,
-      fixedValueHint: 'Namespace',
-    },
-  }
+  storeNamespaceEditorMetadata
 );
 
 const keySchema = withWorkflowJsonSchemaMetadata(
@@ -40,6 +49,7 @@ const keySchema = withWorkflowJsonSchemaMetadata(
   {
     'x-workflow-editor': {
       kind: 'text',
+      inline: { mode: 'input' },
       allowsDynamicReference: true,
       fixedValueHint: 'Key',
     },
@@ -49,6 +59,7 @@ const keySchema = withWorkflowJsonSchemaMetadata(
 const jsonValueSchema = withWorkflowJsonSchemaMetadata(z.any(), 'JSON value to persist', {
   'x-workflow-editor': {
     kind: 'json',
+    inline: { mode: 'textarea' },
     allowsDynamicReference: true,
     fixedValueHint: 'Value',
   },
