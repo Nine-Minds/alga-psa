@@ -12,7 +12,11 @@ const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/al
 // `EACCES: mkdir /etc/alga-appliance`, so the app-channel update flow never worked.
 const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 const DEFAULT_UPDATE_HISTORY_FILE = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
-const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
+// Same story as the release-selection path above: honor ALGA_APPLIANCE_KUBECONFIG
+// (the Deployment sets it to /tmp/alga-appliance/kubeconfig, written by the
+// entrypoint) like setup-engine does. Hardcoding /etc/rancher/k3s/k3s.yaml — which
+// is not mounted in the control-plane pod — made the flux reconcile step fail.
+const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 
 function nowIso() {
   return new Date().toISOString();
