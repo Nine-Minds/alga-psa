@@ -138,32 +138,51 @@ to a **separate** column `deletion_scheduled_for` (e.g. `now + 30d`), NULL until
   Read `status`, `workflow_id`, `subscription_external_id`, and both date columns
   (`scheduled_deletion_date` = 90d auto deadline, `deletion_scheduled_for` = confirmed date, NULL
   until confirmed). `reactivatable` = status ∈ {`pending`,`awaiting_confirmation`,`confirmed`}.
-- **`GET /api/billing/check-tenant`** (alga, HMAC): extend response with
+- **Edition placement (F042):** `pending_tenant_deletions` is an **EE-only** table (created only by
+  `ee/server/migrations/20260113120000`). Every reader must therefore live in EE. The HMAC endpoints
+  below (and the F035 password-reset endpoint) move to `ee/server/src/app/api/...` (mirroring the
+  existing EE-only routes `internal/`, `provisioning/`, `v1/tenant-management/`), keeping the same URL
+  paths nm-store signs against. Any pending-deletion read reachable in CE must fail-soft (table absent
+  ⇒ "no pending deletion"), never throw.
+- **`GET /api/billing/check-tenant`** (alga, HMAC; relocate to EE per F042): extend response with
   `pendingDeletion: boolean`, `reactivatable: boolean`, `deletionStatus?: string`, and
   `effectiveDeletionDate?: string` (= `COALESCE(deletion_scheduled_for, scheduled_deletion_date)`).
   Backward compatible (additive fields).
-- **`POST /api/billing/request-reactivation`** (new, alga, HMAC same scheme): body `{ email }`;
-  looks up active pending deletion → sends reactivation email to tenant admin. Anti-enumeration:
-  return 200 regardless; only email if reactivatable.
+- **`POST /api/billing/request-reactivation`** (new, alga, HMAC same scheme; in EE per F042): body
+  `{ email }`; looks up active pending deletion → sends reactivation email to tenant admin.
+  Anti-enumeration: return 200 regardless; only email if reactivatable.
 - **Reactivation checkout** (nm-store): Stripe Checkout for the plan's standard recurring price,
   `discounts` omitted (no `introCouponId`), no `trial_period_days`; `metadata` includes
   `reactivation: "true"`, `tenant_id`, `deletion_workflow_id`. **Created with the tenant's EXISTING
-  Stripe customer** (`customer: cus_…`, looked up from `stripe_customers`) — Stripe retains the
-  customer after `customer.subscription.deleted`, so the new subscription attaches to the same
-  customer rather than spawning a divergent one.
+  Stripe customer** (`customer: cus_…`) — Stripe retains the customer after
+  `customer.subscription.deleted`, so the new subscription attaches to the same customer rather than
+  spawning a divergent one. nm-store does NOT set `customer` today (verified: `utils/stripe.ts` passes
+  none → Stripe auto-creates one); it obtains the `cus_…` via F044 — a **non-PII** Stripe id returned
+  by alga's token-exchange (the prior `subscription_external_id` and/or `cus_…`), or derived from
+  Stripe with nm-store's own `STRIPE_SECRET_KEY`. The admin **email** is never sent to nm-store (F038).
 - **Stripe customer reconciliation:** the existing tenant already has a `stripe_customers` row from
   the original subscription. Reactivation **reuses** it (F037 checkout + F019 link) — it must NOT
   create a second/divergent customer row, since the billing portal and future subscription webhooks
   key off the customer. Only a new `stripe_subscriptions` row is inserted.
 - **Charged-but-refused ledger:** `pending_reactivation_refunds` table (F036) backs F034 — durable
   work queue of payments captured but not reactivated, for manual refund + an ops-inbox email.
+- **Reactivation token ledger:** `tenant_reactivation_tokens` table (F040) backs F039 — durable
+  single-use state for email links. Store `token_hash`, `tenant`, `deletion_id`, `expires_at`,
+  `reserved_at`, `consumed_at`, `checkout_session_id`, and timestamps. The checkout route validates
+  the signed token against this row and atomically reserves it before creating Stripe Checkout, so a
+  replay cannot mint multiple sessions; completion consumes it on successful reactivation.
+- **Stripe webhook branching:** `checkout.session.completed` handling must branch on
+  `session.metadata.reactivation === "true"` **before** the normal subscription import/update path.
+  Reactivation sessions run only the reactivation trigger/guard path (F041/F016); normal sessions
+  continue through existing checkout handling. This prevents the webhook from importing the new
+  subscription before the Temporal rollback handler owns the reactivation flow.
 - **Reactivation completion** runs **inside the Temporal deletion workflow's rollback handler**
   (not a server orchestrator). The `rollbackDeletion` signal payload is extended with an optional
   `reactivation` block `{ stripeCustomerId, stripeSubscriptionId, stripeSubscriptionItemId,
   stripePriceId, sendPasswordReset }`. On checkout success a thin server trigger fires this
   enriched signal; the (already durable, retried) rollback handler then, in order:
   1. Reactivates users (`is_inactive=false`), removes Canceled tag, reactivates master client
-     (existing rollback behavior).
+     and contacts in the master tenant (existing rollback behavior).
   2. If a `reactivation` block is present: links the new Stripe subscription to the **existing**
      tenant by **reusing `createTenantInDB`'s exact stripe_customers/stripe_subscriptions insert
      path** (shared helper) so Citus shard routing is identical (`tenant` set explicitly), **without
@@ -298,8 +317,9 @@ because all users are deactivated (`is_inactive`) during the deletion window.
   arbitrary email typed on the order form. nm-store never receives the admin address (anti-enumeration).
 - **Token (F039):** the email link carries a signed, single-use, expiring token bound to
   `tenant_id`. The reactivation checkout cannot be created without a valid token (validated
-  server-side); it is consumed on success (replay rejected). So only someone with access to the
-  admin inbox can *initiate* reactivation — payment alone cannot.
+  server-side against the durable token ledger); it is atomically reserved before Checkout creation
+  and consumed on success (replay rejected before or after payment). So only someone with access to
+  the admin inbox can *initiate* reactivation — payment alone cannot.
 - **Access (F021):** after payment, the force password-reset link also goes to the admin inbox — so
   even completing payment grants no access without inbox control.
 
@@ -309,3 +329,39 @@ resurrection of arbitrary tenants, no enumeration). An attacker who controls the
 already effectively the admin (could reset any password regardless), so email-ownership is an
 acceptable and consistent anchor. Finer-grained billing RBAC is a possible future refinement but is
 out of scope for v1 (a single billing/admin email is the authority).
+
+## 13. Review-5 (2026-06-05) — edition placement, Stripe-customer resolution, residual findings
+
+A fifth pass after verifying the claims against both repos. The first three items were already folded
+into §5/§7; the rest are new (F042–F048). All file/line claims below are code-verified.
+
+- **Edition placement — `pending_tenant_deletions` is EE-only (F042).** It is created only by
+  `ee/server/migrations/20260113120000_create_pending_tenant_deletions.cjs` (exact table name
+  `pending_tenant_deletions`). check-tenant currently lives in **CE** (`server/src/app/api/billing/`)
+  and the login path is **shared** (`packages/auth`); reading the table from there throws where it
+  doesn't exist. Resolution: move the HMAC endpoints (check-tenant, request-reactivation F006,
+  reactivation-password-reset F035) into `ee/server/src/app/api/...` at the same URL paths, and make
+  any CE-reachable read fail-soft. EE routes resolve via aliases (`scripts/build-enterprise.sh`).
+- **Login win-back via the EE injection pattern (F043).** Don't inline an EE-table query in shared
+  `auth.tsx`. Reuse the existing `@enterprise/*` dynamic-import + `isEnterprise` pattern
+  (`loadEnterpriseSsoProviderRegistryImpl` / `enterpriseSsoRegistryInitPromise` in `nextAuthOptions.ts`,
+  CE-stub fallback). The shared gate (`auth.tsx:87`) invokes a hook that is a no-op in CE.
+- **nm-store resolves `cus_…` from Stripe, not alga's DB (F044) — confirms the "it comes from Stripe"
+  intuition.** nm-store passes no `customer` today (`utils/stripe.ts`) and holds `STRIPE_SECRET_KEY`.
+  alga's token-exchange returns a **non-PII** Stripe id (prior `subscription_external_id` / `cus_…`);
+  nm-store sets `customer: cus_…` or derives it via `subscriptions.retrieve(sub_…).customer`. The admin
+  email never crosses the boundary — F038 holds. F037 updated to stop shipping alga's DB row.
+- **Reactivated-but-unbilled partial failure (F045).** `handleRollback` flips status to `rolled_back`
+  and reactivates users before linking the subscription. A permanent link failure after a captured
+  payment leaves a live tenant with no subscription — a gap not covered by F034's prior reasons. Raise
+  F034 with a distinct `reactivated_unbilled` reason on exhausted retries.
+- **F019 is a refactor, not a literal reuse (F046).** In `tenant-operations.ts` the customer and
+  subscription inserts are coupled (sub FK uses the just-inserted internal customer; rows carry
+  `billing_tenant = MASTER_TENANT_ID`). Extract a shared helper taking an existing internal
+  `stripe_customer_id` that inserts only the sub row (preserving `tenant` + `billing_tenant`).
+- **Throttle atomicity (F047)** — conditional `UPDATE … WHERE last_winback_email_at IS NULL OR <
+  now()-14d RETURNING`, email only on a returned row (read-check-update double-sends under concurrency).
+- **Admin-email source of truth (F048)** — the authority model hinges on this; pin the canonical field
+  + fallback order behind one resolver shared by F008 and F025.
+
+**Status:** review-complete pending implementation; no open questions.

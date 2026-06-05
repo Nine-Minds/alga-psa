@@ -224,6 +224,61 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   can't initiate (blocks griefing/resurrection + enumeration); inbox-compromise = already-admin.
 - v1 = single billing/admin email is the authority; finer billing-RBAC deferred.
 
+## Review-5 fixes (2026-06-05)
+
+1. **Single-use token needs durable state:** F039 now depends on F040
+   `tenant_reactivation_tokens` with `token_hash`, `tenant`, `deletion_id`, `expires_at`,
+   `reserved_at`, `consumed_at`, `checkout_session_id`, and timestamps. A signed token alone can
+   expire but cannot enforce single-use; checkout creation must atomically reserve the row before
+   creating Stripe Checkout, and completion consumes it.
+2. **Stripe webhook branch made explicit:** F041 requires `checkout.session.completed` to branch on
+   `session.metadata.reactivation === "true"` before normal `handleCheckoutCompleted` subscription
+   import/update behavior. Reactivation sessions go to the reactivation trigger/guard path only.
+3. **Stale refund wording scrubbed:** F032 no longer says refund policy is an open question; charged
+   but refused payments route to F034 (ledger + ops/billing email, manual refund).
+4. **Edition placement (F042) — `pending_tenant_deletions` is EE-only.** VERIFIED: the table is created
+   solely by `ee/server/migrations/20260113120000_create_pending_tenant_deletions.cjs` (exact name
+   `pending_tenant_deletions`, `createTable('pending_tenant_deletions')`). But check-tenant lives in
+   **CE** at `server/src/app/api/billing/check-tenant/route.ts`, and the login hook is in **shared**
+   `packages/auth`. Reading an EE-only table from CE/shared code throws where the table is absent.
+   Move the HMAC endpoints (check-tenant + request-reactivation F006 + reactivation-password-reset
+   F035) under `ee/server/src/app/api/...` (mirroring `internal/`, `provisioning/`,
+   `v1/tenant-management/`), keeping the same HMAC URL paths nm-store calls. EE routes resolve via
+   aliases (`scripts/build-enterprise.sh:23` "EE code resolved via aliases"; no filesystem overlay).
+   Any pending-deletion read reachable in CE must fail-soft (table-absent ⇒ no pending deletion).
+5. **Login hook via the EE injection pattern (F043).** VERIFIED pattern: `nextAuthOptions.ts` already
+   lazy-loads EE impls through `loadEnterpriseSsoProviderRegistryImpl()` (`sso/enterpriseRegistryEntry.ts`,
+   `@enterprise/*` dynamic import that resolves to a CE stub) behind `isEnterprise` +
+   `enterpriseSsoRegistryInitPromise`. Do the same for the win-back hook — DON'T inline the
+   `pending_tenant_deletions` query in `packages/auth/src/actions/auth.tsx`. Shared auth just calls the
+   (no-op in CE) hook at the `is_inactive` gate (`auth.tsx:87`) and returns null as today.
+6. **nm-store gets `cus_…` from Stripe, not alga's DB (F044) — answers "comes from stripe".** VERIFIED:
+   nm-store's `createCheckoutSession`/`createTieredCheckoutSession` (`packages/nm-store/src/utils/stripe.ts`)
+   pass **no** `customer` field today → Stripe mints a new customer each checkout. nm-store holds
+   `STRIPE_SECRET_KEY` (`utils/stripe.ts:8`). Resolution: alga's token-exchange (F014/F039) returns a
+   NON-PII Stripe id (the prior `subscription_external_id`, and/or `cus_…` read server-side from
+   `stripe_customers` by tenant); nm-store sets `customer: cus_…` directly or derives it via
+   `subscriptions.retrieve(sub_…).customer`. The admin EMAIL never crosses to nm-store (preserves F038).
+   F037 updated: it does NOT ship alga's `stripe_customers` row across the boundary.
+7. **Reactivated-but-unbilled partial failure (F045).** `handleRollback` sets status `rolled_back` +
+   reactivates users at the TOP, then (new steps) links the sub + resets password. If
+   `linkSubscriptionToExistingTenant` permanently fails after users are active and payment captured,
+   the tenant is live with no linked subscription — uncovered by F034's existing reasons. On exhausted
+   retries, raise F034 with a distinct `reactivated_unbilled` reason (durable row + email). Temporal
+   activity retries cover transient failures first.
+8. **F019 "reuse exact insert path" is a refactor, not a literal call (F046).** VERIFIED in
+   `tenant-operations.ts`: customer insert (`:142-147`, `tenant`, `stripe_customer_external_id`,
+   `billing_tenant: MASTER_TENANT_ID`) and subscription insert (`:221-222`) are coupled — the sub's
+   `stripe_customer_id` FK uses the just-inserted internal customer (`:191`). Extract a shared helper
+   that takes an EXISTING internal `stripe_customer_id` and inserts ONLY the sub row with `tenant` +
+   `billing_tenant = MASTER_TENANT_ID`; createTenantInDB calls the same helper (no behavior change).
+9. **Throttle atomicity (F047) + admin-email source of truth (F048).** (a) F026 must be a conditional
+   `UPDATE ... WHERE last_winback_email_at IS NULL OR < now()-14d RETURNING`, emailing only when a row
+   comes back — a read-check-update double-sends under concurrent attempts. (b) The whole authority
+   model rests on resolving the billing/admin email; F048 pins the canonical field + fallback order
+   (tenant owner/adminEmail → master-tenant client billing contact / Stripe customer email) behind one
+   resolver used by both F008 and F025.
+
 ## Open questions / gotchas
 
 - Win-back email throttle store: `last_winback_email_at` column on `pending_tenant_deletions`.
