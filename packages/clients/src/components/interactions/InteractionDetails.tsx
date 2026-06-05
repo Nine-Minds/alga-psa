@@ -445,7 +445,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                     return (
                       <div
                         key={artifact.artifact_id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2 dark:bg-gray-800"
                       >
                         <div className="flex min-w-0 items-center gap-2 text-sm">
                           {artifact.artifact_type === 'transcript' ? (
@@ -453,7 +453,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                           ) : (
                             <Download className="h-4 w-4 text-gray-500" />
                           )}
-                          <span className="font-medium">{artifactLabel}</span>
+                          <span className="font-medium">
+                            {artifact.artifact_type === 'transcript'
+                              ? t('interactions.onlineMeeting.transcriptArtifact', { defaultValue: 'Transcript' })
+                              : t('interactions.onlineMeeting.recordingArtifact', { defaultValue: 'Recording' })}
+                          </span>
                           {createdAt && <span className="text-gray-500">{createdAt}</span>}
                         </div>
                         <Button

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
@@ -12,6 +13,7 @@ type ArtifactSubscriptionKind = typeof TEAMS_RECORDING_KIND | typeof TEAMS_TRANS
 interface TeamsIntegrationSubscriptionRow {
   tenant: string;
   install_status: string;
+  meeting_artifact_webhook_secret?: string | null;
   recordings_subscription_id?: string | null;
   recordings_subscription_expires_at?: Date | string | null;
   transcripts_subscription_id?: string | null;
@@ -35,21 +37,32 @@ export interface TeamsMeetingArtifactNotificationJobData extends Record<string, 
   notification: Record<string, unknown>;
 }
 
-export function buildTeamsArtifactClientState(tenantId: string, kind: ArtifactSubscriptionKind): string {
-  return `teams-online-meeting-artifacts:${tenantId}:${kind}`;
+// clientState carries a per-tenant random secret so the public webhook can verify a
+// notification really originated from a subscription we created (Microsoft Graph treats
+// clientState as a shared secret). The tenant/kind prefix is only used for routing; the
+// secret is what the webhook validates against the stored value.
+export function buildTeamsArtifactClientState(tenantId: string, kind: ArtifactSubscriptionKind, secret: string): string {
+  return `teams-online-meeting-artifacts:${tenantId}:${kind}:${secret}`;
 }
 
-export function parseTeamsArtifactClientState(clientState: unknown): { tenantId: string; kind: ArtifactSubscriptionKind } | null {
+export function parseTeamsArtifactClientState(
+  clientState: unknown,
+): { tenantId: string; kind: ArtifactSubscriptionKind; secret: string } | null {
   if (typeof clientState !== 'string') {
     return null;
   }
 
-  const [, tenantId, kind] = clientState.match(/^teams-online-meeting-artifacts:([^:]+):(recordings|transcripts)$/) ?? [];
-  if (!tenantId || (kind !== TEAMS_RECORDING_KIND && kind !== TEAMS_TRANSCRIPT_KIND)) {
+  const [, tenantId, kind, secret] =
+    clientState.match(/^teams-online-meeting-artifacts:([^:]+):(recordings|transcripts):([A-Za-z0-9_-]+)$/) ?? [];
+  if (!tenantId || !secret || (kind !== TEAMS_RECORDING_KIND && kind !== TEAMS_TRANSCRIPT_KIND)) {
     return null;
   }
 
-  return { tenantId, kind };
+  return { tenantId, kind, secret };
+}
+
+function generateArtifactWebhookSecret(): string {
+  return crypto.randomBytes(32).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -120,6 +133,7 @@ async function createSubscription(params: {
   accessToken: string;
   kind: ArtifactSubscriptionKind;
   notificationUrl: string;
+  clientStateSecret: string;
 }): Promise<TeamsMeetingArtifactSubscriptionResult> {
   const metadata = subscriptionColumn(params.kind);
   const expirationDateTime = new Date(Date.now() + SUBSCRIPTION_TTL_HOURS * 60 * 60 * 1000).toISOString();
@@ -132,7 +146,7 @@ async function createSubscription(params: {
       notificationUrl: params.notificationUrl,
       resource: metadata.resource,
       expirationDateTime,
-      clientState: buildTeamsArtifactClientState(params.tenantId, params.kind),
+      clientState: buildTeamsArtifactClientState(params.tenantId, params.kind, params.clientStateSecret),
     },
   });
 
@@ -217,6 +231,16 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     return [];
   }
 
+  // Ensure a stable per-tenant clientState secret exists before creating subscriptions,
+  // and persist it so the webhook can validate inbound notifications against it.
+  let clientStateSecret = normalizeString(row.meeting_artifact_webhook_secret);
+  if (!clientStateSecret) {
+    clientStateSecret = generateArtifactWebhookSecret();
+    await knex('teams_integrations')
+      .where({ tenant: tenantId })
+      .update({ meeting_artifact_webhook_secret: clientStateSecret, updated_at: knex.fn.now() });
+  }
+
   const accessToken = await fetchMicrosoftGraphAppToken({
     tenantAuthority: config.microsoftTenantId,
     clientId: config.clientId,
@@ -237,10 +261,10 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     try {
       result = currentId
         ? await renewSubscription({ accessToken, kind, subscriptionId: currentId })
-        : await createSubscription({ tenantId, accessToken, kind, notificationUrl });
+        : await createSubscription({ tenantId, accessToken, kind, notificationUrl, clientStateSecret });
     } catch (error: any) {
       if (currentId && error?.status === 404) {
-        result = await createSubscription({ tenantId, accessToken, kind, notificationUrl });
+        result = await createSubscription({ tenantId, accessToken, kind, notificationUrl, clientStateSecret });
       } else {
         throw error;
       }

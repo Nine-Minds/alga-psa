@@ -17,9 +17,19 @@ describe('online meeting recording proxy route contract', () => {
     expect(source).toContain("return new NextResponse('Unauthorized', { status: 401 })");
     expect(source).toContain("createTenantKnex(tenant)");
     expect(source).toContain("'artifact.tenant': tenant");
-    expect(source).toContain("request.nextUrl.searchParams.get('portal') === 'true'");
+    // Portal visibility must be enforced from the server-known user type, never a
+    // client-supplied query parameter.
+    expect(source).toContain("(user as any).user_type === 'client'");
+    expect(source).not.toContain("searchParams.get('portal')");
     expect(source).toContain('portalVisibilityEnabled');
     expect(source).toContain("return new NextResponse('Forbidden', { status: 403 })");
+    // Internal users are gated on interaction:read.
+    expect(source).toContain("hasPermission(user as any, 'interaction', 'read'");
+    // Client users are checked for per-entity ownership of the meeting.
+    expect(source).toContain('clientUserOwnsMeeting');
+    // Locally downloaded recordings are preferred over a live Graph stream.
+    expect(source).toContain('StorageService.downloadFile(artifact.file_id)');
+    expect(source).toContain("'artifact.file_id'");
     expect(source).toContain('fetchMicrosoftGraphAppToken');
     expect(source).toContain('Authorization: `Bearer ${accessToken}`');
     expect(source).toContain('fetch(artifact.content_url');

@@ -692,7 +692,7 @@ export function QuickAddInteraction({
                 />
 
                 {isOnlineMeetingType && !isEditMode && (
-                  <div className="rounded border border-gray-200 bg-gray-50 p-3">
+                  <div className="rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
                     {canCreateTeamsMeeting ? (
                       <Switch
                         id={`${id}-create-teams-meeting-toggle`}

@@ -28,14 +28,6 @@ function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function normalizeErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message || 'Unknown error';
-  }
-
-  return String(error || 'Unknown error');
-}
-
 async function fetchJsonCollection(params: {
   accessToken: string;
   url: string;
@@ -78,81 +70,73 @@ async function fetchTranscriptContent(params: {
 export async function fetchMeetingArtifacts(
   input: FetchMeetingArtifactsInput
 ): Promise<TeamsMeetingArtifact[]> {
-  try {
-    const config = await resolveTeamsMeetingExecutionConfig(input.tenantId);
-    if (!config) {
-      logger.warn('[TeamsMeetings] Unable to fetch Teams meeting artifacts because the tenant is not ready', {
-        tenant: input.tenantId,
-        operation: 'fetch_artifacts',
-        meeting_id: input.meetingId,
-        status: null,
-      });
-      return [];
-    }
-
-    const accessToken = await fetchMicrosoftGraphAppToken({
-      tenantAuthority: config.microsoftTenantId,
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
+  // NOTE: this function throws on any fetch/token/Graph failure. The caller relies
+  // on that to distinguish a genuine "no artifacts yet" empty result (returned here)
+  // from a transient failure (thrown) — so a temporary Graph error never ages a real
+  // recording into the terminal `no_recording` state via the retry-attempt counter.
+  const config = await resolveTeamsMeetingExecutionConfig(input.tenantId);
+  if (!config) {
+    logger.warn('[TeamsMeetings] Cannot fetch Teams meeting artifacts because the tenant is not ready', {
+      tenant: input.tenantId,
+      operation: 'fetch_artifacts',
+      meeting_id: input.meetingId,
     });
+    throw new Error(`Teams meeting artifacts unavailable: tenant ${input.tenantId} is not configured for meetings.`);
+  }
 
-    const organizerSegment = encodeURIComponent(input.organizerUserId);
-    const meetingSegment = encodeURIComponent(input.meetingId);
-    const baseUrl = `https://graph.microsoft.com/v1.0/users/${organizerSegment}/onlineMeetings/${meetingSegment}`;
+  const accessToken = await fetchMicrosoftGraphAppToken({
+    tenantAuthority: config.microsoftTenantId,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+  });
 
-    const [recordings, transcripts] = await Promise.all([
-      fetchJsonCollection({ accessToken, url: `${baseUrl}/recordings` }),
-      fetchJsonCollection({ accessToken, url: `${baseUrl}/transcripts` }),
-    ]);
+  const organizerSegment = encodeURIComponent(input.organizerUserId);
+  const meetingSegment = encodeURIComponent(input.meetingId);
+  const baseUrl = `https://graph.microsoft.com/v1.0/users/${organizerSegment}/onlineMeetings/${meetingSegment}`;
 
-    const recordingArtifacts = (recordings.value ?? [])
-      .map((recording): TeamsMeetingArtifact | null => {
-        const providerArtifactId = normalizeString(recording.id);
-        if (!providerArtifactId) {
-          return null;
-        }
+  const [recordings, transcripts] = await Promise.all([
+    fetchJsonCollection({ accessToken, url: `${baseUrl}/recordings` }),
+    fetchJsonCollection({ accessToken, url: `${baseUrl}/transcripts` }),
+  ]);
 
-        return {
-          artifactType: 'recording',
-          providerArtifactId,
-          contentUrl: normalizeString(recording.contentUrl) || null,
-          createdDateTime: normalizeString(recording.createdDateTime) || null,
-        };
-      })
-      .filter((artifact): artifact is TeamsMeetingArtifact => Boolean(artifact));
-
-    const transcriptArtifacts = await Promise.all((transcripts.value ?? []).map(async (transcript): Promise<TeamsMeetingArtifact | null> => {
-      const providerArtifactId = normalizeString(transcript.id);
+  const recordingArtifacts = (recordings.value ?? [])
+    .map((recording): TeamsMeetingArtifact | null => {
+      const providerArtifactId = normalizeString(recording.id);
       if (!providerArtifactId) {
         return null;
       }
 
-      const transcriptContent = await fetchTranscriptContent({
-        accessToken,
-        url: `${baseUrl}/transcripts/${encodeURIComponent(providerArtifactId)}/content`,
-      });
-
       return {
-        artifactType: 'transcript' as const,
+        artifactType: 'recording',
         providerArtifactId,
-        contentUrl: normalizeString(transcript.contentUrl) || null,
-        createdDateTime: normalizeString(transcript.createdDateTime) || null,
-        transcriptContent,
+        contentUrl: normalizeString(recording.contentUrl) || null,
+        createdDateTime: normalizeString(recording.createdDateTime) || null,
       };
-    }));
+    })
+    .filter((artifact): artifact is TeamsMeetingArtifact => Boolean(artifact));
 
-    return [
-      ...recordingArtifacts,
-      ...transcriptArtifacts.filter((artifact): artifact is TeamsMeetingArtifact => Boolean(artifact)),
-    ];
-  } catch (error) {
-    logger.warn('[TeamsMeetings] Failed to fetch Teams meeting artifacts', {
-      tenant: input.tenantId,
-      operation: 'fetch_artifacts',
-      meeting_id: input.meetingId,
-      status: null,
-      error: normalizeErrorMessage(error),
+  const transcriptArtifacts = await Promise.all((transcripts.value ?? []).map(async (transcript): Promise<TeamsMeetingArtifact | null> => {
+    const providerArtifactId = normalizeString(transcript.id);
+    if (!providerArtifactId) {
+      return null;
+    }
+
+    const transcriptContent = await fetchTranscriptContent({
+      accessToken,
+      url: `${baseUrl}/transcripts/${encodeURIComponent(providerArtifactId)}/content`,
     });
-    return [];
-  }
+
+    return {
+      artifactType: 'transcript' as const,
+      providerArtifactId,
+      contentUrl: normalizeString(transcript.contentUrl) || null,
+      createdDateTime: normalizeString(transcript.createdDateTime) || null,
+      transcriptContent,
+    };
+  }));
+
+  return [
+    ...recordingArtifacts,
+    ...transcriptArtifacts.filter((artifact): artifact is TeamsMeetingArtifact => Boolean(artifact)),
+  ];
 }

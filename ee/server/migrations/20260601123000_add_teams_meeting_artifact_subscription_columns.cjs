@@ -23,6 +23,14 @@ const COLUMNS = [
       table.timestamp('transcripts_subscription_expires_at', { useTz: true }).nullable();
     },
   },
+  {
+    // Per-tenant secret embedded in the subscription clientState and validated on
+    // inbound artifact webhooks.
+    name: 'meeting_artifact_webhook_secret',
+    add(table) {
+      table.text('meeting_artifact_webhook_secret').nullable();
+    },
+  },
 ];
 
 exports.up = async function up(knex) {

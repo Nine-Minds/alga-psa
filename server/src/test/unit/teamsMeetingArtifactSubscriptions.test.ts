@@ -99,6 +99,7 @@ describe('Teams meeting artifact subscriptions', () => {
       selected_profile_id: 'profile-1',
       default_meeting_organizer_upn: 'organizer@example.com',
       default_meeting_organizer_object_id: 'organizer-object-id',
+      meeting_artifact_webhook_secret: 'known-secret',
       recordings_subscription_id: null,
       transcripts_subscription_id: null,
     });
@@ -119,17 +120,40 @@ describe('Teams meeting artifact subscriptions', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toMatchObject({
       resource: 'communications/onlineMeetings/getAllRecordings',
       notificationUrl: 'https://example.test/api/teams/webhooks/recordings',
-      clientState: buildTeamsArtifactClientState('tenant-1', 'recordings'),
+      clientState: buildTeamsArtifactClientState('tenant-1', 'recordings', 'known-secret'),
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({
       resource: 'communications/onlineMeetings/getAllTranscripts',
-      clientState: buildTeamsArtifactClientState('tenant-1', 'transcripts'),
+      clientState: buildTeamsArtifactClientState('tenant-1', 'transcripts', 'known-secret'),
     });
     expect(result.map((row) => row.kind)).toEqual(['recordings', 'transcripts']);
     expect(updates).toEqual([
       expect.objectContaining({ recordings_subscription_id: 'recordings-subscription' }),
       expect.objectContaining({ transcripts_subscription_id: 'transcripts-subscription' }),
     ]);
+  });
+
+  it('generates and persists a clientState secret when none is stored yet', async () => {
+    const { knex, updates } = buildKnex({
+      tenant: 'tenant-1',
+      install_status: 'active',
+      selected_profile_id: 'profile-1',
+      default_meeting_organizer_upn: 'organizer@example.com',
+      default_meeting_organizer_object_id: 'organizer-object-id',
+      meeting_artifact_webhook_secret: null,
+      recordings_subscription_id: null,
+      transcripts_subscription_id: null,
+    });
+    createTenantKnexMock.mockResolvedValue({ knex });
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({
+      id: 'sub', expirationDateTime: '2026-06-03T00:00:00.000Z',
+    }), { status: 201 })) as any;
+
+    await renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1' });
+
+    const secretUpdate = updates.find((u) => typeof u.meeting_artifact_webhook_secret === 'string');
+    expect(secretUpdate).toBeDefined();
+    expect(String(secretUpdate?.meeting_artifact_webhook_secret)).toHaveLength(64);
   });
 
   it('T079 renews near-expiry subscriptions and recreates one that returns 404', async () => {
@@ -171,10 +195,13 @@ describe('Teams meeting artifact subscriptions', () => {
   });
 
   it('T081/T082 resolves the meeting from resourceData or decrypted resource data, while clientState only routes tenant/kind', async () => {
-    expect(parseTeamsArtifactClientState('teams-online-meeting-artifacts:tenant-1:recordings')).toEqual({
+    expect(parseTeamsArtifactClientState('teams-online-meeting-artifacts:tenant-1:recordings:secret123')).toEqual({
       tenantId: 'tenant-1',
       kind: 'recordings',
+      secret: 'secret123',
     });
+    // A legacy clientState without a secret is no longer accepted.
+    expect(parseTeamsArtifactClientState('teams-online-meeting-artifacts:tenant-1:recordings')).toBeNull();
 
     await expect(resolveTeamsMeetingIdFromNotification({
       clientState: 'teams-online-meeting-artifacts:tenant-1:recordings',

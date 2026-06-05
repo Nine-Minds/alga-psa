@@ -1,17 +1,21 @@
 'use server'
 
 import type { IOnlineMeeting } from '@alga-psa/types';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import OnlineMeetingModel from '../models/onlineMeeting';
 import { fetchAndPersistMeetingArtifacts } from '../lib/onlineMeetingArtifactCapture';
 
 export const getOnlineMeetingForInteraction = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string,
 ): Promise<IOnlineMeeting | null> => {
   if (!interactionId) {
     throw new Error('Interaction ID is required');
+  }
+
+  if (!(await hasPermission(user, 'interaction', 'read'))) {
+    throw new Error('Forbidden');
   }
 
   return await OnlineMeetingModel.getByInteractionId(interactionId, tenant);
@@ -24,6 +28,10 @@ export const refreshMeetingRecordings = withAuth(async (
 ): Promise<IOnlineMeeting> => {
   if (!meetingId) {
     throw new Error('Meeting ID is required');
+  }
+
+  if (!(await hasPermission(user, 'interaction', 'update'))) {
+    throw new Error('Forbidden');
   }
 
   return await fetchAndPersistMeetingArtifacts({

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { StorageService } from '@alga-psa/storage/StorageService';
 
 type EeTeamsMeetingModule = {
   resolveTeamsMeetingGraphConfig?: (tenantId: string) => Promise<{
@@ -36,6 +38,44 @@ async function portalVisibilityEnabled(knex: any, tenant: string): Promise<boole
   }
 }
 
+// A client-portal user may only reach a recording whose meeting belongs to their own
+// contact/client. We resolve the owning client/contact from the meeting's interaction
+// and compare against the authenticated client user — never trusting the artifact id
+// alone to be correctly scoped by the listing layer.
+async function clientUserOwnsMeeting(
+  knex: any,
+  tenant: string,
+  user: any,
+  interactionId: string | null,
+): Promise<boolean> {
+  const contactId = user?.contact_id;
+  if (!interactionId || !contactId) {
+    return false;
+  }
+
+  const interaction = await knex('interactions')
+    .where({ tenant, interaction_id: interactionId })
+    .first('client_id', 'contact_name_id');
+  if (!interaction) {
+    return false;
+  }
+
+  if (interaction.contact_name_id && interaction.contact_name_id === contactId) {
+    return true;
+  }
+
+  if (interaction.client_id) {
+    const contact = await knex('contacts')
+      .where({ tenant, contact_name_id: contactId })
+      .first('client_id');
+    if (contact?.client_id && contact.client_id === interaction.client_id) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ artifactId: string }> },
@@ -56,8 +96,17 @@ export async function GET(
   }
 
   const { knex } = await createTenantKnex(tenant);
+  const isClientUser = (user as any).user_type === 'client';
 
-  if (request.nextUrl.searchParams.get('portal') === 'true' && !(await portalVisibilityEnabled(knex, tenant))) {
+  // Authorization. Enforcement keys off the server-known user type, never a
+  // client-supplied parameter:
+  //  - client-portal users require the tenant to have exposed recordings to the portal;
+  //  - MSP (internal) users require interaction:read.
+  if (isClientUser) {
+    if (!(await portalVisibilityEnabled(knex, tenant))) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+  } else if (!(await hasPermission(user as any, 'interaction', 'read', knex))) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
@@ -74,11 +123,39 @@ export async function GET(
     .first(
       'artifact.content_url',
       'artifact.provider_artifact_id',
+      'artifact.file_id',
       'meeting.meeting_id',
+      'meeting.interaction_id',
     );
 
   if (!artifact) {
     return new NextResponse('Recording not found', { status: 404 });
+  }
+
+  // Per-entity ownership: a client user may only access recordings for meetings tied
+  // to their own contact/client. Return 404 (not 403) so a non-owning client can't
+  // probe which artifact ids exist.
+  if (isClientUser && !(await clientUserOwnsMeeting(knex, tenant, user, artifact.interaction_id))) {
+    return new NextResponse('Recording not found', { status: 404 });
+  }
+
+  // Prefer the locally downloaded recording when the tenant opted into storage, so a
+  // later Graph content outage doesn't break playback. Fall back to Graph on any error.
+  if (artifact.file_id) {
+    try {
+      const stored = await StorageService.downloadFile(artifact.file_id);
+      const storedHeaders = new Headers();
+      storedHeaders.set('Content-Type', stored.metadata.mime_type || 'video/mp4');
+      storedHeaders.set('Cache-Control', 'private, no-store');
+      storedHeaders.set('Content-Length', String(stored.metadata.size));
+      storedHeaders.set(
+        'Content-Disposition',
+        `attachment; filename="teams-recording-${artifact.provider_artifact_id}.mp4"`,
+      );
+      return new NextResponse(stored.buffer as any, { status: 200, headers: storedHeaders });
+    } catch (error) {
+      console.warn('[OnlineMeetingRecordingProxy] Stored recording unavailable, falling back to Graph', error);
+    }
   }
 
   if (!artifact.content_url) {

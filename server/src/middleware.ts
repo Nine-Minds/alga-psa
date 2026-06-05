@@ -66,6 +66,7 @@ const apiKeySkipPaths = [
   '/api/teams/auth/',
   '/api/teams/bot/',
   '/api/teams/message-extension/',
+  '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
   '/api/teams/package/download',
   '/api/client-portal/domain-session',
   // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)

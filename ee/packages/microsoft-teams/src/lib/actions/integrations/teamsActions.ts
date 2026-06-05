@@ -1,4 +1,5 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
+import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
@@ -289,6 +290,53 @@ export async function getTeamsIntegrationExecutionStateImpl(
   };
 }
 
+// The "Online Meeting" interaction type is the surface MSP users pick to schedule Teams
+// meetings. Rather than backfilling it into every tenant, we provision it lazily into a
+// tenant's own interaction_types the first time they activate Teams. Idempotent and linked
+// to the system type so the QuickAdd toggle and detail views resolve it reliably.
+async function ensureOnlineMeetingInteractionType(
+  knex: any,
+  tenant: string,
+  userId: string | null
+): Promise<void> {
+  try {
+    const systemType = await knex('system_interaction_types')
+      .where({ type_name: 'Online Meeting' })
+      .first('type_id', 'icon');
+    if (!systemType) {
+      return;
+    }
+
+    const existing = await knex('interaction_types')
+      .where({ tenant })
+      .andWhere((builder: any) => {
+        builder.where({ system_type_id: systemType.type_id }).orWhere({ type_name: 'Online Meeting' });
+      })
+      .first('type_id');
+    if (existing) {
+      return;
+    }
+
+    const maxRow = await knex('interaction_types').where({ tenant }).max('display_order as max').first();
+    const nextOrder = (typeof maxRow?.max === 'number' ? maxRow.max : -1) + 1;
+
+    await knex('interaction_types').insert({
+      tenant,
+      type_name: 'Online Meeting',
+      icon: systemType.icon || 'video',
+      system_type_id: systemType.type_id,
+      display_order: nextOrder,
+      created_by: userId,
+    });
+  } catch (error: any) {
+    // Non-fatal: the integration save must still succeed; an admin can add the type manually.
+    logger.warn('[TeamsIntegration] Failed to ensure Online Meeting interaction type', {
+      tenant,
+      error: error?.message || String(error),
+    });
+  }
+}
+
 export async function saveTeamsIntegrationSettingsImpl(
   user: unknown,
   { tenant }: { tenant: string },
@@ -407,6 +455,11 @@ export async function saveTeamsIntegrationSettingsImpl(
       await knex('teams_integrations').where({ tenant }).update(updatePayload);
     } else {
       await knex('teams_integrations').insert(row);
+    }
+
+    // Provision the Online Meeting interaction type once the tenant activates Teams.
+    if (installStatus === 'active') {
+      await ensureOnlineMeetingInteractionType(knex, tenant, (user as any)?.user_id ?? null);
     }
 
     return {
