@@ -199,8 +199,8 @@ describe('workflow data-store business operation actions', () => {
   it('T014/T015: links.upsert/lookup/list/delete actions support forward and reverse mirror flows', async () => {
     const upsert = await invokeAction('links.upsert', {
       namespace: 'project-task-mirror',
-      left: { type: 'project_task', id: 'task-a' },
-      right: { type: 'project_task', id: 'task-b' },
+      from: { type: 'project_task', id: 'task-a' },
+      to: { type: 'project_task', id: 'task-b' },
       relation: 'mirrors',
       attributes: { sourceProjectId: 'project-a' },
       idempotency_key: 'link-task-a-task-b',
@@ -229,7 +229,7 @@ describe('workflow data-store business operation actions', () => {
       namespace: 'project-task-mirror',
       relation: 'mirrors',
     })).resolves.toMatchObject({
-      items: [expect.objectContaining({ left: { type: 'project_task', id: 'task-a' }, right: { type: 'project_task', id: 'task-b' } })],
+      items: [expect.objectContaining({ from: { type: 'project_task', id: 'task-a' }, to: { type: 'project_task', id: 'task-b' } })],
       next_cursor: null,
     });
     await expect(invokeAction('links.list_namespaces', {})).resolves.toEqual({
@@ -237,7 +237,7 @@ describe('workflow data-store business operation actions', () => {
     });
     await expect(invokeAction('links.delete', {
       namespace: 'project-task-mirror',
-      left: { type: 'project_task', id: 'task-a' },
+      from: { type: 'project_task', id: 'task-a' },
       relation: 'mirrors',
       idempotency_key: 'delete-link',
     })).resolves.toEqual({ deleted_count: 1 });
@@ -276,8 +276,8 @@ describe('workflow data-store business operation actions', () => {
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     await expect(invokeAction('links.upsert', {
       namespace: 'permission',
-      left: { type: 'project_task', id: 'a' },
-      right: { type: 'project_task', id: 'b' },
+      from: { type: 'project_task', id: 'a' },
+      to: { type: 'project_task', id: 'b' },
       idempotency_key: 'permission-link',
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
   });

@@ -67,8 +67,8 @@ describe('workflow data-store reference workflows', () => {
         actionId: 'links.upsert',
         inputMapping: {
           namespace: 'project-task-mirror',
-          left: { type: 'project_task', id: { $expr: 'payload.taskId' } },
-          right: { type: 'project_task', id: { $expr: 'vars.createdMirrorTask.task_id' } },
+          from: { type: 'project_task', id: { $expr: 'payload.taskId' } },
+          to: { type: 'project_task', id: { $expr: 'vars.createdMirrorTask.task_id' } },
           relation: 'mirrors',
         },
         saveAs: 'vars.persistedMirrorLink',

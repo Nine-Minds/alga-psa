@@ -53,7 +53,7 @@ The one adjacent table, `tenant_external_entity_mappings`, is integration-specif
 - Authors building dedup, rate-limit, counter, and "remember last seen" automations.
 
 ### Primary flow — cross-project task mirror
-1. **Link-setup workflow.** Trigger `PROJECT_TASK_CREATED` in project A (gated to mirrored projects). Create the counterpart in B via `projects.create_task`, then `links.upsert` records the edge `{namespace:'project-task-mirror', left:{project_task, taskA}, right:{project_task, taskB}, attributes:{fieldMap}}`.
+1. **Link-setup workflow.** Trigger `PROJECT_TASK_CREATED` in project A (gated to mirrored projects). Create the counterpart in B via `projects.create_task`, then `links.upsert` records the edge `{namespace:'project-task-mirror', from:{project_task, taskA}, to:{project_task, taskB}, attributes:{fieldMap}}`.
 2. **Mirror workflow.** Trigger `PROJECT_TASK_UPDATED` for `taskA`. `links.lookup{from:{project_task, taskA}, direction:'forward'}` returns `matches[]`; a `control.forEach` over matches calls `projects.update_task(match.id, mappedFields)`. No matches → no-op. Reverse sync uses `direction:'reverse'`.
 
 ### Secondary flows
@@ -162,9 +162,9 @@ KV (palette group `store`):
 - `store.list_namespaces` → `{namespaces:[{namespace, key_count}]}`
 
 Links (palette group `links`):
-- `links.upsert` `{namespace, left:{type,id}, right:{type,id}, relation?, attributes?}` → `{link_id, created}`
+- `links.upsert` `{namespace, from:{type,id}, to:{type,id}, relation?, attributes?}` → `{link_id, created}` (author-facing field names are `from`/`to`; the DB columns remain `left_*`/`right_*`)
 - `links.lookup` `{namespace, from:{type,id}, direction?='forward'|'reverse'|'either', relation?, right_type?, limit?<=200}` → `{matches:[{link_id, type, id, relation, attributes}]}`
-- `links.delete` `{namespace, left?, right?, relation?}` → `{deleted_count}` (≥1 of left/right required)
+- `links.delete` `{namespace, from?, to?, relation?}` → `{deleted_count}` (≥1 of from/to required)
 - `links.list` `{namespace, left_type?, right_type?, relation?, limit?, cursor?}` → `{items[], next_cursor}`
 - `links.list_namespaces` → `{namespaces:[{namespace, link_count}]}`
 
@@ -172,7 +172,7 @@ Links (palette group `links`):
 
 Add a "Data Store" catalog group in `runtime/designer/actionCatalog.ts` exposing `store.*` and `links.*`. `namespace` is free-text with autocomplete sourced from `*.list_namespaces`. `left/right` ids are populated from upstream action outputs via expressions (`{ $expr: "vars.created.task_id" }`). Three "label" fields — **namespace**, entity **`type`**, and link **`relation`** — share one UX: a **soft-enum combobox** that suggests (a) a curated constant list and (b) values already used in the chosen namespace (a lightweight `SELECT DISTINCT` helper, same idea as `list_namespaces`), while still accepting a custom free-text value. None are enforced enums at the DB/schema level (all stay free-form `text`). Curated defaults: types = `project_task`, `ticket`, `contact`, `client`, `project`, `appointment`, `quote`, …; relations = `related` (default), `mirrors`, `maps_to`, `blocks`, `duplicate_of`, `synced_with`.
 
-On `links.upsert` the author sets `relation` via that combobox (default `related`); on `links.lookup` an optional `relation` filter uses the same combobox (empty = match any relation). `left/right` ids are expression inputs sourced from upstream outputs (`{ $expr: "vars.created.task_id" }`). `direction` (forward/reverse/either) is a small segmented control.
+On `links.upsert` the author sets `relation` via that combobox (default `related`); on `links.lookup` an optional `relation` filter uses the same combobox (empty = match any relation). The `from`/`to` record ids are expression inputs sourced from upstream outputs (`{ $expr: "vars.created.task_id" }`). `direction` (forward/reverse/either) is a small segmented control. Author-facing labels use plain language (Collection, From record, To record, Relationship) with the engineer-y `idempotency_key` described as advanced/optional.
 
 **Components (design-system only; no native HTML controls).** All fields use AlgaPSA `@alga-psa/ui` components — never native `<select>`/`<input>`/`<textarea>`:
 - soft-enum comboboxes (namespace, entity `type`, `relation`) reuse the existing creatable-combobox pattern (`TagInput` / `ComboBoxFieldSelector` precedent): filtered suggestions + "add new" free text;

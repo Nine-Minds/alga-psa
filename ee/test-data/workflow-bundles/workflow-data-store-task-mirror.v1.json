@@ -95,13 +95,13 @@
                 "version": 1,
                 "inputMapping": {
                   "namespace": "project-task-mirror",
-                  "left": {
+                  "from": {
                     "type": "project_task",
                     "id": {
                       "$expr": "payload.taskId"
                     }
                   },
-                  "right": {
+                  "to": {
                     "type": "project_task",
                     "id": {
                       "$expr": "vars.createdMirrorTask.task_id"
@@ -187,13 +187,13 @@
                   "version": 1,
                   "inputMapping": {
                     "namespace": "project-task-mirror",
-                    "left": {
+                    "from": {
                       "type": "project_task",
                       "id": {
                         "$expr": "payload.taskId"
                       }
                     },
-                    "right": {
+                    "to": {
                       "type": "project_task",
                       "id": {
                         "$expr": "vars.createdMirrorTask.task_id"

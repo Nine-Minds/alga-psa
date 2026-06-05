@@ -789,48 +789,48 @@
         "description": "Générer des données structurées de workflow à partir d’une invite via le fournisseur d’IA configuré."
       },
       "store.get": {
-        "label": "Get Stored Value",
-        "description": "Read a persisted workflow key/value entry."
+        "label": "Obtenir la valeur stockée",
+        "description": "Lire une entrée clé/valeur de workflow persistée."
       },
       "store.set": {
-        "label": "Set Stored Value",
-        "description": "Persist a workflow key/value entry."
+        "label": "Définir la valeur stockée",
+        "description": "Persister une entrée clé/valeur de workflow."
       },
       "store.delete": {
-        "label": "Delete Stored Value",
-        "description": "Delete a persisted workflow key/value entry."
+        "label": "Supprimer la valeur stockée",
+        "description": "Supprimer une entrée clé/valeur de workflow persistée."
       },
       "store.increment": {
-        "label": "Increment Stored Number",
-        "description": "Atomically increment a persisted workflow number."
+        "label": "Incrémenter le nombre stocké",
+        "description": "Incrémenter de façon atomique un nombre de workflow persisté."
       },
       "store.list": {
-        "label": "List Stored Values",
-        "description": "List persisted workflow key/value entries in a namespace."
+        "label": "Lister les valeurs stockées",
+        "description": "Lister les entrées clé/valeur de workflow persistées dans un espace de noms."
       },
       "store.list_namespaces": {
-        "label": "List Store Namespaces",
-        "description": "List workflow data-store namespaces used by this tenant."
+        "label": "Lister les espaces de noms du magasin",
+        "description": "Lister les espaces de noms du magasin de données de workflow utilisés par ce locataire."
       },
       "links.upsert": {
-        "label": "Upsert Entity Link",
-        "description": "Create or update a persisted link between two workflow entities."
+        "label": "Créer ou mettre à jour un lien d'entité",
+        "description": "Créer ou mettre à jour un lien persisté entre deux entités de workflow."
       },
       "links.lookup": {
-        "label": "Lookup Entity Links",
-        "description": "Find persisted entity links by source entity and direction."
+        "label": "Rechercher des liens d'entité",
+        "description": "Rechercher des liens d'entité persistés par entité source et direction."
       },
       "links.delete": {
-        "label": "Delete Entity Links",
-        "description": "Delete persisted entity links by side and optional relation."
+        "label": "Supprimer des liens d'entité",
+        "description": "Supprimer des liens d'entité persistés par côté et relation facultative."
       },
       "links.list": {
-        "label": "List Entity Links",
-        "description": "List persisted entity links in a namespace."
+        "label": "Lister les liens d'entité",
+        "description": "Lister les liens d'entité persistés dans un espace de noms."
       },
       "links.list_namespaces": {
-        "label": "List Link Namespaces",
-        "description": "List workflow entity-link namespaces used by this tenant."
+        "label": "Lister les espaces de noms de liens",
+        "description": "Lister les espaces de noms de liens d'entité de workflow utilisés par ce locataire."
       }
     },
     "validation": {
@@ -977,8 +977,8 @@
           "description": "Actions IA"
         },
         "data-store": {
-          "label": "Data Store",
-          "description": "Read and write durable workflow state across runs."
+          "label": "Magasin de données",
+          "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
         }
       }
     },
@@ -1457,10 +1457,10 @@
       "title": "Demander à l’IA",
       "shortcutHint": "Ouvrir Quick Ask pour l’aide sur les transformations"
     },
-    "softEnumPlaceholder": "Select or enter value",
-    "softEnumSearchPlaceholder": "Search or enter a custom value",
-    "softEnumNoResults": "No suggestions",
-    "softEnumUseCustom": "Use \"{{value}}\""
+    "softEnumPlaceholder": "Sélectionner ou saisir une valeur",
+    "softEnumSearchPlaceholder": "Rechercher ou saisir une valeur personnalisée",
+    "softEnumNoResults": "Aucune suggestion",
+    "softEnumUseCustom": "Utiliser « {{value}} »"
   },
   "schemaReference": {
     "selectAction": "Sélectionnez une action pour voir son schéma d’entrée/sortie",
@@ -2038,21 +2038,21 @@
       "expression": "Expression avancée"
     },
     "workflowEntityType": {
-      "project_task": "Project task",
+      "project_task": "Tâche de projet",
       "ticket": "Ticket",
       "contact": "Contact",
       "client": "Client",
-      "project": "Project",
-      "appointment": "Appointment",
-      "quote": "Quote"
+      "project": "Projet",
+      "appointment": "Rendez-vous",
+      "quote": "Devis"
     },
     "workflowLinkRelation": {
-      "related": "Related",
-      "mirrors": "Mirrors",
-      "maps_to": "Maps to",
-      "blocks": "Blocks",
-      "duplicate_of": "Duplicate of",
-      "synced_with": "Synced with"
+      "related": "Associé",
+      "mirrors": "Reflète",
+      "maps_to": "Correspond à",
+      "blocks": "Bloque",
+      "duplicate_of": "Doublon de",
+      "synced_with": "Synchronisé avec"
     }
   },
   "automation": {

@@ -33,6 +33,20 @@ describe('workflow data-store action registration metadata', () => {
     }
   });
 
+  it('serializes reused entity-ref fields (left/right) as inline objects, not unresolved $refs', () => {
+    const registry = getActionRegistryV2();
+    const upsert = registry.get('links.upsert', 1);
+    expect(upsert).toBeDefined();
+    const schema = zodToWorkflowJsonSchema(upsert!.inputSchema, { name: 'links.upsert@1.input' }) as any;
+    const root = schema.definitions?.['links.upsert@1.input'] ?? schema;
+    // Internal subschema refs would break the designer's field editor (renders as "string").
+    expect(JSON.stringify(root)).not.toContain('$ref');
+    for (const side of ['from', 'to'] as const) {
+      expect(root.properties?.[side]?.type, `${side} should be an object`).toBe('object');
+      expect(Object.keys(root.properties?.[side]?.properties ?? {}).sort()).toEqual(['id', 'type']);
+    }
+  });
+
   it('T001: registers store and links actions with labels and side-effect/idempotency metadata', () => {
     const registry = getActionRegistryV2();
     const expectedLabels: Record<string, string> = {
@@ -111,7 +125,7 @@ describe('workflow data-store action registration metadata', () => {
     const lookupProps = lookupSchema.properties;
 
     expect(upsertProps.namespace['x-workflow-editor'].softEnum.suggestionKind).toBe('workflow-data-store-namespace');
-    expect(upsertProps.left.properties.type['x-workflow-editor'].softEnum).toMatchObject({
+    expect(upsertProps.from.properties.type['x-workflow-editor'].softEnum).toMatchObject({
       component: 'soft-enum-combobox',
       suggestionKind: 'workflow-entity-type',
       namespaceField: 'namespace',
@@ -123,7 +137,7 @@ describe('workflow data-store action registration metadata', () => {
       namespaceField: 'namespace',
       allowCustomValue: true,
     });
-    expect(upsertProps.left.properties.id['x-workflow-editor']).toMatchObject({
+    expect(upsertProps.from.properties.id['x-workflow-editor']).toMatchObject({
       kind: 'text',
       allowsDynamicReference: true,
     });

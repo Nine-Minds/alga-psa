@@ -27,7 +27,7 @@ const storeNamespaceEditorMetadata: WorkflowJsonSchemaMetadata = {
     kind: 'custom',
     inline: { mode: 'input' },
     allowsDynamicReference: true,
-    fixedValueHint: 'Namespace',
+    fixedValueHint: 'Collection',
     softEnum: {
       component: 'soft-enum-combobox',
       suggestionKind: 'workflow-data-store-namespace',
@@ -39,13 +39,13 @@ const storeNamespaceEditorMetadata: WorkflowJsonSchemaMetadata = {
 
 const namespaceSchema = withWorkflowJsonSchemaMetadata(
   z.string().trim().min(1).max(MAX_LABEL_LENGTH),
-  'Data-store namespace',
+  'Collection that groups related values together, like a folder (e.g. invoice-dunning-sent).',
   storeNamespaceEditorMetadata
 );
 
 const keySchema = withWorkflowJsonSchemaMetadata(
   z.string().trim().min(1).max(MAX_LABEL_LENGTH),
-  'Data-store key',
+  'The name to save this value under (often an id). Read it back later with the same key.',
   {
     'x-workflow-editor': {
       kind: 'text',
@@ -56,7 +56,7 @@ const keySchema = withWorkflowJsonSchemaMetadata(
   }
 );
 
-const jsonValueSchema = withWorkflowJsonSchemaMetadata(z.any(), 'JSON value to persist', {
+const jsonValueSchema = withWorkflowJsonSchemaMetadata(z.any(), 'The value to save — text, a number, true/false, or any JSON (including a whole payload).', {
   'x-workflow-editor': {
     kind: 'json',
     inline: { mode: 'textarea' },
@@ -65,8 +65,11 @@ const jsonValueSchema = withWorkflowJsonSchemaMetadata(z.any(), 'JSON value to p
   },
 });
 
-const idempotencyKeySchema = z.string().trim().min(1).max(MAX_LABEL_LENGTH).optional();
-const valueTypeSchema = z.enum(['string', 'number', 'boolean', 'json']).default('json');
+const idempotencyKeySchema = z.string().trim().min(1).max(MAX_LABEL_LENGTH)
+  .describe('(Advanced) Optional. Prevents duplicate writes if the step retries; leave blank and the workflow fills it in automatically.')
+  .optional();
+const valueTypeSchema = z.enum(['string', 'number', 'boolean', 'json']).default('json')
+  .describe('How to treat the value — usually leave as JSON.');
 const cursorSchema = z.union([z.number().int().nonnegative(), z.string().trim().min(1)]).optional();
 
 const storeRecordOutputSchema = z.object({
@@ -99,8 +102,12 @@ const setInputSchema = z.object({
   key: keySchema,
   value: jsonValueSchema,
   value_type: valueTypeSchema.optional(),
-  ttl_seconds: z.number().int().positive().max(31_536_000).optional(),
-  if_revision: z.number().int().nonnegative().optional(),
+  ttl_seconds: z.number().int().positive().max(31_536_000)
+    .describe('Optional. Auto-delete this value after N seconds (e.g. 3600 = 1 hour). Leave blank to keep it indefinitely.')
+    .optional(),
+  if_revision: z.number().int().nonnegative()
+    .describe('(Advanced) Only update if the saved version matches this number; use 0 to create only when missing.')
+    .optional(),
   idempotency_key: idempotencyKeySchema,
 });
 
@@ -122,8 +129,8 @@ const deleteOutputSchema = z.object({
 const incrementInputSchema = z.object({
   namespace: namespaceSchema,
   key: keySchema,
-  by: z.number().finite().default(1),
-  initial: z.number().finite().default(0),
+  by: z.number().finite().default(1).describe('How much to add (default 1; use a negative number to subtract).'),
+  initial: z.number().finite().default(0).describe('Starting value if the key does not exist yet (default 0).'),
   idempotency_key: idempotencyKeySchema,
 });
 

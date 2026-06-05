@@ -31,34 +31,36 @@ const softEnumText = (
     },
   });
 
-const namespaceSchema = softEnumText('Entity-link namespace', 'Namespace', {
+const namespaceSchema = softEnumText('Collection that groups related links together, like a folder (e.g. project-task-mirror).', 'Collection', {
   component: 'soft-enum-combobox',
   suggestionKind: 'workflow-data-store-namespace',
   suggestionActionIds: ['links.list_namespaces', 'store.list_namespaces'],
   allowCustomValue: true,
 });
-const entityTypeSchema = softEnumText('Entity type', 'Entity type', {
+const entityTypeSchema = softEnumText('What kind of record this is (e.g. project_task, ticket, contact).', 'Record type', {
   component: 'soft-enum-combobox',
   suggestionKind: 'workflow-entity-type',
   namespaceField: 'namespace',
   allowCustomValue: true,
 });
-const relationSchema = softEnumText('Entity-link relation', 'Relation', {
+const relationSchema = softEnumText('How the two records are related (e.g. mirrors, maps_to).', 'Relationship', {
   component: 'soft-enum-combobox',
   suggestionKind: 'workflow-link-relation',
   namespaceField: 'namespace',
   allowCustomValue: true,
 });
-const entityIdSchema = withWorkflowJsonSchemaMetadata(z.string().trim().min(1).max(MAX_LABEL_LENGTH), 'Entity id', {
+const entityIdSchema = withWorkflowJsonSchemaMetadata(z.string().trim().min(1).max(MAX_LABEL_LENGTH), 'The record id — usually mapped from an earlier step or the trigger payload.', {
   'x-workflow-editor': {
     kind: 'text',
     inline: { mode: 'input' },
     allowsDynamicReference: true,
-    fixedValueHint: 'Entity id',
+    fixedValueHint: 'Record id',
   },
 });
 
-const idempotencyKeySchema = z.string().trim().min(1).max(MAX_LABEL_LENGTH).optional();
+const idempotencyKeySchema = z.string().trim().min(1).max(MAX_LABEL_LENGTH)
+  .describe('(Advanced) Optional. Prevents duplicate writes if the step retries; leave blank and the workflow fills it in automatically.')
+  .optional();
 const cursorSchema = z.union([z.number().int().nonnegative(), z.string().trim().min(1)]).optional();
 
 const entityRefSchema = z.object({
@@ -66,11 +68,14 @@ const entityRefSchema = z.object({
   id: entityIdSchema,
 });
 
+const fromRefSchema = entityRefSchema.describe('The record this link starts from.');
+const toRefSchema = entityRefSchema.describe('The record this link points to.');
+
 const linkItemOutputSchema = z.object({
   link_id: z.string().uuid(),
   namespace: z.string(),
-  left: z.object({ type: z.string(), id: z.string() }),
-  right: z.object({ type: z.string(), id: z.string() }),
+  from: z.object({ type: z.string(), id: z.string() }),
+  to: z.object({ type: z.string(), id: z.string() }),
   relation: z.string(),
   attributes: z.record(z.unknown()),
   created_at: z.string().datetime(),
@@ -79,10 +84,10 @@ const linkItemOutputSchema = z.object({
 
 const upsertInputSchema = z.object({
   namespace: namespaceSchema,
-  left: entityRefSchema,
-  right: entityRefSchema,
+  from: fromRefSchema,
+  to: toRefSchema,
   relation: relationSchema.default('related'),
-  attributes: z.record(z.unknown()).default({}),
+  attributes: z.record(z.unknown()).default({}).describe('Optional extra details to store on the link (advanced).'),
   idempotency_key: idempotencyKeySchema,
 });
 
@@ -93,10 +98,11 @@ const upsertOutputSchema = z.object({
 
 const lookupInputSchema = z.object({
   namespace: namespaceSchema,
-  from: entityRefSchema,
-  direction: z.enum(['forward', 'reverse', 'either']).default('forward'),
+  from: fromRefSchema,
+  direction: z.enum(['forward', 'reverse', 'either']).default('forward')
+    .describe('Which way to follow the link: forward (from → to), reverse (to → from), or either.'),
   relation: relationSchema.optional(),
-  right_type: entityTypeSchema.optional(),
+  to_type: entityTypeSchema.optional(),
   limit: z.number().int().positive().max(200).default(100),
 });
 
@@ -112,13 +118,13 @@ const lookupOutputSchema = z.object({
 
 const deleteInputSchema = z.object({
   namespace: namespaceSchema,
-  left: entityRefSchema.optional(),
-  right: entityRefSchema.optional(),
+  from: fromRefSchema.optional(),
+  to: toRefSchema.optional(),
   relation: relationSchema.optional(),
   idempotency_key: idempotencyKeySchema,
-}).refine((input) => Boolean(input.left || input.right), {
-  message: 'left or right is required',
-  path: ['left'],
+}).refine((input) => Boolean(input.from || input.to), {
+  message: 'from or to is required',
+  path: ['from'],
 });
 
 const deleteOutputSchema = z.object({
@@ -150,8 +156,8 @@ const listNamespacesOutputSchema = z.object({
 const toLinkItem = (item: Awaited<ReturnType<typeof WorkflowEntityLinkModel.list>>['items'][number]) => ({
   link_id: item.link_id,
   namespace: item.namespace,
-  left: { type: item.left_type, id: item.left_id },
-  right: { type: item.right_type, id: item.right_id },
+  from: { type: item.left_type, id: item.left_id },
+  to: { type: item.right_type, id: item.right_id },
   relation: item.relation,
   attributes: item.attributes ?? {},
   created_at: new Date(item.created_at).toISOString(),
@@ -182,8 +188,8 @@ export function registerEntityLinkActions(): void {
       await requirePermission(ctx, tx, workflowPermission.manage);
       const result = await WorkflowEntityLinkModel.upsert(tx.trx, tx.tenantId, {
         namespace: input.namespace,
-        left: toEntityRef(input.left),
-        right: toEntityRef(input.right),
+        left: toEntityRef(input.from),
+        right: toEntityRef(input.to),
         relation: input.relation,
         attributes: input.attributes,
         created_by_run_id: ctx.runId,
@@ -192,8 +198,8 @@ export function registerEntityLinkActions(): void {
         operation: 'links.upsert',
         changedData: {
           namespace: input.namespace,
-          left: toEntityRef(input.left),
-          right: toEntityRef(input.right),
+          from: toEntityRef(input.from),
+          to: toEntityRef(input.to),
           relation: input.relation,
           link_id: result.record.link_id,
         },
@@ -222,7 +228,7 @@ export function registerEntityLinkActions(): void {
         from: toEntityRef(input.from),
         direction: input.direction,
         relation: input.relation,
-        right_type: input.right_type,
+        right_type: input.to_type,
         limit: input.limit,
       });
     }),
@@ -246,8 +252,8 @@ export function registerEntityLinkActions(): void {
       try {
         deletedCount = await WorkflowEntityLinkModel.delete(tx.trx, tx.tenantId, {
           namespace: input.namespace,
-          left: input.left ? toEntityRef(input.left) : undefined,
-          right: input.right ? toEntityRef(input.right) : undefined,
+          left: input.from ? toEntityRef(input.from) : undefined,
+          right: input.to ? toEntityRef(input.to) : undefined,
           relation: input.relation,
         });
       } catch (error) {
@@ -255,14 +261,14 @@ export function registerEntityLinkActions(): void {
           throwActionError(ctx, {
             category: 'ValidationError',
             code: 'VALIDATION_ERROR',
-            message: 'links.delete requires left or right criteria',
+            message: 'links.delete requires a from or to record',
           });
         }
         throw error;
       }
       await writeRunAudit(ctx, tx, {
         operation: 'links.delete',
-        changedData: { namespace: input.namespace, left: input.left ?? null, right: input.right ?? null, relation: input.relation ?? null, deleted_count: deletedCount },
+        changedData: { namespace: input.namespace, from: input.from ?? null, to: input.to ?? null, relation: input.relation ?? null, deleted_count: deletedCount },
         details: { action_id: 'links.delete', action_version: 1, namespace: input.namespace },
       });
       return { deleted_count: deletedCount };

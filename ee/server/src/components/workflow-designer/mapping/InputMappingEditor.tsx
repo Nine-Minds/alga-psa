@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
+import { SearchableSelect, type SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   useWorkflowEntityTypeOptions,
   useWorkflowLinkRelationOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import { listWorkflowDataStoreNamespacesAction } from '@alga-psa/workflows/actions';
 import {
   ExpressionEditorField,
   type ExpressionContext,
@@ -1037,6 +1038,18 @@ const FixedValueEditorShell: React.FC<{
   );
 };
 
+// Cached once per session so the namespace combobox does not re-fetch for every
+// field instance / re-render. Failures fall back to free-text-only (empty list).
+let workflowDataStoreNamespacesPromise: Promise<string[]> | null = null;
+const loadWorkflowDataStoreNamespaces = (): Promise<string[]> => {
+  if (!workflowDataStoreNamespacesPromise) {
+    workflowDataStoreNamespacesPromise = Promise.resolve()
+      .then(() => listWorkflowDataStoreNamespacesAction())
+      .catch(() => [] as string[]);
+  }
+  return workflowDataStoreNamespacesPromise;
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
@@ -1077,6 +1090,21 @@ const LiteralValueEditor: React.FC<{
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
   const softEnum = fieldEditor?.softEnum;
+  const isNamespaceSoftEnum =
+    softEnum?.component === 'soft-enum-combobox' &&
+    softEnum?.suggestionKind === 'workflow-data-store-namespace' &&
+    (softEnum?.suggestionActionIds?.length ?? 0) > 0;
+  const [dynamicNamespaceOptions, setDynamicNamespaceOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isNamespaceSoftEnum) return;
+    let active = true;
+    loadWorkflowDataStoreNamespaces().then((namespaces) => {
+      if (active) setDynamicNamespaceOptions(namespaces);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isNamespaceSoftEnum]);
   const pickerResource = fieldEditor?.picker?.resource;
   const hasMultiUserPickerEditor =
     hasPickerEditor &&
@@ -1228,11 +1256,17 @@ const LiteralValueEditor: React.FC<{
       }
     }
 
+    for (const namespaceValue of dynamicNamespaceOptions) {
+      if (namespaceValue.trim().length > 0 && !optionLabels.has(namespaceValue)) {
+        optionLabels.set(namespaceValue, namespaceValue);
+      }
+    }
+
     if (currentValue && !optionLabels.has(currentValue)) {
       optionLabels.set(currentValue, currentValue);
     }
 
-    const options: SelectOption[] = Array.from(optionLabels, ([optionValue, label]) => ({
+    const options: SearchableSelectOption[] = Array.from(optionLabels, ([optionValue, label]) => ({
       value: optionValue,
       label,
     }));
