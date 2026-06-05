@@ -26,6 +26,12 @@ export interface LicenseStatus {
   /** Connected-appliance status */
   connected: boolean;
   lastCheckinAt: string | null;
+  /**
+   * This install's tenant UUID. Shown on the License page so a customer can
+   * supply it when purchasing an air-gapped/manual license — the issuer binds
+   * the key to this tenant (its `aud`) so it can't be reused on another install.
+   */
+  tenantId: string | null;
 }
 
 async function assertAdminPermission() {
@@ -50,7 +56,7 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
 
   const row = await getLicenseStateRow();
   if (!row) {
-    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null };
+    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null };
   }
 
   // Pass the tenant so a tenant-bound license issued for a different install
@@ -72,6 +78,7 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
     trialUsed: row.trial_started_at !== null,
     connected: !!(row.appliance_credential && row.check_in_url),
     lastCheckinAt: row.last_checkin_at?.toISOString() ?? null,
+    tenantId: user.tenant ?? null,
   };
 }
 
