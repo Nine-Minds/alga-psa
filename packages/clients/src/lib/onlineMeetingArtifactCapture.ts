@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
-import { StorageService } from '@alga-psa/storage/StorageService';
 import type { IOnlineMeeting, IOnlineMeetingArtifact, OnlineMeetingArtifactType } from '@alga-psa/types';
 import OnlineMeetingModel from '../models/onlineMeeting';
 
@@ -64,36 +63,18 @@ export interface DownloadRecordingInput {
   actorUserId: string;
 }
 
-type EeTeamsMeetingModule = {
-  fetchMeetingArtifacts?: (input: { tenantId: string; meetingId: string; organizerUserId: string }) => Promise<TeamsMeetingArtifactPayload[]>;
-  resolveTeamsMeetingGraphConfig?: (tenantId: string) => Promise<{
-    clientId: string;
-    clientSecret: string;
-    microsoftTenantId: string;
-  } | null>;
-  fetchMicrosoftGraphAppToken?: (input: {
-    tenantAuthority: string;
-    clientId: string;
-    clientSecret: string;
-  }) => Promise<string>;
-};
-
-async function loadEeTeamsMeetingModule(): Promise<EeTeamsMeetingModule> {
-  if (!isEnterprise) {
-    return {};
-  }
-
-  try {
-    return (await import('@alga-psa/ee-microsoft-teams/lib')) as EeTeamsMeetingModule;
-  } catch (error) {
-    console.warn('[OnlineMeetingArtifactCapture] EE Teams module unavailable', error);
-    return {};
-  }
+// EE Microsoft Graph access (fetching artifacts, downloading recording blobs) is injected
+// by the caller via `dependencies` so this clients-layer orchestrator never imports the
+// EE Teams package directly. Callers that need real capture (the proactive webhook handler
+// and the cross-feature refresh action) supply `fetchArtifacts` / `downloadRecording`;
+// when they are not provided (e.g. CE, where the edition gate short-circuits anyway) the
+// defaults are no-ops.
+async function noopFetchArtifacts(): Promise<TeamsMeetingArtifactPayload[]> {
+  return [];
 }
 
-async function defaultFetchArtifacts(input: { tenantId: string; meetingId: string; organizerUserId: string }): Promise<TeamsMeetingArtifactPayload[]> {
-  const ee = await loadEeTeamsMeetingModule();
-  return ee.fetchMeetingArtifacts ? ee.fetchMeetingArtifacts(input) : [];
+async function noopDownloadRecording(): Promise<string | null> {
+  return null;
 }
 
 async function loadCaptureSettings(tenantId: string): Promise<CaptureSettings> {
@@ -204,50 +185,6 @@ export async function createTranscriptDocument(input: CreateTranscriptDocumentIn
   return documentId;
 }
 
-export async function downloadRecordingToFileStore(input: DownloadRecordingInput): Promise<string | null> {
-  if (!input.artifact.contentUrl) {
-    return null;
-  }
-
-  const ee = await loadEeTeamsMeetingModule();
-  if (!ee.resolveTeamsMeetingGraphConfig || !ee.fetchMicrosoftGraphAppToken) {
-    return null;
-  }
-
-  const config = await ee.resolveTeamsMeetingGraphConfig(input.tenantId);
-  if (!config) {
-    return null;
-  }
-
-  const accessToken = await ee.fetchMicrosoftGraphAppToken({
-    tenantAuthority: config.microsoftTenantId,
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
-  });
-  const response = await fetch(input.artifact.contentUrl, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download Teams recording (${response.status})`);
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const file = await StorageService.uploadFile(input.tenantId, buffer, `${input.meeting.subject || 'teams-meeting'}-${input.artifact.providerArtifactId}.mp4`, {
-    mime_type: response.headers.get('content-type') || 'video/mp4',
-    uploaded_by_id: input.actorUserId,
-    metadata: {
-      source: 'teams_online_meeting_recording',
-      meeting_id: input.meeting.meeting_id,
-      provider_artifact_id: input.artifact.providerArtifactId,
-    },
-  });
-
-  return file.file_id;
-}
-
 function findExistingArtifact(
   artifacts: IOnlineMeetingArtifact[],
   artifact: TeamsMeetingArtifactPayload,
@@ -277,11 +214,11 @@ export async function fetchAndPersistMeetingArtifacts(
   const upsertArtifact = dependencies.upsertArtifact ?? OnlineMeetingModel.upsertArtifact.bind(OnlineMeetingModel);
   const updateMeeting = dependencies.updateMeeting ?? OnlineMeetingModel.update.bind(OnlineMeetingModel);
   const isEnterpriseEdition = dependencies.isEnterpriseEdition ?? (() => isEnterprise);
-  const fetchArtifacts = dependencies.fetchArtifacts ?? defaultFetchArtifacts;
+  const fetchArtifacts = dependencies.fetchArtifacts ?? noopFetchArtifacts;
   const loadSettings = dependencies.loadSettings ?? loadCaptureSettings;
   const resolveMeetingEntity = dependencies.loadMeetingEntity ?? loadMeetingEntity;
   const persistTranscript = dependencies.createTranscriptDocument ?? createTranscriptDocument;
-  const persistRecording = dependencies.downloadRecording ?? downloadRecordingToFileStore;
+  const persistRecording = dependencies.downloadRecording ?? noopDownloadRecording;
   const revalidate = dependencies.revalidate ?? revalidateMeeting;
   const now = dependencies.now ?? (() => new Date());
 

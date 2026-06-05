@@ -17,7 +17,7 @@ import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
-import { deleteInteraction, refreshMeetingRecordings } from '@alga-psa/clients/actions';
+import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -92,7 +92,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const { openDrawer, goBack, closeDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
   const { launchTimeEntry, renderAgentSchedule } = useSchedulingCallbacks();
-  const { renderQuickAddTicket } = useClientCrossFeature();
+  const { renderQuickAddTicket, refreshMeetingRecordings } = useClientCrossFeature();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -291,7 +291,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   };
 
   const handleRefreshMeetingRecordings = async () => {
-    if (!showOnlineMeetingRecordingControls || !interaction.online_meeting?.meeting_id) {
+    if (!showOnlineMeetingRecordingControls || !interaction.online_meeting?.meeting_id || !refreshMeetingRecordings) {
       return;
     }
 

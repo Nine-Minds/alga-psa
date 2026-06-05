@@ -223,12 +223,18 @@ describe('online meeting artifact capture', () => {
     expect(harness.artifacts[0].document_id).toBe('doc-existing');
   });
 
-  it('T062 refreshMeetingRecordings invokes the shared capture handler with the authenticated user', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, '../actions/onlineMeetingActions.ts'), 'utf8');
+  it('T062 refreshMeetingRecordings invokes the shared capture handler with EE deps injected from the composition layer', () => {
+    // refreshMeetingRecordings lives in @alga-psa/scheduling (it needs EE Graph access), and
+    // injects the capture deps so the clients orchestrator never depends on ee-microsoft-teams.
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../../scheduling/src/actions/onlineMeetingArtifactActions.ts'),
+      'utf8',
+    );
 
     expect(source).toContain('refreshMeetingRecordings');
     expect(source).toContain('fetchAndPersistMeetingArtifacts');
     expect(source).toContain('actorUserId: user.user_id');
+    expect(source).toContain('buildTeamsArtifactCaptureDeps');
   });
 
   it('T077 does not fetch or mutate artifacts when Enterprise capture is disabled', async () => {

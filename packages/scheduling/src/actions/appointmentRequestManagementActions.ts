@@ -38,7 +38,6 @@ import {
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
-import { createInteractionWithSideEffects } from '@alga-psa/clients/actions/interactionCreateHelper';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -973,6 +972,9 @@ export const approveAppointmentRequest = withAuth(async (
           throw new Error('Online Meeting interaction type is not configured');
         }
 
+        // Dynamic import: cross-vertical (scheduling -> clients) idiom; see
+        // custom-rules/no-feature-to-feature-imports.
+        const { createInteractionWithSideEffects } = await import('@alga-psa/clients/actions/interactionCreateHelper');
         const interactionResult = await createInteractionWithSideEffects({
           tenant,
           trx,

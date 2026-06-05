@@ -3,7 +3,6 @@
 import type { IOnlineMeeting } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import OnlineMeetingModel from '../models/onlineMeeting';
-import { fetchAndPersistMeetingArtifacts } from '../lib/onlineMeetingArtifactCapture';
 
 export const getOnlineMeetingForInteraction = withAuth(async (
   user,
@@ -21,22 +20,6 @@ export const getOnlineMeetingForInteraction = withAuth(async (
   return await OnlineMeetingModel.getByInteractionId(interactionId, tenant);
 });
 
-export const refreshMeetingRecordings = withAuth(async (
-  user,
-  { tenant },
-  meetingId: string,
-): Promise<IOnlineMeeting> => {
-  if (!meetingId) {
-    throw new Error('Meeting ID is required');
-  }
-
-  if (!(await hasPermission(user, 'interaction', 'update'))) {
-    throw new Error('Forbidden');
-  }
-
-  return await fetchAndPersistMeetingArtifacts({
-    tenantId: tenant,
-    meetingId,
-    actorUserId: user.user_id,
-  });
-});
+// `refreshMeetingRecordings` now lives in @alga-psa/scheduling/actions (it needs EE Microsoft
+// Graph access, which clients must not depend on). The clients UI reaches it through the
+// ClientCrossFeature context.

@@ -8,7 +8,7 @@ import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketA
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { ContractWizard, ContractDialog } from '@alga-psa/billing/components';
-import { getTeamsMeetingCapability, scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions';
+import { getTeamsMeetingCapability, scheduleTeamsMeeting as scheduleTeamsMeetingAction, refreshMeetingRecordings } from '@alga-psa/scheduling/actions';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
@@ -127,6 +127,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderContractQuickAdd,
       getTeamsMeetingCapability,
       scheduleTeamsMeeting,
+      refreshMeetingRecordings,
       getSlaPolicies,
     }),
     [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd]

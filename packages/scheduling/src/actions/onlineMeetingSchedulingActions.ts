@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { createInteractionWithSideEffects } from '@alga-psa/clients/actions/interactionCreateHelper';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type { IScheduleEntry } from '@alga-psa/types';
 import { resolveTeamsMeetingService, type TeamsMeetingAttendee } from '../lib/teamsMeetingService';
@@ -149,6 +148,9 @@ export const scheduleTeamsMeeting = withAuth(async (
           throw new Error('Online Meeting interaction type is not configured');
         }
 
+        // Dynamic import: the cross-vertical (scheduling -> clients) idiom that keeps the
+        // static dependency graph clean. See custom-rules/no-feature-to-feature-imports.
+        const { createInteractionWithSideEffects } = await import('@alga-psa/clients/actions/interactionCreateHelper');
         const interactionResult = await createInteractionWithSideEffects({
           tenant,
           trx,

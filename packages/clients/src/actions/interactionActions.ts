@@ -5,6 +5,7 @@
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
+import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
@@ -148,18 +149,60 @@ export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promis
   }
 });
 
+// Online meetings (and their recording/transcript artifacts) hang off an interaction
+// via interaction_id with application-level integrity only (Citus, no FK cascade), so
+// they must be cleaned up explicitly when the interaction is deleted — otherwise they
+// orphan when a client/contact is removed. Returns stored recording file_ids to delete
+// from object storage after the DB transaction commits.
+async function cleanupInteractionOnlineMeetings(
+  trx: Knex.Transaction,
+  tenant: string,
+  interactionId: string,
+): Promise<string[]> {
+  const meetings = await trx('online_meetings')
+    .where({ tenant, interaction_id: interactionId })
+    .select('meeting_id');
+  if (meetings.length === 0) {
+    return [];
+  }
+  const meetingIds = meetings.map((m) => m.meeting_id);
+
+  const artifacts = await trx('online_meeting_artifacts')
+    .where({ tenant })
+    .whereIn('meeting_id', meetingIds)
+    .select('document_id', 'file_id');
+
+  const documentIds = artifacts.map((a) => a.document_id).filter((id): id is string => Boolean(id));
+  const fileIds = artifacts.map((a) => a.file_id).filter((id): id is string => Boolean(id));
+
+  await trx('online_meeting_artifacts').where({ tenant }).whereIn('meeting_id', meetingIds).del();
+  await trx('online_meetings').where({ tenant }).whereIn('meeting_id', meetingIds).del();
+
+  // Transcript content is stored as internal documents; remove them with the meeting.
+  if (documentIds.length > 0) {
+    await trx('document_block_content').where({ tenant }).whereIn('document_id', documentIds).del();
+    await trx('document_associations').where({ tenant }).whereIn('document_id', documentIds).del();
+    await trx('documents').where({ tenant }).whereIn('document_id', documentIds).del();
+  }
+
+  return fileIds;
+}
+
 export const deleteInteraction = withAuth(async (user, { tenant }, interactionId: string): Promise<void> => {
   try {
     const { knex } = await createTenantKnex();
 
-    const deletedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existing = await trx('interactions')
+    const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existingRow = await trx('interactions')
         .where({
           interaction_id: interactionId,
           tenant
         })
         .select('interaction_id', 'client_id', 'contact_name_id', 'user_id')
         .first();
+
+      // Cascade-delete the linked online meeting, its artifacts, and transcript documents.
+      const fileIds = await cleanupInteractionOnlineMeetings(trx, tenant, interactionId);
 
       // Delete the interaction
       const deletedCount = await trx('interactions')
@@ -173,8 +216,20 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
         throw new Error('Interaction not found or could not be deleted');
       }
 
-      return existing;
+      return { existing: existingRow, recordingFileIds: fileIds };
     });
+
+    const deletedInteraction = existing;
+
+    // Stored recording blobs live in object storage, not the DB; remove them after commit
+    // (best-effort: a storage failure must not roll back the interaction deletion).
+    for (const fileId of recordingFileIds) {
+      try {
+        await StorageService.deleteFile(fileId, user.user_id);
+      } catch (storageError) {
+        console.warn(`[deleteInteraction] Failed to delete recording file ${fileId}:`, storageError);
+      }
+    }
 
     await publishInteractionSearchEvent('INTERACTION_DELETED', tenant, interactionId, {
       clientId: deletedInteraction?.client_id,

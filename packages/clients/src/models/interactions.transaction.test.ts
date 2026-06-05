@@ -8,6 +8,14 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
 }));
 
+// getById hydrates the linked online meeting via OnlineMeetingModel (its own createTenantKnex);
+// this suite focuses on interaction transaction semantics, so stub it to "no meeting".
+vi.mock('./onlineMeeting', () => ({
+  default: {
+    getByInteractionId: vi.fn(async () => null),
+  },
+}));
+
 import InteractionModel from './interactions';
 
 type Row = Record<string, any>;

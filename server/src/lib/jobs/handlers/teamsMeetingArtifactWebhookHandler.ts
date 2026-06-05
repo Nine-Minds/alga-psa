@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { OnlineMeetingModel } from '@alga-psa/clients/models';
 import { fetchAndPersistMeetingArtifacts } from '@alga-psa/clients/lib/onlineMeetingArtifactCapture';
+import { buildTeamsArtifactCaptureDeps } from '@alga-psa/scheduling/actions';
 
 export interface TeamsMeetingArtifactSubscriptionRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -87,8 +88,9 @@ export async function processTeamsMeetingArtifactNotification(
     return;
   }
 
+  const captureDeps = await buildTeamsArtifactCaptureDeps();
   await fetchAndPersistMeetingArtifacts({
     tenantId: data.tenantId,
     meetingId: meeting.meeting_id,
-  });
+  }, captureDeps);
 }
