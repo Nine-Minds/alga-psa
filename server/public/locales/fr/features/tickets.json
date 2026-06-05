@@ -39,7 +39,8 @@
     "breached": "Violation",
     "paused": "En pause",
     "allResponseStatuses": "Tous les statuts de réponse",
-    "responseStatus": "Statut de réponse"
+    "responseStatus": "Statut de réponse",
+    "board": "Filtrer par tableau"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -377,7 +378,10 @@
       "onTrack": "Sur la bonne voie",
       "breached": "Violé",
       "paused": "En pause",
-      "bundled": "Regroupé"
+      "bundled": "Regroupé",
+      "activeBoards": "Tableaux actifs",
+      "inactiveBoards": "Tableaux inactifs",
+      "allBoards": "Tous les tableaux"
     },
     "selection": {
       "pageSelected_one": "Tous les {{count}} tickets de cette page sont sélectionnés.",
@@ -1266,5 +1270,17 @@
     "success": "Ticket #{{number}} supprimé avec succès.",
     "error": "Échec de la suppression du ticket. Veuillez réessayer.",
     "validationError": "Échec de la validation de la suppression. Veuillez réessayer."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inactif",
+    "noBoard": "Aucun tableau",
+    "selectedCount_one": "{{count}} tableau",
+    "selectedCount_other": "{{count}} tableaux",
+    "excludingPrefix": "hors {{name}}",
+    "excludingCount_one": "hors {{count}} tableau",
+    "excludingCount_other": "hors {{count}} tableaux",
+    "placeholder": "Filtrer par tableau",
+    "title": "Sélecteur de tableau",
+    "searchPlaceholder": "Rechercher des tableaux..."
   }
 }

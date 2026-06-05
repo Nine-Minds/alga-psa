@@ -39,7 +39,8 @@
     "breached": "Breached",
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
-    "responseStatus": "Response Status"
+    "responseStatus": "Response Status",
+    "board": "Filtrar por quadro"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -377,7 +378,10 @@
       "onTrack": "On Track",
       "breached": "Breached",
       "paused": "Paused",
-      "bundled": "Bundled"
+      "bundled": "Bundled",
+      "activeBoards": "Quadros ativos",
+      "inactiveBoards": "Quadros inativos",
+      "allBoards": "Todos os quadros"
     },
     "selection": {
       "pageSelected_one": "All {{count}} ticket on this page are selected.",
@@ -1266,5 +1270,17 @@
     "success": "Ticket #{{number}} excluído com sucesso.",
     "error": "Falha ao excluir o ticket. Tente novamente.",
     "validationError": "Falha ao validar a exclusão. Tente novamente."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inativo",
+    "noBoard": "Sem quadro",
+    "selectedCount_one": "{{count}} quadro",
+    "selectedCount_other": "{{count}} quadros",
+    "excludingPrefix": "exceto {{name}}",
+    "excludingCount_one": "exceto {{count}} quadro",
+    "excludingCount_other": "exceto {{count}} quadros",
+    "placeholder": "Filtrar por quadro",
+    "title": "Seletor de quadro",
+    "searchPlaceholder": "Pesquisar quadros..."
   }
 }

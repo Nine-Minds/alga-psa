@@ -747,6 +747,9 @@
       "assigning": "Assigning...",
       "confirm": "Assign Tasks",
       "teamReplaceNotice": "Tasks already assigned to a different team will have that team replaced."
+    },
+    "convertAdHocToTask": {
+      "title": "Converter em tarefa de projeto"
     }
   },
   "filters": {

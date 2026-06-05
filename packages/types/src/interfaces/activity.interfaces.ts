@@ -275,9 +275,10 @@ export function scheduleEntryToActivity(entry: IScheduleEntry): ScheduleActivity
     type: ActivityType.SCHEDULE,
     status: entry.status,
     priority: ActivityPriority.MEDIUM, // Default priority if not specified
-    startDate: entry.scheduled_start.toISOString(),
-    endDate: entry.scheduled_end.toISOString(),
-    dueDate: entry.scheduled_end.toISOString(),
+    // Times are optional for ad-hoc entries (personal to-dos with no schedule).
+    startDate: entry.scheduled_start ? entry.scheduled_start.toISOString() : undefined,
+    endDate: entry.scheduled_end ? entry.scheduled_end.toISOString() : undefined,
+    dueDate: entry.scheduled_end ? entry.scheduled_end.toISOString() : undefined,
     assignedTo: entry.assigned_user_ids,
     sourceId: entry.entry_id,
     sourceType: ActivityType.SCHEDULE,

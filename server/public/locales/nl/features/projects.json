@@ -747,6 +747,9 @@
       "assigning": "Toewijzen...",
       "confirm": "Taken toewijzen",
       "teamReplaceNotice": "Taken die al aan een ander team zijn toegewezen, worden aan het nieuwe team toegewezen."
+    },
+    "convertAdHocToTask": {
+      "title": "Omzetten naar projecttaak"
     }
   },
   "filters": {

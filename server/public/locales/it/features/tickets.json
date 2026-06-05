@@ -39,7 +39,8 @@
     "breached": "Violato",
     "paused": "In pausa",
     "allResponseStatuses": "Tutti gli stati di risposta",
-    "responseStatus": "Stato risposta"
+    "responseStatus": "Stato risposta",
+    "board": "Filtra per bacheca"
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -377,7 +378,10 @@
       "onTrack": "In linea",
       "breached": "Violato",
       "paused": "In pausa",
-      "bundled": "Raggruppati"
+      "bundled": "Raggruppati",
+      "activeBoards": "Bacheche attive",
+      "inactiveBoards": "Bacheche inattive",
+      "allBoards": "Tutte le bacheche"
     },
     "selection": {
       "pageSelected_one": "Tutti i {{count}} ticket di questa pagina sono selezionati.",
@@ -1266,5 +1270,17 @@
     "success": "Ticket #{{number}} eliminato con successo.",
     "error": "Impossibile eliminare il ticket. Riprova.",
     "validationError": "Impossibile convalidare l'eliminazione. Riprova."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inattivo",
+    "noBoard": "Nessuna bacheca",
+    "selectedCount_one": "{{count}} bacheca",
+    "selectedCount_other": "{{count}} bacheche",
+    "excludingPrefix": "esclusi {{name}}",
+    "excludingCount_one": "esclusa {{count}} bacheca",
+    "excludingCount_other": "escluse {{count}} bacheche",
+    "placeholder": "Filtra per bacheca",
+    "title": "Selettore bacheca",
+    "searchPlaceholder": "Cerca bacheche..."
   }
 }

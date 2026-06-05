@@ -39,7 +39,8 @@
     "breached": "Verletzt",
     "paused": "Pausiert",
     "allResponseStatuses": "Alle Antwortstatus",
-    "responseStatus": "Antwortstatus"
+    "responseStatus": "Antwortstatus",
+    "board": "Nach Board filtern"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -377,7 +378,10 @@
       "onTrack": "Im Plan",
       "breached": "Verletzt",
       "paused": "Pausiert",
-      "bundled": "Gebündelt"
+      "bundled": "Gebündelt",
+      "activeBoards": "Aktive Boards",
+      "inactiveBoards": "Inaktive Boards",
+      "allBoards": "Alle Boards"
     },
     "selection": {
       "pageSelected_one": "Alle {{count}} Tickets auf dieser Seite sind ausgewählt.",
@@ -1266,5 +1270,17 @@
     "success": "Ticket #{{number}} erfolgreich gelöscht.",
     "error": "Ticket konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "validationError": "Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inaktiv",
+    "noBoard": "Kein Board",
+    "selectedCount_one": "{{count}} Board",
+    "selectedCount_other": "{{count}} Boards",
+    "excludingPrefix": "ohne {{name}}",
+    "excludingCount_one": "ohne {{count}} Board",
+    "excludingCount_other": "ohne {{count}} Boards",
+    "placeholder": "Nach Board filtern",
+    "title": "Board-Auswahl",
+    "searchPlaceholder": "Boards suchen..."
   }
 }

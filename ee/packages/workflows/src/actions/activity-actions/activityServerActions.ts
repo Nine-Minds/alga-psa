@@ -10,8 +10,10 @@ import {
   TicketActivity,
   TimeEntryActivity,
   WorkflowTaskActivity,
-  NotificationActivity
+  NotificationActivity,
+  scheduleEntryToActivity
 } from "@alga-psa/types";
+import { createTenantKnex, withTransaction } from "@alga-psa/db";
 import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
@@ -21,8 +23,16 @@ import {
   fetchWorkflowTaskActivities as fetchWorkflowTaskActivitiesInternal,
   fetchNotificationActivities as fetchNotificationActivitiesInternal
 } from "./activityAggregationActions";
-import { withAuth } from "@alga-psa/auth";
+import { withAuth, hasPermission } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
+
+export interface CreateAdHocActivityInput {
+  title: string;
+  notes?: string;
+  /** Optional ISO timestamps — ad-hoc items may have no scheduled time. */
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+}
 
 /**
  * Server action to fetch all activities for the current user with optional filters
@@ -316,4 +326,91 @@ export const fetchDashboardActivities = withAuth(async (
     console.error("Error fetching dashboard activities:", error);
     throw new Error("Failed to fetch dashboard activities. Please try again later.");
   }
+});
+
+/**
+ * Create an ad-hoc item (a schedule entry with work_item_type='ad_hoc', assigned to the
+ * current user). Times are optional — an ad-hoc item is a lightweight personal to-do.
+ */
+export const createAdHocActivity = withAuth(async (
+  user,
+  { tenant },
+  input: CreateAdHocActivityInput
+): Promise<ScheduleActivity> => {
+  const title = (input?.title || "").trim();
+  if (!title) {
+    throw new Error("Title is required");
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  const created = await withTransaction(knex, async (trx) => {
+    const [entry] = await trx("schedule_entries")
+      .insert({
+        tenant,
+        title,
+        notes: input.notes?.trim() || null,
+        work_item_id: null,
+        work_item_type: "ad_hoc",
+        status: "scheduled",
+        scheduled_start: input.scheduledStart ? new Date(input.scheduledStart) : null,
+        scheduled_end: input.scheduledEnd ? new Date(input.scheduledEnd) : null,
+        recurrence_pattern: null,
+        is_recurring: false,
+        is_private: false,
+      })
+      .returning("*");
+
+    await trx("schedule_entry_assignees").insert({
+      tenant,
+      entry_id: entry.entry_id,
+      user_id: user.user_id,
+    });
+
+    return { ...entry, assigned_user_ids: [user.user_id] };
+  });
+
+  revalidatePath("/msp/user-activities");
+  return scheduleEntryToActivity(created) as ScheduleActivity;
+});
+
+/**
+ * Mark an ad-hoc item Done (status='closed') or not done (status='scheduled').
+ * The caller must be an assignee of the entry, or hold user_schedule:update to act
+ * on another user's entries.
+ */
+export const setAdHocActivityDone = withAuth(async (
+  user,
+  { tenant },
+  entryId: string,
+  done: boolean
+): Promise<void> => {
+  if (!entryId) {
+    throw new Error("Entry id is required");
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  await withTransaction(knex, async (trx) => {
+    const entry = await trx("schedule_entries")
+      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+      .first();
+    if (!entry) {
+      throw new Error("Ad-hoc item not found");
+    }
+
+    const isAssignee = await trx("schedule_entry_assignees")
+      .where({ tenant, entry_id: entryId, user_id: user.user_id })
+      .first();
+    if (!isAssignee) {
+      const canManageOthers = await hasPermission(user, "user_schedule", "update", trx);
+      if (!canManageOthers) {
+        throw new Error("Permission denied: cannot modify another user's ad-hoc item");
+      }
+    }
+
+    await trx("schedule_entries")
+      .where({ tenant, entry_id: entryId })
+      .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
+  });
+
+  revalidatePath("/msp/user-activities");
 });

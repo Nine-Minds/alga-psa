@@ -21,8 +21,10 @@ const baseScheduleEntrySchema = tenantSchema.extend({
   entry_id: z.string().optional(), // Optional for creation
   work_item_id: z.string().nullable(),
   assigned_user_ids: z.array(z.string()).min(1), // At least one assigned user required
-  scheduled_start: z.date(),
-  scheduled_end: z.date(),
+  // Optional at the base level so ad-hoc entries can be time-less; non-ad-hoc
+  // entries still require times via validateScheduledTimes (and a DB CHECK).
+  scheduled_start: z.date().nullable().optional(),
+  scheduled_end: z.date().nullable().optional(),
   status: z.string(),
   notes: z.string().optional(),
   title: z.string(),
@@ -53,6 +55,26 @@ const validateWorkItemId = (data: any, ctx: z.RefinementCtx) => {
   }
 };
 
+// Non-ad-hoc entries must have scheduled times.
+const validateScheduledTimes = (data: any, ctx: z.RefinementCtx) => {
+  if (data.work_item_type && data.work_item_type !== 'ad_hoc') {
+    if (!data.scheduled_start) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Scheduled start is required',
+        path: ['scheduled_start']
+      });
+    }
+    if (!data.scheduled_end) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Scheduled end is required',
+        path: ['scheduled_end']
+      });
+    }
+  }
+};
+
 // Main schema with validation
 export const scheduleEntrySchema = baseScheduleEntrySchema.superRefine(validateWorkItemId);
 
@@ -63,7 +85,10 @@ export const scheduleEntryInputSchema = baseScheduleEntrySchema
     created_at: true,
     updated_at: true
   })
-  .superRefine(validateWorkItemId);
+  .superRefine((data, ctx) => {
+    validateWorkItemId(data, ctx);
+    validateScheduledTimes(data, ctx);
+  });
 
 // Update schema makes all fields optional and includes validation
 export const scheduleEntryUpdateSchema = baseScheduleEntrySchema

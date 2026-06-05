@@ -45,12 +45,25 @@ export interface ActivityTimeEntryDialogRenderProps {
   timeSheetId?: string;
 }
 
+export interface ActivityConvertAdHocRenderProps {
+  /** Source ad-hoc item fields, used to prefill the new entity. */
+  title: string;
+  description?: string;
+  assignedTo?: string | null;
+  /** Called after the ticket/task is successfully created. */
+  onConverted: () => void | Promise<void>;
+  onClose: () => void;
+}
+
 export interface ActivityCrossFeatureCallbacks {
   // Render callbacks
   renderTicketDetails: (props: ActivityTicketDetailsRenderProps) => ReactNode;
   renderTaskEdit: (props: ActivityTaskEditRenderProps) => ReactNode;
   renderEntryPopup: (props: ActivityEntryPopupRenderProps) => ReactNode;
   renderTimeEntryDialog: (props: ActivityTimeEntryDialogRenderProps) => ReactNode;
+  // Convert an ad-hoc item into a real ticket / project task (optional — host-provided).
+  renderConvertAdHocToTicket?: (props: ActivityConvertAdHocRenderProps) => ReactNode;
+  renderConvertAdHocToProjectTask?: (props: ActivityConvertAdHocRenderProps) => ReactNode;
 
   // Data-fetching callbacks
   getConsolidatedTicketData: (ticketId: string) => Promise<any>;

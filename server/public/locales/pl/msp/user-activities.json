@@ -28,7 +28,8 @@
       "noDueDate": "Brak terminu",
       "emDash": "—",
       "unread": "Nieprzeczytane",
-      "recurringEvent": "Zdarzenie cykliczne"
+      "recurringEvent": "Zdarzenie cykliczne",
+      "adHocBadge": "Ad hoc"
     },
     "actions": {
       "refresh": "Odśwież",
@@ -43,7 +44,8 @@
       "noMatching": "Brak aktywności pasujących do filtrów"
     },
     "errors": {
-      "loadFailed": "Nie udało się załadować aktywności. Proszę spróbować ponownie później."
+      "loadFailed": "Nie udało się załadować aktywności. Proszę spróbować ponownie później.",
+      "addAdHocFailed": "Nie udało się dodać elementu ad hoc. Spróbuj ponownie."
     },
     "activityTypes": {
       "schedule": "Harmonogram",
@@ -60,6 +62,14 @@
         "title": "Opcje drukowania",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania aktywności."
       }
+    },
+    "adHoc": {
+      "addPlaceholder": "Dodaj element ad hoc…",
+      "addButton": "Dodaj",
+      "markDone": "Oznacz jako ukończone",
+      "markNotDone": "Oznacz jako nieukończone",
+      "convertToTicket": "Konwertuj na zgłoszenie",
+      "convertToTask": "Konwertuj na zadanie projektu"
     }
   },
   "card": {
@@ -417,11 +427,27 @@
       "allProjects": "Wszystkie projekty",
       "allPriorities": "Wszystkie priorytety",
       "selectPriority": "Wybierz priorytet...",
-      "search": "Szukaj aktywności..."
+      "search": "Szukaj aktywności...",
+      "searchBoards": "Szukaj tablic...",
+      "searchStatuses": "Szukaj statusów...",
+      "searchProjects": "Szukaj projektów..."
     },
     "actions": {
       "reset": "Resetuj"
     },
-    "statusClosedSuffix": " (zamknięte)"
+    "statusClosedSuffix": " (zamknięte)",
+    "summary": {
+      "boards_one": "{{count}} tablica",
+      "boards_other": "{{count}} tablice",
+      "statuses_one": "{{count}} status",
+      "statuses_other": "{{count}} statusy",
+      "projects_one": "{{count}} projekt",
+      "projects_other": "{{count}} projekty",
+      "phases_one": "{{count}} faza",
+      "phases_other": "{{count}} fazy",
+      "excludingName": "bez {{name}}",
+      "excludingCount_one": "bez {{count}}",
+      "excludingCount_other": "bez {{count}}"
+    }
   }
 }
