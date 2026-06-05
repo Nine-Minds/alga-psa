@@ -381,7 +381,7 @@
   {
     "id": "F031",
     "description": "Regression: end-to-end reactivation reattaches to the existing tenant with prior data intact and creates NO new tenant row.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "prdRefs": [
       "9",
@@ -391,7 +391,7 @@
   {
     "id": "F032",
     "description": "Point-of-no-return handling: if status flips to `deleting` during the flow, completion refuses and the user is surfaced a 'too late — sign up fresh' outcome; any captured payment routes to F034 for durable manual-refund tracking plus ops/billing email (no auto-refund).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "prdRefs": [
       "10"

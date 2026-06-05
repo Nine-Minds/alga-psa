@@ -411,6 +411,34 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   - `cd server && npm run test -- src/test/unit/billing/reactivationEmails.test.ts` (pass; existing
     coverage parse warnings only).
 
+## Implementation log — regression group (2026-06-05)
+
+- Completed F031/F032:
+  - Added alga regression contract coverage in
+    `server/src/test/unit/billing/reactivationRegression.contract.test.ts`.
+  - Added nm-store regression routing coverage in
+    `/Users/natalliabukhtsik/Desktop/projects/nm-store/packages/nm-store/tests/unit/reactivation-regression.test.ts`.
+- Completed T047/T048:
+  - Regression tests assert the paid reactivation path rolls back the existing tenant, links through
+    `linkSubscriptionToExistingTenant`, triggers password reset, and keeps `linkSubscriptionToExistingTenant`
+    / `insertStripeSubscriptionForTenant` away from tenant creation.
+  - nm-store routing asserts reactivation sessions branch before
+    `buildOrderInstallWorkflowInputFromCheckoutSession` / `startOrderInstallWorkflow`, and completion calls
+    alga's `/api/billing/complete-reactivation`.
+- Completed T049:
+  - nm-store regression verifies past-window tenant checks (`pendingDeletion` with `deleting`/`deleted`)
+    fall through as normal checkout instead of sending a reactivation email.
+- Completed T050/T054:
+  - alga regression verifies `deleting`/`deleted` are not active/reactivatable, completion refuses with
+    the `past_window`/409 path, and the durable refund ledger is written.
+- Completed T052/T053:
+  - alga regression verifies `confirmed` remains reactivatable, workflow waits for rollback before
+    entering `deleting`, `effectiveDeletionDate` coalesces `deletion_scheduled_for` over
+    `scheduled_deletion_date`, and the email renders that date.
+- Commands:
+  - `cd server && npm run test -- src/test/unit/billing/reactivationRegression.contract.test.ts src/test/unit/billing/tenantReactivationDetection.test.ts src/test/unit/billing/reactivationEmails.test.ts` (pass; existing coverage parse warnings only).
+  - `cd /Users/natalliabukhtsik/Desktop/projects/nm-store/packages/nm-store && npm run test -- tests/unit/reactivation-regression.test.ts tests/unit/order-form-reactivation.test.tsx tests/unit/reactivation-core-routing.test.ts` (pass).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`

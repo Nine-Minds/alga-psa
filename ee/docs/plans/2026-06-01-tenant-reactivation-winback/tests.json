@@ -443,7 +443,7 @@
   {
     "id": "T047",
     "description": "E2E Flow A: order page → reactivation email → paid checkout (no discount) → reactivate → password reset → login restores the SAME tenant with prior data.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F031"
@@ -452,7 +452,7 @@
   {
     "id": "T048",
     "description": "E2E: reactivation produces no new tenant row (tenant count unchanged for the customer).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F031"
@@ -461,7 +461,7 @@
   {
     "id": "T049",
     "description": "E2E past-window: an out-of-window email on the order page is treated as a normal new signup; no reactivation email is sent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F011",
@@ -471,7 +471,7 @@
   {
     "id": "T050",
     "description": "Point-of-no-return: status flips to deleting mid-flow → completion refuses and the user is surfaced the too-late outcome.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F032"
@@ -480,7 +480,7 @@
   {
     "id": "T052",
     "description": "Confirmed (30-day) deletion is reactivatable: a deletion in status `confirmed` reports reactivatable:true and the rollback signal during the post-confirmation wait reactivates the tenant.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F004",
@@ -490,7 +490,7 @@
   {
     "id": "T053",
     "description": "effectiveDeletionDate = COALESCE(deletion_scheduled_for, scheduled_deletion_date): after a 30-day confirm it reflects deletion_scheduled_for (now+30d); while awaiting_confirmation it reflects scheduled_deletion_date (now+90d). Emails render this date.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F004",
@@ -500,7 +500,7 @@
   {
     "id": "T054",
     "description": "Immediate confirmation edge: a deletion confirmed `immediate` has no reactivation window — by the time a return happens status is deleting/deleted and reactivatable:false.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "regression",
     "featureIds": [
       "F017",
