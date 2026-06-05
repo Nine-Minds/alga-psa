@@ -44,6 +44,11 @@ export interface BillingAdminEmailResolution {
   source: 'tenant_email' | 'client_billing_email' | 'stripe_customer_email' | 'internal_admin';
 }
 
+export interface TenantStripeCustomerResolution {
+  stripeCustomerId: string | null;
+  source: 'stripe_customer' | 'pending_subscription' | null;
+}
+
 type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
 
 function normalizeDate(value: unknown): string | null {
@@ -234,4 +239,37 @@ export async function resolveBillingAdminEmailForTenant(
   }
 
   return null;
+}
+
+export async function resolveTenantStripeCustomerForReactivation(
+  tenantId: string,
+  pendingDeletion?: PendingDeletionSummary | ActivePendingDeletion | null,
+  knex?: KnexLike,
+): Promise<TenantStripeCustomerResolution> {
+  const db = await getKnex(knex);
+
+  const stripeCustomer = await db('stripe_customers')
+    .where('tenant', tenantId)
+    .whereNotNull('stripe_customer_external_id')
+    .orderBy('created_at', 'desc')
+    .first('stripe_customer_external_id');
+
+  if (stripeCustomer?.stripe_customer_external_id) {
+    return {
+      stripeCustomerId: stripeCustomer.stripe_customer_external_id,
+      source: 'stripe_customer',
+    };
+  }
+
+  if (pendingDeletion?.subscriptionExternalId) {
+    return {
+      stripeCustomerId: pendingDeletion.subscriptionExternalId,
+      source: 'pending_subscription',
+    };
+  }
+
+  return {
+    stripeCustomerId: null,
+    source: null,
+  };
 }

@@ -175,7 +175,7 @@
   {
     "id": "T019",
     "description": "Reactivation checkout omits introCouponId — no discount line item on the created session.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F012"
@@ -184,7 +184,7 @@
   {
     "id": "T020",
     "description": "Reactivation checkout omits trial_period_days — subscription starts billing immediately.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F012"
@@ -193,7 +193,7 @@
   {
     "id": "T021",
     "description": "Reactivation checkout uses the plan's standard recurring price.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F012"
@@ -202,7 +202,7 @@
   {
     "id": "T022",
     "description": "Reactivation checkout metadata contains reactivation='true', tenant_id, and deletion_workflow_id.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F013"
@@ -211,7 +211,7 @@
   {
     "id": "T023",
     "description": "Reactivation entry page is reachable from the email link and renders checkout for the right tenant.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F014"
@@ -220,7 +220,7 @@
   {
     "id": "T024",
     "description": "Reactivation success page renders the 'being restored — check your email' message.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F015"
@@ -586,7 +586,7 @@
   {
     "id": "T061",
     "description": "Reactivation checkout is created with the tenant's existing Stripe customer id (`customer: cus_…`), not a freshly-created customer.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F037"
@@ -633,7 +633,7 @@
   {
     "id": "T066",
     "description": "Token gate: the reactivation checkout cannot be created with a missing / malformed / expired / wrong-tenant token (rejected server-side); a valid unreserved token validates against F040 and is atomically reserved with checkout_session_id before Stripe Checkout creation.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F039",
@@ -644,7 +644,7 @@
   {
     "id": "T067",
     "description": "Token is single-use: replaying a reserved or consumed token is rejected, so the same email link cannot create a second checkout session or second payment; successful reactivation marks consumed_at.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F039",
@@ -672,7 +672,7 @@
   {
     "id": "T073",
     "description": "nm-store customer resolution: the reactivation checkout uses `customer: cus_…` obtained from the non-PII id returned by alga's token-exchange (cus_… or derived from the prior sub_… via Stripe); the admin email is never sent to nm-store. Asserts no admin email in the token-exchange response and `customer` set on the created session.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "featureIds": [
       "F044",

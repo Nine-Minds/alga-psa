@@ -148,7 +148,7 @@
   {
     "id": "F012",
     "description": "nm-store reactivation checkout builder: standard recurring price, `discounts` omitted (no `introCouponId`), no `trial_period_days`.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "2",
@@ -158,7 +158,7 @@
   {
     "id": "F013",
     "description": "Reactivation checkout sets `metadata.reactivation='true'`, `metadata.tenant_id`, `metadata.deletion_workflow_id`.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "7",
@@ -168,7 +168,7 @@
   {
     "id": "F037",
     "description": "Reactivation checkout is created with the tenant's EXISTING Stripe customer (`customer: cus_…`), so the new subscription attaches to the SAME Stripe customer — no new/divergent customer. Stripe keeps the customer after `customer.subscription.deleted`, so reuse is valid. VERIFIED: nm-store's `createCheckoutSession`/`createTieredCheckoutSession` (`packages/nm-store/src/utils/stripe.ts`) today pass NO `customer` field (Stripe auto-creates one per checkout) — this adds it. nm-store obtains the `cus_…` per F044 (a non-PII Stripe id, NOT alga's DB row shipped across the boundary, NOT the admin email). The reactivation block's `stripeCustomerId` carries this existing `cus_…`.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "7",
@@ -179,7 +179,7 @@
   {
     "id": "F014",
     "description": "Reactivation checkout entry page/route reachable from the email link; it REQUIRES a valid signed reactivation token (F039) — the checkout session cannot be created without one (validated server-side). No normal-order coupling.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "4",
@@ -190,7 +190,7 @@
   {
     "id": "F015",
     "description": "Reactivation checkout success page: 'Your account is being restored — check your email to set a new password.'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "6"
@@ -420,7 +420,7 @@
   {
     "id": "F044",
     "description": "nm-store resolves the existing Stripe customer (`cus_…`) for F037 WITHOUT receiving the admin email (preserves F038 anti-enumeration). VERIFIED: nm-store holds `STRIPE_SECRET_KEY` (`utils/stripe.ts`) and the token-exchange endpoint (F014/F039) returns a NON-PII Stripe id — the prior `subscription_external_id` and/or `cus_…` (resolved server-side by alga from `stripe_customers` by tenant). nm-store then sets `customer: cus_…` directly, or derives it from Stripe (`subscriptions.retrieve(sub_…).customer`). The admin EMAIL never crosses to nm-store; only opaque Stripe ids do.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-checkout",
     "prdRefs": [
       "7",

@@ -318,6 +318,34 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   - `cd server && npm run test -- src/test/unit/billing/tenantReactivationDetection.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts src/test/unit/api/billingCheckTenantReactivation.contract.test.ts src/test/unit/api/requestReactivation.contract.test.ts` (pass; existing coverage parse warnings only).
   - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/alga-api-tenant-reactivation.test.ts tests/unit/order-form-reactivation.test.tsx` (pass).
 
+## Implementation log — reactivation-checkout group (2026-06-05)
+
+- Implemented F014/F044 token exchange/reservation in alga EE:
+  - `ee/server/src/app/api/billing/reactivation-token/route.ts` validates the signed token through
+    HMAC service auth, atomically reserves the `tenant_reactivation_tokens` row, rechecks the
+    pending deletion is still reactivatable, and returns only non-PII checkout context:
+    tenant/deletion/workflow ids plus the existing Stripe `cus_...` when available. If no stored
+    customer exists, it returns the prior `sub_...` so nm-store can derive the customer with Stripe.
+  - `ee/server/src/app/api/billing/reactivation-token/session/route.ts` attaches the Stripe checkout
+    session id to the reserved token ledger row. Added CE stubs and server re-exports for both paths.
+  - `tenantReactivationTokens` now supports verify, reserve, checkout-session attachment, and
+    consume-by-checkout-session helpers; replay is rejected once reserved or consumed.
+- Implemented F012/F013/F037/F014/F015/F044 in nm-store:
+  - `validateReactivationToken` and `recordReactivationCheckoutSession` sign calls to the alga token
+    exchange/session routes; responses intentionally contain no admin email.
+  - `createReactivationCheckoutSession` creates embedded Stripe Checkout with the standard
+    recurring AlgaPSA monthly price, the existing Stripe customer, `reactivation:"true"` metadata,
+    no `discounts`, and no `trial_period_days`.
+  - `createTenantReactivationCheckout` validates/reserves the token, derives `cus_...` from a
+    returned prior `sub_...` when needed, creates the Stripe session, then records the session id.
+  - Added `/reactivate?token=...` and `/reactivation/success` pages. Success copy matches the PRD:
+    "Your account is being restored" and "Check your email to set a new password."
+- Tests completed:
+  - T019-T024/T061/T066/T067/T073 via token ledger tests and nm-store reactivation checkout tests.
+- Commands:
+  - `cd server && npm run test -- src/test/unit/billing/tenantReactivationTokens.test.ts src/test/unit/billing/tenantReactivationDetection.test.ts` (pass; existing coverage parse warnings only).
+  - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/reactivation-checkout.test.ts tests/unit/alga-api-tenant-reactivation.test.ts` (pass).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`
