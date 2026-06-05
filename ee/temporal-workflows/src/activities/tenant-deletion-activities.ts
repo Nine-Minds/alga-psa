@@ -48,6 +48,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_run_steps', 'workflow_run_waits', 'workflow_run_snapshots',
   'workflow_action_invocations', 'workflow_definition_versions',
   'workflow_run_logs', 'workflow_runtime_events', 'workflow_step_usage_periods',
+  // Workflow data store + entity links (standalone; created_by_run_id is a soft
+  // ref with no FK, so order among these does not matter)
+  'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // Task/project details

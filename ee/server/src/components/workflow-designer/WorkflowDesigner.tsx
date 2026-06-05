@@ -3484,6 +3484,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'project': return <FolderKanban className={iconClass} />;
         case 'time': return <Clock className={iconClass} />;
         case 'crm': return <Handshake className={iconClass} />;
+        case 'data-store': return <Database className={iconClass} />;
         case 'transform': return <Wand2 className={iconClass} />;
         case 'ai': return <Bot className={iconClass} />;
         case 'ninjaone': return <ShieldAlert className={iconClass} />;
