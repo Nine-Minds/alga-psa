@@ -91,7 +91,7 @@
   },
   {
     "id": "F012",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],
@@ -99,7 +99,7 @@
   },
   {
     "id": "F013",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],
@@ -115,7 +115,7 @@
   },
   {
     "id": "F015",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5"
     ],

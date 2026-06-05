@@ -204,8 +204,8 @@ const nextConfig = {
       'server/src': './src', // Add explicit alias for server/src imports
       '@alga-psa/ui': '../packages/ui/src',
       '@alga-psa/ui/': '../packages/ui/src/',
-      '@alga-psa/clients': '../packages/clients/src',
-      '@alga-psa/clients/': '../packages/clients/src/',
+      '@alga-psa/clients': prebuiltDir('clients'),
+      '@alga-psa/clients/': `${prebuiltDir('clients')}/`,
       // NB: tried switching bare-name aliases to ../packages/<pkg>/dist when
       // USE_PREBUILT=true. tsup bundles each package into a single
       // dist/index.js and downstream consumers import many sub-paths
@@ -237,8 +237,8 @@ const nextConfig = {
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : './src/empty/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
-      '@alga-psa/tags': '../packages/tags/src',
-      '@alga-psa/tags/': '../packages/tags/src/',
+      '@alga-psa/tags': prebuiltDir('tags'),
+      '@alga-psa/tags/': `${prebuiltDir('tags')}/`,
       '@alga-psa/users': '../packages/users/src',
       '@alga-psa/users/': '../packages/users/src/',
       '@alga-psa/users/actions': '../packages/users/src/actions/index.ts',
@@ -248,18 +248,18 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
-      '@alga-psa/event-schemas': '../packages/event-schemas/src',
-      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+      '@alga-psa/event-schemas': prebuiltDir('event-schemas'),
+      '@alga-psa/event-schemas/': `${prebuiltDir('event-schemas')}/`,
       // Leaf horizontal packages (resolve to source during local dev)
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/': '../packages/core/src/',
-      '@alga-psa/validation': '../packages/validation/src',
-      '@alga-psa/validation/': '../packages/validation/src/',
-      '@alga-psa/formatting': '../packages/formatting/src',
-      '@alga-psa/formatting/': '../packages/formatting/src/',
+      '@alga-psa/validation': prebuiltDir('validation'),
+      '@alga-psa/validation/': `${prebuiltDir('validation')}/`,
+      '@alga-psa/formatting': prebuiltDir('formatting'),
+      '@alga-psa/formatting/': `${prebuiltDir('formatting')}/`,
       // Documents package
       '@alga-psa/documents': '../packages/documents/src',
       '@alga-psa/documents/': '../packages/documents/src/',

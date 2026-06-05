@@ -126,3 +126,22 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
 - (Phase 0) Which packages have the biggest src compile footprint? (LOC/file count)
 - Does tsup `entry: ['src/**/*.{ts,tsx}']` glob + `splitting:false` produce resolvable per-file dist? Build-time cost?
 - Will removing src aliases break the `@`/`server/src`/EE aliases that must stay? (only remove `@alga-psa/*` -> src ones)
+
+## KEY INSIGHT (2026-06-05): webpack already dist-aliases; turbopack didn't
+
+- next.config has `prebuiltDir(pkg) = USE_PREBUILT ? dist : src` (line 35) and the
+  WEBPACK `config.resolve.alias` block ALREADY uses it for 11 packages (auth,
+  notifications, clients, types, core(+rateLimit), validation, formatting,
+  event-schemas, sla, assets, tags). The earlier webpack build (green) PROVES dist
+  resolves for these. The TURBOPACK block just never got migrated -> still `src`.
+- So the rollout = point turbopack aliases at prebuiltDir() too (parity w/ webpack).
+- Done + measured green: clients, tags, event-schemas, validation, formatting.
+  cstack1 (billing+clients+4 small) = 9969 MB, 57.5s, ok, 0 resolution errors.
+- Webpack uses only bare+trailing-slash for auth/assets/notifications (NO specific
+  remaps) -> relies on package exports for shallow paths. Turbopack block currently
+  has specific remaps (auth 9, assets 2, notifications 3, core 2). OPEN: does
+  turbopack fall back to exports if the trailing-slash dist alias misses a shallow
+  path? Test on one remap pkg (notifications) before removing remaps on auth/assets.
+- Non-prebuilt big pkgs (projects 54K, scheduling 35K, documents 27K, client-portal
+  36K) are NOT in the webpack prebuilt set -> need converting to the preset + build
+  wiring for the bigger wins. Biggest single = projects.
