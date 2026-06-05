@@ -745,6 +745,9 @@
       "assigning": "Assegnazione...",
       "confirm": "Assegna attività",
       "teamReplaceNotice": "Le attività già assegnate a un altro team verranno riassegnate al team selezionato."
+    },
+    "convertAdHocToTask": {
+      "title": "Converti in attività di progetto"
     }
   },
   "filters": {

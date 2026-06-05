@@ -169,6 +169,11 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       width: '50%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
+          {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).workItemType === 'ad_hoc' && (
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-500/15 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
+              {t('table.values.adHocBadge', { defaultValue: 'Ad hoc' })}
+            </span>
+          )}
           <span className="font-medium text-gray-900 break-words">{value as string}</span>
           {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).isRecurring && (
              <span title={t('table.values.recurringEvent', { defaultValue: 'Recurring Event' })}>

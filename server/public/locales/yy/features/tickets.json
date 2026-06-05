@@ -39,7 +39,8 @@
     "breached": "55555",
     "paused": "55555",
     "allResponseStatuses": "55555",
-    "responseStatus": "55555"
+    "responseStatus": "55555",
+    "board": "55555"
   },
   "create": {
     "title": "55555",
@@ -377,7 +378,10 @@
       "onTrack": "55555",
       "breached": "55555",
       "paused": "55555",
-      "bundled": "55555"
+      "bundled": "55555",
+      "activeBoards": "55555",
+      "inactiveBoards": "55555",
+      "allBoards": "55555"
     },
     "selection": {
       "pageSelected_one": "55555 {{count}} 55555",
@@ -1266,5 +1270,17 @@
     "success": "55555 {{number}} 55555",
     "error": "55555",
     "validationError": "55555"
+  },
+  "boardPicker": {
+    "inactiveBadge": "55555",
+    "noBoard": "55555",
+    "selectedCount_one": "55555 {{count}} 55555",
+    "selectedCount_other": "55555 {{count}} 55555",
+    "excludingPrefix": "55555 {{name}} 55555",
+    "excludingCount_one": "55555 {{count}} 55555",
+    "excludingCount_other": "55555 {{count}} 55555",
+    "placeholder": "55555",
+    "title": "55555",
+    "searchPlaceholder": "55555"
   }
 }

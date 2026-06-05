@@ -28,7 +28,8 @@
       "noDueDate": "Sin fecha de vencimiento",
       "emDash": "—",
       "unread": "No leído",
-      "recurringEvent": "Evento recurrente"
+      "recurringEvent": "Evento recurrente",
+      "adHocBadge": "Ad hoc"
     },
     "actions": {
       "refresh": "Actualizar",
@@ -43,7 +44,8 @@
       "noMatching": "No hay actividades que coincidan con los filtros"
     },
     "errors": {
-      "loadFailed": "No se pudieron cargar las actividades. Inténtelo de nuevo más tarde."
+      "loadFailed": "No se pudieron cargar las actividades. Inténtelo de nuevo más tarde.",
+      "addAdHocFailed": "No se pudo añadir el elemento ad hoc. Inténtalo de nuevo."
     },
     "activityTypes": {
       "schedule": "Calendario",
@@ -60,6 +62,14 @@
         "title": "Opciones de impresión",
         "description": "Elige qué columnas incluir al imprimir las actividades."
       }
+    },
+    "adHoc": {
+      "addPlaceholder": "Añadir un elemento ad hoc…",
+      "addButton": "Añadir",
+      "markDone": "Marcar como hecho",
+      "markNotDone": "Marcar como no hecho",
+      "convertToTicket": "Convertir en ticket",
+      "convertToTask": "Convertir en tarea de proyecto"
     }
   },
   "card": {
@@ -417,11 +427,27 @@
       "allProjects": "Todos los proyectos",
       "allPriorities": "Todas las prioridades",
       "selectPriority": "Seleccionar prioridad...",
-      "search": "Buscar actividades..."
+      "search": "Buscar actividades...",
+      "searchBoards": "Buscar tableros...",
+      "searchStatuses": "Buscar estados...",
+      "searchProjects": "Buscar proyectos..."
     },
     "actions": {
       "reset": "Restablecer"
     },
-    "statusClosedSuffix": " (cerrado)"
+    "statusClosedSuffix": " (cerrado)",
+    "summary": {
+      "boards_one": "{{count}} tablero",
+      "boards_other": "{{count}} tableros",
+      "statuses_one": "{{count}} estado",
+      "statuses_other": "{{count}} estados",
+      "projects_one": "{{count}} proyecto",
+      "projects_other": "{{count}} proyectos",
+      "phases_one": "{{count}} fase",
+      "phases_other": "{{count}} fases",
+      "excludingName": "excl. {{name}}",
+      "excludingCount_one": "excl. {{count}}",
+      "excludingCount_other": "excl. {{count}}"
+    }
   }
 }

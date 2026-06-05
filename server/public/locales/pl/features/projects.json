@@ -745,6 +745,9 @@
       "assigning": "Przypisywanie...",
       "confirm": "Przypisz zadania",
       "teamReplaceNotice": "Zadania już przypisane do innego zespołu zostaną przeniesione do wybranego zespołu."
+    },
+    "convertAdHocToTask": {
+      "title": "Konwertuj na zadanie projektu"
     }
   },
   "filters": {

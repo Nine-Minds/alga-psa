@@ -28,7 +28,8 @@
       "noDueDate": "No due date",
       "emDash": "—",
       "unread": "Unread",
-      "recurringEvent": "Recurring Event"
+      "recurringEvent": "Recurring Event",
+      "adHocBadge": "Ad hoc"
     },
     "actions": {
       "refresh": "Refresh",
@@ -43,7 +44,8 @@
       "noMatching": "No activities found matching filters"
     },
     "errors": {
-      "loadFailed": "Failed to load activities. Please try again later."
+      "loadFailed": "Failed to load activities. Please try again later.",
+      "addAdHocFailed": "Failed to add ad-hoc item. Please try again."
     },
     "activityTypes": {
       "schedule": "Schedule",
@@ -60,6 +62,14 @@
         "title": "Print options",
         "description": "Choose which columns to include when printing activities."
       }
+    },
+    "adHoc": {
+      "addPlaceholder": "Add an ad-hoc item…",
+      "addButton": "Add",
+      "markDone": "Mark as done",
+      "markNotDone": "Mark as not done",
+      "convertToTicket": "Convert to ticket",
+      "convertToTask": "Convert to project task"
     }
   },
   "card": {
@@ -417,11 +427,27 @@
       "allProjects": "All Projects",
       "allPriorities": "All Priorities",
       "selectPriority": "Select Priority...",
-      "search": "Search activities..."
+      "search": "Search activities...",
+      "searchBoards": "Search boards...",
+      "searchStatuses": "Search statuses...",
+      "searchProjects": "Search projects..."
     },
     "actions": {
       "reset": "Reset"
     },
-    "statusClosedSuffix": " (closed)"
+    "statusClosedSuffix": " (closed)",
+    "summary": {
+      "boards_one": "{{count}} board",
+      "boards_other": "{{count}} boards",
+      "statuses_one": "{{count}} status",
+      "statuses_other": "{{count}} statuses",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "phases_one": "{{count}} phase",
+      "phases_other": "{{count}} phases",
+      "excludingName": "excl {{name}}",
+      "excludingCount_one": "excl {{count}}",
+      "excludingCount_other": "excl {{count}}"
+    }
   }
 }

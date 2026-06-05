@@ -542,7 +542,7 @@ function TreeSelect<T extends string>({
                     onChange={(e) => setSearchTerm(e.target.value)}
                     // Stop keystrokes from reaching Radix Select's typeahead/keyboard handlers
                     onKeyDown={(e) => e.stopPropagation()}
-                    placeholder={searchPlaceholder || t('form.search', { defaultValue: 'Search...' })}
+                    placeholder={searchPlaceholder || t('form.searchPlaceholder', { defaultValue: 'Search...' })}
                     className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-white dark:bg-[rgb(var(--color-card))]"
                   />
                 </div>

@@ -745,6 +745,9 @@
       "assigning": "Wird zugewiesen...",
       "confirm": "Aufgaben zuweisen",
       "teamReplaceNotice": "Aufgaben, die bereits einem anderen Team zugewiesen sind, werden auf das neue Team umgestellt."
+    },
+    "convertAdHocToTask": {
+      "title": "In Projektaufgabe umwandeln"
     }
   },
   "filters": {

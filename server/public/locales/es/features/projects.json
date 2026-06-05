@@ -745,6 +745,9 @@
       "assigning": "Asignando...",
       "confirm": "Asignar tareas",
       "teamReplaceNotice": "Las tareas ya asignadas a otro equipo se reasignarán al equipo seleccionado."
+    },
+    "convertAdHocToTask": {
+      "title": "Convertir en tarea de proyecto"
     }
   },
   "filters": {
