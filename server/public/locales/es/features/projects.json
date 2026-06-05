@@ -436,6 +436,7 @@
     "selectFolderDescription": "Elija dónde guardar este nuevo documento"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Detalles limitados — no estás asignado a este ticket",
     "title": "Tickets asociados",
     "linkExistingTitle": "Vincular ticket existente",
     "createTicket": "Crear ticket",
@@ -724,6 +725,7 @@
       "allPriorities": "Todas las prioridades"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Detalles limitados — no estás asignado a esta tarea",
       "title": "Tareas de proyecto vinculadas",
       "loadFailed": "No se pudo cargar la tarea",
       "phaseNotFound": "No se encontró la fase de la tarea",

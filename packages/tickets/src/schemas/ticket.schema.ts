@@ -146,6 +146,7 @@ export const ticketListFiltersSchema = z.object({
   assignedToIds: z.array(z.string().uuid()).optional(),
   assignedTeamIds: z.array(z.string().uuid()).optional(),
   includeUnassigned: z.boolean().optional(),
+  assignedToMe: z.boolean().optional(),
   // Due date filters
   dueDateFilter: z
     .enum(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom'])

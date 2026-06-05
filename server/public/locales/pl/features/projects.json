@@ -436,6 +436,7 @@
     "selectFolderDescription": "Wybierz, gdzie zapisać ten nowy dokument"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Ograniczone szczegóły — nie jesteś przypisany do tego biletu",
     "title": "Powiązane bilety",
     "linkExistingTitle": "Połącz istniejący bilet",
     "createTicket": "Utwórz bilet",
@@ -724,6 +725,7 @@
       "allPriorities": "Wszystkie priorytety"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Ograniczone szczegóły — nie jesteś przypisany do tego zadania",
       "title": "Powiązane zadania projektowe",
       "loadFailed": "Nie udało się załadować zadania",
       "phaseNotFound": "Nie znaleziono fazy zadania",

@@ -436,6 +436,7 @@
     "selectFolderDescription": "Wählen Sie aus, wo dieses neue Dokument gespeichert werden soll"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Eingeschränkte Details — Sie sind diesem Ticket nicht zugewiesen",
     "title": "Verknüpfte Tickets",
     "linkExistingTitle": "Vorhandenes Ticket verknüpfen",
     "createTicket": "Ticket erstellen",
@@ -724,6 +725,7 @@
       "allPriorities": "Alle Prioritäten"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Eingeschränkte Details — Sie sind dieser Aufgabe nicht zugewiesen",
       "title": "Verknüpfte Projektaufgaben",
       "loadFailed": "Aufgabe konnte nicht geladen werden",
       "phaseNotFound": "Aufgabenphase nicht gefunden",
