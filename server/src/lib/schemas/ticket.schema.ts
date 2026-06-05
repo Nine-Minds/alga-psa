@@ -132,6 +132,8 @@ export const ticketListFiltersSchema = z.object({
         z.literal('no-category'),
         z.literal('all')
     ]).nullish(),
+    categoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
+    excludeCategoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
     clientId: z.string().uuid().nullish(),
     contactId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),

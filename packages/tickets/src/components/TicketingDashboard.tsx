@@ -311,11 +311,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedClient = filterValues.clientId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
-  const selectedCategories = useMemo(() =>
-    filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY,
-    [filterValues.categoryId]
+  const selectedCategories = useMemo(() => {
+    if (filterValues.categoryIds && filterValues.categoryIds.length > 0) {
+      return filterValues.categoryIds;
+    }
+    // Fall back to the legacy single-category field (e.g. deep links)
+    return filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY;
+  }, [filterValues.categoryIds, filterValues.categoryId]);
+  const excludedCategories = useMemo(() =>
+    filterValues.excludeCategoryIds && filterValues.excludeCategoryIds.length > 0
+      ? filterValues.excludeCategoryIds
+      : EMPTY_STRING_ARRAY,
+    [filterValues.excludeCategoryIds]
   );
-  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
   const boardFilterState = filterValues.boardFilterState ?? 'active';
 
@@ -358,6 +366,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
+      excludedCategories.length > 0 ||
       searchQuery !== '' ||
       selectedTags.length > 0 ||
       selectedAssignees.length > 0 ||
@@ -366,7 +375,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -488,7 +497,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.clientId) params.set('clientId', f.clientId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
-    if (f.categoryId) params.set('categoryId', f.categoryId);
+    if (f.categoryIds && f.categoryIds.length > 0) {
+      params.set('categoryIds', f.categoryIds.join(','));
+    } else if (f.categoryId) {
+      params.set('categoryId', f.categoryId);
+    }
+    if (f.excludeCategoryIds && f.excludeCategoryIds.length > 0) {
+      params.set('excludeCategoryIds', f.excludeCategoryIds.join(','));
+    }
     if (f.searchQuery) params.set('searchQuery', f.searchQuery);
     if (f.boardFilterState && f.boardFilterState !== 'active') {
       params.set('boardFilterState', f.boardFilterState);
@@ -798,7 +814,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         boardId: selectedBoard ?? undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
-        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+        excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
         clientId: selectedClient ?? undefined,
         searchQuery: debouncedSearchQuery,
         boardFilterState: boardFilterState,
@@ -822,7 +839,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setAllMatchingMode(true);
     }
   }, [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
@@ -1639,7 +1656,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     boardId: selectedBoard ?? undefined,
     statusId: selectedStatus,
     priorityId: selectedPriority,
-    categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
     clientId: selectedClient ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
@@ -1657,7 +1675,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     sortDirection,
     bundleView,
   }), [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
@@ -1896,8 +1914,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [onFilterChange, rawStatusOptions, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
-    setExcludedCategories(newExcludedCategories);
-    onFilterChange({ categoryId: newSelectedCategories.length > 0 ? newSelectedCategories[0] : undefined });
+    onFilterChange({
+      categoryId: undefined, // clear legacy single-category field; arrays are the source of truth
+      categoryIds: newSelectedCategories.length > 0 ? newSelectedCategories : undefined,
+      excludeCategoryIds: newExcludedCategories.length > 0 ? newExcludedCategories : undefined,
+    });
   }, [onFilterChange]);
 
   const handleClientSelect = useCallback((clientId: string | null) => {
@@ -1913,7 +1934,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const handleResetFilters = useCallback(() => {
-    setExcludedCategories([]);
     setSearchQuery('');
     lastEmittedSearchRef.current = '';
     setClientFilterState('active');
@@ -1926,6 +1946,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
+      categoryIds: undefined,
+      excludeCategoryIds: undefined,
       searchQuery: '',
       boardFilterState: 'active',
       showOpenOnly: true,
@@ -2162,8 +2184,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       }
                       return [...prevCategories, newCategory];
                     });
-                    onFilterChange({ categoryId: newCategory.category_id });
-                    setExcludedCategories((prevExcluded) => prevExcluded.filter((categoryId) => categoryId !== newCategory.category_id));
+                    onFilterChange({
+                      categoryId: undefined,
+                      categoryIds: [newCategory.category_id],
+                      excludeCategoryIds: excludedCategories.filter((categoryId) => categoryId !== newCategory.category_id),
+                    });
                     setIsQuickAddCategoryOpen(false);
                   }}
                   preselectedBoardId={selectedBoard || undefined}
