@@ -34,6 +34,11 @@ const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise
 const usePrebuilt = truthyEnv(process.env.USE_PREBUILT);
 const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`;
 const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
+// Shallow->deep / barrel alias remap that follows USE_PREBUILT: dist .js when
+// prebuilt, src .ts(x) for dev hot-reload. distRel includes .js; srcRel the ext.
+const prebuiltFile = (pkg, distRel, srcRel) => usePrebuilt
+  ? `../packages/${pkg}/dist/${distRel}`
+  : `../packages/${pkg}/src/${srcRel}`;
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -211,24 +216,24 @@ const nextConfig = {
       // dist/index.js and downstream consumers import many sub-paths
       // (e.g. @alga-psa/ui/components/Button) which the dist doesn't expose.
       // Result: module-not-found across the build. Keep src/ aliases.
-      '@alga-psa/auth': '../packages/auth/src',
-      '@alga-psa/auth/': '../packages/auth/src/',
-      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
-      '@alga-psa/auth/session-bridge': '../packages/auth/src/lib/session-bridge.ts',
-      '@alga-psa/auth/withAuth': '../packages/auth/src/lib/withAuth.ts',
-      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
-      '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
-      '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+      '@alga-psa/auth': prebuiltDir('auth'),
+      '@alga-psa/auth/': `${prebuiltDir('auth')}/`,
+      '@alga-psa/auth/getCurrentUser': prebuiltFile('auth', 'lib/getCurrentUser.js', 'lib/getCurrentUser.ts'),
+      '@alga-psa/auth/session-bridge': prebuiltFile('auth', 'lib/session-bridge.js', 'lib/session-bridge.ts'),
+      '@alga-psa/auth/withAuth': prebuiltFile('auth', 'lib/withAuth.js', 'lib/withAuth.ts'),
+      '@alga-psa/auth/nextAuthOptions': prebuiltFile('auth', 'lib/nextAuthOptions.js', 'lib/nextAuthOptions.ts'),
+      '@alga-psa/auth/actions': prebuiltFile('auth', 'actions/index.js', 'actions/index.ts'),
+      '@alga-psa/auth/components': prebuiltFile('auth', 'components/index.js', 'components/index.ts'),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+        : prebuiltFile('auth', 'components/SsoProviderButtons.js', 'components/SsoProviderButtons.tsx'),
       // Notifications package
-      '@alga-psa/notifications': '../packages/notifications/src',
-      '@alga-psa/notifications/': '../packages/notifications/src/',
-      '@alga-psa/notifications/actions': '../packages/notifications/src/actions/index.ts',
-      '@alga-psa/notifications/components': '../packages/notifications/src/components/index.ts',
-      '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
+      '@alga-psa/notifications': prebuiltDir('notifications'),
+      '@alga-psa/notifications/': `${prebuiltDir('notifications')}/`,
+      '@alga-psa/notifications/actions': prebuiltFile('notifications', 'actions/index.js', 'actions/index.ts'),
+      '@alga-psa/notifications/components': prebuiltFile('notifications', 'components/index.js', 'components/index.ts'),
+      '@alga-psa/notifications/hooks': prebuiltFile('notifications', 'hooks/index.js', 'hooks/index.ts'),
       '@alga-psa/scheduling': '../packages/scheduling/src',
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
@@ -251,11 +256,11 @@ const nextConfig = {
       '@alga-psa/event-schemas': prebuiltDir('event-schemas'),
       '@alga-psa/event-schemas/': `${prebuiltDir('event-schemas')}/`,
       // Leaf horizontal packages (resolve to source during local dev)
-      '@alga-psa/types': '../packages/types/src',
-      '@alga-psa/types/': '../packages/types/src/',
-      '@alga-psa/core': '../packages/core/src',
-      '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
-      '@alga-psa/core/': '../packages/core/src/',
+      '@alga-psa/types': prebuiltDir('types'),
+      '@alga-psa/types/': `${prebuiltDir('types')}/`,
+      '@alga-psa/core': prebuiltDir('core'),
+      '@alga-psa/core/rateLimit': prebuiltFile('core', 'lib/rateLimit/index.js', 'lib/rateLimit/index.ts'),
+      '@alga-psa/core/': `${prebuiltDir('core')}/`,
       '@alga-psa/validation': prebuiltDir('validation'),
       '@alga-psa/validation/': `${prebuiltDir('validation')}/`,
       '@alga-psa/formatting': prebuiltDir('formatting'),
@@ -271,10 +276,10 @@ const nextConfig = {
       '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
       '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
       // Assets package
-      '@alga-psa/assets': '../packages/assets/src',
-      '@alga-psa/assets/': '../packages/assets/src/',
-      '@alga-psa/assets/actions': '../packages/assets/src/actions/index.ts',
-      '@alga-psa/assets/components': '../packages/assets/src/components/index.ts',
+      '@alga-psa/assets': prebuiltDir('assets'),
+      '@alga-psa/assets/': `${prebuiltDir('assets')}/`,
+      '@alga-psa/assets/actions': prebuiltFile('assets', 'actions/index.js', 'actions/index.ts'),
+      '@alga-psa/assets/components': prebuiltFile('assets', 'components/index.js', 'components/index.ts'),
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',

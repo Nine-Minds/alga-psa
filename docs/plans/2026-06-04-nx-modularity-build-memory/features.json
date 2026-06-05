@@ -83,7 +83,7 @@
   },
   {
     "id": "F011",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],

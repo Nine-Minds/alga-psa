@@ -145,3 +145,19 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
 - Non-prebuilt big pkgs (projects 54K, scheduling 35K, documents 27K, client-portal
   36K) are NOT in the webpack prebuilt set -> need converting to the preset + build
   wiring for the bigger wins. Biggest single = projects.
+
+## PARITY COMPLETE (2026-06-05)
+- turbopack now mirrors webpack's prebuiltDir dist-aliasing for ALL webpack-prebuilt
+  pkgs: clients, tags, event-schemas, validation, formatting, auth, notifications,
+  types, core(+rateLimit), assets. (sla not aliased in turbopack -> N/A.)
+- Helpers: prebuiltDir(pkg) [bare+slash], prebuiltFile(pkg,distRel,srcRel) [remaps].
+  All USE_PREBUILT-gated (dev=src hot-reload, prod build=dist).
+- parity batch: 3 runs [10550,10435,9655] median 10435 vs S2 10937. Green, 0 resolution errors.
+- NOISE REALITY: per-package wins (~150-250MB) < ~1GB cgroup noise -> don't stack visibly.
+  Only billing(175K) cleared noise. nextbuild PSS ~9150 confirms turbopack proc IS reduced.
+  CLEARLY-measurable win needs the big non-prebuilt pkgs (projects/scheduling/documents/
+  client-portal = 152K LOC) converted to the preset.
+- BEYOND-PARITY conversion recipe (projects/scheduling/documents/client-portal): they are
+  nx-built but emit no usable per-file dist. Convert each tsup.config.ts to the shared
+  makeConfig preset (per-file .js dist), then prebuiltDir/prebuiltFile turbopack aliases.
+  projects: own index-only config -> switch to preset; only barrel remaps (actions/components).
