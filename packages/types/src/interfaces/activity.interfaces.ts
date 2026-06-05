@@ -220,10 +220,20 @@ export interface ActivityFilters {
   includeHidden?: boolean;
   /** Ticket-specific: filter by board_id(s) */
   ticketBoardIds?: string[];
+  /** Ticket-specific: exclude these board_id(s) */
+  ticketExcludeBoardIds?: string[];
   /** Ticket-specific: filter by status_id from the statuses table */
   ticketStatusIds?: string[];
+  /** Ticket-specific: exclude these status_id(s) */
+  ticketExcludeStatusIds?: string[];
   /** Project task-specific: filter by project_status_mapping_id */
   projectStatusMappingIds?: string[];
+  /** Project task-specific: exclude these project_id(s) */
+  excludeProjectIds?: string[];
+  /** Project task-specific: exclude these phase_id(s) */
+  excludePhaseIds?: string[];
+  /** Project task-specific: exclude these project_status_mapping_id(s) */
+  excludeProjectStatusMappingIds?: string[];
   /** Ticket-specific: filter by tag definition IDs */
   ticketTagIds?: string[];
   /** Project task-specific: filter by tag definition IDs */

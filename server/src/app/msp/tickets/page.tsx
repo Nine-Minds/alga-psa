@@ -60,6 +60,18 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.boardId && typeof params.boardId === 'string') {
       filtersFromURL.boardId = params.boardId;
     }
+    if (params?.boardIds && typeof params.boardIds === 'string') {
+      const boardIds = params.boardIds.split(',').filter(id => id.trim().length > 0);
+      if (boardIds.length > 0) {
+        filtersFromURL.boardIds = boardIds;
+      }
+    }
+    if (params?.excludeBoardIds && typeof params.excludeBoardIds === 'string') {
+      const excludeBoardIds = params.excludeBoardIds.split(',').filter(id => id.trim().length > 0);
+      if (excludeBoardIds.length > 0) {
+        filtersFromURL.excludeBoardIds = excludeBoardIds;
+      }
+    }
     if (params?.clientId && typeof params.clientId === 'string') {
       filtersFromURL.clientId = params.clientId;
     }
@@ -190,6 +202,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Create full filter object for data fetching
     const fetchFilters: ITicketListFilters = {
       boardId: initialFilters.boardId || undefined,
+      boardIds: initialFilters.boardIds || undefined,
+      excludeBoardIds: initialFilters.excludeBoardIds || undefined,
       statusId: initialFilters.statusId || TICKET_STATUS_FILTER_OPEN,
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,

@@ -7,6 +7,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
+import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import BulkAssignTicketsDialog from './BulkAssignTicketsDialog';
 import BulkAddTagsDialog from './BulkAddTagsDialog';
@@ -21,7 +22,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagFilter } from '@alga-psa/ui/components';
 import type { TagSize } from '@alga-psa/ui/components/tags';
@@ -307,7 +307,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   // Filter values derived from props (single source of truth is Container's activeFilters)
-  const selectedBoard = filterValues.boardId ?? null;
+  const selectedBoards = useMemo(() => {
+    if (filterValues.boardIds && filterValues.boardIds.length > 0) {
+      return filterValues.boardIds;
+    }
+    // Fall back to the legacy single-board field (e.g. deep links)
+    return filterValues.boardId ? [filterValues.boardId] : EMPTY_STRING_ARRAY;
+  }, [filterValues.boardIds, filterValues.boardId]);
+  const excludedBoards = useMemo(() =>
+    filterValues.excludeBoardIds && filterValues.excludeBoardIds.length > 0
+      ? filterValues.excludeBoardIds
+      : EMPTY_STRING_ARRAY,
+    [filterValues.excludeBoardIds]
+  );
+  // Single board id for board-scoped UI (status options, quick-add prefill) — only
+  // meaningful when exactly one real board is selected.
+  const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
+    ? selectedBoards[0]
+    : null;
   const selectedClient = filterValues.clientId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
@@ -361,7 +378,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
-    return selectedBoard !== null ||
+    return selectedBoards.length > 0 ||
+      excludedBoards.length > 0 ||
       selectedClient !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
@@ -375,7 +393,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -493,7 +511,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const f = filterValues;
 
     // Only add non-default/non-empty values to URL
-    if (f.boardId) params.set('boardId', f.boardId);
+    if (f.boardIds && f.boardIds.length > 0) {
+      params.set('boardIds', f.boardIds.join(','));
+    } else if (f.boardId) {
+      params.set('boardId', f.boardId);
+    }
+    if (f.excludeBoardIds && f.excludeBoardIds.length > 0) {
+      params.set('excludeBoardIds', f.excludeBoardIds.join(','));
+    }
     if (f.clientId) params.set('clientId', f.clientId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
@@ -811,7 +836,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleSelectAllMatchingTickets = useCallback(async () => {
     try {
       const filters: ITicketListFilters = {
-        boardId: selectedBoard ?? undefined,
+        boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+        excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
         categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
@@ -839,7 +865,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setAllMatchingMode(true);
     }
   }, [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
+    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
@@ -1653,7 +1679,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [isSelectedBundleMultiClient, performBundleTickets]);
 
   const exportFilters = useMemo((): ITicketListFilters => ({
-    boardId: selectedBoard ?? undefined,
+    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
     statusId: selectedStatus,
     priorityId: selectedPriority,
     categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
@@ -1675,7 +1702,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     sortDirection,
     bundleView,
   }), [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
+    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
@@ -1901,13 +1928,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsQuickAddOpen(false);
   }, [rawStatusOptions, priorityOptions, boards, categories, currentUser, initialClients, t]);
 
-  const handleBoardSelect = useCallback((boardId: string) => {
-    const nextBoardId = boardId || undefined;
-    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, nextBoardId, selectedStatus);
+  const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
+    // Status options are board-scoped; only scope when exactly one real board is selected.
+    const scopedBoardId = newSelectedBoards.length === 1 && newSelectedBoards[0] !== NO_BOARD_VALUE
+      ? newSelectedBoards[0]
+      : undefined;
+    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, scopedBoardId, selectedStatus);
     const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
 
     onFilterChange({
-      boardId: nextBoardId,
+      boardId: undefined, // clear legacy single-board field; arrays are the source of truth
+      boardIds: newSelectedBoards.length > 0 ? newSelectedBoards : undefined,
+      excludeBoardIds: newExcludedBoards.length > 0 ? newExcludedBoards : undefined,
       statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
       showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
     });
@@ -1942,6 +1974,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     onFilterChange({
       boardId: undefined,
+      boardIds: undefined,
+      excludeBoardIds: undefined,
       clientId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
@@ -2027,13 +2061,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <div className={`space-y-3`}>
               {/* Row 1: Primary filters */}
               <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
-                <BoardPicker
+                <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
+                  selectedBoards={selectedBoards}
+                  excludedBoards={excludedBoards}
                   onSelect={handleBoardSelect}
-                  selectedBoardId={selectedBoard}
                   filterState={boardFilterState}
-                  onFilterStateChange={(state: 'active' | 'inactive' | 'all') => onFilterChange({ boardFilterState: state })}
+                  placeholder={t('filters.board', 'Filter by board')}
+                  multiSelect={true}
+                  showExclude={true}
+                  showReset={true}
+                  allowEmpty={true}
+                  className="text-sm min-w-[200px]"
+                />
+                <CustomSelect
+                  id={`${id}-board-status-filter`}
+                  value={boardFilterState}
+                  onValueChange={(state) => onFilterChange({ boardFilterState: state as 'active' | 'inactive' | 'all' })}
+                  options={[
+                    { value: 'active', label: t('dashboard.filters.activeBoards', 'Active Boards') },
+                    { value: 'inactive', label: t('dashboard.filters.inactiveBoards', 'Inactive Boards') },
+                    { value: 'all', label: t('dashboard.filters.allBoards', 'All Boards') },
+                  ]}
+                  className="text-sm"
                 />
                 <ClientPicker
                   id='client-picker'

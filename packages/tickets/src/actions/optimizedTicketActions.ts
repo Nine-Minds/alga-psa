@@ -1013,9 +1013,24 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereNull('t.master_ticket_id');
     }
 
-    // Apply filters to base query
-    if (validatedFilters.boardId) {
-      baseQuery = baseQuery.where('t.board_id', validatedFilters.boardId);
+    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
+    // legacy single `boardId`. An explicit board selection takes precedence over the
+    // active/inactive status restriction (the user has positively chosen boards).
+    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
+      ? validatedFilters.boardIds
+      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
+    const includeNoBoard = includeBoardIds.includes('no-board');
+    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
+    if (includeBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoBoard && includeRealBoardIds.length > 0) {
+          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
+        } else if (includeNoBoard) {
+          this.whereNull('t.board_id');
+        } else {
+          this.whereIn('t.board_id', includeRealBoardIds);
+        }
+      });
     } else if (validatedFilters.boardFilterState !== 'all') {
       const boardSubquery = trx('boards')
         .select('board_id')
@@ -1023,6 +1038,19 @@ async function buildTicketListBaseQuery(
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
+    }
+
+    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
+    // sentinel excludes tickets that have no board.
+    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
+    if (excludeBoardIds.includes('no-board')) {
+      baseQuery = baseQuery.whereNotNull('t.board_id');
+    }
+    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
+    if (excludeRealBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
+      });
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {

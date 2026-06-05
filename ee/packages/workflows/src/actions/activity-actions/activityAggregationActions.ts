@@ -476,6 +476,27 @@ export async function fetchProjectActivities(
           queryBuilder.whereIn("project_tasks.project_status_mapping_id", filters.projectStatusMappingIds);
         }
 
+        // Exclude tasks whose project is in the excluded set
+        if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
+          queryBuilder.whereNotExists(function() {
+            this.select(db.raw(1))
+              .from("project_phases")
+              .whereRaw("project_phases.phase_id = project_tasks.phase_id")
+              .andWhere("project_phases.tenant", tenant)
+              .whereIn("project_phases.project_id", filters.excludeProjectIds!);
+          });
+        }
+
+        // Exclude tasks in the excluded phases
+        if (filters.excludePhaseIds && filters.excludePhaseIds.length > 0) {
+          queryBuilder.whereNotIn("project_tasks.phase_id", filters.excludePhaseIds);
+        }
+
+        // Exclude tasks in the excluded project statuses
+        if (filters.excludeProjectStatusMappingIds && filters.excludeProjectStatusMappingIds.length > 0) {
+          queryBuilder.whereNotIn("project_tasks.project_status_mapping_id", filters.excludeProjectStatusMappingIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
@@ -645,10 +666,16 @@ export async function fetchTicketActivities(
         if (filters.ticketBoardIds && filters.ticketBoardIds.length > 0) {
           queryBuilder.whereIn("tickets.board_id", filters.ticketBoardIds);
         }
+        if (filters.ticketExcludeBoardIds && filters.ticketExcludeBoardIds.length > 0) {
+          queryBuilder.whereNotIn("tickets.board_id", filters.ticketExcludeBoardIds);
+        }
 
         // Ticket-specific status filter by status_id
         if (filters.ticketStatusIds && filters.ticketStatusIds.length > 0) {
           queryBuilder.whereIn("tickets.status_id", filters.ticketStatusIds);
+        }
+        if (filters.ticketExcludeStatusIds && filters.ticketExcludeStatusIds.length > 0) {
+          queryBuilder.whereNotIn("tickets.status_id", filters.ticketExcludeStatusIds);
         }
 
         // Apply priority filter by priority IDs if provided

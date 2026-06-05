@@ -5,6 +5,7 @@
  */
 
 export { default as CategoryPicker } from './CategoryPicker';
+export { default as BoardFilterPicker } from './BoardFilterPicker';
 export { default as QuickAddCategory } from './QuickAddCategory';
 export { QuickAddTicket } from './QuickAddTicket';
 export { default as ResponseSourceBadge } from './ResponseSourceBadge';
