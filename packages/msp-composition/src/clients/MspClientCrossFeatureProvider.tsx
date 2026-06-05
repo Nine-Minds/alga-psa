@@ -2,12 +2,13 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { ContractWizard, ContractDialog } from '@alga-psa/billing/components';
+import { getTeamsMeetingCapability, scheduleTeamsMeeting as scheduleTeamsMeetingAction, refreshMeetingRecordings } from '@alga-psa/scheduling/actions';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
@@ -100,6 +101,20 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
     []
   );
 
+  const scheduleTeamsMeeting = useCallback(
+    (input: ScheduleTeamsMeetingFromClientInput) => scheduleTeamsMeetingAction({
+      ...input,
+      attendees: input.attendees?.map((attendee) => ({
+        emailAddress: {
+          address: attendee.emailAddress,
+          name: attendee.name,
+        },
+        type: 'required' as const,
+      })),
+    }),
+    []
+  );
+
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
       renderQuickAddTicket,
@@ -110,6 +125,9 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
+      getTeamsMeetingCapability,
+      scheduleTeamsMeeting,
+      refreshMeetingRecordings,
       getSlaPolicies,
     }),
     [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd]

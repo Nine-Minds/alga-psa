@@ -10,7 +10,7 @@ import { RequestAppointmentModal } from './RequestAppointmentModal';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink, List, LayoutGrid, MoreVertical, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink, List, LayoutGrid, MoreVertical, Eye, Pencil, Trash2, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,6 +113,49 @@ export default function AppointmentsPage() {
 
     const config = variants[status];
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const renderOnlineMeetingArtifacts = (appointment: AppointmentRequest, idPrefix: string) => {
+    const artifacts = appointment.online_meeting_artifacts ?? [];
+    if (artifacts.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {artifacts.map((artifact) => {
+          if (artifact.artifact_type === 'transcript' && !artifact.document_id) {
+            return null;
+          }
+
+          const label = artifact.artifact_type === 'transcript'
+            ? t('details.viewTranscript', 'View transcript')
+            : t('details.downloadRecording', 'Download recording');
+          const href = artifact.artifact_type === 'transcript'
+            ? `/api/documents/${encodeURIComponent(artifact.document_id!)}/download`
+            : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}?portal=true`;
+
+          return (
+            <Button
+              key={artifact.artifact_id}
+              id={`${idPrefix}-${artifact.artifact_type}-${artifact.artifact_id}`}
+              asChild
+              variant="outline"
+              size="sm"
+            >
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {artifact.artifact_type === 'transcript' ? (
+                  <FileText className="h-4 w-4 mr-2" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {label}
+              </a>
+            </Button>
+          );
+        })}
+      </div>
+    );
   };
 
   const columns: ColumnDefinition<AppointmentRequest>[] = [
@@ -467,6 +510,10 @@ export default function AppointmentsPage() {
                         <ExternalLink className="h-4 w-4 mr-2" />
                         {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
                       </Button>
+                      {renderOnlineMeetingArtifacts(
+                        selectedAppointment,
+                        'client-portal-appointment-artifact-list',
+                      )}
                     </div>
                   </div>
                 )}

@@ -12,6 +12,7 @@ let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').c
 let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
 let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
 let deleteScheduleEntry: typeof import('@alga-psa/scheduling/actions').deleteScheduleEntry;
+let scheduleTeamsMeeting: typeof import('@alga-psa/scheduling/actions').scheduleTeamsMeeting;
 
 const enterpriseState = vi.hoisted(() => ({ value: true }));
 const teamsMeetingCapabilityMock = vi.hoisted(() => vi.fn());
@@ -32,12 +33,54 @@ type CreatedIds = {
   technicianUserId?: string;
   appointmentRequestId?: string;
   scheduleEntryId?: string;
+  interactionId?: string;
+  onlineMeetingId?: string;
   contractId?: string;
   clientContractId?: string;
   contractLineId?: string;
   availabilitySettingIds: string[];
 };
 let createdIds: CreatedIds = { availabilitySettingIds: [] };
+
+async function insertServiceType(
+  db: Knex,
+  values: {
+    id: string;
+    tenant: string;
+    name: string;
+    order_number: number;
+  }
+) {
+  const hasBillingMethod = await db.schema.hasColumn('service_types', 'billing_method');
+  await db('service_types').insert({
+    ...values,
+    ...(hasBillingMethod ? { billing_method: 'fixed' } : {}),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+}
+
+async function ensureStaffUser(db: Knex, tenant: string) {
+  await db('users')
+    .insert({
+      tenant,
+      user_id: STAFF_USER_ID,
+      username: 'staff_online_meeting_test',
+      first_name: 'Staff',
+      last_name: 'User',
+      email: 'staff-online-meeting-test@example.com',
+      hashed_password: 'hashed',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    })
+    .onConflict(['tenant', 'user_id'])
+    .merge({
+      is_inactive: false,
+      updated_at: db.fn.now()
+    });
+}
 
 // Mock the database module to return test database
 vi.mock('@alga-psa/db', async () => {
@@ -75,6 +118,11 @@ vi.mock('@alga-psa/core/features', async () => {
   };
 });
 
+vi.mock('@alga-psa/licensing', () => ({
+  getLicenseStateRow: vi.fn(async () => null),
+  resolveSelfHostTier: vi.fn(() => null),
+}));
+
 // Mock SystemEmailService to prevent actual email sending
 const mockEmailInstance = {
   sendAppointmentRequestReceived: vi.fn(() => Promise.resolve()),
@@ -94,6 +142,11 @@ vi.mock('@alga-psa/email', () => ({
 // Mock event bus to prevent actual event publishing
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(() => Promise.resolve())
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(() => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(() => Promise.resolve())
 }));
 
 // Mock internal notification actions
@@ -143,6 +196,9 @@ describe('Appointment Request Integration Tests', () => {
     createTeamsMeetingMock.mockResolvedValue({
       joinWebUrl: 'https://teams.example.com/meeting/123',
       meetingId: 'meeting-123',
+      organizerUpn: 'organizer@example.com',
+      organizerUserId: 'organizer-object-1',
+      eventId: 'event-123',
     });
     updateTeamsMeetingMock.mockResolvedValue(true);
     deleteTeamsMeetingMock.mockResolvedValue(true);
@@ -161,10 +217,11 @@ describe('Appointment Request Integration Tests', () => {
 
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
+    await ensureStaffUser(db, tenantId);
 
     // Import the actions after mocks are set up
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
-    ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry } = await import('@alga-psa/scheduling/actions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry, scheduleTeamsMeeting } = await import('@alga-psa/scheduling/actions'));
   }, 120_000);
 
   beforeEach(() => {
@@ -255,14 +312,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create a service without any availability settings
       const serviceTypeId = uuidv4();
-      await db('service_types').insert({
+      await insertServiceType(db, {
         id: serviceTypeId,
         tenant: tenantId,
         name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-        billing_method: 'fixed',
-        order_number: Math.floor(Math.random() * 1000000),
-        created_at: db.fn.now(),
-        updated_at: db.fn.now()
+        order_number: Math.floor(Math.random() * 1000000)
       });
       createdIds.serviceTypeId = serviceTypeId;
 
@@ -738,12 +792,157 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBe('teams');
       expect(updatedRequest.online_meeting_url).toBe('https://teams.example.com/meeting/123');
       expect(updatedRequest.online_meeting_id).toBe('meeting-123');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+
+      expect(onlineMeeting).toMatchObject({
+        tenant: tenantId,
+        provider: 'teams',
+        provider_meeting_id: 'meeting-123',
+        provider_event_id: 'event-123',
+        organizer_upn: 'organizer@example.com',
+        organizer_user_id: 'organizer-object-1',
+        join_url: 'https://teams.example.com/meeting/123',
+        status: 'scheduled',
+        schedule_entry_id: approveResult.data?.schedule_entry_id,
+      });
+
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: onlineMeeting.interaction_id,
+        })
+        .first();
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+
+      expect(interaction).toMatchObject({
+        tenant: tenantId,
+        type_id: onlineMeetingType.type_id,
+        client_id: fixture.clientId,
+        contact_name_id: fixture.contactId,
+        user_id: STAFF_USER_ID,
+        title: 'Online Meeting: Test Service',
+      });
       expect(mockEmailInstance.sendAppointmentRequestApproved).toHaveBeenCalledWith(
         expect.objectContaining({
           onlineMeetingUrl: 'https://teams.example.com/meeting/123',
         }),
         expect.anything()
       );
+    });
+
+    it('deletes the orphaned Teams event when the local approval transaction fails after Graph create', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+      expect(onlineMeetingType).toBeTruthy();
+
+      await db('system_interaction_types')
+        .where({ type_id: onlineMeetingType.type_id })
+        .update({ type_name: `Online Meeting Hidden ${uuidv4()}` });
+
+      try {
+        const approveResult = await approveAppointmentRequest({
+          appointment_request_id: fixture.appointmentRequestId,
+          assigned_user_id: fixture.technicianUserId,
+          generate_teams_meeting: true,
+        });
+
+        expect(approveResult.success).toBe(false);
+        expect(approveResult.error).toContain('Online Meeting interaction type is not configured');
+        expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tenantId,
+            appointmentRequestId: fixture.appointmentRequestId,
+          })
+        );
+        expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
+          tenantId,
+          meetingId: 'meeting-123',
+          eventId: 'event-123',
+          appointmentRequestId: fixture.appointmentRequestId,
+        });
+
+        const updatedRequest = await db('appointment_requests')
+          .where({
+            appointment_request_id: fixture.appointmentRequestId,
+            tenant: tenantId,
+          })
+          .first();
+        expect(updatedRequest.status).toBe('pending');
+        expect(updatedRequest.online_meeting_provider).toBeNull();
+        expect(updatedRequest.online_meeting_url).toBeNull();
+        expect(updatedRequest.online_meeting_id).toBeNull();
+
+        const onlineMeeting = await db('online_meetings')
+          .where({
+            tenant: tenantId,
+            appointment_request_id: fixture.appointmentRequestId,
+          })
+          .first();
+        expect(onlineMeeting).toBeUndefined();
+      } finally {
+        await db('system_interaction_types')
+          .where({ type_id: onlineMeetingType.type_id })
+          .update({ type_name: 'Online Meeting' });
+      }
+    });
+
+    it('does not backfill legacy approved Teams appointment links into online meeting records or timeline interactions', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      const approvedAt = new Date('2026-06-01T12:00:00.000Z');
+
+      await db('appointment_requests')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .update({
+          status: 'approved',
+          approved_by_user_id: STAFF_USER_ID,
+          approved_at: approvedAt,
+          online_meeting_provider: 'teams',
+          online_meeting_url: 'https://teams.example.com/legacy',
+          online_meeting_id: 'legacy-meeting-123',
+        });
+
+      const legacyRequest = await db('appointment_requests')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(legacyRequest.online_meeting_provider).toBe('teams');
+      expect(legacyRequest.online_meeting_url).toBe('https://teams.example.com/legacy');
+      expect(legacyRequest.online_meeting_id).toBe('legacy-meeting-123');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
+
+      const timelineInteractions = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: fixture.clientId,
+          contact_name_id: fixture.contactId,
+        })
+        .whereILike('title', 'Online Meeting:%');
+      expect(timelineInteractions).toHaveLength(0);
     });
 
     it('skips Teams meeting creation when the toggle is off', async () => {
@@ -796,6 +995,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBeNull();
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
     });
 
     it('keeps approval successful when Teams meeting creation fails', async () => {
@@ -828,11 +1035,19 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.online_meeting_provider).toBeNull();
       expect(updatedRequest.online_meeting_url).toBeNull();
       expect(updatedRequest.online_meeting_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting).toBeUndefined();
     });
 
     it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
       const fixture = await createPendingAppointmentFixture(db, tenantId, {
-        requestedDate: '2026-04-25',
+        requestedDate: '2026-08-25',
         requestedTime: '14:30',
         requestedDuration: 60,
       });
@@ -857,14 +1072,239 @@ describe('Appointment Request Integration Tests', () => {
       expect(approveResult.success).toBe(true);
       expect(createTeamsMeetingMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          startDateTime: '2026-04-25T21:30:00.000Z',
-          endDateTime: '2026-04-25T22:30:00.000Z',
+          startDateTime: '2026-08-25T21:30:00.000Z',
+          endDateTime: '2026-08-25T22:30:00.000Z',
         })
       );
 
       const createArgs = createTeamsMeetingMock.mock.calls.at(-1)?.[0];
-      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 14:30');
-      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 15:30');
+      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 14:30');
+      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-08-25 15:30');
+    });
+  });
+
+  describe('Schedule Teams Meeting (MSP)', () => {
+    const startDateTime = '2026-08-25T14:00:00.000Z';
+    const endDateTime = '2026-08-25T14:30:00.000Z';
+
+    async function setupMspMeetingContext() {
+      const setup = await setupTestData(db, tenantId, { skipService: true });
+      createdIds.clientId = setup.clientId;
+      createdIds.contactId = setup.contactId;
+      createdIds.clientUserId = setup.clientUserId;
+      createdIds.technicianUserId = setup.technicianUserId;
+      setStaffSchedulingContext(tenantId);
+      return setup;
+    }
+
+    it('creates a Teams meeting for a contact/client and persists the interaction plus online_meetings row', async () => {
+      const { clientId, contactId } = await setupMspMeetingContext();
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Account review',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+        attendees: [
+          {
+            emailAddress: {
+              address: 'client-attendee@example.com',
+              name: 'Client Attendee',
+            },
+            type: 'required',
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      createdIds.onlineMeetingId = result.data.meeting_id;
+      createdIds.interactionId = result.data.interaction_id;
+
+      expect(createTeamsMeetingMock).toHaveBeenCalledWith({
+        tenantId,
+        subject: 'Account review',
+        startDateTime,
+        endDateTime,
+        appointmentRequestId: null,
+        attendees: [
+          {
+            emailAddress: {
+              address: 'client-attendee@example.com',
+              name: 'Client Attendee',
+            },
+            type: 'required',
+          },
+        ],
+      });
+      expect(createTeamsMeetingMock.mock.calls[0][0]).not.toHaveProperty('organizerUpn');
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: result.data.meeting_id,
+        })
+        .first();
+
+      expect(onlineMeeting).toMatchObject({
+        provider: 'teams',
+        provider_meeting_id: 'meeting-123',
+        provider_event_id: 'event-123',
+        organizer_upn: 'organizer@example.com',
+        organizer_user_id: 'organizer-object-1',
+        subject: 'Account review',
+        join_url: 'https://teams.example.com/meeting/123',
+        status: 'scheduled',
+        appointment_request_id: null,
+        schedule_entry_id: null,
+        created_by: STAFF_USER_ID,
+      });
+
+      const onlineMeetingType = await db('system_interaction_types')
+        .where({ type_name: 'Online Meeting' })
+        .first();
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: result.data.interaction_id,
+        })
+        .first();
+
+      expect(interaction).toMatchObject({
+        type_id: onlineMeetingType.type_id,
+        client_id: clientId,
+        contact_name_id: contactId,
+        user_id: STAFF_USER_ID,
+        title: 'Online Meeting: Account review',
+        notes: 'Join Teams Meeting: https://teams.example.com/meeting/123',
+      });
+      expect(onlineMeeting.interaction_id).toBe(interaction.interaction_id);
+    });
+
+    it('denies a user lacking user_schedule:update and creates no meeting rows', async () => {
+      const setup = await setupTestData(db, tenantId, { skipService: true });
+      createdIds.clientId = setup.clientId;
+      createdIds.contactId = setup.contactId;
+      createdIds.clientUserId = setup.clientUserId;
+      createdIds.technicianUserId = setup.technicianUserId;
+
+      const staffUser = createMockUser('internal', {
+        user_id: STAFF_USER_ID,
+        tenant: tenantId,
+      });
+      setMockUser(staffUser, ['user_schedule:read']);
+      setupCommonMocks({
+        tenantId,
+        userId: STAFF_USER_ID,
+        user: staffUser,
+        permissionCheck: (_user, resource, action) => !(resource === 'user_schedule' && action === 'update'),
+      });
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Permission check',
+        startDateTime,
+        endDateTime,
+        client_id: setup.clientId,
+        contact_name_id: setup.contactId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/permission denied/i);
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const interactionCount = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: setup.clientId,
+          contact_name_id: setup.contactId,
+        })
+        .where('title', 'Online Meeting: Permission check')
+        .count<{ count: string }[]>('* as count');
+      expect(Number(interactionCount[0].count)).toBe(0);
+    });
+
+    it('fails gracefully and creates no local rows when Teams capability is unavailable', async () => {
+      const { clientId, contactId } = await setupMspMeetingContext();
+      teamsMeetingCapabilityMock.mockResolvedValue({ available: false, reason: 'no_organizer' });
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Capability check',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('no default organizer');
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const interactionCount = await db('interactions')
+        .where({
+          tenant: tenantId,
+          client_id: clientId,
+          contact_name_id: contactId,
+        })
+        .where('title', 'Online Meeting: Capability check')
+        .count<{ count: string }[]>('* as count');
+      expect(Number(interactionCount[0].count)).toBe(0);
+    });
+
+    it('optionally creates a schedule entry linked to the created interaction', async () => {
+      const { clientId, contactId, technicianUserId } = await setupMspMeetingContext();
+
+      const result = await scheduleTeamsMeeting({
+        subject: 'Scheduled Teams consult',
+        startDateTime,
+        endDateTime,
+        client_id: clientId,
+        contact_name_id: contactId,
+        createScheduleEntry: true,
+        assignedUserIds: [technicianUserId],
+      });
+
+      expect(result.success).toBe(true);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      createdIds.onlineMeetingId = result.data.meeting_id;
+      createdIds.interactionId = result.data.interaction_id;
+      createdIds.scheduleEntryId = result.data.schedule_entry_id ?? undefined;
+
+      expect(result.data.schedule_entry_id).toBeTruthy();
+
+      const scheduleEntry = await db('schedule_entries')
+        .where({
+          tenant: tenantId,
+          entry_id: result.data.schedule_entry_id,
+        })
+        .first();
+      expect(scheduleEntry).toMatchObject({
+        title: 'Scheduled Teams consult',
+        work_item_type: 'interaction',
+        work_item_id: result.data.interaction_id,
+        status: 'scheduled',
+        notes: 'Join Teams Meeting: https://teams.example.com/meeting/123',
+      });
+
+      const assignees = await db('schedule_entry_assignees')
+        .where({
+          tenant: tenantId,
+          entry_id: result.data.schedule_entry_id,
+        })
+        .select('user_id');
+      expect(assignees.map((row) => row.user_id)).toEqual([technicianUserId]);
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: result.data.meeting_id,
+        })
+        .first();
+      expect(onlineMeeting.schedule_entry_id).toBe(result.data.schedule_entry_id);
     });
   });
 
@@ -993,6 +1433,19 @@ describe('Appointment Request Integration Tests', () => {
       expect(createResult.success).toBe(true);
       createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
       const originalScheduleEntryId = createResult.data?.schedule_entry_id;
+      const meetingId = uuidv4();
+      await db('online_meetings').insert({
+        tenant: tenantId,
+        meeting_id: meetingId,
+        provider: 'teams',
+        provider_meeting_id: `pending-meeting-${meetingId}`,
+        subject: 'Pending meeting',
+        join_url: 'https://teams.example.com/pending',
+        start_time: new Date(`${requestDate}T14:00:00.000Z`),
+        end_time: new Date(`${requestDate}T15:00:00.000Z`),
+        status: 'scheduled',
+        appointment_request_id: createResult.data!.appointment_request_id,
+      });
 
       const staffUser = createMockUser('internal', {
         user_id: STAFF_USER_ID,
@@ -1021,6 +1474,14 @@ describe('Appointment Request Integration Tests', () => {
       expect(updatedRequest.declined_reason).toBe('No technician available at requested time');
       expect(updatedRequest.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(updatedRequest.schedule_entry_id).toBeNull();
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          meeting_id: meetingId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
 
       // Verify schedule entry was deleted
       const scheduleEntry = await db('schedule_entries')
@@ -1877,10 +2338,30 @@ describe('Appointment Request Integration Tests', () => {
           tenantId,
           appointmentRequestId: fixture.appointmentRequestId,
           meetingId: 'meeting-123',
+          eventId: 'event-123',
           startDateTime: '2026-04-30T16:45:00.000Z',
           endDateTime: '2026-04-30T18:15:00.000Z',
         })
       );
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(new Date(onlineMeeting.start_time).toISOString()).toBe('2026-04-30T16:45:00.000Z');
+      expect(new Date(onlineMeeting.end_time).toISOString()).toBe('2026-04-30T18:15:00.000Z');
+
+      const interaction = await db('interactions')
+        .where({
+          tenant: tenantId,
+          interaction_id: onlineMeeting.interaction_id,
+        })
+        .first();
+      expect(new Date(interaction.start_time).toISOString()).toBe('2026-04-30T16:45:00.000Z');
+      expect(new Date(interaction.end_time).toISOString()).toBe('2026-04-30T18:15:00.000Z');
+      expect(interaction.duration).toBe(90);
     });
 
     it('returns a warning when the Teams reschedule PATCH fails', async () => {
@@ -1931,6 +2412,44 @@ describe('Appointment Request Integration Tests', () => {
       expect(updateResult.success).toBe(true);
       expect(updateTeamsMeetingMock).not.toHaveBeenCalled();
     });
+
+    it('reschedules a legacy Teams meeting without a provider event id using the standalone fallback', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .delete();
+      updateTeamsMeetingMock.mockClear();
+
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
+      const updateResult = await updateAppointmentRequestDateTime({
+        appointment_request_id: fixture.appointmentRequestId,
+        new_date: '2026-05-04',
+        new_time: '14:30',
+        new_duration: 30,
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateTeamsMeetingMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          appointmentRequestId: fixture.appointmentRequestId,
+          meetingId: 'meeting-123',
+          eventId: null,
+        })
+      );
+    });
   });
 
   describe('Teams meeting deletion lifecycle', () => {
@@ -1956,8 +2475,17 @@ describe('Appointment Request Integration Tests', () => {
       expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
         tenantId,
         meetingId: 'meeting-123',
+        eventId: 'event-123',
         appointmentRequestId: fixture.appointmentRequestId,
       });
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
     });
 
     it('deletes the linked Teams meeting when MSP staff deletes the schedule entry', async () => {
@@ -1978,8 +2506,17 @@ describe('Appointment Request Integration Tests', () => {
       expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
         tenantId,
         meetingId: 'meeting-123',
+        eventId: 'event-123',
         appointmentRequestId: fixture.appointmentRequestId,
       });
+
+      const onlineMeeting = await db('online_meetings')
+        .where({
+          tenant: tenantId,
+          appointment_request_id: fixture.appointmentRequestId,
+        })
+        .first();
+      expect(onlineMeeting.status).toBe('cancelled');
     });
 
     it('surfaces a warning when Teams meeting deletion fails during cancellation', async () => {
@@ -2235,14 +2772,11 @@ async function setupTestData(
   if (!options.skipService) {
     // Create service type
     serviceTypeId = uuidv4();
-    await db('service_types').insert({
+    await insertServiceType(db, {
       id: serviceTypeId,
       tenant: tenantId,
       name: `Service Type ${serviceTypeId.slice(0, 8)}`,
-      billing_method: 'fixed',
-      order_number: Math.floor(Math.random() * 1000000),
-      created_at: db.fn.now(),
-      updated_at: db.fn.now()
+      order_number: Math.floor(Math.random() * 1000000)
     });
 
     // Create service
@@ -2380,6 +2914,20 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   };
 
   // Delete appointment request and related data
+  if (ids.onlineMeetingId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      meeting_id: ids.onlineMeetingId
+    });
+  }
+
+  if (ids.scheduleEntryId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      schedule_entry_id: ids.scheduleEntryId
+    });
+  }
+
   if (ids.scheduleEntryId) {
     await safeDelete('schedule_entry_assignees', {
       tenant: tenantId,
@@ -2392,9 +2940,20 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.appointmentRequestId) {
+    await safeDelete('online_meetings', {
+      tenant: tenantId,
+      appointment_request_id: ids.appointmentRequestId
+    });
     await safeDelete('appointment_requests', {
       tenant: tenantId,
       appointment_request_id: ids.appointmentRequestId
+    });
+  }
+
+  if (ids.interactionId) {
+    await safeDelete('interactions', {
+      tenant: tenantId,
+      interaction_id: ids.interactionId
     });
   }
 

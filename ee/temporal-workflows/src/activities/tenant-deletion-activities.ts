@@ -182,6 +182,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
 
+  // Online meetings (reference interactions / appointment_requests / schedule_entries; artifacts reference meetings)
+  'online_meeting_artifacts', 'online_meetings',
+
   // Appointment
   'appointment_requests',
 

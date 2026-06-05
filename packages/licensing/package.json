@@ -7,14 +7,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "types": "./src/actions/index.ts",
+      "import": "./src/actions/index.ts",
+      "require": "./src/actions/index.ts"
     }
   },
   "scripts": {
