@@ -32,6 +32,10 @@
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "import": "./dist/*.mjs"
     }
   },
   "scripts": {

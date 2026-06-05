@@ -1,15 +1,18 @@
 import { defineConfig } from 'tsup';
 
+// nx-modularity spike (2026-06-04): emit a per-file dist mirroring src so the app
+// can consume @alga-psa/billing from dist (deep sub-path imports) instead of
+// turbopack recompiling all of billing/src. bundle:false keeps each file separate;
+// esbuild preserves 'use server'/'use client' directives per file.
 export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-    runtime: 'src/runtime.ts',
-    'actions/index': 'src/actions/index.ts',
-    'components/index': 'src/components/index.ts',
-    'models/index': 'src/models/index.ts',
-    'schemas/index': 'src/schemas/index.ts',
-    'services/index': 'src/services/index.ts',
-  },
+  entry: [
+    'src/**/*.ts',
+    'src/**/*.tsx',
+    '!src/**/*.test.ts',
+    '!src/**/*.test.tsx',
+    '!src/**/*.stories.tsx',
+    '!src/**/*.d.ts',
+  ],
   format: ['esm'],
   dts: false,
   bundle: false,

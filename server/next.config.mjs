@@ -270,13 +270,9 @@ const nextConfig = {
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
-      // Billing package
-      '@alga-psa/billing': '../packages/billing/src',
-      '@alga-psa/billing/': '../packages/billing/src/',
-      '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
-      '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
-      '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
-      '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+      // Billing package — nx-modularity spike: consume prebuilt dist (per-file,
+      // directive-preserving) via package.json exports instead of recompiling src.
+      // (resolveAlias entries removed; resolution falls through to exports -> dist)
       // Projects package
       '@alga-psa/projects': '../packages/projects/src',
       '@alga-psa/projects/': '../packages/projects/src/',

@@ -60,6 +60,54 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
 - Package builds: `packages/*/tsup.config.ts`, `packages/*/package.json` (`exports`)
 - nx: `npx nx build @alga-psa/<pkg>` ; `npx nx build-deps server`
 
+## SPIKE RESULTS (2026-06-05) — hypothesis CONFIRMED
+
+- **esbuild PRESERVES `'use server'`/`'use client'` directives** per file. The earlier
+  "0 dist directives" was only because `bundle:false` + index-only entries never emitted
+  the leaf files. Fix = **glob entries**.
+- **Working tsup pattern** (billing): `entry: ['src/**/*.ts','src/**/*.tsx', '!**/*.test.*','!**/*.stories.tsx','!**/*.d.ts']`,
+  `bundle:false`, `format:['esm']`, `external:[/^@alga-psa\//, react, next, ...]`.
+  → 361 per-file `dist/*.mjs` mirroring src, **all 206 directives preserved**, build 161 ms.
+- **Exports pattern** that resolves deep imports: add `"./*": { "types":"./src/*.ts","import":"./dist/*.mjs" }`
+  alongside the exact barrel entries (exact wins for `./actions`; `./*` catches `./actions/invoiceGeneration`).
+- **Removed** billing's 6 `resolveAlias` lines in next.config.mjs → turbopack falls through to exports→dist.
+- **Measured (billing only):** peak **10937 → 9976 MB (−961 MB)**, build green (ok=true), no
+  billing resolution errors, dur 58.3s (no regression). Main `next build` proc 9.1→8.5 GB.
+  billing = 175K LOC of ~500K+ total src-aliased LOC → rollout to ui/projects/clients/auth/...
+  should STACK to multi-GB. **GO.**
+- Note: `"./*"` types→`./src/*.ts` won't match `.tsx` component types (type-check only;
+  turbopack build uses the `import` condition → dist, so build is green). Revisit types later.
+- Open: billing dist must be built before next build. Spike built it manually; rollout must
+  wire packages into `nx build-deps server` (F014) so dist is always fresh.
+
+## Wiring (2026-06-05)
+
+- nx infers deps from imports, NOT package.json (no @alga-psa/* in server deps yet nx builds 46).
+  billing/ui are leaf app-only imports nx build-deps doesn't reach -> NOT auto-built.
+- Fix: added root `build:vertical-deps` = `nx run-many -t build -p @alga-psa/billing`,
+  inserted into `build` and `build:ce` after `nx build-deps server`. Extend the `-p` list
+  as more not-auto-built packages are dist-aliased (ui, client-portal, ...).
+- Verified: removed manual billing dist, ran harness -> chain rebuilt billing dist,
+  build green (ok=true, 10238 MB single run). billing dist-aliasing is self-contained + wired.
+
+## RUNTIME VALIDATION plan (mandatory before merge)
+
+- Production build consumes dist (via build:vertical-deps). `npm run dev` does NOT run
+  build:vertical-deps -> billing dist must be built first for dev, OR validate via prod
+  `next start`. Simplest: build billing dist (`npm run build:vertical-deps`) then bring up
+  env, OR run a full `npm run build` + `next start`.
+- Smoke (algadev browser): login -> MSP dashboard -> a billing/invoices page (exercises
+  @alga-psa/billing/actions server actions via dist) -> tickets (editor). Watch console for
+  module-resolution / 'use server' boundary / undefined-export errors.
+
+## Rollout status
+- DONE: billing (175K LOC) — tsup glob + ./* exports + alias removed + wired. -961MB (median spike).
+- Next batch (already nx-built, just need tsup-glob + ./* exports + alias removal):
+  projects(54K), clients(35K), scheduling(35K, NO tsup.config!), documents(27K, NO tsup!),
+  auth(16K), assets(16K). Non-uniform builds -> handle individually.
+- ui(39K): build BROKEN (fonts in TicketDetails.module.css) + deep imports -> needs build fix first.
+- Skip long tail (types type-only/erased; teams/validation/portal-shared tiny).
+
 ## Open questions / TODO
 - (Phase 0) Which packages have the biggest src compile footprint? (LOC/file count)
 - Does tsup `entry: ['src/**/*.{ts,tsx}']` glob + `splitting:false` produce resolvable per-file dist? Build-time cost?
