@@ -47,6 +47,28 @@ because over-provisioned workers added spawn/load overhead. Worker-count sweep
 (1 run each): cpu16=10201, cpu8=10651, cpu4=9888, cpu2=9775 — all ~compile-floor
 bound; cap=4 vs cap=8 is within noise at 3 runs.
 
+### The post-R2 floor: a single turbopack process (~9–10 GB)
+
+Harness cmdline capture at peak shows the floor is **one process —
+`next build --turbo` at ~9.1 GB** (others are tiny postcss/npm wrappers). Its RSS
+exceeds the 8 GB `--max-old-space-size`, so most of it is turbopack's **native
+(Rust) compile memory**, off the V8 heap. ~2.4 GB of the cgroup peak is
+reclaimable page cache (reading node_modules/source) — part of the run-to-run
+noise. Levers tried against this floor — **all sub-noise or worse:**
+
+| attempt | result vs S2 (10937 MB) | verdict |
+|---|---|---|
+| `NODE_OPTIONS=--max-old-space-size` 6144/4096/3072 (no OOM even at 3 GB) | 10162/10609/10221 (~−500 MB) | sub-noise; lowering prod heap headroom trades OOM safety — not baked |
+| `experimental.turbopackMemoryLimit` 4/3/2 GB (no failures) | 11116/10383/10537 (~−400 MB) | sub-noise; turbopack doesn't actually shrink |
+| combo (cap4 + heap6G + turbo3G), 3 runs | median 10330 (−607 MB), 55.3s | sub-noise (overlaps S2), gain is mostly the unsafe heap cap |
+| **webpack** instead of turbopack | **13338 MB, 316 s** | **worse on both axes** (×5.5 slower) |
+| editor/client-lib ssr:false code-split | ≤~200 MB potential (core stays server-side) | sub-noise; not attempted |
+
+**Conclusion:** after R1+R2 (14175 → 10937 MB, −3.2 GB / −23%, *and* faster:
+68→58s), the build sits on turbopack's native compilation floor for this large
+app. No further **sound** change beats the ~1 GB run-to-run variance without
+removing app features. Clean rounds 3–9 are not available within the rules.
+
 ### Learnings (narrow the search space)
 - **Per-worker memory is module-graph-dominated, not render-state.** Capping
   `staticGenerationMaxConcurrency` (concurrent renders/worker) did nothing →

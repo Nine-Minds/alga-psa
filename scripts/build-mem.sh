@@ -57,7 +57,7 @@ fi
 DOCKER_ARGS=(run --rm --init -v "$REPO_ROOT":/work -w /work
   --user "$(id -u):$(id -g)" -e HOME=/tmp)
 # Forward build-tuning env knobs into the container if set in the caller's env.
-for k in NEXT_BUILD_CPUS NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT NODE_OPTIONS; do
+for k in NEXT_BUILD_CPUS NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT NODE_OPTIONS TURBO_MEM_LIMIT; do
   [[ -n "${!k:-}" ]] && DOCKER_ARGS+=(-e "$k=${!k}")
 done
 [[ -t 1 ]] && DOCKER_ARGS+=(-t)

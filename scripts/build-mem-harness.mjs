@@ -225,7 +225,7 @@ const sampler = setInterval(() => {
     const pss = readPssKb(pid);
     if (pss > 0) {
       sumPssKb += pss;
-      procs.push({ pid, pssKb: pss, label: friendlyProc(cmd) });
+      procs.push({ pid, pssKb: pss, label: friendlyProc(cmd), cmd: cmd.slice(0, 240) });
     }
   }
   const stage = classifyStage(cmdlines);
@@ -262,7 +262,7 @@ result.peak.cgroupBytes = cgroupPeak;
 result.peak.samplerPssKb = globalPeak.sumPssKb;
 result.peak.atStage = globalPeak.stage;
 result.procCountAtPeak = globalPeak.procs.length;
-result.topAtPeak = globalPeak.procs.slice(0, 8).map((p) => ({ label: p.label, pssKb: p.pssKb }));
+result.topAtPeak = globalPeak.procs.slice(0, 8).map((p) => ({ label: p.label, pssKb: p.pssKb, cmd: p.cmd }));
 // Roll the peak sample's processes up by friendly label so a large worker pool's
 // full weight is visible even though only the top 8 are listed individually.
 const rollupMap = new Map();
