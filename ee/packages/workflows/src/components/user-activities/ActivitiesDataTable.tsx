@@ -135,12 +135,12 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       cellClassName: 'relative',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          {/* Left-edge color indicator for the activity type — rounded to echo the
-              Tickets/Tasks filter chips above the table. Positioned inline because this
-              file's Tailwind classes aren't all in the scanned content globs. */}
+          {/* Left-edge color accent for the activity type — flush to the row's left
+              border, full height. Positioned inline because this file's Tailwind classes
+              aren't all in the scanned content globs. */}
           <div
             className="absolute"
-            style={{ top: 6, bottom: 6, left: 4, width: 4, borderRadius: 9999, backgroundColor: getActivityTypeColor(value as ActivityType) }}
+            style={{ top: 0, bottom: 0, left: 0, width: 4, backgroundColor: getActivityTypeColor(value as ActivityType) }}
             aria-hidden="true"
           />
           {getActivityTypeIcon(value as ActivityType)}

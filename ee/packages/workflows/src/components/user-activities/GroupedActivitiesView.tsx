@@ -226,12 +226,12 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: Sorta
         'hover:bg-muted/30 transition-colors group'
       )}
     >
-      {/* Left-edge color indicator for the activity type — matches the flat table.
-          Positioned inline because this file's Tailwind classes aren't all in the
-          scanned content globs. */}
+      {/* Left-edge color accent for the activity type — flush to the row's left border,
+          full height (matches the flat table). Positioned inline because this file's
+          Tailwind classes aren't all in the scanned content globs. */}
       <div
         className="absolute"
-        style={{ top: 6, bottom: 6, left: 4, width: 4, borderRadius: 9999, backgroundColor: getActivityTypeColor(activity.type) }}
+        style={{ top: 0, bottom: 0, left: 0, width: 4, backgroundColor: getActivityTypeColor(activity.type) }}
         aria-hidden="true"
       />
 
