@@ -1274,6 +1274,28 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       });
     }
 
+    if (validatedFilters.assignedToMe) {
+      const hasProjectRead = await hasPermission(user, 'project', 'read', trx);
+      if (!hasProjectRead) {
+        const callerUserId = (user as IUserWithRoles).user_id;
+        query = query.where(function(this: any) {
+          this.where('t.assigned_to', callerUserId)
+            .orWhereIn('t.ticket_id', function(this: any) {
+              this.select('ticket_id')
+                .from('ticket_resources')
+                .where('tenant', tenant)
+                .andWhere('additional_user_id', callerUserId);
+            })
+            .orWhereIn('t.assigned_team_id', function(this: any) {
+              this.select('team_id')
+                .from('team_members')
+                .where('tenant', tenant)
+                .andWhere('user_id', callerUserId);
+            });
+        });
+      }
+    }
+
       const sortBy = validatedFilters.sortBy ?? 'entered_at';
       const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
       const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {

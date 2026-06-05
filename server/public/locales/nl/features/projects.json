@@ -432,6 +432,7 @@
     "selectFolderDescription": "Kies waar u dit nieuwe document wilt opslaan"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan dit kaartje",
     "title": "Bijbehorende kaartjes",
     "linkExistingTitle": "Koppel bestaand ticket",
     "createTicket": "Ticket aanmaken",
@@ -720,6 +721,7 @@
       "allPriorities": "Alle prioriteiten"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan deze taak",
       "title": "Gekoppelde projecttaken",
       "loadFailed": "Taak laden mislukt",
       "phaseNotFound": "Taakfase niet gevonden",

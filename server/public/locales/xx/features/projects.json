@@ -432,6 +432,7 @@
     "selectFolderDescription": "11111"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "11111",
     "title": "11111",
     "linkExistingTitle": "11111",
     "createTicket": "11111",
@@ -720,6 +721,7 @@
       "allPriorities": "11111"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "11111",
       "title": "11111",
       "loadFailed": "11111",
       "phaseNotFound": "11111",

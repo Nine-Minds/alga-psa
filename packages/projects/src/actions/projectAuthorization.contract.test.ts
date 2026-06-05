@@ -109,16 +109,19 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('if (!allowedTicketIds.has(link.ticket_id)) {');
   });
 
-  it('F033: linked ticket payloads in project structural surfaces apply ticket-resource intersection semantics', () => {
+  it('F033: linked ticket payloads in project structural surfaces apply assignee-set restriction semantics', () => {
     expect(projectTaskActionsSource).toContain('export async function filterAuthorizedTicketIds(');
+    expect(projectTaskActionsSource).toContain('export async function buildTicketAssigneeSetByTicketId(');
     expect(projectTaskActionsSource).toContain('async function assertTicketReadAllowedById(');
-    expect(projectTaskActionsSource).toContain('resource: { type: \'ticket\', action: \'read\', id: ticket.ticket_id }');
+    expect(projectTaskActionsSource).toContain('if (await isProjectReadAdmin(user, trx)) {');
+    expect(projectTaskActionsSource).toContain('const assigneesByTicket = await buildTicketAssigneeSetByTicketId(trx, tenant, uniqueTicketIds);');
+    expect(projectTaskActionsSource).toContain('export function applyTicketLinkRestriction(');
     expect(projectTaskActionsSource).toContain('await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);');
     expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
-    expect(projectTaskActionsSource).toContain('const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));');
+    expect(projectTaskActionsSource).toContain('applyTicketLinkRestriction(link, allowedTicketIds)');
     expect(projectActionsSource).toContain('const allowedTicketIds = await withTransaction(knex, async (trx: Knex.Transaction) =>');
     expect(projectActionsSource).toContain('ticketLinks.map((link) => link.ticket_id)');
-    expect(projectActionsSource).toContain('const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));');
+    expect(projectActionsSource).toContain('const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));');
     expect(projectActionsSource).toContain('ticketLinks: authorizedTicketLinks,');
   });
 });

@@ -432,6 +432,7 @@
     "selectFolderDescription": "Choose where to save this new document"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Detalhes limitados — você não está atribuído a este ticket",
     "title": "Associated Tickets",
     "linkExistingTitle": "Link Existing Ticket",
     "createTicket": "Create Ticket",
@@ -720,6 +721,7 @@
       "allPriorities": "All Priorities"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Detalhes limitados — você não está atribuído a esta tarefa",
       "title": "Linked Project Tasks",
       "loadFailed": "Failed to load task",
       "phaseNotFound": "Task phase not found",

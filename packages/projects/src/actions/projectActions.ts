@@ -42,7 +42,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { filterAuthorizedTicketIds } from './projectTaskActions';
+import { filterAuthorizedTicketIds, applyTicketLinkRestriction } from './projectTaskActions';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -1644,7 +1644,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
                 ticketLinks.map((link) => link.ticket_id)
             )
         );
-        const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));
+        const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
         const contact = project.contact_name ? {
             full_name: project.contact_name

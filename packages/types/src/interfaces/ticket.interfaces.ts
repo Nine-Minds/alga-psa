@@ -109,6 +109,7 @@ export interface ITicketListFilters {
   assignedToIds?: string[];        // Array of user IDs to filter by
   assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
+  assignedToMe?: boolean;          // Restrict to tickets where caller is assignee (incl. additional agents + team membership). Server bypasses for project:read admins.
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
   dueDateFrom?: string;            // ISO date string for custom range start
