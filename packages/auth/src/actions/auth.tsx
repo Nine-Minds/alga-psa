@@ -7,10 +7,25 @@ import logger from "@alga-psa/core/logger";
 
 import { IUser } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
+import { isEnterprise } from '@alga-psa/core/features';
+import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
     requireTenantMatch?: boolean;
+}
+
+async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
+    if (!isEnterprise || !user.tenant) {
+        return;
+    }
+
+    const hook = await loadEnterpriseInactiveLoginWinbackHook();
+    if (!hook) {
+        return;
+    }
+
+    await hook({ tenantId: user.tenant });
 }
 
 export async function authenticateUser(
@@ -86,6 +101,13 @@ export async function authenticateUser(
     // Check if user is inactive
     if (user.is_inactive) {
         logger.warn(`[authenticateUser] Inactive user attempted to login: ${email}`);
+        void triggerInactiveLoginWinback(user).catch((error) => {
+            logger.warn('[authenticateUser] Login win-back hook failed', {
+                email,
+                tenant: user?.tenant,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        });
         return null;
     }
 

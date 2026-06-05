@@ -375,6 +375,26 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   - `cd server && npm run test -- src/test/unit/billing/reactivationCore.contract.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts` (pass; existing coverage parse warnings only).
   - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/reactivation-core-routing.test.ts tests/unit/reactivation-checkout.test.ts` (pass).
 
+## Implementation log — winback-login group (2026-06-05)
+
+- Implemented F024/F025/F026/F027/F043/F047:
+  - `packages/auth/src/actions/auth.tsx` now calls a fire-and-forget inactive-login win-back hook
+    at the existing `user.is_inactive` gate and still immediately returns `null`. `verifyPassword`
+    remains after the inactive gate, so the login attempt is not password-verified.
+  - Added `packages/auth/src/lib/winback/enterpriseWinbackEntry.ts` using the existing
+    `@enterprise/*` dynamic-import pattern. CE resolves to `packages/ee/src/lib/auth/loginWinback.ts`
+    no-op stub; EE resolves to `ee/server/src/lib/auth/loginWinback.ts`.
+  - EE hook performs a single conditional
+    `UPDATE pending_tenant_deletions ... WHERE last_winback_email_at IS NULL OR < now()-14d
+    RETURNING ...`; only the caller receiving a returned row sends email, making the throttle atomic.
+  - Recipient is resolved through `resolveBillingAdminEmailForTenant`; the attempted user's email is
+    never used as the destination. The hook mints a single-use token and sends the login-winback
+    email via `sendLoginWinbackEmail`.
+- Tests completed:
+  - T036-T043/T059/T072/T076 via `loginWinback.contract.test.ts` plus token tests.
+- Command:
+  - `cd server && npm run test -- src/test/unit/billing/loginWinback.contract.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts` (pass; existing coverage parse warnings only).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`

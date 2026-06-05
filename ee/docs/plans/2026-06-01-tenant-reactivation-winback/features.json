@@ -315,7 +315,7 @@
   {
     "id": "F024",
     "description": "In `authenticateUser`, at the `is_inactive` gate (before the existing `return null`, which already short-circuits before verifyPassword), detect inactive user + active `pending_tenant_deletions` row for `user.tenant`. The password is NOT verified — no reordering, no verifyPassword call; the email fires on the attempt regardless of password correctness.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "8"
@@ -324,7 +324,7 @@
   {
     "id": "F025",
     "description": "Send a throttled login win-back email (at most once per 14 days per tenant, gated on `last_winback_email_at`) as a fire-and-forget side effect. Recipient is the tenant's billing/admin email (the party who can re-subscribe), NOT necessarily the user who attempted — a non-admin's attempt emails the admin. The throttle is intentionally per-tenant (a second attempter's email may be consumed by an earlier one's window).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "8"
@@ -333,7 +333,7 @@
   {
     "id": "F026",
     "description": "Update `last_winback_email_at` after a win-back email is sent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "8"
@@ -342,7 +342,7 @@
   {
     "id": "F027",
     "description": "Preserve the generic `null` auth return and zero behavior change for active users and non-deletion inactive users; do NOT call verifyPassword for inactive users and do NOT reorder the gate.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "3",
@@ -410,7 +410,7 @@
   {
     "id": "F043",
     "description": "Login win-back hook (F024/F025) must NOT inline a `pending_tenant_deletions` query in the shared `packages/auth/src/actions/auth.tsx` (the EE table is absent in CE → would throw on every inactive login). Implement via the EXISTING enterprise injection pattern: an `@enterprise/*` dynamic-import hook (mirroring `loadEnterpriseSsoProviderRegistryImpl` / `enterpriseSsoRegistryInitPromise` in `nextAuthOptions.ts`), gated by `isEnterprise`, that resolves to a CE no-op stub. The EE impl owns the table read + throttle + email; shared auth just invokes the (possibly no-op) hook at the `is_inactive` gate, then returns null as today.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "8",
@@ -451,7 +451,7 @@
   {
     "id": "F047",
     "description": "Win-back throttle is atomic: the F026 update must be a conditional `UPDATE pending_tenant_deletions SET last_winback_email_at = now() WHERE tenant = ? AND (last_winback_email_at IS NULL OR last_winback_email_at < now() - interval '14 days') RETURNING ...`, sending the email only when a row is returned. A read-check-then-update would let two concurrent login attempts both pass the check and double-send; the conditional update makes 'at most once per 14 days' a real guarantee.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "prdRefs": [
       "8",

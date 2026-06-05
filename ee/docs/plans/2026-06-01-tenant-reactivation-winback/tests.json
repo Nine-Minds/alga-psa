@@ -342,7 +342,7 @@
   {
     "id": "T036",
     "description": "Login: an inactive user with an active pending deletion → a win-back email is sent on the login attempt (password is NOT checked; sent regardless of password correctness).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F024",
@@ -352,7 +352,7 @@
   {
     "id": "T037",
     "description": "Login win-back is NOT re-sent within 14 days (last_winback_email_at < 14 days ago).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F025"
@@ -361,7 +361,7 @@
   {
     "id": "T038",
     "description": "Login win-back IS re-sent once more than 14 days have elapsed since last_winback_email_at.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F025"
@@ -370,7 +370,7 @@
   {
     "id": "T039",
     "description": "last_winback_email_at is updated after a win-back email is sent.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F026"
@@ -379,7 +379,7 @@
   {
     "id": "T040",
     "description": "Active user login is unaffected (no win-back email, normal successful login).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F027"
@@ -388,7 +388,7 @@
   {
     "id": "T041",
     "description": "Inactive user with NO active pending deletion gets no win-back email.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F027"
@@ -397,7 +397,7 @@
   {
     "id": "T042",
     "description": "Win-back email is sent even with a wrong/absent password (the is_inactive gate never verifies the password) — no password gating, and verifyPassword is not called for inactive users.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F024",
@@ -407,7 +407,7 @@
   {
     "id": "T043",
     "description": "authenticateUser still returns the generic null in all win-back cases (no distinguishable response).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F027"
@@ -568,7 +568,7 @@
   {
     "id": "T059",
     "description": "Win-back recipient: a non-admin internal user's login attempt sends the win-back email to the tenant's billing/admin email (not the attempter), and the per-tenant 14-day throttle is shared across users.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F025"
@@ -663,7 +663,7 @@
   {
     "id": "T072",
     "description": "Login win-back hook is EE-injected: in a CE build the `is_inactive` gate runs no `pending_tenant_deletions` query (the hook resolves to a no-op stub) and login behavior is byte-for-byte unchanged; the EE build wires the real reader/throttle/email.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F043"
@@ -703,7 +703,7 @@
   {
     "id": "T076",
     "description": "Atomic throttle: two concurrent login attempts to the same mid-deletion tenant result in exactly ONE win-back email (conditional UPDATE ... RETURNING returns a row for only one); a read-check-update would double-send.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "winback-login",
     "featureIds": [
       "F047",
