@@ -39,7 +39,8 @@
     "breached": "Naruszone",
     "paused": "Wstrzymane",
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
-    "responseStatus": "Status odpowiedzi"
+    "responseStatus": "Status odpowiedzi",
+    "board": "Filtruj według tablicy"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -377,7 +378,10 @@
       "onTrack": "W normie",
       "breached": "Naruszone",
       "paused": "Wstrzymane",
-      "bundled": "Zgrupowane"
+      "bundled": "Zgrupowane",
+      "activeBoards": "Aktywne tablice",
+      "inactiveBoards": "Nieaktywne tablice",
+      "allBoards": "Wszystkie tablice"
     },
     "selection": {
       "pageSelected_one": "Zaznaczono wszystkie {{count}} zgłoszenie na tej stronie.",
@@ -1266,5 +1270,17 @@
     "success": "Zgłoszenie #{{number}} zostało usunięte.",
     "error": "Nie udało się usunąć zgłoszenia. Spróbuj ponownie.",
     "validationError": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Nieaktywna",
+    "noBoard": "Brak tablicy",
+    "selectedCount_one": "{{count}} tablica",
+    "selectedCount_other": "{{count}} tablice",
+    "excludingPrefix": "bez {{name}}",
+    "excludingCount_one": "bez {{count}} tablicy",
+    "excludingCount_other": "bez {{count}} tablic",
+    "placeholder": "Filtruj według tablicy",
+    "title": "Wybór tablicy",
+    "searchPlaceholder": "Szukaj tablic..."
   }
 }

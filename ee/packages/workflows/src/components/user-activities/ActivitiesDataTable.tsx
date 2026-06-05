@@ -18,6 +18,7 @@ import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
+import { getActivityTypeColor } from './constants';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -123,14 +124,25 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
 
-  // Define columns for the DataTable - memoized to prevent unnecessary re-renders
+  // Define columns for the DataTable - memoized to prevent unnecessary re-renders.
+  // Widths are percentages, but DataTable sizes them against a ~1800px base, so the
+  // total is kept modest to avoid columns being falsely hidden as "limited space".
   const columns = useMemo<ColumnDefinition<Activity>[]>(() => [
     {
       title: t('table.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'type',
-      width: '10%',
+      width: '6%',
+      cellClassName: 'relative',
       render: (value, record) => (
         <div className="flex items-center gap-2">
+          {/* Left-edge color accent for the activity type — flush to the row's left
+              border, full height. Positioned inline because this file's Tailwind classes
+              aren't all in the scanned content globs. */}
+          <div
+            className="absolute"
+            style={{ top: 0, bottom: 0, left: 0, width: 4, backgroundColor: getActivityTypeColor(value as ActivityType) }}
+            aria-hidden="true"
+          />
           {getActivityTypeIcon(value as ActivityType)}
           <span className="text-xs">{getActivityTypeLabel(value as ActivityType, t)}</span>
         </div>
@@ -139,9 +151,14 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title',
-      width: '50%',
+      width: '27%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
+          {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).workItemType === 'ad_hoc' && (
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-500/15 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
+              {t('table.values.adHocBadge', { defaultValue: 'Ad hoc' })}
+            </span>
+          )}
           <span className="font-medium text-gray-900 break-words">{value as string}</span>
           {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).isRecurring && (
              <span title={t('table.values.recurringEvent', { defaultValue: 'Recurring Event' })}>
@@ -157,7 +174,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      width: '15%',
+      width: '8%',
       render: (_value, record) => (
         <InlineStatusPicker
           activity={record}
@@ -168,7 +185,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.priority', { defaultValue: 'Priority' }),
       dataIndex: 'priority',
-      width: '12%',
+      width: '7%',
       render: (value, record) => {
         // Inline priority picker for tickets and project tasks
         if (record.type === ActivityType.TICKET || record.type === ActivityType.PROJECT_TASK) {
@@ -194,7 +211,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'dueDate',
-      width: '10%',
+      width: '6%',
       render: (value, record) => (
         <div>
           {value ? (
@@ -211,7 +228,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
-      width: '5%',
+      width: '3%',
       sortable: false,
       render: (_, record) => (
         <ActivityActionMenu

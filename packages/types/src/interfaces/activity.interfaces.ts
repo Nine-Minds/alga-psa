@@ -220,10 +220,20 @@ export interface ActivityFilters {
   includeHidden?: boolean;
   /** Ticket-specific: filter by board_id(s) */
   ticketBoardIds?: string[];
+  /** Ticket-specific: exclude these board_id(s) */
+  ticketExcludeBoardIds?: string[];
   /** Ticket-specific: filter by status_id from the statuses table */
   ticketStatusIds?: string[];
+  /** Ticket-specific: exclude these status_id(s) */
+  ticketExcludeStatusIds?: string[];
   /** Project task-specific: filter by project_status_mapping_id */
   projectStatusMappingIds?: string[];
+  /** Project task-specific: exclude these project_id(s) */
+  excludeProjectIds?: string[];
+  /** Project task-specific: exclude these phase_id(s) */
+  excludePhaseIds?: string[];
+  /** Project task-specific: exclude these project_status_mapping_id(s) */
+  excludeProjectStatusMappingIds?: string[];
   /** Ticket-specific: filter by tag definition IDs */
   ticketTagIds?: string[];
   /** Project task-specific: filter by tag definition IDs */
@@ -265,9 +275,10 @@ export function scheduleEntryToActivity(entry: IScheduleEntry): ScheduleActivity
     type: ActivityType.SCHEDULE,
     status: entry.status,
     priority: ActivityPriority.MEDIUM, // Default priority if not specified
-    startDate: entry.scheduled_start.toISOString(),
-    endDate: entry.scheduled_end.toISOString(),
-    dueDate: entry.scheduled_end.toISOString(),
+    // Times are optional for ad-hoc entries (personal to-dos with no schedule).
+    startDate: entry.scheduled_start ? entry.scheduled_start.toISOString() : undefined,
+    endDate: entry.scheduled_end ? entry.scheduled_end.toISOString() : undefined,
+    dueDate: entry.scheduled_end ? entry.scheduled_end.toISOString() : undefined,
     assignedTo: entry.assigned_user_ids,
     sourceId: entry.entry_id,
     sourceType: ActivityType.SCHEDULE,

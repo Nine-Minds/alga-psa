@@ -4,11 +4,12 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityFilters, ScheduleActivity, ActivityType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ScheduleCard } from './ActivityCard';
-import { fetchScheduleActivities } from '@alga-psa/workflows/actions';
+import { fetchScheduleActivities, createAdHocActivity } from '@alga-psa/workflows/actions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
-import { FilterIcon, XCircle } from 'lucide-react';
+import { FilterIcon, XCircle, Plus } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -24,6 +25,8 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
+  const [adHocTitle, setAdHocTitle] = useState('');
+  const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
   const [scheduleFilters, setScheduleFilters] = useState<Partial<ActivityFilters>>({ 
     isClosed: false,
     dateRangeStart: new Date().toISOString(),
@@ -149,6 +152,51 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
     setScheduleFilters(filters);
   };
 
+  const handleAddAdHoc = async () => {
+    const title = adHocTitle.trim();
+    if (!title || isAddingAdHoc) return;
+    setIsAddingAdHoc(true);
+    try {
+      await createAdHocActivity({ title });
+      setAdHocTitle('');
+      await loadActivities();
+    } catch (err) {
+      console.error('Error creating ad-hoc item:', err);
+      setError(t('sections.schedule.errors.addAdHocFailed', { defaultValue: 'Failed to add activity. Please try again.' }));
+    } finally {
+      setIsAddingAdHoc(false);
+    }
+  };
+
+  const quickAddRow = (
+    <div className="mb-4 flex items-center gap-2">
+      <Input
+        id="schedule-add-adhoc-input"
+        value={adHocTitle}
+        onChange={(e) => setAdHocTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            void handleAddAdHoc();
+          }
+        }}
+        placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add Activity' })}
+        className="h-9 max-w-sm text-sm"
+        disabled={isAddingAdHoc}
+      />
+      <Button
+        id="schedule-add-adhoc-button"
+        variant="default"
+        size="sm"
+        onClick={() => void handleAddAdHoc()}
+        disabled={isAddingAdHoc || adHocTitle.trim().length === 0}
+      >
+        <Plus className="h-4 w-4 mr-1" />
+        {t('table.adHoc.addButton', { defaultValue: 'Add' })}
+      </Button>
+    </div>
+  );
+
   const headerContent = (
     <div className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
       {!noCard && <h3 className="text-lg font-semibold">{t('sections.schedule.title', { defaultValue: 'Schedule' })}</h3>}
@@ -199,6 +247,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
 
   const bodyContent = (
     <div className="px-6 pb-6">
+      {quickAddRow}
       {loading ? (
         <div className="flex justify-center items-center h-40">
           <p className="text-gray-500">{t('sections.schedule.states.loading', { defaultValue: 'Loading schedule activities...' })}</p>
@@ -289,6 +338,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
         </div>
       </CardHeader>
       <CardContent>
+        {quickAddRow}
         {loading ? (
           <div className="flex justify-center items-center h-40">
             <p className="text-gray-500">{t('sections.schedule.states.loading', { defaultValue: 'Loading schedule activities...' })}</p>

@@ -227,6 +227,53 @@ export const fetchUserActivities = withAuth(async (
 });
 
 /**
+ * Fetch ad-hoc schedule entries assigned to a user, independent of any date window.
+ *
+ * The normal schedule fetch (getAllScheduleEntries) filters on scheduled_start/end,
+ * which excludes ad-hoc items that have no scheduled time. Ad-hoc items behave like
+ * personal to-dos, so we surface them regardless of date. Done items (status='closed')
+ * are still hidden by the caller's isClosed filter.
+ */
+async function fetchAdHocEntriesForUser(
+  knex: Knex,
+  tenant: string,
+  userId: string
+): Promise<any[]> {
+  const rows = await knex('schedule_entries as se')
+    .join('schedule_entry_assignees as sea', function () {
+      this.on('se.entry_id', 'sea.entry_id').andOn('se.tenant', 'sea.tenant');
+    })
+    .where('se.tenant', tenant)
+    .andWhere('se.work_item_type', 'ad_hoc')
+    .andWhere('sea.user_id', userId)
+    .whereNull('se.original_entry_id')
+    .andWhere(function () {
+      this.where('se.is_recurring', false).orWhereNull('se.is_recurring');
+    })
+    .select('se.*');
+
+  if (rows.length === 0) return [];
+
+  // Resolve the full assignee list for each entry
+  const entryIds = rows.map((r: any) => r.entry_id);
+  const assigneeRows = await knex('schedule_entry_assignees')
+    .where('tenant', tenant)
+    .whereIn('entry_id', entryIds)
+    .select('entry_id', 'user_id');
+  const assigneesByEntry = new Map<string, string[]>();
+  for (const a of assigneeRows as Array<{ entry_id: string; user_id: string }>) {
+    const list = assigneesByEntry.get(a.entry_id) || [];
+    list.push(a.user_id);
+    assigneesByEntry.set(a.entry_id, list);
+  }
+
+  return rows.map((r: any) => ({
+    ...r,
+    assigned_user_ids: assigneesByEntry.get(r.entry_id) || [userId],
+  }));
+}
+
+/**
  * Fetch schedule activities for a user
  */
 export async function fetchScheduleActivities(
@@ -256,7 +303,17 @@ export async function fetchScheduleActivities(
     let userEntries = entries.filter(entry =>
       entry.assigned_user_ids.includes(userId)
     );
-    
+
+    // Also include ad-hoc entries regardless of the date window — they may have no
+    // scheduled time (which the window query above drops) or fall outside now→+30d.
+    const adHocEntries = await fetchAdHocEntriesForUser(knex, tenant, userId);
+    const existingEntryIds = new Set(userEntries.map(entry => entry.entry_id));
+    for (const entry of adHocEntries) {
+      if (!existingEntryIds.has(entry.entry_id)) {
+        userEntries.push(entry);
+      }
+    }
+
     // Apply additional filters
     if (filters.isClosed === false) {
       userEntries = userEntries.filter(entry => entry.status !== 'closed');
@@ -476,6 +533,27 @@ export async function fetchProjectActivities(
           queryBuilder.whereIn("project_tasks.project_status_mapping_id", filters.projectStatusMappingIds);
         }
 
+        // Exclude tasks whose project is in the excluded set
+        if (filters.excludeProjectIds && filters.excludeProjectIds.length > 0) {
+          queryBuilder.whereNotExists(function() {
+            this.select(db.raw(1))
+              .from("project_phases")
+              .whereRaw("project_phases.phase_id = project_tasks.phase_id")
+              .andWhere("project_phases.tenant", tenant)
+              .whereIn("project_phases.project_id", filters.excludeProjectIds!);
+          });
+        }
+
+        // Exclude tasks in the excluded phases
+        if (filters.excludePhaseIds && filters.excludePhaseIds.length > 0) {
+          queryBuilder.whereNotIn("project_tasks.phase_id", filters.excludePhaseIds);
+        }
+
+        // Exclude tasks in the excluded project statuses
+        if (filters.excludeProjectStatusMappingIds && filters.excludeProjectStatusMappingIds.length > 0) {
+          queryBuilder.whereNotIn("project_tasks.project_status_mapping_id", filters.excludeProjectStatusMappingIds);
+        }
+
         // Apply priority filter by priority IDs if provided
         if (filters.priorityIds && filters.priorityIds.length > 0) {
           queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
@@ -645,10 +723,16 @@ export async function fetchTicketActivities(
         if (filters.ticketBoardIds && filters.ticketBoardIds.length > 0) {
           queryBuilder.whereIn("tickets.board_id", filters.ticketBoardIds);
         }
+        if (filters.ticketExcludeBoardIds && filters.ticketExcludeBoardIds.length > 0) {
+          queryBuilder.whereNotIn("tickets.board_id", filters.ticketExcludeBoardIds);
+        }
 
         // Ticket-specific status filter by status_id
         if (filters.ticketStatusIds && filters.ticketStatusIds.length > 0) {
           queryBuilder.whereIn("tickets.status_id", filters.ticketStatusIds);
+        }
+        if (filters.ticketExcludeStatusIds && filters.ticketExcludeStatusIds.length > 0) {
+          queryBuilder.whereNotIn("tickets.status_id", filters.ticketExcludeStatusIds);
         }
 
         // Apply priority filter by priority IDs if provided

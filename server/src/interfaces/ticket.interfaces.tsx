@@ -71,10 +71,14 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
 }
 
 export interface ITicketListFilters {
-  boardId?: string;
+  boardId?: string;                   // Legacy single-board include (deep links)
+  boardIds?: string[];                // Boards to include ('no-board' sentinel matches tickets with no board)
+  excludeBoardIds?: string[];         // Boards to exclude ('no-board' sentinel excludes tickets with no board)
   statusId?: string;
   priorityId?: string;
-  categoryId?: string;
+  categoryId?: string;                // Legacy single-category include (deep links)
+  categoryIds?: string[];             // Categories to include (parent or subcategory ids; 'no-category' sentinel matches uncategorized)
+  excludeCategoryIds?: string[];      // Categories to exclude (parent or subcategory ids; 'no-category' sentinel excludes uncategorized)
   clientId?: string;
   contactId?: string;
   searchQuery?: string;

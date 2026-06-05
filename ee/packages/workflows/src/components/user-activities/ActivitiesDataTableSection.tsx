@@ -27,7 +27,9 @@ import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/Shar
 import { RefreshCw, List, LayoutList, Printer, Settings2 } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
-import { fetchActivities, getUserActivityGroups, type ActivityGroup } from '@alga-psa/workflows/actions';
+import { fetchActivities, getUserActivityGroups, createAdHocActivity, type ActivityGroup } from '@alga-psa/workflows/actions';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Plus } from 'lucide-react';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { GroupedActivitiesView } from './GroupedActivitiesView';
 import { PrintableActivitiesView } from './PrintableActivitiesView';
@@ -105,6 +107,8 @@ function formatActivityPrintDate(dateString?: string): string {
 }
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [adHocTitle, setAdHocTitle] = useState('');
+  const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
   const { openActivityDrawer } = useActivityDrawer();
   const ctx = useActivityCrossFeature();
 
@@ -331,6 +335,23 @@ function formatActivityPrintDate(dateString?: string): string {
     loadActivities();
   }, [loadActivities, invalidateCache]);
 
+  const handleAddAdHoc = useCallback(async () => {
+    const title = adHocTitle.trim();
+    if (!title || isAddingAdHoc) return;
+    setIsAddingAdHoc(true);
+    try {
+      await createAdHocActivity({ title });
+      setAdHocTitle('');
+      invalidateCache();
+      await loadActivities();
+    } catch (err) {
+      console.error('Error creating ad-hoc item:', err);
+      setError(t('table.errors.addAdHocFailed', { defaultValue: 'Failed to add ad-hoc item. Please try again.' }));
+    } finally {
+      setIsAddingAdHoc(false);
+    }
+  }, [adHocTitle, isAddingAdHoc, invalidateCache, loadActivities, t]);
+
   const handleFilterChange = useCallback((newFilters: ActivityFilters) => {
     setFilters(newFilters);
     setSavedFilters(newFilters);
@@ -468,6 +489,32 @@ function formatActivityPrintDate(dateString?: string): string {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 flex items-center gap-2">
+          <Input
+            id={`${id}-add-adhoc-input`}
+            value={adHocTitle}
+            onChange={(e) => setAdHocTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void handleAddAdHoc();
+              }
+            }}
+            placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add Activity' })}
+            className="h-9 max-w-sm text-sm"
+            disabled={isAddingAdHoc}
+          />
+          <Button
+            id={`${id}-add-adhoc-button`}
+            variant="default"
+            size="sm"
+            onClick={() => void handleAddAdHoc()}
+            disabled={isAddingAdHoc || adHocTitle.trim().length === 0}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t('table.adHoc.addButton', { defaultValue: 'Add' })}
+          </Button>
+        </div>
         <ActivitiesTableFilters
           filters={filters}
           onChange={handleFilterChange}

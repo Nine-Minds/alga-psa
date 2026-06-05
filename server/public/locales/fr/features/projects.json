@@ -747,6 +747,9 @@
       "assigning": "Affectation...",
       "confirm": "Affecter les tâches",
       "teamReplaceNotice": "Les tâches déjà affectées à une autre équipe seront réaffectées à l’équipe sélectionnée."
+    },
+    "convertAdHocToTask": {
+      "title": "Convertir en tâche de projet"
     }
   },
   "filters": {

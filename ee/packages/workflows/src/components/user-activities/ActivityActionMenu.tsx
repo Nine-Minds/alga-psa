@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 
-import { Activity, ActivityType, ProjectTaskActivity } from "@alga-psa/types";
+import { Activity, ActivityType, ProjectTaskActivity, ScheduleActivity } from "@alga-psa/types";
+import { useActivityCrossFeature } from "@alga-psa/ui/context";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@alga-psa/ui/components/DropdownMenu";
 import { MoreVertical } from 'lucide-react';
@@ -10,7 +11,9 @@ import { useRouter } from 'next/navigation';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import {
   updateActivityStatus,
-  reassignActivity
+  reassignActivity,
+  setAdHocActivityDone,
+  deleteAdHocActivity
 } from "@alga-psa/workflows/actions";
 import {
   cancelWorkflowTask,
@@ -35,7 +38,43 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const router = useRouter();
-  
+
+  const crossFeature = useActivityCrossFeature();
+  const [convertTarget, setConvertTarget] = useState<'ticket' | 'task' | null>(null);
+
+  const isAdHoc = activity.type === ActivityType.SCHEDULE
+    && (activity as ScheduleActivity).workItemType === 'ad_hoc';
+  const isDone = activity.status === 'closed';
+
+  // Delete the ad-hoc item once it has been converted into a ticket/task.
+  const handleConverted = async () => {
+    try {
+      await deleteAdHocActivity(activity.id);
+    } catch (error) {
+      console.error('Error deleting ad-hoc item after conversion:', error);
+    } finally {
+      setConvertTarget(null);
+      onActionComplete?.();
+    }
+  };
+
+  const convertProps = {
+    title: activity.title,
+    description: activity.description,
+    assignedTo: activity.assignedTo?.[0] ?? null,
+    onConverted: handleConverted,
+    onClose: () => setConvertTarget(null),
+  };
+
+  const handleToggleDone = async () => {
+    try {
+      await setAdHocActivityDone(activity.id, !isDone);
+      onActionComplete?.();
+    } catch (error) {
+      console.error('Error toggling ad-hoc done state:', error);
+    }
+  };
+
   const handleActionClick = async (actionId: string) => {
     try {
       switch (actionId) {
@@ -204,6 +243,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
   };
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -217,6 +257,32 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        {isAdHoc && (
+          <DropdownMenuItem
+            id={`toggle-done-ad-hoc-menu-item-${activity.id}`}
+            onClick={handleToggleDone}
+          >
+            {isDone
+              ? t('table.adHoc.markNotDone', { defaultValue: 'Mark as not done' })
+              : t('table.adHoc.markDone', { defaultValue: 'Mark as done' })}
+          </DropdownMenuItem>
+        )}
+        {isAdHoc && crossFeature.renderConvertAdHocToTicket && (
+          <DropdownMenuItem
+            id={`convert-ad-hoc-to-ticket-menu-item-${activity.id}`}
+            onClick={() => setConvertTarget('ticket')}
+          >
+            {t('table.adHoc.convertToTicket', { defaultValue: 'Convert to ticket' })}
+          </DropdownMenuItem>
+        )}
+        {isAdHoc && crossFeature.renderConvertAdHocToProjectTask && (
+          <DropdownMenuItem
+            id={`convert-ad-hoc-to-task-menu-item-${activity.id}`}
+            onClick={() => setConvertTarget('task')}
+          >
+            {t('table.adHoc.convertToTask', { defaultValue: 'Convert to project task' })}
+          </DropdownMenuItem>
+        )}
         {activity.actions
           .filter(action => shouldShowAction(action.id))
           .map(action => (
@@ -234,5 +300,8 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           ))}
       </DropdownMenuContent>
     </DropdownMenu>
+    {convertTarget === 'ticket' && crossFeature.renderConvertAdHocToTicket?.(convertProps)}
+    {convertTarget === 'task' && crossFeature.renderConvertAdHocToProjectTask?.(convertProps)}
+    </>
   );
 }
