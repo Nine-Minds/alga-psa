@@ -69,6 +69,36 @@ noise. Levers tried against this floor — **all sub-noise or worse:**
 app. No further **sound** change beats the ~1 GB run-to-run variance without
 removing app features. Clean rounds 3–9 are not available within the rules.
 
+### Feature-level refactors investigated (per user direction)
+
+1. **client-lib ssr:false** (blocknote/tiptap/reactflow): the peak is turbopack
+   compiling client+server bundles; these libs are compiled for the **client
+   regardless** of ssr:false, which removes only the ~0.5–1% server-side compile
+   (blocknote ≈ 4.7 MB of 402 MB server output). Tens of MB → unmeasurable
+   against ~1 GB noise. Not pursued.
+
+2. **dist-aliasing workspace packages** (use nx-built dist instead of turbopack
+   recompiling src — the lever that *does* target the compile floor): attempted,
+   hit hard blockers. All src-aliased packages have **empty dist**; `@alga-psa/ui`'s
+   `tsup` build currently **fails**; its tsup config emits only enumerated index
+   entries, not the per-subpath files (`dist/components/Button.mjs`) the 3488
+   `@alga-psa/ui/components/*` imports require; `exports` has gaps (`presence`).
+   Making it work needs: fix each package build, reconfigure tsup to emit hundreds
+   of per-subpath entries (which **adds nx build time**, risking the time rule),
+   fill exports gaps, and **runtime-validate** all imports (the build-only harness
+   verifies compilation, not runtime resolution). A large, risky, separately-
+   validated effort with uncertain turbopack-memory payoff — out of scope for a
+   measure-and-iterate loop.
+
+### Final result
+
+| | peak (median) | dur | vs S0 |
+|---|---|---|---|
+| S0 baseline | 14175 MB | 68.3s | — |
+| **R1+R2 (shipped)** | **10937 MB** | **58.1s** | **−3238 MB (−23%), faster** |
+
+Two committed rounds; the build is at turbopack's compile floor.
+
 ### Learnings (narrow the search space)
 - **Per-worker memory is module-graph-dominated, not render-state.** Capping
   `staticGenerationMaxConcurrency` (concurrent renders/worker) did nothing →
