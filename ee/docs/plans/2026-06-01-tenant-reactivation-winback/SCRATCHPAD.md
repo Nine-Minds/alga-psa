@@ -303,3 +303,27 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
 - Verification: `cd server && npm run test -- src/test/unit/migrations/tenantReactivationWinbackMigration.test.ts`
   passed (3 tests). Running `npx vitest run server/src/test/unit/migrations/tenantReactivationWinbackMigration.test.ts`
   from the repo root found no matching test files because the server Vitest config is workspace-scoped.
+- Completed F002: added `ee/server/src/lib/billing/tenantReactivationDetection.ts` with
+  `getActivePendingDeletion(tenantId, knex?)`. It returns only `pending`, `awaiting_confirmation`,
+  and `confirmed` rows, coalesces `deletion_scheduled_for ?? scheduled_deletion_date`, and fail-softs
+  `42P01`/missing-table errors to `null` for CE safety.
+- Completed F003: same helper file adds `resolveTenantAndAdminEmailByEmail(email, knex?)`, preserving
+  existing check-tenant lookup order: `tenants.email` first, then internal-admin user fallback.
+- Completed F004/F042: moved the real pending-deletion-aware check-tenant handler to
+  `ee/server/src/app/api/billing/check-tenant/route.ts`; `server/src/app/api/billing/check-tenant/route.ts`
+  now routes through `@enterprise/app/api/billing/check-tenant/route`, and the CE stub in
+  `packages/ee/src/app/api/billing/check-tenant/route.ts` returns legacy existence data with
+  `pendingDeletion:false`/`reactivatable:false` without querying `pending_tenant_deletions`.
+- Completed F005: in sibling repo `/Users/natalliabukhtsik/Desktop/projects/nm-store`, updated
+  `packages/nm-store/src/utils/alga-api.ts` and
+  `packages/nm-store/src/app/(frontend)/actions/email-validation.ts` to surface
+  `pendingDeletion`, `reactivatable`, `deletionStatus`, and `effectiveDeletionDate`; fail-open paths
+  now explicitly return not-reactivatable.
+- Completed T002/T003/T004/T005/T006/T007/T008/T071: added alga tests
+  `server/src/test/unit/billing/tenantReactivationDetection.test.ts` and
+  `server/src/test/unit/api/billingCheckTenantReactivation.contract.test.ts`.
+- Completed T009: added nm-store test
+  `/Users/natalliabukhtsik/Desktop/projects/nm-store/packages/nm-store/tests/unit/alga-api-tenant-reactivation.test.ts`.
+- Verification: `cd server && npm run test -- src/test/unit/billing/tenantReactivationDetection.test.ts src/test/unit/api/billingCheckTenantReactivation.contract.test.ts`
+  passed (7 tests). `cd /Users/natalliabukhtsik/Desktop/projects/nm-store/packages/nm-store &&
+  npm run test -- tests/unit/alga-api-tenant-reactivation.test.ts` passed (2 tests).
