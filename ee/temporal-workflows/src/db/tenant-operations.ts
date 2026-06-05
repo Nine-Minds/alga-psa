@@ -14,6 +14,82 @@ import { normalizeProductCode } from './product-bootstrap-resolver.js';
 
 const logger = () => Context.current().log;
 
+export interface InsertStripeSubscriptionForTenantInput {
+  tenantId: string;
+  stripeCustomerInternalId: string;
+  stripeSubscriptionId: string;
+  stripeSubscriptionItemId?: string;
+  stripePriceId: string;
+  stripeBaseItemId?: string;
+  stripeBasePriceId?: string;
+  quantity?: number;
+}
+
+export async function insertStripeSubscriptionForTenant(
+  trx: Knex.Transaction,
+  input: InsertStripeSubscriptionForTenantInput,
+): Promise<{ inserted: boolean; missingPrice: boolean }> {
+  const log = logger();
+  const knex = await getAdminConnection();
+  const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+
+  if (!MASTER_TENANT_ID) {
+    throw new Error('MASTER_BILLING_TENANT_ID not configured');
+  }
+
+  const price = await trx('stripe_prices')
+    .where({
+      stripe_price_external_id: input.stripePriceId,
+      tenant: MASTER_TENANT_ID
+    })
+    .first();
+
+  if (!price) {
+    log.warn(`Price ${input.stripePriceId} not found in database. Subscription will not be created.`);
+    return { inserted: false, missingPrice: true };
+  }
+
+  const subscriptionData: any = {
+    tenant: input.tenantId,
+    stripe_subscription_id: trx.raw('gen_random_uuid()'),
+    stripe_subscription_external_id: input.stripeSubscriptionId,
+    stripe_subscription_item_id: input.stripeSubscriptionItemId,
+    stripe_customer_id: input.stripeCustomerInternalId,
+    stripe_price_id: price.stripe_price_id,
+    status: 'active',
+    quantity: input.quantity || 1,
+    current_period_start: knex.fn.now(),
+    current_period_end: trx.raw(`NOW() + INTERVAL '1 month'`),
+    created_at: knex.fn.now(),
+    updated_at: knex.fn.now(),
+  };
+
+  if (input.stripeBaseItemId) {
+    subscriptionData.stripe_base_item_id = input.stripeBaseItemId;
+
+    if (input.stripeBasePriceId) {
+      const basePrice = await trx('stripe_prices')
+        .where({
+          stripe_price_external_id: input.stripeBasePriceId,
+          tenant: MASTER_TENANT_ID
+        })
+        .first();
+
+      if (basePrice) {
+        subscriptionData.stripe_base_price_id = basePrice.stripe_price_id;
+      } else {
+        log.warn(`Base price ${input.stripeBasePriceId} not found in database`);
+      }
+    }
+  }
+
+  await trx('stripe_subscriptions')
+    .insert(subscriptionData)
+    .returning('*');
+
+  return { inserted: true, missingPrice: false };
+}
+
 /**
  * Create a new tenant in the main application database
  */
@@ -159,69 +235,18 @@ export async function createTenantInDB(
 
         // Insert Stripe subscription if provided
         if (input.stripeSubscriptionId && input.stripePriceId) {
-          log.info('Looking up Stripe price', {
-            stripePriceId: input.stripePriceId
+          const subscriptionInsert = await insertStripeSubscriptionForTenant(trx, {
+            tenantId,
+            stripeCustomerInternalId: stripeCustomer.stripe_customer_id,
+            stripeSubscriptionId: input.stripeSubscriptionId,
+            stripeSubscriptionItemId: input.stripeSubscriptionItemId,
+            stripePriceId: input.stripePriceId,
+            stripeBaseItemId: input.stripeBaseItemId,
+            stripeBasePriceId: input.stripeBasePriceId,
+            quantity: input.licenseCount || 1,
           });
 
-          // Check if price exists in our database
-          const price = await trx('stripe_prices')
-            .where({
-              stripe_price_external_id: input.stripePriceId,
-              tenant: MASTER_TENANT_ID
-            })
-            .first();
-
-          if (!price) {
-            log.warn(
-              `Price ${input.stripePriceId} not found in database. ` +
-              `Subscription will not be created. Ensure prices are pre-populated.`
-            );
-          } else {
-            log.info('Creating Stripe subscription record', {
-              tenantId,
-              stripeSubscriptionId: input.stripeSubscriptionId,
-              quantity: input.licenseCount || 1
-            });
-
-            const subscriptionData: any = {
-                tenant: tenantId,
-                stripe_subscription_id: trx.raw('gen_random_uuid()'), // Internal UUID
-                stripe_subscription_external_id: input.stripeSubscriptionId, // Stripe's ID (sub_...)
-                stripe_subscription_item_id: input.stripeSubscriptionItemId, // Per-user item for quantity updates
-                stripe_customer_id: stripeCustomer.stripe_customer_id, // FK to our stripe_customers
-                stripe_price_id: price.stripe_price_id, // FK to our stripe_prices
-                status: 'active',
-                quantity: input.licenseCount || 1,
-                current_period_start: knex.fn.now(),
-                current_period_end: trx.raw(`NOW() + INTERVAL '1 month'`),
-                created_at: knex.fn.now(),
-                updated_at: knex.fn.now(),
-              };
-
-            // Add base item/price for multi-item subscriptions
-            if (input.stripeBaseItemId) {
-              subscriptionData.stripe_base_item_id = input.stripeBaseItemId;
-
-              if (input.stripeBasePriceId) {
-                const basePrice = await trx('stripe_prices')
-                  .where({
-                    stripe_price_external_id: input.stripeBasePriceId,
-                    tenant: MASTER_TENANT_ID
-                  })
-                  .first();
-
-                if (basePrice) {
-                  subscriptionData.stripe_base_price_id = basePrice.stripe_price_id;
-                } else {
-                  log.warn(`Base price ${input.stripeBasePriceId} not found in database`);
-                }
-              }
-            }
-
-            await trx('stripe_subscriptions')
-              .insert(subscriptionData)
-              .returning('*');
-
+          if (subscriptionInsert.inserted) {
             log.info('Stripe subscription created successfully', {
               stripeSubscriptionId: input.stripeSubscriptionId
             });

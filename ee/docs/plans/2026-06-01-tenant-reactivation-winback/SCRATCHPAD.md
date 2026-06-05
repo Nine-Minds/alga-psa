@@ -346,6 +346,35 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   - `cd server && npm run test -- src/test/unit/billing/tenantReactivationTokens.test.ts src/test/unit/billing/tenantReactivationDetection.test.ts` (pass; existing coverage parse warnings only).
   - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/reactivation-checkout.test.ts tests/unit/alga-api-tenant-reactivation.test.ts` (pass).
 
+## Implementation log — reactivation-core group (2026-06-05)
+
+- Implemented F016/F017/F018/F019/F020/F021/F022/F033/F034/F035/F041/F045/F046:
+  - Extended `RollbackDeletionSignal` with an optional `reactivation` block while leaving the
+    admin rollback route unchanged (no block passed).
+  - `tenant-deletion-workflow.ts` now runs rollback in order: reactivate tenant users, remove the
+    Canceled tag, reactivate the master client/contacts, then (for paid reactivation only) link the
+    new Stripe subscription, stamp `subscription.metadata.tenant_id`, and trigger password reset.
+  - Added `insertStripeSubscriptionForTenant` in `tenant-operations.ts` and refactored
+    `createTenantInDB` onto it. `linkSubscriptionToExistingTenant` reuses the tenant's existing
+    `stripe_customers` row, creates only the new `stripe_subscriptions` row, and blocks tenant-keyed
+    duplicate active subscriptions.
+  - Added HMAC `POST /api/billing/reactivation-password-reset` in EE so the worker calls the app
+    context `requestPasswordReset(email,'internal')` after users are active.
+  - Added HMAC `POST /api/billing/complete-reactivation` in EE to re-check pending-deletion state,
+    send the enriched rollback signal, and route refused/closed/duplicate paid attempts into
+    `pending_reactivation_refunds` plus an ops/billing email.
+  - nm-store `reactivationCompletion.ts` retrieves the Stripe checkout session, extracts the sub/item
+    and price ids, signs the completion call to alga, and `/reactivation/success` invokes it.
+  - `ensureOrderInstallWorkflowForCheckoutSession` now branches `metadata.reactivation === "true"`
+    before building/starting the normal order install workflow, so reactivation sessions cannot mint
+    duplicate tenants.
+- Tests completed:
+  - Alga T027-T035/T051/T055-T058/T062/T063/T074/T075 via core contract tests and token tests.
+  - nm-store T025/T027/T031/T035/T069/T070 via routing contract tests.
+- Commands:
+  - `cd server && npm run test -- src/test/unit/billing/reactivationCore.contract.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts` (pass; existing coverage parse warnings only).
+  - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/reactivation-core-routing.test.ts tests/unit/reactivation-checkout.test.ts` (pass).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`

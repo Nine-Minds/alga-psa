@@ -229,7 +229,7 @@
   {
     "id": "T025",
     "description": "Completion orchestrator runs only for sessions with metadata.reactivation==='true'; ignores normal-order sessions.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F016",
@@ -240,7 +240,7 @@
   {
     "id": "T026",
     "description": "Completion refuses when the deletion status is already deleting/deleted and surfaces the too-late outcome.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F017",
@@ -250,7 +250,7 @@
   {
     "id": "T027",
     "description": "The success trigger fires the enriched rollbackDeletion signal (carrying the reactivation block) to the workflow identified by the pending-deletion row's workflow_id.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F016",
@@ -260,7 +260,7 @@
   {
     "id": "T028",
     "description": "After completion, the tenant's users are reactivated (is_inactive=false).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F018"
@@ -269,7 +269,7 @@
   {
     "id": "T029",
     "description": "After completion, the Canceled tag is removed and the master-tenant client/contacts are reactivated.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F018"
@@ -278,7 +278,7 @@
   {
     "id": "T030",
     "description": "After completion, a stripe_subscriptions row for the NEW subscription is linked to the existing tenant.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F019"
@@ -287,7 +287,7 @@
   {
     "id": "T031",
     "description": "Completion stamps subscription.metadata.tenant_id = existing tenant on the new subscription.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F020"
@@ -296,7 +296,7 @@
   {
     "id": "T032",
     "description": "Password reset is triggered AFTER rollback via the app-side endpoint (F035); the link uses the app baseUrl (NEXT_PUBLIC_BASE_URL) and the branded auth email, NOT the worker's Resend sender; the now-active admin receives it.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F021",
@@ -306,7 +306,7 @@
   {
     "id": "T033",
     "description": "Ordering regression: calling the password reset before rollback would no-op (is_inactive filter) — the handler must reset only after reactivation.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F021"
@@ -315,7 +315,7 @@
   {
     "id": "T034",
     "description": "Tenant-keyed idempotency: two genuine payments (two distinct sub_… ids) result in only ONE active linked stripe_subscriptions row for the tenant; the second is NOT linked (a sub-id-keyed guard would wrongly link both).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F022"
@@ -324,7 +324,7 @@
   {
     "id": "T035",
     "description": "Reactivation never calls startOrderInstallWorkflow / ensureOrderInstallWorkflowForCheckoutSession (real nm-store symbols; spy asserts not-called).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F023"
@@ -333,7 +333,7 @@
   {
     "id": "T051",
     "description": "Back-compat: admin rollback (rollbackDeletion signal with no reactivation block) reactivates users only — links no subscription and sends no password reset.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F033"
@@ -510,7 +510,7 @@
   {
     "id": "T055",
     "description": "Charged-but-refused: payment captured but status flipped to deleting in the checkout→completion gap → reactivation refused AND an ops alert is emitted flagging the payment for manual refund (F034).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F034",
@@ -520,7 +520,7 @@
   {
     "id": "T056",
     "description": "Closed-workflow signal: after the tenant is already `rolled_back` (deletion workflow closed), a second reactivation payment does NOT attempt to signal the closed workflow (no crash) — it is treated as a duplicate payment and routed to the F034 alert.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F016",
@@ -530,7 +530,7 @@
   {
     "id": "T057",
     "description": "Duplicate genuine payment for an already-reactivated tenant → no second subscription linked; alert fired for manual refund.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F022",
@@ -540,7 +540,7 @@
   {
     "id": "T069",
     "description": "Stripe webhook branch: a checkout.session.completed event with metadata.reactivation==='true' does NOT call the normal subscription import/update path; it runs the reactivation trigger/guard path instead.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F041",
@@ -550,7 +550,7 @@
   {
     "id": "T070",
     "description": "Stripe webhook branch: a normal checkout.session.completed event without reactivation metadata still follows the existing subscription import/update path.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F041"
@@ -559,7 +559,7 @@
   {
     "id": "T058",
     "description": "Citus routing: linkSubscriptionToExistingTenant inserts land on the correct shard with `tenant` set (rows queryable under the existing tenant), reusing createTenantInDB's insert path.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F019"
@@ -595,7 +595,7 @@
   {
     "id": "T062",
     "description": "Customer reconciliation: after linking, the tenant still has exactly ONE `stripe_customers` row (existing reused, no duplicate); the new `stripe_subscriptions` row's customer FK points at it.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F019",
@@ -605,7 +605,7 @@
   {
     "id": "T063",
     "description": "F034 sink is durable + visible: a charged-but-refused event inserts a `pending_reactivation_refunds` row AND sends the ops/billing email (mock provider asserts both).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F034"
@@ -683,7 +683,7 @@
   {
     "id": "T074",
     "description": "Reactivated-but-unbilled: when linkSubscriptionToExistingTenant exhausts retries after users are reactivated and payment captured, an F034 alert with reason `reactivated_unbilled` is raised (durable row + ops/billing email) — the tenant is never left silently active without a linked subscription.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F045",
@@ -693,7 +693,7 @@
   {
     "id": "T075",
     "description": "Shared subscription-insert helper (F046): inserts ONLY the `stripe_subscriptions` row against an EXISTING internal `stripe_customer_id` with `tenant` + `billing_tenant = MASTER_TENANT_ID` set; no second `stripe_customers` row is created; createTenantInDB still produces identical rows when refactored onto the helper.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "featureIds": [
       "F046",

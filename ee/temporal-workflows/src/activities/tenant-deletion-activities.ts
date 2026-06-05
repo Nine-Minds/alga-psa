@@ -9,10 +9,12 @@
  */
 
 import { Context } from '@temporalio/activity';
+import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { retryOnReadOnly } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
+import { getSecret } from '@alga-psa/core/secrets';
 import type {
   TenantStats,
   DeactivateUsersResult,
@@ -24,7 +26,13 @@ import type {
   UpdateDeletionStatusInput,
   DeleteTenantDataResult,
   SendCancellationEmailResult,
+  LinkSubscriptionToExistingTenantInput,
+  LinkSubscriptionToExistingTenantResult,
+  TriggerReactivationPasswordResetInput,
+  RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
+import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -1843,4 +1851,174 @@ export async function sendCancellationConfirmationEmail(
     result.errors!.push(errorMsg);
     return result;
   }
+}
+
+export async function linkSubscriptionToExistingTenant(
+  input: LinkSubscriptionToExistingTenantInput,
+): Promise<LinkSubscriptionToExistingTenantResult> {
+  const log = Context.current().log;
+  const knex = await getAdminConnection();
+
+  const existingActiveSubscription = await knex('stripe_subscriptions')
+    .where({ tenant: input.tenantId })
+    .whereIn('status', ['active', 'trialing'])
+    .first('stripe_subscription_external_id');
+
+  if (existingActiveSubscription) {
+    log.warn('Tenant already has an active linked subscription; refusing duplicate link', {
+      tenantId: input.tenantId,
+      existingSubscription: existingActiveSubscription.stripe_subscription_external_id,
+      attemptedSubscription: input.stripeSubscriptionId,
+    });
+    return {
+      linked: false,
+      duplicateActiveSubscription: true,
+      stripeSubscriptionId: existingActiveSubscription.stripe_subscription_external_id,
+    };
+  }
+
+  const result = await knex.transaction(async (trx) => {
+    let stripeCustomer = await trx('stripe_customers')
+      .where({
+        tenant: input.tenantId,
+        stripe_customer_external_id: input.stripeCustomerId,
+      })
+      .first('*');
+
+    if (!stripeCustomer) {
+      stripeCustomer = await trx('stripe_customers')
+        .where({ tenant: input.tenantId })
+        .orderBy('created_at', 'asc')
+        .first('*');
+    }
+
+    if (!stripeCustomer) {
+      const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+      if (!MASTER_TENANT_ID) {
+        throw new Error('MASTER_BILLING_TENANT_ID not configured');
+      }
+
+      [stripeCustomer] = await trx('stripe_customers')
+        .insert({
+          tenant: input.tenantId,
+          stripe_customer_id: trx.raw('gen_random_uuid()'),
+          stripe_customer_external_id: input.stripeCustomerId,
+          billing_tenant: MASTER_TENANT_ID,
+          created_at: knex.fn.now(),
+          updated_at: knex.fn.now(),
+        })
+        .returning('*');
+    }
+
+    const subscriptionInsert = await insertStripeSubscriptionForTenant(trx, {
+      tenantId: input.tenantId,
+      stripeCustomerInternalId: stripeCustomer.stripe_customer_id,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      stripeSubscriptionItemId: input.stripeSubscriptionItemId,
+      stripePriceId: input.stripePriceId,
+      quantity: 1,
+    });
+
+    return subscriptionInsert.inserted;
+  });
+
+  return {
+    linked: result,
+    duplicateActiveSubscription: false,
+    stripeSubscriptionId: input.stripeSubscriptionId,
+  };
+}
+
+export async function stampReactivationSubscriptionMetadata(input: {
+  tenantId: string;
+  stripeSubscriptionId: string;
+}): Promise<void> {
+  await updateSubscriptionMetadata(input.stripeSubscriptionId, {
+    tenant_id: input.tenantId,
+  });
+}
+
+export async function triggerReactivationPasswordReset(
+  input: TriggerReactivationPasswordResetInput,
+): Promise<{ success: boolean }> {
+  const knex = await getAdminConnection();
+  const tenant = await knex('tenants')
+    .where('tenant', input.tenantId)
+    .first('email');
+  const email = tenant?.email;
+  if (!email) {
+    throw new Error(`No tenant email found for ${input.tenantId}`);
+  }
+
+  const secret = process.env.ALGA_WEBHOOK_SECRET;
+  const baseUrl = process.env.ALGA_APP_BASE_URL || process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL;
+  if (!secret || !baseUrl) {
+    throw new Error('ALGA_WEBHOOK_SECRET and app base URL are required for password reset trigger');
+  }
+
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${email}:${timestamp}`)
+    .digest('hex');
+
+  const response = await fetch(`${baseUrl}/api/billing/reactivation-password-reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Webhook-Signature': signature,
+      'X-Timestamp': timestamp,
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  return { success: response.ok };
+}
+
+export async function recordReactivationPaymentAlert(
+  input: RecordReactivationPaymentAlertInput,
+): Promise<{ success: boolean }> {
+  const log = Context.current().log;
+  const knex = await getAdminConnection();
+
+  await knex('pending_reactivation_refunds').insert({
+    tenant: input.tenantId,
+    stripe_checkout_session_id: input.stripeCheckoutSessionId ?? null,
+    stripe_payment_intent_id: input.stripePaymentIntentId ?? null,
+    stripe_subscription_external_id: input.stripeSubscriptionExternalId ?? null,
+    reason: input.reason,
+    created_at: knex.fn.now(),
+  });
+
+  const opsEmail = process.env.REACTIVATION_REFUND_ALERT_EMAIL || process.env.BILLING_OPS_EMAIL;
+  if (opsEmail) {
+    try {
+      const { emailService: emailServicePromise } = await import('../services/email-service.js');
+      const emailServiceInstance = await emailServicePromise;
+      await emailServiceInstance.sendEmail({
+        to: opsEmail,
+        from: 'info@nineminds.com',
+        subject: `Manual reactivation payment review: ${input.reason}`,
+        html: [
+          '<h1>Manual reactivation payment review</h1>',
+          `<p>Tenant: ${input.tenantId}</p>`,
+          `<p>Reason: ${input.reason}</p>`,
+          `<p>Checkout session: ${input.stripeCheckoutSessionId ?? 'n/a'}</p>`,
+          `<p>Payment intent: ${input.stripePaymentIntentId ?? 'n/a'}</p>`,
+          `<p>Subscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}</p>`,
+        ].join(''),
+        text: `Manual reactivation payment review\nTenant: ${input.tenantId}\nReason: ${input.reason}\nCheckout session: ${input.stripeCheckoutSessionId ?? 'n/a'}\nPayment intent: ${input.stripePaymentIntentId ?? 'n/a'}\nSubscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}`,
+        tenantId: input.tenantId,
+        entityType: 'tenant_reactivation',
+        entityId: input.stripeCheckoutSessionId ?? input.tenantId,
+      });
+    } catch (error) {
+      log.error('Failed to send reactivation payment alert email', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        tenantId: input.tenantId,
+      });
+    }
+  }
+
+  return { success: true };
 }

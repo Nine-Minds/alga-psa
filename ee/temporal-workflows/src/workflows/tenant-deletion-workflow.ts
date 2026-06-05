@@ -42,6 +42,10 @@ const {
   deleteTenantData,
   cancelTenantStripeSubscription,
   sendCancellationConfirmationEmail,
+  linkSubscriptionToExistingTenant,
+  stampReactivationSubscriptionMetadata,
+  triggerReactivationPasswordReset,
+  recordReactivationPaymentAlert,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: '10 minutes',
   retry: {
@@ -456,6 +460,46 @@ async function handleRollback(
   // Reactivate client and contacts in master tenant
   log.info('Reactivating client and contacts in master tenant');
   await reactivateMasterTenantClient(tenantId);
+
+  if (rollbackSignal.reactivation) {
+    log.info('Linking reactivation subscription to existing tenant', {
+      tenantId,
+      stripeSubscriptionId: rollbackSignal.reactivation.stripeSubscriptionId,
+    });
+
+    try {
+      const linkResult = await linkSubscriptionToExistingTenant({
+        tenantId,
+        ...rollbackSignal.reactivation,
+      });
+
+      if (linkResult.duplicateActiveSubscription) {
+        await recordReactivationPaymentAlert({
+          tenantId,
+          stripeCheckoutSessionId: rollbackSignal.reactivation.checkoutSessionId,
+          stripeSubscriptionExternalId: rollbackSignal.reactivation.stripeSubscriptionId,
+          reason: 'duplicate_payment',
+        });
+      } else if (linkResult.linked) {
+        await stampReactivationSubscriptionMetadata({
+          tenantId,
+          stripeSubscriptionId: rollbackSignal.reactivation.stripeSubscriptionId,
+        });
+
+        if (rollbackSignal.reactivation.sendPasswordReset !== false) {
+          await triggerReactivationPasswordReset({ tenantId });
+        }
+      }
+    } catch (reactivationError) {
+      await recordReactivationPaymentAlert({
+        tenantId,
+        stripeCheckoutSessionId: rollbackSignal.reactivation.checkoutSessionId,
+        stripeSubscriptionExternalId: rollbackSignal.reactivation.stripeSubscriptionId,
+        reason: 'reactivated_unbilled',
+      });
+      throw reactivationError;
+    }
+  }
 
   // Update database
   await updateDeletionStatus({

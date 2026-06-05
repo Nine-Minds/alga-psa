@@ -199,7 +199,7 @@
   {
     "id": "F016",
     "description": "Thin server trigger on reactivation-checkout success (gated on `metadata.reactivation==='true'`) that fires the enriched `rollbackDeletion` signal to the existing deletion workflow — NOT the normal provisioning trigger. Must handle a CLOSED workflow: once status is `rolled_back` the deletion workflow has returned, so signaling it throws — detect this and route to the already-reactivated / duplicate-payment path (F034) instead of signaling.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
@@ -210,7 +210,7 @@
   {
     "id": "F041",
     "description": "Stripe webhook branch: in `checkout.session.completed`, detect `session.metadata.reactivation === 'true'` before the normal `handleCheckoutCompleted` subscription import/update path. Reactivation sessions run only the F016/F017 reactivation trigger/guard path; normal checkout sessions continue through existing import/update handling. This prevents the webhook from importing the new subscription before the Temporal rollback handler owns completion.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
@@ -220,7 +220,7 @@
   {
     "id": "F017",
     "description": "Pre-signal guard on the trigger: (a) refuse + surface 'too late' when past the window (status `deleting`/`deleted`) — Stripe may have already captured payment, so route to F034 for a manual-refund alert; (b) if the tenant is already reactivated (status `rolled_back`) or already has an active linked subscription, treat as a duplicate payment (F034), do not re-signal. Mirrors the existing rollback endpoint's status rejection.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
@@ -230,7 +230,7 @@
   {
     "id": "F018",
     "description": "Extend `RollbackDeletionSignal` payload (tenant-deletion-types.ts) with an optional `reactivation` block `{ stripeCustomerId, stripeSubscriptionId, stripeSubscriptionItemId, stripePriceId, sendPasswordReset }`; the deletion workflow rollback handler branches on its presence while preserving existing rollback behavior: reactivate tenant users, remove the Canceled tag, and reactivate the master-tenant client and contacts.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7"
@@ -239,7 +239,7 @@
   {
     "id": "F019",
     "description": "New activity `linkSubscriptionToExistingTenant`: inserts only the new `stripe_subscriptions` row for the EXISTING tenant, REUSING createTenantInDB's insert path via the F046 shared helper so Citus shard routing is identical (`tenant` set explicitly, from the worker) and `billing_tenant = MASTER_TENANT_ID` is preserved. Does NOT insert a tenant. CUSTOMER RECONCILIATION: the tenant already has a `stripe_customers` row from the original subscription — this activity must REUSE it (match on tenant), NOT create a second/divergent customer row. The subscription's `stripe_customer_id` FK points at the existing internal customer; if no customer row exists (edge), fall back to create. See SCRATCHPAD Citus + customer-reconciliation notes.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
@@ -250,7 +250,7 @@
   {
     "id": "F020",
     "description": "Rollback handler stamps `subscription.metadata.tenant_id = existing tenant` on the new subscription (reuses updateSubscriptionMetadata).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
@@ -260,7 +260,7 @@
   {
     "id": "F021",
     "description": "New activity `triggerPasswordReset`: AFTER reactivation clears `is_inactive`, force a password-reset (set-password) email when `sendPasswordReset` is set (default). It does NOT mint the link in the worker — the worker lacks NEXT_PUBLIC_BASE_URL/NEXTAUTH_URL and uses a different (Resend) sender. Instead it calls the app-side endpoint F035, which runs the existing `requestPasswordReset` in app context (correct baseUrl + branded auth email registry). Doubles as email-ownership verification after payment.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7"
@@ -269,7 +269,7 @@
   {
     "id": "F022",
     "description": "Idempotency keyed on the TENANT, not the sub id: before linking, if the tenant already has an active linked `stripe_subscriptions` row, do not insert a second (two genuine payments yield two distinct sub_… ids, which a sub-id-keyed guard would miss → double billing). A second/duplicate payment routes to F034 (alert + manual refund), and a re-sent signal / already-`rolled_back` workflow is a no-op (no error, no double-link).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "10"
@@ -278,7 +278,7 @@
   {
     "id": "F023",
     "description": "Reactivation path never invokes `startOrderInstallWorkflow` / `ensureOrderInstallWorkflowForCheckoutSession` (the create-tenant provisioning entry in nm-store `orderInstallTrigger.ts` / `orderInstallFromCheckoutSession.ts`), guarded by the reactivation metadata discriminator.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "9"
@@ -287,7 +287,7 @@
   {
     "id": "F033",
     "description": "Admin rollback endpoint (`rollback-deletion/route.ts`) passes NO `reactivation` block → unchanged behavior (no subscription link, no password reset) — backward compatible.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7"
@@ -296,7 +296,7 @@
   {
     "id": "F034",
     "description": "Charged-but-refused / duplicate-payment alert: on any path where a reactivation payment was (or may have been) captured by Stripe but reactivation is refused — past-the-window race (status `deleting`/`deleted`) or a duplicate payment for an already-reactivated tenant. CONCRETE SINK (two channels so it can't degrade to an unwatched log): (1) insert a durable row in `pending_reactivation_refunds` (F036) with tenant, stripe checkout/payment_intent id, stripe_subscription id, reason, created_at, resolved_at=NULL; (2) email a monitored ops/billing inbox via the existing email service (worker Resend, from info@nineminds.com). No auto-refund — the row is the work queue, the email is the nudge.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "3",
@@ -306,7 +306,7 @@
   {
     "id": "F035",
     "description": "App-side HMAC endpoint (e.g. `POST /api/billing/reactivation-password-reset`, same signing scheme as check-tenant) that invokes the existing `requestPasswordReset(email,'internal')` in the app server context — so the reset link uses the app `baseUrl` and the branded auth email registry. Called by the worker's F021 activity. Resolves the worker-context env/sender gap.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7"
@@ -431,7 +431,7 @@
   {
     "id": "F045",
     "description": "Reactivated-but-unbilled partial-failure guard: the rollback handler sets status `rolled_back` and reactivates users BEFORE linking the subscription. If `linkSubscriptionToExistingTenant` (F019) permanently fails after users are active and payment was captured, the tenant is live with NO linked subscription — a state F034 (charged-but-refused/duplicate) does not cover. On exhausted retries of the link/metadata step, raise an F034 alert with a distinct `reactivated_unbilled` reason (durable refund/ops row + email) so it is never a silent unbilled-active tenant. Temporal activity retries handle transient failures first.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "10",
@@ -441,7 +441,7 @@
   {
     "id": "F046",
     "description": "Extract a shared subscription-insert helper from `createTenantInDB` (`ee/temporal-workflows/src/db/tenant-operations.ts`): the existing code couples the customer insert and subscription insert (the subscription's `stripe_customer_id` FK uses the just-inserted customer row, and rows carry `billing_tenant = MASTER_TENANT_ID`). The helper must accept an EXISTING internal `stripe_customer_id` (looked up by tenant) and insert ONLY the subscription row with `tenant` + `billing_tenant = MASTER_TENANT_ID` set explicitly, so F019 reuses identical Citus placement without creating a tenant or a second customer. createTenantInDB is refactored to call the same helper (no behavior change).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "reactivation-core",
     "prdRefs": [
       "7",
