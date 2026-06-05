@@ -72,6 +72,18 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.categoryId && typeof params.categoryId === 'string') {
       filtersFromURL.categoryId = params.categoryId;
     }
+    if (params?.categoryIds && typeof params.categoryIds === 'string') {
+      const categoryIds = params.categoryIds.split(',').filter(id => id.trim().length > 0);
+      if (categoryIds.length > 0) {
+        filtersFromURL.categoryIds = categoryIds;
+      }
+    }
+    if (params?.excludeCategoryIds && typeof params.excludeCategoryIds === 'string') {
+      const excludeCategoryIds = params.excludeCategoryIds.split(',').filter(id => id.trim().length > 0);
+      if (excludeCategoryIds.length > 0) {
+        filtersFromURL.excludeCategoryIds = excludeCategoryIds;
+      }
+    }
     if (params?.searchQuery && typeof params.searchQuery === 'string') {
       filtersFromURL.searchQuery = params.searchQuery;
     }
@@ -181,6 +193,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       statusId: initialFilters.statusId || TICKET_STATUS_FILTER_OPEN,
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,
+      categoryIds: initialFilters.categoryIds || undefined,
+      excludeCategoryIds: initialFilters.excludeCategoryIds || undefined,
       clientId: initialFilters.clientId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',

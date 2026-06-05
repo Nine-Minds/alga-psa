@@ -38,6 +38,8 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     statusId,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
+    categoryIds: params.get('categoryIds') ? params.get('categoryIds')!.split(',').filter(Boolean) : undefined,
+    excludeCategoryIds: params.get('excludeCategoryIds') ? params.get('excludeCategoryIds')!.split(',').filter(Boolean) : undefined,
     clientId: params.get('clientId') || undefined,
     contactId: params.get('contactId') || undefined,
     searchQuery: params.get('searchQuery') || '',

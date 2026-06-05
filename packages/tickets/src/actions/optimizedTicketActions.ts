@@ -1043,12 +1043,50 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId) {
-      if (validatedFilters.categoryId === 'no-category') {
-        baseQuery = baseQuery.whereNull('t.category_id');
-      } else if (validatedFilters.categoryId !== 'all') {
-        baseQuery = baseQuery.where('t.category_id', validatedFilters.categoryId);
-      }
+    // Category include filter. A ticket "has" a category if either its
+    // category_id (parent) or subcategory_id (child) matches the selection, so
+    // selecting a parent matches its subcategorized tickets and selecting a
+    // subcategory matches tickets that reference it via subcategory_id.
+    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
+    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
+      ? validatedFilters.categoryIds
+      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
+          ? [validatedFilters.categoryId]
+          : []);
+    const includeNoCategory = includeCategoryIds.includes('no-category');
+    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (includeNoCategory || includeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoCategory && includeRealCategoryIds.length > 0) {
+          this.whereNull('t.category_id').orWhere(function () {
+            this.whereIn('t.category_id', includeRealCategoryIds)
+              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+          });
+        } else if (includeNoCategory) {
+          this.whereNull('t.category_id');
+        } else {
+          this.whereIn('t.category_id', includeRealCategoryIds)
+            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+        }
+      });
+    }
+
+    // Category exclude filter. Excludes any ticket whose parent or subcategory is
+    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
+    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
+    const excludeNoCategory = excludeCategoryIds.includes('no-category');
+    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (excludeNoCategory) {
+      baseQuery = baseQuery.whereNotNull('t.category_id');
+    }
+    if (excludeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.where(function () {
+          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
+        }).andWhere(function () {
+          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
+        });
+      });
     }
 
     if (validatedFilters.clientId) {

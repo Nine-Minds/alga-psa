@@ -84,6 +84,8 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
+    categoryIds: decodeCsvParam(params.get('categoryIds')),
+    excludeCategoryIds: decodeCsvParam(params.get('excludeCategoryIds')),
     searchQuery: params.get('searchQuery') || '',
     boardFilterState: ALLOWED_BOARD_FILTER_STATES.has(params.get('boardFilterState') || '')
       ? (params.get('boardFilterState') as ITicketListFilters['boardFilterState'])
@@ -243,7 +245,14 @@ export default function TicketingDashboardContainer({
     if (filters.clientId) params.set('clientId', filters.clientId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
-    if (filters.categoryId) params.set('categoryId', filters.categoryId);
+    if (filters.categoryIds && Array.isArray(filters.categoryIds) && filters.categoryIds.length > 0) {
+      params.set('categoryIds', filters.categoryIds.join(','));
+    } else if (filters.categoryId) {
+      params.set('categoryId', filters.categoryId);
+    }
+    if (filters.excludeCategoryIds && Array.isArray(filters.excludeCategoryIds) && filters.excludeCategoryIds.length > 0) {
+      params.set('excludeCategoryIds', filters.excludeCategoryIds.join(','));
+    }
     if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
     if (filters.boardFilterState && filters.boardFilterState !== 'active') {
       params.set('boardFilterState', filters.boardFilterState);
@@ -316,6 +325,8 @@ export default function TicketingDashboardContainer({
         statusId: filters.statusId || TICKET_STATUS_FILTER_OPEN,
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,
+        categoryIds: filters.categoryIds && filters.categoryIds.length > 0 ? filters.categoryIds : undefined,
+        excludeCategoryIds: filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0 ? filters.excludeCategoryIds : undefined,
         clientId: filters.clientId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',

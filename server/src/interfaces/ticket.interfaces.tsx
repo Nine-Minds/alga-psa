@@ -74,7 +74,9 @@ export interface ITicketListFilters {
   boardId?: string;
   statusId?: string;
   priorityId?: string;
-  categoryId?: string;
+  categoryId?: string;                // Legacy single-category include (deep links)
+  categoryIds?: string[];             // Categories to include (parent or subcategory ids; 'no-category' sentinel matches uncategorized)
+  excludeCategoryIds?: string[];      // Categories to exclude (parent or subcategory ids; 'no-category' sentinel excludes uncategorized)
   clientId?: string;
   contactId?: string;
   searchQuery?: string;
