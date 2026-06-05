@@ -33,6 +33,20 @@ drops > ~400 MB vs prior accepted state, dur not regressed, all builds pass.**
 
 **State after R1 (S1):** median peak 13324 MB, dur 68.8s.
 
+> **Rule change (user, mid-campaign):** worker-count reduction is now ALLOWED,
+> with a new rule: wall-clock must not regress beyond normal variance
+> (warm-cache builds: 66.7–72.5s, median ~68s, σ≈1.6s → bar ≲72s).
+
+| 2 | cap static-gen/page-data workers: `experimental.cpus` default `min(4,cores)` (was host CPU count → 31 workers) | 10538/10937/11678 | **10937** | **−2387** | **58.1s** (−10.7) | ✅ accept |
+
+**State after R2 (S2):** median peak 10937 MB, dur 58.1s. The 31-worker
+static-gen pool (each loading the ~290 MB app bundle) was the dominant peak;
+capping it collapses onto a **fixed ~9 GB turbopack compilation floor**
+(`next build ×4`, ~2.2 GB each, independent of worker count). Build is *faster*
+because over-provisioned workers added spawn/load overhead. Worker-count sweep
+(1 run each): cpu16=10201, cpu8=10651, cpu4=9888, cpu2=9775 — all ~compile-floor
+bound; cap=4 vs cap=8 is within noise at 3 runs.
+
 ### Learnings (narrow the search space)
 - **Per-worker memory is module-graph-dominated, not render-state.** Capping
   `staticGenerationMaxConcurrency` (concurrent renders/worker) did nothing →

@@ -56,6 +56,10 @@ fi
 # npm/nx caches don't try to write to a non-existent home for this uid.
 DOCKER_ARGS=(run --rm --init -v "$REPO_ROOT":/work -w /work
   --user "$(id -u):$(id -g)" -e HOME=/tmp)
+# Forward build-tuning env knobs into the container if set in the caller's env.
+for k in NEXT_BUILD_CPUS NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT NODE_OPTIONS; do
+  [[ -n "${!k:-}" ]] && DOCKER_ARGS+=(-e "$k=${!k}")
+done
 [[ -t 1 ]] && DOCKER_ARGS+=(-t)
 [[ -n "$MEMORY" ]] && DOCKER_ARGS+=(--memory "$MEMORY" --memory-swap "$MEMORY")
 DOCKER_ARGS+=("$IMAGE" node scripts/build-mem-harness.mjs)
