@@ -286,3 +286,20 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
 - Anti-enumeration: checkout reactivation reveals account existence (user types their own
   email — acceptable). Win-back email is silent (no enumeration leak).
 - Keep both `workflowClient.ts` copies in sync if a helper is added.
+
+## Implementation log (2026-06-05)
+
+- Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`
+  with nullable `pending_tenant_deletions.last_winback_email_at`. The migration checks table/column
+  existence before altering so it is safe to rerun and safe to roll back on partially-applied DBs.
+- Completed F036: same migration creates `pending_reactivation_refunds` with tenant, checkout/payment/subscription
+  Stripe ids, reason, `created_at`, `resolved_at`, plus `resolved_at` and unresolved open-queue indexes. This
+  gives F034 a durable manual-refund work queue.
+- Completed F040: same migration creates `tenant_reactivation_tokens` with `token_hash` uniqueness, tenant/deletion
+  lookup, reservation/consumption timestamps, checkout session id, timestamps, and an open unexpired-token index.
+- Completed T001/T060/T068: added source-level migration contract tests in
+  `server/src/test/unit/migrations/tenantReactivationWinbackMigration.test.ts` covering idempotent guards,
+  required columns, uniqueness, and open queue/token indexes.
+- Verification: `cd server && npm run test -- src/test/unit/migrations/tenantReactivationWinbackMigration.test.ts`
+  passed (3 tests). Running `npx vitest run server/src/test/unit/migrations/tenantReactivationWinbackMigration.test.ts`
+  from the repo root found no matching test files because the server Vitest config is workspace-scoped.
