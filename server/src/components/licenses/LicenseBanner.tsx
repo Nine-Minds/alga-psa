@@ -56,6 +56,10 @@ export default function LicenseBanner() {
       message = 'License has expired. The install is now running Essentials features.';
       urgency = 'error';
       break;
+    case 'license_wrong_tenant':
+      message = 'This license was issued for a different appliance and is not valid here. The install is running Essentials features.';
+      urgency = 'error';
+      break;
     case 'ce':
       // CE installs: only show if they haven't used their trial yet.
       if (!status.trialUsed) {

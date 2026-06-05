@@ -95,6 +95,7 @@ export default function LicenseManagementPage() {
     trial_expired: 'Trial Expired — Essentials',
     licensed: 'Licensed',
     license_expired: 'License Expired — Essentials',
+    license_wrong_tenant: 'License Not Valid for This Install — Essentials',
   };
 
   const stateLabel = status.state ? (stateLabelMap[status.state] ?? status.state) : 'Unknown';
