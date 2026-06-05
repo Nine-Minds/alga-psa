@@ -122,13 +122,18 @@ export function ActivitiesTableFilters({
 
       if (!newTypes.includes(ActivityType.TICKET)) {
         delete next.ticketBoardIds;
+        delete next.ticketExcludeBoardIds;
         delete next.ticketStatusIds;
+        delete next.ticketExcludeStatusIds;
         delete next.ticketTagIds;
       }
       if (!newTypes.includes(ActivityType.PROJECT_TASK)) {
         delete next.projectIds;
         delete next.phaseIds;
         delete next.projectStatusMappingIds;
+        delete next.excludeProjectIds;
+        delete next.excludePhaseIds;
+        delete next.excludeProjectStatusMappingIds;
         delete next.projectTaskTagIds;
       }
 
@@ -220,6 +225,7 @@ export function ActivitiesTableFilters({
 
   const boardTreeOptions = useMemo((): TreeSelectOption<'board'>[] => {
     const selectedIds = new Set(filters.ticketBoardIds || []);
+    const excludedIds = new Set(filters.ticketExcludeBoardIds || []);
     return boards
       .filter((b) => b.board_id && b.board_name)
       .map((b) => ({
@@ -227,26 +233,40 @@ export function ActivitiesTableFilters({
         label: b.board_name!,
         type: 'board' as const,
         selected: selectedIds.has(b.board_id!),
+        excluded: excludedIds.has(b.board_id!),
       }));
-  }, [boards, filters.ticketBoardIds]);
+  }, [boards, filters.ticketBoardIds, filters.ticketExcludeBoardIds]);
 
   const handleBoardToggle = useCallback(
-    (value: string, _type: string) => {
+    (value: string, _type: string, excluded?: boolean) => {
       if (!value) {
         const next = { ...filters };
         delete next.ticketBoardIds;
+        delete next.ticketExcludeBoardIds;
         delete next.ticketStatusIds;
+        delete next.ticketExcludeStatusIds;
         onChange(next);
         return;
       }
-      const current = filters.ticketBoardIds || [];
-      const updated = current.includes(value)
-        ? current.filter((id) => id !== value)
-        : [...current, value];
-      onChange({
-        ...filters,
-        ticketBoardIds: updated.length > 0 ? updated : undefined,
-      });
+      const included = filters.ticketBoardIds || [];
+      const excludedIds = filters.ticketExcludeBoardIds || [];
+      let nextIncluded = included;
+      let nextExcluded = excludedIds;
+      if (excluded) {
+        nextExcluded = excludedIds.includes(value)
+          ? excludedIds.filter((id) => id !== value)
+          : [...excludedIds, value];
+        nextIncluded = included.filter((id) => id !== value);
+      } else {
+        nextIncluded = included.includes(value)
+          ? included.filter((id) => id !== value)
+          : [...included, value];
+        nextExcluded = excludedIds.filter((id) => id !== value);
+      }
+      const next = { ...filters };
+      if (nextIncluded.length > 0) next.ticketBoardIds = nextIncluded; else delete next.ticketBoardIds;
+      if (nextExcluded.length > 0) next.ticketExcludeBoardIds = nextExcluded; else delete next.ticketExcludeBoardIds;
+      onChange(next);
     },
     [filters, onChange]
   );
@@ -255,6 +275,7 @@ export function ActivitiesTableFilters({
 
   const ticketStatusTreeOptions = useMemo((): TreeSelectOption<'ticketStatus'>[] => {
     const selectedIds = new Set(filters.ticketStatusIds || []);
+    const excludedIds = new Set(filters.ticketExcludeStatusIds || []);
     const selectedBoardIds = filters.ticketBoardIds;
     const opts = buildUniqueStatusOptions(
       ticketStatuses,
@@ -266,37 +287,47 @@ export function ActivitiesTableFilters({
       label: o.label,
       type: 'ticketStatus' as const,
       selected: selectedIds.has(o.value),
+      excluded: excludedIds.has(o.value),
     }));
-  }, [ticketStatuses, filters.ticketStatusIds, filters.ticketBoardIds]);
+  }, [ticketStatuses, filters.ticketStatusIds, filters.ticketExcludeStatusIds, filters.ticketBoardIds]);
 
   const handleTicketStatusToggle = useCallback(
-    (value: string, _type: string) => {
+    (value: string, _type: string, excluded?: boolean) => {
       if (!value) {
         const next = { ...filters };
         delete next.ticketStatusIds;
+        delete next.ticketExcludeStatusIds;
         onChange(next);
         return;
       }
-      const current = filters.ticketStatusIds || [];
-      const isSelected = current.includes(value);
-      // When filtering across boards, include all status_ids that share the name
+      // When filtering across boards, act on all status_ids that share the name
       const idsForThisName = (filters.ticketBoardIds && filters.ticketBoardIds.length === 1)
         ? [value]
         : getStatusIdsByName(ticketStatuses, value);
+      const removeSet = new Set(idsForThisName);
+      const included = filters.ticketStatusIds || [];
+      const excludedIds = filters.ticketExcludeStatusIds || [];
+      let nextIncluded = included;
+      let nextExcluded = excludedIds;
 
-      let updated: string[];
-      if (isSelected) {
-        // Remove all IDs for this status name
-        const removeSet = new Set(idsForThisName);
-        updated = current.filter((id) => !removeSet.has(id));
+      if (excluded) {
+        const isExcluded = idsForThisName.some((id) => excludedIds.includes(id));
+        nextExcluded = isExcluded
+          ? excludedIds.filter((id) => !removeSet.has(id))
+          : [...new Set([...excludedIds, ...idsForThisName])];
+        nextIncluded = included.filter((id) => !removeSet.has(id));
       } else {
-        // Add all IDs for this status name
-        updated = [...new Set([...current, ...idsForThisName])];
+        const isSelected = idsForThisName.some((id) => included.includes(id));
+        nextIncluded = isSelected
+          ? included.filter((id) => !removeSet.has(id))
+          : [...new Set([...included, ...idsForThisName])];
+        nextExcluded = excludedIds.filter((id) => !removeSet.has(id));
       }
-      onChange({
-        ...filters,
-        ticketStatusIds: updated.length > 0 ? updated : undefined,
-      });
+
+      const next = { ...filters };
+      if (nextIncluded.length > 0) next.ticketStatusIds = nextIncluded; else delete next.ticketStatusIds;
+      if (nextExcluded.length > 0) next.ticketExcludeStatusIds = nextExcluded; else delete next.ticketExcludeStatusIds;
+      onChange(next);
     },
     [filters, onChange, ticketStatuses]
   );
@@ -342,44 +373,45 @@ export function ActivitiesTableFilters({
   // -------- Project / Phase / Status tree ----------------------------------
 
   const handleProjectTreeToggle = useCallback(
-    (value: string, type: ProjectNodeType) => {
+    (value: string, type: ProjectNodeType, excluded?: boolean) => {
       if (!value) {
         const next = { ...filters };
         delete next.projectIds;
         delete next.phaseIds;
         delete next.projectStatusMappingIds;
+        delete next.excludeProjectIds;
+        delete next.excludePhaseIds;
+        delete next.excludeProjectStatusMappingIds;
         onChange(next);
         return;
       }
 
-      if (type === 'project') {
-        const current = filters.projectIds || [];
-        const updated = current.includes(value)
-          ? current.filter((id) => id !== value)
-          : [...current, value];
-        onChange({
-          ...filters,
-          projectIds: updated.length > 0 ? updated : undefined,
-        });
-      } else if (type === 'phase') {
-        const current = filters.phaseIds || [];
-        const updated = current.includes(value)
-          ? current.filter((id) => id !== value)
-          : [...current, value];
-        onChange({
-          ...filters,
-          phaseIds: updated.length > 0 ? updated : undefined,
-        });
-      } else if (type === 'status') {
-        const current = filters.projectStatusMappingIds || [];
-        const updated = current.includes(value)
-          ? current.filter((id) => id !== value)
-          : [...current, value];
-        onChange({
-          ...filters,
-          projectStatusMappingIds: updated.length > 0 ? updated : undefined,
-        });
+      const includeKey: keyof ActivityFiltersType =
+        type === 'project' ? 'projectIds' : type === 'phase' ? 'phaseIds' : 'projectStatusMappingIds';
+      const excludeKey: keyof ActivityFiltersType =
+        type === 'project' ? 'excludeProjectIds' : type === 'phase' ? 'excludePhaseIds' : 'excludeProjectStatusMappingIds';
+
+      const included = (filters[includeKey] as string[] | undefined) || [];
+      const excludedArr = (filters[excludeKey] as string[] | undefined) || [];
+      let nextIncluded = included;
+      let nextExcluded = excludedArr;
+      if (excluded) {
+        nextExcluded = excludedArr.includes(value)
+          ? excludedArr.filter((id) => id !== value)
+          : [...excludedArr, value];
+        nextIncluded = included.filter((id) => id !== value);
+      } else {
+        nextIncluded = included.includes(value)
+          ? included.filter((id) => id !== value)
+          : [...included, value];
+        nextExcluded = excludedArr.filter((id) => id !== value);
       }
+
+      const next = { ...filters };
+      const nextMut = next as Record<string, string[] | undefined>;
+      if (nextIncluded.length > 0) nextMut[includeKey] = nextIncluded; else delete nextMut[includeKey];
+      if (nextExcluded.length > 0) nextMut[excludeKey] = nextExcluded; else delete nextMut[excludeKey];
+      onChange(next);
     },
     [filters, onChange]
   );
@@ -388,25 +420,31 @@ export function ActivitiesTableFilters({
     const selectedProjectIds = new Set(filters.projectIds || []);
     const selectedPhaseIds = new Set(filters.phaseIds || []);
     const selectedMappingIds = new Set(filters.projectStatusMappingIds || []);
+    const excludedProjectIds = new Set(filters.excludeProjectIds || []);
+    const excludedPhaseIds = new Set(filters.excludePhaseIds || []);
+    const excludedMappingIds = new Set(filters.excludeProjectStatusMappingIds || []);
     return projects.filter((p) => !p.is_inactive).map((p) => ({
       value: p.project_id,
       label: p.project_name,
       type: 'project' as const,
       selected: selectedProjectIds.has(p.project_id),
+      excluded: excludedProjectIds.has(p.project_id),
       children: p.phases.map((phase) => ({
         value: phase.phase_id,
         label: phase.phase_name,
         type: 'phase' as const,
         selected: selectedPhaseIds.has(phase.phase_id),
+        excluded: excludedPhaseIds.has(phase.phase_id),
         children: (phase.statuses || []).map((st) => ({
           value: st.mapping_id,
           label: st.name + (st.is_closed ? t('filters.statusClosedSuffix', { defaultValue: ' (closed)' }) : ''),
           type: 'status' as const,
           selected: selectedMappingIds.has(st.mapping_id),
+          excluded: excludedMappingIds.has(st.mapping_id),
         })),
       })),
     }));
-  }, [projects, filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds, t]);
+  }, [projects, filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds, filters.excludeProjectIds, filters.excludePhaseIds, filters.excludeProjectStatusMappingIds, t]);
 
   // -------- Project task tags (TagFilter) -----------------------------------
 
@@ -443,6 +481,56 @@ export function ActivitiesTableFilters({
       .filter((t) => idSet.has(t.tag_id))
       .map((t) => t.tag_text);
   }, [filters.projectTaskTagIds, uniqueProjectTaskTags]);
+
+  // -------- Filter trigger summaries (show selection, not placeholder) ------
+
+  const boardFilterLabel = useMemo(() => {
+    const inc = filters.ticketBoardIds || [];
+    const exc = filters.ticketExcludeBoardIds || [];
+    if (inc.length === 0 && exc.length === 0) return '';
+    const nameOf = (id: string) => boards.find((b) => b.board_id === id)?.board_name || '';
+    const parts: string[] = [];
+    if (inc.length === 1) parts.push(nameOf(inc[0]));
+    else if (inc.length > 1) parts.push(t('filters.summary.boards', { count: inc.length, defaultValue: '{{count}} boards' }));
+    if (exc.length === 1) parts.push(t('filters.summary.excludingName', { name: nameOf(exc[0]), defaultValue: 'excl {{name}}' }));
+    else if (exc.length > 1) parts.push(t('filters.summary.excludingCount', { count: exc.length, defaultValue: 'excl {{count}}' }));
+    return parts.filter(Boolean).join(', ');
+  }, [filters.ticketBoardIds, filters.ticketExcludeBoardIds, boards, t]);
+
+  const statusFilterLabel = useMemo(() => {
+    const inc = filters.ticketStatusIds || [];
+    const exc = filters.ticketExcludeStatusIds || [];
+    if (inc.length === 0 && exc.length === 0) return '';
+    const nameOf = (id: string) => ticketStatuses.find((s) => s.status_id === id)?.name || '';
+    const uniqNames = (ids: string[]) => Array.from(new Set(ids.map(nameOf).filter(Boolean)));
+    const incNames = uniqNames(inc);
+    const excNames = uniqNames(exc);
+    const parts: string[] = [];
+    if (incNames.length === 1) parts.push(incNames[0]);
+    else if (incNames.length > 1) parts.push(t('filters.summary.statuses', { count: incNames.length, defaultValue: '{{count}} statuses' }));
+    if (excNames.length === 1) parts.push(t('filters.summary.excludingName', { name: excNames[0], defaultValue: 'excl {{name}}' }));
+    else if (excNames.length > 1) parts.push(t('filters.summary.excludingCount', { count: excNames.length, defaultValue: 'excl {{count}}' }));
+    return parts.filter(Boolean).join(', ');
+  }, [filters.ticketStatusIds, filters.ticketExcludeStatusIds, ticketStatuses, t]);
+
+  const projectFilterLabel = useMemo(() => {
+    const incTotal = (filters.projectIds?.length || 0) + (filters.phaseIds?.length || 0) + (filters.projectStatusMappingIds?.length || 0);
+    const excTotal = (filters.excludeProjectIds?.length || 0) + (filters.excludePhaseIds?.length || 0) + (filters.excludeProjectStatusMappingIds?.length || 0);
+    if (incTotal === 0 && excTotal === 0) return '';
+    // Single project selected → show its name
+    if (filters.projectIds?.length === 1 && !filters.phaseIds?.length && !filters.projectStatusMappingIds?.length && excTotal === 0) {
+      const name = projects.find((p) => p.project_id === filters.projectIds![0])?.project_name;
+      if (name) return name;
+    }
+    const segs: string[] = [];
+    if (filters.projectIds?.length) segs.push(t('filters.summary.projects', { count: filters.projectIds.length, defaultValue: '{{count}} projects' }));
+    if (filters.phaseIds?.length) segs.push(t('filters.summary.phases', { count: filters.phaseIds.length, defaultValue: '{{count}} phases' }));
+    if (filters.projectStatusMappingIds?.length) segs.push(t('filters.summary.statuses', { count: filters.projectStatusMappingIds.length, defaultValue: '{{count}} statuses' }));
+    const parts: string[] = [];
+    if (segs.length) parts.push(segs.join(', '));
+    if (excTotal > 0) parts.push(t('filters.summary.excludingCount', { count: excTotal, defaultValue: 'excl {{count}}' }));
+    return parts.join(', ');
+  }, [filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds, filters.excludeProjectIds, filters.excludePhaseIds, filters.excludeProjectStatusMappingIds, projects, t]);
 
   // -------- Render ---------------------------------------------------------
 
@@ -587,10 +675,13 @@ export function ActivitiesTableFilters({
                     options={boardTreeOptions}
                     value=""
                     onValueChange={handleBoardToggle}
-                    placeholder={t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
+                    placeholder={boardFilterLabel || t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
                     multiSelect
+                    showExclude
                     showReset
                     allowEmpty
+                    showSearch
+                    searchPlaceholder={t('filters.placeholders.searchBoards', { defaultValue: 'Search boards...' })}
                   />
                 </div>
               )}
@@ -601,10 +692,13 @@ export function ActivitiesTableFilters({
                     options={ticketStatusTreeOptions}
                     value=""
                     onValueChange={handleTicketStatusToggle}
-                    placeholder={t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
+                    placeholder={statusFilterLabel || t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
                     multiSelect
+                    showExclude
                     showReset
                     allowEmpty
+                    showSearch
+                    searchPlaceholder={t('filters.placeholders.searchStatuses', { defaultValue: 'Search statuses...' })}
                   />
                 </div>
               )}
@@ -639,10 +733,13 @@ export function ActivitiesTableFilters({
                     options={projectTreeOptions}
                     value=""
                     onValueChange={handleProjectTreeToggle}
-                    placeholder={t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
+                    placeholder={projectFilterLabel || t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
                     multiSelect
+                    showExclude
                     showReset
                     allowEmpty
+                    showSearch
+                    searchPlaceholder={t('filters.placeholders.searchProjects', { defaultValue: 'Search projects...' })}
                   />
                 </div>
               )}

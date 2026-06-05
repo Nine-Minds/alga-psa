@@ -51,6 +51,8 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   modal?: boolean;
   onAddNew?: () => void;
   addNewLabel?: string;
+  showSearch?: boolean;
+  searchPlaceholder?: string;
 }
 
 function TreeSelect<T extends string>({
@@ -72,6 +74,8 @@ function TreeSelect<T extends string>({
   modal,
   onAddNew,
   addNewLabel = 'Add new',
+  showSearch = false,
+  searchPlaceholder,
 }: TreeSelectProps<T>): React.JSX.Element {
   const { t } = useTranslation();
   const { modal: parentModal } = useModality();
@@ -80,6 +84,8 @@ function TreeSelect<T extends string>({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value);
   const [displayLabel, setDisplayLabel] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Explicit prop overrides parent modality context
   const isModal = modal !== undefined ? modal : parentModal;
@@ -174,6 +180,56 @@ function TreeSelect<T extends string>({
       setDisplayLabel(labels.filter(l => l).join(' > '));
     }
   }, [value, options]);
+
+  // Focus the search box when the dropdown opens; clear the term when it closes.
+  useEffect(() => {
+    if (isOpen && showSearch) {
+      const raf = window.requestAnimationFrame(() => searchInputRef.current?.focus());
+      return () => window.cancelAnimationFrame(raf);
+    }
+    if (!isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen, showSearch]);
+
+  // Extract searchable plain text from a label that may be a string or JSX (e.g. an ITIL badge).
+  const getOptionText = (label: string | React.ReactNode): string => {
+    if (typeof label === 'string') return label;
+    if (React.isValidElement(label)) {
+      const children = (label.props as { children?: React.ReactNode }).children;
+      if (typeof children === 'string') return children;
+      if (Array.isArray(children)) {
+        const text = children.find(child => typeof child === 'string');
+        if (typeof text === 'string') return text;
+      }
+    }
+    return '';
+  };
+
+  // Filter the option tree by the search term. A parent that matches keeps its
+  // whole subtree; a parent that doesn't match is kept only if some descendant does.
+  const filterOptionsBySearch = (opts: TreeSelectOption<T>[], term: string): TreeSelectOption<T>[] => {
+    const query = term.trim().toLowerCase();
+    if (!query) return opts;
+    const result: TreeSelectOption<T>[] = [];
+    for (const opt of opts) {
+      const selfMatches = getOptionText(opt.label).toLowerCase().includes(query);
+      if (selfMatches) {
+        result.push(opt);
+        continue;
+      }
+      if (opt.children && opt.children.length > 0) {
+        const matchedChildren = filterOptionsBySearch(opt.children, term);
+        if (matchedChildren.length > 0) {
+          result.push({ ...opt, children: matchedChildren });
+        }
+      }
+    }
+    return result;
+  };
+
+  const isSearching = showSearch && searchTerm.trim().length > 0;
+  const displayedOptions = isSearching ? filterOptionsBySearch(options, searchTerm) : options;
 
   const toggleExpand = (optionValue: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -279,7 +335,8 @@ function TreeSelect<T extends string>({
     level: number = 0,
     ancestors: TreeSelectOption<T>[] = []
   ): React.JSX.Element[] => {
-    const isExpanded = expandedItems.has(option.value);
+    // While searching, force every branch open so matched descendants are visible.
+    const isExpanded = isSearching ? true : expandedItems.has(option.value);
     const hasChildren = option.children && option.children.length > 0;
 
     const elements: React.JSX.Element[] = [];
@@ -476,6 +533,20 @@ function TreeSelect<T extends string>({
               avoidCollisions={true}
               sticky="always"
             >
+              {showSearch && (
+                <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    // Stop keystrokes from reaching Radix Select's typeahead/keyboard handlers
+                    onKeyDown={(e) => e.stopPropagation()}
+                    placeholder={searchPlaceholder || t('form.search', { defaultValue: 'Search...' })}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-white dark:bg-[rgb(var(--color-card))]"
+                  />
+                </div>
+              )}
               <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">
                 {allowEmpty && (
                   <div
@@ -489,7 +560,13 @@ function TreeSelect<T extends string>({
                     {t('form.clearSelection', { defaultValue: 'Clear selection' })}
                   </div>
                 )}
-                {options.flatMap((option: TreeSelectOption<T>) => renderOption(option))}
+                {isSearching && displayedOptions.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
+                    {t('form.noResults', { defaultValue: 'No results' })}
+                  </div>
+                ) : (
+                  displayedOptions.flatMap((option: TreeSelectOption<T>) => renderOption(option))
+                )}
               </RadixSelect.Viewport>
               {onAddNew && (
                 <>

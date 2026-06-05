@@ -35,6 +35,8 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
 
   return {
     boardId: params.get('boardId') || undefined,
+    boardIds: params.get('boardIds') ? params.get('boardIds')!.split(',').filter(Boolean) : undefined,
+    excludeBoardIds: params.get('excludeBoardIds') ? params.get('excludeBoardIds')!.split(',').filter(Boolean) : undefined,
     statusId,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,

@@ -80,6 +80,8 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
 
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
+    boardIds: decodeCsvParam(params.get('boardIds')),
+    excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
     statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
@@ -241,7 +243,14 @@ export default function TicketingDashboardContainer({
     if (pageSize && pageSize !== 10) params.set('pageSize', String(pageSize));
 
     // Only add non-default/non-empty values to URL
-    if (filters.boardId) params.set('boardId', filters.boardId);
+    if (filters.boardIds && Array.isArray(filters.boardIds) && filters.boardIds.length > 0) {
+      params.set('boardIds', filters.boardIds.join(','));
+    } else if (filters.boardId) {
+      params.set('boardId', filters.boardId);
+    }
+    if (filters.excludeBoardIds && Array.isArray(filters.excludeBoardIds) && filters.excludeBoardIds.length > 0) {
+      params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
+    }
     if (filters.clientId) params.set('clientId', filters.clientId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
@@ -322,6 +331,8 @@ export default function TicketingDashboardContainer({
 
       const currentFiltersWithDefaults: ITicketListFilters = {
         boardId: filters.boardId || undefined,
+        boardIds: filters.boardIds && filters.boardIds.length > 0 ? filters.boardIds : undefined,
+        excludeBoardIds: filters.excludeBoardIds && filters.excludeBoardIds.length > 0 ? filters.excludeBoardIds : undefined,
         statusId: filters.statusId || TICKET_STATUS_FILTER_OPEN,
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,

@@ -51,6 +51,26 @@ const getRelativeTime = (dateString?: string) => {
   return formatDistanceToNow(new Date(dateString), { addSuffix: true });
 };
 
+// Left-edge strip color per activity type (matches the type-icon colors)
+const getActivityTypeColor = (type: ActivityType): string => {
+  switch (type) {
+    case ActivityType.SCHEDULE:
+      return '#22c55e'; // green (matches schedule icon "text-success")
+    case ActivityType.PROJECT_TASK:
+      return 'rgb(var(--color-secondary-500))';
+    case ActivityType.TICKET:
+      return 'rgb(var(--color-primary-500))';
+    case ActivityType.TIME_ENTRY:
+      return '#f97316'; // orange-500
+    case ActivityType.WORKFLOW_TASK:
+      return '#ef4444'; // red (destructive)
+    case ActivityType.NOTIFICATION:
+      return '#6366f1'; // indigo-500
+    default:
+      return 'rgb(var(--color-border-300))';
+  }
+};
+
 // Get activity type icon
 const getActivityTypeIcon = (type: ActivityType) => {
   switch (type) {
@@ -129,8 +149,15 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       title: t('table.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'type',
       width: '10%',
+      cellClassName: 'relative',
       render: (value, record) => (
         <div className="flex items-center gap-2">
+          {/* Left-edge color strip indicating the activity type */}
+          <div
+            className="absolute inset-y-0 left-0 w-1"
+            style={{ backgroundColor: getActivityTypeColor(value as ActivityType) }}
+            aria-hidden="true"
+          />
           {getActivityTypeIcon(value as ActivityType)}
           <span className="text-xs">{getActivityTypeLabel(value as ActivityType, t)}</span>
         </div>
