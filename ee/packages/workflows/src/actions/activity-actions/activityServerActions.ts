@@ -331,6 +331,20 @@ export const fetchDashboardActivities = withAuth(async (
 });
 
 /**
+ * Parse an optional ISO timestamp from client input. Returns null for an empty value,
+ * a valid Date otherwise, and throws on an unparseable string so we never persist an
+ * Invalid Date (which the pg driver would otherwise reject with an opaque error).
+ */
+function parseOptionalTimestamp(value: string | null | undefined, field: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid ${field}`);
+  }
+  return date;
+}
+
+/**
  * Create an ad-hoc item (a schedule entry with work_item_type='ad_hoc', assigned to the
  * current user). Times are optional — an ad-hoc item is a lightweight personal to-do.
  */
@@ -344,7 +358,23 @@ export const createAdHocActivity = withAuth(async (
     throw new Error("Title is required");
   }
 
+  // Validate optional times up front so a bad value fails with a clear message instead
+  // of an opaque driver error at insert time.
+  const scheduledStart = parseOptionalTimestamp(input.scheduledStart, "start time");
+  const scheduledEnd = parseOptionalTimestamp(input.scheduledEnd, "end time");
+  if (scheduledStart && scheduledEnd && scheduledEnd <= scheduledStart) {
+    throw new Error("End time must be after start time");
+  }
+
   const { knex } = await createTenantKnex(tenant);
+
+  // Mirror addScheduleEntry's gate: creating your own schedule entry requires at least
+  // user_schedule:read. (Assigning to others needs user_schedule:update, but an ad-hoc
+  // item is always self-assigned.)
+  if (!(await hasPermission(user, "user_schedule", "read", knex))) {
+    throw new Error("Permission denied: cannot create ad-hoc items");
+  }
+
   const created = await withTransaction(knex, async (trx) => {
     const [entry] = await trx("schedule_entries")
       .insert({
@@ -354,8 +384,8 @@ export const createAdHocActivity = withAuth(async (
         work_item_id: null,
         work_item_type: "ad_hoc",
         status: "scheduled",
-        scheduled_start: input.scheduledStart ? new Date(input.scheduledStart) : null,
-        scheduled_end: input.scheduledEnd ? new Date(input.scheduledEnd) : null,
+        scheduled_start: scheduledStart,
+        scheduled_end: scheduledEnd,
         recurrence_pattern: null,
         is_recurring: false,
         is_private: false,
@@ -500,8 +530,8 @@ export const updateAdHocActivity = withAuth(async (
     throw new Error("Entry id is required");
   }
 
-  const start = input.scheduledStart ? new Date(input.scheduledStart) : null;
-  const end = input.scheduledEnd ? new Date(input.scheduledEnd) : null;
+  const start = parseOptionalTimestamp(input.scheduledStart, "start time");
+  const end = parseOptionalTimestamp(input.scheduledEnd, "end time");
   if (start && end && end <= start) {
     throw new Error("End time must be after start time");
   }
