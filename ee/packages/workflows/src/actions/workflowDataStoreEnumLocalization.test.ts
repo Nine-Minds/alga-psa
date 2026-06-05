@@ -7,9 +7,9 @@ import {
   WORKFLOW_ENTITY_TYPE_VALUES,
   WORKFLOW_LINK_RELATION_LABEL_DEFAULTS,
   WORKFLOW_LINK_RELATION_VALUES,
-} from '../../../../ee/packages/workflows/src/constants/workflowEnums';
+} from '../constants/workflowEnums';
 
-const repoRoot = path.resolve(__dirname, '../../../../');
+const repoRoot = path.resolve(__dirname, '../../../../../');
 const localesRoot = path.join(repoRoot, 'server/public/locales');
 const workflowLocalePath = (locale: string) => path.join(localesRoot, locale, 'msp/workflows.json');
 
