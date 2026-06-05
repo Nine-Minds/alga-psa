@@ -13,8 +13,22 @@
  *   include .js extensions required by Node.js ESM resolution.
  */
 import { defineConfig, type Options } from 'tsup';
-import { readdirSync, statSync, readFileSync, writeFileSync } from 'fs';
+import { readdirSync, statSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'fs';
 import { join, relative } from 'path';
+
+/** Copy non-TS assets (CSS modules etc.) from src/ to dist/, mirroring structure,
+ *  so dist consumers can resolve relative `./x.module.css` imports. */
+function copyAssets(srcDir: string, distDir: string) {
+  for (const file of readdirSync(srcDir)) {
+    const full = join(srcDir, file);
+    if (statSync(full).isDirectory()) {
+      copyAssets(full, join(distDir, file));
+    } else if (/\.(css|scss|sass|json)$/.test(file)) {
+      mkdirSync(distDir, { recursive: true });
+      copyFileSync(full, join(distDir, file));
+    }
+  }
+}
 
 export function getAllSourceFiles(dir: string, base: string = dir): Record<string, string> {
   const entries: Record<string, string> = {};
@@ -94,11 +108,10 @@ export function makeConfig(opts: PresetOptions = {}): Options {
     };
   }
 
-  if (opts.addJsExtensions) {
-    config.onSuccess = async () => {
-      addJsExtensions('dist');
-    };
-  }
+  config.onSuccess = async () => {
+    copyAssets('src', 'dist');
+    if (opts.addJsExtensions) addJsExtensions('dist');
+  };
 
   return config;
 }

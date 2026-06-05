@@ -161,3 +161,27 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
   nx-built but emit no usable per-file dist. Convert each tsup.config.ts to the shared
   makeConfig preset (per-file .js dist), then prebuiltDir/prebuiltFile turbopack aliases.
   projects: own index-only config -> switch to preset; only barrel remaps (actions/components).
+
+## BEYOND-PARITY: projects conversion attempt (2026-06-05) — DEFERRED
+
+- Converted projects/tsup.config.ts to the shared makeConfig preset -> per-file dist
+  (109 files, 86 directives preserved). Aliased projects to prebuiltDir in turbopack.
+- FAILED: turbopack "Can't resolve './ProjectDetail.module.css'". The preset only
+  emits .ts/.tsx; CSS-module files weren't in dist.
+- Added `copyAssets()` to the preset (copy .css/.scss/.json src->dist). Worked when I
+  ran `npx tsup` FROM packages/projects locally (2 .css copied), but FAILED in the
+  nx/container build: projects dist had 0 .css. Root causes:
+  1. **copyAssets cwd**: runs relative to process.cwd(); nx invokes the build from a
+     different cwd than the package dir, so 'src'/'dist' don't resolve to the package.
+     FIX: resolve src/dist from the tsup config dir (e.g. __dirname / import.meta.url),
+     not cwd.
+  2. **nx cache doesn't track the preset** as an input to projects' build, so editing
+     the preset didn't invalidate projects' cache (nx restored pre-CSS output). `nx reset`
+     alone didn't fix (the cwd bug remained). FIX: add build-tools to projects' nx
+     implicit deps / namedInputs, or inline the asset copy in each package config.
+- billing (own glob config, .mjs) built green DESPITE 3 CSS-module imports — its
+  CSS-importing components just aren't reached in the build graph (lucky). Same latent
+  risk; fix copyAssets cwd there too if it ever surfaces.
+- DECISION: reverted the projects turbopack alias to src (branch stays green). Kept the
+  preset copyAssets + projects-on-preset (build-staged) for the follow-up. projects/
+  scheduling/documents/client-portal dist-aliasing is gated on the asset-cwd + nx-input fix.

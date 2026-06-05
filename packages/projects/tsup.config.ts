@@ -1,29 +1,10 @@
 import { defineConfig } from 'tsup';
+import { makeConfig } from '../build-tools/tsup-preset';
 
-export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-    'actions/index': 'src/actions/index.ts',
-    'components/index': 'src/components/index.ts',
-    'models/index': 'src/models/index.ts',
-  },
-  format: ['esm'],
-  dts: false,
-  bundle: false,
-  splitting: false,
-  sourcemap: false,
-  clean: true,
-  external: [
-    'react',
-    'react-dom',
-    'next',
-    'next/navigation',
-    'next/link',
-    'next-auth',
-    'next-auth/react',
-    /^@alga-psa\//,
-  ],
-  esbuildOptions(options) {
-    options.jsx = 'automatic';
-  },
-});
+// nx-modularity (2026-06-05): emit per-file dist (preset, bundle:false) so the app
+// can consume @alga-psa/projects from dist (deep sub-paths) instead of turbopack
+// recompiling projects/src. Preserves 'use server'/'use client' directives.
+export default defineConfig(makeConfig({
+  jsxEnabled: true,
+  external: ['react', 'react-dom', 'next', 'next/navigation', 'next/link', 'next-auth', 'next-auth/react'],
+}));

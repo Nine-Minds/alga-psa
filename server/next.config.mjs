@@ -294,6 +294,9 @@ const nextConfig = {
         '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
       }),
       // Projects package
+      // projects: dist-aliasing deferred — UI-heavy packages need asset (CSS/font)
+      // copying in the package build (preset copyAssets has a cwd issue under nx) +
+      // nx-cache input tracking for the preset. Kept on src until that's solved.
       '@alga-psa/projects': '../packages/projects/src',
       '@alga-psa/projects/': '../packages/projects/src/',
       '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
