@@ -185,3 +185,26 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
 - DECISION: reverted the projects turbopack alias to src (branch stays green). Kept the
   preset copyAssets + projects-on-preset (build-staged) for the follow-up. projects/
   scheduling/documents/client-portal dist-aliasing is gated on the asset-cwd + nx-input fix.
+
+## ROOT CAUSE + FIX (2026-06-05): noop build targets
+
+- billing/projects/scheduling/documents/client-portal have nx build target `nx:noop`
+  -> nx NEVER builds them (they were src-only). So their dist was never produced in
+  the build; my CSS/preset edits never ran. (The "cwd" theory was a red herring.)
+- billing's noop also meant `build:vertical-deps` (nx run-many billing) did NOTHING ->
+  billing dist-aliasing was CI-BROKEN (worked locally only via persisted manual dist).
+- FIX: change build target noop -> `nx:run-script {script:build}` + `dependsOn ['^build']`
+  (mirrors clients). Done for billing + projects.
+- CLEAN-STATE VERIFIED (rm all dist + nx reset + build): GREEN, all dist rebuilt fresh
+  (billing 361, projects 109, auth 75, clients 87), projects CSS copied. CI-correct.
+- projects 3 runs [10438,10691,10061] median 10438; clean build 10267. Green.
+
+## HONEST MEMORY FINDING
+- ALL dist-aliased configs land ~10.3-10.7 GB median vs S2 ~10.9 GB -> only ~−500 MB,
+  AT THE NOISE EDGE. billing-only's tight 9976 cluster was lucky-low, not truly better
+  than the full set. The "stack to multi-GB" hypothesis did NOT hold.
+- Interpretation: turbopack's ~9 GB compile floor is largely FIXED cost (Next/React/RSC
+  machinery + dep graph); removing app SOURCE from compilation gives modest, diminishing
+  returns (~500 MB total), not linear-in-LOC. dist-aliasing is mechanically sound + CI-
+  correct + dev-safe, but LOW ROI vs its complexity.
+- vs R1+R2 (−3.2 GB, simple config) the nx dist-aliasing is a marginal add.

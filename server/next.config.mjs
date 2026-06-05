@@ -294,13 +294,10 @@ const nextConfig = {
         '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
       }),
       // Projects package
-      // projects: dist-aliasing deferred — UI-heavy packages need asset (CSS/font)
-      // copying in the package build (preset copyAssets has a cwd issue under nx) +
-      // nx-cache input tracking for the preset. Kept on src until that's solved.
-      '@alga-psa/projects': '../packages/projects/src',
-      '@alga-psa/projects/': '../packages/projects/src/',
-      '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
-      '@alga-psa/projects/components': '../packages/projects/src/components/index.ts',
+      '@alga-psa/projects': prebuiltDir('projects'),
+      '@alga-psa/projects/': `${prebuiltDir('projects')}/`,
+      '@alga-psa/projects/actions': prebuiltFile('projects', 'actions/index.js', 'actions/index.ts'),
+      '@alga-psa/projects/components': prebuiltFile('projects', 'components/index.js', 'components/index.ts'),
       // DB package (use source files for Turbopack dev/HMR)
       '@alga-psa/db': '../packages/db/src/index.ts',
       '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
