@@ -166,6 +166,14 @@ class EditionBuildDiagnosticsPlugin {
 }
 
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+// nx-modularity (2026-06-05): @alga-psa/* packages migrated to dist-consumption.
+// When USE_PREBUILT=true (the `build`/`build:ce`/`build:prebuilt` chains, which
+// build package dists via nx build-deps + build:vertical-deps) we DROP their
+// `src` resolveAlias so turbopack resolves via package exports -> prebuilt dist
+// (lower compile memory). Dev and build:source keep the src alias for
+// package-source hot-reload (they don't build dists, and don't set USE_PREBUILT).
+const usePrebuiltDist = process.env.USE_PREBUILT === 'true';
+const distAliasedDevOnly = (entries) => (usePrebuiltDist ? {} : entries);
 // Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
 // pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
 // 32-core box), each loading the full app bundle (~290 MB) — the dominant build
@@ -270,9 +278,16 @@ const nextConfig = {
       // MSP Composition package
       '@alga-psa/msp-composition': '../packages/msp-composition/src',
       '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
-      // Billing package — nx-modularity spike: consume prebuilt dist (per-file,
-      // directive-preserving) via package.json exports instead of recompiling src.
-      // (resolveAlias entries removed; resolution falls through to exports -> dist)
+      // Billing package — nx-modularity: prod build consumes prebuilt dist via
+      // package.json exports; dev keeps src aliases (below) for hot-reload.
+      ...distAliasedDevOnly({
+        '@alga-psa/billing': '../packages/billing/src',
+        '@alga-psa/billing/': '../packages/billing/src/',
+        '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
+        '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
+        '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
+        '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+      }),
       // Projects package
       '@alga-psa/projects': '../packages/projects/src',
       '@alga-psa/projects/': '../packages/projects/src/',

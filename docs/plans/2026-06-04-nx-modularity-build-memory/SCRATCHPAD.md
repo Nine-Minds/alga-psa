@@ -100,6 +100,20 @@ dist JS, so the saving may be smaller than hoped. Spike first, measure, then com
   @alga-psa/billing/actions server actions via dist) -> tickets (editor). Watch console for
   module-resolution / 'use server' boundary / undefined-export errors.
 
+## MATERIAL FINDING (2026-06-05): dev-mode tradeoff + fix
+
+- Removing the `src` resolveAlias means turbopack resolves @alga-psa/billing -> exports -> **dist**
+  in BOTH prod build AND `npm run dev`. But `dev:turbo` does NOT run `build:vertical-deps`, and
+  dist-consumption loses package-**source hot-reload** (dev would serve stale dist). This is likely
+  why the team kept src aliases.
+- **FIX = conditional aliasing:** apply the @alga-psa/* -> src resolveAlias only when
+  NODE_ENV !== 'production' (dev keeps src + hot-reload); for the production build the alias is
+  absent so turbopack uses exports -> dist (memory win). `next build` sets NODE_ENV=production.
+- Consequence: **runtime validation must use the PROD build path** (npm run build + next start),
+  not the dev-from-source stack (which would still use src under conditional aliasing).
+- TODO: implement conditional gate around the @alga-psa/* src aliases in next.config.mjs; re-run
+  harness (prod) to confirm dist still consumed + win holds; confirm dev still resolves src.
+
 ## Rollout status
 - DONE: billing (175K LOC) — tsup glob + ./* exports + alias removed + wired. -961MB (median spike).
 - Next batch (already nx-built, just need tsup-glob + ./* exports + alias removal):
