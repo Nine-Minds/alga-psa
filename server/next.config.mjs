@@ -1157,6 +1157,20 @@ const nextConfig = {
     '@faker-js/faker',
     'moment',
     'tinycolor2',
+    // Round 4 (memory campaign 2026-06-04): more server-only deps confirmed
+    // imported in the app graph but not used in client components. Keeps them
+    // out of the Turbopack server bundle that every static-gen worker loads.
+    'nodemailer',
+    'imapflow',
+    'express',
+    'fluent-ffmpeg',
+    'tar',
+    'node-vault',
+    '@nestjs/common',
+    '@asteasolutions/zod-to-openapi',
+    'formdata-node',
+    '@aws-sdk/s3-request-presigner',
+    'winston-daily-rotate-file',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
