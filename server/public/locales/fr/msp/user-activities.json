@@ -64,7 +64,7 @@
       }
     },
     "adHoc": {
-      "addPlaceholder": "Ajouter un élément ad hoc…",
+      "addPlaceholder": "Ajouter une activité",
       "addButton": "Ajouter",
       "markDone": "Marquer comme terminé",
       "markNotDone": "Marquer comme non terminé",

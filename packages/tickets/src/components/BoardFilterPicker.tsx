@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { IBoard } from '@alga-psa/types';
-import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
+import TreeSelect, { TreeSelectOption, TreeSelectPath, TreeSelectMode } from '@alga-psa/ui/components/TreeSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -18,6 +18,8 @@ interface BoardFilterPickerProps {
   onSelect: (boardIds: string[], excludedIds: string[]) => void;
   // Restricts which boards appear in the list (mirrors the legacy BoardPicker status filter).
   filterState?: 'active' | 'inactive' | 'all';
+  // When provided, an active/inactive/all control is shown inside the dropdown header.
+  onFilterStateChange?: (state: 'active' | 'inactive' | 'all') => void;
   placeholder?: string;
   multiSelect?: boolean;
   className?: string;
@@ -37,6 +39,7 @@ export const BoardFilterPicker: React.FC<BoardFilterPickerProps & AutomationProp
   excludedBoards = [],
   onSelect,
   filterState = 'active',
+  onFilterStateChange,
   placeholder,
   multiSelect = true,
   className = '',
@@ -48,6 +51,51 @@ export const BoardFilterPicker: React.FC<BoardFilterPickerProps & AutomationProp
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
   const { t } = useTranslation('features/tickets');
+
+  // Filters with an exclude option use a single Include/Exclude mode toggle so include
+  // and exclude can't contradict each other.
+  const modeToggle = multiSelect && showExclude;
+
+  const handleModeChange = (mode: TreeSelectMode) => {
+    // Clear the opposite set so the filter is never both include- and exclude-based.
+    if (mode === 'include') {
+      onSelect(selectedBoards, []);
+    } else {
+      onSelect([], excludedBoards);
+    }
+  };
+
+  const filterStateOptions: Array<{ value: 'active' | 'inactive' | 'all'; label: string }> = [
+    { value: 'active', label: t('boardPicker.statusActive', 'Active') },
+    { value: 'inactive', label: t('boardPicker.statusInactive', 'Inactive') },
+    { value: 'all', label: t('boardPicker.statusAll', 'All') },
+  ];
+
+  const filterStateControl = onFilterStateChange ? (
+    <div
+      className="flex items-center gap-0.5 rounded-md bg-gray-100 dark:bg-[rgb(var(--color-border-100))] p-0.5"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      {filterStateOptions.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onFilterStateChange(opt.value);
+          }}
+          className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
+            filterState === opt.value
+              ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] shadow-sm'
+              : 'text-gray-500 hover:text-[rgb(var(--color-primary-600))]'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  ) : undefined;
 
   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id,
@@ -177,6 +225,9 @@ export const BoardFilterPicker: React.FC<BoardFilterPickerProps & AutomationProp
           modal={modal}
           showSearch={true}
           searchPlaceholder={t('boardPicker.searchPlaceholder', 'Search boards...')}
+          modeToggle={modeToggle}
+          onModeChange={handleModeChange}
+          headerContent={filterStateControl}
         />
       </div>
     </ReflectionContainer>

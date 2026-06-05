@@ -54,6 +54,7 @@ import { InlineStatusPicker } from './InlineStatusPicker';
 import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { ActivityActionMenu } from './ActivityActionMenu';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { getActivityTypeColor } from './constants';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -221,10 +222,19 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: Sorta
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 border-b border-border/50 bg-background',
+        'relative flex items-center gap-3 px-3 py-2 border-b border-border/50 bg-background',
         'hover:bg-muted/30 transition-colors group'
       )}
     >
+      {/* Left-edge color indicator for the activity type — matches the flat table.
+          Positioned inline because this file's Tailwind classes aren't all in the
+          scanned content globs. */}
+      <div
+        className="absolute"
+        style={{ top: 6, bottom: 6, left: 4, width: 4, borderRadius: 9999, backgroundColor: getActivityTypeColor(activity.type) }}
+        aria-hidden="true"
+      />
+
       {/* Drag handle */}
       <button
         type="button"

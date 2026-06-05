@@ -19,7 +19,7 @@ import { SearchInput } from "@alga-psa/ui/components/SearchInput";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
-import TreeSelect, { TreeSelectOption } from "@alga-psa/ui/components/TreeSelect";
+import TreeSelect, { TreeSelectOption, TreeSelectMode } from "@alga-psa/ui/components/TreeSelect";
 import { TagFilter } from "@alga-psa/ui/components";
 import { RotateCcw, X } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -271,6 +271,18 @@ export function ActivitiesTableFilters({
     [filters, onChange]
   );
 
+  // Clear the opposite set when the user switches a filter's Include/Exclude mode, so a
+  // filter is never both include- and exclude-based at once.
+  const handleBoardModeChange = useCallback(
+    (mode: TreeSelectMode) => {
+      const next = { ...filters };
+      if (mode === 'include') delete next.ticketExcludeBoardIds;
+      else delete next.ticketBoardIds;
+      onChange(next);
+    },
+    [filters, onChange]
+  );
+
   // -------- Ticket status (multi-select, scoped to selected boards) --------
 
   const ticketStatusTreeOptions = useMemo((): TreeSelectOption<'ticketStatus'>[] => {
@@ -330,6 +342,16 @@ export function ActivitiesTableFilters({
       onChange(next);
     },
     [filters, onChange, ticketStatuses]
+  );
+
+  const handleTicketStatusModeChange = useCallback(
+    (mode: TreeSelectMode) => {
+      const next = { ...filters };
+      if (mode === 'include') delete next.ticketExcludeStatusIds;
+      else delete next.ticketStatusIds;
+      onChange(next);
+    },
+    [filters, onChange]
   );
 
   // -------- Ticket tags (TagFilter) ----------------------------------------
@@ -411,6 +433,23 @@ export function ActivitiesTableFilters({
       const nextMut = next as Record<string, string[] | undefined>;
       if (nextIncluded.length > 0) nextMut[includeKey] = nextIncluded; else delete nextMut[includeKey];
       if (nextExcluded.length > 0) nextMut[excludeKey] = nextExcluded; else delete nextMut[excludeKey];
+      onChange(next);
+    },
+    [filters, onChange]
+  );
+
+  const handleProjectModeChange = useCallback(
+    (mode: TreeSelectMode) => {
+      const next = { ...filters };
+      if (mode === 'include') {
+        delete next.excludeProjectIds;
+        delete next.excludePhaseIds;
+        delete next.excludeProjectStatusMappingIds;
+      } else {
+        delete next.projectIds;
+        delete next.phaseIds;
+        delete next.projectStatusMappingIds;
+      }
       onChange(next);
     },
     [filters, onChange]
@@ -682,6 +721,8 @@ export function ActivitiesTableFilters({
                     allowEmpty
                     showSearch
                     searchPlaceholder={t('filters.placeholders.searchBoards', { defaultValue: 'Search boards...' })}
+                    modeToggle
+                    onModeChange={handleBoardModeChange}
                   />
                 </div>
               )}
@@ -699,6 +740,8 @@ export function ActivitiesTableFilters({
                     allowEmpty
                     showSearch
                     searchPlaceholder={t('filters.placeholders.searchStatuses', { defaultValue: 'Search statuses...' })}
+                    modeToggle
+                    onModeChange={handleTicketStatusModeChange}
                   />
                 </div>
               )}
@@ -740,6 +783,8 @@ export function ActivitiesTableFilters({
                     allowEmpty
                     showSearch
                     searchPlaceholder={t('filters.placeholders.searchProjects', { defaultValue: 'Search projects...' })}
+                    modeToggle
+                    onModeChange={handleProjectModeChange}
                   />
                 </div>
               )}

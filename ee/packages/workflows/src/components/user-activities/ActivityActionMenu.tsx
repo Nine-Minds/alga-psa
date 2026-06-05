@@ -12,7 +12,8 @@ import { useActivityDrawer } from "./ActivityDrawerProvider";
 import {
   updateActivityStatus,
   reassignActivity,
-  setAdHocActivityDone
+  setAdHocActivityDone,
+  deleteAdHocActivity
 } from "@alga-psa/workflows/actions";
 import {
   cancelWorkflowTask,
@@ -45,12 +46,12 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
     && (activity as ScheduleActivity).workItemType === 'ad_hoc';
   const isDone = activity.status === 'closed';
 
-  // Mark the ad-hoc as Done once the new ticket/task is created.
+  // Delete the ad-hoc item once it has been converted into a ticket/task.
   const handleConverted = async () => {
     try {
-      await setAdHocActivityDone(activity.id, true);
+      await deleteAdHocActivity(activity.id);
     } catch (error) {
-      console.error('Error closing ad-hoc item after conversion:', error);
+      console.error('Error deleting ad-hoc item after conversion:', error);
     } finally {
       setConvertTarget(null);
       onActionComplete?.();

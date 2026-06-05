@@ -28,10 +28,13 @@ import { getNotificationByIdAction } from "@alga-psa/notifications/actions";
 import { RichTextViewer, TextEditor } from "@alga-psa/ui/editor";
 import { PartialBlock } from '@blocknote/core';
 import { useActivityCrossFeature } from "@alga-psa/ui/context";
+import { AdHocDetailPanel } from "./AdHocDetailPanel";
 
 interface ActivityDetailViewerDrawerProps {
   activityType: ActivityType;
   activityId: string;
+  /** Schedule entries carry a work_item_type; 'ad_hoc' items use a dedicated panel. */
+  workItemType?: string;
   onClose: () => void;
   onActionComplete?: () => void;
 }
@@ -171,6 +174,7 @@ function DocumentViewerEditor({
 export function ActivityDetailViewerDrawer({
   activityType,
   activityId,
+  workItemType,
   onClose,
   onActionComplete
 }: ActivityDetailViewerDrawerProps) {
@@ -254,6 +258,20 @@ export function ActivityDetailViewerDrawer({
         }
 
         case ActivityType.SCHEDULE: {
+          // Ad-hoc items are dateless personal to-dos. They can't be located through
+          // the date-ranged schedule fetch below (and have no schedulable time), so
+          // they use a dedicated lightweight panel instead of the schedule EntryPopup.
+          if (workItemType === 'ad_hoc') {
+            setContent(
+              <AdHocDetailPanel
+                activityId={activityId}
+                onClose={onClose}
+                onActionComplete={onActionComplete}
+              />
+            );
+            break;
+          }
+
           // For schedule entries, we need to get the entry from the schedule entries
           // This assumes the schedule entries API can filter by entry_id
           const now = new Date();
@@ -735,7 +753,7 @@ export function ActivityDetailViewerDrawer({
     } finally {
       setIsLoading(false);
     }
-  }, [activityType, activityId, onActionComplete, onClose, tenant, ctx, invalidateCache, t]);
+  }, [activityType, activityId, workItemType, onActionComplete, onClose, tenant, ctx, invalidateCache, t]);
 
   // Use effect to call loadContent when component mounts or dependencies change
   useEffect(() => {

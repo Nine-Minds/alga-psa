@@ -353,8 +353,8 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       <div className="space-y-3">
         {/* Add watcher section */}
         <Tabs value={watcherAddMode} onValueChange={(value) => handleModeChange(value)}>
-          <div className="flex items-center -mx-6 px-6">
-            <TabsList className="gap-0 w-full">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 -mx-6 px-6">
+            <TabsList className="gap-0 flex-1 min-w-max">
               <TabsTrigger value="client-contact" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>
                 {t('watchList.tabs.contact', 'Contact')}
               </TabsTrigger>

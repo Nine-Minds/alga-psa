@@ -57,6 +57,7 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
       <ActivityDetailViewerDrawer
         activityType={activity.type}
         activityId={activity.id}
+        workItemType={(activity as any).workItemType}
         onClose={handleClose}
         onActionComplete={handleActionComplete}
       />

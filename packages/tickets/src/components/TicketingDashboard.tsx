@@ -2068,23 +2068,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   excludedBoards={excludedBoards}
                   onSelect={handleBoardSelect}
                   filterState={boardFilterState}
+                  onFilterStateChange={(state) => onFilterChange({ boardFilterState: state })}
                   placeholder={t('filters.board', 'Filter by board')}
                   multiSelect={true}
                   showExclude={true}
                   showReset={true}
                   allowEmpty={true}
                   className="text-sm min-w-[200px]"
-                />
-                <CustomSelect
-                  id={`${id}-board-status-filter`}
-                  value={boardFilterState}
-                  onValueChange={(state) => onFilterChange({ boardFilterState: state as 'active' | 'inactive' | 'all' })}
-                  options={[
-                    { value: 'active', label: t('dashboard.filters.activeBoards', 'Active Boards') },
-                    { value: 'inactive', label: t('dashboard.filters.inactiveBoards', 'Inactive Boards') },
-                    { value: 'all', label: t('dashboard.filters.allBoards', 'All Boards') },
-                  ]}
-                  className="text-sm"
                 />
                 <ClientPicker
                   id='client-picker'

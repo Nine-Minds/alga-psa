@@ -127,6 +127,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       }}
       prefilledTitle={props.title}
       prefilledDescription={props.description}
+      prefilledAssignedTo={props.assignedTo ?? undefined}
     />
   );
 

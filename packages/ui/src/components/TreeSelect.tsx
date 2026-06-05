@@ -32,6 +32,16 @@ export interface TreeSelectPath {
   [key: string]: string;
 }
 
+export type TreeSelectMode = 'include' | 'exclude';
+
+// Recursively test whether any option in the tree satisfies a predicate.
+function optionTreeHas<T extends string>(
+  opts: TreeSelectOption<T>[],
+  pred: (o: TreeSelectOption<T>) => boolean
+): boolean {
+  return opts.some((o) => pred(o) || (o.children ? optionTreeHas(o.children, pred) : false));
+}
+
 interface TreeSelectProps<T extends string = string> extends AutomationProps {
   options: TreeSelectOption<T>[];
   value: string;
@@ -53,6 +63,14 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   addNewLabel?: string;
   showSearch?: boolean;
   searchPlaceholder?: string;
+  // When set, a single Include/Exclude mode toggle is shown at the top of the dropdown
+  // instead of per-row include + exclude controls. Each row then toggles membership in
+  // the active mode's set, avoiding contradictory "include some / exclude others" state.
+  modeToggle?: boolean;
+  // Called when the user switches mode; the parent should clear the opposite set.
+  onModeChange?: (mode: TreeSelectMode) => void;
+  // Arbitrary content rendered in the dropdown header (e.g. an active/inactive filter).
+  headerContent?: React.ReactNode;
 }
 
 function TreeSelect<T extends string>({
@@ -76,6 +94,9 @@ function TreeSelect<T extends string>({
   addNewLabel = 'Add new',
   showSearch = false,
   searchPlaceholder,
+  modeToggle = false,
+  onModeChange,
+  headerContent,
 }: TreeSelectProps<T>): React.JSX.Element {
   const { t } = useTranslation();
   const { modal: parentModal } = useModality();
@@ -86,6 +107,13 @@ function TreeSelect<T extends string>({
   const [displayLabel, setDisplayLabel] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Include/Exclude mode (only used when modeToggle is enabled). Seed from the current
+  // selection so an exclude-only filter opens in Exclude mode.
+  const [selectMode, setSelectMode] = useState<TreeSelectMode>(() =>
+    optionTreeHas(options, (o) => !!o.excluded) && !optionTreeHas(options, (o) => !!o.selected)
+      ? 'exclude'
+      : 'include'
+  );
 
   // Explicit prop overrides parent modality context
   const isModal = modal !== undefined ? modal : parentModal;
@@ -180,6 +208,20 @@ function TreeSelect<T extends string>({
       setDisplayLabel(labels.filter(l => l).join(' > '));
     }
   }, [value, options]);
+
+  // Keep the mode in sync when the filter opens with a one-sided selection (e.g. a
+  // persisted exclude-only filter). Only corrects a clear mismatch, so it never fights
+  // a manual toggle made while no items are selected.
+  useEffect(() => {
+    if (!modeToggle) return;
+    const hasInc = optionTreeHas(options, (o) => !!o.selected);
+    const hasExc = optionTreeHas(options, (o) => !!o.excluded);
+    if (hasExc && !hasInc && selectMode === 'include') {
+      setSelectMode('exclude');
+    } else if (hasInc && !hasExc && selectMode === 'exclude') {
+      setSelectMode('include');
+    }
+  }, [modeToggle, options, selectMode]);
 
   // Focus the search box when the dropdown opens; clear the term when it closes.
   useEffect(() => {
@@ -294,6 +336,27 @@ function TreeSelect<T extends string>({
     });
   };
 
+  // Toggle membership in the active mode's set (used when modeToggle is enabled).
+  const activateOption = (option: TreeSelectOption<T>, ancestors: TreeSelectOption<T>[], e: React.MouseEvent): void => {
+    if (modeToggle && selectMode === 'exclude') {
+      handleExclude(option, ancestors, e);
+    } else {
+      handleSelect(option, ancestors, e);
+    }
+  };
+
+  const handleModeChange = (mode: TreeSelectMode, e: React.MouseEvent): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (mode === selectMode) return;
+    isHandlingInternalClick.current = true;
+    setSelectMode(mode);
+    onModeChange?.(mode);
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
+    });
+  };
+
   const handleReset = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -368,18 +431,51 @@ function TreeSelect<T extends string>({
                 </div>
               )}
               {!hasChildren && <div className="w-5" />}
-              <div 
+              <div
                 className={`
                   cursor-pointer truncate
                   ${option.excluded ? 'line-through text-red-500' : ''}
                   ${option.selected ? 'text-purple-600' : ''}
                 `}
-                onClick={(e) => handleSelect(option, ancestors, e)}
+                onClick={(e) => activateOption(option, ancestors, e)}
               >
                 {option.label}
               </div>
             </div>
-            {(multiSelect || showExclude) && (
+            {modeToggle ? (
+              <div className="flex items-center gap-1 ml-2">
+                <Button
+                  id={`mode-${option.value}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={`
+                    p-1 h-auto min-h-0
+                    ${(selectMode === 'include' ? option.selected : option.excluded)
+                      ? (selectMode === 'include' ? 'text-purple-500' : 'text-red-500')
+                      : 'text-gray-400'}
+                  `}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    activateOption(option, ancestors, e);
+                  }}
+                  title={selectMode === 'include'
+                    ? t('form.include', { defaultValue: 'Include' })
+                    : t('form.exclude', { defaultValue: 'Exclude' })}
+                >
+                  {selectMode === 'include' ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </Button>
+              </div>
+            ) : (multiSelect || showExclude) && (
               <div className="flex items-center gap-1 ml-2">
                 {multiSelect && (
                   <Button
@@ -533,18 +629,44 @@ function TreeSelect<T extends string>({
               avoidCollisions={true}
               sticky="always"
             >
-              {showSearch && (
-                <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    // Stop keystrokes from reaching Radix Select's typeahead/keyboard handlers
-                    onKeyDown={(e) => e.stopPropagation()}
-                    placeholder={searchPlaceholder || t('form.searchPlaceholder', { defaultValue: 'Search...' })}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-white dark:bg-[rgb(var(--color-card))]"
-                  />
+              {(headerContent || modeToggle || showSearch) && (
+                <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] space-y-2">
+                  {headerContent}
+                  {modeToggle && (
+                    <div
+                      className="flex items-center gap-0.5 rounded-md bg-gray-100 dark:bg-[rgb(var(--color-border-100))] p-0.5"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      {(['include', 'exclude'] as TreeSelectMode[]).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={(e) => handleModeChange(m, e)}
+                          className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
+                            selectMode === m
+                              ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] shadow-sm'
+                              : 'text-gray-500 hover:text-[rgb(var(--color-primary-600))]'
+                          }`}
+                        >
+                          {m === 'include'
+                            ? t('form.include', { defaultValue: 'Include' })
+                            : t('form.exclude', { defaultValue: 'Exclude' })}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showSearch && (
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      // Stop keystrokes from reaching Radix Select's typeahead/keyboard handlers
+                      onKeyDown={(e) => e.stopPropagation()}
+                      placeholder={searchPlaceholder || t('form.searchPlaceholder', { defaultValue: 'Search...' })}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-white dark:bg-[rgb(var(--color-card))]"
+                    />
+                  )}
                 </div>
               )}
               <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">

@@ -11,8 +11,10 @@ import {
   TimeEntryActivity,
   WorkflowTaskActivity,
   NotificationActivity,
-  scheduleEntryToActivity
+  scheduleEntryToActivity,
+  IUserWithRoles
 } from "@alga-psa/types";
+import type { Knex } from "knex";
 import { createTenantKnex, withTransaction } from "@alga-psa/db";
 import {
   fetchUserActivities,
@@ -374,6 +376,27 @@ export const createAdHocActivity = withAuth(async (
 });
 
 /**
+ * Ensure the caller may modify the given ad-hoc entry: they must be an assignee,
+ * or hold user_schedule:update to act on another user's entries.
+ */
+async function assertCanModifyAdHoc(
+  trx: Knex.Transaction,
+  tenant: string,
+  entryId: string,
+  user: IUserWithRoles
+): Promise<void> {
+  const isAssignee = await trx("schedule_entry_assignees")
+    .where({ tenant, entry_id: entryId, user_id: user.user_id })
+    .first();
+  if (!isAssignee) {
+    const canManageOthers = await hasPermission(user, "user_schedule", "update", trx);
+    if (!canManageOthers) {
+      throw new Error("Permission denied: cannot modify another user's ad-hoc item");
+    }
+  }
+}
+
+/**
  * Mark an ad-hoc item Done (status='closed') or not done (status='scheduled').
  * The caller must be an assignee of the entry, or hold user_schedule:update to act
  * on another user's entries.
@@ -397,19 +420,153 @@ export const setAdHocActivityDone = withAuth(async (
       throw new Error("Ad-hoc item not found");
     }
 
-    const isAssignee = await trx("schedule_entry_assignees")
-      .where({ tenant, entry_id: entryId, user_id: user.user_id })
-      .first();
-    if (!isAssignee) {
-      const canManageOthers = await hasPermission(user, "user_schedule", "update", trx);
-      if (!canManageOthers) {
-        throw new Error("Permission denied: cannot modify another user's ad-hoc item");
-      }
-    }
+    await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
     await trx("schedule_entries")
       .where({ tenant, entry_id: entryId })
       .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
+  });
+
+  revalidatePath("/msp/user-activities");
+});
+
+export interface AdHocActivityDetails {
+  entry_id: string;
+  title: string;
+  notes: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  status: string;
+  assigned_user_ids: string[];
+}
+
+/**
+ * Fetch a single ad-hoc item by id, independent of any schedule date window.
+ * Used by the detail drawer, which can't locate dateless ad-hoc items through the
+ * normal date-ranged schedule fetch.
+ */
+export const getAdHocActivity = withAuth(async (
+  user,
+  { tenant },
+  entryId: string
+): Promise<AdHocActivityDetails> => {
+  if (!entryId) {
+    throw new Error("Entry id is required");
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  const entry = await knex("schedule_entries")
+    .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    .first();
+  if (!entry) {
+    throw new Error("Ad-hoc item not found");
+  }
+
+  const assignees: string[] = await knex("schedule_entry_assignees")
+    .where({ tenant, entry_id: entryId })
+    .pluck("user_id");
+
+  return {
+    entry_id: entry.entry_id,
+    title: entry.title,
+    notes: entry.notes ?? null,
+    scheduled_start: entry.scheduled_start ? new Date(entry.scheduled_start).toISOString() : null,
+    scheduled_end: entry.scheduled_end ? new Date(entry.scheduled_end).toISOString() : null,
+    status: entry.status,
+    assigned_user_ids: assignees,
+  };
+});
+
+export interface UpdateAdHocActivityInput {
+  title?: string;
+  notes?: string | null;
+  /** Optional ISO timestamps. Pass null to clear; omit to leave unchanged. */
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+}
+
+/**
+ * Update an ad-hoc item's title, notes and optional start/end times. Times remain
+ * optional for ad-hoc items, but when both are supplied the end must be after the
+ * start.
+ */
+export const updateAdHocActivity = withAuth(async (
+  user,
+  { tenant },
+  entryId: string,
+  input: UpdateAdHocActivityInput
+): Promise<void> => {
+  if (!entryId) {
+    throw new Error("Entry id is required");
+  }
+
+  const start = input.scheduledStart ? new Date(input.scheduledStart) : null;
+  const end = input.scheduledEnd ? new Date(input.scheduledEnd) : null;
+  if (start && end && end <= start) {
+    throw new Error("End time must be after start time");
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  await withTransaction(knex, async (trx) => {
+    const entry = await trx("schedule_entries")
+      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+      .first();
+    if (!entry) {
+      throw new Error("Ad-hoc item not found");
+    }
+
+    await assertCanModifyAdHoc(trx, tenant, entryId, user);
+
+    const patch: Record<string, unknown> = { updated_at: trx.fn.now() };
+    if (input.title !== undefined) {
+      const title = input.title.trim();
+      if (!title) {
+        throw new Error("Title is required");
+      }
+      patch.title = title;
+    }
+    if (input.notes !== undefined) {
+      patch.notes = input.notes?.trim() || null;
+    }
+    if (input.scheduledStart !== undefined) {
+      patch.scheduled_start = start;
+    }
+    if (input.scheduledEnd !== undefined) {
+      patch.scheduled_end = end;
+    }
+
+    await trx("schedule_entries").where({ tenant, entry_id: entryId }).update(patch);
+  });
+
+  revalidatePath("/msp/user-activities");
+});
+
+/**
+ * Permanently delete an ad-hoc item (and its assignees). Used when an ad-hoc item is
+ * converted into a ticket or project task.
+ */
+export const deleteAdHocActivity = withAuth(async (
+  user,
+  { tenant },
+  entryId: string
+): Promise<void> => {
+  if (!entryId) {
+    throw new Error("Entry id is required");
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  await withTransaction(knex, async (trx) => {
+    const entry = await trx("schedule_entries")
+      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+      .first();
+    if (!entry) {
+      throw new Error("Ad-hoc item not found");
+    }
+
+    await assertCanModifyAdHoc(trx, tenant, entryId, user);
+
+    await trx("schedule_entry_assignees").where({ tenant, entry_id: entryId }).delete();
+    await trx("schedule_entries").where({ tenant, entry_id: entryId }).delete();
   });
 
   revalidatePath("/msp/user-activities");

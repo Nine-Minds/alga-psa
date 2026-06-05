@@ -64,7 +64,7 @@
       }
     },
     "adHoc": {
-      "addPlaceholder": "Add an ad-hoc item…",
+      "addPlaceholder": "Add Activity",
       "addButton": "Add",
       "markDone": "Mark as done",
       "markNotDone": "Mark as not done",

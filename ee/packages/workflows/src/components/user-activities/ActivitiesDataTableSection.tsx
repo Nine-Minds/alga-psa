@@ -500,13 +500,13 @@ function formatActivityPrintDate(dateString?: string): string {
                 void handleAddAdHoc();
               }
             }}
-            placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add an ad-hoc item…' })}
+            placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add Activity' })}
             className="h-9 max-w-sm text-sm"
             disabled={isAddingAdHoc}
           />
           <Button
             id={`${id}-add-adhoc-button`}
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={() => void handleAddAdHoc()}
             disabled={isAddingAdHoc || adHocTitle.trim().length === 0}

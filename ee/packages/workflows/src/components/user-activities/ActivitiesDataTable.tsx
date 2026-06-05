@@ -18,6 +18,7 @@ import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
+import { getActivityTypeColor } from './constants';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -49,26 +50,6 @@ const formatDate = (dateString?: string) => {
 const getRelativeTime = (dateString?: string) => {
   if (!dateString) return '';
   return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-};
-
-// Left-edge strip color per activity type (matches the type-icon colors)
-const getActivityTypeColor = (type: ActivityType): string => {
-  switch (type) {
-    case ActivityType.SCHEDULE:
-      return '#22c55e'; // green (matches schedule icon "text-success")
-    case ActivityType.PROJECT_TASK:
-      return 'rgb(var(--color-secondary-500))';
-    case ActivityType.TICKET:
-      return 'rgb(var(--color-primary-500))';
-    case ActivityType.TIME_ENTRY:
-      return '#f97316'; // orange-500
-    case ActivityType.WORKFLOW_TASK:
-      return '#ef4444'; // red (destructive)
-    case ActivityType.NOTIFICATION:
-      return '#6366f1'; // indigo-500
-    default:
-      return 'rgb(var(--color-border-300))';
-  }
 };
 
 // Get activity type icon
@@ -143,19 +124,23 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
 
-  // Define columns for the DataTable - memoized to prevent unnecessary re-renders
+  // Define columns for the DataTable - memoized to prevent unnecessary re-renders.
+  // Widths are percentages, but DataTable sizes them against a ~1800px base, so the
+  // total is kept modest to avoid columns being falsely hidden as "limited space".
   const columns = useMemo<ColumnDefinition<Activity>[]>(() => [
     {
       title: t('table.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'type',
-      width: '10%',
+      width: '6%',
       cellClassName: 'relative',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          {/* Left-edge color strip indicating the activity type */}
+          {/* Left-edge color indicator for the activity type — rounded to echo the
+              Tickets/Tasks filter chips above the table. Positioned inline because this
+              file's Tailwind classes aren't all in the scanned content globs. */}
           <div
-            className="absolute inset-y-0 left-0 w-1"
-            style={{ backgroundColor: getActivityTypeColor(value as ActivityType) }}
+            className="absolute"
+            style={{ top: 6, bottom: 6, left: 4, width: 4, borderRadius: 9999, backgroundColor: getActivityTypeColor(value as ActivityType) }}
             aria-hidden="true"
           />
           {getActivityTypeIcon(value as ActivityType)}
@@ -166,7 +151,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title',
-      width: '50%',
+      width: '27%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
           {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).workItemType === 'ad_hoc' && (
@@ -189,7 +174,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      width: '15%',
+      width: '8%',
       render: (_value, record) => (
         <InlineStatusPicker
           activity={record}
@@ -200,7 +185,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.priority', { defaultValue: 'Priority' }),
       dataIndex: 'priority',
-      width: '12%',
+      width: '7%',
       render: (value, record) => {
         // Inline priority picker for tickets and project tasks
         if (record.type === ActivityType.TICKET || record.type === ActivityType.PROJECT_TASK) {
@@ -226,7 +211,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'dueDate',
-      width: '10%',
+      width: '6%',
       render: (value, record) => (
         <div>
           {value ? (
@@ -243,7 +228,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     {
       title: t('table.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
-      width: '5%',
+      width: '3%',
       sortable: false,
       render: (_, record) => (
         <ActivityActionMenu
