@@ -1,0 +1,113 @@
+import crypto from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getAdminConnection } from '@alga-psa/db/admin';
+import {
+  getActivePendingDeletion,
+  resolveBillingAdminEmailForTenant,
+  resolveTenantAndAdminEmailByEmail,
+} from '@enterprise/lib/billing/tenantReactivationDetection';
+import { createTenantReactivationToken } from '@enterprise/lib/billing/tenantReactivationTokens';
+import {
+  buildReactivationCheckoutUrl,
+  sendReactivationInviteEmail,
+} from '@enterprise/lib/billing/reactivationInviteEmail';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function verifyWebhookSignature(
+  signature: string | null,
+  email: string,
+  timestamp: string | null,
+): boolean {
+  if (!signature || !timestamp) return false;
+
+  const secret = process.env.ALGA_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('ALGA_WEBHOOK_SECRET not configured');
+    return false;
+  }
+
+  const payload = `${email}:${timestamp}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return signature === expectedSignature;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => null);
+    const email = typeof body?.email === 'string' ? body.email.trim() : '';
+
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email is required' },
+        { status: 400 },
+      );
+    }
+
+    const signature = req.headers.get('x-webhook-signature');
+    const timestamp = req.headers.get('x-timestamp');
+
+    if (!verifyWebhookSignature(signature, email, timestamp)) {
+      console.error('[request-reactivation] Invalid webhook signature');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 },
+      );
+    }
+
+    const knex = await getAdminConnection();
+    const tenant = await resolveTenantAndAdminEmailByEmail(email, knex);
+
+    if (!tenant) {
+      return NextResponse.json({ success: true });
+    }
+
+    const pendingDeletion = await getActivePendingDeletion(tenant.tenantId, knex);
+    if (!pendingDeletion?.reactivatable) {
+      return NextResponse.json({ success: true });
+    }
+
+    const billingAdmin = await resolveBillingAdminEmailForTenant(tenant.tenantId, knex);
+    if (!billingAdmin?.email) {
+      console.warn('[request-reactivation] No billing/admin email resolved', {
+        tenantId: tenant.tenantId,
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    const reactivationToken = await createTenantReactivationToken({
+      tenantId: tenant.tenantId,
+      deletionId: pendingDeletion.deletionId,
+      knex,
+    });
+
+    try {
+      await sendReactivationInviteEmail({
+        to: billingAdmin.email,
+        tenantId: tenant.tenantId,
+        tenantName: tenant.tenantName,
+        effectiveDeletionDate: pendingDeletion.effectiveDeletionDate,
+        reactivationUrl: buildReactivationCheckoutUrl(reactivationToken.token),
+      });
+    } catch (emailError) {
+      console.error('[request-reactivation] Failed to send invite email', {
+        tenantId: tenant.tenantId,
+        error: emailError,
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[request-reactivation] Error requesting reactivation:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
+  }
+}

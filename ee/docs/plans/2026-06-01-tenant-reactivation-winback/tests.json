@@ -1,87 +1,723 @@
 [
-  { "id": "T001", "description": "Migration adds nullable `last_winback_email_at`; up/down are idempotent and leave existing rows untouched.", "implemented": true, "commitGroup": "migration", "featureIds": ["F001"] },
-  { "id": "T068", "description": "Migration creates `tenant_reactivation_tokens` with tenant, deletion_id, unique token_hash, expires_at, reserved_at, consumed_at, checkout_session_id, created_at, updated_at plus indexes for tenant/deletion and open unexpired-token lookup; up/down are idempotent.", "implemented": true, "commitGroup": "migration", "featureIds": ["F040"] },
-
-  { "id": "T002", "description": "getActivePendingDeletion returns the row for statuses pending / awaiting_confirmation / confirmed.", "implemented": true, "commitGroup": "detection", "featureIds": ["F002"] },
-  { "id": "T003", "description": "getActivePendingDeletion returns null for statuses deleting / deleted / rolled_back / failed.", "implemented": true, "commitGroup": "detection", "featureIds": ["F002"] },
-  { "id": "T004", "description": "getActivePendingDeletion returns null when no pending_tenant_deletions row exists.", "implemented": true, "commitGroup": "detection", "featureIds": ["F002"] },
-  { "id": "T005", "description": "Email→tenant resolution matches existing check-tenant behavior (tenants.email then internal-admin fallback).", "implemented": true, "commitGroup": "detection", "featureIds": ["F003"] },
-  { "id": "T006", "description": "check-tenant returns pendingDeletion:true, reactivatable:true, deletionStatus, and effectiveDeletionDate for an in-window deletion.", "implemented": true, "commitGroup": "detection", "featureIds": ["F004"] },
-  { "id": "T007", "description": "check-tenant returns exists:true, pendingDeletion:false for a healthy tenant (back-compat: old fields unchanged).", "implemented": true, "commitGroup": "detection", "featureIds": ["F004"] },
-  { "id": "T008", "description": "check-tenant still 404s {exists:false} for an unknown email.", "implemented": true, "commitGroup": "detection", "featureIds": ["F004"] },
-  { "id": "T009", "description": "nm-store checkExistingTenant surfaces the new fields and fails open (treats errors as not-reactivatable) without blocking checkout.", "implemented": true, "commitGroup": "detection", "featureIds": ["F005"] },
-
-  { "id": "T010", "description": "request-reactivation rejects a request with a missing/invalid HMAC signature.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F006"] },
-  { "id": "T011", "description": "request-reactivation returns 200 and sends the reactivation email when the email maps to a reactivatable tenant.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F007", "F008"] },
-  { "id": "T012", "description": "request-reactivation returns 200 and sends NO email when the tenant exists but is not reactivatable (anti-enumeration).", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F007", "F008"] },
-  { "id": "T013", "description": "request-reactivation returns 200 and sends NO email for an unknown email (anti-enumeration).", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F007"] },
-  { "id": "T014", "description": "nm-store requestReactivation action signs the request with the correct HMAC scheme.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F009"] },
-  { "id": "T015", "description": "OrderForm shows the reactivation CTA (not the hard block) when reactivatable.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F010"] },
-  { "id": "T016", "description": "OrderForm CTA calls requestReactivation and renders an 'email sent' confirmation.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F010"] },
-  { "id": "T017", "description": "OrderForm keeps the 'tenant already exists' block when a tenant exists and is NOT reactivatable.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F011"] },
-  { "id": "T018", "description": "OrderForm allows normal new-signup checkout when the deletion is past the window (deleting/deleted).", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F011"] },
-
-  { "id": "T019", "description": "Reactivation checkout omits introCouponId — no discount line item on the created session.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F012"] },
-  { "id": "T020", "description": "Reactivation checkout omits trial_period_days — subscription starts billing immediately.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F012"] },
-  { "id": "T021", "description": "Reactivation checkout uses the plan's standard recurring price.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F012"] },
-  { "id": "T022", "description": "Reactivation checkout metadata contains reactivation='true', tenant_id, and deletion_workflow_id.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F013"] },
-  { "id": "T023", "description": "Reactivation entry page is reachable from the email link and renders checkout for the right tenant.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F014"] },
-  { "id": "T024", "description": "Reactivation success page renders the 'being restored — check your email' message.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F015"] },
-
-  { "id": "T025", "description": "Completion orchestrator runs only for sessions with metadata.reactivation==='true'; ignores normal-order sessions.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F016", "F023", "F041"] },
-  { "id": "T026", "description": "Completion refuses when the deletion status is already deleting/deleted and surfaces the too-late outcome.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F017", "F032"] },
-  { "id": "T027", "description": "The success trigger fires the enriched rollbackDeletion signal (carrying the reactivation block) to the workflow identified by the pending-deletion row's workflow_id.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F016", "F018"] },
-  { "id": "T028", "description": "After completion, the tenant's users are reactivated (is_inactive=false).", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F018"] },
-  { "id": "T029", "description": "After completion, the Canceled tag is removed and the master-tenant client/contacts are reactivated.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F018"] },
-  { "id": "T030", "description": "After completion, a stripe_subscriptions row for the NEW subscription is linked to the existing tenant.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F019"] },
-  { "id": "T031", "description": "Completion stamps subscription.metadata.tenant_id = existing tenant on the new subscription.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F020"] },
-  { "id": "T032", "description": "Password reset is triggered AFTER rollback via the app-side endpoint (F035); the link uses the app baseUrl (NEXT_PUBLIC_BASE_URL) and the branded auth email, NOT the worker's Resend sender; the now-active admin receives it.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F021", "F035"] },
-  { "id": "T033", "description": "Ordering regression: calling the password reset before rollback would no-op (is_inactive filter) — the handler must reset only after reactivation.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F021"] },
-  { "id": "T034", "description": "Tenant-keyed idempotency: two genuine payments (two distinct sub_… ids) result in only ONE active linked stripe_subscriptions row for the tenant; the second is NOT linked (a sub-id-keyed guard would wrongly link both).", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F022"] },
-  { "id": "T035", "description": "Reactivation never calls startOrderInstallWorkflow / ensureOrderInstallWorkflowForCheckoutSession (real nm-store symbols; spy asserts not-called).", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F023"] },
-  { "id": "T051", "description": "Back-compat: admin rollback (rollbackDeletion signal with no reactivation block) reactivates users only — links no subscription and sends no password reset.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F033"] },
-
-  { "id": "T036", "description": "Login: an inactive user with an active pending deletion → a win-back email is sent on the login attempt (password is NOT checked; sent regardless of password correctness).", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F024", "F025"] },
-  { "id": "T037", "description": "Login win-back is NOT re-sent within 14 days (last_winback_email_at < 14 days ago).", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F025"] },
-  { "id": "T038", "description": "Login win-back IS re-sent once more than 14 days have elapsed since last_winback_email_at.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F025"] },
-  { "id": "T039", "description": "last_winback_email_at is updated after a win-back email is sent.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F026"] },
-  { "id": "T040", "description": "Active user login is unaffected (no win-back email, normal successful login).", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F027"] },
-  { "id": "T041", "description": "Inactive user with NO active pending deletion gets no win-back email.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F027"] },
-  { "id": "T042", "description": "Win-back email is sent even with a wrong/absent password (the is_inactive gate never verifies the password) — no password gating, and verifyPassword is not called for inactive users.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F024", "F027"] },
-  { "id": "T043", "description": "authenticateUser still returns the generic null in all win-back cases (no distinguishable response).", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F027"] },
-
-  { "id": "T044", "description": "Reactivation invite email contains the scheduled deletion date, the standard-price/no-discount note, and a single reactivation CTA.", "implemented": false, "commitGroup": "emails", "featureIds": ["F028"] },
-  { "id": "T045", "description": "Login win-back email contains the scheduled deletion date and a reactivate CTA.", "implemented": false, "commitGroup": "emails", "featureIds": ["F029"] },
-  { "id": "T046", "description": "Both emails are dispatched via the email service from info@nineminds.com (mock provider asserts payload).", "implemented": false, "commitGroup": "emails", "featureIds": ["F030"] },
-
-  { "id": "T047", "description": "E2E Flow A: order page → reactivation email → paid checkout (no discount) → reactivate → password reset → login restores the SAME tenant with prior data.", "implemented": false, "commitGroup": "regression", "featureIds": ["F031"] },
-  { "id": "T048", "description": "E2E: reactivation produces no new tenant row (tenant count unchanged for the customer).", "implemented": false, "commitGroup": "regression", "featureIds": ["F031"] },
-  { "id": "T049", "description": "E2E past-window: an out-of-window email on the order page is treated as a normal new signup; no reactivation email is sent.", "implemented": false, "commitGroup": "regression", "featureIds": ["F011", "F032"] },
-  { "id": "T050", "description": "Point-of-no-return: status flips to deleting mid-flow → completion refuses and the user is surfaced the too-late outcome.", "implemented": false, "commitGroup": "regression", "featureIds": ["F032"] },
-  { "id": "T052", "description": "Confirmed (30-day) deletion is reactivatable: a deletion in status `confirmed` reports reactivatable:true and the rollback signal during the post-confirmation wait reactivates the tenant.", "implemented": false, "commitGroup": "regression", "featureIds": ["F004", "F018"] },
-  { "id": "T053", "description": "effectiveDeletionDate = COALESCE(deletion_scheduled_for, scheduled_deletion_date): after a 30-day confirm it reflects deletion_scheduled_for (now+30d); while awaiting_confirmation it reflects scheduled_deletion_date (now+90d). Emails render this date.", "implemented": false, "commitGroup": "regression", "featureIds": ["F004", "F028"] },
-  { "id": "T054", "description": "Immediate confirmation edge: a deletion confirmed `immediate` has no reactivation window — by the time a return happens status is deleting/deleted and reactivatable:false.", "implemented": false, "commitGroup": "regression", "featureIds": ["F017", "F032"] },
-  { "id": "T055", "description": "Charged-but-refused: payment captured but status flipped to deleting in the checkout→completion gap → reactivation refused AND an ops alert is emitted flagging the payment for manual refund (F034).", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F034", "F017"] },
-  { "id": "T056", "description": "Closed-workflow signal: after the tenant is already `rolled_back` (deletion workflow closed), a second reactivation payment does NOT attempt to signal the closed workflow (no crash) — it is treated as a duplicate payment and routed to the F034 alert.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F016", "F034"] },
-  { "id": "T057", "description": "Duplicate genuine payment for an already-reactivated tenant → no second subscription linked; alert fired for manual refund.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F022", "F034"] },
-  { "id": "T069", "description": "Stripe webhook branch: a checkout.session.completed event with metadata.reactivation==='true' does NOT call the normal subscription import/update path; it runs the reactivation trigger/guard path instead.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F041", "F016"] },
-  { "id": "T070", "description": "Stripe webhook branch: a normal checkout.session.completed event without reactivation metadata still follows the existing subscription import/update path.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F041"] },
-  { "id": "T058", "description": "Citus routing: linkSubscriptionToExistingTenant inserts land on the correct shard with `tenant` set (rows queryable under the existing tenant), reusing createTenantInDB's insert path.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F019"] },
-  { "id": "T059", "description": "Win-back recipient: a non-admin internal user's login attempt sends the win-back email to the tenant's billing/admin email (not the attempter), and the per-tenant 14-day throttle is shared across users.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F025"] },
-  { "id": "T060", "description": "Migration creates `pending_reactivation_refunds` (tenant, stripe ids, reason, created_at, resolved_at nullable + index); up/down idempotent.", "implemented": true, "commitGroup": "migration", "featureIds": ["F036"] },
-  { "id": "T061", "description": "Reactivation checkout is created with the tenant's existing Stripe customer id (`customer: cus_…`), not a freshly-created customer.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F037"] },
-  { "id": "T062", "description": "Customer reconciliation: after linking, the tenant still has exactly ONE `stripe_customers` row (existing reused, no duplicate); the new `stripe_subscriptions` row's customer FK points at it.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F019", "F037"] },
-  { "id": "T063", "description": "F034 sink is durable + visible: a charged-but-refused event inserts a `pending_reactivation_refunds` row AND sends the ops/billing email (mock provider asserts both).", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F034"] },
-  { "id": "T064", "description": "Authority recipient: reactivation/win-back email always goes to the tenant billing/admin email — verified for (a) a non-admin login attempt and (b) a non-admin email typed on the order form; in both cases the entered/attempter address receives nothing.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F038"] },
-  { "id": "T065", "description": "Anti-enumeration: request-reactivation returns 200 with NO admin email / PII in the response; nm-store cannot learn the admin address.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F038", "F007"] },
-  { "id": "T066", "description": "Token gate: the reactivation checkout cannot be created with a missing / malformed / expired / wrong-tenant token (rejected server-side); a valid unreserved token validates against F040 and is atomically reserved with checkout_session_id before Stripe Checkout creation.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F039", "F040", "F014"] },
-  { "id": "T067", "description": "Token is single-use: replaying a reserved or consumed token is rejected, so the same email link cannot create a second checkout session or second payment; successful reactivation marks consumed_at.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F039", "F040"] },
-
-  { "id": "T071", "description": "Edition safety: with `pending_tenant_deletions` absent (CE), check-tenant returns the legacy shape with pendingDeletion:false and does NOT throw; in EE the route resolves under `ee/server/src/app/api/...` at the same HMAC path and returns the new fields.", "implemented": true, "commitGroup": "detection", "featureIds": ["F042"] },
-  { "id": "T072", "description": "Login win-back hook is EE-injected: in a CE build the `is_inactive` gate runs no `pending_tenant_deletions` query (the hook resolves to a no-op stub) and login behavior is byte-for-byte unchanged; the EE build wires the real reader/throttle/email.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F043"] },
-  { "id": "T073", "description": "nm-store customer resolution: the reactivation checkout uses `customer: cus_…` obtained from the non-PII id returned by alga's token-exchange (cus_… or derived from the prior sub_… via Stripe); the admin email is never sent to nm-store. Asserts no admin email in the token-exchange response and `customer` set on the created session.", "implemented": false, "commitGroup": "reactivation-checkout", "featureIds": ["F044", "F037", "F038"] },
-  { "id": "T074", "description": "Reactivated-but-unbilled: when linkSubscriptionToExistingTenant exhausts retries after users are reactivated and payment captured, an F034 alert with reason `reactivated_unbilled` is raised (durable row + ops/billing email) — the tenant is never left silently active without a linked subscription.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F045", "F034"] },
-  { "id": "T075", "description": "Shared subscription-insert helper (F046): inserts ONLY the `stripe_subscriptions` row against an EXISTING internal `stripe_customer_id` with `tenant` + `billing_tenant = MASTER_TENANT_ID` set; no second `stripe_customers` row is created; createTenantInDB still produces identical rows when refactored onto the helper.", "implemented": false, "commitGroup": "reactivation-core", "featureIds": ["F046", "F019"] },
-  { "id": "T076", "description": "Atomic throttle: two concurrent login attempts to the same mid-deletion tenant result in exactly ONE win-back email (conditional UPDATE ... RETURNING returns a row for only one); a read-check-update would double-send.", "implemented": false, "commitGroup": "winback-login", "featureIds": ["F047", "F025"] },
-  { "id": "T077", "description": "Admin-email source of truth: the F048 resolver returns the documented canonical billing/admin email (and its fallback order) for a tenant, and both request-reactivation (F008) and the login win-back hook (F025) send to exactly that address.", "implemented": false, "commitGroup": "request-reactivation", "featureIds": ["F048", "F038"] }
+  {
+    "id": "T001",
+    "description": "Migration adds nullable `last_winback_email_at`; up/down are idempotent and leave existing rows untouched.",
+    "implemented": true,
+    "commitGroup": "migration",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Migration creates `tenant_reactivation_tokens` with tenant, deletion_id, unique token_hash, expires_at, reserved_at, consumed_at, checkout_session_id, created_at, updated_at plus indexes for tenant/deletion and open unexpired-token lookup; up/down are idempotent.",
+    "implemented": true,
+    "commitGroup": "migration",
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "getActivePendingDeletion returns the row for statuses pending / awaiting_confirmation / confirmed.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "getActivePendingDeletion returns null for statuses deleting / deleted / rolled_back / failed.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "getActivePendingDeletion returns null when no pending_tenant_deletions row exists.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Email→tenant resolution matches existing check-tenant behavior (tenants.email then internal-admin fallback).",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "check-tenant returns pendingDeletion:true, reactivatable:true, deletionStatus, and effectiveDeletionDate for an in-window deletion.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "check-tenant returns exists:true, pendingDeletion:false for a healthy tenant (back-compat: old fields unchanged).",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "check-tenant still 404s {exists:false} for an unknown email.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "nm-store checkExistingTenant surfaces the new fields and fails open (treats errors as not-reactivatable) without blocking checkout.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "request-reactivation rejects a request with a missing/invalid HMAC signature.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "request-reactivation returns 200 and sends the reactivation email when the email maps to a reactivatable tenant.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "request-reactivation returns 200 and sends NO email when the tenant exists but is not reactivatable (anti-enumeration).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "request-reactivation returns 200 and sends NO email for an unknown email (anti-enumeration).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "nm-store requestReactivation action signs the request with the correct HMAC scheme.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "OrderForm shows the reactivation CTA (not the hard block) when reactivatable.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "OrderForm CTA calls requestReactivation and renders an 'email sent' confirmation.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "OrderForm keeps the 'tenant already exists' block when a tenant exists and is NOT reactivatable.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "OrderForm allows normal new-signup checkout when the deletion is past the window (deleting/deleted).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Reactivation checkout omits introCouponId — no discount line item on the created session.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Reactivation checkout omits trial_period_days — subscription starts billing immediately.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Reactivation checkout uses the plan's standard recurring price.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Reactivation checkout metadata contains reactivation='true', tenant_id, and deletion_workflow_id.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Reactivation entry page is reachable from the email link and renders checkout for the right tenant.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Reactivation success page renders the 'being restored — check your email' message.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Completion orchestrator runs only for sessions with metadata.reactivation==='true'; ignores normal-order sessions.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F016",
+      "F023",
+      "F041"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Completion refuses when the deletion status is already deleting/deleted and surfaces the too-late outcome.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F017",
+      "F032"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "The success trigger fires the enriched rollbackDeletion signal (carrying the reactivation block) to the workflow identified by the pending-deletion row's workflow_id.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "After completion, the tenant's users are reactivated (is_inactive=false).",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "After completion, the Canceled tag is removed and the master-tenant client/contacts are reactivated.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "After completion, a stripe_subscriptions row for the NEW subscription is linked to the existing tenant.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Completion stamps subscription.metadata.tenant_id = existing tenant on the new subscription.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Password reset is triggered AFTER rollback via the app-side endpoint (F035); the link uses the app baseUrl (NEXT_PUBLIC_BASE_URL) and the branded auth email, NOT the worker's Resend sender; the now-active admin receives it.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F021",
+      "F035"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Ordering regression: calling the password reset before rollback would no-op (is_inactive filter) — the handler must reset only after reactivation.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Tenant-keyed idempotency: two genuine payments (two distinct sub_… ids) result in only ONE active linked stripe_subscriptions row for the tenant; the second is NOT linked (a sub-id-keyed guard would wrongly link both).",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Reactivation never calls startOrderInstallWorkflow / ensureOrderInstallWorkflowForCheckoutSession (real nm-store symbols; spy asserts not-called).",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Back-compat: admin rollback (rollbackDeletion signal with no reactivation block) reactivates users only — links no subscription and sends no password reset.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Login: an inactive user with an active pending deletion → a win-back email is sent on the login attempt (password is NOT checked; sent regardless of password correctness).",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Login win-back is NOT re-sent within 14 days (last_winback_email_at < 14 days ago).",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Login win-back IS re-sent once more than 14 days have elapsed since last_winback_email_at.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "last_winback_email_at is updated after a win-back email is sent.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Active user login is unaffected (no win-back email, normal successful login).",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Inactive user with NO active pending deletion gets no win-back email.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Win-back email is sent even with a wrong/absent password (the is_inactive gate never verifies the password) — no password gating, and verifyPassword is not called for inactive users.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F024",
+      "F027"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "authenticateUser still returns the generic null in all win-back cases (no distinguishable response).",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Reactivation invite email contains the scheduled deletion date, the standard-price/no-discount note, and a single reactivation CTA.",
+    "implemented": false,
+    "commitGroup": "emails",
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Login win-back email contains the scheduled deletion date and a reactivate CTA.",
+    "implemented": false,
+    "commitGroup": "emails",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Both emails are dispatched via the email service from info@nineminds.com (mock provider asserts payload).",
+    "implemented": false,
+    "commitGroup": "emails",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "E2E Flow A: order page → reactivation email → paid checkout (no discount) → reactivate → password reset → login restores the SAME tenant with prior data.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "E2E: reactivation produces no new tenant row (tenant count unchanged for the customer).",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "E2E past-window: an out-of-window email on the order page is treated as a normal new signup; no reactivation email is sent.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F011",
+      "F032"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Point-of-no-return: status flips to deleting mid-flow → completion refuses and the user is surfaced the too-late outcome.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Confirmed (30-day) deletion is reactivatable: a deletion in status `confirmed` reports reactivatable:true and the rollback signal during the post-confirmation wait reactivates the tenant.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F004",
+      "F018"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "effectiveDeletionDate = COALESCE(deletion_scheduled_for, scheduled_deletion_date): after a 30-day confirm it reflects deletion_scheduled_for (now+30d); while awaiting_confirmation it reflects scheduled_deletion_date (now+90d). Emails render this date.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F004",
+      "F028"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Immediate confirmation edge: a deletion confirmed `immediate` has no reactivation window — by the time a return happens status is deleting/deleted and reactivatable:false.",
+    "implemented": false,
+    "commitGroup": "regression",
+    "featureIds": [
+      "F017",
+      "F032"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Charged-but-refused: payment captured but status flipped to deleting in the checkout→completion gap → reactivation refused AND an ops alert is emitted flagging the payment for manual refund (F034).",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F034",
+      "F017"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Closed-workflow signal: after the tenant is already `rolled_back` (deletion workflow closed), a second reactivation payment does NOT attempt to signal the closed workflow (no crash) — it is treated as a duplicate payment and routed to the F034 alert.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F016",
+      "F034"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Duplicate genuine payment for an already-reactivated tenant → no second subscription linked; alert fired for manual refund.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F022",
+      "F034"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Stripe webhook branch: a checkout.session.completed event with metadata.reactivation==='true' does NOT call the normal subscription import/update path; it runs the reactivation trigger/guard path instead.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F041",
+      "F016"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Stripe webhook branch: a normal checkout.session.completed event without reactivation metadata still follows the existing subscription import/update path.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Citus routing: linkSubscriptionToExistingTenant inserts land on the correct shard with `tenant` set (rows queryable under the existing tenant), reusing createTenantInDB's insert path.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Win-back recipient: a non-admin internal user's login attempt sends the win-back email to the tenant's billing/admin email (not the attempter), and the per-tenant 14-day throttle is shared across users.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Migration creates `pending_reactivation_refunds` (tenant, stripe ids, reason, created_at, resolved_at nullable + index); up/down idempotent.",
+    "implemented": true,
+    "commitGroup": "migration",
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Reactivation checkout is created with the tenant's existing Stripe customer id (`customer: cus_…`), not a freshly-created customer.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Customer reconciliation: after linking, the tenant still has exactly ONE `stripe_customers` row (existing reused, no duplicate); the new `stripe_subscriptions` row's customer FK points at it.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F019",
+      "F037"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "F034 sink is durable + visible: a charged-but-refused event inserts a `pending_reactivation_refunds` row AND sends the ops/billing email (mock provider asserts both).",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Authority recipient: reactivation/win-back email always goes to the tenant billing/admin email — verified for (a) a non-admin login attempt and (b) a non-admin email typed on the order form; in both cases the entered/attempter address receives nothing.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Anti-enumeration: request-reactivation returns 200 with NO admin email / PII in the response; nm-store cannot learn the admin address.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F038",
+      "F007"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Token gate: the reactivation checkout cannot be created with a missing / malformed / expired / wrong-tenant token (rejected server-side); a valid unreserved token validates against F040 and is atomically reserved with checkout_session_id before Stripe Checkout creation.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F039",
+      "F040",
+      "F014"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Token is single-use: replaying a reserved or consumed token is rejected, so the same email link cannot create a second checkout session or second payment; successful reactivation marks consumed_at.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Edition safety: with `pending_tenant_deletions` absent (CE), check-tenant returns the legacy shape with pendingDeletion:false and does NOT throw; in EE the route resolves under `ee/server/src/app/api/...` at the same HMAC path and returns the new fields.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Login win-back hook is EE-injected: in a CE build the `is_inactive` gate runs no `pending_tenant_deletions` query (the hook resolves to a no-op stub) and login behavior is byte-for-byte unchanged; the EE build wires the real reader/throttle/email.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "nm-store customer resolution: the reactivation checkout uses `customer: cus_…` obtained from the non-PII id returned by alga's token-exchange (cus_… or derived from the prior sub_… via Stripe); the admin email is never sent to nm-store. Asserts no admin email in the token-exchange response and `customer` set on the created session.",
+    "implemented": false,
+    "commitGroup": "reactivation-checkout",
+    "featureIds": [
+      "F044",
+      "F037",
+      "F038"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Reactivated-but-unbilled: when linkSubscriptionToExistingTenant exhausts retries after users are reactivated and payment captured, an F034 alert with reason `reactivated_unbilled` is raised (durable row + ops/billing email) — the tenant is never left silently active without a linked subscription.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F045",
+      "F034"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Shared subscription-insert helper (F046): inserts ONLY the `stripe_subscriptions` row against an EXISTING internal `stripe_customer_id` with `tenant` + `billing_tenant = MASTER_TENANT_ID` set; no second `stripe_customers` row is created; createTenantInDB still produces identical rows when refactored onto the helper.",
+    "implemented": false,
+    "commitGroup": "reactivation-core",
+    "featureIds": [
+      "F046",
+      "F019"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Atomic throttle: two concurrent login attempts to the same mid-deletion tenant result in exactly ONE win-back email (conditional UPDATE ... RETURNING returns a row for only one); a read-check-update would double-send.",
+    "implemented": false,
+    "commitGroup": "winback-login",
+    "featureIds": [
+      "F047",
+      "F025"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Admin-email source of truth: the F048 resolver returns the documented canonical billing/admin email (and its fallback order) for a tenant, and both request-reactivation (F008) and the login win-back hook (F025) send to exactly that address.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "featureIds": [
+      "F048",
+      "F038"
+    ]
+  }
 ]

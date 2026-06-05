@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
-  getActivePendingDeletion,
+  getPendingDeletionSummary,
   resolveTenantAndAdminEmailByEmail,
 } from '@enterprise/lib/billing/tenantReactivationDetection';
 
@@ -69,14 +69,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const pendingDeletion = await getActivePendingDeletion(tenant.tenantId, knex);
+    const pendingDeletion = await getPendingDeletionSummary(tenant.tenantId, knex);
 
     return NextResponse.json({
       exists: true,
       tenantId: tenant.tenantId,
       tenantName: tenant.tenantName,
       pendingDeletion: !!pendingDeletion,
-      reactivatable: !!pendingDeletion?.reactivatable,
+      reactivatable: pendingDeletion?.reactivatable ?? false,
       deletionStatus: pendingDeletion?.status,
       effectiveDeletionDate: pendingDeletion?.effectiveDeletionDate,
     });

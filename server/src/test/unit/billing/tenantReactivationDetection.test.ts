@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getActivePendingDeletion,
+  resolveBillingAdminEmailForTenant,
   resolveTenantAndAdminEmailByEmail,
 } from '../../../../../ee/server/src/lib/billing/tenantReactivationDetection';
 
@@ -20,6 +21,13 @@ function createFakeKnex(tables: Record<string, Row[]>) {
             Object.entries(criteria).every(([key, expected]) => row[key] === expected),
           );
         }
+        return builder;
+      },
+      whereNotNull(column: string) {
+        rows = rows.filter((row) => row[column] !== null && row[column] !== undefined);
+        return builder;
+      },
+      orderBy() {
         return builder;
       },
       async first(...columns: string[]) {
@@ -170,6 +178,47 @@ describe('tenant reactivation detection', () => {
         tenantEmail: 'tenant@example.com',
         adminEmail: 'admin@example.com',
         matchedBy: 'internal_admin',
+      });
+  });
+
+  it('T077: billing/admin email resolver uses the documented canonical fallback order', async () => {
+    const tenantEmailKnex = createFakeKnex({
+      tenants: [{ tenant: 'tenant-1', email: 'tenant-owner@example.com' }],
+      clients: [{ tenant: 'tenant-1', billing_email: 'billing@example.com', is_inactive: false }],
+      stripe_customers: [{ tenant: 'tenant-1', email: 'stripe@example.com' }],
+      users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
+    });
+
+    await expect(resolveBillingAdminEmailForTenant('tenant-1', tenantEmailKnex))
+      .resolves.toEqual({
+        email: 'tenant-owner@example.com',
+        source: 'tenant_email',
+      });
+
+    const clientBillingKnex = createFakeKnex({
+      tenants: [{ tenant: 'tenant-1', email: null }],
+      clients: [{ tenant: 'tenant-1', billing_email: 'billing@example.com', is_inactive: false }],
+      stripe_customers: [{ tenant: 'tenant-1', email: 'stripe@example.com' }],
+      users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
+    });
+
+    await expect(resolveBillingAdminEmailForTenant('tenant-1', clientBillingKnex))
+      .resolves.toEqual({
+        email: 'billing@example.com',
+        source: 'client_billing_email',
+      });
+
+    const stripeKnex = createFakeKnex({
+      tenants: [{ tenant: 'tenant-1', email: null }],
+      clients: [],
+      stripe_customers: [{ tenant: 'tenant-1', email: 'stripe@example.com' }],
+      users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
+    });
+
+    await expect(resolveBillingAdminEmailForTenant('tenant-1', stripeKnex))
+      .resolves.toEqual({
+        email: 'stripe@example.com',
+        source: 'stripe_customer_email',
       });
   });
 });

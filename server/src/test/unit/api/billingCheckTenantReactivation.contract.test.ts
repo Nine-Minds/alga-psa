@@ -14,9 +14,9 @@ describe('billing check-tenant reactivation contract', () => {
   const ceRoute = readRepoFile('packages/ee/src/app/api/billing/check-tenant/route.ts');
 
   it('T006: EE check-tenant returns the additive pending-deletion fields for in-window deletions', () => {
-    expect(eeRoute).toContain('getActivePendingDeletion(tenant.tenantId, knex)');
+    expect(eeRoute).toContain('getPendingDeletionSummary(tenant.tenantId, knex)');
     expect(eeRoute).toContain('pendingDeletion: !!pendingDeletion');
-    expect(eeRoute).toContain('reactivatable: !!pendingDeletion?.reactivatable');
+    expect(eeRoute).toContain('reactivatable: pendingDeletion?.reactivatable ?? false');
     expect(eeRoute).toContain('deletionStatus: pendingDeletion?.status');
     expect(eeRoute).toContain('effectiveDeletionDate: pendingDeletion?.effectiveDeletionDate');
   });

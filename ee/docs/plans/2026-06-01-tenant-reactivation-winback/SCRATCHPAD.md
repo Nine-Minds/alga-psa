@@ -287,6 +287,37 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
   email — acceptable). Win-back email is silent (no enumeration leak).
 - Keep both `workflowClient.ts` copies in sync if a helper is added.
 
+## Implementation log — request-reactivation group (2026-06-05)
+
+- Implemented F006/F007/F008/F038/F039/F048 in alga EE:
+  - `ee/server/src/app/api/billing/request-reactivation/route.ts` adds the HMAC
+    `POST /api/billing/request-reactivation` endpoint at the same URL path nm-store signs.
+    Missing/invalid signatures return 401; valid requests return `{ success: true }` without
+    exposing tenant/admin details. Unknown, healthy, past-window, and unresolved-admin cases all
+    return 200 with no email for anti-enumeration.
+  - `ee/server/src/lib/billing/tenantReactivationTokens.ts` creates signed, expiring
+    reactivation tokens and stores only `token_hash` in `tenant_reactivation_tokens`.
+  - `ee/server/src/lib/billing/reactivationInviteEmail.ts` builds/sends the admin-inbox-only
+    reactivation invite from `info@nineminds.com`; the email includes scheduled deletion date,
+    standard-price/no-discount language, and a single checkout CTA.
+  - `resolveBillingAdminEmailForTenant` documents the canonical authority resolver and fallback
+    order: `tenants.email` -> master-tenant client `billing_email` -> `stripe_customers.email` ->
+    first internal user email. Both request-reactivation and the future win-back hook should use it.
+  - The request endpoint catches invite-send failures and still returns the anti-enumeration 200;
+    delivery failures are logged without leaking state to nm-store.
+- Implemented F009/F010/F011 in nm-store:
+  - `requestTenantReactivation` signs and calls alga's request endpoint.
+  - `requestReactivation(email)` server action wraps the utility.
+  - `OrderForm` diverts `reactivatable:true` tenants to a Welcome back CTA and disables normal
+    checkout; healthy existing tenants remain hard-blocked; past-window `deleting`/`deleted`
+    tenants are allowed through normal signup.
+- Tests completed:
+  - Alga: T010-T013/T064/T065/T077 via route/helper/token contract tests.
+  - nm-store: T014 via signed API utility test; T015-T018 via focused OrderForm reactivation tests.
+- Commands:
+  - `cd server && npm run test -- src/test/unit/billing/tenantReactivationDetection.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts src/test/unit/api/billingCheckTenantReactivation.contract.test.ts src/test/unit/api/requestReactivation.contract.test.ts` (pass; existing coverage parse warnings only).
+  - `cd ../nm-store/packages/nm-store && npm run test -- tests/unit/alga-api-tenant-reactivation.test.ts tests/unit/order-form-reactivation.test.tsx` (pass).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`
