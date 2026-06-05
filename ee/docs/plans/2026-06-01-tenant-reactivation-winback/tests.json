@@ -416,7 +416,7 @@
   {
     "id": "T044",
     "description": "Reactivation invite email contains the scheduled deletion date, the standard-price/no-discount note, and a single reactivation CTA.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "featureIds": [
       "F028"
@@ -425,7 +425,7 @@
   {
     "id": "T045",
     "description": "Login win-back email contains the scheduled deletion date and a reactivate CTA.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "featureIds": [
       "F029"
@@ -434,7 +434,7 @@
   {
     "id": "T046",
     "description": "Both emails are dispatched via the email service from info@nineminds.com (mock provider asserts payload).",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "featureIds": [
       "F030"

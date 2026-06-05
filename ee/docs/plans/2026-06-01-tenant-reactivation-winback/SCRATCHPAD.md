@@ -395,6 +395,22 @@ confirmation / ensure billing authority? Answer (now §12, F038/F039):
 - Command:
   - `cd server && npm run test -- src/test/unit/billing/loginWinback.contract.test.ts src/test/unit/billing/tenantReactivationTokens.test.ts` (pass; existing coverage parse warnings only).
 
+## Implementation log — emails group (2026-06-05)
+
+- Completed F028/F029/F030:
+  - Reactivation invite and login win-back templates live in
+    `ee/server/src/lib/billing/reactivationInviteEmail.ts`.
+  - Reactivation invite copy includes "Welcome back", the effective deletion date, a standard-price
+    note, an explicit no-intro-discount/no-trial note, and one CTA to the token-gated checkout.
+  - Login win-back copy includes the sign-in-attempt framing, effective deletion date, and the same
+    reactivate CTA.
+  - Both dispatch through the existing email-service interface from `info@nineminds.com` with
+    `tenant_reactivation` metadata.
+- Completed T044/T045/T046 in `server/src/test/unit/billing/reactivationEmails.test.ts`.
+- Command:
+  - `cd server && npm run test -- src/test/unit/billing/reactivationEmails.test.ts` (pass; existing
+    coverage parse warnings only).
+
 ## Implementation log (2026-06-05)
 
 - Completed F001: added EE migration `ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs`

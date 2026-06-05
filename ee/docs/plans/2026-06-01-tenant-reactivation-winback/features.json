@@ -352,7 +352,7 @@
   {
     "id": "F028",
     "description": "Reactivation invite email template: 'Welcome back', what reactivation does, standard-price note (no discount), scheduled deletion date, single CTA to the reactivation checkout.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "prdRefs": [
       "6"
@@ -361,7 +361,7 @@
   {
     "id": "F029",
     "description": "Login win-back email template: 'We noticed a sign-in attempt', scheduled deletion date, reactivate CTA.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "prdRefs": [
       "6",
@@ -371,7 +371,7 @@
   {
     "id": "F030",
     "description": "Both emails sent via the existing Resend/email service from `info@nineminds.com` with appropriate metadata.",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "emails",
     "prdRefs": [
       "6",
