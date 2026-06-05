@@ -42,7 +42,8 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { filterAuthorizedTicketIds, applyTicketLinkRestriction } from './projectTaskActions';
+import { filterAuthorizedTicketIds } from './projectTaskActions';
+import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,

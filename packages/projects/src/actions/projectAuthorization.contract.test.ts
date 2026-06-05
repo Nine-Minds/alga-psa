@@ -115,7 +115,8 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('async function assertTicketReadAllowedById(');
     expect(projectTaskActionsSource).toContain('if (await isProjectReadAdmin(user, trx)) {');
     expect(projectTaskActionsSource).toContain('const assigneesByTicket = await buildTicketAssigneeSetByTicketId(trx, tenant, uniqueTicketIds);');
-    expect(projectTaskActionsSource).toContain('export function applyTicketLinkRestriction(');
+    expect(readSource('../lib/taskTicketMapping.ts')).toContain('export function applyTicketLinkRestriction(');
+    expect(projectTaskActionsSource).toContain("import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';");
     expect(projectTaskActionsSource).toContain('await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);');
     expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
     expect(projectTaskActionsSource).toContain('applyTicketLinkRestriction(link, allowedTicketIds)');
