@@ -14,10 +14,50 @@
     background: #fff !important;
   }
 
+  /* The shared print hook marks the ancestor path to the print root and marks
+     all sibling branches as hidden. Use display:none for those sibling branches
+     so invisible app chrome cannot paginate into trailing blank pages. */
+  html.app-print-mode,
+  html.ua-print-mode {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode body,
+  html.ua-print-mode body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   /* Hide everything by default in print mode */
   html.app-print-mode body *,
   html.ua-print-mode body * {
     visibility: hidden;
+  }
+
+  html.app-print-mode [data-app-print-hidden],
+  html.ua-print-mode [data-app-print-hidden] {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-app-print-preserve],
+  html.ua-print-mode [data-app-print-preserve] {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 
   /* Re-show the print root and its contents */
@@ -31,7 +71,7 @@
   /* Position the print root at the top of the page */
   html.app-print-mode .ua-print-root,
   html.ua-print-mode .ua-print-root {
-    position: absolute;
+    position: static;
     left: 0;
     top: 0;
     width: 100%;

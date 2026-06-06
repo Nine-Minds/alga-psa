@@ -135,6 +135,26 @@ export async function initializeApp() {
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     logger.info('Email provider registries initialized');
 
+    // Inject the concrete ScheduleEntry implementation into the core
+    // scheduleEntryRegistry used by the user-activities aggregation. The
+    // registry keeps @alga-psa/core (and the workflows package) decoupled from
+    // the concrete model — the host wires it here. Registered unconditionally at
+    // process startup because the slot is process-global (it can't be gated
+    // per-tenant by product, and doing so in the MSP layout render left it
+    // unregistered for server-action workers → "getAllScheduleEntries not
+    // registered"). AlgaDesk isolation is enforced separately by the
+    // /msp/user-activities route guard (upgrade_boundary), so the schedule fetch
+    // never executes there regardless.
+    try {
+      const { registerScheduleEntryIntegration } = await import(
+        '@alga-psa/msp-composition/workflows/registerScheduleEntryIntegration'
+      );
+      registerScheduleEntryIntegration();
+      logger.info('Schedule entry integration registered');
+    } catch (error) {
+      logger.error('Failed to register schedule entry integration:', error);
+    }
+
     // Initialize notification accumulator for batching ticket update emails
     // This is non-critical - if it fails, the system falls back to immediate sending
     try {
