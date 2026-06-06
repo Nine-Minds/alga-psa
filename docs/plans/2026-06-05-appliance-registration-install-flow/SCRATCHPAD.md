@@ -229,10 +229,27 @@ new `INITIAL_TENANT_ID`.
 
 ## Build-step 5 — nm-store (separate repo /home/robert/nm-store; outward-facing)
 
-- (2026-06-05) nm-store is local. Registration form + `/register-tenant` call +
-  confirmation/email + portal reissue (F070–F076) are independent of the appliance
-  WIP, but outward-facing (Stripe ordering + email) in a production marketing/store
-  site — wants a deliberate pass, not blind autonomous edits.
+- (2026-05-31/06-06) nm-store is local. Its existing order flow is **hosted-only**
+  (checkout → Temporal `OrderInstallWorkflow` → hosted tenant; no appliance/
+  deploymentType concept). Appliance registration is a **new outward-facing product
+  surface** there.
+- (2026-06-06) **BUILT (branch `feat/appliance-registration-client`, commit
+  6ab0a427):** `src/lib/algaLicenseClient.ts` — typed `registerTenant()` +
+  `reissueInstallCode()` calling `/register-tenant` + `/install-codes/reissue`
+  (Bearer `ALGA_LICENSE_SERVICE_SECRET`, `ALGA_LICENSE_SERVICE_URL`). This is the
+  transport F071/F075 build on. Logic validated via a tsx harness (the repo's
+  vitest can't run here — missing `strip-literal` in node_modules under Node 24; the
+  `.test.ts` is correct and runs once that dep gap is fixed).
+- (2026-06-06) **STILL PENDING in nm-store (need product direction):** F070
+  registration form, F072 confirmation page, F073 confirmation email (template +
+  send), F074 Stripe SKU/ordering for the appliance product, F075 portal reissue
+  UI. These plug into nm-store's existing OrderForm/checkout/email and are
+  outward-facing — left for a deliberate pass, not autonomous edits.
+- (2026-06-06) F076 operator doc written: `ee/appliance/docs/registration-install-flow.md`.
+- (2026-06-06) **F041 remains ops:** publish the current generic ISO to the
+  object-store key the presigner targets (`APPLIANCE_ISO_KEY`), and wire the
+  `OBJECT_STORE_*` env onto the alga-license Deployment (service `k8s/deployment.yaml`
+  + nm-kube-config).
 
 ## Commands / Runbooks
 

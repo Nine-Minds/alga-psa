@@ -223,5 +223,13 @@
       "F067",
       "F068"
     ]
+  },
+  {
+    "id": "T025",
+    "description": "[AUTO] nm-store alga-license client: registerTenant POSTs to /register-tenant with Bearer auth + maps fields; surfaces service error detail on non-ok; reissueInstallCode maps + requires tenantId|contactEmail. Validated via tsx harness (repo vitest env has a strip-literal dep gap).",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
   }
 ]

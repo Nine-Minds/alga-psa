@@ -393,10 +393,18 @@
   {
     "id": "F076",
     "description": "Docs: update appliance install + licensing docs to describe register \u2192 download \u2192 install \u2192 re-issue (operator-facing).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "4",
       "15"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "nm-store alga-license client (src/lib/algaLicenseClient.ts): typed registerTenant() + reissueInstallCode() calling /register-tenant + /install-codes/reissue (Bearer service auth). The transport F071/F075 build on; the registration UI/Stripe/email that call it are still pending.",
+    "implemented": true,
+    "prdRefs": [
+      "10"
     ]
   }
 ]
