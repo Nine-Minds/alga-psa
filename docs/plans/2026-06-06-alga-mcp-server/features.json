@@ -1,7 +1,7 @@
 [
-  { "id": "F001", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Create packages/agent-tooling CE workspace package (build config, exports, added to npm workspaces)" },
-  { "id": "F002", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Move ChatApiRegistryEntry / registry schema types into agent-tooling (pure types)" },
-  { "id": "F003", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Move ranked search (searchRegistryEntries) into agent-tooling, dependency-free" },
+  { "id": "F001", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Create packages/agent-tooling CE workspace package (build config, exports, added to npm workspaces)" },
+  { "id": "F002", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Move ChatApiRegistryEntry / registry schema types into agent-tooling (pure types)" },
+  { "id": "F003", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Move ranked search (searchRegistryEntries) into agent-tooling, dependency-free" },
   { "id": "F004", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Add request-building module: registry entry + args -> {method, path, query, headers, body} with path-param substitution and read/mutation classification" },
   { "id": "F005", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Tool surface"], "description": "Add the 3 meta-tool definition schemas (search_api_registry, search_business_data, call_api_endpoint) with edition-templated descriptions; drop finish_response" },
   { "id": "F006", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Generalize registry generator to emit BOTH CE and EE registries from alga-openapi.ce.json / .ee.json" },

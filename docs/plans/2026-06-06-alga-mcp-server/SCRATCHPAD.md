@@ -56,3 +56,12 @@ Implement AlgaPSA as an MCP **server** in two transports: a free CE local stdio 
 - `searchBusinessData()` in chat uses server-internal DB search (`createTenantKnex`, ACL principal) — **not** reachable from a workstation connector. The connector must use the HTTP `/api/v1/search` endpoint instead.
 - Re-pointing the chat assistant onto `agent-tooling` is the only shipped-code change in Phase 1 → regression-test the existing chat flow.
 - Registry is ~1.2MB; serve gzipped from `meta/mcp-registry`.
+
+## Implementation log / surprises
+
+### 2026-06-06 — Group A (F001-F003): agent-tooling package extracted
+- Created `packages/agent-tooling` (CE), mirroring `packages/formatting` conventions (src-export map, tsup preset, project.json, vitest). Typechecks + builds + 6 search tests pass.
+- **Decision:** *copy* schema+search into the package and leave `ee/server/src/chat/registry/*` untouched for now (brief, intentional duplication). The EE chat re-point + de-dup is Group D — deferred so the connector (Group F) lands first with **zero** changes to the build-critical `server/next.config.mjs` or shipped chat code.
+- **Sequencing change vs features.json order:** executing A → B → F (standalone connector, no Next.js) BEFORE C → E → D (server integration + next.config edits + chat re-point). Risk pushed later; value (working CE connector) lands first.
+- **SURPRISE — search never returns empty for a non-empty query.** `scoreEntry` adds an unconditional recency bonus `Math.max(0, 2 - index*0.05)`, so the first ~40 registry entries always score > 0 even with zero token/intent match. Implication for MCP: `search_api_registry` on an irrelevant query returns low-relevance entries (by registry order), not an empty set. The agent must judge relevance from the returned scores/descriptions. Consider surfacing the `score` in the MCP tool result so the model can tell "weak match" from "strong match". Not changing the algorithm now (parity with shipped chat behavior).
+- **next.config.mjs reality:** per-package webpack aliases exist in TWO blocks (dev-source ~L230-274 and prebuilt ~L515-544) plus a `transpilePackages` list (~L413). Group E/D must add `@alga-psa/agent-tooling` to all three. Build-critical file — edit carefully.
