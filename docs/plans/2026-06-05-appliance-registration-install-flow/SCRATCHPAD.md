@@ -115,6 +115,31 @@ new `INITIAL_TENANT_ID`.
   **smoke**, not Fastify route tests — validated in the build-step-4 live loop, per
   the light-automated directive.
 
+## Build-step 2 — INITIAL_TENANT_ID seam (code in working tree, alga-psa; UNCOMMITTED w/ licval WIP)
+
+- (2026-06-05) Implemented F050/F051/F052/F054/F055: `createTenant`
+  (`ee/server/src/lib/testing/tenant-creation.ts`) takes optional `tenantId` →
+  sets `tenantInsert.tenant` when present (else DB `gen_random_uuid()` default,
+  unchanged); idempotency guard returns the existing tenant (+ its client) if the
+  id already exists so a re-run doesn't error/duplicate. Threaded through
+  `TenantCreationInput` → `createTenantComplete`. `create-tenant.ts` reads
+  `INITIAL_TENANT_ID` (env or `--tenantId`) and passes it down.
+- (2026-06-05) **Three `tenant-creation.ts` copies** — only
+  `ee/server/src/lib/testing/tenant-creation.ts` is the live path (what
+  `server/scripts/create-tenant.ts` imports). `packages/ee/src/lib/testing/…` is
+  the CE stub (throws). No parallel edit needed.
+- (2026-06-05) No caller breakage: the change is additive-optional;
+  `tenant-test-factory.ts` (the only other `createTenantComplete` consumer) is
+  unaffected. Other `createTenant(` matches are unrelated functions (temporal
+  activities, server test-utils).
+- (2026-06-05) **Not committed** — these two files also carry the user's licval
+  WIP (password seam). Left uncommitted in the working tree to avoid committing
+  in-flight work; appliance changes (steps 2+4) commit together when the user is
+  ready. F053 (bootstrap passes the redeemed id) + full typecheck land in step 4.
+- (2026-06-05) T007/T008 reclassified AUTO→SMOKE: exercising `createTenant`'s id
+  adoption needs the full alga-psa `tenants`/`clients` schema (heavy), so it's
+  validated in the live install loop, not a unit DB.
+
 ## Commands / Runbooks
 
 - (2026-06-05) **alga-license migration/db tests:** run against a throwaway

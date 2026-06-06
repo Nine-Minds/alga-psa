@@ -61,7 +61,7 @@
   },
   {
     "id": "T007",
-    "description": "[AUTO] createTenant honors INITIAL_TENANT_ID: with tenantId set, the tenants row uses that exact UUID; with it unset, a DB-generated UUID is used (no regression).",
+    "description": "[SMOKE] createTenant honors INITIAL_TENANT_ID: with tenantId set, the tenants row uses that exact UUID; with it unset, a DB-generated UUID is used (no regression). (needs the full alga-psa tenants schema; validated in the live install loop rather than a unit DB.)",
     "implemented": false,
     "featureIds": [
       "F050",
@@ -71,7 +71,7 @@
   },
   {
     "id": "T008",
-    "description": "[AUTO] Idempotent install: rerunning create-tenant with the same INITIAL_TENANT_ID does not create a duplicate tenant or admin user.",
+    "description": "[SMOKE] Idempotent install: rerunning create-tenant with the same INITIAL_TENANT_ID does not create a duplicate tenant or admin user. (needs the full alga-psa tenants schema; validated in the live install loop rather than a unit DB.)",
     "implemented": false,
     "featureIds": [
       "F055"

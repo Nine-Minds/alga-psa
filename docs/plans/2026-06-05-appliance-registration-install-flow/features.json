@@ -219,7 +219,7 @@
   {
     "id": "F050",
     "description": "createTenant (tenant-creation.ts) accepts optional tenantId; when set, tenantInsert.tenant = input.tenantId instead of relying on the gen_random_uuid() default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -227,7 +227,7 @@
   {
     "id": "F051",
     "description": "Thread tenantId through createTenantComplete (TenantCreationInput) down to createTenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -235,7 +235,7 @@
   {
     "id": "F052",
     "description": "server/scripts/create-tenant.ts reads INITIAL_TENANT_ID (env + optional arg) and passes it into createTenantComplete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -251,7 +251,7 @@
   {
     "id": "F054",
     "description": "INITIAL_TENANT_ID unset \u2192 unchanged DB-generated UUID behavior (additive/safe, no regression for non-registry installs).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -259,7 +259,7 @@
   {
     "id": "F055",
     "description": "Idempotent install: rerunning create-tenant with the same INITIAL_TENANT_ID no-ops rather than duplicating the tenant/admin (admin-user create already guards on (email, tenant)).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9",
       "13"
