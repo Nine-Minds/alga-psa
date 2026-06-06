@@ -231,5 +231,14 @@
     "featureIds": [
       "F077"
     ]
+  },
+  {
+    "id": "T026",
+    "description": "[AUTO] applianceRegistration (vitest, deps injectable): registerApplianceAndEmail registers then emails + merges emailSent; reissueApplianceAndEmail; sendInstallCodeEmail skips w/o RESEND_API_KEY and POSTs to Resend w/ Bearer when set. Typecheck-clean; runs in CI (this env's vitest has a strip-literal gap + server-only blocks tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F073",
+      "F077"
+    ]
   }
 ]

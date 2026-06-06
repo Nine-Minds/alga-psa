@@ -341,7 +341,7 @@
   {
     "id": "F070",
     "description": "nm-store: registration form collects company, contact name/email, edition (and product_code) for an appliance registration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10",
       "4"
@@ -350,7 +350,7 @@
   {
     "id": "F071",
     "description": "nm-store: registration submit calls alga-license POST /register-tenant (service-authed) and handles the response.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10"
     ]
@@ -358,7 +358,7 @@
   {
     "id": "F072",
     "description": "nm-store: confirmation page shows the install code (the presigned download link is delivered by email).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10"
     ]
@@ -366,7 +366,7 @@
   {
     "id": "F073",
     "description": "nm-store: email the install code + presigned download link to the contact after registration/purchase (primary delivery of the download link).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10",
       "11"
@@ -375,7 +375,7 @@
   {
     "id": "F074",
     "description": "nm-store: paid tier \u2014 Stripe checkout ordering (registry row at submit; entitlement + code mint on checkout.session.completed).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10",
       "16"
@@ -384,7 +384,7 @@
   {
     "id": "F075",
     "description": "nm-store: portal 're-issue install code' action (behind portal auth) calls POST /install-codes/reissue and shows the fresh code + link.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "10",
       "5"

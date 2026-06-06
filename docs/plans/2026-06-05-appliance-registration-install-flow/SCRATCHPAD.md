@@ -240,11 +240,30 @@ new `INITIAL_TENANT_ID`.
   transport F071/F075 build on. Logic validated via a tsx harness (the repo's
   vitest can't run here — missing `strip-literal` in node_modules under Node 24; the
   `.test.ts` is correct and runs once that dep gap is fixed).
-- (2026-06-06) **STILL PENDING in nm-store (need product direction):** F070
-  registration form, F072 confirmation page, F073 confirmation email (template +
-  send), F074 Stripe SKU/ordering for the appliance product, F075 portal reissue
-  UI. These plug into nm-store's existing OrderForm/checkout/email and are
-  outward-facing — left for a deliberate pass, not autonomous edits.
+- (2026-06-06) **BUILT — commerce surface (decisions: SEPARATE route + essentials+paid),
+  branch `feat/appliance-registration-client` commit `ee53d0b0`, tsc clean:**
+  - `/order/appliance` registration form (client): essentials → direct register →
+    show code; paid (pro/premium) → embedded Stripe checkout. `/order/appliance/reissue`.
+  - `lib/appliance/applianceRegistration.ts`: `registerApplianceAndEmail`,
+    `reissueApplianceAndEmail`, `sendInstallCodeEmail` (Resend, reuses the
+    newsletter pattern), and **idempotent** `provisionApplianceFromCheckoutSession`
+    — nm-store has no DB, so it writes the minted `tenant_id`/`install_code` back
+    onto the **Stripe subscription metadata** and reuses them on thank-you refresh
+    (so a refresh never re-mints).
+  - `lib/appliance/applianceCheckout.ts`: embedded subscription checkout stamping
+    `deploymentType=appliance` + edition/contact into metadata, dedicated
+    `return_url=/order/appliance/thank-you`. **Hosted OrderForm/checkout/thank-you
+    untouched** (the separate-route choice).
+  - Checkout-complete is handled by the thank-you page (Stripe `return_url`), not a
+    webhook — so the appliance thank-you provisions on render.
+  - **Email is best-effort** (Resend): logs + returns `emailSent:false` if
+    `RESEND_API_KEY` unset; the code is always shown on-page too.
+- (2026-06-06) **nm-store env to set for PAID:**
+  `STRIPE_PRICE_ID_APPLIANCE_{PRO,PREMIUM}_{MONTHLY,YEARLY}` (+ optional
+  `..._USER_MONTHLY/YEARLY` per-user), `ALGA_LICENSE_SERVICE_URL`,
+  `ALGA_LICENSE_SERVICE_SECRET`, `RESEND_API_KEY`/`APPLIANCE_FROM_EMAIL`. Essentials
+  needs no Stripe price. Tests can't run here (repo vitest `strip-literal` gap +
+  `server-only` blocks tsx) — validated by tsc + the tsx client harness + smoke.
 - (2026-06-06) F076 operator doc written: `ee/appliance/docs/registration-install-flow.md`.
 - (2026-06-06) **F041 remains ops:** publish the current generic ISO to the
   object-store key the presigner targets (`APPLIANCE_ISO_KEY`), and wire the
