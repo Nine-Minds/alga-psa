@@ -177,7 +177,7 @@ describe('usePrintAction', () => {
 
 describe('PrintButton', () => {
   it('renders the default Print label and triggers a print on click', async () => {
-    render(<PrintButton />);
+    render(<PrintButton id="print-btn" />);
 
     const button = screen.getByRole('button', { name: 'Print' }) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
@@ -196,7 +196,7 @@ describe('PrintButton', () => {
       release = resolve;
     });
 
-    render(<PrintButton onBeforePrint={() => gate} />);
+    render(<PrintButton id="print-btn" onBeforePrint={() => gate} />);
     const button = screen.getByRole('button', { name: 'Print' }) as HTMLButtonElement;
 
     fireEvent.click(button);
@@ -215,7 +215,7 @@ describe('PrintButton', () => {
   });
 
   it('shows a count-aware label when items are selected', () => {
-    render(<PrintButton selectedCount={3} />);
+    render(<PrintButton id="print-btn" selectedCount={3} />);
     expect(screen.getByRole('button', { name: 'Print selected (3)' })).toBeTruthy();
   });
 });
