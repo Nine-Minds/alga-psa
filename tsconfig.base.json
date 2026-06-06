@@ -88,6 +88,8 @@
       "@alga-psa/block-content/*": ["packages/block-content/src/*"],
       "@alga-psa/formatting": ["packages/formatting/src"],
       "@alga-psa/formatting/*": ["packages/formatting/src/*"],
+      "@alga-psa/agent-tooling": ["packages/agent-tooling/src"],
+      "@alga-psa/agent-tooling/*": ["packages/agent-tooling/src/*"],
       "@alga-psa/documents": ["packages/documents/src"],
       "@alga-psa/documents/*": ["packages/documents/src/*"],
       "@alga-psa/storage": ["packages/storage/src"],

@@ -24,6 +24,7 @@
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
     "generate:proto": "mkdir -p ee/server/src/generated && protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=ee/server/src/generated --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false --proto_path=ee/server/protos workflow.proto",
+    "mcp:registry:generate": "node ee/scripts/generate-chat-registry.mjs",
     "dev": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false npx nx next:dev server",
     "dev:turbo": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false npx nx next:dev server -- --turbo",
     "build": "npm run build:assemblyscript && npx nx build-deps server && cd server && USE_PREBUILT=true EDITION=community NEXT_PUBLIC_EDITION=community npm run build:turbo",
