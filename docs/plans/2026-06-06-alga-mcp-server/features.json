@@ -188,7 +188,7 @@
   {
     "id": "F021",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 1 acceptance"
     ],

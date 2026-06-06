@@ -77,7 +77,7 @@
   {
     "id": "T009",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
@@ -108,7 +108,7 @@
   {
     "id": "T012",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],

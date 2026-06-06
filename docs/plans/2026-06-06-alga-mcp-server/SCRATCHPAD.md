@@ -96,3 +96,17 @@ Implement AlgaPSA as an MCP **server** in two transports: a free CE local stdio 
 - **next.config.mjs:** added `@alga-psa/agent-tooling` (+`/` subpath variant) in all three places, mirroring the source-transpiled `scheduling`/`formatting` packages exactly: turbopack `resolveAlias`, `transpilePackages`, and the webpack `config.resolve.alias` "Source-transpiled" block. This runtime alias is needed (unlike Group E) because the chat imports `searchRegistryEntries` as a runtime value. Verified the config still parses/loads (`node import()`); agent-tooling + connector tests still pass.
 - **⚠️ FINAL GATE I could NOT run in-session:** a full EE/CE Next build (`npm run build` / `npm run dev`) to confirm the webpack/turbopack alias resolves at build time. The edits mirror a known-working package precisely and the config parses, but a real build is the definitive check. **Surface this to the user.**
 - **T006 (chat regression) left implemented=false:** behavior is preserved by construction, but the live chat flow (LLM + server) wasn't exercised. Verify on a running dev server.
+
+### 2026-06-06 — Group G (F021, T009, T012): Phase 1 E2E
+- Added `e2e.test.ts`: a mock AlgaPSA HTTP instance + the **real** `InstanceClient` + the **real** MCP protocol (InMemory transport). Drives the full path: registry fetch → `search_api_registry` → `call_api_endpoint` → `GET /api/v1/tickets/{id}`, plus a 401 auth-failure case. 17 connector tests pass.
+- Covers T009 (real `/api/v1` dispatch + parsed result) and T012 (lists + reads a ticket). F021 acceptance is faithfully *simulated* (real HTTP + protocol); real Claude-Desktop verification is manual.
+
+## PHASE 1 STATUS — COMPLETE (pending live gates)
+**Done & committed (8 commits):** `agent-tooling` package (registry/search/request-build/tool-defs), `@alga-psa/mcp-connector` stdio bin, dual-edition registry generation + CE artifact, `GET /api/v1/meta/mcp-registry`, EE chat re-pointed onto the shared package. **21/21 Phase-1 features; 10/12 Phase-1 tests** (29 automated tests across the two packages all green).
+
+**Live gates I could NOT run in-session (surface to user):**
+1. **EE/CE Next build** (`npm run build` / `npm run dev`) — validates the Group D `next.config` alias resolves at build time. Edits mirror `scheduling`/`formatting` exactly; config parses; but a real build is the definitive check. (→ T006 chat regression + T007 endpoint auth ride on this.)
+2. **EE registry is stale** (609 vs 901) — run `npm run mcp:registry:generate`, review, commit separately.
+3. **Connector tenant header** — verify whether `/api/v1` needs `x-tenant-id` or resolves tenant from the API key (set `ALGA_TENANT_ID` if required).
+
+**Phases 2–3 (EE remote + governance) NOT started** — F022-F043. F022/F023 (Streamable HTTP transport + 3 tools, EE-gated) are implementable now (analogous to the connector). F024+ (OAuth 2.1, agent identity, ABAC, approval gates, quotas, SSO) need product decisions first: OAuth AS-vs-IdP strategy, and the deferred approval-over-request/response mechanism.
