@@ -70,6 +70,10 @@
       "markNotDone": "Als nicht erledigt markieren",
       "convertToTicket": "In Ticket umwandeln",
       "convertToTask": "In Projektaufgabe umwandeln"
+    },
+    "viewingUser": {
+      "label": "Anzeigen:",
+      "me": "Meine Aktivitäten"
     }
   },
   "card": {

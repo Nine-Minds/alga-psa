@@ -242,6 +242,12 @@ export interface ActivityFilters {
   sortBy?: ActivitySortBy;
   /** Sort direction for the sortBy column. Defaults to 'asc'. */
   sortDirection?: 'asc' | 'desc';
+  /**
+   * View another user's activities instead of the caller's own. Requires the caller to
+   * hold user_schedule:update or user_schedule:read_all (the same gate the schedule
+   * calendar uses to view other users' calendars). Ignored when equal to the caller.
+   */
+  targetUserId?: string;
 }
 
 /**

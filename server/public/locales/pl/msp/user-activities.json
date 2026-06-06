@@ -70,6 +70,10 @@
       "markNotDone": "Oznacz jako nieukończone",
       "convertToTicket": "Konwertuj na zgłoszenie",
       "convertToTask": "Konwertuj na zadanie projektu"
+    },
+    "viewingUser": {
+      "label": "Wyświetlanie:",
+      "me": "Moje aktywności"
     }
   },
   "card": {

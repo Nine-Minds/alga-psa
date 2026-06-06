@@ -16,7 +16,7 @@ import {
   workflowTaskToActivity,
 } from '@alga-psa/types';
 import { getAllScheduleEntries } from '@alga-psa/core';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
 
@@ -140,6 +140,39 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
 }
 
 /**
+ * Resolve whose activities to fetch. Defaults to the caller; when filters.targetUserId
+ * names another internal user, require the same gate the schedule calendar uses to view
+ * other users' calendars (user_schedule:update or user_schedule:read_all).
+ */
+async function resolveActivityTarget(
+  user: any,
+  tenantId: string,
+  targetUserId?: string
+): Promise<{ userId: string; viewingOther: boolean }> {
+  if (!targetUserId || targetUserId === user.user_id) {
+    return { userId: user.user_id, viewingOther: false };
+  }
+
+  const { knex, tenant } = await createTenantKnex(tenantId);
+  const [canUpdate, canReadAll] = await Promise.all([
+    hasPermission(user, 'user_schedule', 'update', knex),
+    hasPermission(user, 'user_schedule', 'read_all', knex),
+  ]);
+  if (!canUpdate && !canReadAll) {
+    throw new Error("Permission denied: cannot view another user's activities");
+  }
+
+  const target = await knex('users')
+    .where({ tenant, user_id: targetUserId, user_type: 'internal' })
+    .first();
+  if (!target) {
+    throw new Error('User not found');
+  }
+
+  return { userId: targetUserId, viewingOther: true };
+}
+
+/**
  * Fetch all activities for a user with optional filters and pagination
  */
 export const fetchUserActivities = withAuth(async (
@@ -151,38 +184,50 @@ export const fetchUserActivities = withAuth(async (
 ): Promise<ActivityResponse> => {
   const tenantId: string = tenant;
 
+  // Determine whose activities to fetch (self, or another user if permitted).
+  const { userId: effectiveUserId, viewingOther } =
+    await resolveActivityTarget(user, tenantId, filters.targetUserId);
+
   // Fetch activities from different sources based on filters
   const activities: Activity[] = [];
   const promises: Promise<Activity[]>[] = [];
 
   // Only fetch requested activity types or all if not specified
   // Note: An empty array is truthy, so we need to check length explicitly
-  const typesToFetch = filters.types && filters.types.length > 0
+  let typesToFetch = filters.types && filters.types.length > 0
     ? filters.types
     : Object.values(ActivityType);
 
+  // Notifications and time entries are personal; never expose them when viewing
+  // another user's activities.
+  if (viewingOther) {
+    typesToFetch = typesToFetch.filter(
+      (type) => type !== ActivityType.NOTIFICATION && type !== ActivityType.TIME_ENTRY
+    );
+  }
+
   if (typesToFetch.includes(ActivityType.SCHEDULE)) {
-    promises.push(fetchScheduleActivities(user.user_id, tenantId, filters));
+    promises.push(fetchScheduleActivities(effectiveUserId, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
-    promises.push(fetchProjectActivities(user.user_id, tenantId, filters));
+    promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.TICKET)) {
-    promises.push(fetchTicketActivities(user.user_id, tenantId, filters));
+    promises.push(fetchTicketActivities(effectiveUserId, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.TIME_ENTRY)) {
-    promises.push(fetchTimeEntryActivities(user.user_id, tenantId, filters));
+    promises.push(fetchTimeEntryActivities(effectiveUserId, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.WORKFLOW_TASK)) {
-    promises.push(fetchWorkflowTaskActivities(user.user_id, tenantId, filters));
+    promises.push(fetchWorkflowTaskActivities(effectiveUserId, tenantId, filters));
   }
 
   if (typesToFetch.includes(ActivityType.NOTIFICATION)) {
-    promises.push(fetchNotificationActivities(user.user_id, tenantId, filters));
+    promises.push(fetchNotificationActivities(effectiveUserId, tenantId, filters));
   }
 
   // Wait for all fetches to complete
@@ -209,12 +254,12 @@ export const fetchUserActivities = withAuth(async (
     pageNumber: page
   };
 
-  // Update cache key to include pagination
-  const cacheKey = `user-activities:${user.user_id}:${JSON.stringify(filters)}:page${page}:size${pageSize}`;
-  
+  // Update cache key to include pagination (keyed on whose activities these are)
+  const cacheKey = `user-activities:${effectiveUserId}:${JSON.stringify(filters)}:page${page}:size${pageSize}`;
+
   // Create tags for cache invalidation
   const tags = [
-    `user:${user.user_id}`,
+    `user:${effectiveUserId}`,
     ...typesToFetch.map(type => `type:${type}`)
   ];
   

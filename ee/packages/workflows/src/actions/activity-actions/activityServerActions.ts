@@ -12,6 +12,7 @@ import {
   WorkflowTaskActivity,
   NotificationActivity,
   scheduleEntryToActivity,
+  IUser,
   IUserWithRoles
 } from "@alga-psa/types";
 import type { Knex } from "knex";
@@ -406,8 +407,12 @@ export const createAdHocActivity = withAuth(async (
 });
 
 /**
- * Ensure the caller may modify the given ad-hoc entry: they must be an assignee,
- * or hold user_schedule:update to act on another user's entries.
+ * Ensure the caller may modify the given ad-hoc entry: they must be an assignee, or
+ * hold the "view/manage other users' schedule" capability (user_schedule:update or
+ * user_schedule:read_all) to act on another user's entries. This mirrors the gate used
+ * to view another user's activities, so a manager who can see a report's ad-hoc to-do
+ * can also mark it done or convert it (creating the ticket/task is separately gated by
+ * the relevant ticket:create / project_task:create permission).
  */
 async function assertCanModifyAdHoc(
   trx: Knex.Transaction,
@@ -419,8 +424,11 @@ async function assertCanModifyAdHoc(
     .where({ tenant, entry_id: entryId, user_id: user.user_id })
     .first();
   if (!isAssignee) {
-    const canManageOthers = await hasPermission(user, "user_schedule", "update", trx);
-    if (!canManageOthers) {
+    const [canUpdate, canReadAll] = await Promise.all([
+      hasPermission(user, "user_schedule", "update", trx),
+      hasPermission(user, "user_schedule", "read_all", trx),
+    ]);
+    if (!canUpdate && !canReadAll) {
       throw new Error("Permission denied: cannot modify another user's ad-hoc item");
     }
   }
@@ -600,4 +608,53 @@ export const deleteAdHocActivity = withAuth(async (
   });
 
   revalidatePath("/msp/user-activities");
+});
+
+export interface ActivityViewableUsersResult {
+  /** Whether the caller may view other users' activities at all. */
+  canViewOthers: boolean;
+  /** Internal users (excluding the caller) whose activities may be viewed. */
+  users: IUser[];
+}
+
+/**
+ * List the internal users whose activities the caller may view, and whether the caller has
+ * that capability at all. Gated by the same permission the schedule calendar uses to view
+ * other users' calendars (user_schedule:update or user_schedule:read_all). When the caller
+ * lacks it, returns canViewOthers=false and an empty list so the UI can hide the selector.
+ *
+ * Returns IUser-shaped rows (safe columns only) so the UI can render them with UserPicker,
+ * including avatars.
+ */
+export const getActivityViewableUsers = withAuth(async (
+  user,
+  { tenant }
+): Promise<ActivityViewableUsersResult> => {
+  const { knex } = await createTenantKnex(tenant);
+
+  const [canUpdate, canReadAll] = await Promise.all([
+    hasPermission(user, "user_schedule", "update", knex),
+    hasPermission(user, "user_schedule", "read_all", knex),
+  ]);
+  if (!canUpdate && !canReadAll) {
+    return { canViewOthers: false, users: [] };
+  }
+
+  // Select only non-sensitive columns (never hashed_password / two_factor_secret).
+  const rows = await knex("users")
+    .where({ tenant, user_type: "internal", is_inactive: false })
+    .whereNot({ user_id: user.user_id })
+    .orderBy([{ column: "first_name" }, { column: "last_name" }])
+    .select(
+      "user_id",
+      "first_name",
+      "last_name",
+      "email",
+      "username",
+      "user_type",
+      "is_inactive",
+      "tenant"
+    );
+
+  return { canViewOthers: true, users: rows as IUser[] };
 });

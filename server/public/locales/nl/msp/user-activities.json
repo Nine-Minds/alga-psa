@@ -70,6 +70,10 @@
       "markNotDone": "Markeren als niet voltooid",
       "convertToTicket": "Omzetten naar ticket",
       "convertToTask": "Omzetten naar projecttaak"
+    },
+    "viewingUser": {
+      "label": "Weergeven:",
+      "me": "Mijn activiteiten"
     }
   },
   "card": {
