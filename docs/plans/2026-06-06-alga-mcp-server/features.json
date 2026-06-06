@@ -1,47 +1,397 @@
 [
-  { "id": "F001", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Create packages/agent-tooling CE workspace package (build config, exports, added to npm workspaces)" },
-  { "id": "F002", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Move ChatApiRegistryEntry / registry schema types into agent-tooling (pure types)" },
-  { "id": "F003", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Move ranked search (searchRegistryEntries) into agent-tooling, dependency-free" },
-  { "id": "F004", "phase": 1, "implemented": true, "prdRefs": ["Phase 1"], "description": "Add request-building module: registry entry + args -> {method, path, query, headers, body} with path-param substitution and read/mutation classification" },
-  { "id": "F005", "phase": 1, "implemented": true, "prdRefs": ["Phase 1", "Tool surface"], "description": "Add the 3 meta-tool definition schemas (search_api_registry, search_business_data, call_api_endpoint) with edition-templated descriptions; drop finish_response" },
-  { "id": "F006", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Generalize registry generator to emit BOTH CE and EE registries from alga-openapi.ce.json / .ee.json" },
-  { "id": "F007", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Risks"], "description": "Re-point EE chat assistant (chatCompletionsService) to import registry/search/tool-defs from agent-tooling" },
-  { "id": "F008", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Keep temp-key-from-session dispatch in EE chat (not moved to the shared package); package exposes request-building only" },
-  { "id": "F009", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Add GET /api/v1/meta/mcp-registry returning the instance's edition registry (gzipped)" },
-  { "id": "F010", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Security"], "description": "Auth-guard the registry endpoint (requires valid API key; 401 without)" },
-  { "id": "F011", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Registry endpoint is edition-aware via isEnterpriseEdition() (serves CE or EE registry)" },
-  { "id": "F012", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Scaffold @alga/mcp-connector package: Node, @modelcontextprotocol/sdk StdioServerTransport, npx-runnable bin" },
-  { "id": "F013", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Connector config from ALGA_INSTANCE_URL + ALGA_API_TOKEN env vars; fail-fast with clear message if missing" },
-  { "id": "F014", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Connector startup: fetch registry from instance meta/mcp-registry, hold in memory; clear error on fetch failure" },
-  { "id": "F015", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Tool surface"], "description": "Implement search_api_registry tool -> in-memory ranked search over fetched registry" },
-  { "id": "F016", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Tool surface"], "description": "Implement search_business_data tool -> GET /api/v1/search with user token" },
-  { "id": "F017", "phase": 1, "implemented": false, "prdRefs": ["Phase 1", "Tool surface"], "description": "Implement call_api_endpoint tool -> build request from registry entry + send to /api/v1 with user token" },
-  { "id": "F018", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Map API failures (4xx/5xx) to structured MCP tool errors (not thrown) so the model can recover" },
-  { "id": "F019", "phase": 1, "implemented": false, "prdRefs": ["Phase 1"], "description": "Clear 401 handling instructing the user to reconfigure their token" },
-  { "id": "F020", "phase": 1, "implemented": false, "prdRefs": ["Primary flows"], "description": "README + MCP client config snippets for Claude Desktop and Cursor" },
-  { "id": "F021", "phase": 1, "implemented": false, "prdRefs": ["Phase 1 acceptance"], "description": "End-to-end: user drives AlgaPSA (list + read + simple mutation) from Claude Desktop under their own permissions" },
-
-  { "id": "F022", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Add /api/mcp Streamable HTTP endpoint via SDK StreamableHTTPServerTransport, EE-gated (no HTTP+SSE)" },
-  { "id": "F023", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Expose the 3 meta-tools over the remote transport reusing agent-tooling" },
-  { "id": "F024", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "OAuth 2.1 resource server: advertise .well-known/oauth-protected-resource metadata" },
-  { "id": "F025", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "OAuth 2.1 authorization-code + PKCE flow; AlgaPSA acts as / fronts the authorization server" },
-  { "id": "F026", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Dynamic Client Registration support for MCP clients" },
-  { "id": "F027", "phase": 2, "implemented": false, "prdRefs": ["Phase 2", "Architecture"], "description": "Extend AuthorizationSubject with agentId + subject type 'agent'" },
-  { "id": "F028", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Admin provisioning of agent identities per tenant (create/list/revoke)" },
-  { "id": "F029", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Resolve OAuth token -> agent subject per request" },
-  { "id": "F030", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Per-agent permission assignment reusing existing RBAC roles" },
-  { "id": "F031", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Remote dispatch through authz kernel under agent subject (reads auto-execute; mutations permission-gated)" },
-  { "id": "F032", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Audit every agent tool invocation to audit_logs (identity, tool, inputs, policy decision, result, timestamp)" },
-  { "id": "F033", "phase": 2, "implemented": false, "prdRefs": ["Phase 2"], "description": "Audit export of agent actions" },
-  { "id": "F034", "phase": 2, "implemented": false, "prdRefs": ["Phase 2 acceptance"], "description": "End-to-end: admin stands up remote server, client connects over OAuth, actions attributable + audited" },
-
-  { "id": "F035", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Add agent subject type to kernel bundle/narrowing policy evaluation (agent-specific ABAC)" },
-  { "id": "F036", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Policy authoring for agents (which tools / resources / conditions)" },
-  { "id": "F037", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Approval holding queue: data model + persistence for gated mutations" },
-  { "id": "F038", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Approve/reject UI for held agent actions" },
-  { "id": "F039", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Timeout policy for held approvals" },
-  { "id": "F040", "phase": 3, "implemented": false, "prdRefs": ["Phase 3", "Open questions"], "description": "DESIGN SPIKE (deferred): approval-resolution mechanism over Streamable HTTP request/response (pending_approval handle vs check_approval tool vs streamed result)" },
-  { "id": "F041", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "Per-agent and per-tenant quotas / rate limits extending enforceApiRateLimit; structured to feed metered usage later" },
-  { "id": "F042", "phase": 3, "implemented": false, "prdRefs": ["Phase 3"], "description": "SSO-bound agent identity via the tenant IdP" },
-  { "id": "F043", "phase": 3, "implemented": false, "prdRefs": ["Phase 3 acceptance"], "description": "End-to-end: policy restricts agent to read-only billing + requires approval for bulk ticket close + exportable audit trail" }
+  {
+    "id": "F001",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Create packages/agent-tooling CE workspace package (build config, exports, added to npm workspaces)"
+  },
+  {
+    "id": "F002",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Move ChatApiRegistryEntry / registry schema types into agent-tooling (pure types)"
+  },
+  {
+    "id": "F003",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Move ranked search (searchRegistryEntries) into agent-tooling, dependency-free"
+  },
+  {
+    "id": "F004",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Add request-building module: registry entry + args -> {method, path, query, headers, body} with path-param substitution and read/mutation classification"
+  },
+  {
+    "id": "F005",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1",
+      "Tool surface"
+    ],
+    "description": "Add the 3 meta-tool definition schemas (search_api_registry, search_business_data, call_api_endpoint) with edition-templated descriptions; drop finish_response"
+  },
+  {
+    "id": "F006",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Generalize registry generator to emit BOTH CE and EE registries from alga-openapi.ce.json / .ee.json"
+  },
+  {
+    "id": "F007",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1",
+      "Risks"
+    ],
+    "description": "Re-point EE chat assistant (chatCompletionsService) to import registry/search/tool-defs from agent-tooling"
+  },
+  {
+    "id": "F008",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Keep temp-key-from-session dispatch in EE chat (not moved to the shared package); package exposes request-building only"
+  },
+  {
+    "id": "F009",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Add GET /api/v1/meta/mcp-registry returning the instance's edition registry (gzipped)"
+  },
+  {
+    "id": "F010",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1",
+      "Security"
+    ],
+    "description": "Auth-guard the registry endpoint (requires valid API key; 401 without)"
+  },
+  {
+    "id": "F011",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Registry endpoint is edition-aware via isEnterpriseEdition() (serves CE or EE registry)"
+  },
+  {
+    "id": "F012",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Scaffold @alga/mcp-connector package: Node, @modelcontextprotocol/sdk StdioServerTransport, npx-runnable bin"
+  },
+  {
+    "id": "F013",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Connector config from ALGA_INSTANCE_URL + ALGA_API_TOKEN env vars; fail-fast with clear message if missing"
+  },
+  {
+    "id": "F014",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Connector startup: fetch registry from instance meta/mcp-registry, hold in memory; clear error on fetch failure"
+  },
+  {
+    "id": "F015",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1",
+      "Tool surface"
+    ],
+    "description": "Implement search_api_registry tool -> in-memory ranked search over fetched registry"
+  },
+  {
+    "id": "F016",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1",
+      "Tool surface"
+    ],
+    "description": "Implement search_business_data tool -> GET /api/v1/search with user token"
+  },
+  {
+    "id": "F017",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1",
+      "Tool surface"
+    ],
+    "description": "Implement call_api_endpoint tool -> build request from registry entry + send to /api/v1 with user token"
+  },
+  {
+    "id": "F018",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Map API failures (4xx/5xx) to structured MCP tool errors (not thrown) so the model can recover"
+  },
+  {
+    "id": "F019",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ],
+    "description": "Clear 401 handling instructing the user to reconfigure their token"
+  },
+  {
+    "id": "F020",
+    "phase": 1,
+    "implemented": true,
+    "prdRefs": [
+      "Primary flows"
+    ],
+    "description": "README + MCP client config snippets for Claude Desktop and Cursor"
+  },
+  {
+    "id": "F021",
+    "phase": 1,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 1 acceptance"
+    ],
+    "description": "End-to-end: user drives AlgaPSA (list + read + simple mutation) from Claude Desktop under their own permissions"
+  },
+  {
+    "id": "F022",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Add /api/mcp Streamable HTTP endpoint via SDK StreamableHTTPServerTransport, EE-gated (no HTTP+SSE)"
+  },
+  {
+    "id": "F023",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Expose the 3 meta-tools over the remote transport reusing agent-tooling"
+  },
+  {
+    "id": "F024",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "OAuth 2.1 resource server: advertise .well-known/oauth-protected-resource metadata"
+  },
+  {
+    "id": "F025",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "OAuth 2.1 authorization-code + PKCE flow; AlgaPSA acts as / fronts the authorization server"
+  },
+  {
+    "id": "F026",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Dynamic Client Registration support for MCP clients"
+  },
+  {
+    "id": "F027",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2",
+      "Architecture"
+    ],
+    "description": "Extend AuthorizationSubject with agentId + subject type 'agent'"
+  },
+  {
+    "id": "F028",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Admin provisioning of agent identities per tenant (create/list/revoke)"
+  },
+  {
+    "id": "F029",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Resolve OAuth token -> agent subject per request"
+  },
+  {
+    "id": "F030",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Per-agent permission assignment reusing existing RBAC roles"
+  },
+  {
+    "id": "F031",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Remote dispatch through authz kernel under agent subject (reads auto-execute; mutations permission-gated)"
+  },
+  {
+    "id": "F032",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Audit every agent tool invocation to audit_logs (identity, tool, inputs, policy decision, result, timestamp)"
+  },
+  {
+    "id": "F033",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2"
+    ],
+    "description": "Audit export of agent actions"
+  },
+  {
+    "id": "F034",
+    "phase": 2,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 2 acceptance"
+    ],
+    "description": "End-to-end: admin stands up remote server, client connects over OAuth, actions attributable + audited"
+  },
+  {
+    "id": "F035",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Add agent subject type to kernel bundle/narrowing policy evaluation (agent-specific ABAC)"
+  },
+  {
+    "id": "F036",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Policy authoring for agents (which tools / resources / conditions)"
+  },
+  {
+    "id": "F037",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Approval holding queue: data model + persistence for gated mutations"
+  },
+  {
+    "id": "F038",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Approve/reject UI for held agent actions"
+  },
+  {
+    "id": "F039",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Timeout policy for held approvals"
+  },
+  {
+    "id": "F040",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3",
+      "Open questions"
+    ],
+    "description": "DESIGN SPIKE (deferred): approval-resolution mechanism over Streamable HTTP request/response (pending_approval handle vs check_approval tool vs streamed result)"
+  },
+  {
+    "id": "F041",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "Per-agent and per-tenant quotas / rate limits extending enforceApiRateLimit; structured to feed metered usage later"
+  },
+  {
+    "id": "F042",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3"
+    ],
+    "description": "SSO-bound agent identity via the tenant IdP"
+  },
+  {
+    "id": "F043",
+    "phase": 3,
+    "implemented": false,
+    "prdRefs": [
+      "Phase 3 acceptance"
+    ],
+    "description": "End-to-end: policy restricts agent to read-only billing + requires approval for bulk ticket close + exportable audit trail"
+  }
 ]
