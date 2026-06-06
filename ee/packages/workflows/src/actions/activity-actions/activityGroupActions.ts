@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 
@@ -21,18 +21,41 @@ export interface ActivityGroupItem {
 }
 
 /**
- * Fetch all groups with their items for the current user.
+ * Fetch all groups with their items for a user.
+ * Defaults to the caller's own groups. When `targetUserId` names another internal
+ * user, return that user's groups instead — gated by the same permission used to view
+ * another user's activities (user_schedule:update or user_schedule:read_all), so the
+ * grouped view reflects the user currently being viewed.
  * Returns groups sorted by their sort_order, items sorted within each group.
  */
 export const getUserActivityGroups = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  targetUserId?: string
 ): Promise<ActivityGroup[]> => {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    let ownerUserId = user.user_id;
+    if (targetUserId && targetUserId !== user.user_id) {
+      const [canUpdate, canReadAll] = await Promise.all([
+        hasPermission(user, 'user_schedule', 'update', trx),
+        hasPermission(user, 'user_schedule', 'read_all', trx),
+      ]);
+      if (!canUpdate && !canReadAll) {
+        throw new Error("Permission denied: cannot view another user's groups");
+      }
+      const target = await trx('users')
+        .where({ tenant, user_id: targetUserId, user_type: 'internal' })
+        .first();
+      if (!target) {
+        throw new Error('User not found');
+      }
+      ownerUserId = targetUserId;
+    }
+
     const groups = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
+      .where({ tenant, user_id: ownerUserId })
       .orderBy('sort_order')
       .select('group_id', 'group_name', 'sort_order', 'is_collapsed');
 

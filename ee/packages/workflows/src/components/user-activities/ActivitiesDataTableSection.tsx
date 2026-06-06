@@ -221,18 +221,22 @@ function formatActivityPrintDate(dateString?: string): string {
   const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
   const [printActivities, setPrintActivities] = useState<Activity[] | null>(null);
 
+  // Groups belong to whoever is being viewed (self by default). Passing the
+  // selected user id makes the grouped view show that user's groups instead of
+  // the caller's. Depends on targetUserId so switching users reloads groups.
   const loadActivityGroups = useCallback(async (): Promise<ActivityGroup[]> => {
     try {
-      const groups = await getUserActivityGroups();
+      const groups = await getUserActivityGroups(targetUserId || undefined);
       setActivityGroups(groups);
       return groups;
     } catch (err) {
       console.error('Error loading activity groups:', err);
+      setActivityGroups([]);
       return [];
     }
-  }, []);
+  }, [targetUserId]);
 
-  // Load groups when grouped mode is active
+  // Load groups when grouped mode is active (and reload when the viewed user changes)
   useEffect(() => {
     if (listViewMode === 'grouped') {
       loadActivityGroups();
@@ -612,6 +616,7 @@ function formatActivityPrintDate(dateString?: string): string {
               await loadActivityGroups();
             }}
             onActionComplete={handleRefresh}
+            readOnly={viewingOther}
           />
         ) : (
           <ActivitiesDataTable

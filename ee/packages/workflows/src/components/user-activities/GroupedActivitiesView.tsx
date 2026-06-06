@@ -145,6 +145,13 @@ interface GroupedActivitiesViewProps {
   serverGroups: ActivityGroup[];
   onGroupsChange: () => Promise<void> | void;
   onActionComplete?: () => void;
+  /**
+   * When true, the groups belong to another user (the caller is viewing someone
+   * else's activities). Group structure is shown read-only: no add/rename/delete,
+   * no drag-to-reorder, and collapse is local-only. Group mutations would
+   * otherwise target the caller's own groups, which is not what's displayed.
+   */
+  readOnly?: boolean;
 }
 
 interface LocalGroup {
@@ -202,13 +209,15 @@ interface SortableActivityRowProps {
   activity: Activity;
   onActionComplete?: () => void;
   onOpenDrawer: (activity: Activity) => void;
+  readOnly?: boolean;
 }
 
-function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: SortableActivityRowProps) {
+function SortableActivityRow({ activity, onActionComplete, onOpenDrawer, readOnly = false }: SortableActivityRowProps) {
   const { t } = useTranslation('msp/user-activities');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `${activity.type}:${activity.id}`,
     data: { activity, type: 'activity' },
+    disabled: readOnly,
   });
 
   const style: React.CSSProperties = {
@@ -235,16 +244,20 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: Sorta
         aria-hidden="true"
       />
 
-      {/* Drag handle */}
-      <button
-        type="button"
-        className="cursor-grab active:cursor-grabbing flex-shrink-0 w-5 p-0.5 text-muted-foreground hover:text-foreground opacity-40 group-hover:opacity-100 transition-opacity"
-        {...attributes}
-        {...listeners}
-        aria-label={t('groupedView.ariaLabels.dragToReorder', { defaultValue: 'Drag to reorder' })}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {/* Drag handle (hidden when viewing another user's read-only groups) */}
+      {readOnly ? (
+        <span className="flex-shrink-0 w-5" aria-hidden="true" />
+      ) : (
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing flex-shrink-0 w-5 p-0.5 text-muted-foreground hover:text-foreground opacity-40 group-hover:opacity-100 transition-opacity"
+          {...attributes}
+          {...listeners}
+          aria-label={t('groupedView.ariaLabels.dragToReorder', { defaultValue: 'Drag to reorder' })}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Type column: icon only with tooltip */}
       <div
@@ -400,6 +413,7 @@ export function GroupedActivitiesView({
   serverGroups,
   onGroupsChange,
   onActionComplete,
+  readOnly = false,
 }: GroupedActivitiesViewProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
@@ -463,13 +477,16 @@ export function GroupedActivitiesView({
     setLocalGroups((prev) =>
       prev.map((g) => (g.groupId === group.groupId ? { ...g, isCollapsed: !g.isCollapsed } : g))
     );
+    // Viewing another user's groups: collapse is a local-only convenience; don't
+    // persist (it would write to the caller's own group rows).
+    if (readOnly) return;
     try {
       await updateActivityGroup(group.groupId, { isCollapsed: !group.isCollapsed });
     } catch (err) {
       console.error('Error updating group:', err);
       await onGroupsChange();
     }
-  }, [onGroupsChange]);
+  }, [onGroupsChange, readOnly]);
 
   const handleStartRename = (group: LocalGroup) => {
     setEditingGroupId(group.groupId);
@@ -492,11 +509,12 @@ export function GroupedActivitiesView({
 
   // -------- Drag and drop --------------------------------------------------
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
-    })
-  );
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 6 },
+  });
+  // No drag sensors in read-only mode — dragging another user's groups would
+  // persist against the caller's own groups.
+  const sensors = useSensors(...(readOnly ? [] : [pointerSensor]));
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id as string);
@@ -517,6 +535,8 @@ export function GroupedActivitiesView({
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveDragId(null);
+
+    if (readOnly) return;
 
     const { active, over } = event;
     if (!over) return;
@@ -639,7 +659,7 @@ export function GroupedActivitiesView({
         console.error('Error moving to group:', err);
       }
     }
-  }, [findContainer, localGroups, ungrouped, onGroupsChange]);
+  }, [findContainer, localGroups, ungrouped, onGroupsChange, readOnly]);
 
   // Custom collision detection: prefer pointer-within, fall back to rect.
   // Filter droppables so group drags only match group droppables and
@@ -691,7 +711,8 @@ export function GroupedActivitiesView({
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
-        {/* Toolbar */}
+        {/* Toolbar — group management is hidden when viewing another user's groups */}
+        {!readOnly && (
         <div className="flex items-center gap-2">
           {showNewGroupInput ? (
             <div className="flex items-center gap-2">
@@ -737,6 +758,7 @@ export function GroupedActivitiesView({
             </Button>
           )}
         </div>
+        )}
 
         {/* Column headers */}
         <GroupedViewColumnHeader
@@ -768,6 +790,7 @@ export function GroupedActivitiesView({
                 onDeleteGroup={handleDeleteGroup}
                 onOpenDrawer={handleOpenDrawer}
                 onActionComplete={onActionComplete}
+                readOnly={readOnly}
               />
             );
           })}
@@ -778,6 +801,7 @@ export function GroupedActivitiesView({
           activities={groupSortBy ? sortGroupActivities(ungrouped, groupSortBy, groupSortDirection) : ungrouped}
           onOpenDrawer={handleOpenDrawer}
           onActionComplete={onActionComplete}
+          readOnly={readOnly}
         />
       </div>
 
@@ -818,6 +842,7 @@ interface GroupSectionProps {
   onDeleteGroup: (groupId: string) => void;
   onOpenDrawer: (activity: Activity) => void;
   onActionComplete?: () => void;
+  readOnly?: boolean;
 }
 
 function GroupSection({
@@ -832,6 +857,7 @@ function GroupSection({
   onDeleteGroup,
   onOpenDrawer,
   onActionComplete,
+  readOnly = false,
 }: GroupSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const itemIds = useMemo(
@@ -852,6 +878,7 @@ function GroupSection({
   } = useSortable({
     id: `group:${group.groupId}`,
     data: { type: 'group', groupId: group.groupId },
+    disabled: readOnly,
   });
 
   const sectionStyle: React.CSSProperties = {
@@ -870,16 +897,18 @@ function GroupSection({
     >
       {/* Group header */}
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border">
-        {/* Group drag handle */}
-        <button
-          type="button"
-          className="cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 text-muted-foreground hover:text-foreground opacity-40 hover:opacity-100 transition-opacity"
-          {...attributes}
-          {...listeners}
-          aria-label={t('groupedView.ariaLabels.dragToReorderGroup', { defaultValue: 'Drag to reorder group' })}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+        {/* Group drag handle (hidden in read-only mode) */}
+        {!readOnly && (
+          <button
+            type="button"
+            className="cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 text-muted-foreground hover:text-foreground opacity-40 hover:opacity-100 transition-opacity"
+            {...attributes}
+            {...listeners}
+            aria-label={t('groupedView.ariaLabels.dragToReorderGroup', { defaultValue: 'Drag to reorder group' })}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onToggleCollapse(group)}
@@ -926,26 +955,30 @@ function GroupSection({
             <Badge variant="default" className="text-xs">
               {group.activities.length}
             </Badge>
-            <Button
-              id={`rename-group-${group.groupId}`}
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0"
-              onClick={() => onStartRename(group)}
-              aria-label={t('groupedView.ariaLabels.renameGroup', { defaultValue: 'Rename group' })}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              id={`delete-group-${group.groupId}`}
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-              onClick={() => onDeleteGroup(group.groupId)}
-              aria-label={t('groupedView.ariaLabels.deleteGroup', { defaultValue: 'Delete group' })}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {!readOnly && (
+              <>
+                <Button
+                  id={`rename-group-${group.groupId}`}
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={() => onStartRename(group)}
+                  aria-label={t('groupedView.ariaLabels.renameGroup', { defaultValue: 'Rename group' })}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  id={`delete-group-${group.groupId}`}
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                  onClick={() => onDeleteGroup(group.groupId)}
+                  aria-label={t('groupedView.ariaLabels.deleteGroup', { defaultValue: 'Delete group' })}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </>
         )}
       </div>
@@ -965,6 +998,7 @@ function GroupSection({
                   activity={activity}
                   onOpenDrawer={onOpenDrawer}
                   onActionComplete={onActionComplete}
+                  readOnly={readOnly}
                 />
               ))
             )}
@@ -983,9 +1017,10 @@ interface UngroupedSectionProps {
   activities: Activity[];
   onOpenDrawer: (activity: Activity) => void;
   onActionComplete?: () => void;
+  readOnly?: boolean;
 }
 
-function UngroupedSection({ activities, onOpenDrawer, onActionComplete }: UngroupedSectionProps) {
+function UngroupedSection({ activities, onOpenDrawer, onActionComplete, readOnly = false }: UngroupedSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const { value: collapsed, setValue: setCollapsed } = useUserPreference<boolean>(
     'activitiesUngroupedCollapsed',
@@ -1026,6 +1061,7 @@ function UngroupedSection({ activities, onOpenDrawer, onActionComplete }: Ungrou
                 activity={activity}
                 onOpenDrawer={onOpenDrawer}
                 onActionComplete={onActionComplete}
+                readOnly={readOnly}
               />
             ))
           )}
