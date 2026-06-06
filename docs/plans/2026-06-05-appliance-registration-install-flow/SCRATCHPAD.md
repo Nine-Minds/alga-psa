@@ -165,6 +165,40 @@ new `INITIAL_TENANT_ID`.
   current ISO to that key. Not wired here (ops); register-tenant returns an empty
   download_url until it is.
 
+## Build-step 4 — appliance setup integration (MAPPED; needs coordination, NOT yet built)
+
+- (2026-06-05) The redeem belongs in the **host-service** `setup-engine.mjs` (has
+  the form inputs + network egress; mints the in-cluster secrets), not the in-app
+  `connectAppliance` (which runs post-tenant). Seam: after `normalizeInitialTenant`,
+  if an install code is present, POST it to `ALGA_LICENSE_SERVICE_URL/register` →
+  capture `tenant_id` + `edition` (+ paid `first_jwt`/`appliance_credential`/
+  `check_in_url`), then:
+  - add `INITIAL_TENANT_ID` to the `appliance-initial-tenant` Secret
+    (`initialTenantSecretYaml`, ~line 429) → create-tenant adopts it (build-step 2);
+  - feed the `appliance-license-seed` Secret (`licenseSeedCmd`, ~line 1014:
+    `EDITION_CHOICE` + optional `LICENSE_TOKEN`).
+- (2026-06-05) **THREE reconciliation decisions block a clean edit** (all inside the
+  user's ACTIVE licval license-setup rework):
+  1. **UX:** the setup UI (`status-ui/app/setup/page.tsx`) already has
+     `editionChoice` (ee/ce) + a pasted `licenseKey`. Does the install code become
+     the primary path (overriding those), an added third option, or replace them?
+  2. **Taxonomy:** registry `edition = essentials|pro|premium` vs appliance
+     `editionChoice = ee|ce` + license tier `pro|premium`. Need a mapping
+     (essentials→ce? pro/premium→ee+token?).
+  3. **Connected seed:** `appliance_credential`/`check_in_url` are written today only
+     by in-app `connectAppliance`, not the seed Secret — install-time connected
+     licensing needs new seed plumbing in `packages/licensing/src/lib/license-state.ts`.
+- (2026-06-05) `setup-engine.mjs` + `status-ui/` are NOT in the uncommitted WIP
+  (safe to edit git-wise) but are conceptually the licval subsystem. F053/F060–F068
+  pend on the three decisions above.
+
+## Build-step 5 — nm-store (separate repo /home/robert/nm-store; outward-facing)
+
+- (2026-06-05) nm-store is local. Registration form + `/register-tenant` call +
+  confirmation/email + portal reissue (F070–F076) are independent of the appliance
+  WIP, but outward-facing (Stripe ordering + email) in a production marketing/store
+  site — wants a deliberate pass, not blind autonomous edits.
+
 ## Commands / Runbooks
 
 - (2026-06-05) **alga-license migration/db tests:** run against a throwaway
