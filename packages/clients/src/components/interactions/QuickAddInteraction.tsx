@@ -19,7 +19,7 @@ const TextEditor = dynamic<any>(() => import('@alga-psa/ui/editor').then((mod) =
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
-import { getInteractionById, getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import { getInteractionById, getAllClients, getAllContacts, getClientById } from '@alga-psa/clients/actions';
 import { addInteraction, updateInteraction, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
@@ -40,6 +40,7 @@ import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useOptionalClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import QuickAddContact from '../contacts/QuickAddContact';
+import MeetingAttendeesPicker, { type MeetingAttendee, type DefaultMeetingAttendee } from './MeetingAttendeesPicker';
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -92,8 +93,18 @@ export function QuickAddInteraction({
   const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [createTeamsMeeting, setCreateTeamsMeeting] = useState(false);
   const [isTeamsCapabilityLoading, setIsTeamsCapabilityLoading] = useState(false);
+  const [meetingAttendees, setMeetingAttendees] = useState<MeetingAttendee[]>([]);
+  const [clientDefaultEmail, setClientDefaultEmail] = useState<string | null>(null);
+  const [clientDefaultName, setClientDefaultName] = useState<string | null>(null);
+  const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
 
   const isEditMode = !!editingInteraction;
+
+  // Resolve the client/contact this new interaction is attached to (create mode only).
+  const meetingClientId = !isEditMode
+    ? (entityType === 'client' ? entityId : (clientId ?? null))
+    : null;
+  const meetingContactId = !isEditMode && entityType === 'contact' ? entityId : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
     [interactionTypes, typeId]
@@ -360,6 +371,82 @@ export function QuickAddInteraction({
     };
   }, [isOpen, isOnlineMeetingType, isEditMode, clientCrossFeature]);
 
+  // Load attendee options (internal users + contacts) only once the Teams meeting toggle is
+  // on (i.e. the attendee picker is actually shown) — avoids running the heavy getAllContacts()
+  // query every time the "Online Meeting" type is merely selected. The `hasLoadedAttendeeOptions`
+  // guard keeps it to a single fetch per dialog session.
+  useEffect(() => {
+    if (!isOpen || isEditMode || !isOnlineMeetingType || !createTeamsMeeting || hasLoadedAttendeeOptions) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [usersList, contactsList] = await Promise.all([
+          getAllUsersBasicAsync(false, 'internal'),
+          getAllContacts(),
+        ]);
+        if (cancelled) return;
+        setUsers(usersList);
+        setContacts(contactsList);
+        setHasLoadedAttendeeOptions(true);
+      } catch (error) {
+        console.error('Failed to load meeting attendee options:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditMode, isOnlineMeetingType, createTeamsMeeting, hasLoadedAttendeeOptions]);
+
+  // Resolve the attached client's default (location) email to prefill as an attendee.
+  useEffect(() => {
+    if (!isOpen || isEditMode || !isOnlineMeetingType || !createTeamsMeeting || !meetingClientId) {
+      setClientDefaultEmail(null);
+      setClientDefaultName(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const client = await getClientById(meetingClientId);
+        if (cancelled) return;
+        setClientDefaultEmail(client?.location_email ?? client?.email ?? null);
+        setClientDefaultName(client?.client_name ?? null);
+      } catch (error) {
+        console.error('Failed to load client default email:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditMode, isOnlineMeetingType, createTeamsMeeting, meetingClientId]);
+
+  // Prefill: the attached contact's email (as a contact chip) or the client location email.
+  const defaultAttendees = useMemo<DefaultMeetingAttendee[]>(() => {
+    if (meetingContactId) {
+      const contact = contacts.find((candidate) => candidate.contact_name_id === meetingContactId);
+      const email = contact?.email?.trim();
+      if (contact && email) {
+        return [{
+          emailAddress: email,
+          name: contact.full_name,
+          contactId: meetingContactId,
+          avatarUrl: contact.avatarUrl ?? null,
+        }];
+      }
+      return [];
+    }
+    if (clientDefaultEmail) {
+      return [{ emailAddress: clientDefaultEmail, name: clientDefaultName ?? undefined }];
+    }
+    return [];
+  }, [meetingContactId, contacts, clientDefaultEmail, clientDefaultName]);
+
   // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
   const getTotalDurationMinutes = (): number => {
     return clampDuration(durationHours, durationMinutes).totalMinutes;
@@ -546,7 +633,7 @@ export function QuickAddInteraction({
           endDateTime: endTime,
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
-          attendees: [],
+          attendees: meetingAttendees,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -589,6 +676,10 @@ export function QuickAddInteraction({
         setEndTimeError('');
         setTeamsMeetingCapability(null);
         setCreateTeamsMeeting(false);
+        setMeetingAttendees([]);
+        setClientDefaultEmail(null);
+        setClientDefaultName(null);
+        setHasLoadedAttendeeOptions(false);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -692,16 +783,29 @@ export function QuickAddInteraction({
                 />
 
                 {isOnlineMeetingType && !isEditMode && (
-                  <div className="rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                  <div className="space-y-3">
                     {canCreateTeamsMeeting ? (
-                      <Switch
-                        id={`${id}-create-teams-meeting-toggle`}
-                        checked={createTeamsMeeting}
-                        onCheckedChange={setCreateTeamsMeeting}
-                        label={t('interactions.quickAdd.teams.createToggle', {
-                          defaultValue: 'Create Teams meeting',
-                        })}
-                      />
+                      <>
+                        <Switch
+                          id={`${id}-create-teams-meeting-toggle`}
+                          checked={createTeamsMeeting}
+                          onCheckedChange={setCreateTeamsMeeting}
+                          label={t('interactions.quickAdd.teams.createToggle', {
+                            defaultValue: 'Create Teams meeting',
+                          })}
+                        />
+                        {createTeamsMeeting && (
+                          <MeetingAttendeesPicker
+                            id={`${id}-attendees`}
+                            users={users}
+                            contacts={contacts}
+                            clientId={meetingClientId}
+                            defaultAttendees={defaultAttendees}
+                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                            onAttendeesChange={setMeetingAttendees}
+                          />
+                        )}
+                      </>
                     ) : (
                       <p className="text-sm text-gray-600">
                         {isTeamsCapabilityLoading

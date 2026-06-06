@@ -28,7 +28,7 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, scheduleTeamsMeeting } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -513,19 +513,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     await fetchEvents();
   };
 
-  const handleEntryPopupSave = async (entryData: IScheduleEntry & {
-    generate_teams_meeting?: boolean;
-    teams_meeting_client_id?: string | null;
-    teams_meeting_contact_name_id?: string | null;
-  }) => {
+  const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
     try {
       console.log('Saving entry:', entryData);
-      const {
-        generate_teams_meeting,
-        teams_meeting_client_id,
-        teams_meeting_contact_name_id,
-        ...scheduleEntryData
-      } = entryData;
+      const scheduleEntryData = entryData;
       let updatedEntry;
       if (selectedEvent) {
         const entryToUpdate = {
@@ -549,39 +540,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
           return;
         }
       } else {
-        if (generate_teams_meeting) {
-          const result = await scheduleTeamsMeeting({
-            subject: scheduleEntryData.title,
-            startDateTime: scheduleEntryData.scheduled_start,
-            endDateTime: scheduleEntryData.scheduled_end,
-            client_id: teams_meeting_client_id ?? null,
-            contact_name_id: teams_meeting_contact_name_id ?? null,
-            ticket_id: scheduleEntryData.work_item_type === 'ticket' ? scheduleEntryData.work_item_id : null,
-            createScheduleEntry: true,
-            assignedUserIds: scheduleEntryData.assigned_user_ids,
-            scheduleEntry: {
-              title: scheduleEntryData.title,
-              notes: scheduleEntryData.notes,
-              assignedUserIds: scheduleEntryData.assigned_user_ids,
-              isPrivate: scheduleEntryData.is_private,
-            },
-          });
-          if (result.success) {
-            await fetchEvents();
-            setShowEntryPopup(false);
-            setSelectedEvent(null);
-            setSelectedSlot(null);
-            return;
-          }
-
-          console.error('Failed to create Teams schedule entry:', result.error);
-          alert(t('calendar.errors.createTeamsMeetingFailed', {
-            defaultValue: 'Failed to create Teams meeting: {{error}}',
-            error: result.error,
-          }));
-          return;
-        }
-
         const result = await addScheduleEntry({
           ...scheduleEntryData,
           recurrence_pattern: scheduleEntryData.recurrence_pattern || null,

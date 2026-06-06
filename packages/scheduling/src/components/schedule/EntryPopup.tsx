@@ -48,9 +48,6 @@ interface EntryPopupProps {
   onClose: () => void;
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'> & {
     updateType?: string;
-    generate_teams_meeting?: boolean;
-    teams_meeting_client_id?: string | null;
-    teams_meeting_contact_name_id?: string | null;
   }) => void;
   onDelete?: (entryId: string, deleteType?: IEditScope) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   canAssignMultipleAgents: boolean;
@@ -214,21 +211,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           setAppointmentRequestData(null);
         }
     } else {
+        // Non-appointment entries no longer offer ad-hoc Teams meeting creation
+        // (meetings are created as interactions, not schedule entries).
         setIsAppointmentRequest(false);
         setAppointmentRequestData(null);
-        if (!event) {
-          try {
-            const capability = await getTeamsMeetingCapability();
-            setTeamsMeetingCapability(capability);
-          } catch (error) {
-            console.error('Failed to load Teams meeting capability:', error);
-            setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
-          }
-          setGenerateTeamsMeeting(false);
-        } else {
-          setTeamsMeetingCapability(null);
-          setGenerateTeamsMeeting(false);
-        }
+        setTeamsMeetingCapability(null);
+        setGenerateTeamsMeeting(false);
       }
     };
 
@@ -673,21 +661,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       }));
     }
 
-    const selectedWorkItemClientId = (selectedWorkItem as IExtendedWorkItem | null)?.client_id ?? null;
-    const selectedWorkItemContactNameId = (selectedWorkItem as IExtendedWorkItem | null)?.entity_type === 'contact'
-      ? ((selectedWorkItem as IExtendedWorkItem | null)?.entity_id ?? null)
-      : null;
-    const shouldGenerateTeamsForEntry = !event
-      && !isAppointmentRequest
-      && Boolean(teamsMeetingCapability?.available)
-      && generateTeamsMeeting;
-
-    if (shouldGenerateTeamsForEntry && !selectedWorkItemClientId && !selectedWorkItemContactNameId) {
-      errors.push(t('entryPopup.validation.teamsMeetingClientRequired', {
-        defaultValue: 'Select a client-backed work item before generating a Teams meeting',
-      }));
-    }
-    
     // Validate dates
     const startDate = new Date(entryData.scheduled_start);
     const endDate = new Date(entryData.scheduled_end);
@@ -759,9 +732,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],
-      generate_teams_meeting: shouldGenerateTeamsForEntry,
-      teams_meeting_client_id: shouldGenerateTeamsForEntry ? selectedWorkItemClientId : null,
-      teams_meeting_contact_name_id: shouldGenerateTeamsForEntry ? selectedWorkItemContactNameId : null,
     };
 
     // Show recurrence options only for existing recurring events
@@ -1289,26 +1259,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
-          {!event && !isAppointmentRequest && teamsMeetingCapability?.available && (
-            <div className="rounded border border-gray-200 bg-gray-50 p-3 space-y-2">
-              <Switch
-                id="generate-teams-meeting-schedule-entry-popup"
-                checked={generateTeamsMeeting}
-                onCheckedChange={setGenerateTeamsMeeting}
-                label={t('entryPopup.fields.generateTeamsMeeting', {
-                  defaultValue: 'Generate Teams meeting',
-                })}
-                disabled={!canEditFields}
-              />
-              {generateTeamsMeeting && !((selectedWorkItem as IExtendedWorkItem | null)?.client_id) && (
-                <p className="text-sm text-gray-600">
-                  {t('entryPopup.fields.generateTeamsMeetingRequiresClient', {
-                    defaultValue: 'Select a client-backed work item to create the meeting interaction.',
-                  })}
-                </p>
-              )}
-            </div>
-          )}
         </div>
         <div className="space-y-4">
           <div className="relative z-10">
