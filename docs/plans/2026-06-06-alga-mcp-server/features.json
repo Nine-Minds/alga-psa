@@ -219,7 +219,7 @@
     "prdRefs": [
       "Phase 2"
     ],
-    "description": "OAuth 2.1 resource server: advertise .well-known/oauth-protected-resource metadata"
+    "description": "Serve /.well-known/oauth-protected-resource (RFC 9728) advertising the tenant IdP as authorization_servers; 401 + WWW-Authenticate resource_metadata"
   },
   {
     "id": "F025",
@@ -228,7 +228,7 @@
     "prdRefs": [
       "Phase 2"
     ],
-    "description": "OAuth 2.1 authorization-code + PKCE flow; AlgaPSA acts as / fronts the authorization server"
+    "description": "Validate IdP-issued bearer tokens (issuer/audience/resource-indicator/JWKS signature); map client/sub claim -> agent. No Alga authorization server"
   },
   {
     "id": "F026",
@@ -237,7 +237,7 @@
     "prdRefs": [
       "Phase 2"
     ],
-    "description": "Dynamic Client Registration support for MCP clients"
+    "description": "(DROPPED) Dynamic Client Registration \u2014 spec downgraded to optional; with IdP delegation, client registration happens at the tenant IdP, not Alga"
   },
   {
     "id": "F027",
@@ -378,12 +378,12 @@
   },
   {
     "id": "F042",
-    "phase": 3,
+    "phase": 2,
     "implemented": false,
     "prdRefs": [
       "Phase 3"
     ],
-    "description": "SSO-bound agent identity via the tenant IdP"
+    "description": "(Phase 2 CORE) SSO-bound agent identity: agents.idp_subject binds an agent to a tenant-IdP client/subject \u2014 this IS the remote auth mechanism"
   },
   {
     "id": "F043",

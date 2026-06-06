@@ -134,6 +134,55 @@ Rationale: "run it yourself on your workstation = free; a networked server many 
 
 ## 9. Open questions for implementation
 
-- Exact shape of the approval-gate resolution over Streamable HTTP (Phase 3).
+- ~~AlgaPSA-as-authorization-server vs. delegating to tenant IdP~~ → **RESOLVED in §10: delegate to tenant IdP.**
+- ~~Approval-gate resolution mechanism~~ → **RESOLVED in §10: pending-handle + `check_approval` poll (Phase 3).**
 - Whether `search_business_data` ACL semantics via `/api/v1/search` exactly match the chat assistant's internal ACL path, or need reconciliation.
-- AlgaPSA-as-authorization-server vs. delegating to tenant IdP for the OAuth 2.1 flow (Phase 2 vs. SSO-bound identity in Phase 3).
+
+## 10. Phase 2 design addendum — remote server, identity & auth (decided 2026-06-06)
+
+Grounded in the current MCP authorization spec (2025-11 revision): an MCP server is an **OAuth 2.1 resource server only** — it validates bearer tokens from a separate authorization server, MUST serve Protected Resource Metadata (RFC 9728), and clients bind tokens to the resource via Resource Indicators (RFC 8707). Alga has **no** authorization server today (NextAuth relying-party only).
+
+### 10.1 Decisions
+1. **OAuth = delegate to the tenant IdP.** The MCP server is purely a **resource server**. Token issuance is the tenant's existing IdP (Entra / Google / Keycloak — the same providers EE SSO already integrates). Alga validates tokens (issuer + audience + resource indicator + signature via the IdP's JWKS) and maps the token's client/subject claim to an Alga agent. **No Alga-as-AS.**
+   - **Accepted constraint:** a remote MCP server therefore *requires the tenant to have an IdP*. A bare appliance with no IdP cannot run the remote server (it can still run the free local connector). Document this prominently; offer Keycloak as the appliance IdP option.
+   - This pulls **"SSO-bound agent identity" (was Phase 3 / F042) into the Phase 2 core** — the IdP binding *is* how agents authenticate.
+2. **Agent identity = first-class `agents` table.** A real principal, not an api-key alias.
+3. **Approval over MCP = pending-handle + `check_approval` tool (poll)** — Phase 3; decouples the Alga-admin approver from the agent; robust on all clients.
+
+### 10.2 Auth flow (resource-server)
+```
+MCP client → GET /api/mcp (no token)
+         ← 401 + WWW-Authenticate: resource_metadata="…/.well-known/oauth-protected-resource"
+MCP client → reads PRM → authorization_servers = [tenant IdP]
+         → obtains token from the IdP (client-credentials / service principal for a machine agent),
+           with resource indicator = the Alga MCP resource URL
+MCP client → GET /api/mcp  (Authorization: Bearer <IdP JWT>)
+Alga MCP   → validate: issuer ∈ tenant's configured IdPs, aud/resource = this server,
+             signature via cached JWKS, not expired
+         → extract client_id / sub claim → look up agents.idp_subject → agent principal
+         → build AuthorizationSubject{ agentId, subjectType:'agent', tenant, … }
+         → dispatch through the existing authz kernel → /api/v1; audit every call
+```
+
+### 10.3 Agent identity model
+- **`agents` table** (per tenant): `agent_id` (uuid PK), `tenant`, `name`, `description`, `active`, `created_by`, `created_at`, plus the **IdP binding**: `idp_issuer`, `idp_subject` (the `sub`/`azp`/`client_id` claim that identifies this agent in the tenant IdP). Unique on `(tenant, idp_issuer, idp_subject)`.
+- **Credentials:** primary path is the IdP token (above). Optionally, an Alga-issued agent credential reuses `api_keys` with a new nullable `agent_id` (and `user_id` made nullable for agent keys) — useful for non-OAuth/dev access and to let the *local connector* act as a registered agent later. Not required for the IdP path.
+- **`AuthorizationSubject`** gains `agentId?: string` and `subjectType?: 'user' | 'agent'` (default `'user'`). `buildAuthorizationPrincipalSubject` grows an **agent branch**: given a resolved agent, assemble a subject with the agent's assigned roles/permissions (Phase 2 reuses RBAC roles; Phase 3 adds agent-specific ABAC bundles).
+- **Authz kernel unchanged** — it already evaluates whatever subject it's handed; we only teach the *subject builder* about agents.
+
+### 10.4 Reuse map (minimal new surface)
+- **Transport:** SDK `StreamableHTTPServerTransport`, single `/api/mcp` route, EE-gated via `isEnterpriseEdition()`. Tool handlers reuse the connector's `search/call` logic but dispatch **in-process through the kernel** (not HTTP-to-self) under the agent subject.
+- **JWKS/JWT validation:** reuse `@auth/core/jwt` + `getSecretProviderInstance`; cache JWKS per IdP. IdP config reuses EE `providerConfig` / `ssoProviders` (per-tenant).
+- **Audit:** reuse `auditLog()` / `audit_logs` — one row per tool invocation (agent_id, tool, inputs, decision, result, ts).
+- **Rate limiting:** reuse `enforceApiRateLimit` with `rateLimitSubjectId = agent_id`.
+- **Registry:** the EE registry already served by `GET /api/v1/meta/mcp-registry` (Phase 1).
+
+### 10.5 Revised feature interpretation (Phase 2)
+- **F024 (PRM):** serve `/.well-known/oauth-protected-resource` advertising the tenant's IdP as the `authorization_servers`. (Core.)
+- **F025 (token flow):** **validate IdP tokens** (issuer/aud/resource/JWKS), not run an Alga auth-code+PKCE flow. (Re-scoped.)
+- **F026 (DCR):** **dropped/deferred** — DCR is downgraded to optional in the spec, and with IdP delegation client registration happens at the IdP, not Alga.
+- **F042 (SSO-bound identity):** **pulled into Phase 2 core** (it's the auth mechanism), not a Phase-3 add-on.
+- **F027-F033** (agent subject, provisioning, mapping, per-agent RBAC, kernel dispatch, audit, export) unchanged in intent.
+
+### 10.6 What still needs live infra / can't be unit-tested here
+- A real tenant IdP for the full token round-trip. Unit-testable now: JWKS signature validation (mock JWKS), claim→agent mapping, the `agents` migration + subject builder, EE-gating. End-to-end needs a live IdP (or a mock OAuth server in integration tests).
