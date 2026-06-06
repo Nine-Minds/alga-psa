@@ -1,0 +1,116 @@
+[
+  {
+    "id": "T001",
+    "description": "[AUTO] Migration up: claim_codes.entitlement_id is nullable and claim_codes.tenant_id (uuid, FK→tenant_registry, indexed) exists; down reverts cleanly. Run against a throwaway postgres (gated on DB_HOST; DELETE not TRUNCATE for the least-priv role).",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "[AUTO] db round-trip: insertClaimCode with tenant_id and null entitlement_id persists; getClaimCode returns tenant_id + nullable entitlement_id.",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T003",
+    "description": "[AUTO] /register essentials: a code with null entitlement_id returns 200 with tenant_id + edition + company/contact and NO first_jwt/credential; an appliance row is upserted with the tenant_id and no token.",
+    "implemented": false,
+    "featureIds": ["F010", "F012", "F013", "F015"]
+  },
+  {
+    "id": "T004",
+    "description": "[AUTO] /register paid: a code with an entitlement returns a license whose decoded aud == the registry-minted tenant_id (not a body-supplied value), plus appliance_credential + check_in_url.",
+    "implemented": false,
+    "featureIds": ["F010", "F014", "F015"]
+  },
+  {
+    "id": "T005",
+    "description": "[AUTO] /register sets the registry row to status='installed' + installed_at on success.",
+    "implemented": false,
+    "featureIds": ["F016", "F007"]
+  },
+  {
+    "id": "T006",
+    "description": "[AUTO] reissue: revokeClaimCodesForTenant invalidates prior unconsumed codes and a fresh code is minted for the SAME tenant_id; the old code then fails /register as consumed/invalid.",
+    "implemented": false,
+    "featureIds": ["F006", "F030", "F031", "F032", "F033"]
+  },
+  {
+    "id": "T007",
+    "description": "[AUTO] createTenant honors INITIAL_TENANT_ID: with tenantId set, the tenants row uses that exact UUID; with it unset, a DB-generated UUID is used (no regression).",
+    "implemented": false,
+    "featureIds": ["F050", "F051", "F054"]
+  },
+  {
+    "id": "T008",
+    "description": "[AUTO] Idempotent install: rerunning create-tenant with the same INITIAL_TENANT_ID does not create a duplicate tenant or admin user.",
+    "implemented": false,
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T010",
+    "description": "[SMOKE] /register-tenant (essentials) on the live service returns tenant_id + install_code + download_url and creates a tenant_registry row at status='registered'.",
+    "implemented": false,
+    "featureIds": ["F020", "F021", "F023", "F024"]
+  },
+  {
+    "id": "T011",
+    "description": "[SMOKE] The presigned download_url fetches the current generic ISO; an expired URL is rejected by the object store.",
+    "implemented": false,
+    "featureIds": ["F024", "F040", "F041", "F042"]
+  },
+  {
+    "id": "T012",
+    "description": "[SMOKE] Full essentials loop on the appliance VM: register → download → setup UI (enter install code + admin password) → appliance boots under the minted tenant_id at edition=essentials, license_state seeded (no token), registry flips to installed. Admin can log in with the set password.",
+    "implemented": false,
+    "featureIds": ["F052", "F053", "F060", "F061", "F062", "F063", "F064", "F066"]
+  },
+  {
+    "id": "T013",
+    "description": "[SMOKE] Full paid loop: register + Stripe checkout → install → appliance shows licensed at the purchased tier, license bound (aud=tenant_id), license_state holds token/credential/check_in_url.",
+    "implemented": false,
+    "featureIds": ["F022", "F065", "F074"]
+  },
+  {
+    "id": "T014",
+    "description": "[SMOKE] Reinstall recovery: wipe the appliance → portal re-issue install code → reinstall → the appliance comes back under the SAME tenant_id.",
+    "implemented": false,
+    "featureIds": ["F063", "F075", "F031"]
+  },
+  {
+    "id": "T015",
+    "description": "[SMOKE] A consumed (already-used) code entered at setup shows a clear error pointing to portal re-issue.",
+    "implemented": false,
+    "featureIds": ["F067"]
+  },
+  {
+    "id": "T016",
+    "description": "[SMOKE] With alga-license unreachable, setup blocks redeem with a clear 'license service unreachable' message rather than silently generating a local tenant.",
+    "implemented": false,
+    "featureIds": ["F068"]
+  },
+  {
+    "id": "T017",
+    "description": "[SMOKE] nm-store registration form submits → confirmation page shows the install code + download link, and the confirmation email arrives with both.",
+    "implemented": false,
+    "featureIds": ["F070", "F071", "F072", "F073"]
+  },
+  {
+    "id": "T018",
+    "description": "[SMOKE] nm-store portal 're-issue install code' action (authed) returns a fresh code + link for an existing tenant resolved by email.",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
+  {
+    "id": "T019",
+    "description": "[SMOKE] Legacy/non-registry path: an appliance installed with INITIAL_TENANT_ID unset still creates its own tenant and (if applicable) registers/licenses via the body tenant_id fallback, unchanged.",
+    "implemented": false,
+    "featureIds": ["F011", "F054"]
+  },
+  {
+    "id": "T020",
+    "description": "[SMOKE] Paid /check-in after install rolls the token forward and preserves aud=tenant_id across the re-sign.",
+    "implemented": false,
+    "featureIds": ["F014", "F065"]
+  }
+]

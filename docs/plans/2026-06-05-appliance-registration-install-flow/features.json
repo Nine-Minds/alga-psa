@@ -1,0 +1,290 @@
+[
+  {
+    "id": "F001",
+    "description": "PRECONDITION (already in working tree as licval WIP, verification-only — do NOT rebuild): admin password is set at install. server/scripts/create-tenant.ts reads INITIAL_ADMIN_PASSWORD (and args.password) and threads it through createTenantComplete → createAdminUser, which uses input.password ?? generateSecurePassword() (ee/server/src/lib/testing/tenant-creation.ts). create-tenant.ts also initializes tenant_settings (onboarding pending) and honors DB_HOST/DB_PORT/DB_USER_ADMIN. INITIAL_TENANT_ID lands in these same two files.",
+    "implemented": true,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: alter claim_codes.entitlement_id to NULLABLE (alga-license/migrations/03 baseline is NOT NULL). New numbered migration, up + down.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: add claim_codes.tenant_id uuid NOT NULL with FK → tenant_registry(tenant_id), plus an index on tenant_id.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F004",
+    "description": "db.ts: insertClaimCode accepts tenant_id (required) and entitlement_id (optional/nullable).",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F005",
+    "description": "db.ts: getClaimCode + ClaimCodeRow expose tenant_id and nullable entitlement_id.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F006",
+    "description": "db.ts: new revokeClaimCodesForTenant(tenantId) — reissue path for essentials codes that have no entitlement to key on.",
+    "implemented": false,
+    "prdRefs": ["7", "8"]
+  },
+  {
+    "id": "F007",
+    "description": "db.ts: setRegistryTenantInstalled(tenantId) — set status='installed' + installed_at.",
+    "implemented": false,
+    "prdRefs": ["7", "8"]
+  },
+  {
+    "id": "F010",
+    "description": "/register: source tenant_id from the claim_code row (row.tenant_id), the registry-minted identity, instead of the request body.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F011",
+    "description": "/register: keep accepting body tenant_id ONLY as a legacy fallback for pre-registry appliances (registry path ignores it).",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F012",
+    "description": "/register: essentials path — when row.entitlement_id is null, skip license minting and return no token, but still upsertAppliance (credential + tenant_id).",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F013",
+    "description": "/register: look up tenant_registry by tenant_id for edition + company_name + contact_email to include in the response.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F014",
+    "description": "/register: paid path unchanged — mint per-appliance license bound aud=tenant_id (registry-sourced), reuse license_sub, return first_jwt + appliance_credential + check_in_url.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F015",
+    "description": "RegisterResponse type + payload: add tenant_id, edition, company_name, contact_email; make appliance_credential / first_jwt / check_in_url optional (present only for paid).",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F016",
+    "description": "/register: on success, set registry status='installed' + installed_at (F007).",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F020",
+    "description": "/register-tenant: new route scaffold guarded by makeServiceAuthHook (service auth), registered in server.ts.",
+    "implemented": false,
+    "prdRefs": ["8", "12"]
+  },
+  {
+    "id": "F021",
+    "description": "/register-tenant: create tenant_registry row via createRegistryTenant (deployment_type=appliance, status=registered) from company/contact/edition; validate edition enum.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F022",
+    "description": "/register-tenant: paid tier — create/link the entitlement (+ stripe_customer_id linkage) for the new tenant.",
+    "implemented": false,
+    "prdRefs": ["8", "10"]
+  },
+  {
+    "id": "F023",
+    "description": "/register-tenant: mint an install code carrying tenant_id (+ entitlement_id when paid) via generateClaimCode + insertClaimCode (F004).",
+    "implemented": false,
+    "prdRefs": ["8", "5"]
+  },
+  {
+    "id": "F024",
+    "description": "/register-tenant: presign the current ISO and return { tenant_id, install_code, download_url } (RegisterTenant request/response api-types).",
+    "implemented": false,
+    "prdRefs": ["8", "11"]
+  },
+  {
+    "id": "F030",
+    "description": "/install-codes/reissue: new route scaffold guarded by makeServiceAuthHook.",
+    "implemented": false,
+    "prdRefs": ["8", "12"]
+  },
+  {
+    "id": "F031",
+    "description": "/install-codes/reissue: resolve the registry tenant by contact_email (getRegistryTenantByEmail) or tenant_id (getRegistryTenant); 404 when unknown.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F032",
+    "description": "/install-codes/reissue: revoke prior unconsumed codes for that tenant via revokeClaimCodesForTenant (F006) so only the newest code is live.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F033",
+    "description": "/install-codes/reissue: mint a fresh install code for the SAME tenant_id (+ current entitlement if any) and a fresh presigned download_url; return { install_code, download_url }.",
+    "implemented": false,
+    "prdRefs": ["8"]
+  },
+  {
+    "id": "F040",
+    "description": "Presign helper in alga-license: holds MinIO credentials (config/env), mints a time-boxed presigned GET URL for an object key. (Decision pending §16.1.)",
+    "implemented": false,
+    "prdRefs": ["11", "16"]
+  },
+  {
+    "id": "F041",
+    "description": "Appliance release process publishes the current generic ISO to a known object-store key that the presign helper targets.",
+    "implemented": false,
+    "prdRefs": ["11", "16"]
+  },
+  {
+    "id": "F042",
+    "description": "Presigned URL expiry is configurable (claim-code-aligned TTL) and documented.",
+    "implemented": false,
+    "prdRefs": ["11"]
+  },
+  {
+    "id": "F050",
+    "description": "createTenant (tenant-creation.ts) accepts optional tenantId; when set, tenantInsert.tenant = input.tenantId instead of relying on the gen_random_uuid() default.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F051",
+    "description": "Thread tenantId through createTenantComplete (TenantCreationInput) down to createTenant.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F052",
+    "description": "server/scripts/create-tenant.ts reads INITIAL_TENANT_ID (env + optional arg) and passes it into createTenantComplete.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F053",
+    "description": "Appliance bootstrap (configmap/script that runs create-tenant at first boot) sets INITIAL_TENANT_ID from the redeem result.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F054",
+    "description": "INITIAL_TENANT_ID unset → unchanged DB-generated UUID behavior (additive/safe, no regression for non-registry installs).",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F055",
+    "description": "Idempotent install: rerunning create-tenant with the same INITIAL_TENANT_ID no-ops rather than duplicating the tenant/admin (admin-user create already guards on (email, tenant)).",
+    "implemented": false,
+    "prdRefs": ["9", "13"]
+  },
+  {
+    "id": "F060",
+    "description": "Setup UI: add an 'enter install code' step (alongside admin password) in the appliance first-boot setup flow.",
+    "implemented": false,
+    "prdRefs": ["9", "4"]
+  },
+  {
+    "id": "F061",
+    "description": "Host-service redeem: POST { claim_code, appliance_id } to /register from the install-time consumer (generalize connectAppliance).",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F062",
+    "description": "Host-service redeem: parse tenant_id + edition (+ optional license bits) from the richer RegisterResponse (F015).",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F063",
+    "description": "Install: run create-tenant with INITIAL_TENANT_ID = redeemed tenant_id (wires F052/F053 to the redeem result).",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F064",
+    "description": "Seed license_state with edition for every install (essentials included), so the appliance reads its tier from license_state.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F065",
+    "description": "Seed license_state with license_token (first_jwt) + appliance_credential + check_in_url for paid installs (existing connectAppliance write, made token-optional).",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F066",
+    "description": "Essentials install: license_state row exists with no token; appliance runs at edition=essentials without erroring on the missing license.",
+    "implemented": false,
+    "prdRefs": ["9"]
+  },
+  {
+    "id": "F067",
+    "description": "Setup UI surfaces invalid/expired/consumed code errors clearly and points the user to portal re-issue.",
+    "implemented": false,
+    "prdRefs": ["13"]
+  },
+  {
+    "id": "F068",
+    "description": "Setup UI/host-service blocks install with a clear 'license service unreachable' error when alga-license can't be reached at redeem.",
+    "implemented": false,
+    "prdRefs": ["13"]
+  },
+  {
+    "id": "F070",
+    "description": "nm-store: registration form collects company, contact name/email, edition (and product_code) for an appliance registration.",
+    "implemented": false,
+    "prdRefs": ["10", "4"]
+  },
+  {
+    "id": "F071",
+    "description": "nm-store: registration submit calls alga-license POST /register-tenant (service-authed) and handles the response.",
+    "implemented": false,
+    "prdRefs": ["10"]
+  },
+  {
+    "id": "F072",
+    "description": "nm-store: confirmation page shows the install code + download link.",
+    "implemented": false,
+    "prdRefs": ["10"]
+  },
+  {
+    "id": "F073",
+    "description": "nm-store: email the install code + download link to the contact.",
+    "implemented": false,
+    "prdRefs": ["10"]
+  },
+  {
+    "id": "F074",
+    "description": "nm-store: paid tier — Stripe checkout ordering (registry row at submit; entitlement + code mint on checkout.session.completed). (Decision pending §16.2.)",
+    "implemented": false,
+    "prdRefs": ["10", "16"]
+  },
+  {
+    "id": "F075",
+    "description": "nm-store: portal 're-issue install code' action (behind portal auth) calls POST /install-codes/reissue and shows the fresh code + link.",
+    "implemented": false,
+    "prdRefs": ["10", "5"]
+  },
+  {
+    "id": "F076",
+    "description": "Docs: update appliance install + licensing docs to describe register → download → install → re-issue (operator-facing).",
+    "implemented": false,
+    "prdRefs": ["4", "15"]
+  }
+]
