@@ -203,5 +203,25 @@
     "featureIds": [
       "F033"
     ]
+  },
+  {
+    "id": "T023",
+    "description": "[AUTO] install-code.mjs: redeemInstallCode maps paid/essentials /register responses, surfaces friendly errors for consumed/unreachable/no-URL, deriveApplianceId is stable, licenseSeedFromRedeem maps editions to seed literals (7 unit tests).",
+    "implemented": true,
+    "featureIds": [
+      "F061",
+      "F062",
+      "F065"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "[AUTO] setup-engine workflow: a redeemed install code threads INITIAL_TENANT_ID into the appliance-initial-tenant Secret; a redeem failure returns a preflightFailure that blocks the install (step=redeem-install-code).",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F067",
+      "F068"
+    ]
   }
 ]

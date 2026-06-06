@@ -243,7 +243,7 @@
   {
     "id": "F053",
     "description": "Appliance bootstrap (configmap/script that runs create-tenant at first boot) sets INITIAL_TENANT_ID from the redeem result.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -268,7 +268,7 @@
   {
     "id": "F060",
     "description": "Setup UI: add an 'enter install code' step (alongside admin password) in the appliance first-boot setup flow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9",
       "4"
@@ -277,7 +277,7 @@
   {
     "id": "F061",
     "description": "Host-service redeem: POST { claim_code, appliance_id } to /register from the install-time consumer (generalize connectAppliance).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -285,7 +285,7 @@
   {
     "id": "F062",
     "description": "Host-service redeem: parse tenant_id + edition (+ optional license bits) from the richer RegisterResponse (F015).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -293,7 +293,7 @@
   {
     "id": "F063",
     "description": "Install: run create-tenant with INITIAL_TENANT_ID = redeemed tenant_id (wires F052/F053 to the redeem result).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -301,7 +301,7 @@
   {
     "id": "F064",
     "description": "Seed license_state with edition for every install (essentials included), so the appliance reads its tier from license_state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -309,7 +309,7 @@
   {
     "id": "F065",
     "description": "Seed license_state with license_token (first_jwt) + appliance_credential + check_in_url for paid installs (existing connectAppliance write, made token-optional).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -317,7 +317,7 @@
   {
     "id": "F066",
     "description": "Essentials install: license_state row exists with no token; appliance runs at edition=essentials without erroring on the missing license.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "9"
     ]
@@ -325,7 +325,7 @@
   {
     "id": "F067",
     "description": "Setup UI surfaces invalid/expired/consumed code errors clearly and points the user to portal re-issue.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "13"
     ]
@@ -333,7 +333,7 @@
   {
     "id": "F068",
     "description": "Setup UI/host-service blocks install with a clear 'license service unreachable' error when alga-license can't be reached at redeem.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "13"
     ]

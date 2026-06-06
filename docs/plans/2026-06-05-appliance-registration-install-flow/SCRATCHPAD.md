@@ -192,6 +192,41 @@ new `INITIAL_TENANT_ID`.
   (safe to edit git-wise) but are conceptually the licval subsystem. F053/F060–F068
   pend on the three decisions above.
 
+## Build-step 4 — appliance setup integration (BUILT in working tree, alga-psa)
+
+- (2026-06-05) Redeem lives in the host-service. New `install-code.mjs`
+  (`redeemInstallCode` / `deriveApplianceId` / `licenseSeedFromRedeem`) is pure +
+  unit-tested (7 tests, mock fetch). `setup-engine.mjs` `validateSetupInputs` takes
+  `installCode`; `applyRuntimeValuesAndReleaseSelection` redeems it (injectable via
+  `options.redeemInstallCode` for tests) BEFORE building the two Secrets, threading
+  `tenant_id` → `initialTenantSecretYaml(initialTenant, tenantId)` (INITIAL_TENANT_ID
+  line) and the license fields → the `appliance-license-seed` literals
+  (`licenseSeedFromRedeem`). Redeem failure → `preflightFailure` blocks the install
+  (F067/F068). 2 new workflow tests; 8/8 pass.
+- (2026-06-05) `appliance-bootstrap-configmap.yaml`: create-tenant gets
+  `INITIAL_TENANT_ID="${INITIAL_TENANT_ID:-}"` (create-tenant.ts reads it; empty =>
+  DB-generated). License-seed SQL extended: a `sql_value()` helper + new columns
+  `appliance_id`/`check_in_url`/`appliance_credential` (connected refresh), and the
+  trial is suppressed when `INSTALL_EDITION=essentials` (essentials resolves to the
+  essentials tier, not an auto premium trial).
+- (2026-06-05) status-ui `setup/page.tsx`: an **Install code** field (primary,
+  recommended) above the manual Edition/license fallback; included in the POST.
+  Typechecks clean.
+- (2026-06-05) **DEFAULTS I PICKED — confirm during smoke** (you authorized
+  sensible defaults + flag):
+  1. **Taxonomy:** the appliance always runs EE (`EDITION_CHOICE=ee`); essentials =
+     EE-unlicensed (no token, no auto-trial), pro/premium = EE + minted token. The
+     `ce` choice stays only for a manual community install (no install code).
+  2. **Connected seed:** `appliance_id`/`check_in_url`/`appliance_credential` are
+     seeded straight into `license_state` by the bootstrap SQL (vs. the in-app
+     `connectAppliance` plaintext write) so daily check-in works from first boot.
+- (2026-06-05) **Two caveats:** (a) the install code is single-use and **consumed
+  at apply time** — a failed install past that point needs a re-issued code (the
+  reissue endpoint exists; consider persisting the redeem to skip re-redeem on
+  retry). (b) `ee/appliance/ubuntu-iso/overlay/.../host-service/` is a build-synced
+  COPY — the ISO build must pick up the new `install-code.mjs` + setup-engine edits
+  (overlay sync, not a manual edit).
+
 ## Build-step 5 — nm-store (separate repo /home/robert/nm-store; outward-facing)
 
 - (2026-06-05) nm-store is local. Registration form + `/register-tenant` call +

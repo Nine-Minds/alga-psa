@@ -115,6 +115,7 @@ export default function SetupPage() {
   const [releaseRef, setReleaseRef] = useState('');
   const [editionChoice, setEditionChoice] = useState<'ee' | 'ce'>('ee');
   const [licenseKey, setLicenseKey] = useState('');
+  const [installCode, setInstallCode] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +158,7 @@ export default function SetupPage() {
       releaseRef: String(formData.get('releaseRef') || releaseRef),
       editionChoice,
       licenseKey: licenseKey.trim() || undefined,
+      installCode: installCode.trim() || undefined,
     };
     const validation = validateSetupForm(payload);
     setFieldErrors(validation);
@@ -239,7 +241,22 @@ export default function SetupPage() {
             <form id="appliance-setup-form" className={styles.form} onSubmit={submit} noValidate>
               <div className={styles.formGrid}>
                 <div className={styles.field}>
-                  <label>Edition</label>
+                  <label htmlFor="setup-install-code">Install code <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(from your registration email — recommended)</small></label>
+                  <input
+                    id="setup-install-code"
+                    name="installCode"
+                    value={installCode}
+                    onChange={(event) => setInstallCode(event.target.value.toUpperCase())}
+                    placeholder="K7QPM2RX"
+                    disabled={disabled}
+                    autoComplete="off"
+                    style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}
+                  />
+                  <span className={styles.helpText}>Enter the code from your registration email to bind this appliance to your tenant and apply your edition automatically. No code? Choose an edition manually below.</span>
+                </div>
+
+                <div className={styles.field}>
+                  <label>Edition <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(used only if no install code is entered)</small></label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
                       <input type="radio" name="editionChoice" value="ee" checked={editionChoice === 'ee'} onChange={() => setEditionChoice('ee')} disabled={disabled} style={{ marginTop: '0.2rem' }} />

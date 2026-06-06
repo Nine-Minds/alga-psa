@@ -7,6 +7,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
+import { redeemInstallCode, deriveApplianceId, licenseSeedFromRedeem } from './install-code.mjs';
 
 // Path defaults honor the ALGA_APPLIANCE_* environment the control plane runs
 // with, falling back to the bare-host locations. This keeps the setup workflow
@@ -425,8 +426,13 @@ function normalizeInitialTenant(raw) {
   };
 }
 
-function initialTenantSecretYaml(initialTenant) {
-  return `apiVersion: v1\nkind: Secret\nmetadata:\n  name: appliance-initial-tenant\n  namespace: msp\ntype: Opaque\nstringData:\n  INITIAL_TENANT_NAME: ${yamlString(initialTenant.tenantName)}\n  INITIAL_ADMIN_FIRST_NAME: ${yamlString(initialTenant.adminFirstName)}\n  INITIAL_ADMIN_LAST_NAME: ${yamlString(initialTenant.adminLastName)}\n  INITIAL_ADMIN_EMAIL: ${yamlString(initialTenant.adminEmail)}\n  INITIAL_ADMIN_PASSWORD: ${yamlString(initialTenant.adminPassword)}\n`;
+function initialTenantSecretYaml(initialTenant, initialTenantId) {
+  // INITIAL_TENANT_ID (when an install code was redeemed) makes the bootstrap's
+  // create-tenant adopt the registry-minted tenant id instead of DB-generating
+  // one. Omitted (empty) on the legacy/no-code path — create-tenant then mints
+  // its own, unchanged. create-tenant.ts reads it from the pod env.
+  const tenantIdLine = initialTenantId ? `\n  INITIAL_TENANT_ID: ${yamlString(initialTenantId)}` : '';
+  return `apiVersion: v1\nkind: Secret\nmetadata:\n  name: appliance-initial-tenant\n  namespace: msp\ntype: Opaque\nstringData:\n  INITIAL_TENANT_NAME: ${yamlString(initialTenant.tenantName)}\n  INITIAL_ADMIN_FIRST_NAME: ${yamlString(initialTenant.adminFirstName)}\n  INITIAL_ADMIN_LAST_NAME: ${yamlString(initialTenant.adminLastName)}\n  INITIAL_ADMIN_EMAIL: ${yamlString(initialTenant.adminEmail)}\n  INITIAL_ADMIN_PASSWORD: ${yamlString(initialTenant.adminPassword)}${tenantIdLine}\n`;
 }
 
 function appUrlFromInput(value) {
@@ -510,6 +516,11 @@ export function validateSetupInputs(raw, options = {}) {
     throw new Error('Invalid edition choice. Use ee or ce.');
   }
   const licenseKey = raw.licenseKey ? String(raw.licenseKey).trim() : null;
+  // Install code (from the registration email). When present it's the PRIMARY
+  // licensing path: redeemed at apply time to derive the tenant id + edition +
+  // (paid) license, overriding the manual editionChoice/licenseKey, which remain
+  // the airgap/manual fallback when no code is entered.
+  const installCode = raw.installCode ? String(raw.installCode).trim().toUpperCase() : null;
 
   if (!['stable', 'nightly'].includes(channel)) {
     throw new Error('Invalid channel. Use stable or nightly.');
@@ -544,6 +555,7 @@ export function validateSetupInputs(raw, options = {}) {
     initialTenant,
     editionChoice,
     licenseKey,
+    installCode,
     submittedAt: nowIso()
   };
 }
@@ -993,12 +1005,39 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
   const statusToken = fs.existsSync(options.tokenFile || DEFAULT_TOKEN_FILE)
     ? fs.readFileSync(options.tokenFile || DEFAULT_TOKEN_FILE, 'utf8').trim()
     : crypto.randomBytes(24).toString('base64url');
+  // ── Install-code redemption (registration-driven licensing) ────────────────
+  // When the operator entered an install code, redeem it now against the
+  // alga-license service: this yields the registry-minted tenant id (adopted as
+  // INITIAL_TENANT_ID), the edition, and — for paid tiers — the first license +
+  // per-appliance credential + check-in URL. A bad/expired/used code or an
+  // unreachable service blocks the install with a clear message (it never
+  // silently self-generates a tenant). NOTE: the code is single-use and consumed
+  // here, so a failed install past this point needs a re-issued code.
+  let redeemResult = null;
+  if (inputs.installCode) {
+    const serviceUrl = options.algaLicenseServiceUrl || process.env.ALGA_LICENSE_SERVICE_URL;
+    const applianceId = deriveApplianceId(inputs.appHostname);
+    const doRedeem = options.redeemInstallCode || redeemInstallCode;
+    try {
+      redeemResult = await doRedeem({ serviceUrl, installCode: inputs.installCode, applianceId });
+    } catch (error) {
+      const failure = preflightFailure(
+        'registry-release-source',
+        'redeem-install-code',
+        'Could not redeem the install code.',
+        error instanceof Error ? error.message : String(error)
+      );
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      return failure;
+    }
+  }
+
   const initialTenantSecretPath = path.join(tempDir, 'initial-tenant-secret.yaml');
   const hasInitialTenant = Boolean(inputs.initialTenant);
 
   if (hasInitialTenant) {
     try {
-      fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant), { mode: 0o600 });
+      fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant, redeemResult?.tenantId || ''), { mode: 0o600 });
     } catch (error) {
       const failure = preflightFailure(
         'registry-release-source',
@@ -1011,10 +1050,17 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     }
   }
 
-  // Build appliance-license-seed secret command (F079-F080)
-  const licenseSeedArgs = `--from-literal=EDITION_CHOICE=${shellQuote(inputs.editionChoice || 'ee')}`;
-  const licenseKeyArg = inputs.licenseKey ? ` --from-literal=LICENSE_TOKEN=${shellQuote(inputs.licenseKey)}` : '';
-  const licenseSeedCmd = `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic appliance-license-seed ${licenseSeedArgs}${licenseKeyArg} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`;
+  // Build appliance-license-seed secret command (F079-F080). When an install code
+  // was redeemed it drives the edition + license (+ connected-refresh fields);
+  // otherwise fall back to the manual editionChoice/licenseKey path (airgap).
+  const licenseSeedLiterals = redeemResult
+    ? licenseSeedFromRedeem(redeemResult)
+    : { EDITION_CHOICE: inputs.editionChoice || 'ee', ...(inputs.licenseKey ? { LICENSE_TOKEN: inputs.licenseKey } : {}) };
+  const licenseSeedArgs = Object.entries(licenseSeedLiterals)
+    .filter(([, value]) => value !== undefined && value !== '')
+    .map(([key, value]) => `--from-literal=${key}=${shellQuote(value)}`)
+    .join(' ');
+  const licenseSeedCmd = `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic appliance-license-seed ${licenseSeedArgs} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`;
 
   const commands = [
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
