@@ -242,6 +242,8 @@ const nextConfig = {
       '@alga-psa/validation/': '../packages/validation/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
+      '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
+      '@alga-psa/agent-tooling/': '../packages/agent-tooling/src/',
       // Documents package
       '@alga-psa/documents': '../packages/documents/src',
       '@alga-psa/documents/': '../packages/documents/src/',
@@ -417,6 +419,7 @@ const nextConfig = {
     '@emoji-mart/data',
     '@alga-psa/ui',
     '@alga-psa/scheduling',
+    '@alga-psa/agent-tooling',
     '@alga-psa/users',
     '@alga-psa/email',
     '@alga-psa/teams',
@@ -537,6 +540,8 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/agent-tooling': path.join(__dirname, '../packages/agent-tooling/src'),
+      '@alga-psa/agent-tooling/': `${path.join(__dirname, '../packages/agent-tooling/src')}/`,
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
