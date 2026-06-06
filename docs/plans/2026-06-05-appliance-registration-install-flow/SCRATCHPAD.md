@@ -85,6 +85,36 @@ new `INITIAL_TENANT_ID`.
   `DB_HOST`/`DB_PORT`/`DB_USER_ADMIN`. `INITIAL_TENANT_ID` lands in the same two
   files. Do not revert this WIP.
 
+## Build-step 1 — alga-license schema + /register (DONE on branch `feat/registration-install-flow`)
+
+- (2026-06-05) **Two refinements discovered while implementing** (both fed back into
+  the PRD/features):
+  - `claim_codes.tenant_id` is **NULLABLE**, not NOT NULL. Migration alters
+    `entitlement_id` NULLABLE via `knex.raw('ALTER TABLE … DROP NOT NULL')` (knex
+    `.alter()` would try to rebuild the FK) and adds `tenant_id uuid` nullable FK +
+    index (`migrations/05_claim_codes_registry.cjs`). `/register` resolves
+    `tenant = row.tenant_id ?? body.tenant_id` — the body path is the clean legacy
+    fallback, which only works because tenant_id is nullable.
+  - **Essentials `/register` creates NO appliance row.** `appliances.entitlement_id`
+    is `NOT NULL` (FK), and essentials has nothing to refresh (no license → no
+    check-in), so the essentials branch returns `{ tenant_id, edition }` and does
+    not call `upsertAppliance` or issue a credential. (Original F012 said "still
+    upsertAppliance" — corrected.)
+- (2026-06-05) `createRegistryTenant` already accepted a pinned `tenantId` and
+  returns the row — `/register-tenant` (build step 3) is mostly wiring.
+- (2026-06-05) `RegisterResponse` now returns `tenant_id` + `edition` +
+  `company_name`/`contact_email`; `appliance_credential`/`first_jwt`/`check_in_url`
+  are **optional** (paid only). The existing alga-psa `connectAppliance` destructures
+  the three paid fields and ignores the rest, so paid back-compat holds.
+- (2026-06-05) **Validated:** `tsc --noEmit` clean; migration applies + rolls back +
+  re-applies on a throwaway `postgres:16` (5433); jest **28/28** incl. 3 new seam
+  tests (claim_codes tenant_id round-trip, `revokeClaimCodesForTenant`,
+  `setRegistryTenantInstalled`). The repo's `signing.test.ts` IS the gated-on-DB_HOST
+  pg integration suite — extend that block, don't add a parallel harness.
+- (2026-06-05) Test weighting note: `/register` HTTP behavior (T003/T004) is
+  **smoke**, not Fastify route tests — validated in the build-step-4 live loop, per
+  the light-automated directive.
+
 ## Commands / Runbooks
 
 - (2026-06-05) **alga-license migration/db tests:** run against a throwaway
@@ -93,6 +123,12 @@ new `INITIAL_TENANT_ID`.
   — tests `DELETE`. DB-layer tests are gated on `DB_HOST` (skip without a DB).
 - (2026-06-05) **Build gotcha:** the shell has `NODE_ENV=production`, so
   `npm install` omits devDeps (breaks tsc/@types) — use `npm install --include=dev`.
+- (2026-06-05) **alga-license validation one-liner** (throwaway pg):
+  `docker run -d --name algalic-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=alga_license -p 5433:5432 postgres:16`
+  then `DB_HOST=localhost DB_PORT=5433 DB_NAME=alga_license DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=test npm run migrate`
+  and `DB_HOST=localhost DB_PORT=5433 DB_NAME=alga_license DB_USER_APP=postgres DB_PASSWORD_APP=test npm test`.
+  The signLicense tests need the alga-psa fixture key at
+  `packages/licensing/src/lib/__test-fixtures__/v1-test.private.pem` (present).
 - (2026-06-05) **Appliance VM smoke:** the full register→download→install loop is
   validated live on the libvirt appliance VM (see the appliance teardown/reinstall
   + VM ISO-test memories for driving setup via the browser / virsh).

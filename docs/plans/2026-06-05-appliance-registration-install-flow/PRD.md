@@ -98,7 +98,11 @@ One migration extending `claim_codes` (current:
 `alga-license/migrations/03_claim_codes.cjs`, `entitlement_id NOT NULL`):
 
 - `entitlement_id` → **NULLABLE** (essentials codes carry no entitlement).
-- add `tenant_id uuid NOT NULL` FK → `tenant_registry(tenant_id)`, indexed.
+- add `tenant_id uuid` **NULLABLE** FK → `tenant_registry(tenant_id)` (ON DELETE
+  CASCADE), indexed. Nullable (not NOT NULL as first drafted): the legacy
+  `/claim-codes` path and any existing rows carry no registry tenant, and `/register`
+  falls back to the appliance-supplied body `tenant_id` for those. Implemented as
+  `migrations/05_claim_codes_registry.cjs`.
 
 No change to `tenant_registry` (already has `edition`, `company_name`,
 `contact_email`, `status`, `stripe_customer_id`) beyond writing
