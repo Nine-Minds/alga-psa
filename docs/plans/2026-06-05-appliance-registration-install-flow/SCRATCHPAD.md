@@ -140,6 +140,31 @@ new `INITIAL_TENANT_ID`.
   adoption needs the full alga-psa `tenants`/`clients` schema (heavy), so it's
   validated in the live install loop, not a unit DB.
 
+## Build-step 3 — /register-tenant + /install-codes/reissue + presign (DONE, alga-license branch)
+
+- (2026-06-05) **Dependency-free SigV4 presigner** (`src/storage/presign.ts`) — the
+  service had no AWS SDK and is intentionally lean (fastify/knex/pg only), so the
+  S3/MinIO presigned-GET URL is hand-rolled with `node:crypto` (path-style,
+  UNSIGNED-PAYLOAD, query-auth). `now` is injectable for deterministic tests.
+- (2026-06-05) Object-store config is **env-driven and OPTIONAL**:
+  `OBJECT_STORE_ENDPOINT/REGION/BUCKET/ACCESS_KEY/SECRET_KEY` + `APPLIANCE_ISO_KEY`
+  (default `appliance/current/alga-appliance.iso`). `getPresignConfigFromEnv()`
+  returns null when unset so existing deploys (and /sign /register /check-in) boot
+  without it; only register-tenant/reissue need it, and they emit `download_url:''`
+  if it's missing. TTL = `claimCodeTtlSeconds` (link expiry aligned to the code).
+- (2026-06-05) New routes: `/register-tenant` (service-authed) creates the registry
+  row, (paid) upserts the entitlement bound to the new tenant, mints the install
+  code carrying tenant_id (+ entitlement), presigns. `/install-codes/reissue`
+  resolves by tenant_id|email, `revokeClaimCodesForTenant`, re-attaches the active
+  entitlement via new `getActiveEntitlementByTenant`, mints a fresh code + link.
+- (2026-06-05) **Validated:** tsc clean; jest **31/31** (added presign structural
+  test ×2 + getActiveEntitlementByTenant). Route HTTP behavior (T010/T018) is smoke.
+- (2026-06-05) **DEPLOY FOLLOW-UP (relates to F041):** the alga-license Deployment
+  (service `k8s/deployment.yaml` + nm-kube-config) must get the `OBJECT_STORE_*`
+  env + `APPLIANCE_ISO_KEY`, and the appliance release process must publish the
+  current ISO to that key. Not wired here (ops); register-tenant returns an empty
+  download_url until it is.
+
 ## Commands / Runbooks
 
 - (2026-06-05) **alga-license migration/db tests:** run against a throwaway

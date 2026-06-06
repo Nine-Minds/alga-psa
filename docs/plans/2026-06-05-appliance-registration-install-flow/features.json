@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "/register-tenant: new route scaffold guarded by makeServiceAuthHook (service auth), registered in server.ts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "12"
@@ -125,7 +125,7 @@
   {
     "id": "F021",
     "description": "/register-tenant: create tenant_registry row via createRegistryTenant (deployment_type=appliance, status=registered) from company/contact/edition; validate edition enum.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -133,7 +133,7 @@
   {
     "id": "F022",
     "description": "/register-tenant: paid tier \u2014 create/link the entitlement (+ stripe_customer_id linkage) for the new tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "10"
@@ -142,7 +142,7 @@
   {
     "id": "F023",
     "description": "/register-tenant: mint an install code carrying tenant_id (+ entitlement_id when paid) via generateClaimCode + insertClaimCode (F004).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "5"
@@ -151,7 +151,7 @@
   {
     "id": "F024",
     "description": "/register-tenant: presign the current ISO and return { tenant_id, install_code, download_url } (RegisterTenant request/response api-types).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "11"
@@ -160,7 +160,7 @@
   {
     "id": "F030",
     "description": "/install-codes/reissue: new route scaffold guarded by makeServiceAuthHook.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8",
       "12"
@@ -169,7 +169,7 @@
   {
     "id": "F031",
     "description": "/install-codes/reissue: resolve the registry tenant by contact_email (getRegistryTenantByEmail) or tenant_id (getRegistryTenant); 404 when unknown.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -177,7 +177,7 @@
   {
     "id": "F032",
     "description": "/install-codes/reissue: revoke prior unconsumed codes for that tenant via revokeClaimCodesForTenant (F006) so only the newest code is live.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -185,7 +185,7 @@
   {
     "id": "F033",
     "description": "/install-codes/reissue: mint a fresh install code for the SAME tenant_id (+ current entitlement if any) and a fresh presigned download_url; return { install_code, download_url }.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "8"
     ]
@@ -193,7 +193,7 @@
   {
     "id": "F040",
     "description": "Presign helper in alga-license: object-store (MinIO) credentials supplied via env vars; mints a time-boxed presigned GET URL for an object key.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11",
       "16"
@@ -211,7 +211,7 @@
   {
     "id": "F042",
     "description": "Presigned URL expiry is configurable (claim-code-aligned TTL) and documented.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "11"
     ]

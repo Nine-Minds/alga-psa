@@ -186,5 +186,22 @@
       "F014",
       "F065"
     ]
+  },
+  {
+    "id": "T021",
+    "description": "[AUTO] presignGetObject builds a path-style SigV4 GET URL with all required X-Amz-* params, a 64-hex signature, deterministic for fixed inputs, and changes with the secret.",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F042"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "[AUTO] getActiveEntitlementByTenant returns a paid tenant's active entitlement (reissue re-attach) and undefined for revoked/essentials.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
   }
 ]
