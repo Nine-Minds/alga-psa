@@ -70,6 +70,10 @@
       "markNotDone": "55555",
       "convertToTicket": "55555",
       "convertToTask": "55555"
+    },
+    "viewingUser": {
+      "label": "55555",
+      "me": "55555"
     }
   },
   "card": {

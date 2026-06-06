@@ -12,6 +12,7 @@ import {
   IStatus,
   ITag,
   ItemType,
+  IUser,
   ProjectWithPhases,
   TaggedEntityType,
 } from '@alga-psa/types';
@@ -27,8 +28,17 @@ import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/Shar
 import { RefreshCw, List, LayoutList, Printer, Settings2 } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
-import { fetchActivities, getUserActivityGroups, createAdHocActivity, type ActivityGroup } from '@alga-psa/workflows/actions';
+import {
+  fetchActivities,
+  getUserActivityGroups,
+  createAdHocActivity,
+  getActivityViewableUsers,
+  type ActivityGroup,
+} from '@alga-psa/workflows/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Plus } from 'lucide-react';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { GroupedActivitiesView } from './GroupedActivitiesView';
@@ -111,6 +121,29 @@ function formatActivityPrintDate(dateString?: string): string {
   const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
   const { openActivityDrawer } = useActivityDrawer();
   const ctx = useActivityCrossFeature();
+
+  // "Viewing": whose activities to show. Empty string = the current user. Other values
+  // require the caller to hold the schedule "view others" permission (resolved server-side).
+  const [targetUserId, setTargetUserId] = useState<string>('');
+  const [viewableUsers, setViewableUsers] = useState<IUser[]>([]);
+  const [canViewOthers, setCanViewOthers] = useState(false);
+
+  // Load the users whose activities this user may view (empty/forbidden → selector hidden).
+  useEffect(() => {
+    let cancelled = false;
+    getActivityViewableUsers()
+      .then((result) => {
+        if (cancelled) return;
+        setCanViewOthers(result.canViewOthers);
+        setViewableUsers(result.users);
+      })
+      .catch((err) => console.error('Error loading viewable users:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const viewingOther = canViewOthers && targetUserId !== '';
 
   // Flat vs grouped mode (persisted per user)
   const { value: listViewMode, setValue: setListViewMode } = useUserPreference<ListViewMode>(
@@ -295,7 +328,8 @@ function formatActivityPrintDate(dateString?: string): string {
       : Object.values(ActivityType),
     sortBy,
     sortDirection,
-  }), [filters, sortBy, sortDirection]);
+    targetUserId: targetUserId || undefined,
+  }), [filters, sortBy, sortDirection, targetUserId]);
 
   const loadActivities = useCallback(async () => {
     try {
@@ -357,6 +391,11 @@ function formatActivityPrintDate(dateString?: string): string {
     setSavedFilters(newFilters);
     setCurrentPage(1);
   }, [setSavedFilters]);
+
+  const handleTargetUserChange = useCallback((value: string) => {
+    setTargetUserId(value);
+    setCurrentPage(1);
+  }, []);
 
   const preparePrintActivities = useCallback(async () => {
     if (listViewMode === 'grouped') {
@@ -489,32 +528,57 @@ function formatActivityPrintDate(dateString?: string): string {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 flex items-center gap-2">
-          <Input
-            id={`${id}-add-adhoc-input`}
-            value={adHocTitle}
-            onChange={(e) => setAdHocTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void handleAddAdHoc();
-              }
-            }}
-            placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add Activity' })}
-            className="h-9 max-w-sm text-sm"
-            disabled={isAddingAdHoc}
-          />
-          <Button
-            id={`${id}-add-adhoc-button`}
-            variant="default"
-            size="sm"
-            onClick={() => void handleAddAdHoc()}
-            disabled={isAddingAdHoc || adHocTitle.trim().length === 0}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            {t('table.adHoc.addButton', { defaultValue: 'Add' })}
-          </Button>
-        </div>
+        {(canViewOthers || !viewingOther) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {!viewingOther && (
+              <>
+                <Input
+                  id={`${id}-add-adhoc-input`}
+                  value={adHocTitle}
+                  onChange={(e) => setAdHocTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleAddAdHoc();
+                    }
+                  }}
+                  placeholder={t('table.adHoc.addPlaceholder', { defaultValue: 'Add Activity' })}
+                  className="h-9 max-w-sm text-sm"
+                  disabled={isAddingAdHoc}
+                />
+                <Button
+                  id={`${id}-add-adhoc-button`}
+                  variant="default"
+                  size="sm"
+                  onClick={() => void handleAddAdHoc()}
+                  disabled={isAddingAdHoc || adHocTitle.trim().length === 0}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t('table.adHoc.addButton', { defaultValue: 'Add' })}
+                </Button>
+              </>
+            )}
+            {canViewOthers && (
+              <div className="ml-auto flex items-center gap-2">
+                <Label htmlFor={`${id}-viewing-user`} className="text-sm font-medium whitespace-nowrap mb-0">
+                  {t('table.viewingUser.label', { defaultValue: 'Viewing:' })}
+                </Label>
+                <UserPicker
+                  id={`${id}-viewing-user`}
+                  value={targetUserId}
+                  onValueChange={handleTargetUserChange}
+                  users={viewableUsers}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  userTypeFilter="internal"
+                  placeholder={t('table.viewingUser.me', { defaultValue: 'My activities' })}
+                  unassignedLabel={t('table.viewingUser.me', { defaultValue: 'My activities' })}
+                  buttonWidth="fit"
+                  size="sm"
+                />
+              </div>
+            )}
+          </div>
+        )}
         <ActivitiesTableFilters
           filters={filters}
           onChange={handleFilterChange}
