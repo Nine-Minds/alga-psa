@@ -18,6 +18,14 @@
     "./registry/search": {
       "import": "./src/registry/search.ts",
       "types": "./src/registry/search.ts"
+    },
+    "./invoke/buildRequest": {
+      "import": "./src/invoke/buildRequest.ts",
+      "types": "./src/invoke/buildRequest.ts"
+    },
+    "./tools/definitions": {
+      "import": "./src/tools/definitions.ts",
+      "types": "./src/tools/definitions.ts"
     }
   },
   "scripts": {
