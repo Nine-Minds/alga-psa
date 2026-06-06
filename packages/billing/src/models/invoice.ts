@@ -312,6 +312,22 @@ const Invoice = {
       }
       return 0;
     };
+    // Quantities are not minor units — they can be fractional (e.g. 4.25 hours
+    // for hourly time charges), so parse them as decimals instead of truncating
+    // to whole integers the way parseMinorUnit does for cents.
+    const parseDecimal = (value: unknown): number => {
+      if (typeof value === 'number') {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      if (typeof value === 'bigint') {
+        return Number(value);
+      }
+      return 0;
+    };
     const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
     const normalizeDateLikeString = (value: unknown): string => {
       if (typeof value === 'string') {
@@ -500,7 +516,7 @@ const Invoice = {
 
     const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
       ...item,
-      quantity: parseMinorUnit(item.quantity),
+      quantity: parseDecimal(item.quantity),
       unit_price: parseMinorUnit(item.unit_price),
       total_price: parseMinorUnit(item.total_price),
       tax_amount: parseMinorUnit(item.tax_amount),
@@ -633,7 +649,7 @@ const Invoice = {
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
-          knexOrTrx.raw('CAST(ic.quantity AS INTEGER) as quantity'),
+          knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
