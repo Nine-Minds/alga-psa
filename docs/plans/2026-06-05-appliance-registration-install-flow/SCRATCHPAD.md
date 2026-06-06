@@ -27,6 +27,20 @@ new `INITIAL_TENANT_ID`.
   set for the riskiest seams, everything else validated live on the VM. This
   deliberately inverts the software-planner default (tests longer than features) —
   `tests.json` is shorter and smoke-weighted on purpose.
+- (2026-06-05) **The short code is the identity carrier for BOTH tiers** (not just
+  paid). Essentials installs get a short code too and never type a raw tenant_id;
+  the code's `tenant_id` is set for everyone, `entitlement_id` is null for
+  essentials. One-liner framing: "a short code always resolves a tenant; for paid
+  it additionally mints a bound license."
+- (2026-06-05) **§16 open questions all resolved:** (1) alga-license presigns with
+  object-store creds via **env vars**; the presigned URL is **emailed** to the user
+  after registration/purchase (alongside the code) — not a public link. (2) Paid
+  ordering: registry row at form submit, entitlement + code on
+  `checkout.session.completed`. (3) Essentials edition from
+  `tenant_registry.edition` (no edition on the code). (4) Reuse
+  `generateClaimCode()` for install codes. Remaining impl detail (not a fork):
+  which object-store key holds the current generic ISO + how the release process
+  publishes it (F041).
 
 ## Discoveries / Constraints
 
@@ -95,13 +109,6 @@ new `INITIAL_TENANT_ID`.
 
 ## Open Questions
 
-- (2026-06-05) **§16.1 Presign owner / ISO location** — lean: alga-license holds
-  MinIO creds + presigns; confirm MinIO is the ISO store and how
-  `ee/appliance/releases/…` publishes the "current" ISO key. *Most impactful — gates
-  F040/F041.*
-- (2026-06-05) **§16.2 Stripe vs. registration ordering (paid)** — lean: registry
-  row at form submit; entitlement + code on `checkout.session.completed`.
-- (2026-06-05) **§16.3 Edition source for essentials** — confirmed via
-  `tenant_registry.edition` (code → tenant_id → registry). OK?
-- (2026-06-05) **§16.4 Code format** — reuse `generateClaimCode()` or a distinct
-  install-code format? Lean: reuse.
+- (2026-06-05) **All four §16 design questions resolved** — see the Decisions
+  section. No open design forks remain. Only impl detail left: the object-store key
+  for the current generic ISO + the release-process publish step (F041).

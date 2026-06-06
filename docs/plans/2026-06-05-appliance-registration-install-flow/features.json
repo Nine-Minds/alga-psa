@@ -139,7 +139,7 @@
   },
   {
     "id": "F040",
-    "description": "Presign helper in alga-license: holds MinIO credentials (config/env), mints a time-boxed presigned GET URL for an object key. (Decision pending §16.1.)",
+    "description": "Presign helper in alga-license: object-store (MinIO) credentials supplied via env vars; mints a time-boxed presigned GET URL for an object key.",
     "implemented": false,
     "prdRefs": ["11", "16"]
   },
@@ -259,19 +259,19 @@
   },
   {
     "id": "F072",
-    "description": "nm-store: confirmation page shows the install code + download link.",
+    "description": "nm-store: confirmation page shows the install code (the presigned download link is delivered by email).",
     "implemented": false,
     "prdRefs": ["10"]
   },
   {
     "id": "F073",
-    "description": "nm-store: email the install code + download link to the contact.",
+    "description": "nm-store: email the install code + presigned download link to the contact after registration/purchase (primary delivery of the download link).",
     "implemented": false,
-    "prdRefs": ["10"]
+    "prdRefs": ["10", "11"]
   },
   {
     "id": "F074",
-    "description": "nm-store: paid tier — Stripe checkout ordering (registry row at submit; entitlement + code mint on checkout.session.completed). (Decision pending §16.2.)",
+    "description": "nm-store: paid tier — Stripe checkout ordering (registry row at submit; entitlement + code mint on checkout.session.completed).",
     "implemented": false,
     "prdRefs": ["10", "16"]
   },

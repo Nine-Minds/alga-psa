@@ -172,18 +172,24 @@ inserts into `tenants` without a `tenant` value → DB default):
 ## 10. nm-store changes
 
 - Registration form (company, contact, edition) → `POST /register-tenant`.
-- Confirmation page shows the install code + download link; email the same.
+- **Email** the install code + presigned download link to the contact after
+  registration/purchase (primary delivery); the confirmation page may also show the
+  install code.
 - Paid: Stripe checkout ordering — create registry row at submit
   (`status='registered'`), attach entitlement + mint code on
-  `checkout.session.completed` (see open question §16.2).
+  `checkout.session.completed` (§16.2).
 - Portal "re-issue install code" action (behind portal auth) → `/install-codes/reissue`.
 
 ## 11. Presigned download & ISO publishing
 
-- alga-license holds the MinIO credentials and mints time-boxed presigned GET URLs
-  (nm-store stays DB-less and relays) — see open question §16.1.
+- alga-license mints time-boxed presigned GET URLs; the object-store (MinIO)
+  credentials are supplied to the service as **env vars** (§16.1).
+- The presigned `download_url` is **delivered by email** to the contact after
+  registration/purchase, alongside the install code — registration-gated, not a
+  public link. (`/register-tenant` returns it; the post-registration/checkout email
+  step carries it to the user.)
 - The appliance release process publishes the **current** generic ISO to a known
-  object-store key; `download_url` points there.
+  object-store key; `download_url` points there (impl detail under F041).
 - Presigning provides registration gating + link expiry, not ISO confidentiality.
 
 ## 12. Security / permissions
@@ -232,18 +238,22 @@ verifiable:
 4. Setup-UI install-code step + install-time redeem/seed consumer.
 5. nm-store registration + confirmation/email + portal re-issue.
 
-## 16. Open questions
+## 16. Resolved decisions (was open — settled 2026-06-05)
 
-1. **Presigned URL owner / ISO location.** Lean: alga-license holds MinIO creds and
-   presigns; confirm MinIO is the ISO store and how the appliance release process
-   (`ee/appliance/releases/…`) publishes the "current" ISO key.
-2. **Stripe vs. registration ordering (paid).** Lean: registry row at form submit
-   (`registered`), entitlement + code on `checkout.session.completed`.
-3. **Edition source for essentials at `/register`.** Confirmed via
-   `tenant_registry.edition` (code → tenant_id → registry lookup); no edition on the
-   code. OK?
-4. **Code format.** Reuse `generateClaimCode()` as-is, or a distinct visual format
-   for install codes? Lean: reuse.
+1. **Presign owner / delivery.** alga-license mints the time-boxed presigned GET
+   URL, with the object-store (MinIO) credentials provided as **env vars**. The
+   presigned URL is **delivered by email** to the contact after
+   registration/purchase (carried alongside the install code), not handed out
+   publicly. (Remaining implementation detail: which object-store key holds the
+   "current" generic ISO and how the appliance release process publishes it — an
+   impl task under F041, not a design fork.)
+2. **Stripe vs. registration ordering (paid).** Create the `tenant_registry` row at
+   form submit (`status='registered'`); attach the entitlement + mint the install
+   code on `checkout.session.completed`.
+3. **Edition source for essentials at `/register`.** From `tenant_registry.edition`
+   via code → `tenant_id` → registry lookup; no edition stored on the code.
+4. **Code format.** Reuse `generateClaimCode()` (existing 8-char unambiguous
+   format) for install codes — one machinery, essentials and paid alike.
 
 ## 17. Acceptance criteria (Definition of Done)
 
