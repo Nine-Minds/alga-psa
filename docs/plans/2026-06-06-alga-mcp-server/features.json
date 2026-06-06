@@ -76,7 +76,7 @@
   {
     "id": "F009",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 1"
     ],
@@ -85,7 +85,7 @@
   {
     "id": "F010",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 1",
       "Security"
@@ -95,7 +95,7 @@
   {
     "id": "F011",
     "phase": 1,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 1"
     ],
