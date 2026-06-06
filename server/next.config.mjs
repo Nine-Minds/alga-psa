@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
+import os from 'os';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -165,7 +166,16 @@ class EditionBuildDiagnosticsPlugin {
 }
 
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
-const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS);
+// Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
+// pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
+// 32-core box), each loading the full app bundle (~290 MB) — the dominant build
+// memory peak. Capping to a small number collapses that peak onto the (fixed,
+// ~4-process) turbopack compilation floor with no wall-clock cost (static-gen is
+// ~0.1s; compilation, the bulk of the build, is turbopack/Rust and unaffected by
+// this count). Measured: 31→8 workers cut peak ~13.3→~10 GB and was *faster*.
+// Capped at available cores so small CI runners aren't oversubscribed.
+const hostParallelism = (os.availableParallelism?.() ?? os.cpus().length) || 8;
+const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, hostParallelism);
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
@@ -1074,8 +1084,10 @@ const nextConfig = {
     // Increase middleware body size limit for extension installs
     proxyClientMaxBodySize: '100mb',
     // Next build "Collecting page data" uses a worker pool sized from this value.
-    // In large repos, the default (often == host CPU count) can cause OOMs in CI.
-    ...(buildCpus ? { cpus: buildCpus } : {}),
+    // Default-capped (see buildCpus above) to bound peak memory; override with
+    // NEXT_BUILD_CPUS. In large repos the uncapped default (== host CPU count)
+    // OOMs in CI.
+    cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
@@ -1157,6 +1169,20 @@ const nextConfig = {
     '@faker-js/faker',
     'moment',
     'tinycolor2',
+    // Round 4 (memory campaign 2026-06-04): more server-only deps confirmed
+    // imported in the app graph but not used in client components. Keeps them
+    // out of the Turbopack server bundle that every static-gen worker loads.
+    'nodemailer',
+    'imapflow',
+    'express',
+    'fluent-ffmpeg',
+    'tar',
+    'node-vault',
+    '@nestjs/common',
+    '@asteasolutions/zod-to-openapi',
+    'formdata-node',
+    '@aws-sdk/s3-request-presigner',
+    'winston-daily-rotate-file',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
