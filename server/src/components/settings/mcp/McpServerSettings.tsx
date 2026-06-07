@@ -54,7 +54,7 @@ export default function McpServerSettings() {
   const [busy, setBusy] = useState(false);
 
   // Add-IdP form
-  const [idpForm, setIdpForm] = useState({ issuer: '', jwksUri: '', audience: '', subjectClaim: 'sub' });
+  const [idpForm, setIdpForm] = useState({ kind: 'microsoft', entraTenantId: '', issuer: '', jwksUri: '', audience: '', subjectClaim: '' });
   // Create-agent form
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
 
@@ -81,7 +81,7 @@ export default function McpServerSettings() {
   const addIdp = () =>
     run(async () => {
       await api('/api/v1/mcp/idp-providers', { method: 'POST', body: JSON.stringify(idpForm) });
-      setIdpForm({ issuer: '', jwksUri: '', audience: '', subjectClaim: 'sub' });
+      setIdpForm({ kind: 'microsoft', entraTenantId: '', issuer: '', jwksUri: '', audience: '', subjectClaim: '' });
       await reloadIdps();
     });
 
@@ -144,13 +144,49 @@ export default function McpServerSettings() {
               ))}
             </tbody>
           </table>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div><Label htmlFor="idp-issuer">Issuer</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
-            <div><Label htmlFor="idp-jwks">JWKS URI</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
-            <div><Label htmlFor="idp-audience">Audience (resource)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
-            <div><Label htmlFor="idp-claim">Subject claim</Label><Input id="idp-claim" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
+          <div className="space-y-3">
+            <div className="md:w-1/2">
+              <Label htmlFor="idp-kind">Provider</Label>
+              <select
+                id="idp-kind"
+                className="block w-full rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-2 py-1.5 text-sm text-[rgb(var(--color-text-900))]"
+                value={idpForm.kind}
+                onChange={(e) => setIdpForm({ ...idpForm, kind: e.target.value })}
+              >
+                <option value="microsoft">Microsoft Entra</option>
+                <option value="google">Google</option>
+                <option value="custom">Custom (advanced)</option>
+              </select>
+            </div>
+
+            {idpForm.kind === 'microsoft' && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div><Label htmlFor="idp-entra-tid">Entra tenant ID</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="your directory (tenant) id" /></div>
+                <div><Label htmlFor="idp-audience">Audience (optional)</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="the agent app's resource/aud" /></div>
+                <div><Label htmlFor="idp-claim-ms">Subject claim</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">App-only token: <code>azp</code>/<code>appid</code>. User token: <code>oid</code>/<code>sub</code>.</p></div>
+              </div>
+            )}
+
+            {idpForm.kind === 'google' && (
+              <p className="text-sm text-[rgb(var(--color-text-600))]">Nothing to configure — Google's issuer &amp; keys are well-known. An agent's subject is its service-account id (<code>sub</code>).</p>
+            )}
+
+            {idpForm.kind === 'custom' && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div><Label htmlFor="idp-issuer">Issuer</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
+                <div><Label htmlFor="idp-jwks">JWKS URI</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
+                <div><Label htmlFor="idp-audience-c">Audience (resource)</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
+                <div><Label htmlFor="idp-claim-c">Subject claim</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
+              </div>
+            )}
           </div>
-          <Button id="mcp-add-idp" onClick={addIdp} disabled={busy || !idpForm.issuer || !idpForm.jwksUri}>Add trusted IdP</Button>
+          <Button
+            id="mcp-add-idp"
+            onClick={addIdp}
+            disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
+          >
+            Add trusted IdP
+          </Button>
         </CardContent>
       </Card>
 
