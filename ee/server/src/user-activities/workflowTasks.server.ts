@@ -1,4 +1,3 @@
-// @ts-nocheck
 // EE implementation of the user-activities workflow-task source.
 //
 // `@alga-psa/user-activities/server/workflow-tasks` resolves here in the EE app build
