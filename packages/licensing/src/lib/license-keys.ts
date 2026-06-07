@@ -13,11 +13,13 @@
 export const LICENSE_PUBLIC_KEYS: Record<string, string> = {
   /**
    * v1: initial production signing key.
-   * Corresponding private key is held by Nine Minds (not in this repo).
+   * Corresponding ES256 (P-256) private key is held by Nine Minds in Vault
+   * (the alga-license signing service loads it at runtime; it is never committed).
+   * public-key sha256(DER) fingerprint: 87b2f50be065f21fb1a8684f130c6b1571cd1da28253419bde2ae62b6801e6c6
    */
   'v1': `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2Jqnmqjb2akeRovfGxeYQQkhwdVu
-w+XSD+4BU0TGN1T0O/xc6IpIjnnxZ+FIDbgMjUP2VO1FMly5BDLsMOejKA==
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEz+SFchVr1Y0Yp7RWngGyeCxBOFJK
+gUyETxpmGwiPUM8mqwchE8pAyX8C7cZslf9XX609TYDSqQBq5sekERbcIw==
 -----END PUBLIC KEY-----`,
 
   /**
