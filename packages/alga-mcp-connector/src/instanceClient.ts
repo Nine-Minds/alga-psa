@@ -69,9 +69,15 @@ export class InstanceClient {
       );
     }
     const json = (await res.json().catch(() => null)) as unknown;
-    const entries = Array.isArray(json)
-      ? json
-      : (json as { entries?: unknown } | null)?.entries;
+    // Tolerate Alga's standard envelope ({ data: { entries } }), a bare
+    // { entries }, or a raw array.
+    const payload =
+      json && typeof json === 'object' && 'data' in json
+        ? (json as { data?: unknown }).data
+        : json;
+    const entries = Array.isArray(payload)
+      ? payload
+      : (payload as { entries?: unknown } | null)?.entries;
     if (!Array.isArray(entries)) {
       throw new Error(`Registry response from ${url} did not contain an "entries" array.`);
     }

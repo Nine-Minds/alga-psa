@@ -34,7 +34,8 @@ beforeAll(async () => {
       res.end(JSON.stringify(body));
     };
     if (url.pathname === '/api/v1/meta/mcp-registry') {
-      json(200, { edition: 'ce', count: REGISTRY_ENTRIES.length, entries: REGISTRY_ENTRIES });
+      // Alga wraps responses in a { data: ... } envelope.
+      json(200, { data: { edition: 'ce', count: REGISTRY_ENTRIES.length, entries: REGISTRY_ENTRIES } });
     } else if (url.pathname === '/api/v1/tickets') {
       json(200, { data: [TICKET] });
     } else if (url.pathname === '/api/v1/tickets/t-1') {
