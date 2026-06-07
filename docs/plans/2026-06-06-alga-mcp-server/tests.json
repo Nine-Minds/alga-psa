@@ -117,7 +117,7 @@
   {
     "id": "T013",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
@@ -127,7 +127,7 @@
   {
     "id": "T014",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"
@@ -137,7 +137,7 @@
   {
     "id": "T015",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F030",
@@ -148,7 +148,7 @@
   {
     "id": "T016",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
@@ -157,7 +157,7 @@
   {
     "id": "T017",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F033"

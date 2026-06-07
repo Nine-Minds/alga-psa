@@ -109,6 +109,23 @@ Implement AlgaPSA as an MCP **server** in two transports: a free CE local stdio 
 2. **EE registry is stale** (609 vs 901) — run `npm run mcp:registry:generate`, review, commit separately.
 3. **Connector tenant header** — verify whether `/api/v1` needs `x-tenant-id` or resolves tenant from the API key (set `ALGA_TENANT_ID` if required).
 
+## PHASE 2 COMPLETE (2026-06-07) — remote governance, live-verified
+
+**13/14 Phase-2 features done** (F026 Dynamic Client Registration intentionally dropped — spec downgraded it; IdP delegation registers clients at the IdP). Built + verified live against the EE dev server (:3001) with a **mock IdP** (RS256 keypair + a local JWKS server).
+
+- **Agent identity** (`agents`, `agent_idp_providers`, `agent_roles`, `api_keys.agent_id`; migrations applied). Agents are backed by a **no-login internal user** so the existing kernel + `hasPermission` enforce the agent's RBAC roles (the kernel's `defaultRbacEvaluator` re-fetches by `user_id`, so a backing user is the low-risk way to reuse all authz — vs. a riskier core RBAC change). `AuthorizationSubject` gains `agentId`/`subjectType`.
+- **IdP-delegated auth** (`idpToken.ts`, jose): validate a Bearer JWT against a tenant-trusted IdP's JWKS (iss/aud/resource), map subject → agent. Resource server only; no Alga AS. PRM at `/.well-known/oauth-protected-resource`.
+- **Dispatch**: agent path mints a short-lived agent-scoped key and calls `/api/v1` → kernel enforces the agent's roles. Every tool call written to `mcp_agent_audit`; exportable via `/api/v1/mcp/audit`.
+- **Provisioning API**: `/api/v1/mcp/{agents,idp-providers,audit}` (EE, API-key admin auth).
+- **E2E proof (live)**: Admin agent → reads a real ticket; **no-role agent → 403 (RBAC deny)**; **untrusted issuer → 401**; agent action audited. T013-T017 covered by this live mock-IdP E2E.
+
+**SURPRISES / fixes during the live build:**
+- **RLS is no longer used** (per Robert). My agent tables' tenant_isolation RLS policies referenced `current_setting('app.current_tenant')`, which the app no longer sets → `guc.c find_option` 500s. Removed RLS from all four tables (live + migration files); tenant isolation is in code (`.where({tenant})`).
+- **Global API middleware** (`server/src/middleware.ts`) enforces `x-api-key` on `/api/*` and rejected the agent's `Bearer` JWT ("API key missing"). Added `/api/mcp` to `apiKeySkipPaths` (it authenticates in-route). `/api/v1/mcp/*` provisioning stays gated.
+- **Multi-dir migrations**: `knex_migrations` references CE+EE+ext dirs, so single-dir `migrate:latest` reports "corrupt". Applied the two new migrations surgically (run `up()` + record). The repo's `server/scripts/run-ee-migrations.js` is the proper merged runner.
+- Backing-user pattern means `api_keys.user_id` stays set (the backing user) even though I made it nullable; `agent_id` links the agent. Threading `agentId`/`subjectType` fully through the `/api/v1` subject builder is a future refinement (today attribution/audit live at the MCP layer; RBAC via the backing user).
+
+### Pre-existing Phases 2–3 notes (superseded for Phase 2 above)
 **Phases 2–3 (EE remote + governance) NOT started** — F022-F043. F022/F023 (Streamable HTTP transport + 3 tools, EE-gated) are implementable now (analogous to the connector). F024+ (OAuth 2.1, agent identity, ABAC, approval gates, quotas, SSO) need product decisions first: OAuth AS-vs-IdP strategy, and the deferred approval-over-request/response mechanism.
 
 ## LIVE BRING-UP (2026-06-07) — both MCPs running against the dev server (:3001, EE)
