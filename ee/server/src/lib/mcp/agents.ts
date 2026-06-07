@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
+import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
 
 /**
  * MCP agent identity service (Phase 2). An agent is a first-class principal
@@ -44,6 +45,9 @@ export interface TrustedIdp {
   issuer: string;
   jwks_uri: string;
   audience: string | null;
+  subject_claim: string;
+  kind: IdpKind;
+  entra_tenant_id: string | null;
   active: boolean;
 }
 
@@ -116,33 +120,44 @@ export async function setAgentActive(tenant: string, agentId: string, active: bo
 
 export interface TrustedIdpInput {
   tenant: string;
-  issuer: string;
-  jwksUri: string;
+  /** Preset: 'google' | 'microsoft' | 'custom' (default 'custom'). */
+  kind?: IdpKind;
+  /** Microsoft preset: the customer's Entra tenant id. */
+  entraTenantId?: string;
+  /** Custom: raw issuer + JWKS. For presets these are derived via discovery. */
+  issuer?: string;
+  jwksUri?: string;
   audience?: string;
-  /** Which token claim identifies the agent (sub / azp / client_id). Default 'sub'. */
+  /** Which token claim identifies the agent (sub / azp / client_id). Preset-defaulted. */
   subjectClaim?: string;
+  /** Test/seam override of the discovery origin. */
+  discoveryBaseUrl?: string;
 }
 
-export async function addTrustedIdp(input: TrustedIdpInput): Promise<void> {
-  const subjectClaim = input.subjectClaim || 'sub';
-  await runWithTenant(input.tenant, async () => {
+/** Add/update a trusted IdP, resolving presets (issuer + JWKS via OIDC discovery). Returns the stored row. */
+export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp> {
+  const kind = input.kind ?? 'custom';
+  const resolved = await resolveIdpFromPreset(kind, {
+    entraTenantId: input.entraTenantId,
+    issuer: input.issuer,
+    jwksUri: input.jwksUri,
+    subjectClaim: input.subjectClaim,
+    discoveryBaseUrl: input.discoveryBaseUrl,
+  });
+  return runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex(input.tenant);
+    const fields = {
+      jwks_uri: resolved.jwksUri,
+      audience: input.audience ?? null,
+      subject_claim: resolved.subjectClaim,
+      kind,
+      entra_tenant_id: input.entraTenantId ?? null,
+    };
     await knex('agent_idp_providers')
-      .insert({
-        tenant: input.tenant,
-        issuer: input.issuer,
-        jwks_uri: input.jwksUri,
-        audience: input.audience ?? null,
-        subject_claim: subjectClaim,
-      })
+      .insert({ tenant: input.tenant, issuer: resolved.issuer, ...fields })
       .onConflict(['tenant', 'issuer'])
-      .merge({
-        jwks_uri: input.jwksUri,
-        audience: input.audience ?? null,
-        subject_claim: subjectClaim,
-        active: true,
-        updated_at: knex.fn.now(),
-      });
+      .merge({ ...fields, active: true, updated_at: knex.fn.now() });
+    return knex('agent_idp_providers').where({ tenant: input.tenant, issuer: resolved.issuer }).first();
   });
 }
 
