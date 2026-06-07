@@ -932,6 +932,17 @@ const nextConfig = {
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );
+        // The MCP seam has no tsconfig `paths` entry (unlike chat/extensions),
+        // so in CE the bare `@product/mcp/entry` specifier falls through to the
+        // package `exports` and lands on ./ee/entry (the EE impl, which imports
+        // @ee/lib/mcp/* with no CE stub) — beating resolve.alias. Force it to the
+        // CE stub before resolution so no EE governance code enters the CE build.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
+          )
+        );
       }
     }
 
