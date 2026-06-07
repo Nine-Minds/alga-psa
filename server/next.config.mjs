@@ -582,6 +582,17 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
+      // MCP seam (.ts entries). The bare specifier must be aliased here for the
+      // webpack build — without it, '@product/mcp/entry' falls through to the
+      // package exports field (which only lists ./ee/entry and ./oss/entry) and
+      // fails to resolve. Mirrors the extensions seam above.
+      '@product/mcp/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-mcp/oss/entry.ts');
+        const selectedPath = isEE ? eePath : ossPath;
+        console.log(`[WEBPACK ALIAS DEBUG] @product/mcp/entry -> ${selectedPath} (isEE: ${isEE})`);
+        return selectedPath;
+      })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
