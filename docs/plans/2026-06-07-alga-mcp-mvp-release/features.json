@@ -144,7 +144,7 @@
   {
     "id": "F016",
     "group": "cleanup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ],
