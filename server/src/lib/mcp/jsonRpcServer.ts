@@ -11,6 +11,9 @@ import {
 } from '@alga-psa/agent-tooling';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { loadMcpRegistry } from './loadRegistry';
+import { authenticateAgentToken, looksLikeJwt } from './idpToken';
+import { mintAgentSessionKey } from './agents';
+import { writeAgentAudit } from './agentAudit';
 
 // Minimal Streamable-HTTP MCP server. Handles JSON-RPC over POST with single
 // application/json responses (sufficient for initialize / tools/list /
@@ -34,6 +37,9 @@ interface DispatchCtx {
   registry: ChatApiRegistryEntry[];
   apiKey: string;
   baseUrl: string;
+  // When set, this is an agent session — tool calls are attributed + audited.
+  agentId?: string;
+  tenant?: string;
 }
 
 interface ToolOutcome {
@@ -161,6 +167,17 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
       const name = (m.params?.name as string) ?? '';
       const args = (m.params?.arguments as Record<string, unknown>) ?? {};
       const out = await dispatchTool(name, args, ctx);
+      if (ctx.agentId && ctx.tenant) {
+        await writeAgentAudit({
+          tenant: ctx.tenant,
+          agentId: ctx.agentId,
+          tool: name,
+          arguments: args,
+          ok: !out.isError,
+          decision: out.isError ? 'deny' : 'allow',
+          resultSummary: out.content?.[0]?.text,
+        });
+      }
       return rpcResult(id, out);
     }
     default:
@@ -168,22 +185,52 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
   }
 }
 
-export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> {
-  const apiKey = req.headers.get('x-api-key') ?? bearerToken(req.headers.get('authorization'));
-  if (!apiKey) {
-    return new NextResponse(JSON.stringify({ error: 'Authentication required' }), {
-      status: 401,
-      headers: {
-        'content-type': 'application/json',
-        'WWW-Authenticate': `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`,
-      },
+interface ResolvedAuth {
+  apiKey: string;
+  agentId?: string;
+  tenant?: string;
+}
+
+/**
+ * Resolve the caller. A Bearer JWT is an IdP-delegated **agent** (validated via
+ * the tenant's trusted IdP, then dispatched under a short-lived agent-scoped key
+ * so the kernel enforces the agent's RBAC). Otherwise it's an Alga **API key**.
+ */
+async function resolveAuth(
+  req: NextRequest,
+): Promise<{ ok: true; auth: ResolvedAuth } | { ok: false; status: number; error: string; wwwAuthenticate?: boolean }> {
+  const xApiKey = req.headers.get('x-api-key');
+  const bearer = bearerToken(req.headers.get('authorization'));
+
+  if (bearer && looksLikeJwt(bearer)) {
+    const res = await authenticateAgentToken(bearer);
+    if (!res.ok) return { ok: false, status: res.status, error: res.error };
+    const { resolved } = res.ctx;
+    const sessionKey = await mintAgentSessionKey({
+      tenant: resolved.tenant,
+      agentId: resolved.agent.agent_id,
+      backingUserId: resolved.backingUserId as string,
     });
+    return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }
 
+  const apiKey = xApiKey ?? bearer;
+  if (!apiKey) return { ok: false, status: 401, error: 'Authentication required', wwwAuthenticate: true };
   const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-  if (!keyRecord) {
-    return NextResponse.json({ error: 'Invalid or expired API key' }, { status: 401 });
+  if (!keyRecord) return { ok: false, status: 401, error: 'Invalid or expired API key' };
+  return { ok: true, auth: { apiKey } };
+}
+
+export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> {
+  const authResult = await resolveAuth(req);
+  if (!authResult.ok) {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (authResult.wwwAuthenticate) {
+      headers['WWW-Authenticate'] = `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`;
+    }
+    return new NextResponse(JSON.stringify({ error: authResult.error }), { status: authResult.status, headers });
   }
+  const { auth } = authResult;
 
   let body: unknown;
   try {
@@ -194,7 +241,13 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
 
   const messages = Array.isArray(body) ? (body as JsonRpcMessage[]) : [body as JsonRpcMessage];
   const { entries } = await loadMcpRegistry();
-  const ctx: DispatchCtx = { registry: entries, apiKey, baseUrl: req.nextUrl.origin };
+  const ctx: DispatchCtx = {
+    registry: entries,
+    apiKey: auth.apiKey,
+    baseUrl: req.nextUrl.origin,
+    agentId: auth.agentId,
+    tenant: auth.tenant,
+  };
 
   const responses: object[] = [];
   for (const m of messages) {

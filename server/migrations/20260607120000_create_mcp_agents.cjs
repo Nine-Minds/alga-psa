@@ -7,13 +7,7 @@
  * @returns { Promise<void> }
  */
 exports.up = async function up(knex) {
-  const tenantPolicySql = (tableName) => `
-    CREATE POLICY tenant_isolation_policy ON ${tableName}
-    FOR ALL
-    USING (tenant = current_setting('app.current_tenant')::text)
-    WITH CHECK (tenant = current_setting('app.current_tenant')::text)
-  `;
-
+  // Tenant isolation is enforced in application code (WHERE tenant = ...), not RLS.
   if (!(await knex.schema.hasTable('agents'))) {
     await knex.schema.createTable('agents', (t) => {
       t.uuid('agent_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
@@ -33,8 +27,6 @@ exports.up = async function up(knex) {
       // NULLs are distinct in PG unique constraints, so many key-only agents are fine.
       t.unique(['tenant', 'idp_issuer', 'idp_subject']);
     });
-    await knex.raw('ALTER TABLE agents ENABLE ROW LEVEL SECURITY');
-    await knex.raw(tenantPolicySql('agents'));
   }
 
   if (!(await knex.schema.hasTable('agent_idp_providers'))) {
@@ -51,8 +43,6 @@ exports.up = async function up(knex) {
       t.index('tenant');
       t.index('issuer');
     });
-    await knex.raw('ALTER TABLE agent_idp_providers ENABLE ROW LEVEL SECURITY');
-    await knex.raw(tenantPolicySql('agent_idp_providers'));
   }
 
   if (!(await knex.schema.hasTable('agent_roles'))) {
@@ -65,8 +55,6 @@ exports.up = async function up(knex) {
       t.index('tenant');
       t.index('agent_id');
     });
-    await knex.raw('ALTER TABLE agent_roles ENABLE ROW LEVEL SECURITY');
-    await knex.raw(tenantPolicySql('agent_roles'));
   }
 
   if (!(await knex.schema.hasColumn('api_keys', 'agent_id'))) {

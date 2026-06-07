@@ -142,6 +142,20 @@ export async function findTrustedIdpsByIssuer(issuer: string): Promise<TrustedId
   return knex('agent_idp_providers').where({ issuer, active: true });
 }
 
+/** Distinct active issuers across the instance (for the Protected Resource Metadata doc). */
+export async function listAllActiveIssuers(): Promise<string[]> {
+  const knex = await getConnection(null);
+  const rows = await knex('agent_idp_providers').where({ active: true }).distinct('issuer');
+  return rows.map((r: { issuer: string }) => r.issuer);
+}
+
+export async function listTrustedIdps(tenant: string): Promise<TrustedIdp[]> {
+  return runWithTenant(tenant, async () => {
+    const { knex } = await createTenantKnex(tenant);
+    return knex('agent_idp_providers').where({ tenant }).orderBy('issuer');
+  });
+}
+
 /** Cross-tenant resolve of an agent by its IdP (issuer, subject) binding. */
 export async function resolveAgentByIdp(issuer: string, subject: string): Promise<ResolvedAgent | null> {
   const knex = await getConnection(null);
