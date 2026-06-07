@@ -30,6 +30,20 @@
 - **Google:** issuer `https://accounts.google.com`; discovery `https://accounts.google.com/.well-known/openid-configuration`; JWKS `https://www.googleapis.com/oauth2/v3/certs`. Service-account identity = `sub` (numeric) / `email`.
 - **Microsoft v2.0:** issuer `https://login.microsoftonline.com/{tid}/v2.0`; discovery `…/{tid}/v2.0/.well-known/openid-configuration`; JWKS from discovery. App-only token claims: `azp`/`appid` = the app registration's client id; `oid` = service principal object id. (`tid` is the customer Entra tenant.)
 
+## Implementation log
+
+- **Tier 1 (F001–F007) shipped:** `idpPresets.ts` (resolveIdpFromPreset google/microsoft/custom) + `oidcDiscovery.ts` (cached well-known fetch). `addTrustedIdp` resolves presets; route+seam pass `kind`/`entraTenantId`. Admin UI dropdown + conditional fields + resolved row in the providers table. Verified live vs real Google/Microsoft discovery docs.
+- **Reuse (F008–F009) shipped:** `getIdpSuggestions(tenant)` reads `microsoft_profiles` (is_archived=false, prefer is_default) -> `{microsoft:{entraTenantId,…}}`; `/api/v1/mcp/idp-suggestions`; UI banner (`#mcp-ms-suggestion`, `#mcp-use-ms-connection`) one-click prefills the Microsoft preset. Verified in-browser.
+- **Tier 2 (F010–F014) shipped:** `idpBuiltins.ts` — `hostedGoogleEnabled()`/`hostedMicrosoftEnabled()` (appSecret GOOGLE/MICROSOFT_OAUTH_CLIENT_ID), `getBuiltinIdpForIssuer(issuer)` (Google fixed issuer; MS regex `…/{tid}/v2.0`), `listBuiltinIssuers()`.
+  - `idpToken.authenticateAgentToken` now builds a unified candidate list: `agent_idp_providers` rows **+** the built-in for the issuer. Built-ins carry `tenant: null` -> tenant-match check is skipped (agent tenant comes solely from the (issuer, subject) binding).
+  - `agents.listAllActiveIssuers` merges `listBuiltinIssuers()` (deduped) for PRM.
+  - **Verified live:** dev has `secrets/google_oauth_client_id` only (no MS). `GET /.well-known/oauth-protected-resource` now returns `authorization_servers: ["https://accounts.google.com"]` with **zero** `agent_idp_providers` rows -> the Google built-in is advertised purely from the shared-app secret. F014: agent provisioning form already accepts free-form `idpIssuer`/`idpSubject`, so binding to the built-in `accounts.google.com` issuer needs no IdP row.
+  - Nice-to-have (deferred): surface built-in issuers as preset choices in the *agent* form too (today the admin types `https://accounts.google.com`).
+
+## Infra (supporting)
+
+- `server/scripts/run-ee-migrations.js` rewritten to merge CE+EE migrations into a dir **under server/** (was os.tmpdir()) so migrations' relative `require`/`path.resolve(__dirname,'..')` resolve (node_modules + src siblings). Auto-cleaned in `finally`; `EE_MIGRATIONS_KEEP_TMP=1` to retain. `.gitignore`: `.ee-combined-migrations-*/`.
+
 ## Gotchas
 
 - OIDC discovery is a network call -> cache it; fail with a clear message; let `custom` override the `jwks_uri`.

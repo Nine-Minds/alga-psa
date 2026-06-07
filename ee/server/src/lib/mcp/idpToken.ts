@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, decodeJwt, type JWTPayload } from 'jose';
 import { findTrustedIdpsByIssuer, resolveAgentByIdp, type ResolvedAgent } from './agents';
+import { getBuiltinIdpForIssuer } from './idpBuiltins';
 
 /**
  * IdP-delegated token validation (Phase 2 F025/F029/F042). The MCP server is an
@@ -32,6 +33,19 @@ export function looksLikeJwt(token: string): boolean {
   return token.split('.').length === 3;
 }
 
+/**
+ * A validation candidate: a tenant-registered IdP row OR a hosted built-in
+ * (Tier 2). `tenant: null` marks a built-in, which is instance-wide — the
+ * agent's tenant is determined solely by the (issuer, subject) binding, so the
+ * tenant-match check is skipped for it.
+ */
+interface IdpCandidate {
+  jwksUri: string;
+  audience: string | null;
+  subjectClaim: string;
+  tenant: string | null;
+}
+
 export async function authenticateAgentToken(
   token: string,
   opts: { subjectClaim?: string } = {},
@@ -44,19 +58,30 @@ export async function authenticateAgentToken(
   }
   if (!issuer) return { ok: false, status: 401, error: 'Token is missing the "iss" claim.' };
 
-  const idps = await findTrustedIdpsByIssuer(issuer);
-  if (idps.length === 0) {
+  const candidates: IdpCandidate[] = (await findTrustedIdpsByIssuer(issuer)).map((idp) => ({
+    jwksUri: idp.jwks_uri,
+    audience: idp.audience,
+    subjectClaim: idp.subject_claim,
+    tenant: idp.tenant,
+  }));
+  // Hosted built-ins (Google/Microsoft shared apps) extend the trust set when
+  // the SaaS shared-app secrets are present, so hosted tenants need no IdP row.
+  const builtin = await getBuiltinIdpForIssuer(issuer);
+  if (builtin) {
+    candidates.push({ ...builtin, tenant: null });
+  }
+  if (candidates.length === 0) {
     return { ok: false, status: 401, error: `Untrusted token issuer: ${issuer}` };
   }
 
   let lastError = 'Token verification failed.';
-  for (const idp of idps) {
+  for (const cand of candidates) {
     try {
-      const { payload } = await jwtVerify(token, getJwks(idp.jwks_uri), {
+      const { payload } = await jwtVerify(token, getJwks(cand.jwksUri), {
         issuer,
-        audience: idp.audience ?? undefined,
+        audience: cand.audience ?? undefined,
       });
-      const subjectClaim = opts.subjectClaim ?? idp.subject_claim ?? 'sub';
+      const subjectClaim = opts.subjectClaim ?? cand.subjectClaim ?? 'sub';
       const subject = String(
         (payload as Record<string, unknown>)[subjectClaim] ?? payload.sub ?? '',
       );
@@ -69,7 +94,7 @@ export async function authenticateAgentToken(
         lastError = `No active agent is bound to ${issuer} / ${subject}.`;
         continue;
       }
-      if (resolved.tenant !== idp.tenant) {
+      if (cand.tenant !== null && resolved.tenant !== cand.tenant) {
         lastError = 'Agent/IdP tenant mismatch.';
         continue;
       }

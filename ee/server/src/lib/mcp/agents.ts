@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
+import { listBuiltinIssuers } from './idpBuiltins';
 
 /**
  * MCP agent identity service (Phase 2). An agent is a first-class principal
@@ -171,7 +172,12 @@ export async function findTrustedIdpsByIssuer(issuer: string): Promise<TrustedId
 export async function listAllActiveIssuers(): Promise<string[]> {
   const knex = await getConnection(null);
   const rows = await knex('agent_idp_providers').where({ active: true }).distinct('issuer');
-  return rows.map((r: { issuer: string }) => r.issuer);
+  const registered = rows.map((r: { issuer: string }) => r.issuer);
+  // Advertise hosted built-ins (Google/Microsoft shared apps) when enabled, so
+  // MCP clients can discover them via Protected Resource Metadata with no per-
+  // tenant IdP registration.
+  const builtins = await listBuiltinIssuers();
+  return Array.from(new Set([...registered, ...builtins]));
 }
 
 export async function listTrustedIdps(tenant: string): Promise<TrustedIdp[]> {
