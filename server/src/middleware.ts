@@ -86,6 +86,8 @@ const apiKeySkipPaths = [
   '/api/chat/',
   // Remote MCP server authenticates in-route (Alga API key OR IdP-delegated Bearer token)
   '/api/mcp',
+  // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
+  '/api/v1/mcp/',
   // Workflow definition/run APIs are session-authenticated for MSP workflow UI tooling.
   '/api/workflow-definitions',
   '/api/workflow-definitions/',

@@ -57,6 +57,7 @@ import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
+import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
@@ -310,15 +311,26 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     content: <ExtensionManagement />,
   };
 
+  // MCP server governance (Enterprise only).
+  const mcpTab: SettingsTabContent = {
+    id: 'mcp-server',
+    label: 'MCP Server',
+    icon: Settings,
+    content: <McpServerSettings />,
+  };
+
   // Create a map of tab content by label for easy lookup
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
+    if (isEEAvailable) {
+      tabs.push(mcpTab);
+    }
     if (!isAlgaDesk) {
       return tabs;
     }
 
     return tabs.filter((tab) => allowedTabIds.has(tab.id));
-  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgaDesk]);
+  }, [allowedTabIds, baseTabContent, extensionsTab, mcpTab, isEEAvailable, isAlgaDesk]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

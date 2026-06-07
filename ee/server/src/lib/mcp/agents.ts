@@ -184,6 +184,23 @@ export async function getAgentRoleIds(tenant: string, agentId: string): Promise<
   });
 }
 
+export interface AssignableRole {
+  role_id: string;
+  role_name: string;
+  description: string | null;
+}
+
+/** MSP (internal) roles assignable to an agent. */
+export async function listAssignableRoles(tenant: string): Promise<AssignableRole[]> {
+  return runWithTenant(tenant, async () => {
+    const { knex } = await createTenantKnex(tenant);
+    return knex('roles')
+      .where({ tenant, msp: true })
+      .select('role_id', 'role_name', 'description')
+      .orderBy('role_name');
+  });
+}
+
 /**
  * Mint a short-lived agent-scoped API key (backed by the agent's internal user)
  * for dispatching tool calls through /api/v1 under the agent's permissions.

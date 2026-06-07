@@ -28,6 +28,9 @@ export async function listTrustedIdps(_tenant: string): Promise<unknown[]> {
 export async function listAllActiveIssuers(): Promise<string[]> {
   return [];
 }
+export async function listAssignableRoles(_tenant: string): Promise<unknown[]> {
+  return [];
+}
 export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<unknown[]> {
   return [];
 }
