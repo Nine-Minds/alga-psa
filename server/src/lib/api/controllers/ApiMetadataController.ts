@@ -36,7 +36,6 @@ import type { ApiPermissionInfo, ApiSchemaInfo, ApiStats } from '../schemas/meta
 import { ZodError } from 'zod';
 import { getTenantProduct } from '@/lib/productAccess';
 import { isApiVisibleInMetadata } from '@/lib/productSurfaceRegistry';
-import { isEnterpriseEdition } from '@/lib/features';
 
 export class ApiMetadataController extends ApiBaseController {
   private metadataService: MetadataService;
@@ -301,21 +300,8 @@ export class ApiMetadataController extends ApiBaseController {
         const apiRequest = await this.authenticate(req);
         await this.assertProductApiAccess(apiRequest);
 
-        let edition: 'ce' | 'ee' = 'ce';
-        const { chatApiRegistry } = await import('@/lib/mcp/registry.generated');
-        let entries: unknown[] = chatApiRegistry;
-
-        if (isEnterpriseEdition()) {
-          try {
-            const mod = (await import('@product/chat/entry')) as { eeMcpRegistry?: unknown[] };
-            if (Array.isArray(mod.eeMcpRegistry)) {
-              entries = mod.eeMcpRegistry;
-              edition = 'ee';
-            }
-          } catch {
-            // EE registry artifact unavailable — fall back to the CE registry.
-          }
-        }
+        const { loadMcpRegistry } = await import('@/lib/mcp/loadRegistry');
+        const { edition, entries } = await loadMcpRegistry();
 
         return createSuccessResponse(
           { edition, count: entries.length, entries },

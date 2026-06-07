@@ -110,3 +110,21 @@ Implement AlgaPSA as an MCP **server** in two transports: a free CE local stdio 
 3. **Connector tenant header** — verify whether `/api/v1` needs `x-tenant-id` or resolves tenant from the API key (set `ALGA_TENANT_ID` if required).
 
 **Phases 2–3 (EE remote + governance) NOT started** — F022-F043. F022/F023 (Streamable HTTP transport + 3 tools, EE-gated) are implementable now (analogous to the connector). F024+ (OAuth 2.1, agent identity, ABAC, approval gates, quotas, SSO) need product decisions first: OAuth AS-vs-IdP strategy, and the deferred approval-over-request/response mechanism.
+
+## LIVE BRING-UP (2026-06-07) — both MCPs running against the dev server (:3001, EE)
+
+Dev server: `feature/alga-mcp-server/server`, Next 16.2.6, `PORT=3001 npm run dev` (nx `server:next:dev`), `NEXT_PUBLIC_EDITION=enterprise` (from server/.env). DB: docker `algamcp-postgres-1`. Test API key minted via DB insert (SHA-256 of a random token; internal user dorothy@kansas.oz; saved at /tmp/alga_mcp_token.txt, description 'mcp-test-key').
+
+**EE-BUILD GATE CLEARED.** Restarted the dev server to pick up the Group-D `next.config` agent-tooling alias. `/api/mcp` `tools/list` returned the 3 tools — i.e. `buildMetaToolDefinitions` (an agent-tooling **runtime** value) resolved at runtime. So the turbopack/webpack alias + transpilePackages edits are correct. Server booted clean; chat path (search.ts shim runtime value) implicitly exercises the same alias.
+
+**LOCAL MCP — works.** Built bin driven over real stdio (SDK StdioClientTransport) against :3001: `search_api_registry('list tickets')` → `get-_api_v1_tickets`; `call_api_endpoint` → HTTP 200, real ticket "Ruby Slippers Server Power Fluctuation"; `search_business_data` → valid response. Re-verified after the server restart.
+
+**SERVER MCP — works.** New EE-gated `POST /api/mcp` (Streamable HTTP, JSON-RPC). Synthetic curl drive: unauth → 401; `initialize` → protocol result; `tools/list` → 3 tools; `tools/call search_api_registry` → ranked; `tools/call call_api_endpoint(get-_api_v1_tickets)` → HTTP 200 real ticket.
+
+**BUG FOUND + FIXED via live test:** the connector's `fetchRegistry` only read top-level `entries`, but the real endpoint returns Alga's `{ data: { entries } }` envelope → connector couldn't parse the registry. Fixed `instanceClient.fetchRegistry` to unwrap `data`; updated the E2E mock to use the envelope. (Pure-unit tests had missed it because the mock returned a bare `{entries}`.)
+
+**NOTES / not-yet-done:**
+- `app_search_index` has **0 rows** in this dev DB → `search_business_data` correctly returns empty. Tool is fine; the index just isn't populated.
+- Server MCP **auth is an MVP stand-in: Alga API key** (`x-api-key`/Bearer validated via `validateApiKeyAnyTenant`), NOT the designed IdP-delegated OAuth (F024/F025). The 401 also advertises a `WWW-Authenticate: ...resource_metadata` header, but the PRM endpoint isn't built yet.
+- Server MCP **dispatch is self-HTTP** to `/api/v1` under the caller's key (reuses agent-tooling `buildRequest`), NOT the designed in-process kernel dispatch under an agent subject (F031). Good enough to prove the transport + tool surface; swap to kernel dispatch when agent identity (F027) lands.
+- So **F022 (transport) + F023 (3 tools over remote) = done (MVP)**; F024-F033 (OAuth/IdP, agent identity, audit) remain.

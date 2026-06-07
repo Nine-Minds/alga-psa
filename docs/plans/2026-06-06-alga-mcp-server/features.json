@@ -197,20 +197,20 @@
   {
     "id": "F022",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ],
-    "description": "Add /api/mcp Streamable HTTP endpoint via SDK StreamableHTTPServerTransport, EE-gated (no HTTP+SSE)"
+    "description": "POST /api/mcp Streamable HTTP (JSON-RPC) endpoint, EE-gated. [DONE-MVP: JSON-RPC over POST; agent-tooling engine]"
   },
   {
     "id": "F023",
     "phase": 2,
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ],
-    "description": "Expose the 3 meta-tools over the remote transport reusing agent-tooling"
+    "description": "Expose the 3 meta-tools over the remote transport reusing agent-tooling. [DONE-MVP; dispatch self-HTTP to /api/v1 under caller key \u2014 kernel dispatch is F031]"
   },
   {
     "id": "F024",
