@@ -56,7 +56,7 @@ export async function authenticateAgentToken(
         issuer,
         audience: idp.audience ?? undefined,
       });
-      const subjectClaim = opts.subjectClaim ?? 'sub';
+      const subjectClaim = opts.subjectClaim ?? idp.subject_claim ?? 'sub';
       const subject = String(
         (payload as Record<string, unknown>)[subjectClaim] ?? payload.sub ?? '',
       );

@@ -25,6 +25,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     issuer?: string;
     jwksUri?: string;
     audience?: string;
+    subjectClaim?: string;
   };
   if (!body.issuer || !body.jwksUri) {
     return NextResponse.json({ error: '"issuer" and "jwksUri" are required' }, { status: 400 });
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     issuer: body.issuer,
     jwksUri: body.jwksUri,
     audience: body.audience,
+    subjectClaim: body.subjectClaim,
   });
   return NextResponse.json({ data: { issuer: body.issuer, ok: true } }, { status: 201 });
 }

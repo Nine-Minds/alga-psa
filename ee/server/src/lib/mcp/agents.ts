@@ -119,9 +119,12 @@ export interface TrustedIdpInput {
   issuer: string;
   jwksUri: string;
   audience?: string;
+  /** Which token claim identifies the agent (sub / azp / client_id). Default 'sub'. */
+  subjectClaim?: string;
 }
 
 export async function addTrustedIdp(input: TrustedIdpInput): Promise<void> {
+  const subjectClaim = input.subjectClaim || 'sub';
   await runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex(input.tenant);
     await knex('agent_idp_providers')
@@ -130,9 +133,16 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<void> {
         issuer: input.issuer,
         jwks_uri: input.jwksUri,
         audience: input.audience ?? null,
+        subject_claim: subjectClaim,
       })
       .onConflict(['tenant', 'issuer'])
-      .merge({ jwks_uri: input.jwksUri, audience: input.audience ?? null, active: true, updated_at: knex.fn.now() });
+      .merge({
+        jwks_uri: input.jwksUri,
+        audience: input.audience ?? null,
+        subject_claim: subjectClaim,
+        active: true,
+        updated_at: knex.fn.now(),
+      });
   });
 }
 
@@ -191,6 +201,13 @@ export async function mintAgentSessionKey(params: {
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
+    // Opportunistically sweep this tenant's expired agent session keys so they
+    // don't accumulate (each agent request mints a fresh short-lived key).
+    await knex('api_keys')
+      .where({ tenant, purpose: 'mcp_agent' })
+      .whereNotNull('expires_at')
+      .where('expires_at', '<', knex.fn.now())
+      .del();
     await knex('api_keys').insert({
       api_key: hash,
       user_id: userId,
@@ -204,4 +221,14 @@ export async function mintAgentSessionKey(params: {
     });
   });
   return token;
+}
+
+/** Delete all expired agent session keys across all tenants (for a sweep job). */
+export async function cleanupExpiredAgentKeys(): Promise<number> {
+  const knex = await getConnection(null);
+  return knex('api_keys')
+    .where({ purpose: 'mcp_agent' })
+    .whereNotNull('expires_at')
+    .where('expires_at', '<', knex.fn.now())
+    .del();
 }

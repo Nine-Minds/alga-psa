@@ -45,6 +45,8 @@ interface DispatchCtx {
 interface ToolOutcome {
   content: Array<{ type: 'text'; text: string }>;
   isError: boolean;
+  /** Upstream HTTP status when the tool dispatched to /api/v1 (for audit granularity). */
+  statusCode?: number;
 }
 
 const rpcResult = (id: unknown, result: unknown) => ({ jsonrpc: '2.0', id, result });
@@ -122,7 +124,7 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
     if (args.cursor) params.set('cursor', String(args.cursor));
     if (args.sort) params.set('sort', String(args.sort));
     const r = await selfFetch(ctx.baseUrl, `/api/v1/search?${params.toString()}`, { method: 'GET' }, ctx.apiKey);
-    return { content: textContent(r.data), isError: !r.ok };
+    return { content: textContent(r.data), isError: !r.ok, statusCode: r.status };
   }
 
   if (name === CALL_API_ENDPOINT_TOOL) {
@@ -141,7 +143,7 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
       init.body = built.body;
     }
     const r = await selfFetch(ctx.baseUrl, path, init, ctx.apiKey);
-    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok };
+    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
   }
 
   return toolErr(`Unknown tool: ${name}`);
@@ -168,13 +170,19 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
       const args = (m.params?.arguments as Record<string, unknown>) ?? {};
       const out = await dispatchTool(name, args, ctx);
       if (ctx.agentId && ctx.tenant) {
+        const decision = !out.isError
+          ? 'allow'
+          : out.statusCode === 403 || out.statusCode === 401
+            ? 'deny'
+            : 'error';
         await writeAgentAudit({
           tenant: ctx.tenant,
           agentId: ctx.agentId,
           tool: name,
           arguments: args,
           ok: !out.isError,
-          decision: out.isError ? 'deny' : 'allow',
+          statusCode: out.statusCode ?? null,
+          decision,
           resultSummary: out.content?.[0]?.text,
         });
       }
