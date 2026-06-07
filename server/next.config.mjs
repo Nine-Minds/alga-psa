@@ -101,6 +101,7 @@ class EditionBuildDiagnosticsPlugin {
     this.options = {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
+        '@product/mcp/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -359,6 +360,9 @@ const nextConfig = {
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
         : '@product/chat/oss/entry',
+      '@product/mcp/entry': isEE
+        ? '@product/mcp/ee/entry'
+        : '@product/mcp/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -653,6 +657,10 @@ const nextConfig = {
       const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
       config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
       config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
+
+      const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
+      const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+      config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
       const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
       const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');

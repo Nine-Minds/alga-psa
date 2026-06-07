@@ -1,17 +1,15 @@
 /**
- * MCP agent provisioning (EE). GET lists agents; POST provisions a new agent
- * bound to a tenant-IdP subject with assigned RBAC roles.
+ * MCP agent provisioning (EE). Implementation loaded via the @product/mcp seam.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
-import { authenticateMcpAdmin } from '@/lib/mcp/adminAuth';
-import { createAgent, listAgents } from '@/lib/mcp/agents';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  const { authenticateMcpAdmin, listAgents } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   return NextResponse.json({ data: await listAgents(admin.tenant) });
@@ -19,6 +17,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  const { authenticateMcpAdmin, createAgent } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

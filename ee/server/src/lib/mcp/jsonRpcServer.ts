@@ -10,7 +10,7 @@ import {
   type CallEndpointArgs,
 } from '@alga-psa/agent-tooling';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { loadMcpRegistry } from './loadRegistry';
+import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
 import { authenticateAgentToken, looksLikeJwt } from './idpToken';
 import { mintAgentSessionKey } from './agents';
 import { writeAgentAudit } from './agentAudit';

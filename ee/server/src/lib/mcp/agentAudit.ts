@@ -1,4 +1,4 @@
-import { createTenantKnex, runWithTenant } from '../db';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 
 /** One agent tool invocation, recorded for the exportable agent-action audit. */
 export interface AgentAuditEntry {

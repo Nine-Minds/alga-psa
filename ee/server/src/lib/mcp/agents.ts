@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import { createTenantKnex, runWithTenant } from '../db';
-import { getConnection } from '../db/db';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { getConnection } from '@/lib/db/db';
 
 /**
  * MCP agent identity service (Phase 2). An agent is a first-class principal

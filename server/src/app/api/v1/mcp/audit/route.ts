@@ -1,17 +1,15 @@
 /**
- * MCP agent-action audit export (EE, Phase 2 F033). Returns recorded agent tool
- * invocations for the tenant, optionally filtered by agentId.
+ * MCP agent-action audit export (EE). Implementation loaded via the @product/mcp seam.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
-import { authenticateMcpAdmin } from '@/lib/mcp/adminAuth';
-import { exportAgentAudit } from '@/lib/mcp/agentAudit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return NextResponse.json({ error: 'Enterprise feature' }, { status: 404 });
+  const { authenticateMcpAdmin, exportAgentAudit } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
