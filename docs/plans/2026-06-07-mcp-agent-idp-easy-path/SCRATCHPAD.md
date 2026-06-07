@@ -44,6 +44,13 @@
 - **F018 (docs) shipped:** `docs/mcp-server.md` now documents the easy path (presets / reuse / hosted built-ins) and the irreducible interactive-vs-unattended distinction (unattended machine agents still need their own Entra app registration / Google service account).
 - **F017 deferred:** the copy-paste directory-identity wizard (guided Entra/Google service-account setup) is its own follow-up UI piece — the docs cover the steps in prose for now.
 
+## Tests (lean 80/20 — favor live)
+
+- `ee/server/src/__tests__/unit/mcpIdpPresets.test.ts` (11) — **live** OIDC discovery vs real Google + Microsoft (`common`) well-known docs; preset resolution (google→sub, microsoft→azp, override, missing-tenant error); discovery cache identity + unreachable-doc error; custom regression (verbatim passthrough, sub default, requires issuer+jwks). T001/T002/T003/T009.
+- `ee/server/src/__tests__/unit/mcpAgentTokenValidation.test.ts` (8) — **mock-IdP round-trip**: real RS256 token + local `http` JWKS server through the actual jose pipeline in `authenticateAgentToken`; only the DB seams (`findTrustedIdpsByIssuer`/`resolveAgentByIdp`) + `getBuiltinIdpForIssuer` are mocked. Covers: registered-row validate+resolve, audience mismatch 403, tenant-match 403, non-default subject claim (azp), missing backing-id 403, **built-in path validates with no row and skips the tenant match** (Tier 2), untrusted-issuer 401, non-JWT 401. T005/T008.
+- Run: `cd ee/server && DATABASE_URL=postgresql://x:x@127.0.0.1:5432/x npx vitest run src/__tests__/unit/mcpIdpPresets.test.ts src/__tests__/unit/mcpAgentTokenValidation.test.ts` (globalSetup only checks DATABASE_URL presence; these tests touch no DB). 19/19 green, ~1.4s.
+- **Not automated (live-verified instead):** T004 addTrustedIdp DB write, T006 admin-UI preset, T007 reuse suggestion, T010 dup-409 (verified via the API this session). These need the full DB/UI stack; deferred per the lean strategy.
+
 ## Infra (supporting)
 
 - `server/scripts/run-ee-migrations.js` rewritten to merge CE+EE migrations into a dir **under server/** (was os.tmpdir()) so migrations' relative `require`/`path.resolve(__dirname,'..')` resolve (node_modules + src siblings). Auto-cleaned in `finally`; `EE_MIGRATIONS_KEEP_TMP=1` to retain. `.gitignore`: `.ee-combined-migrations-*/`.
