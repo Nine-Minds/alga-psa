@@ -212,7 +212,9 @@ async function resolveAuth(
 
   if (bearer && looksLikeJwt(bearer)) {
     const res = await authenticateAgentToken(bearer);
-    if (!res.ok) return { ok: false, status: res.status, error: res.error };
+    // Explicit `=== false` (not `!res.ok`): ee/server sets tsconfig strict:false, and
+    // negative narrowing of a boolean-discriminated union doesn't narrow there.
+    if (res.ok === false) return { ok: false, status: res.status, error: res.error };
     const { resolved } = res.ctx;
     const sessionKey = await mintAgentSessionKey({
       tenant: resolved.tenant,
@@ -231,7 +233,7 @@ async function resolveAuth(
 
 export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> {
   const authResult = await resolveAuth(req);
-  if (!authResult.ok) {
+  if (authResult.ok === false) {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (authResult.wwwAuthenticate) {
       headers['WWW-Authenticate'] = `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`;

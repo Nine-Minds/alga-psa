@@ -1,7 +1,7 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { exportJWK, generateKeyPair, SignJWT, type KeyLike } from 'jose';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 
 /**
  * MCP agent-token validation round-trip (easy-path F012, Tier 2 built-ins).
@@ -32,7 +32,7 @@ const mResolveAgent = vi.mocked(resolveAgentByIdp);
 const mBuiltin = vi.mocked(getBuiltinIdpForIssuer);
 
 const ISSUER = 'https://idp.example.test/tenant-1';
-let privateKey: KeyLike;
+let privateKey: CryptoKey;
 let server: http.Server;
 let jwksUri: string;
 
@@ -120,7 +120,7 @@ describe('authenticateAgentToken — registered IdP row', () => {
 
     const res = await authenticateAgentToken(token);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.status).toBe(403);
+    if (res.ok === false) expect(res.status).toBe(403);
   });
 
   it('enforces the agent/IdP tenant match for registered rows (403)', async () => {
@@ -130,7 +130,7 @@ describe('authenticateAgentToken — registered IdP row', () => {
 
     const res = await authenticateAgentToken(token);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/tenant mismatch/i);
+    if (res.ok === false) expect(res.error).toMatch(/tenant mismatch/i);
   });
 
   it('selects the subject from a non-default claim (azp)', async () => {
@@ -149,7 +149,7 @@ describe('authenticateAgentToken — registered IdP row', () => {
 
     const res = await authenticateAgentToken(token);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/backing identity/i);
+    if (res.ok === false) expect(res.error).toMatch(/backing identity/i);
   });
 });
 
@@ -173,7 +173,7 @@ describe('authenticateAgentToken — hosted built-in (Tier 2)', () => {
 
     const res = await authenticateAgentToken(token);
     expect(res.ok).toBe(false);
-    if (!res.ok) {
+    if (res.ok === false) {
       expect(res.status).toBe(401);
       expect(res.error).toMatch(/untrusted token issuer/i);
     }
@@ -184,6 +184,6 @@ describe('authenticateAgentToken — malformed input', () => {
   it('rejects a non-JWT bearer token (401)', async () => {
     const res = await authenticateAgentToken('not-a-jwt');
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.status).toBe(401);
+    if (res.ok === false) expect(res.status).toBe(401);
   });
 });
