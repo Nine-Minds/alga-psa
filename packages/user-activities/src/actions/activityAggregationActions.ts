@@ -15,10 +15,16 @@ import {
   timeEntryToActivity,
   workflowTaskToActivity,
 } from '@alga-psa/types';
-import { getAllScheduleEntries } from '@alga-psa/core';
+import { getScheduleActivityEntries } from '@alga-psa/scheduling/actions';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
+
+// Workflow tasks are the only EE-specific activity source. The base package resolves
+// this to a CE stub (returns []); the EE app build aliases the specifier to the real
+// implementation. This keeps `@alga-psa/user-activities` free of `@alga-psa/workflows`.
+import { fetchWorkflowTaskActivities } from '@alga-psa/user-activities/server/workflow-tasks';
+export { fetchWorkflowTaskActivities };
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation
 const cache = {
@@ -274,7 +280,7 @@ export const fetchUserActivities = withAuth(async (
 /**
  * Fetch ad-hoc schedule entries assigned to a user, independent of any date window.
  *
- * The normal schedule fetch (getAllScheduleEntries) filters on scheduled_start/end,
+ * The normal schedule fetch (getScheduleActivityEntries) filters on scheduled_start/end,
  * which excludes ad-hoc items that have no scheduled time. Ad-hoc items behave like
  * personal to-dos, so we surface them regardless of date. Done items (status='closed')
  * are still hidden by the caller's isClosed filter.
@@ -337,17 +343,15 @@ export async function fetchScheduleActivities(
       ? new Date(filters.dateRangeEnd)
       : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
     
-    // Fetch schedule entries
+    // Fetch schedule entries assigned to this user via the scheduling domain. This
+    // owns ScheduleEntry model access (recurrence expansion + assignee filtering +
+    // permission gate), so user-activities never imports the schedule model. Replaces
+    // the former process-global scheduleEntryRegistry, which failed across Next bundles.
     const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
     }
-    const entries = await getAllScheduleEntries(knex, tenant, start, end);
-    
-    // Filter entries assigned to the user
-    let userEntries = entries.filter(entry =>
-      entry.assigned_user_ids.includes(userId)
-    );
+    let userEntries = await getScheduleActivityEntries(userId, start, end);
 
     // Also include ad-hoc entries regardless of the date window — they may have no
     // scheduled time (which the window query above drops) or fall outside now→+30d.
@@ -1003,167 +1007,6 @@ export async function fetchTimeEntryActivities(
   }
 }
 
-/**
- * Interface for workflow task data from database
- */
-interface WorkflowTaskData {
-  task_id: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority?: string;
-  due_date?: string;
-  assigned_users?: string[];
-  assigned_roles?: string[];
-  execution_id: string;
-  form_id?: string;
-  context_data?: Record<string, any>;
-  tenant: string;
-  created_at: string;
-  updated_at: string;
-  workflow_name?: string;
-  workflow_version?: string;
-  current_state?: string;
-  execution_status?: string;
-}
-
-/**
- * Fetch workflow task activities for a user
- */
-export async function fetchWorkflowTaskActivities(
-  userId: string,
-  tenantId: string,
-  filters: ActivityFilters
-): Promise<Activity[]> {
-  try {
-    if (filters.clientId) {
-      return [];
-    }
-
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
-    if (!tenant) {
-      throw new Error("Tenant is required");
-    }
-
-    // Execute queries in transaction
-    const { userRoles, workflowTasks } = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user roles for role-based task assignment
-      const userRoles = await trx("user_roles")
-        .where("user_roles.tenant", tenant)
-        .where("user_roles.user_id", userId)
-        .select("role_id");
-      
-      const roleIds = userRoles.map(role => role.role_id);
-
-      // Go back to using the knex query builder instead of raw SQL to avoid binding issues
-      const workflowTasksQuery = trx("workflow_tasks as wt")
-      .select(
-        "wt.*"
-      )
-      .where("wt.tenant", tenant)
-      .modify(function(queryBuilder) {
-        // Filter for tasks assigned to the user or their roles
-        queryBuilder.where(function() {
-          // Tasks assigned to the user
-          this.whereRaw("wt.assigned_users::jsonb @> ?::jsonb", [JSON.stringify([userId])]);
-          
-          // Tasks assigned to user's roles
-          if (roleIds.length > 0) {
-            roleIds.forEach(roleId => {
-              this.orWhereRaw("wt.assigned_roles::jsonb @> ?::jsonb", [JSON.stringify([roleId])]);
-            });
-          }
-        });
-        
-        // Apply status filter if provided
-        if (filters.status && filters.status.length > 0) {
-          queryBuilder.whereIn("wt.status", filters.status);
-        }
-        
-        // Apply priority filter if provided (case-insensitive comparison)
-        if (filters.priority && filters.priority.length > 0) {
-          queryBuilder.where(function() {
-            this.whereRaw(
-              "LOWER(wt.priority) IN (" + filters.priority!.map(() => "?").join(", ") + ")",
-              filters.priority!.map(p => p.toLowerCase())
-            );
-          });
-        }
-        
-        // Apply due date filter if provided
-        if (filters.dueDateStart) {
-          queryBuilder.where("wt.due_date", ">=", toPlainDate(filters.dueDateStart));
-        }
-        
-        if (filters.dueDateEnd) {
-          queryBuilder.where("wt.due_date", "<=", toPlainDate(filters.dueDateEnd));
-        }
-        
-        // Apply closed filter if provided
-        if (filters.isClosed !== undefined) {
-          if (filters.isClosed) {
-            queryBuilder.whereIn("wt.status", ["completed", "cancelled"]);
-          } else {
-            queryBuilder.whereNotIn("wt.status", ["completed", "cancelled"]);
-          }
-        }
-        
-        // Apply execution ID filter if provided
-        if (filters.executionId) {
-          queryBuilder.where("wt.execution_id", filters.executionId);
-        }
-        
-        // Apply search filter if provided
-        if (filters.search) {
-          const searchTerm = `%${filters.search}%`;
-          queryBuilder.where(function() {
-            this.where("wt.title", 'ilike', searchTerm)
-              .orWhere("wt.description", 'ilike', searchTerm);
-          });
-        }
-        
-        // Apply hidden filter if provided
-        if (filters.includeHidden !== undefined) {
-          if (filters.includeHidden) {
-            // Include all tasks (hidden and not hidden)
-            // No additional filter needed
-          } else {
-            // Only include non-hidden tasks
-            queryBuilder.where(function() {
-              this.where("wt.is_hidden", false)
-                .orWhereNull("wt.is_hidden");
-            });
-          }
-        } else {
-          // Default behavior: exclude hidden tasks
-          queryBuilder.where(function() {
-            this.where("wt.is_hidden", false)
-              .orWhereNull("wt.is_hidden");
-          });
-        }
-      });
-      
-      // Execute the query
-      const workflowTasks = await workflowTasksQuery;
-      
-      return { userRoles, workflowTasks };
-    });
-
-    // Convert to activities
-    const activities = workflowTasks.map((task: WorkflowTaskData) => workflowTaskToActivity(task));
-    
-    // Cache individual activity type results
-    if (workflowTasks.length > 0) {
-      const cacheKey = `workflow-task-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.WORKFLOW_TASK}`]);
-    }
-    
-    return activities;
-  } catch (error) {
-    console.error("Error fetching workflow task activities:", error);
-    return [];
-  }
-}
 
 /**
  * Process activities by applying additional filtering, sorting, etc.

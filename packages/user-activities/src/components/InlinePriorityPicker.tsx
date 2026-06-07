@@ -5,7 +5,7 @@ import { Activity, ActivityType, IPriority } from '@alga-psa/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { Check, ChevronDown } from 'lucide-react';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { updateActivityPriorityById } from '@alga-psa/workflows/actions';
+import { updateActivityPriorityById } from '@alga-psa/user-activities/actions';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

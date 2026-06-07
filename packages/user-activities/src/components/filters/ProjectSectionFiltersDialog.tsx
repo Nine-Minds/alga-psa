@@ -20,6 +20,7 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { IProject, IProjectPhase } from "@alga-psa/types";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useActivityCrossFeature } from "@alga-psa/ui/context";
 
 interface ProjectSectionFiltersDialogProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export function ProjectSectionFiltersDialog({
   priorities = [],
 }: ProjectSectionFiltersDialogProps) {
   const { t } = useTranslation('msp/user-activities');
+  const crossFeature = useActivityCrossFeature();
   // Local state excluding projectId and phaseId, which are handled separately
   const [localFilters, setLocalFilters] = useState<Omit<Partial<ActivityFilters>, 'projectId' | 'phaseId'>>(() => {
     const { projectId, phaseId, ...rest } = initialFilters;
@@ -68,14 +70,18 @@ useEffect(() => {
     if (selectedProjectId && selectedProjectId !== 'all') {
       try {
         setLoadingPhases(true);
-        // Use getProjectDetails to get phases for the selected project
-        const { getProjectDetails } = await import("@alga-psa/projects/actions/projectActions");
-        const projectDetails = await getProjectDetails(selectedProjectId);
-        if (isActionPermissionError(projectDetails)) {
+        // Fetch phases via the cross-feature seam so the base package needs no direct
+        // @alga-psa/projects dependency. getProjectsWithPhases returns every project with
+        // its phases; pick the selected one.
+        const projectsWithPhases = await crossFeature.getProjectsWithPhases();
+        if (isActionPermissionError(projectsWithPhases)) {
           setProjectPhases([]);
           return;
         }
-        setProjectPhases(projectDetails.phases);
+        const match = Array.isArray(projectsWithPhases)
+          ? projectsWithPhases.find((p: any) => p.project_id === selectedProjectId)
+          : null;
+        setProjectPhases(match?.phases || []);
       } catch (error) {
         console.error('Error loading project phases:', error);
         setProjectPhases([]);

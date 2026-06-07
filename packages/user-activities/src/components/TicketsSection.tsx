@@ -9,7 +9,7 @@ import { IStatus } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { TicketCard } from "./ActivityCard";
-import { fetchTicketActivities } from "@alga-psa/workflows/actions";
+import { fetchTicketActivities } from "@alga-psa/user-activities/actions";
 import { getTicketStatuses, getAllPriorities } from "@alga-psa/reference-data/actions";
 import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog";
 import { Filter, XCircle } from 'lucide-react';

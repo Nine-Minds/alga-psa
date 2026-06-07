@@ -391,6 +391,16 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : './src/empty/workflows/entry',
+      // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
+      // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
+      '@alga-psa/user-activities/server/workflow-tasks': isEE
+        ? '../ee/server/src/user-activities/workflowTasks.server'
+        : '../packages/user-activities/src/server/workflow-tasks',
+      '@alga-psa/user-activities/client/workflow-tasks': isEE
+        ? '../ee/server/src/user-activities/workflowTasks.client'
+        : '../packages/user-activities/src/client/workflow-tasks',
+      '@alga-psa/user-activities': '../packages/user-activities/src',
+      '@alga-psa/user-activities/': '../packages/user-activities/src/',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -439,6 +449,7 @@ const nextConfig = {
     '@alga-psa/billing',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
+    '@alga-psa/user-activities',
     '@alga-psa/projects',
     '@alga-psa/surveys',
     '@alga-psa/tickets',
@@ -614,6 +625,16 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, 'src/empty/workflows/entry.tsx'),
+      // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
+      '@alga-psa/user-activities/server/workflow-tasks': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
+        : path.join(__dirname, '../packages/user-activities/src/server/workflow-tasks.ts'),
+      '@alga-psa/user-activities/client/workflow-tasks': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx')
+        : path.join(__dirname, '../packages/user-activities/src/client/workflow-tasks.tsx'),
+      // Base package alias (subpaths like /actions and /components resolve via prefix).
+      // Must come AFTER the workflow-tasks seams so the EE seam wins for those specifiers.
+      '@alga-psa/user-activities': path.join(__dirname, '../packages/user-activities/src'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
@@ -934,6 +955,8 @@ const nextConfig = {
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
+        const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
         const authSsoButtonsEeEntry = path.join(
           __dirname,
           '../ee/server/src/components/auth/SsoProviderButtons.tsx',
@@ -949,6 +972,17 @@ const nextConfig = {
             // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
             if (req === '@alga-psa/workflows/entry') {
               resource.request = workflowsEeEntry;
+              return;
+            }
+            // user-activities workflow-task seam: it's a real package export, so without
+            // this an EE build could resolve it to the in-package CE default via the
+            // exports map before the webpack alias wins. Force the EE implementations.
+            if (req === '@alga-psa/user-activities/server/workflow-tasks') {
+              resource.request = userActivitiesWorkflowTasksServerEe;
+              return;
+            }
+            if (req === '@alga-psa/user-activities/client/workflow-tasks') {
+              resource.request = userActivitiesWorkflowTasksClientEe;
               return;
             }
             // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`

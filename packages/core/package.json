@@ -50,10 +50,6 @@
       "import": "./dist/config/deletion/index.js",
       "types": "./src/config/deletion/index.ts"
     },
-    "./lib/scheduleEntryRegistry": {
-      "import": "./dist/lib/scheduleEntryRegistry.js",
-      "types": "./src/lib/scheduleEntryRegistry.ts"
-    },
     "./context/DocumentsCrossFeatureContext": {
       "import": "./dist/context/DocumentsCrossFeatureContext.js",
       "types": "./src/context/DocumentsCrossFeatureContext.ts"

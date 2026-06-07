@@ -36,6 +36,11 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 // Document imports
 import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
 
+// Workflow-task (EE-only) cross-feature members. Resolves to a CE stub that supplies
+// nothing, and in the EE app build to the real TaskForm + task-inbox actions. Keeping
+// this behind the alias is what lets msp-composition stay CE-safe (no @alga-psa/workflows).
+import { getWorkflowTaskCrossFeatureMembers } from '@alga-psa/user-activities/client/workflow-tasks';
+
 export function MspActivityCrossFeatureProvider({ children }: { children: ReactNode }) {
   const renderTicketDetailsRef = useRef<(props: ActivityTicketDetailsRenderProps) => ReactNode>(null);
   const renderTaskEditRef = useRef<(props: ActivityTaskEditRenderProps) => ReactNode>(null);
@@ -167,6 +172,10 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
     []
   );
 
+  // EE-only workflow-task members (getTaskDetails/dismiss/hide/unhide/renderWorkflowTaskForm).
+  // Empty object in CE; real implementations in EE via the build-aliased import.
+  const workflowTaskMembers = useMemo(() => getWorkflowTaskCrossFeatureMembers(), []);
+
   const value = useMemo<ActivityCrossFeatureCallbacks>(
     () => ({
       renderTicketDetails,
@@ -186,8 +195,9 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       getProjectsWithPhases,
       getAllClients,
       getAllContacts,
+      ...workflowTaskMembers,
     }),
-    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask]
+    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, workflowTaskMembers]
   );
 
   return (

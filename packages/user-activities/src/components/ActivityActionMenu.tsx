@@ -14,17 +14,12 @@ import {
   reassignActivity,
   setAdHocActivityDone,
   deleteAdHocActivity
-} from "@alga-psa/workflows/actions";
+} from "@alga-psa/user-activities/actions";
 import {
   cancelWorkflowTask,
   reassignWorkflowTask,
   submitTaskForm
-} from "@alga-psa/workflows/actions";
-import {
-  dismissTask,
-  hideTask,
-  unhideTask
-} from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
+} from "@alga-psa/user-activities/actions";
 import { markAsReadAction } from "@alga-psa/notifications/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -183,11 +178,11 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
     router.push(`/${activity.type}s/${activity.id}/reassign`);
   };
 
-  // Handle dismiss action - only for workflow tasks
+  // Handle dismiss action - only for workflow tasks (EE-only; provided via cross-feature)
   const handleDismissAction = async () => {
     if (activity.type === ActivityType.WORKFLOW_TASK) {
       try {
-        await dismissTask(activity.id);
+        await crossFeature.dismissTask?.(activity.id);
       } catch (error: any) {
         console.error(`Error dismissing task:`, error);
         alert(t('drawer.menu.dismissError', { defaultValue: 'Failed to dismiss task: {{message}}', message: error.message }));
@@ -197,19 +192,19 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
     }
   };
 
-  // Handle hide action - only for workflow tasks
+  // Handle hide action - only for workflow tasks (EE-only; provided via cross-feature)
   const handleHideAction = async () => {
     if (activity.type === ActivityType.WORKFLOW_TASK) {
-      await hideTask(activity.id);
+      await crossFeature.hideTask?.(activity.id);
     } else {
       console.warn('Hide action is only supported for workflow tasks');
     }
   };
 
-  // Handle unhide action - only for workflow tasks
+  // Handle unhide action - only for workflow tasks (EE-only; provided via cross-feature)
   const handleUnhideAction = async () => {
     if (activity.type === ActivityType.WORKFLOW_TASK) {
-      await unhideTask(activity.id);
+      await crossFeature.unhideTask?.(activity.id);
     } else {
       console.warn('Unhide action is only supported for workflow tasks');
     }

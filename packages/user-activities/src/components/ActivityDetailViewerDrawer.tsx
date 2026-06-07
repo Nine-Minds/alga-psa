@@ -8,15 +8,13 @@ import { ActivityType } from "@alga-psa/types";
 import { processTemplateVariables } from "@alga-psa/core";
 import { useDrawer } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useActivitiesCache } from "../../hooks/useActivitiesCache";
+import { useActivitiesCache } from "../hooks/useActivitiesCache";
 import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getTaskDetails } from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
 import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions";
-import { TaskForm } from "@alga-psa/workflows/components";
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatISO } from 'date-fns';
@@ -421,7 +419,22 @@ export function ActivityDetailViewerDrawer({
         }
 
         case ActivityType.WORKFLOW_TASK: {
-          const taskDetails = await getTaskDetails(activityId);
+          // Workflow tasks are an EE-only source. The task-detail fetch and form renderer
+          // are supplied through the cross-feature seam (absent in CE). If they're missing,
+          // there are no workflow tasks to show, so render an Enterprise placeholder.
+          if (!ctx.getTaskDetails || !ctx.renderWorkflowTaskForm) {
+            setContent(
+              <div className="h-full p-6">
+                <h2 className="text-xl font-semibold mb-4">{t('drawer.workflowTaskTitle', { defaultValue: 'Workflow Task' })}</h2>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  {t('drawer.enterpriseOnly', { defaultValue: 'Workflow tasks are an Enterprise feature.' })}
+                </div>
+              </div>
+            );
+            break;
+          }
+
+          const taskDetails = await ctx.getTaskDetails(activityId);
 
           if (taskDetails.formId && taskDetails.formSchema && taskDetails.formSchema.jsonSchema) {
             let initialDataForForm = taskDetails.responseData || {};
@@ -437,20 +450,20 @@ export function ActivityDetailViewerDrawer({
             setContent(
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">{t('drawer.workflowTaskTitle', { defaultValue: 'Workflow Task' })}</h2>
-                <TaskForm
-                  taskId={activityId}
-                  schema={taskDetails.formSchema.jsonSchema || {}}
-                  uiSchema={taskDetails.formSchema.uiSchema || {}}
-                  initialFormData={initialDataForForm} // Use the prepared initialDataForForm
-                  onComplete={() => {
+                {ctx.renderWorkflowTaskForm({
+                  taskId: activityId,
+                  schema: taskDetails.formSchema.jsonSchema || {},
+                  uiSchema: taskDetails.formSchema.uiSchema || {},
+                  initialFormData: initialDataForForm,
+                  onComplete: () => {
                     // Invalidate cache for this activity type
                     invalidateCache(ActivityType.WORKFLOW_TASK);
                     onActionComplete?.();
-                  }}
-                  contextData={taskDetails.contextData}
-                  executionId={taskDetails.executionId}
-                  isInDrawer={true}
-                />
+                  },
+                  contextData: taskDetails.contextData,
+                  executionId: taskDetails.executionId,
+                  isInDrawer: true,
+                })}
               </div>
             );
           } else {

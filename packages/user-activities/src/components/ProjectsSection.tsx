@@ -6,7 +6,7 @@ import { ProjectTaskActivity, ActivityFilters, IPriority } from '@alga-psa/types
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ProjectTaskCard } from './ActivityCard';
-import { fetchProjectActivities } from '@alga-psa/workflows/actions';
+import { fetchProjectActivities } from '@alga-psa/user-activities/actions';
 import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDialog';
 import { Filter, XCircle } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';
