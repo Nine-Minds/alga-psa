@@ -6,6 +6,13 @@ import { NextResponse } from 'next/server';
 const enterpriseOnly = () =>
   NextResponse.json({ error: 'The MCP server is an Enterprise feature.' }, { status: 404 });
 
+// Mirrors @ee/lib/mcp/adminAuth's McpAdminContext so the route shells type-check
+// identically against either edition's seam entry.
+export interface McpAdminContext {
+  tenant: string;
+  userId: string | null;
+}
+
 export async function handleMcpJsonRpc(_req: unknown) {
   return enterpriseOnly();
 }
@@ -37,6 +44,6 @@ export async function getIdpSuggestions(_tenant: string): Promise<Record<string,
 export async function exportAgentAudit(_tenant: string, _filter?: unknown): Promise<unknown[]> {
   return [];
 }
-export async function authenticateMcpAdmin(_req: unknown): Promise<null> {
+export async function authenticateMcpAdmin(_req: unknown): Promise<McpAdminContext | null> {
   return null;
 }

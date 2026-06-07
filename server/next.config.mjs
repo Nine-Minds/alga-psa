@@ -964,6 +964,15 @@ const nextConfig = {
           '../ee/server/src/components/auth/SsoProviderButtons.tsx',
         );
         config.plugins = config.plugins || [];
+        // Force the MCP seam to the EE implementation before resolution, so the
+        // tsconfig `paths` CE default (@product/mcp/entry -> oss) can't win via
+        // JsConfigPathsPlugin and produce a hybrid EE build. Mirrors the CE force.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';

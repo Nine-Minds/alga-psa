@@ -11,6 +11,8 @@ interface TrustedIdp {
   jwks_uri: string;
   audience: string | null;
   subject_claim: string;
+  kind?: 'google' | 'microsoft' | 'custom';
+  entra_tenant_id?: string | null;
   active: boolean;
 }
 interface Agent {
