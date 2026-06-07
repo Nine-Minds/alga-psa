@@ -52,6 +52,18 @@ export interface TrustedIdp {
   active: boolean;
 }
 
+/**
+ * Thrown when an agent would bind to an (issuer, subject) already claimed by an
+ * active agent. The route maps `.name` to HTTP 409 (the seam erases the class
+ * identity, so callers match on the string name, not `instanceof`).
+ */
+export class AgentBindingConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AgentBindingConflictError';
+  }
+}
+
 function lockedPassword(): string {
   // Agents authenticate via IdP token, never password. This is unguessable and
   // not a usable bcrypt hash, so credential login can never succeed.
@@ -65,6 +77,18 @@ function backingUserId(agent: AgentRecord): string | null {
 
 export async function createAgent(input: CreateAgentInput): Promise<AgentRecord> {
   const { tenant } = input;
+  // One agent per IdP identity: validation resolves (issuer, subject) -> agent
+  // cross-tenant, so a second binding to the same identity would be ambiguous.
+  // Reject it up front with a friendly message instead of a silent shadow.
+  if (input.idpIssuer && input.idpSubject) {
+    const existing = await resolveAgentByIdp(input.idpIssuer, input.idpSubject);
+    if (existing) {
+      throw new AgentBindingConflictError(
+        `An active agent ("${existing.agent.name}") is already bound to ${input.idpIssuer} / ${input.idpSubject}. ` +
+          'Each IdP identity maps to one agent — deactivate that agent or use a different subject.',
+      );
+    }
+  }
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const agentId = crypto.randomUUID();

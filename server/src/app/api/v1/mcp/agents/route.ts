@@ -30,14 +30,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   };
   if (!body.name) return NextResponse.json({ error: '"name" is required' }, { status: 400 });
 
-  const agent = await createAgent({
-    tenant: admin.tenant,
-    name: body.name,
-    description: body.description,
-    idpIssuer: body.idpIssuer,
-    idpSubject: body.idpSubject,
-    roleIds: body.roleIds,
-    createdBy: admin.userId ?? undefined,
-  });
-  return NextResponse.json({ data: agent }, { status: 201 });
+  try {
+    const agent = await createAgent({
+      tenant: admin.tenant,
+      name: body.name,
+      description: body.description,
+      idpIssuer: body.idpIssuer,
+      idpSubject: body.idpSubject,
+      roleIds: body.roleIds,
+      createdBy: admin.userId ?? undefined,
+    });
+    return NextResponse.json({ data: agent }, { status: 201 });
+  } catch (e) {
+    // Duplicate (issuer, subject) binding -> 409 with the friendly message.
+    if (e instanceof Error && e.name === 'AgentBindingConflictError') {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
+    throw e;
+  }
 }

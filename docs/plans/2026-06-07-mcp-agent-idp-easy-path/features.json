@@ -17,7 +17,7 @@
   { "id": "F014", "group": "hosted", "implemented": true, "prdRefs": ["The key distinction"], "description": "Hosted: bind an agent to a built-in issuer + subject without manual IdP registration (interactive/human-delegated path)" },
 
   { "id": "F015", "group": "guidance", "implemented": true, "prdRefs": ["Risks"], "description": "Per-provider subject-claim guidance in the UI (Microsoft app token azp/appid vs user oid/sub; Google service account sub), preset-defaulted + editable" },
-  { "id": "F016", "group": "guidance", "implemented": false, "prdRefs": ["Risks"], "description": "Friendly error on duplicate (issuer, subject) binding (one agent per identity)" },
+  { "id": "F016", "group": "guidance", "implemented": true, "prdRefs": ["Risks"], "description": "Friendly error on duplicate (issuer, subject) binding (one agent per identity)" },
   { "id": "F017", "group": "guidance", "implemented": false, "prdRefs": ["The key distinction"], "description": "Guided wizard: copy-paste steps/values to create the agent's directory identity (Entra app registration / Google service account) for unattended agents" },
   { "id": "F018", "group": "guidance", "implemented": false, "prdRefs": ["DoD"], "description": "Docs update (docs/mcp-server.md): the easy path (presets, reuse, hosted) + the irreducible unattended-machine-agent caveat" }
 ]

@@ -40,6 +40,10 @@
   - **Verified live:** dev has `secrets/google_oauth_client_id` only (no MS). `GET /.well-known/oauth-protected-resource` now returns `authorization_servers: ["https://accounts.google.com"]` with **zero** `agent_idp_providers` rows -> the Google built-in is advertised purely from the shared-app secret. F014: agent provisioning form already accepts free-form `idpIssuer`/`idpSubject`, so binding to the built-in `accounts.google.com` issuer needs no IdP row.
   - Nice-to-have (deferred): surface built-in issuers as preset choices in the *agent* form too (today the admin types `https://accounts.google.com`).
 
+- **F016 (dup-binding) shipped:** `AgentBindingConflictError` in agents.ts; `createAgent` pre-checks `resolveAgentByIdp(issuer, subject)` and throws a friendly message; the agents POST route maps `.name === 'AgentBindingConflictError'` -> HTTP 409 (string-name match because the seam erases class identity). **Verified live:** first create 201, second (same issuer/subject) 409 with the message; test agent + backing user cleaned up.
+- **F018 (docs) shipped:** `docs/mcp-server.md` now documents the easy path (presets / reuse / hosted built-ins) and the irreducible interactive-vs-unattended distinction (unattended machine agents still need their own Entra app registration / Google service account).
+- **F017 deferred:** the copy-paste directory-identity wizard (guided Entra/Google service-account setup) is its own follow-up UI piece — the docs cover the steps in prose for now.
+
 ## Infra (supporting)
 
 - `server/scripts/run-ee-migrations.js` rewritten to merge CE+EE migrations into a dir **under server/** (was os.tmpdir()) so migrations' relative `require`/`path.resolve(__dirname,'..')` resolve (node_modules + src siblings). Auto-cleaned in `finally`; `EE_MIGRATIONS_KEEP_TMP=1` to retain. `.gitignore`: `.ee-combined-migrations-*/`.

@@ -54,16 +54,49 @@ the configured **subject claim** to a provisioned agent.
 > to a machine agent (client-credentials / service principal). A bare appliance with no IdP
 > can still run the free local connector.
 
+### The easy path — provider presets, reuse, and hosted built-ins
+
+Registering an IdP used to mean typing a raw issuer + JWKS URL + audience. Three layers
+now remove that friction, mirroring how AlgaPSA's own Google/Microsoft SSO works.
+
+**1. Provider presets (any edition).** In **Settings → MCP Server** the trusted-IdP form
+offers **Microsoft Entra**, **Google**, or **Custom** instead of free text:
+
+- **Google** — nothing to enter. Issuer is fixed (`https://accounts.google.com`), the JWKS
+  is fetched via OIDC discovery, and the subject claim defaults to `sub`.
+- **Microsoft Entra** — enter only the **Entra tenant id**. The issuer
+  (`https://login.microsoftonline.com/{tid}/v2.0`) and JWKS are derived via discovery; the
+  subject claim defaults to `azp` (app-only tokens). Use the concrete tenant id, **not**
+  `common` — tokens are issued with the concrete `tid`, so `common` won't match on verify.
+- **Custom** — the original raw issuer / JWKS / audience / claim path, unchanged.
+
+`POST /api/v1/mcp/idp-providers` accepts `{ kind: 'google'|'microsoft'|'custom', entraTenantId? }`
+and resolves issuer + JWKS server-side.
+
+**2. Reuse an existing connection.** If the tenant already linked Microsoft (SSO / email /
+Teams), the form shows **"You're already connected to Microsoft — enable agent access?"** and
+one-click pre-fills the Entra preset with the known tenant id (read from `microsoft_profiles`).
+
+**3. Hosted built-ins (SaaS, near-zero-config).** On Nine Minds–hosted AlgaPSA, Google and
+Microsoft are **pre-trusted** using the shared OAuth apps that already back SSO — so a hosted
+tenant can provision agents with **no IdP registration at all**. When the shared-app secrets
+are present, the built-in issuers are advertised in the PRM and accepted at token validation
+exactly like a registered `agent_idp_providers` row. This covers **interactive / human-delegated**
+agents (auth-code + PKCE through the shared app); the customer configures nothing in their own
+directory.
+
 ### Admin setup (the journey)
 
 Either from the UI (**Settings → MCP Server**, EE only) or the admin API:
 
-1. **Register the trusted IdP** — issuer, JWKS URI, audience (= your `/api/mcp` URL), and the
-   subject claim (`sub` / `azp` / `client_id`).
+1. **Register the trusted IdP** — pick **Google** / **Microsoft Entra** (preset) or **Custom**.
+   On hosted SaaS with built-ins, skip this entirely.
    `POST /api/v1/mcp/idp-providers`
-2. **In the IdP**, register the agent as an OAuth client (client-credentials / service
-   principal) → note its `client_id`/subject.
+2. **Give the agent a directory identity** — see the distinction below. Interactive agents
+   reuse the human's IdP login; unattended agents need their own client-credentials principal.
 3. **Provision the agent** — name, IdP issuer + subject, and the RBAC roles it may use.
+   One agent per `(issuer, subject)` — re-binding an identity already claimed by an active
+   agent returns a friendly `409`.
    `POST /api/v1/mcp/agents`
 4. The agent's MCP client connects to `/api/mcp`; on `401` it reads the PRM, gets a token
    from the IdP (resource = the `/api/mcp` URL), and connects.
@@ -72,12 +105,27 @@ Either from the UI (**Settings → MCP Server**, EE only) or the admin API:
 Agents operate **only within their assigned roles** (an agent without a permission is
 denied), and **every tool call is audited** (identity, tool, inputs, decision, status).
 
+### The key distinction — interactive vs unattended agents
+
+The easy path makes **interactive, human-delegated** agents zero-config: the agent acts as a
+signed-in human, so it rides the existing Google/Microsoft login (or the hosted built-ins) and
+needs no new directory object.
+
+**Unattended machine agents** (client-credentials, no human in the loop) are the irreducible
+exception: a token with no user behind it must come from a **directory identity the customer
+owns** — an **Entra app registration** or a **Google service account**. No preset removes that;
+it's a property of OAuth, not of AlgaPSA. For these, create the app/service-account in your own
+directory, then provision the agent with its `client_id` (Entra `azp`/`appid`) or service-account
+`sub` (Google) as the subject. The subject-claim guidance in the form names the right claim per
+provider.
+
 ### Admin API reference (EE, session-admin or API-key auth)
 
 | Method | Path | |
 |--------|------|--|
-| GET/POST | `/api/v1/mcp/idp-providers` | list / add trusted IdPs |
-| GET/POST | `/api/v1/mcp/agents` | list / provision agents |
+| GET/POST | `/api/v1/mcp/idp-providers` | list / add trusted IdPs (POST takes `kind`/`entraTenantId` presets or raw custom fields) |
+| GET | `/api/v1/mcp/idp-suggestions` | suggested IdP from an existing connection (e.g. linked Microsoft → Entra tenant id) |
+| GET/POST | `/api/v1/mcp/agents` | list / provision agents (duplicate `(issuer, subject)` → `409`) |
 | GET | `/api/v1/mcp/roles` | assignable MSP roles |
 | GET | `/api/v1/mcp/audit` | export agent audit (`?agentId=`, `?limit=`) |
 
