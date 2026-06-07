@@ -181,6 +181,33 @@ export async function listTrustedIdps(tenant: string): Promise<TrustedIdp[]> {
   });
 }
 
+export interface IdpSuggestion {
+  microsoft?: { entraTenantId: string; displayName: string | null; source: string };
+}
+
+/**
+ * Reuse an existing connection (F008): if the tenant already linked Microsoft
+ * (SSO / email / Teams) we know their Entra tenant id, so the agent IdP can be
+ * pre-filled — "you're already connected to Microsoft".
+ */
+export async function getIdpSuggestions(tenant: string): Promise<IdpSuggestion> {
+  return runWithTenant(tenant, async () => {
+    const { knex } = await createTenantKnex(tenant);
+    const hasProfiles = await knex.schema.hasTable('microsoft_profiles');
+    if (hasProfiles) {
+      const prof = await knex('microsoft_profiles')
+        .where({ tenant, is_archived: false })
+        .whereNotNull('tenant_id')
+        .orderBy('is_default', 'desc')
+        .first();
+      if (prof?.tenant_id) {
+        return { microsoft: { entraTenantId: prof.tenant_id, displayName: prof.display_name ?? null, source: 'microsoft_profile' } };
+      }
+    }
+    return {};
+  });
+}
+
 /** Cross-tenant resolve of an agent by its IdP (issuer, subject) binding. */
 export async function resolveAgentByIdp(issuer: string, subject: string): Promise<ResolvedAgent | null> {
   const knex = await getConnection(null);

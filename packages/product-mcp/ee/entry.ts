@@ -9,6 +9,7 @@ export {
   listTrustedIdps,
   listAllActiveIssuers,
   listAssignableRoles,
+  getIdpSuggestions,
 } from '@ee/lib/mcp/agents';
 export { exportAgentAudit } from '@ee/lib/mcp/agentAudit';
 export { authenticateMcpAdmin } from '@ee/lib/mcp/adminAuth';

@@ -57,6 +57,7 @@ export default function McpServerSettings() {
   const [idpForm, setIdpForm] = useState({ kind: 'microsoft', entraTenantId: '', issuer: '', jwksUri: '', audience: '', subjectClaim: '' });
   // Create-agent form
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
+  const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null } }>({});
 
   const reloadIdps = useCallback(() => api<{ data: TrustedIdp[] }>('/api/v1/mcp/idp-providers').then((r) => setIdps(r.data)), []);
   const reloadAgents = useCallback(() => api<{ data: Agent[] }>('/api/v1/mcp/agents').then((r) => setAgents(r.data)), []);
@@ -64,6 +65,9 @@ export default function McpServerSettings() {
 
   useEffect(() => {
     Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => setError(String(e.message ?? e)));
+    api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
+      .then((r) => setSuggestion(r.data))
+      .catch(() => {});
   }, [reloadIdps, reloadAgents, reloadRoles]);
 
   const run = async (fn: () => Promise<unknown>) => {
@@ -144,6 +148,18 @@ export default function McpServerSettings() {
               ))}
             </tbody>
           </table>
+          {suggestion.microsoft && !idps.some((p) => p.kind === 'microsoft') && (
+            <div id="mcp-ms-suggestion" className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2 text-sm dark:bg-[rgb(var(--color-primary-400)/0.15)]">
+              <span>You're already connected to Microsoft{suggestion.microsoft.displayName ? ` (${suggestion.microsoft.displayName})` : ''} — enable agent access with that directory?</span>
+              <Button
+                id="mcp-use-ms-connection"
+                size="sm"
+                onClick={() => setIdpForm({ ...idpForm, kind: 'microsoft', entraTenantId: suggestion.microsoft!.entraTenantId })}
+              >
+                Use it
+              </Button>
+            </div>
+          )}
           <div className="space-y-3">
             <div className="md:w-1/2">
               <Label htmlFor="idp-kind">Provider</Label>
