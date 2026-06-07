@@ -41,6 +41,12 @@ A networked MCP endpoint (`POST /api/mcp`, Streamable HTTP / JSON-RPC) that auth
 **agents** via the tenant's identity provider and enforces governance: distinct agent
 identity, RBAC, and an exportable audit trail. Enterprise-only.
 
+> **Dark release.** The admin UI (**Settings → MCP Server**) is gated behind the
+> `mcp-server` PostHog feature flag and is **off by default** — it appears only when the
+> tenant is Enterprise *and* the flag is enabled for them. This is a UI-only gate: the
+> server endpoints below stay live regardless, so an operator can configure agents via the
+> admin API even before the tab is rolled out. See `docs/features/feature-flags.md`.
+
 ### Auth model — OAuth 2.1 resource server (IdP delegation)
 
 AlgaPSA is an OAuth 2.1 **resource server** only; it does **not** issue tokens. Tokens come
