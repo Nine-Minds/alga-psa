@@ -9,7 +9,7 @@ import {
   updateActivityStatusById,
   getActivityStatusOptions,
   type ActivityStatusOption,
-} from '@alga-psa/workflows/actions';
+} from '@alga-psa/user-activities/actions';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

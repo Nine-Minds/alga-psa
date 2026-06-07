@@ -1,4 +1,4 @@
-import { UserActivitiesDashboard } from '@alga-psa/workflows/components';
+import { UserActivitiesDashboard } from '@alga-psa/msp-composition/user-activities';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';

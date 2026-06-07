@@ -34,7 +34,7 @@ import {
   createAdHocActivity,
   getActivityViewableUsers,
   type ActivityGroup,
-} from '@alga-psa/workflows/actions';
+} from '@alga-psa/user-activities/actions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -46,7 +46,7 @@ import { PrintableActivitiesView } from './PrintableActivitiesView';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivityCrossFeature } from '@alga-psa/ui/context';
-import { useActivitiesCache } from '../../hooks/useActivitiesCache';
+import { useActivitiesCache } from '../hooks/useActivitiesCache';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { ScheduleActivity } from '@alga-psa/types';
 

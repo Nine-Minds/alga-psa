@@ -49,7 +49,7 @@ import {
   reorderActivitiesInGroup,
   reorderGroups,
   type ActivityGroup,
-} from '@alga-psa/workflows/actions';
+} from '@alga-psa/user-activities/actions';
 import { InlineStatusPicker } from './InlineStatusPicker';
 import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { ActivityActionMenu } from './ActivityActionMenu';

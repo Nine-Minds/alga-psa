@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Activity, ActivityType } from '@alga-psa/types';
-import type { ActivityGroup } from '@alga-psa/workflows/actions';
+import type { ActivityGroup } from '@alga-psa/user-activities/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 

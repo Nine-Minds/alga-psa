@@ -33,7 +33,7 @@ vi.mock('server/src/components/chat/QuickAskOverlay', () => ({
   default: () => null,
 }));
 
-vi.mock('@alga-psa/workflows/components', () => ({
+vi.mock('@alga-psa/msp-composition/user-activities', () => ({
   ActivityDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

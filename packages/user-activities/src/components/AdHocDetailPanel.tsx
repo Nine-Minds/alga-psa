@@ -16,7 +16,7 @@ import {
   updateAdHocActivity,
   setAdHocActivityDone,
   deleteAdHocActivity,
-} from '@alga-psa/workflows/actions';
+} from '@alga-psa/user-activities/actions';
 
 interface AdHocDetailPanelProps {
   activityId: string;
