@@ -1,36 +1,255 @@
 [
-  { "id": "F001", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals", "Primary flows"], "description": "Create @product/mcp package (oss stub + ee entry) mirroring @product/chat, with next.config oss/ee aliasing" },
-  { "id": "F002", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "Move agents.ts / idpToken.ts / agentAudit.ts / adminAuth.ts from server/src/lib/mcp to ee/server/src/lib/mcp" },
-  { "id": "F003", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "Move jsonRpcServer.ts (remote MCP handler) to ee/server/src/lib/mcp" },
-  { "id": "F004", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "/api/mcp route shell stays in server/src/app, dynamic-imports the EE handler via @product/mcp; 404 in CE" },
-  { "id": "F005", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "/api/v1/mcp/{agents,idp-providers,audit} route shells dynamic-import EE impl via the seam; 404 in CE" },
-  { "id": "F006", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "PRM route (/.well-known/oauth-protected-resource) loads EE impl via the seam; 404 in CE" },
-  { "id": "F007", "group": "ee-relocation", "implemented": false, "prdRefs": ["Risks"], "description": "Move the two agent migrations to ee/server/migrations; verify run-ee-migrations.js applies them without double-applying" },
-  { "id": "F008", "group": "ee-relocation", "implemented": false, "prdRefs": ["Goals"], "description": "Keep CE pieces in place + verify no EE leakage (agent-tooling, connector, meta/mcp-registry, loadRegistry, registry.generated stay CE)" },
-  { "id": "F009", "group": "ee-relocation", "implemented": false, "prdRefs": ["Risks", "DoD"], "description": "Re-run the live agent E2E after relocation for parity (admin agent reads ticket; no-role 403; untrusted 401; audited)" },
-
-  { "id": "F010", "group": "build", "implemented": false, "prdRefs": ["Goals", "DoD"], "description": "Production EE build passes (npm run build:ee) with the relocated MCP governance" },
-  { "id": "F011", "group": "build", "implemented": false, "prdRefs": ["Goals", "DoD"], "description": "CE build stubs the EE MCP surface (routes 404 / no EE governance source bundled)" },
-
-  { "id": "F012", "group": "real-idp", "implemented": false, "prdRefs": ["Goals", "Risks"], "description": "Make the agent subject claim configurable per trusted IdP (sub / azp / client_id)" },
-  { "id": "F013", "group": "real-idp", "implemented": false, "prdRefs": ["Goals", "DoD"], "description": "Real IdP smoke against ONE of Entra/Keycloak/Google: register provider, provision agent, token round-trip, dispatch + audit" },
-
-  { "id": "F014", "group": "publish", "implemented": false, "prdRefs": ["Goals"], "description": "Finalize @alga-psa/mcp-connector public name + package.json (publishConfig, files, bin)" },
-  { "id": "F015", "group": "publish", "implemented": false, "prdRefs": ["Goals", "DoD"], "description": "Publish the connector to npm so npx @alga-psa/mcp-connector works" },
-
-  { "id": "F016", "group": "cleanup", "implemented": false, "prdRefs": ["Goals"], "description": "Remove dev test artifacts (mcp-test-key API key, mcp-agent-* backing users + agents) from shared envs; document the procedure" },
-
-  { "id": "F017", "group": "docs", "implemented": false, "prdRefs": ["Goals", "DoD"], "description": "Admin setup docs: stand up remote server, register tenant IdP, provision agent + assign roles, export audit" },
-  { "id": "F018", "group": "docs", "implemented": false, "prdRefs": ["Goals"], "description": "End-user connector setup docs (expand/link the connector README for Claude Desktop + Cursor)" },
-
-  { "id": "F019", "group": "admin-ui", "implemented": false, "prdRefs": ["Primary flows", "USER-JOURNEY GAP"], "description": "MCP settings area + nav entry in the admin UI, permission-gated to admins" },
-  { "id": "F020", "group": "admin-ui", "implemented": false, "prdRefs": ["USER-JOURNEY GAP"], "description": "Trusted IdP providers UI: list / add / remove (issuer, jwks_uri, audience, subject-claim)" },
-  { "id": "F021", "group": "admin-ui", "implemented": false, "prdRefs": ["USER-JOURNEY GAP"], "description": "Agents UI: list / create / deactivate (name, description, IdP issuer+subject)" },
-  { "id": "F022", "group": "admin-ui", "implemented": false, "prdRefs": ["USER-JOURNEY GAP"], "description": "Agent RBAC role assignment UI (select from existing roles)" },
-  { "id": "F023", "group": "admin-ui", "implemented": false, "prdRefs": ["USER-JOURNEY GAP"], "description": "Agent audit viewer UI: list, filter by agent, export" },
-  { "id": "F024", "group": "admin-ui", "implemented": false, "prdRefs": ["USER-JOURNEY GAP", "DoD"], "description": "Wire the UI to /api/v1/mcp/* (or server actions); enforce admin-only access" },
-
-  { "id": "F025", "group": "mvp-polish", "implemented": false, "prdRefs": ["Risks"], "description": "Per-tenant PRM (tenant hint via host/path) so authorization_servers are tenant-scoped — OR document the single-tenant-appliance limitation" },
-  { "id": "F026", "group": "mvp-polish", "implemented": false, "prdRefs": ["Non-goals"], "description": "Expired agent-session-key cleanup sweep (purpose='mcp_agent' keys past expiry)" },
-  { "id": "F027", "group": "mvp-polish", "implemented": false, "prdRefs": ["Non-goals"], "description": "Audit decision granularity: distinguish allow / deny (403) / error (other) instead of deriving from isError" }
+  {
+    "id": "F001",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Primary flows"
+    ],
+    "description": "Create @product/mcp package (oss stub + ee entry) mirroring @product/chat, with next.config oss/ee aliasing"
+  },
+  {
+    "id": "F002",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Move agents.ts / idpToken.ts / agentAudit.ts / adminAuth.ts from server/src/lib/mcp to ee/server/src/lib/mcp"
+  },
+  {
+    "id": "F003",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Move jsonRpcServer.ts (remote MCP handler) to ee/server/src/lib/mcp"
+  },
+  {
+    "id": "F004",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "/api/mcp route shell stays in server/src/app, dynamic-imports the EE handler via @product/mcp; 404 in CE"
+  },
+  {
+    "id": "F005",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "/api/v1/mcp/{agents,idp-providers,audit} route shells dynamic-import EE impl via the seam; 404 in CE"
+  },
+  {
+    "id": "F006",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "PRM route (/.well-known/oauth-protected-resource) loads EE impl via the seam; 404 in CE"
+  },
+  {
+    "id": "F007",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ],
+    "description": "Move the two agent migrations to ee/server/migrations; verify run-ee-migrations.js applies them without double-applying"
+  },
+  {
+    "id": "F008",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Keep CE pieces in place + verify no EE leakage (agent-tooling, connector, meta/mcp-registry, loadRegistry, registry.generated stay CE)"
+  },
+  {
+    "id": "F009",
+    "group": "ee-relocation",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "DoD"
+    ],
+    "description": "Re-run the live agent E2E after relocation for parity (admin agent reads ticket; no-role 403; untrusted 401; audited)"
+  },
+  {
+    "id": "F010",
+    "group": "build",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "DoD"
+    ],
+    "description": "Production EE build passes (npm run build:ee) with the relocated MCP governance"
+  },
+  {
+    "id": "F011",
+    "group": "build",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "DoD"
+    ],
+    "description": "CE build stubs the EE MCP surface (routes 404 / no EE governance source bundled)"
+  },
+  {
+    "id": "F012",
+    "group": "real-idp",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Risks"
+    ],
+    "description": "Make the agent subject claim configurable per trusted IdP (sub / azp / client_id)"
+  },
+  {
+    "id": "F013",
+    "group": "real-idp",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "DoD"
+    ],
+    "description": "Real IdP smoke against ONE of Entra/Keycloak/Google: register provider, provision agent, token round-trip, dispatch + audit"
+  },
+  {
+    "id": "F014",
+    "group": "publish",
+    "implemented": false,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Finalize @alga-psa/mcp-connector public name + package.json (publishConfig, files, bin)"
+  },
+  {
+    "id": "F015",
+    "group": "publish",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "DoD"
+    ],
+    "description": "Publish the connector to npm so npx @alga-psa/mcp-connector works"
+  },
+  {
+    "id": "F016",
+    "group": "cleanup",
+    "implemented": false,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "Remove dev test artifacts (mcp-test-key API key, mcp-agent-* backing users + agents) from shared envs; document the procedure"
+  },
+  {
+    "id": "F017",
+    "group": "docs",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "DoD"
+    ],
+    "description": "Admin setup docs: stand up remote server, register tenant IdP, provision agent + assign roles, export audit"
+  },
+  {
+    "id": "F018",
+    "group": "docs",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ],
+    "description": "End-user connector setup docs (expand/link the connector README for Claude Desktop + Cursor)"
+  },
+  {
+    "id": "F019",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "Primary flows",
+      "USER-JOURNEY GAP"
+    ],
+    "description": "MCP settings area + nav entry in the admin UI, permission-gated to admins"
+  },
+  {
+    "id": "F020",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "USER-JOURNEY GAP"
+    ],
+    "description": "Trusted IdP providers UI: list / add / remove (issuer, jwks_uri, audience, subject-claim)"
+  },
+  {
+    "id": "F021",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "USER-JOURNEY GAP"
+    ],
+    "description": "Agents UI: list / create / deactivate (name, description, IdP issuer+subject)"
+  },
+  {
+    "id": "F022",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "USER-JOURNEY GAP"
+    ],
+    "description": "Agent RBAC role assignment UI (select from existing roles)"
+  },
+  {
+    "id": "F023",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "USER-JOURNEY GAP"
+    ],
+    "description": "Agent audit viewer UI: list, filter by agent, export"
+  },
+  {
+    "id": "F024",
+    "group": "admin-ui",
+    "implemented": true,
+    "prdRefs": [
+      "USER-JOURNEY GAP",
+      "DoD"
+    ],
+    "description": "Wire the UI to /api/v1/mcp/* (or server actions); enforce admin-only access"
+  },
+  {
+    "id": "F025",
+    "group": "mvp-polish",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ],
+    "description": "Per-tenant PRM (tenant hint via host/path) so authorization_servers are tenant-scoped \u2014 OR document the single-tenant-appliance limitation"
+  },
+  {
+    "id": "F026",
+    "group": "mvp-polish",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ],
+    "description": "Expired agent-session-key cleanup sweep (purpose='mcp_agent' keys past expiry)"
+  },
+  {
+    "id": "F027",
+    "group": "mvp-polish",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ],
+    "description": "Audit decision granularity: distinguish allow / deny (403) / error (other) instead of deriving from isError"
+  }
 ]
