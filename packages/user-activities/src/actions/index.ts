@@ -5,6 +5,7 @@ export {
   fetchWorkflowTask,
   fetchTaskFormSchema,
   fetchTaskFormData,
+  submitTaskForm,
   cancelWorkflowTask,
   reassignWorkflowTask,
   fetchDashboardWorkflowTasks,
