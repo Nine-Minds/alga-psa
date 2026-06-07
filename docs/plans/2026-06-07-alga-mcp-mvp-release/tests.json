@@ -1,0 +1,13 @@
+[
+  { "id": "T001", "implemented": false, "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007", "F009"], "description": "POST-RELOCATION LIVE E2E (parity): mock-IdP agent flow still passes — Admin agent reads a real ticket; no-role agent -> 403; untrusted issuer -> 401; action audited" },
+  { "id": "T002", "implemented": false, "featureIds": ["F004", "F005", "F006", "F011"], "description": "CE build: /api/mcp + /api/v1/mcp/* + PRM return 404/stub, and no EE governance source is bundled" },
+  { "id": "T003", "implemented": false, "featureIds": ["F010"], "description": "EE production build (npm run build:ee) compiles + bundles the relocated MCP governance" },
+  { "id": "T004", "implemented": false, "featureIds": ["F007"], "description": "run-ee-migrations.js applies the relocated agent migrations on a fresh DB without double-applying" },
+  { "id": "T005", "implemented": false, "featureIds": ["F012", "F013"], "description": "Real IdP smoke (one provider): token round-trip -> agent dispatch returns real data -> audit row written" },
+  { "id": "T006", "implemented": false, "featureIds": ["F015"], "description": "npx @alga-psa/mcp-connector (from npm) connects to an instance and lists/calls the 3 tools" },
+  { "id": "T007", "implemented": false, "featureIds": ["F019", "F020", "F021", "F022", "F024"], "description": "Admin UI happy path: register an IdP, create an agent, assign a role — entirely from the UI — and the agent record + binding persist" },
+  { "id": "T008", "implemented": false, "featureIds": ["F023"], "description": "Admin UI: audit viewer lists an agent's tool calls and exports them" },
+  { "id": "T009", "implemented": false, "featureIds": ["F024"], "description": "Admin UI permission gate: a non-admin user cannot access MCP settings / provisioning" },
+  { "id": "T010", "implemented": false, "featureIds": ["F026"], "description": "Session-key cleanup removes expired purpose='mcp_agent' keys and leaves active ones" },
+  { "id": "T011", "implemented": false, "featureIds": ["F027"], "description": "Audit granularity: a kernel-denied (403) call records decision='deny'; a 404/other error records decision='error'" }
+]
