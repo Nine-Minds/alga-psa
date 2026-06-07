@@ -399,6 +399,8 @@ const nextConfig = {
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? '../ee/server/src/user-activities/workflowTasks.client'
         : '../packages/user-activities/src/client/workflow-tasks',
+      '@alga-psa/user-activities': '../packages/user-activities/src',
+      '@alga-psa/user-activities/': '../packages/user-activities/src/',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -630,6 +632,9 @@ const nextConfig = {
       '@alga-psa/user-activities/client/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx')
         : path.join(__dirname, '../packages/user-activities/src/client/workflow-tasks.tsx'),
+      // Base package alias (subpaths like /actions and /components resolve via prefix).
+      // Must come AFTER the workflow-tasks seams so the EE seam wins for those specifiers.
+      '@alga-psa/user-activities': path.join(__dirname, '../packages/user-activities/src'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
