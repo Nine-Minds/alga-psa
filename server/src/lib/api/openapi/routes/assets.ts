@@ -685,6 +685,25 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // Assets linked to a ticket. Returned by GET /api/v1/tickets/{id}/assets,
+  // which responds with the apiMiddleware envelope ({ data } — no `success`).
+  const TicketAssetRow = registry.registerSchema(
+    'TicketAssetRow',
+    AssetResource.extend({
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (e.g. affected, related).'),
+      association_notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      linked_at: zOpenApi.string().nullable().optional().describe('When the asset was linked to the ticket, from asset_associations.created_at.'),
+    }),
+  );
+
+  const TicketAssetListResponse = registry.registerSchema(
+    'TicketAssetListResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(TicketAssetRow).describe('Assets linked to the ticket via asset_associations, ordered by link time descending. Empty when no associations exist or the ticket is not found.'),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
   const assetRouteExtensions = {
     'x-tenant-scoped': true,
     'x-request-context-required': true,
@@ -1584,21 +1603,51 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/tickets',
     summary: 'List tickets linked to an asset',
     description:
-      'Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array.',
+      'Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated and RLS is active) and enforces BOTH asset:read and ticket:read because the response joins ticket data. It performs no asset existence check, so a valid caller hitting a nonexistent or cross-tenant asset ID gets 200 with an empty array (tenant scoping prevents cross-tenant leakage; this is not an authorization bypass).',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
     responses: {
       200: { description: 'Linked tickets returned successfully. Empty when no associations exist or the asset is not found.', schema: AssetTicketListResponse },
-      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
-      403: { description: 'Authenticated request context lacks permission to read assets when auth wiring is present.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:read or ticket:read.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
+      'x-rbac-additional-required': 'ticket:read',
       'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/tickets/{id}/assets',
+    summary: 'List assets linked to a ticket',
+    description:
+      'Returns assets associated with the path ticket ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to assets and clients. Each row includes the asset fields plus the association relationship_type, association_notes, and linked_at, ordered by link time descending. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant (RLS active); it enforces ticket:read, a per-ticket authorization-kernel check (assertTicketReadAllowed), AND asset:read because the response exposes asset records. The response uses the apiMiddleware envelope ({ data } with no top-level success field). It performs no asset existence check beyond the ticket authorization, so an authorized caller on a ticket with no linked assets gets 200 with an empty array.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Linked assets returned successfully. Empty when the ticket has no linked assets.', schema: TicketAssetListResponse },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:read (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Ticket not found / not authorized for the caller.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'read',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
       'x-not-paginated': true,
     },
     edition: 'both',

@@ -26,6 +26,8 @@ import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
+import { hasPermission } from '../../auth/rbac';
+import { getConnection } from '../../db/db';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -165,11 +167,34 @@ export class ApiAssetController {
     return createApiResponse(relationships);
   }
 
+  // Enforce read permission for each resource the caller's response exposes.
+  // Returns a 403 error response on the first denial, or null when allowed.
+  private async requireReadPermissions(
+    context: ApiContext,
+    resources: Array<'asset' | 'ticket'>,
+  ): Promise<NextResponse | null> {
+    if (!context.user) {
+      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+    }
+    const knex = await getConnection(context.tenant);
+    for (const resource of resources) {
+      const allowed = await hasPermission(context.user, resource, 'read', knex);
+      if (!allowed) {
+        return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
+      }
+    }
+    return null;
+  }
+
   /**
    * GET /api/v1/assets/{id}/tickets - List tickets linked to an asset
    */
   async listTickets(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
+
+    // Response joins ticket data onto an asset — require read on both resources.
+    const denied = await this.requireReadPermissions(context, ['asset', 'ticket']);
+    if (denied) return denied;
 
     const tickets = await this.assetService.getAssetTickets(params.id, context);
 

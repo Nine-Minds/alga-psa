@@ -620,6 +620,10 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
           await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          // Response exposes asset records, so also require asset:read.
+          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read asset');
+          }
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
 
           return createSuccessResponse(assets, 200, undefined, apiRequest);

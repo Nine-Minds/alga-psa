@@ -2959,6 +2959,43 @@ components:
         - success
         - data
         - meta
+    TicketAssetRow:
+      allOf:
+        - $ref: "#/components/schemas/AssetResource"
+        - type: object
+          properties:
+            relationship_type:
+              type: string
+              description: Association type from asset_associations.relationship_type (e.g.
+                affected, related).
+            association_notes:
+              type:
+                - string
+                - "null"
+              description: Optional notes from asset_associations.notes.
+            linked_at:
+              type:
+                - string
+                - "null"
+              description: When the asset was linked to the ticket, from
+                asset_associations.created_at.
+          required:
+            - relationship_type
+    TicketAssetListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketAssetRow"
+          description: Assets linked to the ticket via asset_associations, ordered by link
+            time descending. Empty when no associations exist or the ticket is
+            not found.
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
     AutomationExecutionParams:
       type: object
       properties:
@@ -20541,9 +20578,13 @@ paths:
         ticket, joined to tickets and statuses. Results include the association
         relationship_type and linked_at and are ordered by ticket updated_at
         descending. This mirrors the asset detail UI and the
-        assets.find_associated_tickets workflow action. It performs no asset
-        existence check, so nonexistent or cross-tenant asset IDs return 200
-        with an empty array.
+        assets.find_associated_tickets workflow action. The route is
+        authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is
+        populated and RLS is active) and enforces BOTH asset:read and
+        ticket:read because the response joins ticket data. It performs no asset
+        existence check, so a valid caller hitting a nonexistent or cross-tenant
+        asset ID gets 200 with an empty array (tenant scoping prevents
+        cross-tenant leakage; this is not an authorization bypass).
       tags:
         - Assets
       security:
@@ -20551,9 +20592,10 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-request-context-required: true
-        x-current-auth-wiring-missing: true
+        x-current-auth-wiring-missing: false
         x-rbac-resource: asset
         x-rbac-action: read
+        x-rbac-additional-required: ticket:read
         x-no-asset-existence-check: true
         x-not-paginated: true
       x-alga-products:
@@ -20576,21 +20618,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetTicketListResponse"
         "401":
-          description: x-api-key is missing at middleware.
+          description: x-api-key missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
         "403":
-          description: Authenticated request context lacks permission to read assets when
-            auth wiring is present.
+          description: Caller lacks asset:read or ticket:read.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/tickets/{id}/assets:
+    get:
+      summary: List assets linked to a ticket
+      description: Returns assets associated with the path ticket ID in the
+        authenticated tenant, read from asset_associations where entity_type is
+        ticket, joined to assets and clients. Each row includes the asset fields
+        plus the association relationship_type, association_notes, and
+        linked_at, ordered by link time descending. The route is authenticated
+        and tenant-scoped via ApiBaseController.authenticate + runWithTenant
+        (RLS active); it enforces ticket:read, a per-ticket authorization-kernel
+        check (assertTicketReadAllowed), AND asset:read because the response
+        exposes asset records. The response uses the apiMiddleware envelope ({
+        data } with no top-level success field). It performs no asset existence
+        check beyond the ticket authorization, so an authorized caller on a
+        ticket with no linked assets gets 200 with an empty array.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+        x-rbac-additional-required: asset:read
+        x-per-record-authorization: assertTicketReadAllowed
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Linked assets returned successfully. Empty when the ticket has no
+            linked assets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketAssetListResponse"
+        "401":
+          description: x-api-key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks ticket:read (or per-ticket authorization) or asset:read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Ticket not found / not authorized for the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -49235,70 +49346,6 @@ paths:
         x-rbac-resource: ticket
       x-alga-products:
         - psa
-      parameters:
-        - schema:
-            type: string
-            format: uuid
-            description: UUID path identifier from underlying resource tables.
-          required: true
-          description: UUID path identifier from underlying resource tables.
-          name: id
-          in: path
-      responses:
-        "200":
-          description: Operation succeeded.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiSuccess"
-        "400":
-          description: Validation or request parsing failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiError"
-        "401":
-          description: API key missing/invalid or associated user missing.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiError"
-        "403":
-          description: RBAC denied for ticket resource action.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiError"
-        "404":
-          description: Target resource not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiError"
-        "500":
-          description: Unexpected controller/service failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkV1ApiError"
-  /api/v1/tickets/{id}/assets:
-    get:
-      summary: List ticket assets
-      description: Lists assets linked to ticket UUID via asset_associations, the same
-        table the UI and ticket-from-asset flow use.
-      tags:
-        - Work Management v1
-      security:
-        - ApiKeyAuth: []
-      extensions:
-        x-tenant-scoped: true
-        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
-          controller-specific equivalent
-        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-rbac-resource: ticket
-      x-alga-products:
-        - psa
-        - algadesk
       parameters:
         - schema:
             type: string
