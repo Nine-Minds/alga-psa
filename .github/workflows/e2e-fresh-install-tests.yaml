@@ -171,8 +171,22 @@ jobs:
         run: |
           echo "Freeing up disk space before build..."
           df -h
-          docker system prune -a -f --volumes
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          # Remove large pre-installed toolchains this job never uses. Each is
+          # guarded with `|| true` so a missing path can't fail the step (the
+          # shell runs with `set -e`). The previous run started with only ~19G
+          # free and the four --no-cache image builds exhausted it; this frees
+          # ~15-20G more on the root volume.
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/share/swift || true
+          # Drop apt caches.
+          sudo apt-get clean || true
+          # Reclaim all Docker space (images, build cache, volumes).
+          docker system prune -a -f --volumes || true
+          echo "Disk space after cleanup:"
           df -h
         shell: bash
 
@@ -194,6 +208,21 @@ jobs:
             -f docker-compose.setup-ubuntu.override.yaml \
             build --no-cache \
             server setup email-service
+        shell: bash
+
+      - name: Reclaim disk space before hocuspocus build
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Disk space before reclaim:"
+          df -h /
+          # The previous --no-cache build leaves dangling intermediate
+          # (multi-stage) layers and BuildKit cache behind. Reclaim them so the
+          # hocuspocus build has headroom -- the earlier run ran out of space
+          # mid-`apt-get` precisely here, on the last image of the job.
+          docker image prune -f || true
+          docker builder prune -af || true
+          echo "Disk space after reclaim:"
+          df -h /
         shell: bash
 
       - name: Build hocuspocus image with repo-root context
@@ -770,15 +799,19 @@ jobs:
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 5
         run: |
           echo "=== COLLECTING ALL LOGS DUE TO FAILURE ==="
-          
+
           echo "=== CONTAINER STATUS ==="
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps || echo "Could not get container status"
-          
+          timeout 60 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps || echo "Could not get container status"
+
           echo -e "\n=== DOCKER SYSTEM INFO ==="
-          docker system df
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+          # `docker system df` can hang for minutes against a disk-full/wedged
+          # daemon (it previously stalled here until the step was SIGTERM'd ->
+          # exit 143), so cap it with `timeout`.
+          timeout 60 docker system df || echo "docker system df timed out or failed"
+          timeout 60 docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" || echo "docker images timed out or failed"
           
           echo -e "\n=== ALL CONTAINER LOGS ==="
           docker-compose -p alga-e2e-test logs --tail=1000 || echo "Could not get compose logs"

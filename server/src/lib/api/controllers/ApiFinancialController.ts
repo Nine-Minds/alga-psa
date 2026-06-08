@@ -672,8 +672,8 @@ export class ApiFinancialController extends ApiBaseController {
           const body = await apiRequest.json();
           const validatedData = bulkTransactionOperationSchema.parse(body);
 
-          // TODO: Implement bulkTransactionOperation in FinancialService
-          return createErrorResponse('Not implemented', 501);
+          const result = await this.financialService.bulkTransactionOperation(validatedData, apiRequest.context!);
+          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);
@@ -695,8 +695,8 @@ export class ApiFinancialController extends ApiBaseController {
           const body = await apiRequest.json();
           const validatedData = bulkCreditOperationSchema.parse(body);
 
-          // TODO: Implement bulkCreditOperation in FinancialService
-          return createErrorResponse('Not implemented', 501);
+          const result = await this.financialService.bulkCreditOperation(validatedData, apiRequest.context!);
+          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);

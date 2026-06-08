@@ -546,9 +546,8 @@ export class ApiContractLineController {
         filters
       };
       
-      // TODO: Implement listClientContractLines in ContractLineService
-      const result = { data: [], total: 0 };
-      
+      const result = await this.contractLineService.listClientContractLines(listOptions, context);
+
       return createPaginatedResponse(result.data, {
         page: listOptions.page,
         limit: listOptions.limit,
@@ -615,19 +614,26 @@ export class ApiContractLineController {
    * POST /api/v2/plan-templates/{id}/create-plan - Create plan from template
    */
   createFromTemplate() {
-    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
-      const params = await context.params;
-      const data = await req.json();
+    return async (req: NextRequest): Promise<NextResponse> => {
       const requestContext = requireRequestContext(req);
-      
-      // Validate request body
-      const validation = createPlanFromTemplateSchema.safeParse(data);
+      // The template id comes from the {id} path param (set by the route auth
+      // wrapper) and takes precedence over any template_id in the body.
+      const templateId = (req as any).params?.id as string | undefined;
+      const data = await req.json();
+
+      const validation = createPlanFromTemplateSchema.safeParse({
+        ...data,
+        template_id: templateId ?? data?.template_id
+      });
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
+      if (!validation.data.template_id) {
+        return createErrorResponse('Template id is required in the path', 400, 'VALIDATION_ERROR');
+      }
 
       const plan = await this.contractLineService.createFromTemplate(validation.data, requestContext);
-      
+
       return createApiResponse({
         ...plan,
         _links: getHateoasLinks('contract-line', plan.contract_line_id!)
