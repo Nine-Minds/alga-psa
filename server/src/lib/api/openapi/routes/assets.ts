@@ -1674,6 +1674,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/assets/{id}/tickets',
+    operationId: 'listAssetTickets',
     summary: 'List tickets linked to an asset',
     description:
       'Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated and RLS is active) and enforces BOTH asset:read and ticket:read because the response joins ticket data. It performs no asset existence check, so a valid caller hitting a nonexistent or cross-tenant asset ID gets 200 with an empty array (tenant scoping prevents cross-tenant leakage; this is not an authorization bypass).',
@@ -1701,6 +1702,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/tickets/{id}/assets',
+    operationId: 'listTicketAssets',
     summary: 'List assets linked to a ticket',
     description:
       'Returns assets associated with the path ticket ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to assets and clients. Each row includes the asset fields plus the association relationship_type, association_notes, and linked_at, ordered by link time descending. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant (RLS active); it enforces ticket:read, a per-ticket authorization-kernel check (assertTicketReadAllowed), AND asset:read because the response exposes asset records. The response uses the apiMiddleware envelope ({ data } with no top-level success field). It performs no asset existence check beyond the ticket authorization, so an authorized caller on a ticket with no linked assets gets 200 with an empty array.',
@@ -1729,6 +1731,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post',
     path: '/api/v1/assets/{id}/tickets',
+    operationId: 'linkTicketToAsset',
     summary: 'Link a ticket to an asset',
     description:
       'Creates an asset_associations row (entity_type=ticket) linking the path asset to the ticket in the request body. This is the same table the asset detail UI, GET /api/v1/assets/{id}/tickets, and GET /api/v1/tickets/{id}/assets read, so the link is immediately visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update (the asset associations are being mutated) plus ticket:read (the ticket is only referenced). Both the asset and the ticket must exist in the tenant (404 otherwise), and a duplicate link returns 409.',
@@ -1764,6 +1767,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'delete',
     path: '/api/v1/assets/{id}/tickets/{ticketId}',
+    operationId: 'unlinkTicketFromAsset',
     summary: 'Unlink a ticket from an asset',
     description:
       'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update plus ticket:read. Returns 404 when no such link exists.',
@@ -1791,6 +1795,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post',
     path: '/api/v1/tickets/{id}/assets',
+    operationId: 'linkAssetToTicket',
     summary: 'Link an asset to a ticket',
     description:
       'Creates an asset_associations row (entity_type=ticket) linking the asset in the request body to the path ticket. Same table GET /api/v1/tickets/{id}/assets and the asset detail UI read, so the link is visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; it enforces ticket:update plus a per-ticket authorization-kernel check (assertTicketReadAllowed) AND asset:read (the asset is referenced). The response uses the apiMiddleware envelope ({ data } with no top-level success field). Both the ticket and asset must exist (404 otherwise); a duplicate link returns 409.',
@@ -1827,6 +1832,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'delete',
     path: '/api/v1/tickets/{id}/assets/{assetId}',
+    operationId: 'unlinkAssetFromTicket',
     summary: 'Unlink an asset from a ticket',
     description:
       'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. Authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; enforces ticket:update plus the per-ticket authorization check and asset:read. Returns 404 when no such link exists.',
