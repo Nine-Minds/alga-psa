@@ -328,6 +328,13 @@ export const createTicketFromAssetSchema = z.object({
   category_id: uuidSchema.optional()
 });
 
+// Link an asset to a ticket (POST /api/v1/tickets/{id}/assets).
+export const linkTicketAssetSchema = z.object({
+  asset_id: uuidSchema,
+  relationship_type: z.string().min(1).optional(),
+  notes: z.string().optional()
+});
+
 // Export types for TypeScript
 export type CreateTicketData = z.infer<typeof createTicketSchema>;
 export type UpdateTicketData = z.infer<typeof updateTicketSchema>;
@@ -340,3 +347,4 @@ export type TicketSearchData = z.infer<typeof ticketSearchSchema>;
 export type TicketExportQuery = z.infer<typeof ticketExportQuerySchema>;
 export type TicketMetricsQuery = z.infer<typeof ticketMetricsQuerySchema>;
 export type CreateTicketFromAssetData = z.infer<typeof createTicketFromAssetSchema>;
+export type LinkTicketAssetData = z.infer<typeof linkTicketAssetSchema>;

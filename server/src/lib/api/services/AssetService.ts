@@ -24,6 +24,7 @@ import {
   PrinterAssetData
 } from '../schemas/asset';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
 
 export class AssetService extends BaseService<any> {
   constructor() {
@@ -492,6 +493,79 @@ export class AssetService extends BaseService<any> {
         'aa.created_at as linked_at'
       )
       .orderBy('t.updated_at', 'desc');
+  }
+
+  /**
+   * Link a ticket to an asset by inserting an asset_associations row
+   * (entity_type='ticket'). Same table the asset detail UI and getAssetTickets
+   * read, so the link is immediately visible from both sides.
+   */
+  async linkTicket(
+    assetId: string,
+    data: { ticket_id: string; relationship_type?: string; notes?: string },
+    context: ServiceContext
+  ): Promise<any> {
+    const knex = await this.getDbForContext(context);
+
+    const asset = await knex('assets')
+      .where({ tenant: context.tenant, asset_id: assetId })
+      .first();
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    const ticket = await knex('tickets')
+      .where({ tenant: context.tenant, ticket_id: data.ticket_id })
+      .first();
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    const existing = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: data.ticket_id,
+        entity_type: 'ticket'
+      })
+      .first();
+    if (existing) {
+      throw new ConflictError('Ticket is already linked to this asset');
+    }
+
+    const [created] = await knex('asset_associations')
+      .insert({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: data.ticket_id,
+        entity_type: 'ticket',
+        relationship_type: data.relationship_type || 'affected',
+        notes: data.notes ?? null,
+        created_by: context.userId,
+        created_at: new Date().toISOString()
+      })
+      .returning('*');
+
+    return created;
+  }
+
+  /**
+   * Remove the asset_associations row linking a ticket to an asset.
+   */
+  async unlinkTicket(assetId: string, ticketId: string, context: ServiceContext): Promise<void> {
+    const knex = await this.getDbForContext(context);
+    const deleted = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset-ticket association not found');
+    }
   }
 
   async createRelationship(assetId: string, data: CreateAssetRelationshipData, context: ServiceContext): Promise<any> {

@@ -504,6 +504,82 @@ export class TicketService extends BaseService<ITicket> {
     return assets;
   }
 
+  /**
+   * Link an asset to a ticket by inserting an asset_associations row
+   * (entity_type='ticket'). Same table getTicketAssets and the asset detail UI
+   * read, so the link is visible from both sides.
+   */
+  async linkAsset(
+    ticketId: string,
+    data: { asset_id: string; relationship_type?: string; notes?: string },
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const ticket = await knex('tickets')
+      .where({ tenant: context.tenant, ticket_id: ticketId })
+      .first();
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    const asset = await knex('assets')
+      .where({ tenant: context.tenant, asset_id: data.asset_id })
+      .first();
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    const existing = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: data.asset_id,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .first();
+    if (existing) {
+      throw new ConflictError('Asset is already linked to this ticket');
+    }
+
+    const [created] = await knex('asset_associations')
+      .insert({
+        tenant: context.tenant,
+        asset_id: data.asset_id,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        relationship_type: data.relationship_type || 'affected',
+        notes: data.notes ?? null,
+        created_by: context.userId,
+        created_at: new Date().toISOString()
+      })
+      .returning('*');
+
+    return created;
+  }
+
+  /**
+   * Remove the asset_associations row linking an asset to a ticket.
+   */
+  async unlinkAsset(ticketId: string, assetId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const deleted = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset-ticket association not found');
+    }
+  }
+
   async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);

@@ -4277,6 +4277,195 @@
           "data"
         ]
       },
+      "AssetAssociationRow": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tenant UUID from asset_associations.tenant."
+          },
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID from asset_associations.asset_id."
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Linked entity UUID — the ticket_id, from asset_associations.entity_id."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "ticket"
+            ],
+            "description": "Always 'ticket' for these endpoints."
+          },
+          "relationship_type": {
+            "type": "string",
+            "description": "Association type from asset_associations.relationship_type (defaults to affected)."
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional notes from asset_associations.notes."
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Creator user UUID from asset_associations.created_by."
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Link creation timestamp from asset_associations.created_at."
+          }
+        },
+        "required": [
+          "tenant",
+          "asset_id",
+          "entity_id",
+          "entity_type",
+          "relationship_type",
+          "created_by",
+          "created_at"
+        ]
+      },
+      "AssetTicketLinkRequest": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID to link to the asset."
+          },
+          "relationship_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional association type; defaults to affected."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes stored on asset_associations.notes."
+          }
+        },
+        "required": [
+          "ticket_id"
+        ]
+      },
+      "TicketAssetLinkRequest": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID to link to the ticket."
+          },
+          "relationship_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional association type; defaults to affected."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes stored on asset_associations.notes."
+          }
+        },
+        "required": [
+          "asset_id"
+        ]
+      },
+      "AssetTicketLinkResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetAssociationRow"
+              },
+              {
+                "description": "The inserted asset_associations row."
+              }
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiResponseMeta"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "TicketAssetLinkResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetAssociationRow"
+              },
+              {
+                "description": "The inserted asset_associations row."
+              }
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetTicketLinkParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID from assets.asset_id."
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID from tickets.ticket_id."
+          }
+        },
+        "required": [
+          "id",
+          "ticketId"
+        ]
+      },
+      "TicketAssetLinkParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID from tickets.ticket_id."
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID from assets.asset_id."
+          }
+        },
+        "required": [
+          "id",
+          "assetId"
+        ]
+      },
       "AutomationExecutionParams": {
         "type": "object",
         "properties": {
@@ -13755,7 +13944,7 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+            "description": "Category UUID from service_categories.category_id or categories.category_id."
           }
         },
         "required": [
@@ -13793,12 +13982,18 @@
             "format": "uuid"
           },
           "board_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "description": {
             "type": [
               "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "display_order": {
+            "type": "number"
+          },
+          "is_from_itil_standard": {
+            "type": [
+              "boolean",
               "null"
             ]
           },
@@ -13806,15 +14001,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "updated_by": {
-            "type": "string",
-            "format": "uuid"
-          },
           "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
             "type": "string",
             "format": "date-time"
           },
@@ -13841,10 +14028,9 @@
           "category_name",
           "board_id",
           "created_by",
-          "updated_by",
           "tenant"
         ],
-        "description": "Ticket category resource from ticket_categories, including optional hierarchy fields."
+        "description": "Ticket category resource from the categories table, including optional hierarchy fields. The categories table has no description/updated_by/updated_at columns."
       },
       "TicketCategoryCreateRequest": {
         "type": "object",
@@ -13861,10 +14047,6 @@
           "parent_category": {
             "type": "string",
             "format": "uuid"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 1000
           }
         },
         "required": [
@@ -13887,10 +14069,6 @@
           "parent_category": {
             "type": "string",
             "format": "uuid"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 1000
           }
         }
       },
@@ -29450,6 +29628,126 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "Link a ticket to an asset",
+        "description": "Creates an asset_associations row (entity_type=ticket) linking the path asset to the ticket in the request body. This is the same table the asset detail UI, GET /api/v1/assets/{id}/tickets, and GET /api/v1/tickets/{id}/assets read, so the link is immediately visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update (the asset associations are being mutated) plus ticket:read (the ticket is only referenced). Both the asset and the ticket must exist in the tenant (404 otherwise), and a duplicate link returns 409.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": false,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-rbac-additional-required": "ticket:read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "The ticket to link plus optional relationship_type and notes.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetTicketLinkRequest"
+              },
+              "description": "The ticket to link plus optional relationship_type and notes."
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket linked. Returns the inserted asset_associations row.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetTicketLinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset:update or ticket:read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset or ticket not found in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ticket is already linked to this asset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/tickets/{id}/assets": {
@@ -29523,6 +29821,318 @@
           },
           "404": {
             "description": "Ticket not found / not authorized for the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Link an asset to a ticket",
+        "description": "Creates an asset_associations row (entity_type=ticket) linking the asset in the request body to the path ticket. Same table GET /api/v1/tickets/{id}/assets and the asset detail UI read, so the link is visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; it enforces ticket:update plus a per-ticket authorization-kernel check (assertTicketReadAllowed) AND asset:read (the asset is referenced). The response uses the apiMiddleware envelope ({ data } with no top-level success field). Both the ticket and asset must exist (404 otherwise); a duplicate link returns 409.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update",
+          "x-rbac-additional-required": "asset:read",
+          "x-per-record-authorization": "assertTicketReadAllowed"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "The asset to link plus optional relationship_type and notes.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketAssetLinkRequest"
+              },
+              "description": "The asset to link plus optional relationship_type and notes."
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asset linked. Returns the inserted asset_associations row.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketAssetLinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ticket:update (or per-ticket authorization) or asset:read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or asset not found in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Asset is already linked to this ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/tickets/{ticketId}": {
+      "delete": {
+        "summary": "Unlink a ticket from an asset",
+        "description": "Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update plus ticket:read. Returns 404 when no such link exists.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": false,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-rbac-additional-required": "ticket:read",
+          "x-idempotent": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID from tickets.ticket_id."
+            },
+            "required": true,
+            "description": "Ticket UUID from tickets.ticket_id.",
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Link removed."
+          },
+          "401": {
+            "description": "x-api-key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset:update or ticket:read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset-ticket association not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/assets/{assetId}": {
+      "delete": {
+        "summary": "Unlink an asset from a ticket",
+        "description": "Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. Authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; enforces ticket:update plus the per-ticket authorization check and asset:read. Returns 404 when no such link exists.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update",
+          "x-rbac-additional-required": "asset:read",
+          "x-per-record-authorization": "assertTicketReadAllowed",
+          "x-idempotent": false
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID from tickets.ticket_id."
+            },
+            "required": true,
+            "description": "Ticket UUID from tickets.ticket_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "assetId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Link removed."
+          },
+          "401": {
+            "description": "x-api-key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ticket:update (or per-ticket authorization) or asset:read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset-ticket association not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -58543,10 +59153,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -58639,10 +59249,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -58745,10 +59355,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -59083,7 +59693,7 @@
           "x-rbac-resource": "ticket_settings",
           "x-rbac-action": "create",
           "x-id-provenance": {
-            "category_id": "ticket_categories.category_id"
+            "category_id": "categories.category_id"
           }
         },
         "x-alga-products": [
@@ -59168,7 +59778,7 @@
           "x-rbac-resource": "ticket_settings",
           "x-rbac-action": "read",
           "x-id-provenance": {
-            "category_id": "ticket_categories.category_id"
+            "category_id": "categories.category_id"
           }
         },
         "x-alga-products": [
@@ -59179,10 +59789,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -59264,7 +59874,7 @@
           "x-rbac-resource": "ticket_settings",
           "x-rbac-action": "update",
           "x-id-provenance": {
-            "category_id": "ticket_categories.category_id"
+            "category_id": "categories.category_id"
           }
         },
         "x-alga-products": [
@@ -59275,10 +59885,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -59370,7 +59980,7 @@
           "x-rbac-resource": "ticket_settings",
           "x-rbac-action": "delete",
           "x-id-provenance": {
-            "category_id": "ticket_categories.category_id"
+            "category_id": "categories.category_id"
           }
         },
         "x-alga-products": [
@@ -59381,10 +59991,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Category UUID from service_categories.category_id or ticket_categories.category_id."
+              "description": "Category UUID from service_categories.category_id or categories.category_id."
             },
             "required": true,
-            "description": "Category UUID from service_categories.category_id or ticket_categories.category_id.",
+            "description": "Category UUID from service_categories.category_id or categories.category_id.",
             "name": "id",
             "in": "path"
           }
@@ -59607,7 +60217,7 @@
           "x-rbac-resource": "ticket_settings",
           "x-rbac-action": "update",
           "x-id-provenance": {
-            "category_id": "ticket_categories.category_id"
+            "category_id": "categories.category_id"
           }
         },
         "x-alga-products": [

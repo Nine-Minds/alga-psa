@@ -16,8 +16,9 @@ import {
   createTicketCommentSchema,
   updateTicketCommentSchema,
   updateTicketStatusSchema,
-  updateTicketAssignmentSchema,  
-  createTicketFromAssetSchema
+  updateTicketAssignmentSchema,
+  createTicketFromAssetSchema,
+  linkTicketAssetSchema
 } from '../schemas/ticket';
 import { 
   ApiKeyServiceForApi 
@@ -627,6 +628,82 @@ export class ApiTicketController extends ApiBaseController {
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
 
           return createSuccessResponse(assets, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Link an asset to a ticket
+   */
+  linkAsset() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Mutating the ticket's associations needs ticket:update; the asset is
+          // only referenced, so asset:read is enough.
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read asset');
+          }
+
+          const body = await req.json();
+          const validation = linkTicketAssetSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.errors);
+          }
+
+          const association = await this.ticketService.linkAsset(ticketId, validation.data, apiRequest.context!);
+
+          return createSuccessResponse(association, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Unlink an asset from a ticket
+   */
+  unlinkAsset() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read asset');
+          }
+
+          // assetId is the path segment after "assets".
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const assetsIndex = segments.indexOf('assets');
+          const assetId = assetsIndex >= 0 ? segments[assetsIndex + 1] : undefined;
+
+          if (!assetId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['assetId'], message: 'asset ID is required' },
+            ]);
+          }
+
+          await this.ticketService.unlinkAsset(ticketId, assetId, apiRequest.context!);
+
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);
