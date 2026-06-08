@@ -655,6 +655,36 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const AssetTicketRow = registry.registerSchema(
+    'AssetTicketRow',
+    zOpenApi.object({
+      ticket_id: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+      ticket_number: zOpenApi.string().describe('Human-readable ticket number from tickets.ticket_number.'),
+      title: zOpenApi.string().nullable().optional().describe('Ticket title.'),
+      status_id: zOpenApi.string().uuid().nullable().optional().describe('Status UUID from tickets.status_id.'),
+      status_name: zOpenApi.string().nullable().optional().describe('Status name from the joined statuses table.'),
+      is_closed: zOpenApi.boolean().nullable().optional().describe('Whether the ticket is closed.'),
+      priority_id: zOpenApi.string().uuid().nullable().optional().describe('Priority UUID from tickets.priority_id.'),
+      assigned_to: zOpenApi.string().uuid().nullable().optional().describe('Assigned user UUID from tickets.assigned_to.'),
+      client_id: zOpenApi.string().uuid().nullable().optional().describe('Client UUID from tickets.client_id.'),
+      board_id: zOpenApi.string().uuid().nullable().optional().describe('Board UUID from tickets.board_id.'),
+      entered_at: zOpenApi.string().nullable().optional().describe('Ticket creation timestamp.'),
+      updated_at: zOpenApi.string().nullable().optional().describe('Ticket last update timestamp.'),
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (e.g. affected, related).'),
+      association_notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      linked_at: zOpenApi.string().nullable().optional().describe('When the asset was linked to the ticket, from asset_associations.created_at.'),
+    }),
+  );
+
+  const AssetTicketListResponse = registry.registerSchema(
+    'AssetTicketListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: zOpenApi.array(AssetTicketRow).describe('Tickets linked to the asset via asset_associations, ordered by ticket updated_at descending. Empty when no associations exist or the asset is not found.'),
+      meta: ApiResponseMeta,
+    }),
+  );
+
   const assetRouteExtensions = {
     'x-tenant-scoped': true,
     'x-request-context-required': true,
@@ -1545,6 +1575,31 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       'x-self-relationship-error-is-500': true,
       'x-duplicate-error-is-500': true,
       'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/tickets',
+    summary: 'List tickets linked to an asset',
+    description:
+      'Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Linked tickets returned successfully. Empty when no associations exist or the asset is not found.', schema: AssetTicketListResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to read assets when auth wiring is present.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
     },
     edition: 'both',
   });

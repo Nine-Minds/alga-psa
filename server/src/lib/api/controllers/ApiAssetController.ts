@@ -166,6 +166,17 @@ export class ApiAssetController {
   }
 
   /**
+   * GET /api/v1/assets/{id}/tickets - List tickets linked to an asset
+   */
+  async listTickets(req: NextRequest, params: { id: string }): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+
+    const tickets = await this.assetService.getAssetTickets(params.id, context);
+
+    return createApiResponse(tickets);
+  }
+
+  /**
    * POST /api/v2/assets/{id}/relationships - Create asset relationship
    */
   async createRelationship(req: NextRequest, params: { id: string }): Promise<NextResponse> {

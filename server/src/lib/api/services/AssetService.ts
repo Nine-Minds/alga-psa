@@ -452,6 +452,48 @@ export class AssetService extends BaseService<any> {
       );
   }
 
+  /**
+   * List tickets linked to an asset (asset_associations -> tickets).
+   * Mirrors the assets.find_associated_tickets workflow action and the asset
+   * detail UI, reading the same asset_associations table.
+   */
+  async getAssetTickets(assetId: string, context: ServiceContext): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    return knex('asset_associations as aa')
+      .innerJoin('tickets as t', function joinTickets(this: Knex.JoinClause) {
+        this.on('t.ticket_id', '=', 'aa.entity_id')
+          .andOn('t.tenant', '=', 'aa.tenant');
+      })
+      .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+        this.on('t.status_id', '=', 's.status_id')
+          .andOn('t.tenant', '=', 's.tenant');
+      })
+      .where({
+        'aa.asset_id': assetId,
+        'aa.entity_type': 'ticket',
+        'aa.tenant': context.tenant,
+        't.tenant': context.tenant
+      })
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.status_id',
+        's.name as status_name',
+        't.is_closed',
+        't.priority_id',
+        't.assigned_to',
+        't.client_id',
+        't.board_id',
+        't.entered_at',
+        't.updated_at',
+        'aa.relationship_type',
+        'aa.notes as association_notes',
+        'aa.created_at as linked_at'
+      )
+      .orderBy('t.updated_at', 'desc');
+  }
+
   async createRelationship(assetId: string, data: CreateAssetRelationshipData, context: ServiceContext): Promise<any> {
     // Prevent circular relationships
     if (assetId === data.related_asset_id) {

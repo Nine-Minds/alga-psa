@@ -4087,6 +4087,144 @@
           "meta"
         ]
       },
+      "AssetTicketRow": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID from tickets.ticket_id."
+          },
+          "ticket_number": {
+            "type": "string",
+            "description": "Human-readable ticket number from tickets.ticket_number."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ticket title."
+          },
+          "status_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Status UUID from tickets.status_id."
+          },
+          "status_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Status name from the joined statuses table."
+          },
+          "is_closed": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the ticket is closed."
+          },
+          "priority_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Priority UUID from tickets.priority_id."
+          },
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Assigned user UUID from tickets.assigned_to."
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Client UUID from tickets.client_id."
+          },
+          "board_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Board UUID from tickets.board_id."
+          },
+          "entered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ticket creation timestamp."
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Ticket last update timestamp."
+          },
+          "relationship_type": {
+            "type": "string",
+            "description": "Association type from asset_associations.relationship_type (e.g. affected, related)."
+          },
+          "association_notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional notes from asset_associations.notes."
+          },
+          "linked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the asset was linked to the ticket, from asset_associations.created_at."
+          }
+        },
+        "required": [
+          "ticket_id",
+          "ticket_number",
+          "relationship_type"
+        ]
+      },
+      "AssetTicketListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetTicketRow"
+            },
+            "description": "Tickets linked to the asset via asset_associations, ordered by ticket updated_at descending. Empty when no associations exist or the asset is not found."
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiResponseMeta"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
       "AutomationExecutionParams": {
         "type": "object",
         "properties": {
@@ -29169,6 +29307,87 @@
           },
           "500": {
             "description": "Unexpected error, including missing req.context, self-relationship errors, or duplicate relationship errors in the current implementation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/tickets": {
+      "get": {
+        "summary": "List tickets linked to an asset",
+        "description": "Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Linked tickets returned successfully. Empty when no associations exist or the asset is not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetTicketListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to read assets when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context in the current route wiring.",
             "content": {
               "application/json": {
                 "schema": {
@@ -72805,6 +73024,105 @@
         },
         "x-alga-products": [
           "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/assets": {
+      "get": {
+        "summary": "List ticket assets",
+        "description": "Lists assets linked to ticket UUID via asset_associations, the same table the UI and ticket-from-asset flow use.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "ticket"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
         ],
         "parameters": [
           {
