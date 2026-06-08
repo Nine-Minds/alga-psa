@@ -126,8 +126,8 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling (see below).
-- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, and drive RMM actions.
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling and asset links (see below).
+- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - Additional endpoints: companies (clients), contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
@@ -149,6 +149,21 @@ When multiple tickets describe the same underlying issue, they can be grouped un
 **Bundle modes:**
 - `link_only` — links tickets visually without propagating state changes to children
 - `sync_updates` — propagates the master ticket's status changes to all children (default)
+
+#### Asset ↔ Ticket Links
+
+Assets and tickets can be linked to each other (the same association surfaced in the asset and ticket detail UIs). The link is a single record readable and writable from either side.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/assets/{id}/tickets` | List tickets linked to an asset |
+| `POST` | `/assets/{id}/tickets` | Link a ticket to an asset. Requires `ticket_id`; accepts optional `relationship_type` (default `affected`) and `notes` |
+| `DELETE` | `/assets/{id}/tickets/{ticketId}` | Remove the link between an asset and a ticket |
+| `GET` | `/tickets/{id}/assets` | List assets linked to a ticket |
+| `POST` | `/tickets/{id}/assets` | Link an asset to a ticket. Requires `asset_id`; accepts optional `relationship_type` (default `affected`) and `notes` |
+| `DELETE` | `/tickets/{id}/assets/{assetId}` | Remove the link between a ticket and an asset |
+
+**Permissions:** the asset-side routes require `asset:update` plus `ticket:read`; the ticket-side routes require `ticket:update` plus `asset:read`. In each case you need *update* on the resource whose links you are changing and *read* on the one you reference.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

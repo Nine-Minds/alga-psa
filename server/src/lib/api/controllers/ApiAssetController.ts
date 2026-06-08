@@ -17,7 +17,8 @@ import {
   assetSearchSchema,
   assetExportQuerySchema,
   bulkUpdateAssetSchema,
-  bulkAssetStatusSchema
+  bulkAssetStatusSchema,
+  linkAssetTicketSchema
 } from '../schemas/asset';
 import { z } from 'zod';
 import { createApiResponse, createErrorResponse, createPaginatedResponse } from '../utils/response';
@@ -186,6 +187,25 @@ export class ApiAssetController {
     return null;
   }
 
+  // Enforce a specific action per resource. Returns a 403 on the first denial,
+  // or null when all checks pass.
+  private async requirePermissions(
+    context: ApiContext,
+    checks: Array<{ resource: 'asset' | 'ticket'; action: string }>,
+  ): Promise<NextResponse | null> {
+    if (!context.user) {
+      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+    }
+    const knex = await getConnection(context.tenant);
+    for (const { resource, action } of checks) {
+      const allowed = await hasPermission(context.user, resource, action, knex);
+      if (!allowed) {
+        return createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN');
+      }
+    }
+    return null;
+  }
+
   /**
    * GET /api/v1/assets/{id}/tickets - List tickets linked to an asset
    */
@@ -199,6 +219,48 @@ export class ApiAssetController {
     const tickets = await this.assetService.getAssetTickets(params.id, context);
 
     return createApiResponse(tickets);
+  }
+
+  /**
+   * POST /api/v1/assets/{id}/tickets - Link a ticket to an asset
+   */
+  async linkTicket(req: NextRequest, params: { id: string }): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+
+    // Mutating the asset's associations needs asset:update; the ticket is only
+    // referenced, so ticket:read is enough.
+    const denied = await this.requirePermissions(context, [
+      { resource: 'asset', action: 'update' },
+      { resource: 'ticket', action: 'read' },
+    ]);
+    if (denied) return denied;
+
+    const data = await req.json();
+    const validation = linkAssetTicketSchema.safeParse(data);
+    if (!validation.success) {
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+    }
+
+    const association = await this.assetService.linkTicket(params.id, validation.data, context);
+
+    return createApiResponse(association, 201);
+  }
+
+  /**
+   * DELETE /api/v1/assets/{id}/tickets/{ticketId} - Unlink a ticket from an asset
+   */
+  async unlinkTicket(req: NextRequest, params: { id: string; ticketId: string }): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+
+    const denied = await this.requirePermissions(context, [
+      { resource: 'asset', action: 'update' },
+      { resource: 'ticket', action: 'read' },
+    ]);
+    if (denied) return denied;
+
+    await this.assetService.unlinkTicket(params.id, params.ticketId, context);
+
+    return new NextResponse(null, { status: 204 });
   }
 
   /**

@@ -202,6 +202,13 @@ export const createAssetRelationshipSchema = z.object({
   relationship_type: z.string().min(1, 'Relationship type is required')
 });
 
+// Link a ticket to an asset (POST /api/v1/assets/{id}/tickets).
+export const linkAssetTicketSchema = z.object({
+  ticket_id: uuidSchema,
+  relationship_type: z.string().min(1).optional(),
+  notes: z.string().optional()
+});
+
 export const assetRelationshipResponseSchema = z.object({
   relationship_id: uuidSchema,
   asset_id: uuidSchema,

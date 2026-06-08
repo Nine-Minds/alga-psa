@@ -704,6 +704,79 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // The asset_associations row created by the link endpoints (returned by both
+  // POST /assets/{id}/tickets and POST /tickets/{id}/assets).
+  const AssetAssociationRow = registry.registerSchema(
+    'AssetAssociationRow',
+    zOpenApi.object({
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID from asset_associations.tenant.'),
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_associations.asset_id.'),
+      entity_id: zOpenApi.string().uuid().describe('Linked entity UUID — the ticket_id, from asset_associations.entity_id.'),
+      entity_type: zOpenApi.literal('ticket').describe("Always 'ticket' for these endpoints."),
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (defaults to affected).'),
+      notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      created_by: zOpenApi.string().uuid().describe('Creator user UUID from asset_associations.created_by.'),
+      created_at: zOpenApi.string().describe('Link creation timestamp from asset_associations.created_at.'),
+    }),
+  );
+
+  // POST /api/v1/assets/{id}/tickets body.
+  const AssetTicketLinkRequest = registry.registerSchema(
+    'AssetTicketLinkRequest',
+    zOpenApi.object({
+      ticket_id: zOpenApi.string().uuid().describe('Ticket UUID to link to the asset.'),
+      relationship_type: zOpenApi.string().min(1).optional().describe('Optional association type; defaults to affected.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on asset_associations.notes.'),
+    }),
+  );
+
+  // POST /api/v1/tickets/{id}/assets body.
+  const TicketAssetLinkRequest = registry.registerSchema(
+    'TicketAssetLinkRequest',
+    zOpenApi.object({
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID to link to the ticket.'),
+      relationship_type: zOpenApi.string().min(1).optional().describe('Optional association type; defaults to affected.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on asset_associations.notes.'),
+    }),
+  );
+
+  // createApiResponse envelope ({ success, data, meta }) — used by the asset-side POST.
+  const AssetTicketLinkResponse = registry.registerSchema(
+    'AssetTicketLinkResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetAssociationRow.describe('The inserted asset_associations row.'),
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  // apiMiddleware envelope ({ data } — no success) — used by the ticket-side POST.
+  const TicketAssetLinkResponse = registry.registerSchema(
+    'TicketAssetLinkResponse',
+    zOpenApi.object({
+      data: AssetAssociationRow.describe('The inserted asset_associations row.'),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  // DELETE /api/v1/assets/{id}/tickets/{ticketId} params.
+  const AssetTicketLinkParams = registry.registerSchema(
+    'AssetTicketLinkParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Asset UUID from assets.asset_id.'),
+      ticketId: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+    }),
+  );
+
+  // DELETE /api/v1/tickets/{id}/assets/{assetId} params.
+  const TicketAssetLinkParams = registry.registerSchema(
+    'TicketAssetLinkParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+      assetId: zOpenApi.string().uuid().describe('Asset UUID from assets.asset_id.'),
+    }),
+  );
+
   const assetRouteExtensions = {
     'x-tenant-scoped': true,
     'x-request-context-required': true,
@@ -1649,6 +1722,132 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       'x-rbac-additional-required': 'asset:read',
       'x-per-record-authorization': 'assertTicketReadAllowed',
       'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/tickets',
+    summary: 'Link a ticket to an asset',
+    description:
+      'Creates an asset_associations row (entity_type=ticket) linking the path asset to the ticket in the request body. This is the same table the asset detail UI, GET /api/v1/assets/{id}/tickets, and GET /api/v1/tickets/{id}/assets read, so the link is immediately visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update (the asset associations are being mutated) plus ticket:read (the ticket is only referenced). Both the asset and the ticket must exist in the tenant (404 otherwise), and a duplicate link returns 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: AssetTicketLinkRequest,
+        description: 'The ticket to link plus optional relationship_type and notes.',
+        required: true,
+      },
+    },
+    responses: {
+      201: { description: 'Ticket linked. Returns the inserted asset_associations row.', schema: AssetTicketLinkResponse },
+      400: { description: 'Request body validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:update or ticket:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset or ticket not found in the tenant.', schema: ApiErrorEnvelope },
+      409: { description: 'Ticket is already linked to this asset.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'ticket:read',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/assets/{id}/tickets/{ticketId}',
+    summary: 'Unlink a ticket from an asset',
+    description:
+      'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update plus ticket:read. Returns 404 when no such link exists.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetTicketLinkParams },
+    responses: {
+      204: { description: 'Link removed.', emptyBody: true },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:update or ticket:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset-ticket association not found.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'ticket:read',
+      'x-idempotent': false,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/tickets/{id}/assets',
+    summary: 'Link an asset to a ticket',
+    description:
+      'Creates an asset_associations row (entity_type=ticket) linking the asset in the request body to the path ticket. Same table GET /api/v1/tickets/{id}/assets and the asset detail UI read, so the link is visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; it enforces ticket:update plus a per-ticket authorization-kernel check (assertTicketReadAllowed) AND asset:read (the asset is referenced). The response uses the apiMiddleware envelope ({ data } with no top-level success field). Both the ticket and asset must exist (404 otherwise); a duplicate link returns 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: TicketAssetLinkRequest,
+        description: 'The asset to link plus optional relationship_type and notes.',
+        required: true,
+      },
+    },
+    responses: {
+      201: { description: 'Asset linked. Returns the inserted asset_associations row.', schema: TicketAssetLinkResponse },
+      400: { description: 'Request body validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:update (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Ticket or asset not found in the tenant.', schema: ApiErrorEnvelope },
+      409: { description: 'Asset is already linked to this ticket.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/tickets/{id}/assets/{assetId}',
+    summary: 'Unlink an asset from a ticket',
+    description:
+      'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. Authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; enforces ticket:update plus the per-ticket authorization check and asset:read. Returns 404 when no such link exists.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketAssetLinkParams },
+    responses: {
+      204: { description: 'Link removed.', emptyBody: true },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:update (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset-ticket association not found.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
+      'x-idempotent': false,
     },
     edition: 'both',
   });
