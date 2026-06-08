@@ -26,6 +26,7 @@ interface Args {
   companyName?: string;
   password?: string;
   productCode?: string;
+  tenantId?: string;
   help?: boolean;
 }
 
@@ -39,6 +40,7 @@ const args = parse<Args>(
     companyName: { type: String, optional: true, description: 'Company name (defaults to tenant name)' },
     password: { type: String, optional: true, description: 'Admin password (generated if not provided)' },
     productCode: { type: String, optional: true, description: 'Product code: psa (default) or algadesk' },
+    tenantId: { type: String, optional: true, description: 'Pre-minted tenant id to adopt (else env INITIAL_TENANT_ID; else DB-generated)' },
     help: { type: Boolean, optional: true, alias: 'h', description: 'Show help' }
   },
   {
@@ -57,17 +59,17 @@ async function main() {
   // Create database connection
   // For local development, use localhost instead of Docker service names
   const isDocker = process.env.DOCKER_ENV === 'true';
-  const dbHost = isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost';
-  const dbPort = isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432';
-  
+  const dbHost = process.env.DB_HOST || (isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost');
+  const dbPort = process.env.DB_PORT || (isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432');
+
   const db = knex({
     client: 'pg',
     connection: {
       host: dbHost,
       port: parseInt(dbPort),
       database: process.env.DB_NAME_SERVER || 'server',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD_ADMIN || process.env.POSTGRES_PASSWORD || 'abcd1234!'
+      user: process.env.DB_USER_ADMIN || process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD_SUPERUSER || process.env.POSTGRES_PASSWORD || 'abcd1234!'
     }
   });
 
@@ -83,25 +85,61 @@ async function main() {
       productCode = args.productCode;
     }
 
+    const suppliedPassword = args.password ?? process.env.INITIAL_ADMIN_PASSWORD;
+    // Adopt a pre-minted tenant id when the appliance install provides one (the
+    // registry-minted id redeemed from the install code); otherwise the DB mints it.
+    const initialTenantId = args.tenantId ?? process.env.INITIAL_TENANT_ID;
+
     const result = await createTenantComplete(db, {
       tenantName: args.tenant,
       adminUser: {
         firstName: args.firstName || 'Admin',
         lastName: args.lastName || 'User',
-        email: args.email
+        email: args.email,
+        password: suppliedPassword
       },
       companyName: resolvedCompanyName,
       clientName: resolvedClientName,
-      productCode
+      productCode,
+      tenantId: initialTenantId
     });
 
+    // Put the new tenant into the onboarding-pending state so the admin lands in
+    // the in-app onboarding wizard on first login. createTenantComplete (the
+    // testing/CLI tenant path) does not create a tenant_settings row the way the
+    // SaaS provisioning path does, so without this the OnboardingProvider redirect
+    // (which requires onboarding_completed=false AND onboarding_skipped=false)
+    // never fires. Idempotent + best-effort so it never blocks tenant creation.
+    try {
+      const now = new Date();
+      await db('tenant_settings')
+        .insert({
+          tenant: result.tenantId,
+          onboarding_completed: false,
+          onboarding_skipped: false,
+          onboarding_data: null,
+          settings: null,
+          created_at: now,
+          updated_at: now
+        })
+        .onConflict('tenant')
+        .ignore();
+      console.log('Onboarding: tenant_settings initialized (onboarding pending)');
+    } catch (settingsError) {
+      console.warn('Warning: failed to initialize tenant_settings for onboarding:', settingsError);
+    }
+
     console.log('\n✅ Tenant created successfully!');
-    console.log(`Tenant ID: ${result.tenantId}`);
+    console.log(`Tenant ID: ${result.tenantId}${initialTenantId ? ' (adopted from INITIAL_TENANT_ID)' : ''}`);
     console.log(`Admin User ID: ${result.adminUserId}`);
     console.log(`Client ID: ${result.clientId}`);
     console.log(`Admin Email: ${args.email}`);
     console.log(`Product Code: ${productCode ?? '(default)'}`);
-    console.log(`Temporary Password: ${result.temporaryPassword}`);
+    if (suppliedPassword) {
+      console.log('Admin Password: [provided]');
+    } else {
+      console.log(`Temporary Password: ${result.temporaryPassword}`);
+    }
 
   } catch (error) {
     console.error('\n❌ Failed to create tenant:', error);

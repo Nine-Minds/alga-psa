@@ -30,11 +30,17 @@ export interface TenantCreationInput {
     firstName: string;
     lastName: string;
     email: string;
+    password?: string;
   };
   companyName?: string;
   clientName?: string;
   contractLine?: string;
   productCode?: 'psa' | 'algadesk';
+  /**
+   * Pre-minted tenant id to adopt (the registry-minted id an appliance receives
+   * at install via INITIAL_TENANT_ID). Omit to let the DB generate one.
+   */
+  tenantId?: string;
 }
 
 export interface TenantCreationResult {
@@ -62,9 +68,20 @@ export interface CreateAdminUserResult {
  */
 export async function createTenant(
   db: Knex,
-  input: { tenantName: string; email: string; clientName?: string; productCode?: 'psa' | 'algadesk' }
+  input: { tenantName: string; email: string; clientName?: string; productCode?: 'psa' | 'algadesk'; tenantId?: string }
 ): Promise<CreateTenantResult> {
   return await db.transaction(async (trx) => {
+    // Idempotency: when a tenant id is supplied (appliance install adopting the
+    // registry-minted id) and the tenant already exists, skip creation and return
+    // it — so a re-run of the install bootstrap doesn't error or duplicate.
+    if (input.tenantId) {
+      const existing = await trx('tenants').where({ tenant: input.tenantId }).first();
+      if (existing) {
+        const existingClient = await trx('clients').where({ tenant: input.tenantId }).first();
+        return { tenantId: input.tenantId, clientId: existingClient?.client_id };
+      }
+    }
+
     // Create tenant first
     const tenantCompanyName = input.clientName ?? input.tenantName;
     const tenantInsert: Record<string, unknown> = {
@@ -76,10 +93,15 @@ export async function createTenant(
     if (input.productCode) {
       tenantInsert.product_code = input.productCode;
     }
+    // Adopt the pre-minted tenant id (INITIAL_TENANT_ID) when supplied; otherwise
+    // the DB default (gen_random_uuid()) generates one — unchanged legacy behavior.
+    if (input.tenantId) {
+      tenantInsert.tenant = input.tenantId;
+    }
     const tenantResult = await trx('tenants')
       .insert(tenantInsert)
       .returning('tenant');
-    
+
     const tenantId = tenantResult[0].tenant || tenantResult[0];
     
     // Create client using provided name or fallback to tenant company name
@@ -113,6 +135,7 @@ export async function createAdminUser(
     lastName: string;
     email: string;
     clientId?: string;
+    password?: string;
   }
 ): Promise<CreateAdminUserResult> {
   return await db.transaction(async (trx) => {
@@ -125,8 +148,8 @@ export async function createAdminUser(
       throw new Error(`User with email ${input.email} already exists`);
     }
 
-    // Generate temporary password
-    const temporaryPassword = generateSecurePassword();
+    // Use the supplied admin password when provided; otherwise generate a temporary one.
+    const temporaryPassword = input.password ?? generateSecurePassword();
     const hashedPassword = await hashPassword(temporaryPassword);
     
     // Create user
@@ -252,6 +275,7 @@ export async function createTenantComplete(
       email: input.adminUser.email,
       clientName: input.clientName,
       productCode: input.productCode,
+      tenantId: input.tenantId,
     });
 
     // Step 2: Create admin user
@@ -261,6 +285,7 @@ export async function createTenantComplete(
       lastName: input.adminUser.lastName,
       email: input.adminUser.email,
       clientId: tenantResult.clientId,
+      password: input.adminUser.password,
     });
 
     // Step 3: Setup tenant data

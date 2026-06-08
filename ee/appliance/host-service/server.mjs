@@ -709,6 +709,7 @@ const server = http.createServer(async (req, res) => {
         adminPassword: payload.adminPassword || '',
         adminPasswordConfirm: payload.adminPasswordConfirm || '',
         editionChoice: payload.editionChoice || 'ee',
+        installCode: payload.installCode || '',
         licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
