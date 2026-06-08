@@ -263,6 +263,9 @@
       "name": "tickets"
     },
     {
+      "name": "user"
+    },
+    {
       "name": "webhooks"
     },
     {
@@ -2053,34 +2056,9 @@
             "type": "string",
             "enum": [
               "csv",
-              "json",
-              "xlsx"
+              "json"
             ],
-            "description": "Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope."
-          },
-          "include_extension_data": {
-            "type": "string",
-            "enum": [
-              "true",
-              "false"
-            ],
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-          },
-          "include_maintenance": {
-            "type": "string",
-            "enum": [
-              "true",
-              "false"
-            ],
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-          },
-          "include_documents": {
-            "type": "string",
-            "enum": [
-              "true",
-              "false"
-            ],
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
+            "description": "Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data."
           },
           "asset_types": {
             "type": "array",
@@ -2095,14 +2073,14 @@
                 "unknown"
               ]
             },
-            "description": "Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter."
+            "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
           },
           "statuses": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Accepted by validation as an array, but not currently applied."
+            "description": "Filter to these asset statuses. Repeat the param or pass a comma-separated list."
           },
           "client_ids": {
             "type": "array",
@@ -2110,14 +2088,14 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Accepted by validation as an array, but not currently applied."
+            "description": "Filter to these client UUIDs. Repeat the param or pass a comma-separated list."
           },
           "fields": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Accepted by validation as an array, but not currently used to select export columns."
+            "description": "Restrict exported columns to this set. Repeat the param or pass a comma-separated list."
           }
         }
       },
@@ -9501,7 +9479,7 @@
           "template_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Used by service; current controller ignores the path id and relies on this field."
+            "description": "Optional; the template id is taken from the path {id} and overrides this field when both are present."
           },
           "contract_line_name": {
             "type": "string",
@@ -9544,7 +9522,6 @@
           }
         },
         "required": [
-          "template_id",
           "contract_line_name"
         ]
       },
@@ -21001,22 +20978,70 @@
     },
     "/api/v1/rbac/audit": {
       "get": {
-        "summary": "Get RBAC audit log (not implemented)",
-        "description": "Current route returns a static 501 Not Implemented payload and does not call an RBAC controller.",
+        "summary": "Get RBAC audit log",
+        "description": "Lists RBAC audit-log entries from audit_logs (roles, permissions, role_permissions, user_roles), newest first. Supports page/limit pagination and user_id, operation, table_name, record_id, start_date, and end_date filters. Gated on role:read.",
         "tags": [
           "Access Control & Users v1"
         ],
-        "security": [],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "extensions": {
-          "x-controller-handler": "rbacAuditNotImplemented",
-          "x-implementation-status": "not-implemented"
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "role",
+          "x-rbac-action": "read",
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or equivalent controller-specific auth path",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-controller-handler": "listRbacAudit"
         },
         "x-alga-products": [
           "psa"
         ],
         "responses": {
-          "501": {
-            "description": "RBAC audit endpoint is not implemented in this build.",
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (payload/query/path parsing).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for role:read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27768,7 +27793,7 @@
     "/api/v1/assets/export": {
       "get": {
         "summary": "Export assets",
-        "description": "Exports assets for the authenticated tenant. The controller validates assetExportQuerySchema, but currently ignores the validated filters and include flags and calls AssetService.list with default options. When format=csv or omitted, it returns text/csv with Content-Disposition attachment filename=assets.csv. When format=json or format=xlsx, it returns a JSON success envelope; xlsx generation is not implemented. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before export.",
+        "description": "Exports all assets for the authenticated tenant (paginated internally, not capped to the default list page). Optional set filters asset_types, statuses, and client_ids narrow the result; fields restricts the exported columns. format=csv (default) returns text/csv with Content-Disposition attachment filename=assets.csv; format=json returns the success envelope with the rows in data. The route is authenticated and tenant-scoped via withApiKeyRouteAuth.",
         "tags": [
           "Assets"
         ],
@@ -27780,12 +27805,10 @@
         "extensions": {
           "x-tenant-scoped": true,
           "x-request-context-required": true,
-          "x-current-auth-wiring-missing": true,
+          "x-current-auth-wiring-missing": false,
           "x-rbac-resource": "asset",
           "x-rbac-action": "read",
-          "x-csv-content-disposition": "attachment; filename=assets.csv",
-          "x-export-filters-currently-ignored": true,
-          "x-xlsx-generation-implemented": false
+          "x-csv-content-disposition": "attachment; filename=assets.csv"
         },
         "x-alga-products": [
           "psa"
@@ -27796,56 +27819,13 @@
               "type": "string",
               "enum": [
                 "csv",
-                "json",
-                "xlsx"
+                "json"
               ],
-              "description": "Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope."
+              "description": "Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data."
             },
             "required": false,
-            "description": "Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope.",
+            "description": "Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data.",
             "name": "format",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-            },
-            "required": false,
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-            "name": "include_extension_data",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-            },
-            "required": false,
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-            "name": "include_maintenance",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ],
-              "description": "Accepted by validation, but currently ignored by ApiAssetController.export."
-            },
-            "required": false,
-            "description": "Accepted by validation, but currently ignored by ApiAssetController.export.",
-            "name": "include_documents",
             "in": "query"
           },
           {
@@ -27862,10 +27842,10 @@
                   "unknown"
                 ]
               },
-              "description": "Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter."
+              "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
             },
             "required": false,
-            "description": "Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter.",
+            "description": "Filter to these asset types. Repeat the param or pass a comma-separated list.",
             "name": "asset_types",
             "in": "query"
           },
@@ -27875,10 +27855,10 @@
               "items": {
                 "type": "string"
               },
-              "description": "Accepted by validation as an array, but not currently applied."
+              "description": "Filter to these asset statuses. Repeat the param or pass a comma-separated list."
             },
             "required": false,
-            "description": "Accepted by validation as an array, but not currently applied.",
+            "description": "Filter to these asset statuses. Repeat the param or pass a comma-separated list.",
             "name": "statuses",
             "in": "query"
           },
@@ -27889,10 +27869,10 @@
                 "type": "string",
                 "format": "uuid"
               },
-              "description": "Accepted by validation as an array, but not currently applied."
+              "description": "Filter to these client UUIDs. Repeat the param or pass a comma-separated list."
             },
             "required": false,
-            "description": "Accepted by validation as an array, but not currently applied.",
+            "description": "Filter to these client UUIDs. Repeat the param or pass a comma-separated list.",
             "name": "client_ids",
             "in": "query"
           },
@@ -27902,17 +27882,17 @@
               "items": {
                 "type": "string"
               },
-              "description": "Accepted by validation as an array, but not currently used to select export columns."
+              "description": "Restrict exported columns to this set. Repeat the param or pass a comma-separated list."
             },
             "required": false,
-            "description": "Accepted by validation as an array, but not currently used to select export columns.",
+            "description": "Restrict exported columns to this set. Repeat the param or pass a comma-separated list.",
             "name": "fields",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Asset export returned successfully. For format=csv or omitted, the handler returns text/csv with an attachment filename; for format=json or format=xlsx, the handler currently returns this JSON envelope.",
+            "description": "Asset export returned successfully. For format=csv (or omitted) the handler returns text/csv with an attachment filename; for format=json it returns this JSON envelope.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27932,7 +27912,7 @@
             }
           },
           "401": {
-            "description": "x-api-key is missing at middleware.",
+            "description": "x-api-key is missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27942,7 +27922,7 @@
             }
           },
           "403": {
-            "description": "Authenticated request context lacks permission to read/export assets when auth wiring is present.",
+            "description": "Caller lacks asset:read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -27952,7 +27932,7 @@
             }
           },
           "500": {
-            "description": "Unexpected error, including missing req.context in the current route wiring.",
+            "description": "Unexpected error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -34785,7 +34765,7 @@
     "/api/v1/client-contract-lines": {
       "get": {
         "summary": "List client contract lines",
-        "description": "Lists client contract line assignments. Current implementation validates query but returns TODO stub `{ data: [], total: 0 }`. This route requires request context and can fail with `Request context not available` when not wired.",
+        "description": "Lists client contract lines — contract_lines rows that belong to client contracts (joined via contract_id), with the owning client_id and client_contract_id surfaced. Supports client_id, contract_line_id, service_category, is_active, has_custom_rate, and start/end-date-range filters plus page/limit pagination. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
         "tags": [
           "Client Contract Lines"
         ],
@@ -34796,9 +34776,7 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-request-context-required": true,
-          "x-request-context-wiring-gap": true,
-          "x-service-implementation-status": "todo-stub"
+          "x-request-context-required": true
         },
         "x-alga-products": [
           "psa"
@@ -34985,7 +34963,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Stubbed empty assignment list returned.",
+            "description": "Paginated client contract lines returned.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35005,7 +34983,7 @@
             }
           },
           "401": {
-            "description": "x-api-key missing at middleware.",
+            "description": "x-api-key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35015,7 +34993,7 @@
             }
           },
           "500": {
-            "description": "Request context missing or unhandled failure.",
+            "description": "Unhandled failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35028,7 +35006,7 @@
       },
       "post": {
         "summary": "Assign contract line to client",
-        "description": "Assigns one contract line to client using createClientContractLineSchema validation. Requires request context wiring.",
+        "description": "Assigns one contract line to a client by cloning a template line into the client contract, using createClientContractLineSchema validation. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
         "tags": [
           "Client Contract Lines"
         ],
@@ -35040,7 +35018,6 @@
         "extensions": {
           "x-tenant-scoped": true,
           "x-request-context-required": true,
-          "x-request-context-wiring-gap": true,
           "x-id-provenance": {
             "client_contract_line_id": "contract_lines.contract_line_id (client-owned line model)"
           }
@@ -35080,7 +35057,7 @@
             }
           },
           "401": {
-            "description": "x-api-key missing at middleware.",
+            "description": "x-api-key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35090,7 +35067,7 @@
             }
           },
           "500": {
-            "description": "Request context missing or unhandled assignment failure.",
+            "description": "Unhandled assignment failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35105,7 +35082,7 @@
     "/api/v1/client-contract-lines/{id}": {
       "delete": {
         "summary": "Unassign contract line from client",
-        "description": "Deactivates the client-owned contract line assignment (current model) for provided id.",
+        "description": "Deactivates the client-owned contract line for the provided id. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
         "tags": [
           "Client Contract Lines"
         ],
@@ -35116,9 +35093,7 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-request-context-required": true,
-          "x-request-context-wiring-gap": true,
-          "x-returns-json-with-204-currently": true
+          "x-request-context-required": true
         },
         "x-alga-products": [
           "psa"
@@ -35149,7 +35124,7 @@
             }
           },
           "401": {
-            "description": "x-api-key missing at middleware.",
+            "description": "x-api-key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35159,7 +35134,7 @@
             }
           },
           "500": {
-            "description": "Request context missing or unassignment failure.",
+            "description": "Unassignment failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -37353,7 +37328,7 @@
     "/api/v1/contract-line-templates/{id}/create-contract-line": {
       "post": {
         "summary": "Create contract line from template",
-        "description": "Creates a contract line from a template. Current controller validates body createPlanFromTemplateSchema and passes that body to service; path `{id}` is not used by service logic.",
+        "description": "Creates a contract line from a template. The template id is taken from the path `{id}` (it takes precedence over any template_id in the body), and the rest of the body is validated with createPlanFromTemplateSchema. Authenticated and tenant-scoped via withApiKeyRouteAuth.",
         "tags": [
           "Contract Lines"
         ],
@@ -37366,8 +37341,7 @@
           "x-tenant-scoped": true,
           "x-auth-source": "middleware API-key presence + request context requirement in controller",
           "x-request-context-required": true,
-          "x-request-context-wiring-gap": true,
-          "x-path-id-ignored-currently": true
+          "x-request-context-wiring-gap": true
         },
         "x-alga-products": [
           "psa"
@@ -37417,7 +37391,7 @@
             }
           },
           "401": {
-            "description": "x-api-key missing at middleware.",
+            "description": "x-api-key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -37427,7 +37401,7 @@
             }
           },
           "500": {
-            "description": "Request context missing or template application failure.",
+            "description": "Template application failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -39364,16 +39338,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Endpoint intentionally returns Not implemented.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
           }
         }
       }
@@ -39381,7 +39345,7 @@
     "/api/v1/financial/bulk/transactions": {
       "post": {
         "summary": "Run bulk transaction operation",
-        "description": "Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkTransactionOperations).",
+        "description": "FinancialService.bulkTransactionOperation() applies approve/reject/reverse to existing transactions (1–100 ids). reverse posts a compensating transaction linked to the original via related_transaction_id, recomputes the running balance, and syncs the client credit balance for credit-type transactions. Returns per-id results { total_requested, successful, failed, results[] }.",
         "tags": [
           "Financial"
         ],
@@ -39395,8 +39359,7 @@
           "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
-          "x-rbac-action": "update",
-          "x-implementation-gap": "Not implemented; returns 501."
+          "x-rbac-action": "update"
         },
         "x-alga-products": [
           "psa"
@@ -39461,16 +39424,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Endpoint intentionally returns Not implemented.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
           }
         }
       }
@@ -39478,7 +39431,7 @@
     "/api/v1/financial/bulk/credits": {
       "post": {
         "summary": "Run bulk credit operation",
-        "description": "Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkCreditOperations).",
+        "description": "FinancialService.bulkCreditOperation() applies expire/extend_expiration/transfer to existing credits (1–100 ids). expire forfeits the remaining amount via a credit_expiration transaction and reduces the client balance; extend_expiration sets a new expiration_date; transfer moves the remaining amount to parameters.target_client_id. Returns per-id results { total_requested, successful, failed, results[] }.",
         "tags": [
           "Financial"
         ],
@@ -39492,8 +39445,7 @@
           "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
-          "x-rbac-action": "update",
-          "x-implementation-gap": "Not implemented; returns 501."
+          "x-rbac-action": "update"
         },
         "x-alga-products": [
           "psa"
@@ -39551,16 +39503,6 @@
           },
           "500": {
             "description": "Unexpected bulk operation failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Endpoint intentionally returns Not implemented.",
             "content": {
               "application/json": {
                 "schema": {
@@ -84157,7 +84099,7 @@
     "/api/v1/user/telemetry-preferences": {
       "get": {
         "summary": "Get telemetry preferences",
-        "description": "Returns telemetry preference view controlled by environment variable; requires session user.",
+        "description": "Read-only. Returns the usage-stats telemetry state, which is controlled by the ALGA_USAGE_STATS environment variable (not per-user); requires session user. There are no write verbs because the preference cannot be changed through the API.",
         "tags": [
           "Meta & Utility v1"
         ],
@@ -84278,146 +84220,104 @@
           }
         }
       },
-      "post": {
-        "summary": "Set telemetry preferences (environment-controlled)",
-        "description": "Endpoint acknowledges request but reports environment-controlled behavior rather than persisting user preference.",
+      "delete": {
+        "summary": "DELETE v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "Meta & Utility v1"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
+          "user"
         ],
         "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "Session user required in handler; global /api middleware may still require x-api-key presence",
-          "x-tenant-header": "x-tenant-id (optional)",
-          "x-session-auth-required": true
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
         },
         "x-alga-products": [
           "psa"
         ],
         "responses": {
-          "200": {
-            "description": "Operation succeeded.",
+          "204": {
+            "description": "Placeholder success response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiSuccessV1"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request payload/query.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/PlaceholderObject"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized (API key/session auth failure depending on route).",
+            "description": "Authentication required",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Permission denied.",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected route/controller failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           }
         }
       },
-      "delete": {
-        "summary": "Delete telemetry preferences (environment-controlled)",
-        "description": "Endpoint acknowledges request but reports environment-controlled behavior rather than deleting stored preference.",
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "Meta & Utility v1"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
+          "user"
         ],
         "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "Session user required in handler; global /api middleware may still require x-api-key presence",
-          "x-tenant-header": "x-tenant-id (optional)",
-          "x-session-auth-required": true
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
         },
         "x-alga-products": [
           "psa"
         ],
-        "responses": {
-          "200": {
-            "description": "Operation succeeded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiSuccessV1"
-                }
-              }
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
             }
-          },
-          "400": {
-            "description": "Invalid request payload/query.",
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/PlaceholderObject"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized (API key/session auth failure depending on route).",
+            "description": "Authentication required",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Permission denied.",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected route/controller failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetaUtilityApiErrorV1"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

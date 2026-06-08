@@ -15,7 +15,6 @@ import {
   updateMaintenanceScheduleSchema,
   recordMaintenanceSchema,
   assetSearchSchema,
-  assetExportQuerySchema,
   bulkUpdateAssetSchema,
   bulkAssetStatusSchema,
   linkAssetTicketSchema
@@ -446,22 +445,40 @@ export class ApiAssetController {
    * GET /api/v2/assets/export - Export assets
    */
   async export(req: NextRequest): Promise<NextResponse> {
-    const query = Object.fromEntries(new URL(req.url).searchParams.entries());
     const context = await this.requireAllowedContext(req);
-    
-    // Validate query parameters
-    const validation = assetExportQuerySchema.safeParse(query);
-    if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+    const sp = new URL(req.url).searchParams;
+
+    const format = sp.get('format') === 'json' ? 'json' : 'csv';
+    // Set filters arrive as repeated or comma-separated query params.
+    const multi = (key: string) => sp.getAll(key).flatMap((v) => v.split(',')).map((v) => v.trim()).filter(Boolean);
+    const assetTypes = multi('asset_types');
+    const statuses = multi('statuses');
+    const clientIds = multi('client_ids');
+    const fields = multi('fields');
+
+    // Page through every asset for the tenant — list() defaults to 25 rows, so
+    // an export must paginate rather than take only the first page.
+    const pageSize = 200;
+    const MAX_ROWS = 50000;
+    let page = 1;
+    let rows: any[] = [];
+    while (rows.length < MAX_ROWS) {
+      const result = await this.assetService.list({ page, limit: pageSize }, context);
+      rows = rows.concat(result.data);
+      if (result.data.length < pageSize || rows.length >= (result.total ?? rows.length)) break;
+      page += 1;
     }
 
-    // For now, just return the assets as JSON
-    // In a real implementation, you'd generate CSV/Excel based on format
-    const assets = await this.assetService.list({}, context);
-    
-    if (validation.data.format === 'csv') {
-      // Convert to CSV format
-      const csvData = this.convertToCSV(assets.data);
+    // Apply the export-only set filters in memory (list() takes single-value filters).
+    if (assetTypes.length) rows = rows.filter((r) => assetTypes.includes(r.asset_type));
+    if (statuses.length) rows = rows.filter((r) => statuses.includes(r.status));
+    if (clientIds.length) rows = rows.filter((r) => clientIds.includes(r.client_id));
+    if (fields.length) {
+      rows = rows.map((r) => Object.fromEntries(fields.filter((k) => k in r).map((k) => [k, r[k]])));
+    }
+
+    if (format === 'csv') {
+      const csvData = this.convertToCSV(rows);
       return new NextResponse(csvData, {
         headers: {
           'Content-Type': 'text/csv',
@@ -470,7 +487,7 @@ export class ApiAssetController {
       });
     }
 
-    return createApiResponse(assets.data);
+    return createApiResponse(rows);
   }
 
   /**

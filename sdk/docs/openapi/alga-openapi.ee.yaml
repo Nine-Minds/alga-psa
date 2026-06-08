@@ -91,6 +91,7 @@ tags:
   - name: teams
   - name: tenant-management
   - name: tickets
+  - name: user
   - name: webhooks
   - name: workflow
   - name: workflow-definitions
@@ -1389,54 +1390,34 @@ components:
           enum: &a41
             - csv
             - json
-            - xlsx
-          description: Export format. csv returns text/csv; json and xlsx currently return
-            the same JSON envelope.
-        include_extension_data:
-          type: string
-          enum: &a42
-            - "true"
-            - "false"
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
-        include_maintenance:
-          type: string
-          enum: &a43
-            - "true"
-            - "false"
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
-        include_documents:
-          type: string
-          enum: &a44
-            - "true"
-            - "false"
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
+          description: Export format. csv (default) returns text/csv as an attachment;
+            json returns the success envelope with the rows in data.
         asset_types:
           type: array
           items:
             type: string
             enum: *a2
-          description: Accepted by validation as an array, but the controller builds query
-            values with Object.fromEntries and does not apply this filter.
+          description: Filter to these asset types. Repeat the param or pass a
+            comma-separated list.
         statuses:
           type: array
           items:
             type: string
-          description: Accepted by validation as an array, but not currently applied.
+          description: Filter to these asset statuses. Repeat the param or pass a
+            comma-separated list.
         client_ids:
           type: array
           items:
             type: string
             format: uuid
-          description: Accepted by validation as an array, but not currently applied.
+          description: Filter to these client UUIDs. Repeat the param or pass a
+            comma-separated list.
         fields:
           type: array
           items:
             type: string
-          description: Accepted by validation as an array, but not currently used to
-            select export columns.
+          description: Restrict exported columns to this set. Repeat the param or pass a
+            comma-separated list.
     AssetIdParams:
       type: object
       properties:
@@ -2696,7 +2677,7 @@ components:
           type: array
           items:
             type: string
-            enum: &a45
+            enum: &a42
               - asset_tag
               - name
               - serial_number
@@ -2723,7 +2704,7 @@ components:
           description: Optional client UUID filters.
         include_extension_data:
           type: string
-          enum: &a46
+          enum: &a43
             - "true"
             - "false"
           description: When true, the service fetches asset-type-specific extension data
@@ -3175,7 +3156,7 @@ components:
             orders executions by started_at desc.
         order:
           type: string
-          enum: &a47
+          enum: &a44
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3200,7 +3181,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a48
+          enum: &a45
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3237,7 +3218,7 @@ components:
           description: Maximum execution duration in milliseconds.
         has_errors:
           type: string
-          enum: &a49
+          enum: &a46
             - "true"
             - "false"
           description: Filter by whether the execution has errors; transformed to boolean
@@ -3268,7 +3249,7 @@ components:
             rules by created_at desc.
         order:
           type: string
-          enum: &a50
+          enum: &a47
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3293,7 +3274,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a51
+          enum: &a48
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3359,7 +3340,7 @@ components:
             templates by created_at desc.
         order:
           type: string
-          enum: &a52
+          enum: &a49
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3384,7 +3365,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a53
+          enum: &a50
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3418,7 +3399,7 @@ components:
           description: Optional upper bound for performance window.
         group_by:
           type: string
-          enum: &a54
+          enum: &a51
             - hour
             - day
             - week
@@ -4740,7 +4721,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a55
+          enum: &a52
             - asc
             - desc
         search:
@@ -4765,7 +4746,7 @@ components:
           type: string
         billing_cycle:
           type: string
-          enum: &a56
+          enum: &a53
             - weekly
             - bi-weekly
             - monthly
@@ -4774,12 +4755,12 @@ components:
             - annually
         is_inactive:
           type: string
-          enum: &a57
+          enum: &a54
             - "true"
             - "false"
         is_tax_exempt:
           type: string
-          enum: &a58
+          enum: &a55
             - "true"
             - "false"
         account_manager_id:
@@ -4793,7 +4774,7 @@ components:
           type: string
         has_credit_limit:
           type: string
-          enum: &a59
+          enum: &a56
             - "true"
             - "false"
         industry:
@@ -4940,7 +4921,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a60
+          enum: &a57
             - asc
             - desc
         search:
@@ -4970,12 +4951,12 @@ components:
           type: string
         is_inactive:
           type: string
-          enum: &a61
+          enum: &a58
             - "true"
             - "false"
         has_client:
           type: string
-          enum: &a62
+          enum: &a59
             - "true"
             - "false"
         client_name:
@@ -5043,7 +5024,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum: &a63
+          enum: &a60
             - "true"
             - "false"
         limit:
@@ -5055,12 +5036,12 @@ components:
       properties:
         format:
           type: string
-          enum: &a64
+          enum: &a61
             - csv
             - json
         include_inactive:
           type: string
-          enum: &a65
+          enum: &a62
             - "true"
             - "false"
         client_id:
@@ -5080,7 +5061,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a66
+          enum: &a63
             - asc
             - desc
         search:
@@ -5107,17 +5088,17 @@ components:
           type: string
         is_active:
           type: string
-          enum: &a67
+          enum: &a64
             - "true"
             - "false"
         has_custom_rate:
           type: string
-          enum: &a68
+          enum: &a65
             - "true"
             - "false"
         is_contractd:
           type: string
-          enum: &a69
+          enum: &a66
             - "true"
             - "false"
         start_date_from:
@@ -6262,7 +6243,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a70
+          enum: &a67
             - asc
             - desc
         search:
@@ -6298,19 +6279,19 @@ components:
             - annually
         is_custom:
           type: string
-          enum: &a71
+          enum: &a68
             - "true"
             - "false"
         is_active:
           type: string
-          enum: &a72
+          enum: &a69
             - "true"
             - "false"
         service_category:
           type: string
         has_services:
           type: string
-          enum: &a73
+          enum: &a70
             - "true"
             - "false"
         clients_count_min:
@@ -6323,19 +6304,19 @@ components:
           type: string
         include_services:
           type: string
-          enum: &a74
+          enum: &a71
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
         include_usage:
           type: string
-          enum: &a75
+          enum: &a72
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
         include_clients:
           type: string
-          enum: &a76
+          enum: &a73
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
@@ -6682,8 +6663,8 @@ components:
         template_id:
           type: string
           format: uuid
-          description: Used by service; current controller ignores the path id and relies
-            on this field.
+          description: Optional; the template id is taken from the path {id} and overrides
+            this field when both are present.
         contract_line_name:
           type: string
           minLength: 1
@@ -6712,7 +6693,6 @@ components:
             required:
               - service_id
       required:
-        - template_id
         - contract_line_name
     ContractLineApiSuccess:
       type: object
@@ -6818,7 +6798,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a77
+          enum: &a74
             - pdf
             - markdown
             - md
@@ -7434,7 +7414,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a78
+          enum: &a75
             - asc
             - desc
         search:
@@ -7463,22 +7443,22 @@ components:
           type: string
         include_expired:
           type: string
-          enum: &a79
+          enum: &a76
             - "true"
             - "false"
         expiring_soon:
           type: string
-          enum: &a80
+          enum: &a77
             - "true"
             - "false"
         has_remaining:
           type: string
-          enum: &a81
+          enum: &a78
             - "true"
             - "false"
         has_expiration:
           type: string
-          enum: &a82
+          enum: &a79
             - "true"
             - "false"
         date_from:
@@ -7487,13 +7467,13 @@ components:
           type: string
         group_by:
           type: string
-          enum: &a83
+          enum: &a80
             - day
             - week
             - month
         include_projections:
           type: string
-          enum: &a84
+          enum: &a81
             - "true"
             - "false"
         as_of_date:
@@ -7509,27 +7489,27 @@ components:
           type: string
         order:
           type: string
-          enum: &a85
+          enum: &a82
             - asc
             - desc
         include_items:
           type: string
-          enum: &a86
+          enum: &a83
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a87
+          enum: &a84
             - "true"
             - "false"
         include_billing_cycle:
           type: string
-          enum: &a88
+          enum: &a85
             - "true"
             - "false"
         include_transactions:
           type: string
-          enum: &a89
+          enum: &a86
             - "true"
             - "false"
         q:
@@ -7540,7 +7520,7 @@ components:
           type: string
         format:
           type: string
-          enum: &a90
+          enum: &a87
             - json
             - csv
       additionalProperties:
@@ -8928,7 +8908,7 @@ components:
           type: string
         active:
           type: string
-          enum: &a91
+          enum: &a88
             - "true"
             - "false"
         search:
@@ -8937,7 +8917,7 @@ components:
           type: string
         force_refresh:
           type: string
-          enum: &a92
+          enum: &a89
             - "true"
             - "false"
     QuickBooksV1SyncHistoryQuery:
@@ -8949,7 +8929,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a93
+          enum: &a90
             - pending
             - in_progress
             - completed
@@ -8958,7 +8938,7 @@ components:
             - partial
         operation_type:
           type: string
-          enum: &a94
+          enum: &a91
             - customer_sync
             - invoice_export
             - invoice_import
@@ -9683,7 +9663,7 @@ components:
           description: Opaque pagination cursor copied from a prior response's nextCursor.
         sort:
           type: string
-          enum: &a95
+          enum: &a92
             - relevance
             - recent
           description: Result ordering. "relevance" (default) ranks by full-text score;
@@ -9998,7 +9978,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a96
+          enum: &a93
             - asc
             - desc
         search:
@@ -10025,19 +10005,19 @@ components:
           format: uuid
         is_parent:
           type: string
-          enum: &a97
+          enum: &a94
             - "true"
             - "false"
         is_child:
           type: string
-          enum: &a98
+          enum: &a95
             - "true"
             - "false"
         depth:
           type: string
         active:
           type: string
-          enum: &a99
+          enum: &a96
             - "true"
             - "false"
         offset:
@@ -10046,17 +10026,17 @@ components:
           type: string
         sort_order:
           type: string
-          enum: &a100
+          enum: &a97
             - asc
             - desc
         include_hierarchy:
           type: string
-          enum: &a101
+          enum: &a98
             - "true"
             - "false"
         category_type:
           type: string
-          enum: &a102
+          enum: &a99
             - service
             - ticket
     CategoryMoveRequest:
@@ -10083,7 +10063,7 @@ components:
           minLength: 1
         category_type:
           type: string
-          enum: &a103
+          enum: &a100
             - service
             - ticket
         board_id:
@@ -10091,7 +10071,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum: &a104
+          enum: &a101
             - "true"
             - "false"
         limit:
@@ -10105,7 +10085,7 @@ components:
       properties:
         category_type:
           type: string
-          enum: &a105
+          enum: &a102
             - service
             - ticket
         board_id:
@@ -10119,7 +10099,7 @@ components:
           format: date-time
         include_usage:
           type: string
-          enum: &a106
+          enum: &a103
             - "true"
             - "false"
     CategoryAnalyticsResponse:
@@ -10740,7 +10720,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a112
+          enum: &a109
             - asc
             - desc
         name:
@@ -10751,24 +10731,24 @@ components:
           type: string
         is_active:
           type: string
-          enum: &a113
+          enum: &a110
             - "true"
             - "false"
         is_test_mode:
           type: string
-          enum: &a114
+          enum: &a111
             - "true"
             - "false"
         payload_format:
           type: string
-          enum: &a115
+          enum: &a112
             - json
             - xml
             - form_data
             - custom
         has_failures:
           type: string
-          enum: &a116
+          enum: &a113
             - "true"
             - "false"
         last_delivery_from:
@@ -10802,7 +10782,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a117
+          enum: &a114
             - pending
             - delivered
             - failed
@@ -12564,7 +12544,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a118
+          enum: &a115
             - asc
             - desc
         fields:
@@ -12790,7 +12770,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a119
+          enum: &a116
             - asc
             - desc
         search:
@@ -12799,12 +12779,12 @@ components:
           type: string
         include_items:
           type: string
-          enum: &a120
+          enum: &a117
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a121
+          enum: &a118
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -14923,20 +14903,52 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
   /api/v1/rbac/audit:
     get:
-      summary: Get RBAC audit log (not implemented)
-      description: Current route returns a static 501 Not Implemented payload and does
-        not call an RBAC controller.
+      summary: Get RBAC audit log
+      description: Lists RBAC audit-log entries from audit_logs (roles, permissions,
+        role_permissions, user_roles), newest first. Supports page/limit
+        pagination and user_id, operation, table_name, record_id, start_date,
+        and end_date filters. Gated on role:read.
       tags:
         - Access Control & Users v1
-      security: []
+      security:
+        - ApiKeyAuth: []
       extensions:
-        x-controller-handler: rbacAuditNotImplemented
-        x-implementation-status: not-implemented
+        x-tenant-scoped: true
+        x-rbac-resource: role
+        x-rbac-action: read
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          equivalent controller-specific auth path
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-controller-handler: listRbacAudit
       x-alga-products:
         - psa
       responses:
-        "501":
-          description: RBAC audit endpoint is not implemented in this build.
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiSuccessV1"
+        "400":
+          description: Validation failed (payload/query/path parsing).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
+        "403":
+          description: RBAC denied for role:read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
           content:
             application/json:
               schema:
@@ -19344,15 +19356,13 @@ paths:
   /api/v1/assets/export:
     get:
       summary: Export assets
-      description: Exports assets for the authenticated tenant. The controller
-        validates assetExportQuerySchema, but currently ignores the validated
-        filters and include flags and calls AssetService.list with default
-        options. When format=csv or omitted, it returns text/csv with
-        Content-Disposition attachment filename=assets.csv. When format=json or
-        format=xlsx, it returns a JSON success envelope; xlsx generation is not
-        implemented. In the current route wiring, req.context may be absent
-        because no route-level API-key auth wrapper sets it, causing a 500
-        before export.
+      description: Exports all assets for the authenticated tenant (paginated
+        internally, not capped to the default list page). Optional set filters
+        asset_types, statuses, and client_ids narrow the result; fields
+        restricts the exported columns. format=csv (default) returns text/csv
+        with Content-Disposition attachment filename=assets.csv; format=json
+        returns the success envelope with the rows in data. The route is
+        authenticated and tenant-scoped via withApiKeyRouteAuth.
       tags:
         - Assets
       security:
@@ -19360,74 +19370,44 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-request-context-required: true
-        x-current-auth-wiring-missing: true
+        x-current-auth-wiring-missing: false
         x-rbac-resource: asset
         x-rbac-action: read
         x-csv-content-disposition: attachment; filename=assets.csv
-        x-export-filters-currently-ignored: true
-        x-xlsx-generation-implemented: false
       x-alga-products:
         - psa
       parameters:
         - schema:
             type: string
             enum: *a41
-            description: Export format. csv returns text/csv; json and xlsx currently return
-              the same JSON envelope.
+            description: Export format. csv (default) returns text/csv as an attachment;
+              json returns the success envelope with the rows in data.
           required: false
-          description: Export format. csv returns text/csv; json and xlsx currently return
-            the same JSON envelope.
+          description: Export format. csv (default) returns text/csv as an attachment;
+            json returns the success envelope with the rows in data.
           name: format
-          in: query
-        - schema:
-            type: string
-            enum: *a42
-            description: Accepted by validation, but currently ignored by
-              ApiAssetController.export.
-          required: false
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
-          name: include_extension_data
-          in: query
-        - schema:
-            type: string
-            enum: *a43
-            description: Accepted by validation, but currently ignored by
-              ApiAssetController.export.
-          required: false
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
-          name: include_maintenance
-          in: query
-        - schema:
-            type: string
-            enum: *a44
-            description: Accepted by validation, but currently ignored by
-              ApiAssetController.export.
-          required: false
-          description: Accepted by validation, but currently ignored by
-            ApiAssetController.export.
-          name: include_documents
           in: query
         - schema:
             type: array
             items:
               type: string
               enum: *a2
-            description: Accepted by validation as an array, but the controller builds query
-              values with Object.fromEntries and does not apply this filter.
+            description: Filter to these asset types. Repeat the param or pass a
+              comma-separated list.
           required: false
-          description: Accepted by validation as an array, but the controller builds query
-            values with Object.fromEntries and does not apply this filter.
+          description: Filter to these asset types. Repeat the param or pass a
+            comma-separated list.
           name: asset_types
           in: query
         - schema:
             type: array
             items:
               type: string
-            description: Accepted by validation as an array, but not currently applied.
+            description: Filter to these asset statuses. Repeat the param or pass a
+              comma-separated list.
           required: false
-          description: Accepted by validation as an array, but not currently applied.
+          description: Filter to these asset statuses. Repeat the param or pass a
+            comma-separated list.
           name: statuses
           in: query
         - schema:
@@ -19435,28 +19415,29 @@ paths:
             items:
               type: string
               format: uuid
-            description: Accepted by validation as an array, but not currently applied.
+            description: Filter to these client UUIDs. Repeat the param or pass a
+              comma-separated list.
           required: false
-          description: Accepted by validation as an array, but not currently applied.
+          description: Filter to these client UUIDs. Repeat the param or pass a
+            comma-separated list.
           name: client_ids
           in: query
         - schema:
             type: array
             items:
               type: string
-            description: Accepted by validation as an array, but not currently used to
-              select export columns.
+            description: Restrict exported columns to this set. Repeat the param or pass a
+              comma-separated list.
           required: false
-          description: Accepted by validation as an array, but not currently used to
-            select export columns.
+          description: Restrict exported columns to this set. Repeat the param or pass a
+            comma-separated list.
           name: fields
           in: query
       responses:
         "200":
-          description: Asset export returned successfully. For format=csv or omitted, the
+          description: Asset export returned successfully. For format=csv (or omitted) the
             handler returns text/csv with an attachment filename; for
-            format=json or format=xlsx, the handler currently returns this JSON
-            envelope.
+            format=json it returns this JSON envelope.
           content:
             application/json:
               schema:
@@ -19468,21 +19449,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "401":
-          description: x-api-key is missing at middleware.
+          description: x-api-key is missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
         "403":
-          description: Authenticated request context lacks permission to read/export
-            assets when auth wiring is present.
+          description: Caller lacks asset:read.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -19727,7 +19706,7 @@ paths:
             type: array
             items:
               type: string
-              enum: *a45
+              enum: *a42
             description: Search fields. If omitted, the service searches asset_tag, name,
               serial_number, and location.
           required: false
@@ -19766,7 +19745,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a46
+            enum: *a43
             description: When true, the service fetches asset-type-specific extension data
               for every result.
           required: false
@@ -21192,7 +21171,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a47
+            enum: *a44
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -21239,7 +21218,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a48
+            enum: *a45
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -21295,7 +21274,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a49
+            enum: *a46
             description: Filter by whether the execution has errors; transformed to boolean
               by validation.
           required: false
@@ -21541,7 +21520,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a50
+            enum: *a47
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -21588,7 +21567,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a51
+            enum: *a48
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -22228,7 +22207,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a52
+            enum: *a49
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -22275,7 +22254,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a53
+            enum: *a50
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -22656,7 +22635,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a54
+            enum: *a51
             description: Aggregation bucket size; defaults to day.
           required: false
           description: Aggregation bucket size; defaults to day.
@@ -23083,7 +23062,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a55
+            enum: *a52
           required: false
           name: order
           in: query
@@ -23133,19 +23112,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a56
+            enum: *a53
           required: false
           name: billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a57
+            enum: *a54
           required: false
           name: is_inactive
           in: query
         - schema:
             type: string
-            enum: *a58
+            enum: *a55
           required: false
           name: is_tax_exempt
           in: query
@@ -23172,7 +23151,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a59
+            enum: *a56
           required: false
           name: has_credit_limit
           in: query
@@ -23706,7 +23685,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a60
+            enum: *a57
           required: false
           name: order
           in: query
@@ -23767,13 +23746,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a61
+            enum: *a58
           required: false
           name: is_inactive
           in: query
         - schema:
             type: string
-            enum: *a62
+            enum: *a59
           required: false
           name: has_client
           in: query
@@ -24080,7 +24059,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a63
+            enum: *a60
           required: false
           name: include_inactive
           in: query
@@ -24140,13 +24119,13 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a64
+            enum: *a61
           required: false
           name: format
           in: query
         - schema:
             type: string
-            enum: *a65
+            enum: *a62
           required: false
           name: include_inactive
           in: query
@@ -24233,10 +24212,12 @@ paths:
   /api/v1/client-contract-lines:
     get:
       summary: List client contract lines
-      description: "Lists client contract line assignments. Current implementation
-        validates query but returns TODO stub `{ data: [], total: 0 }`. This
-        route requires request context and can fail with `Request context not
-        available` when not wired."
+      description: Lists client contract lines — contract_lines rows that belong to
+        client contracts (joined via contract_id), with the owning client_id and
+        client_contract_id surfaced. Supports client_id, contract_line_id,
+        service_category, is_active, has_custom_rate, and start/end-date-range
+        filters plus page/limit pagination. Authenticated and tenant-scoped via
+        withApiKeyRouteAuth.
       tags:
         - Client Contract Lines
       security:
@@ -24244,8 +24225,6 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-request-context-required: true
-        x-request-context-wiring-gap: true
-        x-service-implementation-status: todo-stub
       x-alga-products:
         - psa
       parameters:
@@ -24266,7 +24245,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a66
+            enum: *a63
           required: false
           name: order
           in: query
@@ -24318,19 +24297,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a67
+            enum: *a64
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum: *a68
+            enum: *a65
           required: false
           name: has_custom_rate
           in: query
         - schema:
             type: string
-            enum: *a69
+            enum: *a66
           required: false
           name: is_contractd
           in: query
@@ -24360,7 +24339,7 @@ paths:
           in: query
       responses:
         "200":
-          description: Stubbed empty assignment list returned.
+          description: Paginated client contract lines returned.
           content:
             application/json:
               schema:
@@ -24372,22 +24351,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "401":
-          description: x-api-key missing at middleware.
+          description: x-api-key missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "500":
-          description: Request context missing or unhandled failure.
+          description: Unhandled failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
     post:
       summary: Assign contract line to client
-      description: Assigns one contract line to client using
-        createClientContractLineSchema validation. Requires request context
-        wiring.
+      description: Assigns one contract line to a client by cloning a template line
+        into the client contract, using createClientContractLineSchema
+        validation. Authenticated and tenant-scoped via withApiKeyRouteAuth.
       tags:
         - Client Contract Lines
       security:
@@ -24395,7 +24374,6 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-request-context-required: true
-        x-request-context-wiring-gap: true
         x-id-provenance:
           client_contract_line_id: contract_lines.contract_line_id (client-owned line model)
       x-alga-products:
@@ -24420,13 +24398,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "401":
-          description: x-api-key missing at middleware.
+          description: x-api-key missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "500":
-          description: Request context missing or unhandled assignment failure.
+          description: Unhandled assignment failure.
           content:
             application/json:
               schema:
@@ -24434,8 +24412,8 @@ paths:
   /api/v1/client-contract-lines/{id}:
     delete:
       summary: Unassign contract line from client
-      description: Deactivates the client-owned contract line assignment (current
-        model) for provided id.
+      description: Deactivates the client-owned contract line for the provided id.
+        Authenticated and tenant-scoped via withApiKeyRouteAuth.
       tags:
         - Client Contract Lines
       security:
@@ -24443,8 +24421,6 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-request-context-required: true
-        x-request-context-wiring-gap: true
-        x-returns-json-with-204-currently: true
       x-alga-products:
         - psa
       parameters:
@@ -24464,13 +24440,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "401":
-          description: x-api-key missing at middleware.
+          description: x-api-key missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
         "500":
-          description: Request context missing or unassignment failure.
+          description: Unassignment failure.
           content:
             application/json:
               schema:
@@ -24512,7 +24488,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a70
+            enum: *a67
           required: false
           name: order
           in: query
@@ -24564,13 +24540,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a71
+            enum: *a68
           required: false
           name: is_custom
           in: query
         - schema:
             type: string
-            enum: *a72
+            enum: *a69
           required: false
           name: is_active
           in: query
@@ -24581,7 +24557,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a73
+            enum: *a70
           required: false
           name: has_services
           in: query
@@ -24607,7 +24583,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a74
+            enum: *a71
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -24615,7 +24591,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a75
+            enum: *a72
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -24623,7 +24599,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a76
+            enum: *a73
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -25855,9 +25831,11 @@ paths:
   /api/v1/contract-line-templates/{id}/create-contract-line:
     post:
       summary: Create contract line from template
-      description: Creates a contract line from a template. Current controller
-        validates body createPlanFromTemplateSchema and passes that body to
-        service; path `{id}` is not used by service logic.
+      description: Creates a contract line from a template. The template id is taken
+        from the path `{id}` (it takes precedence over any template_id in the
+        body), and the rest of the body is validated with
+        createPlanFromTemplateSchema. Authenticated and tenant-scoped via
+        withApiKeyRouteAuth.
       tags:
         - Contract Lines
       security:
@@ -25867,7 +25845,6 @@ paths:
         x-auth-source: middleware API-key presence + request context requirement in controller
         x-request-context-required: true
         x-request-context-wiring-gap: true
-        x-path-id-ignored-currently: true
       x-alga-products:
         - psa
       parameters:
@@ -25899,13 +25876,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ContractLineApiError"
         "401":
-          description: x-api-key missing at middleware.
+          description: x-api-key missing/invalid.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractLineApiError"
         "500":
-          description: Request context missing or template application failure.
+          description: Template application failure.
           content:
             application/json:
               schema:
@@ -25945,7 +25922,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum: *a77
+            enum: *a74
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -27373,17 +27350,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "501":
-          description: Endpoint intentionally returns Not implemented.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
   /api/v1/financial/bulk/transactions:
     post:
       summary: Run bulk transaction operation
-      description: Route validates payload but currently returns 501 Not implemented
-        (TODO in ApiFinancialController.bulkTransactionOperations).
+      description: FinancialService.bulkTransactionOperation() applies
+        approve/reject/reverse to existing transactions (1–100 ids). reverse
+        posts a compensating transaction linked to the original via
+        related_transaction_id, recomputes the running balance, and syncs the
+        client credit balance for credit-type transactions. Returns per-id
+        results { total_requested, successful, failed, results[] }.
       tags:
         - Financial
       security:
@@ -27394,7 +27369,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; otherwise tenant inferred from key)
         x-rbac-resource: financial
         x-rbac-action: update
-        x-implementation-gap: Not implemented; returns 501.
       x-alga-products:
         - psa
       requestBody:
@@ -27434,17 +27408,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "501":
-          description: Endpoint intentionally returns Not implemented.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
   /api/v1/financial/bulk/credits:
     post:
       summary: Run bulk credit operation
-      description: Route validates payload but currently returns 501 Not implemented
-        (TODO in ApiFinancialController.bulkCreditOperations).
+      description: FinancialService.bulkCreditOperation() applies
+        expire/extend_expiration/transfer to existing credits (1–100 ids).
+        expire forfeits the remaining amount via a credit_expiration transaction
+        and reduces the client balance; extend_expiration sets a new
+        expiration_date; transfer moves the remaining amount to
+        parameters.target_client_id. Returns per-id results { total_requested,
+        successful, failed, results[] }.
       tags:
         - Financial
       security:
@@ -27455,7 +27428,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; otherwise tenant inferred from key)
         x-rbac-resource: financial
         x-rbac-action: update
-        x-implementation-gap: Not implemented; returns 501.
       x-alga-products:
         - psa
       requestBody:
@@ -27495,12 +27467,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "501":
-          description: Endpoint intentionally returns Not implemented.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
   /api/v1/financial/credits:
     get:
       summary: List credit balances and records
@@ -27535,7 +27501,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -27598,25 +27564,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -27632,13 +27598,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -27954,7 +27920,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -28017,25 +27983,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -28051,13 +28017,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -28279,7 +28245,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -28342,25 +28308,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -28376,13 +28342,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -28717,7 +28683,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -28780,25 +28746,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -28814,13 +28780,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -28959,7 +28925,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -29022,25 +28988,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -29056,13 +29022,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -29136,7 +29102,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -29199,25 +29165,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -29233,13 +29199,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -29313,7 +29279,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -29376,25 +29342,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -29410,13 +29376,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -29548,7 +29514,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -29611,25 +29577,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -29645,13 +29611,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -29725,7 +29691,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a78
+            enum: *a75
           required: false
           name: order
           in: query
@@ -29788,25 +29754,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a79
+            enum: *a76
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum: *a80
+            enum: *a77
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum: *a81
+            enum: *a78
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum: *a82
+            enum: *a79
           required: false
           name: has_expiration
           in: query
@@ -29822,13 +29788,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a83
+            enum: *a80
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum: *a84
+            enum: *a81
           required: false
           name: include_projections
           in: query
@@ -30087,31 +30053,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a85
+            enum: *a82
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum: *a86
+            enum: *a83
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a87
+            enum: *a84
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum: *a88
+            enum: *a85
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a89
+            enum: *a86
           required: false
           name: include_transactions
           in: query
@@ -30132,7 +30098,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a90
+            enum: *a87
           required: false
           name: format
           in: query
@@ -30255,31 +30221,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a85
+            enum: *a82
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum: *a86
+            enum: *a83
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a87
+            enum: *a84
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum: *a88
+            enum: *a85
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a89
+            enum: *a86
           required: false
           name: include_transactions
           in: query
@@ -30300,7 +30266,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a90
+            enum: *a87
           required: false
           name: format
           in: query
@@ -30578,31 +30544,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a85
+            enum: *a82
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum: *a86
+            enum: *a83
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a87
+            enum: *a84
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum: *a88
+            enum: *a85
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a89
+            enum: *a86
           required: false
           name: include_transactions
           in: query
@@ -30623,7 +30589,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a90
+            enum: *a87
           required: false
           name: format
           in: query
@@ -31056,31 +31022,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a85
+            enum: *a82
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum: *a86
+            enum: *a83
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a87
+            enum: *a84
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum: *a88
+            enum: *a85
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a89
+            enum: *a86
           required: false
           name: include_transactions
           in: query
@@ -31101,7 +31067,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a90
+            enum: *a87
           required: false
           name: format
           in: query
@@ -31174,31 +31140,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a85
+            enum: *a82
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum: *a86
+            enum: *a83
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a87
+            enum: *a84
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum: *a88
+            enum: *a85
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum: *a89
+            enum: *a86
           required: false
           name: include_transactions
           in: query
@@ -31219,7 +31185,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a90
+            enum: *a87
           required: false
           name: format
           in: query
@@ -34779,7 +34745,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -34795,7 +34761,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -35156,7 +35122,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -35172,7 +35138,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -35716,7 +35682,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -35732,7 +35698,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -35805,7 +35771,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -35821,7 +35787,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -36324,7 +36290,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -36340,7 +36306,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -36589,13 +36555,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a93
+            enum: *a90
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a94
+            enum: *a91
           required: false
           name: operation_type
           in: query
@@ -36924,7 +36890,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -36940,7 +36906,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -37129,7 +37095,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -37145,7 +37111,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -37218,7 +37184,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -37234,7 +37200,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -37601,7 +37567,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -37617,7 +37583,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -38169,7 +38135,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -38185,7 +38151,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -38259,7 +38225,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -38275,7 +38241,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -38786,7 +38752,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -38802,7 +38768,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -39055,13 +39021,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a93
+            enum: *a90
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a94
+            enum: *a91
           required: false
           name: operation_type
           in: query
@@ -39395,7 +39361,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -39411,7 +39377,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -39602,7 +39568,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a91
+            enum: *a88
           required: false
           name: active
           in: query
@@ -39618,7 +39584,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a92
+            enum: *a89
           required: false
           name: force_refresh
           in: query
@@ -40209,7 +40175,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a95
+            enum: *a92
             description: Result ordering. "relevance" (default) ranks by full-text score;
               "recent" orders by last update.
           required: false
@@ -40584,7 +40550,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a96
+            enum: *a93
           required: false
           name: order
           in: query
@@ -40636,13 +40602,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a97
+            enum: *a94
           required: false
           name: is_parent
           in: query
         - schema:
             type: string
-            enum: *a98
+            enum: *a95
           required: false
           name: is_child
           in: query
@@ -40653,7 +40619,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a99
+            enum: *a96
           required: false
           name: active
           in: query
@@ -40669,19 +40635,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a97
           required: false
           name: sort_order
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a98
           required: false
           name: include_hierarchy
           in: query
         - schema:
             type: string
-            enum: *a102
+            enum: *a99
           required: false
           name: category_type
           in: query
@@ -41137,7 +41103,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a103
+            enum: *a100
           required: false
           name: category_type
           in: query
@@ -41149,7 +41115,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a104
+            enum: *a101
           required: false
           name: include_inactive
           in: query
@@ -41224,7 +41190,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a105
+            enum: *a102
           required: false
           name: category_type
           in: query
@@ -41248,7 +41214,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a106
+            enum: *a103
           required: false
           name: include_usage
           in: query
@@ -41334,7 +41300,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a107
+      tags: &a104
         - Services
         - Service Catalog
       security:
@@ -41410,7 +41376,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a108
+            enum: &a105
               - fixed
               - hourly
               - usage
@@ -41458,7 +41424,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a107
+      tags: *a104
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41487,7 +41453,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a108
+                  enum: *a105
                 default_rate:
                   type: number
                   minimum: 0
@@ -41549,7 +41515,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a107
+      tags: *a104
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41598,7 +41564,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a107
+      tags: *a104
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41636,7 +41602,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a108
+                  enum: *a105
                 default_rate:
                   type: number
                   minimum: 0
@@ -41697,7 +41663,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a107
+      tags: *a104
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41746,7 +41712,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a109
+      tags: &a106
         - Products
         - Service Catalog
       security:
@@ -41857,7 +41823,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a109
+      tags: *a106
       security:
         - ApiKeyAuth: []
       extensions:
@@ -41886,7 +41852,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a110
+                  enum: &a107
                     - usage
                   default: usage
                 default_rate:
@@ -42025,7 +41991,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a109
+      tags: *a106
       security:
         - ApiKeyAuth: []
       extensions:
@@ -42074,7 +42040,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a109
+      tags: *a106
       security:
         - ApiKeyAuth: []
       extensions:
@@ -42112,7 +42078,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a110
+                  enum: *a107
                   default: usage
                 default_rate:
                   type: number
@@ -42251,7 +42217,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a109
+      tags: *a106
       security:
         - ApiKeyAuth: []
       extensions:
@@ -42299,7 +42265,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a111
+      tags: &a108
         - Service Types
         - Service Catalog
       security:
@@ -42360,7 +42326,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a111
+      tags: *a108
       security:
         - ApiKeyAuth: []
       extensions:
@@ -42441,7 +42407,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a112
+            enum: *a109
           required: false
           name: order
           in: query
@@ -42462,25 +42428,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a113
+            enum: *a110
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum: *a114
+            enum: *a111
           required: false
           name: is_test_mode
           in: query
         - schema:
             type: string
-            enum: *a115
+            enum: *a112
           required: false
           name: payload_format
           in: query
         - schema:
             type: string
-            enum: *a116
+            enum: *a113
           required: false
           name: has_failures
           in: query
@@ -43511,7 +43477,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a117
+            enum: *a114
           required: false
           name: status
           in: query
@@ -45629,7 +45595,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -45930,7 +45896,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46014,7 +45980,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46098,7 +46064,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46191,7 +46157,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46289,7 +46255,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46592,7 +46558,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46689,7 +46655,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -46947,7 +46913,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -47037,7 +47003,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -47181,7 +47147,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -47476,7 +47442,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -47567,7 +47533,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -47711,7 +47677,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -48146,7 +48112,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -48457,7 +48423,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -48883,7 +48849,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -48967,7 +48933,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -49154,7 +49120,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -49239,7 +49205,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -49605,7 +49571,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -49703,7 +49669,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -50431,7 +50397,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -50573,7 +50539,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -50882,7 +50848,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -51025,7 +50991,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -51168,7 +51134,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -51325,7 +51291,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -51608,7 +51574,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -51752,7 +51718,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -52187,7 +52153,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -52390,7 +52356,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -52476,7 +52442,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -52919,7 +52885,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -53390,7 +53356,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a118
+            enum: *a115
           required: false
           name: order
           in: query
@@ -53482,7 +53448,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a116
           required: false
           name: order
           in: query
@@ -53498,13 +53464,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a117
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a121
+            enum: *a118
           required: false
           name: include_client
           in: query
@@ -53573,7 +53539,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a116
           required: false
           name: order
           in: query
@@ -53589,13 +53555,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a117
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a121
+            enum: *a118
           required: false
           name: include_client
           in: query
@@ -55010,7 +54976,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a116
           required: false
           name: order
           in: query
@@ -55026,13 +54992,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a117
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a121
+            enum: *a118
           required: false
           name: include_client
           in: query
@@ -55105,7 +55071,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a119
+            enum: *a116
           required: false
           name: order
           in: query
@@ -55121,13 +55087,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a120
+            enum: *a117
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a121
+            enum: *a118
           required: false
           name: include_client
           in: query
@@ -56304,8 +56270,10 @@ paths:
   /api/v1/user/telemetry-preferences:
     get:
       summary: Get telemetry preferences
-      description: Returns telemetry preference view controlled by environment
-        variable; requires session user.
+      description: Read-only. Returns the usage-stats telemetry state, which is
+        controlled by the ALGA_USAGE_STATS environment variable (not per-user);
+        requires session user. There are no write verbs because the preference
+        cannot be changed through the API.
       tags:
         - Meta & Utility v1
       security:
@@ -56380,100 +56348,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MetaUtilityApiErrorV1"
-    post:
-      summary: Set telemetry preferences (environment-controlled)
-      description: Endpoint acknowledges request but reports environment-controlled
-        behavior rather than persisting user preference.
-      tags:
-        - Meta & Utility v1
-      security:
-        - ApiKeyAuth: []
-      extensions:
-        x-tenant-scoped: true
-        x-auth-mechanism: Session user required in handler; global /api middleware may
-          still require x-api-key presence
-        x-tenant-header: x-tenant-id (optional)
-        x-session-auth-required: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Operation succeeded.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
-        "400":
-          description: Invalid request payload/query.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
-        "401":
-          description: Unauthorized (API key/session auth failure depending on route).
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
-        "403":
-          description: Permission denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
-        "500":
-          description: Unexpected route/controller failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
     delete:
-      summary: Delete telemetry preferences (environment-controlled)
-      description: Endpoint acknowledges request but reports environment-controlled
-        behavior rather than deleting stored preference.
+      summary: DELETE v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - Meta & Utility v1
-      security:
-        - ApiKeyAuth: []
+        - user
       extensions:
-        x-tenant-scoped: true
-        x-auth-mechanism: Session user required in handler; global /api middleware may
-          still require x-api-key presence
-        x-tenant-header: x-tenant-id (optional)
-        x-session-auth-required: true
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
       x-alga-products:
         - psa
       responses:
-        "200":
-          description: Operation succeeded.
+        "204":
+          description: Placeholder success response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
-        "400":
-          description: Invalid request payload/query.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+                $ref: "#/components/schemas/PlaceholderObject"
         "401":
-          description: Unauthorized (API key/session auth failure depending on route).
+          description: Authentication required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Permission denied.
+          description: Forbidden
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
-        "500":
-          description: Unexpected route/controller failure.
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - user
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/ext-bundles/abort:
     post:
       summary: Abort extension bundle upload (route inventory only)

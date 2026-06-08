@@ -39,14 +39,11 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetExportQuery = registry.registerSchema(
     'AssetExportQuery',
     zOpenApi.object({
-      format: zOpenApi.enum(['csv', 'json', 'xlsx']).optional().describe('Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope.'),
-      include_extension_data: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      include_maintenance: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      include_documents: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      asset_types: zOpenApi.array(AssetType).optional().describe('Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter.'),
-      statuses: zOpenApi.array(zOpenApi.string()).optional().describe('Accepted by validation as an array, but not currently applied.'),
-      client_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Accepted by validation as an array, but not currently applied.'),
-      fields: zOpenApi.array(zOpenApi.string()).optional().describe('Accepted by validation as an array, but not currently used to select export columns.'),
+      format: zOpenApi.enum(['csv', 'json']).optional().describe('Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data.'),
+      asset_types: zOpenApi.array(AssetType).optional().describe('Filter to these asset types. Repeat the param or pass a comma-separated list.'),
+      statuses: zOpenApi.array(zOpenApi.string()).optional().describe('Filter to these asset statuses. Repeat the param or pass a comma-separated list.'),
+      client_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Filter to these client UUIDs. Repeat the param or pass a comma-separated list.'),
+      fields: zOpenApi.array(zOpenApi.string()).optional().describe('Restrict exported columns to this set. Repeat the param or pass a comma-separated list.'),
     }),
   );
 
@@ -1008,7 +1005,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/export',
     summary: 'Export assets',
     description:
-      'Exports assets for the authenticated tenant. The controller validates assetExportQuerySchema, but currently ignores the validated filters and include flags and calls AssetService.list with default options. When format=csv or omitted, it returns text/csv with Content-Disposition attachment filename=assets.csv. When format=json or format=xlsx, it returns a JSON success envelope; xlsx generation is not implemented. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before export.',
+      'Exports all assets for the authenticated tenant (paginated internally, not capped to the default list page). Optional set filters asset_types, statuses, and client_ids narrow the result; fields restricts the exported columns. format=csv (default) returns text/csv with Content-Disposition attachment filename=assets.csv; format=json returns the success envelope with the rows in data. The route is authenticated and tenant-scoped via withApiKeyRouteAuth.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1016,7 +1013,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     responses: {
       200: {
-        description: 'Asset export returned successfully. For format=csv or omitted, the handler returns text/csv with an attachment filename; for format=json or format=xlsx, the handler currently returns this JSON envelope.',
+        description: 'Asset export returned successfully. For format=csv (or omitted) the handler returns text/csv with an attachment filename; for format=json it returns this JSON envelope.',
         schema: AssetExportJsonResponse,
       },
       400: {
@@ -1024,25 +1021,24 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       401: {
-        description: 'x-api-key is missing at middleware.',
+        description: 'x-api-key is missing/invalid.',
         schema: MiddlewareUnauthorizedResponse,
       },
       403: {
-        description: 'Authenticated request context lacks permission to read/export assets when auth wiring is present.',
+        description: 'Caller lacks asset:read.',
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
     extensions: {
       ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
       'x-csv-content-disposition': 'attachment; filename=assets.csv',
-      'x-export-filters-currently-ignored': true,
-      'x-xlsx-generation-implemented': false,
     },
     edition: 'both',
   });

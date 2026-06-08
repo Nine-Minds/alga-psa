@@ -447,8 +447,8 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
 
   const financialBulkRoutes: Array<[string, string, string, any, Record<string, unknown>]> = [
     ['/api/v1/financial/bulk/invoices', 'Run bulk invoice operation', 'FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.', BulkInvoiceOperationBody, {}],
-    ['/api/v1/financial/bulk/transactions', 'Run bulk transaction operation', 'Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkTransactionOperations).', BulkTransactionOperationBody, { 'x-implementation-gap': 'Not implemented; returns 501.' }],
-    ['/api/v1/financial/bulk/credits', 'Run bulk credit operation', 'Route validates payload but currently returns 501 Not implemented (TODO in ApiFinancialController.bulkCreditOperations).', BulkCreditOperationBody, { 'x-implementation-gap': 'Not implemented; returns 501.' }],
+    ['/api/v1/financial/bulk/transactions', 'Run bulk transaction operation', 'FinancialService.bulkTransactionOperation() applies approve/reject/reverse to existing transactions (1–100 ids). reverse posts a compensating transaction linked to the original via related_transaction_id, recomputes the running balance, and syncs the client credit balance for credit-type transactions. Returns per-id results { total_requested, successful, failed, results[] }.', BulkTransactionOperationBody, {}],
+    ['/api/v1/financial/bulk/credits', 'Run bulk credit operation', 'FinancialService.bulkCreditOperation() applies expire/extend_expiration/transfer to existing credits (1–100 ids). expire forfeits the remaining amount via a credit_expiration transaction and reduces the client balance; extend_expiration sets a new expiration_date; transfer moves the remaining amount to parameters.target_client_id. Returns per-id results { total_requested, successful, failed, results[] }.', BulkCreditOperationBody, {}],
   ];
 
   for (const [path, summary, description, schema, extraExtensions] of financialBulkRoutes) {
@@ -465,7 +465,6 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
         400: { description: 'Invalid bulk operation payload.', schema: ApiError },
         401: { description: 'API key missing/invalid.', schema: ApiError },
         403: { description: 'financial:update permission denied.', schema: ApiError },
-        501: { description: 'Endpoint intentionally returns Not implemented.', schema: ApiError },
         500: { description: 'Unexpected bulk operation failure.', schema: ApiError },
       },
       extensions: { ...commonExtensions, 'x-rbac-resource': 'financial', 'x-rbac-action': 'update', ...extraExtensions },

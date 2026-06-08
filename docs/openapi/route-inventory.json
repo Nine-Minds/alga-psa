@@ -5150,9 +5150,9 @@
       "GET"
     ],
     "route_file": "server/src/app/api/v1/rbac/audit/route.ts",
-    "controller": "",
-    "controller_import": "",
-    "controller_file": ""
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
   },
   {
     "edition": "CE",
@@ -6518,9 +6518,7 @@
     "edition": "CE",
     "route_path": "/api/v1/user/telemetry-preferences",
     "methods": [
-      "DELETE",
-      "GET",
-      "POST"
+      "GET"
     ],
     "route_file": "server/src/app/api/v1/user/telemetry-preferences/route.ts",
     "controller": "",

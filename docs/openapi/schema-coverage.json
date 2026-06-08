@@ -5702,9 +5702,13 @@
     "methods": [
       "GET"
     ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
   },
   {
     "route_path": "/api/v1/roles",
@@ -7367,9 +7371,7 @@
     "route_path": "/api/v1/user/telemetry-preferences",
     "edition": "CE",
     "methods": [
-      "DELETE",
-      "GET",
-      "POST"
+      "GET"
     ],
     "controller_file": "",
     "schema_imports": [],

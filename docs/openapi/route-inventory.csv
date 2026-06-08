@@ -450,7 +450,7 @@ CE,/api/v1/quotes/{id}/revisions,GET POST,server/src/app/api/v1/quotes/[id]/revi
 CE,/api/v1/quotes/{id}/send,POST,server/src/app/api/v1/quotes/[id]/send/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/quotes/{id}/submit-for-approval,POST,server/src/app/api/v1/quotes/[id]/submit-for-approval/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/rbac/analytics,GET,server/src/app/api/v1/rbac/analytics/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
-CE,/api/v1/rbac/audit,GET,server/src/app/api/v1/rbac/audit/route.ts,,,
+CE,/api/v1/rbac/audit,GET,server/src/app/api/v1/rbac/audit/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/roles,GET POST,server/src/app/api/v1/roles/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
 CE,/api/v1/roles/bulk,POST,server/src/app/api/v1/roles/bulk/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
 CE,/api/v1/roles/templates,GET,server/src/app/api/v1/roles/templates/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
@@ -570,7 +570,7 @@ CE,/api/v1/time-sheets/{id}/submit,POST,server/src/app/api/v1/time-sheets/[id]/s
 CE,/api/v1/time-sheets/{id}/summary,GET,server/src/app/api/v1/time-sheets/[id]/summary/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
 CE,/api/v1/user-roles,GET,server/src/app/api/v1/user-roles/route.ts,ApiUserController,@/lib/api/controllers/ApiUserController,server/src/lib/api/controllers/ApiUserController.ts
 CE,/api/v1/user/telemetry-decision,GET,server/src/app/api/v1/user/telemetry-decision/route.ts,,,
-CE,/api/v1/user/telemetry-preferences,DELETE GET POST,server/src/app/api/v1/user/telemetry-preferences/route.ts,,,
+CE,/api/v1/user/telemetry-preferences,GET,server/src/app/api/v1/user/telemetry-preferences/route.ts,,,
 CE,/api/v1/users,GET POST,server/src/app/api/v1/users/route.ts,ApiUserController,@/lib/api/controllers/ApiUserController,server/src/lib/api/controllers/ApiUserController.ts
 CE,/api/v1/users/activity,GET,server/src/app/api/v1/users/activity/route.ts,ApiUserController,@/lib/api/controllers/ApiUserController,server/src/lib/api/controllers/ApiUserController.ts
 CE,/api/v1/users/bulk/create,POST,server/src/app/api/v1/users/bulk/create/route.ts,ApiUserController,@/lib/api/controllers/ApiUserController,server/src/lib/api/controllers/ApiUserController.ts

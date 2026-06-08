@@ -370,10 +370,7 @@ export const assetSearchSchema = z.object({
 
 // Asset export schema
 export const assetExportQuerySchema = z.object({
-  format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_extension_data: booleanTransform.optional().default('false'),
-  include_maintenance: booleanTransform.optional().default('false'),
-  include_documents: booleanTransform.optional().default('false'),
+  format: z.enum(['csv', 'json']).optional().default('csv'),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   client_ids: z.array(uuidSchema).optional(),
