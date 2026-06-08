@@ -984,7 +984,7 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
 ): Promise<PurchaseOrderOverageResult | null> => {
   const { knex } = await createTenantKnex();
 
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoices');
   }
 
@@ -1003,7 +1003,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -1400,7 +1400,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   let normalizedGroupedSelections = groupedSelections;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
     if (!Array.isArray(groupedSelections) || groupedSelections.length === 0) {
@@ -1462,7 +1462,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   let normalizedSelectorInput = selectorInput;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
     normalizedSelectorInput = await normalizeRecurringSelectorInput({
@@ -1495,7 +1495,7 @@ export const previewInvoice = withAuth(async (
   let selectorInput: IRecurringDueSelectionInput | null = null;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
 
@@ -1573,7 +1573,7 @@ export const generateInvoice = withAuth(async (
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permissions within transaction
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -1628,6 +1628,10 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null> => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: invoice create or generate required');
+  }
+
   const { knex } = await createTenantKnex();
   let normalizedSelectorInput = selectorInput;
 
@@ -1826,6 +1830,10 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null> => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: invoice create or generate required');
+  }
+
   const { knex } = await createTenantKnex();
   if (!Array.isArray(selectorInputs) || selectorInputs.length === 0) {
     throw new Error('No recurring execution windows selected');
@@ -1867,7 +1875,7 @@ export const generateInvoiceNumber = withAuth(async (
   _trx?: Knex.Transaction
 ): Promise<string> => {
   // Check permissions
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoice numbers');
   }
 
@@ -1886,7 +1894,7 @@ export const generateInvoicePDF = withAuth(async (
   const { knex } = await createTenantKnex();
 
   // Check permissions
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoice PDFs');
   }
 
@@ -1924,7 +1932,7 @@ export const downloadInvoicePDF = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permissions
-    if (!hasPermission(user, 'invoice', 'read')) {
+    if (!await hasPermission(user, 'invoice', 'read')) {
       throw new Error('Permission denied: Cannot download invoice PDFs');
     }
 
@@ -2047,7 +2055,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check permissions within transaction
-        if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+        if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
           throw new Error('Permission denied: Cannot create invoices');
         }
 

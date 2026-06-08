@@ -7,11 +7,15 @@ import { withTransaction } from '@alga-psa/db'
 import { createTenantKnex } from '@alga-psa/db'
 import { Knex } from 'knex'
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 /**
  * Get all rate tiers for a specific service
  */
-export const getServiceRateTiers = withAuth(async (_user, { tenant }, serviceId: string): Promise<IServiceRateTier[]> => {
+export const getServiceRateTiers = withAuth(async (user, { tenant }, serviceId: string): Promise<IServiceRateTier[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex()
     const tiers = await withTransaction(knex, async (trx) => {
@@ -27,7 +31,10 @@ export const getServiceRateTiers = withAuth(async (_user, { tenant }, serviceId:
 /**
  * Get a specific rate tier by ID
  */
-export const getServiceRateTierById = withAuth(async (_user, { tenant }, tierId: string): Promise<IServiceRateTier | null> => {
+export const getServiceRateTierById = withAuth(async (user, { tenant }, tierId: string): Promise<IServiceRateTier | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex()
     const tier = await withTransaction(knex, async (trx) => {
@@ -44,10 +51,13 @@ export const getServiceRateTierById = withAuth(async (_user, { tenant }, tierId:
  * Create a new rate tier
  */
 export const createServiceRateTier = withAuth(async (
-  _user,
+  user,
   { tenant },
   tierData: ICreateServiceRateTier
 ): Promise<IServiceRateTier> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -67,11 +77,14 @@ export const createServiceRateTier = withAuth(async (
  * Update an existing rate tier
  */
 export const updateServiceRateTier = withAuth(async (
-  _user,
+  user,
   { tenant },
   tierId: string,
   tierData: IUpdateServiceRateTier
 ): Promise<IServiceRateTier | null> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -93,7 +106,10 @@ export const updateServiceRateTier = withAuth(async (
 /**
  * Delete a rate tier
  */
-export const deleteServiceRateTier = withAuth(async (_user, { tenant }, tierId: string): Promise<void> => {
+export const deleteServiceRateTier = withAuth(async (user, { tenant }, tierId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -113,7 +129,10 @@ export const deleteServiceRateTier = withAuth(async (_user, { tenant }, tierId: 
 /**
  * Delete all rate tiers for a service
  */
-export const deleteServiceRateTiersByServiceId = withAuth(async (_user, { tenant }, serviceId: string): Promise<void> => {
+export const deleteServiceRateTiersByServiceId = withAuth(async (user, { tenant }, serviceId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -131,11 +150,14 @@ export const deleteServiceRateTiersByServiceId = withAuth(async (_user, { tenant
  * This will replace all existing tiers for the service
  */
 export const updateServiceRateTiers = withAuth(async (
-  _user,
+  user,
   { tenant },
   serviceId: string,
   tiers: Omit<ICreateServiceRateTier, 'service_id'>[]
 ): Promise<IServiceRateTier[]> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex: db } = await createTenantKnex()
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {

@@ -7,6 +7,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -1147,6 +1148,10 @@ export const getClientTaxRate = withAuth(async (
     taxRegion: string,
     date: ISO8601String
 ): Promise<number> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('tax_rates')
@@ -1172,6 +1177,10 @@ export const getAvailableBillingPeriods = withAuth(async (
     { tenant },
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const {
         page = 1,
         pageSize = 10,
@@ -1310,6 +1319,10 @@ export const getAvailableRecurringDueWork = withAuth(async (
     { tenant },
     options: FetchRecurringDueWorkOptions = {},
 ): Promise<PaginatedRecurringDueWorkResult> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const {
         page = 1,
         pageSize = 10,
@@ -1462,6 +1475,10 @@ export const getDueDate = withAuth(async (
     clientId: string,
     invoiceDate: ISO8601String
 ): Promise<ISO8601String> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('clients')
@@ -1495,6 +1512,10 @@ export const getNextBillingDate = withAuth(async (
     clientId: string,
     currentEndDate: ISO8601String
 ): Promise<ISO8601String> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('client_billing_cycles')
@@ -1546,6 +1567,12 @@ export async function calculatePreviewTax(
     cycleEnd: ISO8601String,
     defaultTaxRegion: string
 ): Promise<number> {
+    const { getCurrentUserAsync } = await import('../lib/authHelpers');
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser || !await hasPermission(currentUser as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const taxService = new TaxService();
     let totalTax = 0;
 

@@ -17,6 +17,7 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   CLIENT_CADENCE_SCHEDULE_CONTEXT,
   type ClientCadenceScheduleContext
@@ -49,6 +50,9 @@ export const getClientBillingCycleAnchor = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ClientBillingCycleAnchorConfig> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -104,6 +108,9 @@ export const updateClientBillingCycleAnchor = withAuth(async (
   { tenant },
   input: UpdateClientBillingCycleAnchorInput
 ): Promise<{ success: true }> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -198,6 +205,9 @@ export const previewClientBillingPeriods = withAuth(async (
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
 ): Promise<BillingCyclePeriodPreviewResult> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');

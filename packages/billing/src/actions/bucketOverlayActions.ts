@@ -41,7 +41,7 @@ export const upsertBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!hasPermission(user, 'billing', 'update')) {
+    if (!await hasPermission(user, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update bucket overlays');
     }
 
@@ -158,7 +158,7 @@ export const deleteBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!hasPermission(user, 'billing', 'delete')) {
+    if (!await hasPermission(user, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete bucket overlays');
     }
 
@@ -223,7 +223,7 @@ export const getBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    if (!hasPermission(user, 'billing', 'read')) {
+    if (!await hasPermission(user, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read bucket overlays');
     }
 

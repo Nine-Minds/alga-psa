@@ -2,7 +2,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getCurrentUserAsync } from '../lib/authHelpers';
+import { getCurrentUserAsync, hasPermissionAsync } from '../lib/authHelpers';
 import {
   generateInvoiceForSelectionInput,
   generateInvoiceForSelectionInputs,
@@ -78,6 +78,15 @@ export async function selectClientCadenceRecurringRunTargets(
   pageSize: number;
   totalPages: number;
 }> {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
+    throw new Error('Permission denied');
+  }
+
   const recurringDueWork = await getAvailableRecurringDueWork(options);
   const targets = mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
     recurringDueWork.invoiceCandidates,
@@ -108,6 +117,10 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+    throw new Error('Permission denied');
   }
 
   const targets = normalizeRecurringBillingRunTargets(params);
@@ -250,6 +263,10 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
     throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+    throw new Error('Permission denied');
   }
 
   const groupedTargets = normalizeRecurringBillingRunGroupedTargets(params);

@@ -8,6 +8,7 @@
 
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 
@@ -45,10 +46,13 @@ export type BillingLocationSummary = Pick<
  * Used by quote/invoice/contract editors to populate location pickers.
  */
 export const getActiveClientLocationsForBilling = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
 ): Promise<BillingLocationSummary[]> => {
+  if (!await hasPermission(user, 'client', 'read')) {
+    throw new Error('Permission denied: client read required');
+  }
   if (!clientId) {
     return [];
   }
