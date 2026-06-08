@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -67,10 +68,10 @@ const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
-// Per-user, per-project list of status columns the user has chosen to hide from
-// the kanban board. Purely visual (does not change the admin `is_visible`
-// config) — it just declutters the board to make dragging across columns easier.
-const PROJECT_KANBAN_HIDDEN_STATUSES_SETTING = 'project_kanban_hidden_statuses';
+// Per-user, per-project map of status columns the user has chosen to hide from
+// the kanban board (see kanbanPreferences for the setting name / value shape).
+// Purely visual (does not change the admin `is_visible` config) — it just
+// declutters the board to make dragging across columns easier.
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
 const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // Legacy localStorage key previously used by TaskListView; reused for one-time
@@ -220,16 +221,21 @@ export default function ProjectDetail({
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
-  // Hidden kanban columns are scoped per project (each project has its own
-  // statuses), so the preference key includes the project id.
-  const hiddenStatusesPrefKey = `${PROJECT_KANBAN_HIDDEN_STATUSES_SETTING}:${project.project_id}`;
+  // Hidden kanban columns are scoped per project, and within a project per
+  // phase: each phase can have its own customized status set (with distinct
+  // project_status_mapping_ids), so a column hidden in one phase must not leak
+  // into another. The preference key includes the project id and the value is a
+  // map of phase_id -> hidden mapping ids. (Keeping a single static key — rather
+  // than a per-phase key — matters because useUserPreferencesBatch only fetches
+  // from the server once on mount; a phase-dependent key would never load.)
+  const hiddenStatusesPrefKey = projectKanbanHiddenStatusesKey(project.project_id);
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
     { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
-    { key: hiddenStatusesPrefKey, defaultValue: [] as string[], debounceMs: 300 },
+    { key: hiddenStatusesPrefKey, defaultValue: {} as Record<string, string[]>, debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
     {
       key: columnWidthsPrefKey,
@@ -243,7 +249,7 @@ export default function ProjectDetail({
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
-  const { value: hiddenKanbanStatusIds, setValue: setHiddenKanbanStatusIds } = prefs[hiddenStatusesPrefKey];
+  const { value: hiddenKanbanStatusesByPhase, setValue: setHiddenKanbanStatusesByPhase } = prefs[hiddenStatusesPrefKey];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
   const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
   const listDensity = useMemo(() => {
@@ -742,13 +748,23 @@ export default function ProjectDetail({
     [projectStatuses]
   );
   // Per-user "hidden" columns are a purely visual filter layered on top of the
-  // admin-configured visible statuses. Guard against stale ids (status deleted
-  // or made invisible after being hidden) by only counting ids that still map
-  // to a currently-visible status.
-  const hiddenStatusIdSet = useMemo(
-    () => new Set<string>(Array.isArray(hiddenKanbanStatusIds) ? hiddenKanbanStatusIds : []),
-    [hiddenKanbanStatusIds]
-  );
+  // admin-configured visible statuses. Hidden ids are scoped per phase because a
+  // phase's status set (and its project_status_mapping_ids) is independent of
+  // other phases once customized. The stored value is a { [phaseId]: string[] }
+  // map; normalize it defensively (older builds persisted a flat string[]).
+  const currentPhaseId = selectedPhase?.phase_id ?? null;
+  const hiddenStatusesByPhase = useMemo<Record<string, string[]>>(() => {
+    const raw = hiddenKanbanStatusesByPhase;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return raw as Record<string, string[]>;
+  }, [hiddenKanbanStatusesByPhase]);
+  // Guard against stale ids (status deleted, made invisible, or the phase
+  // re-customized after being hidden) — only ids matching a currently-visible
+  // status in the active phase have any effect.
+  const hiddenStatusIdSet = useMemo(() => {
+    const ids = currentPhaseId ? hiddenStatusesByPhase[currentPhaseId] : undefined;
+    return new Set<string>(Array.isArray(ids) ? ids : []);
+  }, [hiddenStatusesByPhase, currentPhaseId]);
   const displayedKanbanStatuses = useMemo(
     () => visibleKanbanStatuses.filter(
       (status) => !hiddenStatusIdSet.has(status.project_status_mapping_id)
@@ -762,16 +778,36 @@ export default function ProjectDetail({
     [visibleKanbanStatuses, hiddenStatusIdSet]
   );
   const toggleKanbanStatusHidden = useCallback((statusMappingId: string) => {
-    setHiddenKanbanStatusIds((prev: string[]) => {
-      const current = Array.isArray(prev) ? prev : [];
-      return current.includes(statusMappingId)
+    if (!currentPhaseId) return;
+    setHiddenKanbanStatusesByPhase((prev: Record<string, string[]>) => {
+      const map = (prev && typeof prev === 'object' && !Array.isArray(prev)) ? prev : {};
+      const current = Array.isArray(map[currentPhaseId]) ? map[currentPhaseId] : [];
+      const next = current.includes(statusMappingId)
         ? current.filter((id) => id !== statusMappingId)
         : [...current, statusMappingId];
+      const updated = { ...map };
+      // Drop empty entries so the map doesn't accumulate keys for phases with
+      // nothing hidden.
+      if (next.length === 0) {
+        delete updated[currentPhaseId];
+      } else {
+        updated[currentPhaseId] = next;
+      }
+      return updated;
     });
-  }, [setHiddenKanbanStatusIds]);
+  }, [setHiddenKanbanStatusesByPhase, currentPhaseId]);
   const showAllKanbanStatuses = useCallback(() => {
-    setHiddenKanbanStatusIds([]);
-  }, [setHiddenKanbanStatusIds]);
+    if (!currentPhaseId) return;
+    // "Show all" only resets the phase currently in view, matching the per-phase
+    // scope of hiding.
+    setHiddenKanbanStatusesByPhase((prev: Record<string, string[]>) => {
+      const map = (prev && typeof prev === 'object' && !Array.isArray(prev)) ? prev : {};
+      if (!(currentPhaseId in map)) return map;
+      const updated = { ...map };
+      delete updated[currentPhaseId];
+      return updated;
+    });
+  }, [setHiddenKanbanStatusesByPhase, currentPhaseId]);
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
@@ -3648,6 +3684,33 @@ export default function ProjectDetail({
       <div className={styles.kanbanWrapper}>
         {isLoadingTasks ? (
           <KanbanBoardSkeleton />
+        ) : displayedKanbanStatuses.length === 0 && hiddenVisibleStatusCount > 0 ? (
+          // Every visible column has been hidden by the user — the board would
+          // otherwise be blank with no per-column controls to recover from, so
+          // surface an explicit "show all" affordance here.
+          <div
+            id="kanban-all-columns-hidden"
+            className="flex flex-col items-center justify-center gap-3 py-16 text-center"
+          >
+            <EyeOff className="h-8 w-8 text-gray-300" />
+            <div>
+              <p className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                {t('projectDetail.allColumnsHidden', 'All columns are hidden')}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('projectDetail.allColumnsHiddenHint', 'Show one or more columns to see your tasks.')}
+              </p>
+            </div>
+            <Button
+              id="kanban-show-all-columns-empty"
+              variant="outline"
+              size="sm"
+              onClick={showAllKanbanStatuses}
+            >
+              <Eye className="mr-1.5 h-4 w-4" />
+              {t('projectDetail.showAllColumns', 'Show all columns')}
+            </Button>
+          </div>
         ) : (
           <KanbanBoard
             tasks={projectTasks}

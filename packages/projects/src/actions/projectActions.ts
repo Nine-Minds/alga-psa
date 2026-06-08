@@ -33,6 +33,7 @@ import { z } from 'zod';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
@@ -743,6 +744,19 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
             await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
+
+            // The per-user "hidden kanban columns" preference is keyed by phase
+            // inside its value ({ [phaseId]: mappingIds }). Strip this phase's
+            // entry from every user's map for this project so deleted phases
+            // don't leave orphaned keys behind. (Legacy flat-array values don't
+            // contain phase ids, so jsonb_exists skips them.)
+            await trx('user_preferences')
+                .where({ tenant, setting_name: projectKanbanHiddenStatusesKey(projectId) })
+                .whereRaw('jsonb_exists(setting_value, ?)', [phaseId])
+                .update({
+                    setting_value: trx.raw('setting_value - ?', [phaseId]),
+                    updated_at: trx.fn.now(),
+                });
         });
 
         if (projectIdForEvent) {
@@ -1322,6 +1336,13 @@ export const deleteProject = withAuth(async (
             // Clean up child records owned by the project
             await trx('project_ticket_links').where({ project_id: projectId, tenant: tenantId }).delete();
             await trx('email_reply_tokens').where({ project_id: projectId, tenant: tenantId }).delete();
+
+            // Drop every user's per-project "hidden kanban columns" preference for
+            // this project — those rows reference this project by setting name and
+            // would otherwise be orphaned once the project is gone.
+            await trx('user_preferences')
+                .where({ tenant: tenantId, setting_name: projectKanbanHiddenStatusesKey(projectId) })
+                .delete();
 
             await ProjectModel.delete(trx, tenantId, projectId);
         });
