@@ -1027,6 +1027,13 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         'Could not redeem the install code.',
         error instanceof Error ? error.message : String(error)
       );
+      // A bad/expired/used code is operator-correctable: stop auto-retrying (it
+      // will never succeed) so the control-plane keeps the setup form open for a
+      // re-issued code. Transient/network errors stay retry-safe (unflagged).
+      if (error && error.correctable) {
+        failure.correctable = true;
+        failure.retrySafe = false;
+      }
       writeInstallState({ status: 'runtime-values-blocked', phase: 'registry-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
       return failure;
     }

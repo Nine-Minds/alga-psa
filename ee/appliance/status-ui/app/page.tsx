@@ -11,6 +11,9 @@ type Blocker = { severity?: string; component?: string; layer?: string; reason?:
 type EventItem = { type?: string; reason?: string; namespace?: string; involvedObject?: string; message?: string; timestamp?: string | null };
 type StatusResponse = {
   status?: string;
+  // True when setup is blocked on a correctable install code; the UI offers a
+  // "re-enter your install code" action and the /setup form is reachable again.
+  setupReEditable?: boolean;
   rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
@@ -367,6 +370,13 @@ export default function StatusPage() {
           </div>
           <span className={`${styles.statusPill} ${badgeClass(state)}`}>{state}</span>
         </header>
+
+        {status?.setupReEditable ? (
+          <div className={styles.alert} role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <span>The install code could not be redeemed — it may be invalid, expired, or already used. Re-issue a fresh code from the portal, then re-enter it to continue.</span>
+            <a className={styles.actionButton} href="/setup/">Re-enter your install code</a>
+          </div>
+        ) : null}
 
         {activeTab === 'overview' ? (
           <div id="appliance-panel-overview" role="tabpanel" aria-labelledby="appliance-tab-overview" className={styles.grid}>

@@ -240,6 +240,21 @@ function currentMode() {
   }
 }
 
+// True when setup is blocked on an operator-correctable input — specifically a
+// bad/expired/used install code (failure.step === 'redeem-install-code'). In
+// that state we keep GET /setup and POST /api/setup OPEN so the operator can
+// re-enter a re-issued code, instead of permanently locking them into the
+// status view. Any other submitted state stays locked (status mode) as before.
+function setupReEditable() {
+  try {
+    if (!fs.existsSync(stateFile)) return false;
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    return state?.failure?.step === 'redeem-install-code';
+  } catch {
+    return false;
+  }
+}
+
 function readRequestBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -679,7 +694,7 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
       return;
     }
-    if (mode === 'status') {
+    if (mode === 'status' && !setupReEditable()) {
       jsonResponse(res, 409, { error: 'Setup has already started.', redirectTo: '/' });
       return;
     }
@@ -720,6 +735,10 @@ const server = http.createServer(async (req, res) => {
         lastAction: 'Setup accepted; background workflow is starting',
         updatedAt: new Date().toISOString()
       }, null, 2)}\n`, { mode: 0o600 });
+      // Fresh submit (incl. re-entering a corrected install code): reset the
+      // auto-retry counter so the new attempt is not gated by the prior code's
+      // exhausted retries.
+      clearRetryState();
       queueSetupWorkflow();
       jsonResponse(res, 202, {
         ok: true,
@@ -769,7 +788,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify(snapshot));
+    // setupReEditable is computed live (not from the cached snapshot) so the
+    // status UI can offer a "re-enter your install code" action while setup is
+    // blocked on a correctable (bad/used/expired) install code.
+    res.end(JSON.stringify({ ...snapshot, setupReEditable: setupReEditable() }));
     return;
   }
 
@@ -971,7 +993,10 @@ const server = http.createServer(async (req, res) => {
     // The setup page is the SPA shell; it gates its own content via
     // /api/auth/state. Only the legacy server-rendered POST mutates state, so
     // that path requires a session.
-    if (mode === 'status') {
+    // Once setup has started we redirect to the status view — UNLESS it is
+    // blocked on an operator-correctable install code, in which case we keep the
+    // form reachable so they can re-enter a re-issued code.
+    if (mode === 'status' && !setupReEditable()) {
       res.writeHead(303, { location: '/' });
       res.end();
       return;

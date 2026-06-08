@@ -65,7 +65,13 @@ export async function redeemInstallCode({ serviceUrl, installCode, applianceId, 
   if (!res.ok) {
     let body = {};
     try { body = await res.json(); } catch { /* non-JSON error body */ }
-    throw new Error(FRIENDLY_ERRORS[body.code] || body.error || `Install-code redemption failed (HTTP ${res.status}).`);
+    const err = new Error(FRIENDLY_ERRORS[body.code] || body.error || `Install-code redemption failed (HTTP ${res.status}).`);
+    // An invalid/expired/used code is operator-correctable: setup keeps the form
+    // open so they can re-enter a fresh (re-issued) code, and stops auto-retrying
+    // a code that will never change. (Network/reach errors are transient — they
+    // stay retry-safe and are NOT flagged here.)
+    if (FRIENDLY_ERRORS[body.code]) err.correctable = true;
+    throw err;
   }
 
   const data = await res.json();
