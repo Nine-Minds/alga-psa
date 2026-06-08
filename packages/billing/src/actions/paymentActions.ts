@@ -1,7 +1,8 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import type { PaymentDetails, PaymentLinkResult, WebhookProcessingResult } from '@alga-psa/types';
+import type { PaymentDetails, PaymentLinkResult } from '@alga-psa/types';
+import { getCurrentUserAsync } from '../lib/authHelpers';
 
 function isEnterpriseBuild(): boolean {
   return process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -36,7 +37,16 @@ async function getPaymentService(tenantId: string): Promise<any | null> {
   }
 }
 
-export async function hasEnabledPaymentProvider(tenantId: string): Promise<boolean> {
+async function getAuthenticatedTenantId(): Promise<string> {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+  return currentUser.tenant;
+}
+
+export async function hasEnabledPaymentProvider(): Promise<boolean> {
+  const tenantId = await getAuthenticatedTenantId();
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return false;
 
@@ -49,9 +59,9 @@ export async function hasEnabledPaymentProvider(tenantId: string): Promise<boole
 }
 
 export async function getOrCreateInvoicePaymentLink(
-  tenantId: string,
   invoiceId: string
 ): Promise<PaymentLinkResult | null> {
+  const tenantId = await getAuthenticatedTenantId();
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
@@ -62,17 +72,16 @@ export async function getOrCreateInvoicePaymentLink(
 }
 
 export async function getOrCreateInvoicePaymentLinkUrl(
-  tenantId: string,
   invoiceId: string
 ): Promise<string | null> {
-  const link = await getOrCreateInvoicePaymentLink(tenantId, invoiceId);
+  const link = await getOrCreateInvoicePaymentLink(invoiceId);
   return link?.url || null;
 }
 
 export async function getInvoicePaymentStatus(
-  tenantId: string,
   invoiceId: string
 ): Promise<PaymentDetails | null> {
+  const tenantId = await getAuthenticatedTenantId();
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
@@ -83,9 +92,9 @@ export async function getInvoicePaymentStatus(
 }
 
 export async function getActiveInvoicePaymentLinkUrl(
-  tenantId: string,
   invoiceId: string
 ): Promise<string | null> {
+  const tenantId = await getAuthenticatedTenantId();
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
@@ -111,29 +120,4 @@ export async function getInvoicePaymentLinkUrlForEmail(
 
   const link = await paymentService.getOrCreatePaymentLink(invoiceId);
   return link?.url || null;
-}
-
-export async function processStripePaymentWebhookPayload(
-  tenantId: string,
-  payload: string
-): Promise<WebhookProcessingResult> {
-  if (!isEnterpriseBuild()) {
-    return { success: false, error: 'Payment integration not available' } as WebhookProcessingResult;
-  }
-
-  try {
-    const ee = await loadEnterprisePayments();
-    if (!ee?.PaymentService || !ee?.createStripePaymentProvider) {
-      return { success: false, error: 'Payment integration not available' } as WebhookProcessingResult;
-    }
-
-    const paymentService = await ee.PaymentService.create(tenantId);
-    const provider = ee.createStripePaymentProvider(tenantId);
-    const webhookEvent = provider.parseWebhookEvent(payload);
-
-    return paymentService.processWebhookEvent(webhookEvent);
-  } catch (error) {
-    logger.error('[billing/paymentActions] processStripePaymentWebhookPayload failed', { tenantId, error });
-    return { success: false, error: 'Payment webhook processing failed' } as WebhookProcessingResult;
-  }
 }

@@ -337,7 +337,7 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'read')) {
+      if (!await hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot read contract line mappings');
       }
 
@@ -380,7 +380,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'read')) {
+      if (!await hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot read detailed contract lines');
       }
 
@@ -445,7 +445,7 @@ export const addContractLine = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'create')) {
+      if (!await hasPermission(user, 'billing', 'create')) {
         throw new Error('Permission denied: Cannot add contract lines');
       }
 
@@ -523,7 +523,7 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'delete')) {
+      if (!await hasPermission(user, 'billing', 'delete')) {
         throw new Error('Permission denied: Cannot remove contract lines');
       }
 
@@ -571,7 +571,7 @@ export const updateContractLineAssociation = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'update')) {
+      if (!await hasPermission(user, 'billing', 'update')) {
         throw new Error('Permission denied: Cannot update contract line associations');
       }
 
@@ -660,7 +660,7 @@ export const isContractLineAttached = withAuth(async (user, { tenant }, contract
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      if (!hasPermission(user, 'billing', 'read')) {
+      if (!await hasPermission(user, 'billing', 'read')) {
         throw new Error('Permission denied: Cannot check contract line associations');
       }
 

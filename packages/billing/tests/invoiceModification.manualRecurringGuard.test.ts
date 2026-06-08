@@ -59,6 +59,10 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');
   return {

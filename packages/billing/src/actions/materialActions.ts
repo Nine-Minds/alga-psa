@@ -5,8 +5,12 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { ITicketMaterial, IProjectMaterial } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
-export const listTicketMaterials = withAuth(async (_user, { tenant }, ticketId: string): Promise<ITicketMaterial[]> => {
+export const listTicketMaterials = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketMaterial[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const rows = await trx('ticket_materials as tm')
@@ -24,7 +28,7 @@ export const listTicketMaterials = withAuth(async (_user, { tenant }, ticketId: 
   });
 });
 
-export const addTicketMaterial = withAuth(async (_user, { tenant }, input: {
+export const addTicketMaterial = withAuth(async (user, { tenant }, input: {
   ticket_id: string;
   client_id: string;
   service_id: string;
@@ -33,6 +37,9 @@ export const addTicketMaterial = withAuth(async (_user, { tenant }, input: {
   currency_code: string;
   description?: string | null;
 }): Promise<ITicketMaterial> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('ticket_materials')
@@ -52,7 +59,10 @@ export const addTicketMaterial = withAuth(async (_user, { tenant }, input: {
   });
 });
 
-export const deleteTicketMaterial = withAuth(async (_user, { tenant }, ticketMaterialId: string): Promise<void> => {
+export const deleteTicketMaterial = withAuth(async (user, { tenant }, ticketMaterialId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('ticket_materials')
@@ -71,7 +81,10 @@ export const deleteTicketMaterial = withAuth(async (_user, { tenant }, ticketMat
   });
 });
 
-export const listProjectMaterials = withAuth(async (_user, { tenant }, projectId: string): Promise<IProjectMaterial[]> => {
+export const listProjectMaterials = withAuth(async (user, { tenant }, projectId: string): Promise<IProjectMaterial[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const rows = await trx('project_materials as pm')
@@ -89,7 +102,7 @@ export const listProjectMaterials = withAuth(async (_user, { tenant }, projectId
   });
 });
 
-export const addProjectMaterial = withAuth(async (_user, { tenant }, input: {
+export const addProjectMaterial = withAuth(async (user, { tenant }, input: {
   project_id: string;
   client_id: string;
   service_id: string;
@@ -98,6 +111,9 @@ export const addProjectMaterial = withAuth(async (_user, { tenant }, input: {
   currency_code: string;
   description?: string | null;
 }): Promise<IProjectMaterial> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await trx('project_materials')
@@ -117,7 +133,10 @@ export const addProjectMaterial = withAuth(async (_user, { tenant }, input: {
   });
 });
 
-export const deleteProjectMaterial = withAuth(async (_user, { tenant }, projectMaterialId: string): Promise<void> => {
+export const deleteProjectMaterial = withAuth(async (user, { tenant }, projectMaterialId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const row = await trx('project_materials')

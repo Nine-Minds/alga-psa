@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 async function assertContractIsAuthorable(
   knex: any,
@@ -29,6 +30,9 @@ export const getPricingSchedulesByContract = withAuth(async (
   { tenant },
   contractId: string
 ): Promise<IContractPricingSchedule[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -56,6 +60,9 @@ export const getPricingScheduleById = withAuth(async (
   { tenant },
   scheduleId: string
 ): Promise<IContractPricingSchedule | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -110,6 +117,9 @@ export const createPricingSchedule = withAuth(async (
   { tenant },
   scheduleData: Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>
 ): Promise<IContractPricingSchedule> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -188,6 +198,9 @@ export const updatePricingSchedule = withAuth(async (
   scheduleId: string,
   scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'contract_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
 ): Promise<IContractPricingSchedule> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -280,6 +293,9 @@ export const deletePricingSchedule = withAuth(async (
   { tenant },
   scheduleId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -316,6 +332,9 @@ export const getActivePricingScheduleByContract = withAuth(async (
   contractId: string,
   date?: Date
 ): Promise<IContractPricingSchedule | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {

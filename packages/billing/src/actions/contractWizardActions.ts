@@ -1541,6 +1541,9 @@ export const listContractTemplatesForWizard = withAuth(async (
   user,
   { tenant }
 ): Promise<TemplateOption[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: Cannot list contract templates');
+  }
   const { knex } = await createTenantKnex();
 
   // currency_code removed from contract_templates - templates are now currency-neutral
@@ -1568,6 +1571,9 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   { tenant },
   templateId: string
 ): Promise<ClientTemplateSnapshot> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: Cannot view contract template snapshot');
+  }
   const { knex } = await createTenantKnex();
 
   const template = await knex('contract_templates')

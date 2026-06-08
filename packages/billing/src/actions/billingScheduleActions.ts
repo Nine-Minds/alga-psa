@@ -15,6 +15,7 @@ import {
 import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
 import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
@@ -41,6 +42,9 @@ export const getClientBillingScheduleSummaries = withAuth(async (
   { tenant },
   clientIds: string[]
 ): Promise<Record<string, ClientBillingScheduleConfig>> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   if (clientIds.length === 0) {
     return {};
   }
@@ -95,6 +99,9 @@ export const updateClientBillingSchedule = withAuth(async (
   { tenant },
   input: UpdateClientBillingScheduleInput
 ): Promise<{ success: true }> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
