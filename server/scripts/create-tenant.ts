@@ -4,14 +4,23 @@
  * CLI script to create a new tenant with onboarding seeds
  */
 
-import { createTenantComplete } from '../../ee/server/src/lib/testing/tenant-creation';
 import knex from 'knex';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'node:module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// tenant-creation lives in the ee/server (CommonJS) package; importing it with
+// a named ESM import across the package boundary fails under tsx in the
+// production image ("does not provide an export named 'createTenantComplete'"),
+// because esbuild transpiles it to CJS. require() it via the CJS interop so the
+// appliance bootstrap (npx tsx create-tenant.ts) resolves the export.
+const require = createRequire(import.meta.url);
+const { createTenantComplete } =
+  require('../../ee/server/src/lib/testing/tenant-creation') as typeof import('../../ee/server/src/lib/testing/tenant-creation');
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
