@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Contraseña cambiada correctamente",
-        "userUpdated": "Usuario actualizado correctamente"
+        "userUpdated": "Usuario actualizado correctamente",
+        "roleAdded": "Rol añadido correctamente",
+        "roleRemoved": "Rol eliminado correctamente"
       },
       "error": {
         "userNotFound": "Usuario no encontrado",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Se produjo un error al cambiar la contraseña",
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
-        "reportsToCycle": "Esto crearía una cadena de reporte circular"
+        "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
       }
     },
     "loading": "Cargando detalles del usuario..."
