@@ -102,6 +102,7 @@ class EditionBuildDiagnosticsPlugin {
     this.options = {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
+        '@product/mcp/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -252,6 +253,8 @@ const nextConfig = {
       '@alga-psa/validation/': '../packages/validation/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
+      '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
+      '@alga-psa/agent-tooling/': '../packages/agent-tooling/src/',
       // Documents package
       '@alga-psa/documents': '../packages/documents/src',
       '@alga-psa/documents/': '../packages/documents/src/',
@@ -367,6 +370,9 @@ const nextConfig = {
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
         : '@product/chat/oss/entry',
+      '@product/mcp/entry': isEE
+        ? '@product/mcp/ee/entry'
+        : '@product/mcp/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -437,6 +443,7 @@ const nextConfig = {
     '@emoji-mart/data',
     '@alga-psa/ui',
     '@alga-psa/scheduling',
+    '@alga-psa/agent-tooling',
     '@alga-psa/users',
     '@alga-psa/email',
     '@alga-psa/teams',
@@ -558,6 +565,8 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/agent-tooling': path.join(__dirname, '../packages/agent-tooling/src'),
+      '@alga-psa/agent-tooling/': `${path.join(__dirname, '../packages/agent-tooling/src')}/`,
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
@@ -592,6 +601,17 @@ const nextConfig = {
         const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
         const selectedPath = isEE ? eePath : ossPath;
         console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+        return selectedPath;
+      })(),
+      // MCP seam (.ts entries). The bare specifier must be aliased here for the
+      // webpack build — without it, '@product/mcp/entry' falls through to the
+      // package exports field (which only lists ./ee/entry and ./oss/entry) and
+      // fails to resolve. Mirrors the extensions seam above.
+      '@product/mcp/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-mcp/oss/entry.ts');
+        const selectedPath = isEE ? eePath : ossPath;
+        console.log(`[WEBPACK ALIAS DEBUG] @product/mcp/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
       // SSO provider buttons - swap between CE stub and EE implementation
@@ -679,6 +699,10 @@ const nextConfig = {
       const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
       config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
       config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
+
+      const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
+      const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+      config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
       const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
       const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');
@@ -939,6 +963,17 @@ const nextConfig = {
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );
+        // The MCP seam has no tsconfig `paths` entry (unlike chat/extensions),
+        // so in CE the bare `@product/mcp/entry` specifier falls through to the
+        // package `exports` and lands on ./ee/entry (the EE impl, which imports
+        // @ee/lib/mcp/* with no CE stub) — beating resolve.alias. Force it to the
+        // CE stub before resolution so no EE governance code enters the CE build.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -962,6 +997,15 @@ const nextConfig = {
           '../ee/server/src/components/auth/SsoProviderButtons.tsx',
         );
         config.plugins = config.plugins || [];
+        // Force the MCP seam to the EE implementation before resolution, so the
+        // tsconfig `paths` CE default (@product/mcp/entry -> oss) can't win via
+        // JsConfigPathsPlugin and produce a hybrid EE build. Mirrors the CE force.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';

@@ -174,6 +174,18 @@ Controls access to the new service request definition and client portal request-
 - When enabled: The full service request UI is accessible.
 - Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
 
+### 12. `mcp-server`
+Dark-release gate for the remote (governed) MCP server admin UI. Enterprise-only and off by default; used to roll the feature out per-tenant before general availability.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Settings → MCP Server tab (the IdP-provider / agent / audit admin surface). Hidden when disabled; the tab only appears when the tenant is Enterprise **and** the flag is on. Direct access via `?tab=mcp-server` falls back to the default tab.
+
+**Behavior:**
+- When disabled (default): The MCP Server settings tab is hidden. Because no flag exists in PostHog by default — and the flag resolves `false` when PostHog is unavailable — the tab is dark on every instance until explicitly enabled for a tenant.
+- When enabled: The MCP Server admin tab is shown (Enterprise builds only).
+- **UI-only gate.** The server endpoints (`POST /api/mcp`, `/.well-known/oauth-protected-resource`, and the `/api/v1/mcp/*` admin APIs) remain live regardless of flag state — they are already Enterprise-gated and harmless without agents/IdPs configured. The flag only hides the admin entry point in the UI.
+
 ## Implementation Details
 
 ### User Identification

@@ -377,6 +377,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
   'resources',                 // resources.user_id → users with NO ACTION
   'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
+
+  // === MCP agent governance (EE) ===
+  // Relations are enforced in application code (no DB FKs), so this order is
+  // advisory. Children first: agent_roles + mcp_agent_audit reference agents
+  // (agent_id); agents.created_by / backing user reference users, so delete the
+  // agent tables before users. agent_idp_providers is independent.
+  'agent_roles',
+  'mcp_agent_audit',
+  'agent_idp_providers',
+  'agents',
+
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
