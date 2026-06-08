@@ -10,9 +10,17 @@ spec:
   targetNamespace: msp
   install:
     createNamespace: true
+    # The bootstrap (migrations + create-tenant) runs as a post-install Helm
+    # hook, but the alga-core Deployment's wait-for-bootstrap init container
+    # blocks until that bootstrap creates the users table. With Flux waiting for
+    # the Deployment to be Ready *before* running post-install hooks, this
+    # deadlocks (install times out, the hook never runs). disableWait lets the
+    # hook run immediately; readiness is tracked by the status engine instead.
+    disableWait: true
     remediation:
       retries: 0
   upgrade:
+    disableWait: true
     remediation:
       retries: 0
   chart:

@@ -6,7 +6,6 @@
 
 import { createTenantComplete } from '../../ee/server/src/lib/testing/tenant-creation';
 import knex from 'knex';
-import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -30,30 +29,58 @@ interface Args {
   help?: boolean;
 }
 
-const args = parse<Args>(
-  {
-    tenant: { type: String, description: 'Tenant name' },
-    email: { type: String, description: 'Admin user email' },
-    firstName: { type: String, optional: true, defaultValue: 'Admin', description: 'Admin first name' },
-    lastName: { type: String, optional: true, defaultValue: 'User', description: 'Admin last name' },
-    clientName: { type: String, optional: true, description: 'Client name (defaults to tenant name)' },
-    companyName: { type: String, optional: true, description: 'Company name (defaults to tenant name)' },
-    password: { type: String, optional: true, description: 'Admin password (generated if not provided)' },
-    productCode: { type: String, optional: true, description: 'Product code: psa (default) or algadesk' },
-    tenantId: { type: String, optional: true, description: 'Pre-minted tenant id to adopt (else env INITIAL_TENANT_ID; else DB-generated)' },
-    help: { type: Boolean, optional: true, alias: 'h', description: 'Show help' }
-  },
-  {
-    helpArg: 'help',
-    headerContentSections: [
-      {
-        header: 'Create Tenant',
-        content: 'Creates a new tenant with an admin user'
+const HELP = `Create Tenant — creates a new tenant with an admin user
+
+Usage: create-tenant --tenant <name> --email <email> [options]
+
+Options:
+  --tenant       Tenant name (required)
+  --email        Admin user email (required)
+  --firstName    Admin first name (default: Admin)
+  --lastName     Admin last name (default: User)
+  --clientName   Client name (defaults to tenant name)
+  --companyName  Company name (defaults to tenant name)
+  --password     Admin password (generated if not provided)
+  --productCode  Product code: psa (default) or algadesk
+  --tenantId     Pre-minted tenant id to adopt (else env INITIAL_TENANT_ID; else DB-generated)
+  -h, --help     Show help
+`;
+
+// Minimal --key value / --flag parser (process.argv). Deliberately avoids
+// ts-command-line-args, which is a devDependency and therefore absent from the
+// --omit=dev production image the appliance bootstrap runs this script in.
+function parseArgs(argv: string[]): Args {
+  const out: Record<string, string | boolean> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === '-h' || token === '--help') {
+      out.help = true;
+      continue;
+    }
+    if (token.startsWith('--')) {
+      const key = token.slice(2);
+      const next = argv[i + 1];
+      if (next === undefined || next.startsWith('--')) {
+        out[key] = true;
+      } else {
+        out[key] = next;
+        i++;
       }
-    ],
-    argv: process.argv.slice(2)
+    }
   }
-);
+  return out as unknown as Args;
+}
+
+const args = parseArgs(process.argv.slice(2));
+if (args.help) {
+  console.log(HELP);
+  process.exit(0);
+}
+if (!args.tenant || !args.email) {
+  console.error('Error: --tenant and --email are required.\n');
+  console.error(HELP);
+  process.exit(1);
+}
 
 async function main() {
   // Create database connection
