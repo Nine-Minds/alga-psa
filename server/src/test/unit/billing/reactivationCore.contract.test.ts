@@ -70,4 +70,39 @@ describe('reactivation core contract', () => {
     expect(activities).toContain('/api/billing/reactivation-password-reset');
     expect(activities).toContain('X-Webhook-Signature');
   });
+
+  it('password-reset failures are surfaced, not swallowed (retry then ops alert without faking success)', () => {
+    const activities = read('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
+    const workflow = read('ee/temporal-workflows/src/workflows/tenant-deletion-workflow.ts');
+
+    // The activity throws on a non-2xx so Temporal retries instead of returning
+    // a swallowed { success: false }.
+    expect(activities).toContain('if (!response.ok) {');
+    expect(activities).toContain('Reactivation password reset request failed');
+
+    // A link failure is reactivated_unbilled (refund-eligible); a post-link
+    // password-reset failure is reactivated_no_access (billed + reactivated but
+    // locked out — manual reset, NOT a refund) and must NOT fail the rollback.
+    expect(workflow).toContain("reason: 'reactivated_unbilled'");
+    expect(workflow).toContain("reason: 'reactivated_no_access'");
+    const noAccessIndex = workflow.indexOf("reason: 'reactivated_no_access'");
+    const resetIndex = workflow.indexOf('await triggerReactivationPasswordReset');
+    expect(noAccessIndex).toBeGreaterThan(resetIndex);
+  });
+
+  it('T064b: every reactivation HMAC endpoint enforces a 5-minute timestamp freshness window', () => {
+    const routes = [
+      'ee/server/src/app/api/billing/check-tenant/route.ts',
+      'ee/server/src/app/api/billing/request-reactivation/route.ts',
+      'ee/server/src/app/api/billing/complete-reactivation/route.ts',
+      'ee/server/src/app/api/billing/reactivation-token/route.ts',
+      'ee/server/src/app/api/billing/reactivation-token/session/route.ts',
+      'ee/server/src/app/api/billing/reactivation-password-reset/route.ts',
+      'packages/ee/src/app/api/billing/check-tenant/route.ts',
+    ];
+
+    for (const route of routes) {
+      expect(read(route)).toContain('Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000');
+    }
+  });
 });

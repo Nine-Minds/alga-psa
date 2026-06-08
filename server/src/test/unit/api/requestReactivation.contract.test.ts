@@ -32,8 +32,8 @@ describe('request-reactivation route contract', () => {
     expect(eeRoute).not.toContain('adminEmail:');
   });
 
-  it('T064/T077: sends only to the canonical billing/admin email and embeds a durable token link', () => {
-    expect(eeRoute).toContain('resolveBillingAdminEmailForTenant(tenant.tenantId, knex)');
+  it('T064/T077: sends only to the canonical reactivation contact email and embeds a durable token link', () => {
+    expect(eeRoute).toContain('resolveReactivationContactEmail(tenant.tenantId, knex)');
     expect(eeRoute).toContain('createTenantReactivationToken({');
     expect(eeRoute).toContain('buildReactivationCheckoutUrl(reactivationToken.token)');
     expect(eeRoute).toContain('to: billingAdmin.email');

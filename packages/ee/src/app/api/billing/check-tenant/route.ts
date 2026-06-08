@@ -13,6 +13,11 @@ function verifyWebhookSignature(
 ): boolean {
   if (!signature || !timestamp) return false;
 
+  const timestampMs = Number.parseInt(timestamp, 10);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
+    return false;
+  }
+
   const secret = process.env.ALGA_WEBHOOK_SECRET;
   if (!secret) {
     console.error('ALGA_WEBHOOK_SECRET not configured');

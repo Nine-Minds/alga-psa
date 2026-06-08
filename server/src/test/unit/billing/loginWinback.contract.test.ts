@@ -48,7 +48,7 @@ describe('login win-back contract', () => {
   it('T059: EE hook resolves the tenant billing/admin email and never sends to the attempter', () => {
     const source = read('ee/server/src/lib/auth/loginWinback.ts');
 
-    expect(source).toContain('resolveBillingAdminEmailForTenant(input.tenantId');
+    expect(source).toContain('resolveReactivationContactEmail(input.tenantId');
     expect(source).toContain('to: adminEmail.email');
     expect(source).not.toContain('attempt');
   });

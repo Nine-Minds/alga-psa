@@ -39,9 +39,9 @@ export interface TenantEmailResolution {
   matchedBy: 'tenant_email' | 'internal_admin';
 }
 
-export interface BillingAdminEmailResolution {
+export interface ReactivationContactEmailResolution {
   email: string;
-  source: 'tenant_email' | 'client_billing_email' | 'stripe_customer_email' | 'internal_admin';
+  source: 'tenant_email';
 }
 
 export interface TenantStripeCustomerResolution {
@@ -184,18 +184,21 @@ export async function resolveTenantAndAdminEmailByEmail(
 }
 
 /**
- * Canonical billing/admin recipient resolver for reactivation authority.
+ * Canonical reactivation contact resolver.
  *
- * Fallback order:
- * 1. tenants.email (the original tenant/billing email captured during signup)
- * 2. clients.billing_email for the tenant's active client rows
- * 3. stripe_customers.email for the existing Stripe customer
- * 4. first internal user email for the tenant
+ * The reactivation authority anchor is the tenant's billing/owner email
+ * (`tenants.email`) — the SAME address the forced password-reset
+ * (`triggerReactivationPasswordReset`) targets after payment. Pinning the
+ * invite, the login win-back nudge, and the post-payment set-password email to
+ * one field guarantees the token, the checkout, and account access all land in
+ * the same inbox (PRD §12 authority chain). No fallback chain: if the canonical
+ * email is missing we send nothing rather than diverting reactivation to a
+ * different recipient than the password reset.
  */
-export async function resolveBillingAdminEmailForTenant(
+export async function resolveReactivationContactEmail(
   tenantId: string,
   knex?: KnexLike,
-): Promise<BillingAdminEmailResolution | null> {
+): Promise<ReactivationContactEmailResolution | null> {
   const db = await getKnex(knex);
 
   const tenant = await db('tenants')
@@ -204,38 +207,6 @@ export async function resolveBillingAdminEmailForTenant(
 
   if (tenant?.email) {
     return { email: tenant.email, source: 'tenant_email' };
-  }
-
-  const billingClient = await db('clients')
-    .where('tenant', tenantId)
-    .whereNotNull('billing_email')
-    .where({ is_inactive: false })
-    .orderBy('created_at', 'asc')
-    .first('billing_email');
-
-  if (billingClient?.billing_email) {
-    return { email: billingClient.billing_email, source: 'client_billing_email' };
-  }
-
-  const stripeCustomer = await db('stripe_customers')
-    .where('tenant', tenantId)
-    .orderBy('created_at', 'asc')
-    .first('email');
-
-  if (stripeCustomer?.email) {
-    return { email: stripeCustomer.email, source: 'stripe_customer_email' };
-  }
-
-  const internalAdmin = await db('users')
-    .where({
-      tenant: tenantId,
-      user_type: 'internal',
-    })
-    .orderBy('created_at', 'asc')
-    .first('email');
-
-  if (internalAdmin?.email) {
-    return { email: internalAdmin.email, source: 'internal_admin' };
   }
 
   return null;

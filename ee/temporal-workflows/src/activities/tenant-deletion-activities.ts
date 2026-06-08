@@ -212,6 +212,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stripe_customers', 'stripe_accounts',
   'payment_webhook_events', 'payment_provider_configs', 'client_payment_customers',
 
+  // Tenant reactivation / win-back state (tenant-scoped; FK only to tenants).
+  // Tokens are single-use email-link state and refunds are a manual-review
+  // queue — both are purged with the tenant they belong to.
+  'tenant_reactivation_tokens', 'pending_reactivation_refunds',
+
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
@@ -1972,7 +1977,14 @@ export async function triggerReactivationPasswordReset(
     body: JSON.stringify({ email }),
   });
 
-  return { success: response.ok };
+  // Throw on a non-2xx so Temporal retries (the proxyActivities policy bounds
+  // this at maximumAttempts). A swallowed failure would leave a reactivated,
+  // billed tenant with no way to log in and no signal to anyone.
+  if (!response.ok) {
+    throw new Error(`Reactivation password reset request failed: ${response.status}`);
+  }
+
+  return { success: true };
 }
 
 export async function recordReactivationPaymentAlert(
@@ -2008,9 +2020,11 @@ export async function recordReactivationPaymentAlert(
           `<p>Subscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}</p>`,
         ].join(''),
         text: `Manual reactivation payment review\nTenant: ${input.tenantId}\nReason: ${input.reason}\nCheckout session: ${input.stripeCheckoutSessionId ?? 'n/a'}\nPayment intent: ${input.stripePaymentIntentId ?? 'n/a'}\nSubscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}`,
-        tenantId: input.tenantId,
-        entityType: 'tenant_reactivation',
-        entityId: input.stripeCheckoutSessionId ?? input.tenantId,
+        metadata: {
+          tenantId: input.tenantId,
+          entityType: 'tenant_reactivation',
+          entityId: input.stripeCheckoutSessionId ?? input.tenantId,
+        },
       });
     } catch (error) {
       log.error('Failed to send reactivation payment alert email', {

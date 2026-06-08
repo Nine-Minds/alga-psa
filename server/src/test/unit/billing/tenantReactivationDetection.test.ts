@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getActivePendingDeletion,
-  resolveBillingAdminEmailForTenant,
+  resolveReactivationContactEmail,
   resolveTenantAndAdminEmailByEmail,
 } from '../../../../../ee/server/src/lib/billing/tenantReactivationDetection';
 
@@ -181,7 +181,12 @@ describe('tenant reactivation detection', () => {
       });
   });
 
-  it('T077: billing/admin email resolver uses the documented canonical fallback order', async () => {
+  it('T077: reactivation contact resolver pins to tenants.email (the password-reset anchor)', async () => {
+    // The invite/win-back recipient MUST equal the address the post-payment
+    // set-password email targets (tenants.email). Pinning to one field — not a
+    // fallback chain — guarantees the token and account access land in the same
+    // inbox (PRD §12). Other addresses (client billing, Stripe, internal users)
+    // are intentionally NOT used as fallbacks.
     const tenantEmailKnex = createFakeKnex({
       tenants: [{ tenant: 'tenant-1', email: 'tenant-owner@example.com' }],
       clients: [{ tenant: 'tenant-1', billing_email: 'billing@example.com', is_inactive: false }],
@@ -189,36 +194,22 @@ describe('tenant reactivation detection', () => {
       users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
     });
 
-    await expect(resolveBillingAdminEmailForTenant('tenant-1', tenantEmailKnex))
+    await expect(resolveReactivationContactEmail('tenant-1', tenantEmailKnex))
       .resolves.toEqual({
         email: 'tenant-owner@example.com',
         source: 'tenant_email',
       });
 
-    const clientBillingKnex = createFakeKnex({
+    // When tenants.email is absent we resolve nothing (and therefore send
+    // nothing) rather than diverging from the password-reset target.
+    const noTenantEmailKnex = createFakeKnex({
       tenants: [{ tenant: 'tenant-1', email: null }],
       clients: [{ tenant: 'tenant-1', billing_email: 'billing@example.com', is_inactive: false }],
       stripe_customers: [{ tenant: 'tenant-1', email: 'stripe@example.com' }],
       users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
     });
 
-    await expect(resolveBillingAdminEmailForTenant('tenant-1', clientBillingKnex))
-      .resolves.toEqual({
-        email: 'billing@example.com',
-        source: 'client_billing_email',
-      });
-
-    const stripeKnex = createFakeKnex({
-      tenants: [{ tenant: 'tenant-1', email: null }],
-      clients: [],
-      stripe_customers: [{ tenant: 'tenant-1', email: 'stripe@example.com' }],
-      users: [{ tenant: 'tenant-1', email: 'admin@example.com', user_type: 'internal' }],
-    });
-
-    await expect(resolveBillingAdminEmailForTenant('tenant-1', stripeKnex))
-      .resolves.toEqual({
-        email: 'stripe@example.com',
-        source: 'stripe_customer_email',
-      });
+    await expect(resolveReactivationContactEmail('tenant-1', noTenantEmailKnex))
+      .resolves.toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
-  resolveBillingAdminEmailForTenant,
+  resolveReactivationContactEmail,
 } from '@enterprise/lib/billing/tenantReactivationDetection';
 import { createTenantReactivationToken } from '@enterprise/lib/billing/tenantReactivationTokens';
 import {
@@ -40,7 +40,7 @@ export async function handleInactiveLoginWinback(input: {
     return;
   }
 
-  const adminEmail = await resolveBillingAdminEmailForTenant(input.tenantId, knex);
+  const adminEmail = await resolveReactivationContactEmail(input.tenantId, knex);
   if (!adminEmail?.email) {
     return;
   }

@@ -49,10 +49,25 @@ describe('tenant reactivation win-back migration', () => {
     expect(migration).toContain("table.text('checkout_session_id').nullable()");
     expect(migration).toContain("table.timestamp('created_at').notNullable().defaultTo(knex.fn.now())");
     expect(migration).toContain("table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now())");
-    expect(migration).toContain("table.unique(['token_hash']");
+    expect(migration).toContain("table.unique(['tenant', 'token_hash']");
     expect(migration).toContain('tenant_reactivation_tokens_tenant_deletion_idx');
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS tenant_reactivation_tokens_open_unexpired_idx');
     expect(migration).toContain('WHERE reserved_at IS NULL AND consumed_at IS NULL');
     expect(migration).toContain("dropTableIfExists('tenant_reactivation_tokens')");
+  });
+
+  it('T068b: distributes both tenant tables by tenant (Citus), with distribution-column-led keys', () => {
+    // create_distributed_table requires the distribution column in every PK /
+    // unique constraint, so both PKs lead with `tenant` and the token ledger is
+    // unique on (tenant, token_hash).
+    expect(migration).toContain("table.primary(['tenant', 'refund_id']");
+    expect(migration).toContain("table.primary(['tenant', 'reactivation_token_id']");
+    expect(migration).toContain("create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')");
+    expect(migration).toContain("distributeTenantTable(knex, 'pending_reactivation_refunds')");
+    expect(migration).toContain("distributeTenantTable(knex, 'tenant_reactivation_tokens')");
+    // create_distributed_table cannot run inside a transaction.
+    expect(migration).toContain('exports.config = { transaction: false }');
+    // Distribution is guarded so non-Citus (local/dev) deploys still work.
+    expect(migration).toContain("pg_extension WHERE extname = 'citus'");
   });
 });

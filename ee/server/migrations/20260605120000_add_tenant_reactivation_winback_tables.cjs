@@ -7,7 +7,43 @@
  *   reactivation payments that cannot or should not reactivate a tenant.
  * - tenant_reactivation_tokens is the durable single-use token ledger for
  *   reactivation email links.
+ *
+ * Both new tables are tenant-scoped and distributed by `tenant`, colocated with
+ * `tenants`. Distributed tables require the distribution column in every primary
+ * key and unique constraint, hence the composite (tenant, id) keys and the
+ * (tenant, token_hash) uniqueness. create_distributed_table cannot run inside a
+ * transaction, so this migration disables the wrapping transaction.
  */
+
+exports.config = { transaction: false };
+
+async function isCitusEnabled(knex) {
+  const result = await knex.raw(
+    `SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled`,
+  );
+  return result.rows?.[0]?.enabled === true;
+}
+
+async function distributeTenantTable(knex, table) {
+  if (!(await isCitusEnabled(knex))) {
+    console.log(`Citus not enabled, skipping ${table} distribution`);
+    return;
+  }
+
+  const isDistributed = await knex.raw(
+    `SELECT EXISTS (
+       SELECT 1 FROM pg_dist_partition WHERE logicalrelid = '${table}'::regclass
+     ) AS distributed`,
+  );
+  if (isDistributed.rows?.[0]?.distributed) {
+    console.log(`${table} already distributed`);
+    return;
+  }
+
+  console.log(`Distributing ${table}...`);
+  await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
+  console.log(`✓ Distributed ${table}`);
+}
 
 /**
  * @param {import('knex').Knex} knex
@@ -40,7 +76,8 @@ exports.up = async function up(knex) {
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
       table.timestamp('resolved_at').nullable();
 
-      table.primary(['refund_id'], {
+      // Distribution column must lead the primary key on Citus.
+      table.primary(['tenant', 'refund_id'], {
         constraintName: 'pending_reactivation_refunds_pk',
       });
       table.index(['tenant'], 'pending_reactivation_refunds_tenant_idx');
@@ -53,6 +90,8 @@ exports.up = async function up(knex) {
       ON pending_reactivation_refunds (created_at)
       WHERE resolved_at IS NULL;
   `);
+
+  await distributeTenantTable(knex, 'pending_reactivation_refunds');
 
   const hasTenantReactivationTokens = await knex.schema.hasTable('tenant_reactivation_tokens');
   if (!hasTenantReactivationTokens) {
@@ -68,10 +107,14 @@ exports.up = async function up(knex) {
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
       table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
 
-      table.primary(['reactivation_token_id'], {
+      // Distribution column must lead the primary key and every unique
+      // constraint on Citus. token_hash is HMAC-derived from a payload that
+      // already includes the tenant id + a random nonce, so per-tenant
+      // uniqueness is equivalent to global uniqueness in practice.
+      table.primary(['tenant', 'reactivation_token_id'], {
         constraintName: 'tenant_reactivation_tokens_pk',
       });
-      table.unique(['token_hash'], {
+      table.unique(['tenant', 'token_hash'], {
         indexName: 'tenant_reactivation_tokens_token_hash_uk',
       });
       table.index(['tenant', 'deletion_id'], 'tenant_reactivation_tokens_tenant_deletion_idx');
@@ -83,6 +126,8 @@ exports.up = async function up(knex) {
       ON tenant_reactivation_tokens (tenant, deletion_id, expires_at)
       WHERE reserved_at IS NULL AND consumed_at IS NULL;
   `);
+
+  await distributeTenantTable(knex, 'tenant_reactivation_tokens');
 };
 
 /**

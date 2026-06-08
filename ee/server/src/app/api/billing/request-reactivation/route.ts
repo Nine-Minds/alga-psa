@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
   getActivePendingDeletion,
-  resolveBillingAdminEmailForTenant,
+  resolveReactivationContactEmail,
   resolveTenantAndAdminEmailByEmail,
 } from '@enterprise/lib/billing/tenantReactivationDetection';
 import { createTenantReactivationToken } from '@enterprise/lib/billing/tenantReactivationTokens';
@@ -22,6 +22,11 @@ function verifyWebhookSignature(
   timestamp: string | null,
 ): boolean {
   if (!signature || !timestamp) return false;
+
+  const timestampMs = Number.parseInt(timestamp, 10);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
+    return false;
+  }
 
   const secret = process.env.ALGA_WEBHOOK_SECRET;
   if (!secret) {
@@ -73,9 +78,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const billingAdmin = await resolveBillingAdminEmailForTenant(tenant.tenantId, knex);
+    const billingAdmin = await resolveReactivationContactEmail(tenant.tenantId, knex);
     if (!billingAdmin?.email) {
-      console.warn('[request-reactivation] No billing/admin email resolved', {
+      console.warn('[request-reactivation] No reactivation contact email resolved', {
         tenantId: tenant.tenantId,
       });
       return NextResponse.json({ success: true });

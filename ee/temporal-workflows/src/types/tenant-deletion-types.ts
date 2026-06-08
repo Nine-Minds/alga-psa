@@ -138,7 +138,7 @@ export interface RecordReactivationPaymentAlertInput {
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?: string;
   stripeSubscriptionExternalId?: string;
-  reason: 'past_window' | 'duplicate_payment' | 'reactivated_unbilled';
+  reason: 'past_window' | 'duplicate_payment' | 'reactivated_unbilled' | 'reactivated_no_access';
 }
 
 // ============================================
