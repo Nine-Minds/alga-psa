@@ -5,7 +5,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '../../../../../shared/utils/encryption';
+// Use the published @alga-psa/shared package subpath (exports map ->
+// dist/utils/encryption.js) rather than a dev-source-layout relative path: the
+// appliance bootstrap runs this module from the built production image, where
+// shared/ ships only as dist + node_modules (no shared/utils/ source tree).
+import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
 
 async function deleteTenantScopedRows(
   trx: Knex.Transaction,
