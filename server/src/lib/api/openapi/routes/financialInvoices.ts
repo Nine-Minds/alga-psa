@@ -1352,4 +1352,19 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     },
     edition: 'both',
   });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/financial',
+    summary: 'Financial API namespace root',
+    description: 'Namespace root with no resource of its own — it returns 404. Use the financial sub-resources instead: /api/v1/financial/invoices, /api/v1/financial/transactions, /api/v1/financial/credits, /api/v1/financial/bulk/{invoices,transactions,credits}, and /api/v1/billing-analytics/overview.',
+    tags: [financialTag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      404: { description: 'Always — this root has no resource; call a sub-resource path.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+    },
+    extensions: { 'x-namespace-root': true },
+    edition: 'both',
+  });
 }

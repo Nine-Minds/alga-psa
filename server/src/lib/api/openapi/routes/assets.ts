@@ -1854,4 +1854,176 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     edition: 'both',
   });
 
+  // ==========================================================================
+  // Asset sub-resources: notes, RMM actions, software inventory, summary
+  // ==========================================================================
+  const AssetNotesResponse = registry.registerSchema(
+    'AssetNotesResponse',
+    zOpenApi.object({
+      document: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      blockData: zOpenApi.unknown().nullable().optional().describe('Parsed BlockNote JSON, or null when no notes exist.'),
+      lastUpdated: zOpenApi.string().nullable().optional(),
+    }),
+  );
+  const AssetNotesUpdateBody = registry.registerSchema(
+    'AssetNotesUpdateBody',
+    zOpenApi.object({ blockData: zOpenApi.unknown().describe('BlockNote JSON block data to store as the asset notes.') }),
+  );
+  const AssetRmmResponse = registry.registerSchema(
+    'AssetRmmResponse',
+    zOpenApi.object({ data: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Cached RMM device data, or null (always null on Community Edition).') }),
+  );
+  const AssetRmmActionResponse = registry.registerSchema(
+    'AssetRmmActionResponse',
+    zOpenApi.object({
+      success: zOpenApi.boolean(),
+      message: zOpenApi.string(),
+      jobId: zOpenApi.string().optional().describe('Provider job id when the action was queued (EE).'),
+    }),
+  );
+  const AssetRemoteControlResponse = registry.registerSchema(
+    'AssetRemoteControlResponse',
+    zOpenApi.object({
+      url: zOpenApi.string().optional(),
+      type: zOpenApi.string().optional(),
+    }).nullable().describe('Remote-control session URL, or null when unavailable (always null on Community Edition).'),
+  );
+  const AssetRmmScriptBody = registry.registerSchema(
+    'AssetRmmScriptBody',
+    zOpenApi.object({ scriptId: zOpenApi.string().describe('Provider script identifier to run on the device.') }),
+  );
+  const AssetRemoteControlQuery = registry.registerSchema(
+    'AssetRemoteControlQuery',
+    zOpenApi.object({ type: zOpenApi.enum(['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell']).optional().describe('Remote-control protocol (default splashtop).') }),
+  );
+  const AssetSoftwareQuery = registry.registerSchema(
+    'AssetSoftwareQuery',
+    zOpenApi.object({
+      page: zOpenApi.number().int().min(1).optional(),
+      limit: zOpenApi.number().int().min(1).max(200).optional(),
+      category: zOpenApi.string().optional(),
+      software_type: zOpenApi.string().optional(),
+      search: zOpenApi.string().optional(),
+      include_uninstalled: zOpenApi.enum(['true', 'false']).optional(),
+    }),
+  );
+  const AssetSoftwareResponse = registry.registerSchema(
+    'AssetSoftwareResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      summary: zOpenApi.record(zOpenApi.unknown()).optional(),
+      pagination: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+  const AssetSummaryResponse = registry.registerSchema(
+    'AssetSummaryResponse',
+    zOpenApi.object({
+      health_status: zOpenApi.enum(['healthy', 'warning', 'critical', 'unknown']).optional(),
+      health_reason: zOpenApi.string().optional(),
+      security_status: zOpenApi.enum(['secure', 'at_risk', 'critical']).optional(),
+      security_issues: zOpenApi.array(zOpenApi.string()).optional(),
+      warranty_status: zOpenApi.enum(['no_warranty', 'expired', 'expiring_soon', 'active']).optional(),
+      warranty_days_remaining: zOpenApi.number().nullable().optional(),
+      open_tickets_count: zOpenApi.number().optional(),
+    }),
+  );
+
+  const assetSubErrs = {
+    401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+    403: { description: 'Caller lacks the required asset permission.', schema: ApiErrorEnvelope },
+    404: { description: 'Asset not found.', schema: ApiErrorEnvelope },
+    500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+  };
+  const assetExt = (action: string, extra: Record<string, unknown> = {}) => ({
+    'x-tenant-scoped': true,
+    'x-rbac-resource': 'asset',
+    'x-rbac-action': action,
+    ...extra,
+  });
+  // RMM device actions are gated to Enterprise Edition: on Community Edition the
+  // handlers return null / { success:false, message:'…requires Enterprise Edition' }.
+  const EE_RMM = { 'x-edition-feature': 'ee-rmm', 'x-ce-behavior': 'returns null or success:false EE-required message' };
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/notes',
+    summary: 'Get asset notes',
+    description: 'Returns the BlockNote content of the asset notes document, or an empty result when no notes exist.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Asset notes content.', schema: AssetNotesResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/assets/{id}/notes',
+    summary: 'Update asset notes',
+    description: 'Creates or updates the BlockNote notes document linked to the asset. Returns the document id.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, body: { schema: AssetNotesUpdateBody } },
+    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ document_id: zOpenApi.string().uuid() }) }, ...assetSubErrs },
+    extensions: assetExt('update'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/assets/{id}/notes',
+    summary: 'Delete asset notes',
+    description: 'Unlinks the notes document from the asset. Pass delete_document=true to also hard-delete the document and its block content.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, query: zOpenApi.object({ delete_document: zOpenApi.enum(['true', 'false']).optional() }) },
+    responses: { 204: { description: 'Notes unlinked/deleted.', emptyBody: true }, ...assetSubErrs },
+    extensions: assetExt('update'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/rmm',
+    summary: 'Get cached RMM data',
+    description: 'Returns the cached RMM device data synced from the RMM provider. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Cached RMM data (null on CE).', schema: AssetRmmResponse }, ...assetSubErrs },
+    extensions: assetExt('read', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/reboot',
+    summary: 'Reboot device via RMM',
+    description: 'Sends a reboot command to the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Reboot result.', schema: AssetRmmActionResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/refresh',
+    summary: 'Refresh RMM data for device',
+    description: 'Triggers a single-device RMM sync and returns the refreshed data. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Refreshed RMM data (null on CE).', schema: AssetRmmResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/rmm/remote-control',
+    summary: 'Get remote-control session URL',
+    description: 'Generates a remote-control URL for the device using the protocol given by the type query param. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, query: AssetRemoteControlQuery },
+    responses: { 200: { description: 'Remote-control URL (null on CE).', schema: AssetRemoteControlResponse }, ...assetSubErrs },
+    extensions: assetExt('read', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/script',
+    summary: 'Run a script via RMM',
+    description: 'Runs the script identified by scriptId on the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, body: { schema: AssetRmmScriptBody } },
+    responses: { 200: { description: 'Script run result.', schema: AssetRmmActionResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/software',
+    summary: 'List asset software inventory',
+    description: 'Returns the paginated software inventory for the asset (from the normalized software tables), with filters for category, software_type, search, and include_uninstalled, plus a summary of totals.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, query: AssetSoftwareQuery },
+    responses: { 200: { description: 'Asset software inventory.', schema: AssetSoftwareResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/summary',
+    summary: 'Get asset summary metrics',
+    description: 'Returns computed asset metrics: health status/reason, security status/issues, warranty status and days remaining, and open ticket count.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Asset summary metrics.', schema: AssetSummaryResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
+  });
+
 }
