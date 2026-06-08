@@ -2855,6 +2855,147 @@ components:
         - success
         - data
         - meta
+    AssetTicketRow:
+      type: object
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+          description: Ticket UUID from tickets.ticket_id.
+        ticket_number:
+          type: string
+          description: Human-readable ticket number from tickets.ticket_number.
+        title:
+          type:
+            - string
+            - "null"
+          description: Ticket title.
+        status_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Status UUID from tickets.status_id.
+        status_name:
+          type:
+            - string
+            - "null"
+          description: Status name from the joined statuses table.
+        is_closed:
+          type:
+            - boolean
+            - "null"
+          description: Whether the ticket is closed.
+        priority_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Priority UUID from tickets.priority_id.
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Assigned user UUID from tickets.assigned_to.
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Client UUID from tickets.client_id.
+        board_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Board UUID from tickets.board_id.
+        entered_at:
+          type:
+            - string
+            - "null"
+          description: Ticket creation timestamp.
+        updated_at:
+          type:
+            - string
+            - "null"
+          description: Ticket last update timestamp.
+        relationship_type:
+          type: string
+          description: Association type from asset_associations.relationship_type (e.g.
+            affected, related).
+        association_notes:
+          type:
+            - string
+            - "null"
+          description: Optional notes from asset_associations.notes.
+        linked_at:
+          type:
+            - string
+            - "null"
+          description: When the asset was linked to the ticket, from
+            asset_associations.created_at.
+      required:
+        - ticket_id
+        - ticket_number
+        - relationship_type
+    AssetTicketListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetTicketRow"
+          description: Tickets linked to the asset via asset_associations, ordered by
+            ticket updated_at descending. Empty when no associations exist or
+            the asset is not found.
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    TicketAssetRow:
+      allOf:
+        - $ref: "#/components/schemas/AssetResource"
+        - type: object
+          properties:
+            relationship_type:
+              type: string
+              description: Association type from asset_associations.relationship_type (e.g.
+                affected, related).
+            association_notes:
+              type:
+                - string
+                - "null"
+              description: Optional notes from asset_associations.notes.
+            linked_at:
+              type:
+                - string
+                - "null"
+              description: When the asset was linked to the ticket, from
+                asset_associations.created_at.
+          required:
+            - relationship_type
+    TicketAssetListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketAssetRow"
+          description: Assets linked to the ticket via asset_associations, ordered by link
+            time descending. Empty when no associations exist or the ticket is
+            not found.
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
     AutomationExecutionParams:
       type: object
       properties:
@@ -20425,6 +20566,142 @@ paths:
           description: Unexpected error, including missing req.context, self-relationship
             errors, or duplicate relationship errors in the current
             implementation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/tickets:
+    get:
+      summary: List tickets linked to an asset
+      description: Returns tickets associated with the path asset ID in the
+        authenticated tenant, read from asset_associations where entity_type is
+        ticket, joined to tickets and statuses. Results include the association
+        relationship_type and linked_at and are ordered by ticket updated_at
+        descending. This mirrors the asset detail UI and the
+        assets.find_associated_tickets workflow action. The route is
+        authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is
+        populated and RLS is active) and enforces BOTH asset:read and
+        ticket:read because the response joins ticket data. It performs no asset
+        existence check, so a valid caller hitting a nonexistent or cross-tenant
+        asset ID gets 200 with an empty array (tenant scoping prevents
+        cross-tenant leakage; this is not an authorization bypass).
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: false
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-rbac-additional-required: ticket:read
+        x-no-asset-existence-check: true
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Linked tickets returned successfully. Empty when no associations
+            exist or the asset is not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetTicketListResponse"
+        "401":
+          description: x-api-key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset:read or ticket:read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/tickets/{id}/assets:
+    get:
+      summary: List assets linked to a ticket
+      description: Returns assets associated with the path ticket ID in the
+        authenticated tenant, read from asset_associations where entity_type is
+        ticket, joined to assets and clients. Each row includes the asset fields
+        plus the association relationship_type, association_notes, and
+        linked_at, ordered by link time descending. The route is authenticated
+        and tenant-scoped via ApiBaseController.authenticate + runWithTenant
+        (RLS active); it enforces ticket:read, a per-ticket authorization-kernel
+        check (assertTicketReadAllowed), AND asset:read because the response
+        exposes asset records. The response uses the apiMiddleware envelope ({
+        data } with no top-level success field). It performs no asset existence
+        check beyond the ticket authorization, so an authorized caller on a
+        ticket with no linked assets gets 200 with an empty array.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+        x-rbac-additional-required: asset:read
+        x-per-record-authorization: assertTicketReadAllowed
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Linked assets returned successfully. Empty when the ticket has no
+            linked assets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketAssetListResponse"
+        "401":
+          description: x-api-key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks ticket:read (or per-ticket authorization) or asset:read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Ticket not found / not authorized for the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
           content:
             application/json:
               schema:

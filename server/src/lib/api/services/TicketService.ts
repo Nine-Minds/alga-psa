@@ -470,6 +470,40 @@ export class TicketService extends BaseService<ITicket> {
     return documents as IDocument[];
   }
 
+  /**
+   * List assets linked to a ticket (asset_associations -> assets).
+   */
+  async getTicketAssets(ticketId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const assets = await knex('asset_associations as aa')
+      .join('assets as a', function joinAssets(this: Knex.JoinClause) {
+        this.on('aa.asset_id', '=', 'a.asset_id')
+          .andOn('aa.tenant', '=', 'a.tenant');
+      })
+      .leftJoin('clients as c', function joinClients(this: Knex.JoinClause) {
+        this.on('a.client_id', '=', 'c.client_id')
+          .andOn('a.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'aa.entity_id': ticketId,
+        'aa.entity_type': 'ticket',
+        'aa.tenant': context.tenant,
+        'a.tenant': context.tenant
+      })
+      .select(
+        'a.*',
+        'c.client_name',
+        'aa.relationship_type',
+        'aa.notes as association_notes',
+        'aa.created_at as linked_at'
+      )
+      .orderBy('aa.created_at', 'desc');
+
+    return assets;
+  }
+
   async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
@@ -1241,12 +1275,17 @@ export class TicketService extends BaseService<ITicket> {
         analyticsTracker
       );
 
-      // Create API-specific asset association (additional to shared model association)
-      await trx('asset_ticket_associations').insert({
-        asset_id: data.asset_id,
-        ticket_id: ticketResult.ticket_id,
+      // Link the asset to the new ticket in asset_associations — the same table
+      // the UI and the ticket/asset association endpoints read. (The shared model
+      // only records created_from_asset in the ticket attributes.)
+      await trx('asset_associations').insert({
         tenant: context.tenant,
-        created_at: knex.raw('now()')
+        asset_id: data.asset_id,
+        entity_id: ticketResult.ticket_id,
+        entity_type: 'ticket',
+        relationship_type: 'affected',
+        created_by: context.userId,
+        created_at: new Date().toISOString()
       });
 
       // Get the full ticket data for return
