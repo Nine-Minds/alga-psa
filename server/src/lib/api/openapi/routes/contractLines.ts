@@ -285,7 +285,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/contract-lines',
     summary: 'List contract lines',
     description:
-      'Lists contract lines with pagination/filtering and optional include flags. Route requires x-api-key at middleware and a request context in-controller (requireRequestContext). Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.',
+      'Lists contract lines with pagination/filtering and optional include flags. Authenticated and tenant-scoped via withApiKeyRouteAuth. Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContractLineListQuery },

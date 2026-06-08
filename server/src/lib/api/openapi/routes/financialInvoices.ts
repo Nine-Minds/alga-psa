@@ -398,7 +398,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/billing-analytics/overview',
     summary: 'Get billing overview analytics',
     description:
-      'Maps to ApiContractLineController.getBillingOverviewAnalytics(). The method requires request context via requireRequestContext(req), but this route does not authenticate/set req.context in the handler. Current behavior can fail with 500 "Request context not available" when middleware has not injected context.',
+      'Maps to ApiContractLineController.getBillingOverviewAnalytics() and returns tenant billing overview analytics. Authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated before the handler runs).',
     tags: [billingAnalyticsTag],
     security: [{ ApiKeyAuth: [] }],
     responses: {

@@ -76,7 +76,7 @@ export function registerPublicResourcesV1Routes(
   registry.registerRoute({
     method: 'get', path: '/api/v1/software/search',
     summary: 'Search software across the fleet',
-    description: 'Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated.',
+    description: 'Searches installed software across all assets in the tenant, with filters for name/publisher search, category, software_type, is_managed, is_security_relevant, and client_id. Paginated. Authenticated by the global x-api-key middleware and tenant-scoped by the underlying withAuth action (it calls the searchSoftwareFleetWide server action directly rather than using a route-level controller wrapper).',
     tags: ['Software'], security: [{ ApiKeyAuth: [] }],
     request: { query: registry.registerSchema('SoftwareSearchQuery', zOpenApi.object({
       search: zOpenApi.string().optional(),
@@ -89,7 +89,7 @@ export function registerPublicResourcesV1Routes(
       limit: zOpenApi.number().int().min(1).max(200).optional(),
     })) },
     responses: { 200: { description: 'Matching software, paginated.', schema: Success }, ...stdErrs() },
-    extensions: { 'x-tenant-scoped': true, 'x-auth-wrapper-missing': true },
+    extensions: { 'x-tenant-scoped': true, 'x-auth-via': 'middleware-apikey+withAuth-action' },
     edition: 'both',
   });
 

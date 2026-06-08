@@ -41,6 +41,7 @@ tags:
   - name: Meta & Utility v1
   - name: Priorities
   - name: Products
+  - name: Project Templates
   - name: Projects
   - name: QuickBooks v1
   - name: Quotes & Contracts v1
@@ -57,6 +58,8 @@ tags:
   - name: Ticket Categories
   - name: Webhooks
   - name: Work Management v1
+  - name: Workflow Definitions
+  - name: Workflow Runs
   - name: Workflows v1
   - name: accounting
   - name: auth
@@ -91,8 +94,6 @@ tags:
   - name: tickets
   - name: webhooks
   - name: workflow
-  - name: workflow-definitions
-  - name: workflow-runs
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -8759,6 +8760,252 @@ components:
           description: Export batch identifier.
       required:
         - batchId
+    UnversionedV1Success:
+      type: object
+      properties:
+        data:
+          anyOf:
+            - type: object
+              additionalProperties: {}
+            - type: array
+              items:
+                type: object
+                additionalProperties: {}
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    ProjectTemplateIdParam:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+      required:
+        - templateId
+    ProjectTemplateCopyOptions:
+      type: object
+      properties:
+        copyPhases:
+          type: boolean
+        copyStatuses:
+          type: boolean
+        copyTasks:
+          type: boolean
+        copyDependencies:
+          type: boolean
+        copyChecklists:
+          type: boolean
+        copyServices:
+          type: boolean
+        assignmentOption:
+          type: string
+      description: Which parts of the template to copy when applying it.
+    ProjectTemplateCreateBody:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        template_name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+      required:
+        - project_id
+        - template_name
+    ProjectTemplateUpdateBody:
+      type: object
+      properties:
+        template_name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+    ProjectTemplateApplyBody:
+      type: object
+      properties:
+        project_name:
+          type: string
+          minLength: 1
+        client_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date-time
+        assigned_to:
+          type: string
+          format: uuid
+        options:
+          $ref: "#/components/schemas/ProjectTemplateCopyOptions"
+      required:
+        - project_name
+        - client_id
+    WorkflowDefinitionIdParam:
+      type: object
+      properties:
+        workflowId:
+          type: string
+          format: uuid
+      required:
+        - workflowId
+    WorkflowDefinitionVersionParams:
+      type: object
+      properties:
+        workflowId:
+          type: string
+          format: uuid
+        version:
+          type: string
+          description: Draft version number (coerced to a positive integer).
+      required:
+        - workflowId
+        - version
+    WorkflowDefinitionDocument:
+      type: object
+      additionalProperties: {}
+      description: Workflow definition DSL document (nodes, edges, triggers, payload
+        schema, etc.).
+    WorkflowDefinitionCreateBody:
+      type: object
+      properties:
+        key:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9._-]*$
+          description: Stable workflow key; generated when omitted.
+        definition:
+          $ref: "#/components/schemas/WorkflowDefinitionDocument"
+        payloadSchemaMode:
+          type: string
+          enum:
+            - inferred
+            - pinned
+        pinnedPayloadSchemaRef:
+          type: string
+      required:
+        - definition
+    WorkflowImportQuery:
+      type: object
+      properties:
+        force:
+          type: string
+          enum: &a100
+            - "true"
+            - "false"
+    WorkflowImportBody:
+      type: object
+      properties:
+        bundle:
+          description: Legacy v1 workflow bundle document.
+    WorkflowMetadataBody:
+      type: object
+      properties:
+        key:
+          type: string
+        isVisible:
+          type: boolean
+        isPaused:
+          type: boolean
+        concurrencyLimit:
+          type: integer
+          minimum: 0
+        autoPauseOnFailure:
+          type: boolean
+        failureRateThreshold:
+          type: number
+          minimum: 0
+          maximum: 1
+        failureRateMinRuns:
+          type: integer
+          minimum: 0
+        retentionPolicyOverride:
+          type: object
+          additionalProperties: {}
+    WorkflowDefinitionUpdateBody:
+      type: object
+      properties:
+        definition:
+          $ref: "#/components/schemas/WorkflowDefinitionDocument"
+      required:
+        - definition
+    WorkflowPublishBody:
+      type: object
+      properties:
+        definition:
+          $ref: "#/components/schemas/WorkflowDefinitionDocument"
+    WorkflowRunIdParam:
+      type: object
+      properties:
+        runId:
+          type: string
+      required:
+        - runId
+    WorkflowRunActionBody:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Audit reason for the action.
+        source:
+          type: string
+          description: Origin label; defaults to 'api'.
+    WorkflowRunCreateBody:
+      type: object
+      properties:
+        workflowId:
+          type: string
+        workflowVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payload:
+          type: object
+          additionalProperties: {}
+        eventType:
+          type: string
+        sourcePayloadSchemaRef:
+          type: string
+      required:
+        - workflowId
+    WorkflowRunReplayBody:
+      type: object
+      properties:
+        reason:
+          type: string
+        source:
+          type: string
+        payload:
+          type: object
+          additionalProperties: {}
+    WorkflowEventBody:
+      type: object
+      properties:
+        eventName:
+          type: string
+        workflowCorrelationKey:
+          type: string
+        correlationKey:
+          type: string
+        payloadSchemaRef:
+          type: string
+        payload:
+          type: object
+          additionalProperties: {}
+      required:
+        - eventName
+    WorkflowEventIdParam:
+      type: object
+      properties:
+        eventId:
+          type: string
+      required:
+        - eventId
     FileDownloadParams:
       type: object
       properties:
@@ -9525,7 +9772,7 @@ components:
           type: string
         active:
           type: string
-          enum: &a100
+          enum: &a101
             - "true"
             - "false"
         search:
@@ -9534,7 +9781,7 @@ components:
           type: string
         force_refresh:
           type: string
-          enum: &a101
+          enum: &a102
             - "true"
             - "false"
     QuickBooksV1SyncHistoryQuery:
@@ -9546,7 +9793,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a102
+          enum: &a103
             - pending
             - in_progress
             - completed
@@ -9555,7 +9802,7 @@ components:
             - partial
         operation_type:
           type: string
-          enum: &a103
+          enum: &a104
             - customer_sync
             - invoice_export
             - invoice_import
@@ -10280,7 +10527,7 @@ components:
           description: Opaque pagination cursor copied from a prior response's nextCursor.
         sort:
           type: string
-          enum: &a104
+          enum: &a105
             - relevance
             - recent
           description: Result ordering. "relevance" (default) ranks by full-text score;
@@ -10595,7 +10842,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a105
+          enum: &a106
             - asc
             - desc
         search:
@@ -10622,19 +10869,19 @@ components:
           format: uuid
         is_parent:
           type: string
-          enum: &a106
+          enum: &a107
             - "true"
             - "false"
         is_child:
           type: string
-          enum: &a107
+          enum: &a108
             - "true"
             - "false"
         depth:
           type: string
         active:
           type: string
-          enum: &a108
+          enum: &a109
             - "true"
             - "false"
         offset:
@@ -10643,17 +10890,17 @@ components:
           type: string
         sort_order:
           type: string
-          enum: &a109
+          enum: &a110
             - asc
             - desc
         include_hierarchy:
           type: string
-          enum: &a110
+          enum: &a111
             - "true"
             - "false"
         category_type:
           type: string
-          enum: &a111
+          enum: &a112
             - service
             - ticket
     CategoryMoveRequest:
@@ -10680,7 +10927,7 @@ components:
           minLength: 1
         category_type:
           type: string
-          enum: &a112
+          enum: &a113
             - service
             - ticket
         board_id:
@@ -10688,7 +10935,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum: &a113
+          enum: &a114
             - "true"
             - "false"
         limit:
@@ -10702,7 +10949,7 @@ components:
       properties:
         category_type:
           type: string
-          enum: &a114
+          enum: &a115
             - service
             - ticket
         board_id:
@@ -10716,7 +10963,7 @@ components:
           format: date-time
         include_usage:
           type: string
-          enum: &a115
+          enum: &a116
             - "true"
             - "false"
     CategoryAnalyticsResponse:
@@ -11337,7 +11584,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a121
+          enum: &a122
             - asc
             - desc
         name:
@@ -11348,24 +11595,24 @@ components:
           type: string
         is_active:
           type: string
-          enum: &a122
+          enum: &a123
             - "true"
             - "false"
         is_test_mode:
           type: string
-          enum: &a123
+          enum: &a124
             - "true"
             - "false"
         payload_format:
           type: string
-          enum: &a124
+          enum: &a125
             - json
             - xml
             - form_data
             - custom
         has_failures:
           type: string
-          enum: &a125
+          enum: &a126
             - "true"
             - "false"
         last_delivery_from:
@@ -11399,7 +11646,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a126
+          enum: &a127
             - pending
             - delivered
             - failed
@@ -13161,7 +13408,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a127
+          enum: &a128
             - asc
             - desc
         fields:
@@ -13466,7 +13713,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a128
+          enum: &a129
             - asc
             - desc
         search:
@@ -13475,12 +13722,12 @@ components:
           type: string
         include_items:
           type: string
-          enum: &a129
+          enum: &a130
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a130
+          enum: &a131
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -19523,13 +19770,10 @@ paths:
       summary: List assets
       description: Lists assets for the authenticated tenant with pagination, sorting,
         and asset filters. The controller validates query parameters with
-        assetListQuerySchema, calls requireRequestContext, queries assets
-        filtered by assets.tenant, joins clients for client_name, computes
-        warranty_status, and adds HATEOAS links from asset_id. In the current
-        route wiring, the edge middleware only checks x-api-key presence and the
-        route is not wrapped with withApiKeyAuth or ApiBaseController
-        authentication, so req.context may be absent and produce a 500
-        INTERNAL_ERROR before the intended tenant-scoped list can run.
+        assetListQuerySchema, queries assets filtered by assets.tenant, joins
+        clients for client_name, computes warranty_status, and adds HATEOAS
+        links from asset_id. The route is authenticated and tenant-scoped via
+        withApiKeyRouteAuth (req.context is populated before the handler runs).
       tags:
         - Assets
       security:
@@ -19791,8 +20035,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -19804,9 +20047,7 @@ paths:
         asset_tag, name, and status are required. AssetService.create writes
         assets.tenant from the request context, inserts the asset, optionally
         upserts asset-type-specific extension_data, publishes an ASSET_CREATED
-        event, and returns getWithDetails with HATEOAS links. In the current
-        route wiring, req.context may be absent because no route-level API-key
-        auth wrapper sets it, causing a 500 before creation.
+        event, and returns getWithDetails with HATEOAS links.
       tags:
         - Assets
       security:
@@ -19855,8 +20096,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -19868,9 +20108,7 @@ paths:
         tenant. The controller validates asset_ids and status with
         bulkAssetStatusSchema, then calls AssetService.update for each asset_id
         with { status }. Each update is tenant-scoped by assets.asset_id and
-        assets.tenant and publishes an ASSET_UPDATED event. In the current route
-        wiring, req.context may be absent because no route-level API-key auth
-        wrapper sets it, causing a 500 before updates.
+        assets.tenant and publishes an ASSET_UPDATED event.
       tags:
         - Assets
       security:
@@ -19920,8 +20158,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -19933,9 +20170,7 @@ paths:
         item supplies an asset_id and partial update data validated with
         updateAssetSchema. The controller calls AssetService.update for every
         item, tenant-scoping each update by asset_id and context.tenant and
-        publishing ASSET_UPDATED events. In the current route wiring,
-        req.context may be absent because no route-level API-key auth wrapper
-        sets it, causing a 500 before updates.
+        publishing ASSET_UPDATED events.
       tags:
         - Assets
       security:
@@ -19985,8 +20220,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20000,9 +20234,7 @@ paths:
         verify entity_type in this method. The controller intends to return an
         empty success response after deletion, but currently calls
         createApiResponse(null, 204) inside NextResponse.json, which can throw
-        because JSON responses cannot use status 204 with a body. In the current
-        route wiring, req.context may also be absent because no route-level
-        API-key auth wrapper sets it, causing a 500 before deletion.
+        because JSON responses cannot use status 204 with a body.
       tags:
         - Assets
       security:
@@ -20043,8 +20275,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context or the current 204
-            JSON response construction issue.
+          description: Unexpected error, including the current 204 JSON response
+            construction issue.
           content:
             application/json:
               schema:
@@ -20171,9 +20403,7 @@ paths:
         performs no existence check, so missing or cross-tenant IDs are silent
         no-ops. The controller intends to return 204 with no body, but currently
         constructs a JSON response with status 204, which can throw in
-        NextResponse. In the current route wiring, req.context may also be
-        absent because no route-level API-key auth wrapper sets it, causing a
-        500 before deletion.
+        NextResponse.
       tags:
         - Assets
       security:
@@ -20218,8 +20448,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context or the current 204
-            JSON response construction issue.
+          description: Unexpected error, including the current 204 JSON response
+            construction issue.
           content:
             application/json:
               schema:
@@ -20233,9 +20463,7 @@ paths:
         frequency_interval, or start_date are supplied, the service loads the
         existing schedule for the tenant and recalculates next_maintenance.
         Missing or cross-tenant schedule IDs result in a 200 response with an
-        undefined nested data value rather than 404. In the current route
-        wiring, req.context may be absent because no route-level API-key auth
-        wrapper sets it, causing a 500 before update.
+        undefined nested data value rather than 404.
       tags:
         - Assets
       security:
@@ -20297,8 +20525,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20312,9 +20539,7 @@ paths:
         match, publishes no event, and performs no existence check; missing or
         cross-tenant IDs are silent no-ops. The controller intends to return 204
         with no body, but currently constructs a JSON response with status 204,
-        which can throw in NextResponse. In the current route wiring,
-        req.context may also be absent because no route-level API-key auth
-        wrapper sets it, causing a 500 before deletion.
+        which can throw in NextResponse.
       tags:
         - Assets
       security:
@@ -20357,8 +20582,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context or the current 204
-            JSON response construction issue.
+          description: Unexpected error, including the current 204 JSON response
+            construction issue.
           content:
             application/json:
               schema:
@@ -20372,9 +20597,7 @@ paths:
         client_name, and optionally loads asset-type-specific extension data per
         result. The response is not paginated and includes HATEOAS links for
         each asset; the top-level search link currently points at
-        /api/v2/assets/search. In the current route wiring, req.context may be
-        absent because no route-level API-key auth wrapper sets it, causing a
-        500 before search.
+        /api/v2/assets/search.
       tags:
         - Assets
       security:
@@ -20485,8 +20708,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20498,10 +20720,7 @@ paths:
         counts, counts by type/status/client, warranty counts, and maintenance
         due/overdue counts. The service runs multiple aggregate queries filtered
         by context.tenant; assets_by_client is limited to the top 10 client
-        names. The response links currently point at /api/v2/assets paths. In
-        the current route wiring, req.context may be absent because no
-        route-level API-key auth wrapper sets it, causing a 500 before
-        statistics can be calculated.
+        names. The response links currently point at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -20537,8 +20756,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20551,9 +20769,7 @@ paths:
         type-specific extension_data, relationships, document associations,
         maintenance schedules, and HATEOAS links. The service first loads assets
         by asset_id and context.tenant, then loads related data in parallel. If
-        the asset is not found, the controller returns a 404 error envelope. In
-        the current route wiring, req.context may be absent because no
-        route-level API-key auth wrapper sets it, causing a 500 before lookup.
+        the asset is not found, the controller returns a 404 error envelope.
       tags:
         - Assets
       security:
@@ -20609,8 +20825,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20625,9 +20840,7 @@ paths:
         This REST path does not update extension data, create asset history
         records, or wrap the update in a transaction. Missing assets currently
         lead to a 500 when the controller tries to add links to a null result
-        rather than a clean 404. In the current route wiring, req.context may be
-        absent because no route-level API-key auth wrapper sets it, causing a
-        500 before update.
+        rather than a clean 404.
       tags:
         - Assets
       security:
@@ -20706,8 +20919,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context or null asset
-            result handling in the current route wiring.
+          description: Unexpected error, including null asset result handling.
           content:
             application/json:
               schema:
@@ -20723,9 +20935,7 @@ paths:
         table handled by the server-action delete path. Missing assets throw a
         generic Error and currently surface as 500 via handleApiError rather
         than 404. The controller also constructs a JSON response with status
-        204, which can throw in NextResponse. In the current route wiring,
-        req.context may be absent because no route-level API-key auth wrapper
-        sets it, causing a 500 before deletion.
+        204, which can throw in NextResponse.
       tags:
         - Assets
       security:
@@ -20775,8 +20985,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context, generic Asset not
-            found errors, or the current 204 JSON response construction issue.
+          description: Unexpected error, including generic Asset not found errors or the
+            current 204 JSON response construction issue.
           content:
             application/json:
               schema:
@@ -20790,8 +21000,7 @@ paths:
         file_size, mime_type, and uploaded_at. It does not check whether the
         asset exists first, so nonexistent or cross-tenant asset IDs return 200
         with an empty array. Response links currently point at /api/v2/assets
-        paths. In the current route wiring, req.context may be absent because no
-        route-level API-key auth wrapper sets it, causing a 500 before lookup.
+        paths.
       tags:
         - Assets
       security:
@@ -20837,8 +21046,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20853,9 +21061,7 @@ paths:
         returns the inserted row. It does not verify that the asset or document
         belongs to the same tenant before insert, does not set created_by, and
         publishes no event. Foreign-key or unique constraint errors surface
-        through handleApiError. In the current route wiring, req.context may be
-        absent because no route-level API-key auth wrapper sets it, causing a
-        500 before insert.
+        through handleApiError.
       tags:
         - Assets
       security:
@@ -20923,8 +21129,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -20938,9 +21143,7 @@ paths:
         asset_maintenance_history by asset_id and context.tenant. It performs no
         asset existence check, so nonexistent or cross-tenant asset IDs return
         200 with an empty array. Response links currently point at
-        /api/v2/assets paths. In the current v1 asset route wiring, req.context
-        may be absent because no route-level API-key auth wrapper sets it,
-        causing a 500 before lookup.
+        /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -20986,8 +21189,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -21000,9 +21202,7 @@ paths:
         asset_id and context.tenant and joins users to add assigned_user_name.
         It performs no asset existence check, so nonexistent or cross-tenant
         asset IDs return 200 with an empty array. Response links currently point
-        at /api/v2/assets paths. In the current v1 asset route wiring,
-        req.context may be absent because no route-level API-key auth wrapper
-        sets it, causing a 500 before lookup.
+        at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -21047,8 +21247,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -21062,9 +21261,7 @@ paths:
         and the service falls back to now when absent. The service inserts
         asset_id from the path, tenant from context, timestamps, and a
         calculated next_maintenance value. It does not verify asset existence,
-        does not set created_by, and publishes no event. In the current v1 asset
-        route wiring, req.context may be absent because no route-level API-key
-        auth wrapper sets it, causing a 500 before insert.
+        does not set created_by, and publishes no event.
       tags:
         - Assets
       security:
@@ -21132,8 +21329,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -21148,9 +21344,7 @@ paths:
         supplied and a matching tenant schedule exists, the service updates that
         schedule last_maintenance and next_maintenance. It does not verify asset
         existence or performed_by before insert, does not set created_by, and
-        publishes no event. In the current v1 asset route wiring, req.context
-        may be absent because no route-level API-key auth wrapper sets it,
-        causing a 500 before insert.
+        publishes no event.
       tags:
         - Assets
       security:
@@ -21219,8 +21413,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -21233,9 +21426,7 @@ paths:
         fields. The service filters by asset_relationships.asset_id and
         context.tenant and joins related assets on matching tenant. It performs
         no parent asset existence check and does not filter soft-deleted related
-        assets. Response links currently point at /api/v2/assets paths. In the
-        current v1 asset route wiring, req.context may be absent because no
-        route-level API-key auth wrapper sets it, causing a 500 before lookup.
+        assets. Response links currently point at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -21281,8 +21472,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context in the current
-            route wiring.
+          description: Unexpected error.
           content:
             application/json:
               schema:
@@ -21295,9 +21485,7 @@ paths:
         self relationships and duplicate source/related pairs, but currently
         throws generic Errors for those cases, which surface as 500 rather than
         400 or 409. The inserted row is returned without joined related asset
-        details. In the current v1 asset route wiring, req.context may be absent
-        because no route-level API-key auth wrapper sets it, causing a 500
-        before insert.
+        details.
       tags:
         - Assets
       security:
@@ -21366,9 +21554,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "500":
-          description: Unexpected error, including missing req.context, self-relationship
-            errors, or duplicate relationship errors in the current
-            implementation.
+          description: Unexpected error, including self-relationship or
+            duplicate-relationship errors in the current implementation.
           content:
             application/json:
               schema:
@@ -25779,10 +25966,9 @@ paths:
     get:
       summary: List contract lines
       description: Lists contract lines with pagination/filtering and optional include
-        flags. Route requires x-api-key at middleware and a request context
-        in-controller (requireRequestContext). Query parsing/validation uses
-        contractLineListQuerySchema, then listWithOptions reads from
-        contract_lines for the tenant context.
+        flags. Authenticated and tenant-scoped via withApiKeyRouteAuth. Query
+        parsing/validation uses contractLineListQuerySchema, then
+        listWithOptions reads from contract_lines for the tenant context.
       tags:
         - Contract Lines
       security:
@@ -28496,11 +28682,10 @@ paths:
   /api/v1/billing-analytics/overview:
     get:
       summary: Get billing overview analytics
-      description: Maps to ApiContractLineController.getBillingOverviewAnalytics().
-        The method requires request context via requireRequestContext(req), but
-        this route does not authenticate/set req.context in the handler. Current
-        behavior can fail with 500 "Request context not available" when
-        middleware has not injected context.
+      description: Maps to ApiContractLineController.getBillingOverviewAnalytics() and
+        returns tenant billing overview analytics. Authenticated and
+        tenant-scoped via withApiKeyRouteAuth (req.context is populated before
+        the handler runs).
       tags:
         - Billing Analytics
       security:
@@ -34493,14 +34678,17 @@ paths:
       summary: Search software across the fleet
       description: Searches installed software across all assets in the tenant, with
         filters for name/publisher search, category, software_type, is_managed,
-        is_security_relevant, and client_id. Paginated.
+        is_security_relevant, and client_id. Paginated. Authenticated by the
+        global x-api-key middleware and tenant-scoped by the underlying withAuth
+        action (it calls the searchSoftwareFleetWide server action directly
+        rather than using a route-level controller wrapper).
       tags:
         - Software
       security:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-auth-wrapper-missing: true
+        x-auth-via: middleware-apikey+withAuth-action
       x-alga-products:
         - psa
       parameters:
@@ -35231,6 +35419,2337 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Batch not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/templates:
+    post:
+      summary: Create project template
+      description: Creates a project template from an existing project.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTemplateCreateBody"
+      responses:
+        "201":
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List project templates
+      description: Lists the tenant project templates.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List project templates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/templates/{templateId}:
+    patch:
+      summary: Update project template
+      description: Updates the template name, description, or category.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTemplateUpdateBody"
+      responses:
+        "200":
+          description: Template updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: Get a project template
+      description: Returns a single project template by id.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: templateId
+          in: path
+      responses:
+        "200":
+          description: Get a project template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a project template
+      description: Deletes a project template by id.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: delete
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: templateId
+          in: path
+      responses:
+        "204":
+          description: Template deleted.
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/templates/{templateId}/apply:
+    post:
+      summary: Create project from template
+      description: Creates a new project from the template, copying the selected parts
+        (phases, statuses, tasks, etc.).
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: templateId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTemplateApplyBody"
+      responses:
+        "201":
+          description: Project created from template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/templates/{templateId}/duplicate:
+    post:
+      summary: Duplicate project template
+      description: Creates a complete copy of the template and returns the new
+        template id. No request body.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: templateId
+          in: path
+      responses:
+        "201":
+          description: Template duplicated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Template not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions:
+    post:
+      summary: Create workflow definition
+      description: Creates a new workflow with a draft definition.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowDefinitionCreateBody"
+      responses:
+        "201":
+          description: Workflow definition created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List workflow definitions
+      description: Lists workflow definitions for the tenant.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List workflow definitions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/import:
+    post:
+      summary: Import a v1 workflow bundle
+      description: Imports a legacy v1 workflow bundle. Pass force=true (query) to
+        overwrite an existing definition.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            enum: *a100
+          required: false
+          name: force
+          in: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowImportBody"
+      responses:
+        "201":
+          description: Bundle imported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/metadata:
+    put:
+      summary: Update workflow metadata
+      description: "Updates workflow metadata: key, visibility, pause state,
+        concurrency limit, failure thresholds, and retention policy."
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: publish
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowMetadataBody"
+      responses:
+        "200":
+          description: Metadata updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/{version}:
+    put:
+      summary: Update workflow draft definition
+      description: Replaces the draft definition for a specific version.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+        - schema:
+            type: string
+            description: Draft version number (coerced to a positive integer).
+          required: true
+          description: Draft version number (coerced to a positive integer).
+          name: version
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowDefinitionUpdateBody"
+      responses:
+        "200":
+          description: Draft updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow/version not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: Get a workflow version
+      description: Returns the definition document for a specific workflow version.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+        - schema:
+            type: string
+            description: Draft version number (coerced to a positive integer).
+          required: true
+          description: Draft version number (coerced to a positive integer).
+          name: version
+          in: path
+      responses:
+        "200":
+          description: Get a workflow version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow/version not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/{version}/publish:
+    post:
+      summary: Publish a workflow version
+      description: Publishes the draft as an active version (auto-increments when the
+        requested version is below the next expected). An optional definition in
+        the body overrides the stored draft.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: publish
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+        - schema:
+            type: string
+            description: Draft version number (coerced to a positive integer).
+          required: true
+          description: Draft version number (coerced to a positive integer).
+          name: version
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowPublishBody"
+      responses:
+        "200":
+          description: Version published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow/version not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs:
+    post:
+      summary: Start a workflow run
+      description: Starts a workflow execution with an optional version override and
+        input payload (payload capped ~2MB; rate-limited per tenant).
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunCreateBody"
+      responses:
+        "201":
+          description: Run started.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List workflow runs
+      description: Lists workflow runs for the tenant.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List workflow runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/cancel:
+    post:
+      summary: Cancel a workflow run
+      description: Stops the run and marks its waits as canceled.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunActionBody"
+      responses:
+        "200":
+          description: Cancel a workflow run succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/replay:
+    post:
+      summary: Replay a workflow run
+      description: Re-executes the workflow from the start with a new input payload.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunReplayBody"
+      responses:
+        "200":
+          description: Replay a workflow run succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/requeue:
+    post:
+      summary: Requeue a workflow run
+      description: Re-initializes the run's event wait (for runs stuck awaiting an
+        external event).
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunActionBody"
+      responses:
+        "200":
+          description: Requeue a workflow run succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/resume:
+    post:
+      summary: Resume a workflow run
+      description: Resolves waiting steps and resumes a paused/waiting run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunActionBody"
+      responses:
+        "200":
+          description: Resume a workflow run succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/retry:
+    post:
+      summary: Retry a failed workflow run
+      description: Restarts a FAILED run from its last failed node.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: admin
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunActionBody"
+      responses:
+        "200":
+          description: Retry a failed workflow run succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow/events:
+    post:
+      summary: Submit a workflow event
+      description: Injects an event into the workflow runtime, correlating it to
+        waiting runs by event name and correlation key.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowEventBody"
+      responses:
+        "200":
+          description: Event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List workflow events
+      description: Lists submitted workflow events for the tenant.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List workflow events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/projects/templates/categories:
+    get:
+      summary: List project template categories
+      description: Lists the available project-template categories.
+      tags:
+        - Project Templates
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: project
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List project template categories.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/versions:
+    get:
+      summary: List workflow versions
+      description: Lists the versions (draft and published) of a workflow definition.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+      responses:
+        "200":
+          description: List workflow versions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/export:
+    get:
+      summary: Export a workflow definition
+      description: Exports the workflow definition document (JSON).
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+      responses:
+        "200":
+          description: Export a workflow definition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/audit:
+    get:
+      summary: Get workflow audit log
+      description: Returns the audit-log entries for a workflow definition.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+      responses:
+        "200":
+          description: Get workflow audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-definitions/{workflowId}/audit/export:
+    get:
+      summary: Export workflow audit log
+      description: Exports the workflow definition audit log.
+      tags:
+        - Workflow Definitions
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: workflowId
+          in: path
+      responses:
+        "200":
+          description: Export workflow audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workflow not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/dead-letter:
+    get:
+      summary: List dead-lettered runs
+      description: Lists runs that failed terminally and were moved to the dead-letter set.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: List dead-lettered runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/export:
+    get:
+      summary: Export workflow runs
+      description: Exports workflow runs (JSON/CSV).
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Export workflow runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/latest:
+    get:
+      summary: Get latest workflow runs
+      description: Returns the most recent workflow runs.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Get latest workflow runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/summary:
+    get:
+      summary: Get workflow runs summary
+      description: Returns aggregate run metrics across the tenant.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Get workflow runs summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}:
+    get:
+      summary: Get a workflow run
+      description: Returns a single workflow run by id.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Get a workflow run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/steps:
+    get:
+      summary: Get workflow run steps
+      description: Returns the step/node states for a run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Get workflow run steps.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/timeline:
+    get:
+      summary: Get workflow run timeline
+      description: Returns the chronological event timeline for a run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Get workflow run timeline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/summary:
+    get:
+      summary: Get workflow run summary
+      description: Returns a summary of a single run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Get workflow run summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/audit:
+    get:
+      summary: Get workflow run audit log
+      description: Returns the audit-log entries for a run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Get workflow run audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/audit/export:
+    get:
+      summary: Export workflow run audit log
+      description: Exports the audit log for a run.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Export workflow run audit log.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow-runs/{runId}/export:
+    get:
+      summary: Export a workflow run
+      description: Exports a single workflow run (JSON).
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: runId
+          in: path
+      responses:
+        "200":
+          description: Export a workflow run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow/events/export:
+    get:
+      summary: Export workflow events
+      description: Exports workflow events (JSON/CSV).
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Export workflow events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow/events/summary:
+    get:
+      summary: Get workflow events summary
+      description: Returns aggregate workflow-event metrics.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Get workflow events summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/workflow/events/{eventId}:
+    get:
+      summary: Get a workflow event
+      description: Returns a single workflow event by id.
+      tags:
+        - Workflow Runs
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: workflow
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: eventId
+          in: path
+      responses:
+        "200":
+          description: Get a workflow event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnversionedV1Success"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Event not found.
           content:
             application/json:
               schema:
@@ -37766,7 +40285,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -37782,7 +40301,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -38143,7 +40662,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -38159,7 +40678,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -38703,7 +41222,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -38719,7 +41238,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -38792,7 +41311,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -38808,7 +41327,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -39311,7 +41830,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -39327,7 +41846,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -39576,13 +42095,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a102
+            enum: *a103
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a103
+            enum: *a104
           required: false
           name: operation_type
           in: query
@@ -39911,7 +42430,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -39927,7 +42446,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -40116,7 +42635,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -40132,7 +42651,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -40205,7 +42724,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -40221,7 +42740,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -40588,7 +43107,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -40604,7 +43123,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -41156,7 +43675,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -41172,7 +43691,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -41246,7 +43765,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -41262,7 +43781,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -41773,7 +44292,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -41789,7 +44308,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -42042,13 +44561,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a102
+            enum: *a103
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a103
+            enum: *a104
           required: false
           name: operation_type
           in: query
@@ -42382,7 +44901,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -42398,7 +44917,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -42589,7 +45108,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
           required: false
           name: active
           in: query
@@ -42605,7 +45124,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a101
+            enum: *a102
           required: false
           name: force_refresh
           in: query
@@ -43196,7 +45715,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a104
+            enum: *a105
             description: Result ordering. "relevance" (default) ranks by full-text score;
               "recent" orders by last update.
           required: false
@@ -43571,7 +46090,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a105
+            enum: *a106
           required: false
           name: order
           in: query
@@ -43623,13 +46142,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a106
+            enum: *a107
           required: false
           name: is_parent
           in: query
         - schema:
             type: string
-            enum: *a107
+            enum: *a108
           required: false
           name: is_child
           in: query
@@ -43640,7 +46159,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a108
+            enum: *a109
           required: false
           name: active
           in: query
@@ -43656,19 +46175,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a109
+            enum: *a110
           required: false
           name: sort_order
           in: query
         - schema:
             type: string
-            enum: *a110
+            enum: *a111
           required: false
           name: include_hierarchy
           in: query
         - schema:
             type: string
-            enum: *a111
+            enum: *a112
           required: false
           name: category_type
           in: query
@@ -44124,7 +46643,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a112
+            enum: *a113
           required: false
           name: category_type
           in: query
@@ -44136,7 +46655,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a113
+            enum: *a114
           required: false
           name: include_inactive
           in: query
@@ -44211,7 +46730,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a114
+            enum: *a115
           required: false
           name: category_type
           in: query
@@ -44235,7 +46754,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a115
+            enum: *a116
           required: false
           name: include_usage
           in: query
@@ -44321,7 +46840,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a116
+      tags: &a117
         - Services
         - Service Catalog
       security:
@@ -44397,7 +46916,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a117
+            enum: &a118
               - fixed
               - hourly
               - usage
@@ -44445,7 +46964,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a116
+      tags: *a117
       security:
         - ApiKeyAuth: []
       extensions:
@@ -44474,7 +46993,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a117
+                  enum: *a118
                 default_rate:
                   type: number
                   minimum: 0
@@ -44536,7 +47055,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a116
+      tags: *a117
       security:
         - ApiKeyAuth: []
       extensions:
@@ -44585,7 +47104,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a116
+      tags: *a117
       security:
         - ApiKeyAuth: []
       extensions:
@@ -44623,7 +47142,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a117
+                  enum: *a118
                 default_rate:
                   type: number
                   minimum: 0
@@ -44684,7 +47203,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a116
+      tags: *a117
       security:
         - ApiKeyAuth: []
       extensions:
@@ -44733,7 +47252,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a118
+      tags: &a119
         - Products
         - Service Catalog
       security:
@@ -44844,7 +47363,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a118
+      tags: *a119
       security:
         - ApiKeyAuth: []
       extensions:
@@ -44873,7 +47392,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a119
+                  enum: &a120
                     - usage
                   default: usage
                 default_rate:
@@ -45012,7 +47531,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a118
+      tags: *a119
       security:
         - ApiKeyAuth: []
       extensions:
@@ -45061,7 +47580,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a118
+      tags: *a119
       security:
         - ApiKeyAuth: []
       extensions:
@@ -45099,7 +47618,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a119
+                  enum: *a120
                   default: usage
                 default_rate:
                   type: number
@@ -45238,7 +47757,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a118
+      tags: *a119
       security:
         - ApiKeyAuth: []
       extensions:
@@ -45286,7 +47805,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a120
+      tags: &a121
         - Service Types
         - Service Catalog
       security:
@@ -45347,7 +47866,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a120
+      tags: *a121
       security:
         - ApiKeyAuth: []
       extensions:
@@ -45428,7 +47947,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a121
+            enum: *a122
           required: false
           name: order
           in: query
@@ -45449,25 +47968,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a122
+            enum: *a123
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum: *a123
+            enum: *a124
           required: false
           name: is_test_mode
           in: query
         - schema:
             type: string
-            enum: *a124
+            enum: *a125
           required: false
           name: payload_format
           in: query
         - schema:
             type: string
-            enum: *a125
+            enum: *a126
           required: false
           name: has_failures
           in: query
@@ -46498,7 +49017,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a126
+            enum: *a127
           required: false
           name: status
           in: query
@@ -48616,7 +51135,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -48917,7 +51436,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49001,7 +51520,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49085,7 +51604,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49178,7 +51697,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49276,7 +51795,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49579,7 +52098,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49676,7 +52195,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -49934,7 +52453,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -50024,7 +52543,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -50168,7 +52687,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -50463,7 +52982,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -50554,7 +53073,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -50698,7 +53217,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -51133,7 +53652,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -51444,7 +53963,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -51870,7 +54389,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -51954,7 +54473,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -52139,7 +54658,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -52224,7 +54743,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -52590,7 +55109,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -52688,7 +55207,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -53416,7 +55935,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -53558,7 +56077,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -53867,7 +56386,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -54010,7 +56529,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -54153,7 +56672,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -54310,7 +56829,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -54593,7 +57112,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -54737,7 +57256,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -55172,7 +57691,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -55375,7 +57894,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -55461,7 +57980,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -55904,7 +58423,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -56375,7 +58894,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a127
+            enum: *a128
           required: false
           name: order
           in: query
@@ -57103,7 +59622,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a128
+            enum: *a129
           required: false
           name: order
           in: query
@@ -57119,13 +59638,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a129
+            enum: *a130
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a130
+            enum: *a131
           required: false
           name: include_client
           in: query
@@ -57194,7 +59713,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a128
+            enum: *a129
           required: false
           name: order
           in: query
@@ -57210,13 +59729,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a129
+            enum: *a130
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a130
+            enum: *a131
           required: false
           name: include_client
           in: query
@@ -58631,7 +61150,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a128
+            enum: *a129
           required: false
           name: order
           in: query
@@ -58647,13 +61166,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a129
+            enum: *a130
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a130
+            enum: *a131
           required: false
           name: include_client
           in: query
@@ -58726,7 +61245,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a128
+            enum: *a129
           required: false
           name: order
           in: query
@@ -58742,13 +61261,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a129
+            enum: *a130
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a130
+            enum: *a131
           required: false
           name: include_client
           in: query
@@ -64541,283 +67060,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/projects/templates:
-    get:
-      summary: GET projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/projects/templates/categories:
-    get:
-      summary: GET projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/projects/templates/{templateId}:
-    delete:
-      summary: DELETE projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    patch:
-      summary: PATCH projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/projects/templates/{templateId}/apply:
-    post:
-      summary: POST projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/projects/templates/{templateId}/duplicate:
-    post:
-      summary: POST projects
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - projects
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/public/appointment-request:
     post:
       summary: POST public
@@ -68839,1152 +71081,6 @@ paths:
             description: Placeholder request body
       responses:
         "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/import:
-    post:
-      summary: POST workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/audit:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/audit/export:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/export:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/metadata:
-    put:
-      summary: PUT workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/versions:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/{version}:
-    get:
-      summary: GET workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-definitions/{workflowId}/{version}/publish:
-    post:
-      summary: POST workflow-definitions
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-definitions
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/dead-letter:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/export:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/latest:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/summary:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/audit:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/audit/export:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/cancel:
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/export:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/replay:
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/requeue:
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/resume:
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/retry:
-    post:
-      summary: POST workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/steps:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/summary:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow-runs/{runId}/timeline:
-    get:
-      summary: GET workflow-runs
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow-runs
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow/events:
-    get:
-      summary: GET workflow
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST workflow
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow/events/export:
-    get:
-      summary: GET workflow
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow/events/summary:
-    get:
-      summary: GET workflow
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/workflow/events/{eventId}:
-    get:
-      summary: GET workflow
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - workflow
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      responses:
-        "200":
           description: Placeholder success response
           content:
             application/json:

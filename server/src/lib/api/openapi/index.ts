@@ -16,6 +16,7 @@ import { registerFileRoutes } from './routes/files';
 import { registerFinancialInvoiceRoutes } from './routes/financialInvoices';
 import { registerKbArticleRoutes } from './routes/kbArticles';
 import { registerPublicResourcesV1Routes } from './routes/publicResourcesV1';
+import { registerUnversionedPublicV1Routes } from './routes/unversionedPublicV1';
 import { registerInstallRoutes } from './routes/installs';
 import { registerInboundWebhookRoutes } from './routes/inboundWebhooks';
 import { registerStatusRoutes } from './routes/statuses';
@@ -59,6 +60,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerFinancialInvoiceRoutes(registry);
   registerKbArticleRoutes(registry, components);
   registerPublicResourcesV1Routes(registry, components);
+  registerUnversionedPublicV1Routes(registry, components);
   registerFileRoutes(registry);
   registerInboundWebhookRoutes(registry);
   registerSystemRoutes(registry);
