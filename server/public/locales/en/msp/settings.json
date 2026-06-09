@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Password changed successfully",
-        "userUpdated": "User updated successfully"
+        "userUpdated": "User updated successfully",
+        "roleAdded": "Role added successfully",
+        "roleRemoved": "Role removed successfully"
       },
       "error": {
         "userNotFound": "User not found",
@@ -305,7 +307,8 @@
         "reportsToCycle": "This would create a circular reporting chain",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
-        "passwordChangeError": "An error occurred while changing password"
+        "passwordChangeError": "An error occurred while changing password",
+        "permissionDenied": "You do not have permission to change user roles."
       }
     },
     "loading": "Loading user details..."

@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Wachtwoord succesvol gewijzigd",
-        "userUpdated": "Gebruiker succesvol bijgewerkt"
+        "userUpdated": "Gebruiker succesvol bijgewerkt",
+        "roleAdded": "Rol succesvol toegevoegd",
+        "roleRemoved": "Rol succesvol verwijderd"
       },
       "error": {
         "userNotFound": "Gebruiker niet gevonden",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-        "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+        "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
       }
     },
     "loading": "Gebruikersdetails laden..."

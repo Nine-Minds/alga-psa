@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "55555",
-        "userUpdated": "55555"
+        "userUpdated": "55555",
+        "roleAdded": "55555",
+        "roleRemoved": "55555"
       },
       "error": {
         "userNotFound": "55555",
@@ -305,7 +307,8 @@
         "reportsToCycle": "55555",
         "passwordTooShort": "55555",
         "passwordChangeFailed": "55555",
-        "passwordChangeError": "55555"
+        "passwordChangeError": "55555",
+        "permissionDenied": "55555"
       }
     },
     "loading": "55555"

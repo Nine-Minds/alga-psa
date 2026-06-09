@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "11111",
-        "userUpdated": "11111"
+        "userUpdated": "11111",
+        "roleAdded": "11111",
+        "roleRemoved": "11111"
       },
       "error": {
         "userNotFound": "11111",
@@ -305,7 +307,8 @@
         "reportsToCycle": "11111",
         "passwordTooShort": "11111",
         "passwordChangeFailed": "11111",
-        "passwordChangeError": "11111"
+        "passwordChangeError": "11111",
+        "permissionDenied": "11111"
       }
     },
     "loading": "11111"

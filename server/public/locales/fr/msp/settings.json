@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Mot de passe modifié avec succès",
-        "userUpdated": "Utilisateur mis à jour avec succès"
+        "userUpdated": "Utilisateur mis à jour avec succès",
+        "roleAdded": "Rôle ajouté avec succès",
+        "roleRemoved": "Rôle supprimé avec succès"
       },
       "error": {
         "userNotFound": "Utilisateur introuvable",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe",
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."
