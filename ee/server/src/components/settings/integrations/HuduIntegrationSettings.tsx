@@ -16,6 +16,7 @@ import {
 } from '../../../lib/actions/integrations/huduActions';
 import type { HuduActionResult, HuduConnectionStatusData } from '../../../lib/actions/integrations/huduActions';
 import type { HuduErrorKind } from '../../../lib/integrations/hudu/huduClient';
+import HuduCompanyMappingManager from './hudu/HuduCompanyMappingManager';
 
 type ConnectionBadgeState = 'not_connected' | 'connected' | 'error';
 
@@ -271,6 +272,7 @@ export default function HuduIntegrationSettings() {
   };
 
   return (
+    <>
     <Card id="hudu-integration-settings">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
@@ -392,5 +394,13 @@ export default function HuduIntegrationSettings() {
         )}
       </CardContent>
     </Card>
+
+    {/* Company mappings - shown when connected (NinjaOne precedent) */}
+    {isConnected && (
+      <div className="mt-6">
+        <HuduCompanyMappingManager />
+      </div>
+    )}
+    </>
   );
 }

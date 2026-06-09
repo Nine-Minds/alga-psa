@@ -53,9 +53,14 @@ describe('hudu company mappings — DB integration', () => {
         password: readPostgresPassword(),
         database: process.env.HUDU_TEST_DB_NAME || 'server',
       },
+      // Single connection so the advisory lock below is held for the whole file.
+      pool: { min: 1, max: 1 },
     });
 
     await db.raw('select 1');
+    // Serialize against the hudu_integrations migration test: its DROP TABLE
+    // and this file's tenants cascade-delete deadlock when run in parallel.
+    await db.raw("select pg_advisory_lock(hashtext('hudu-db-integration-tests'))");
 
     // The shared CE table normally already exists in the dev DB. If it does
     // not, bootstrap it from the CE migration + the later tenant_id→tenant
@@ -93,6 +98,7 @@ describe('hudu company mappings — DB integration', () => {
       await db('clients').where({ tenant: tenantId }).del().catch(() => undefined);
       await db('tenants').where({ tenant: tenantId }).del().catch(() => undefined);
     }
+    await db?.raw('select pg_advisory_unlock_all()').catch(() => undefined);
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 

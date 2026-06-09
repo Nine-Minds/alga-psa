@@ -52,10 +52,15 @@ describe('hudu_integrations migration + repository — DB integration', () => {
         password: readPostgresPassword(),
         database: process.env.HUDU_TEST_DB_NAME || 'server',
       },
+      // Single connection so the advisory lock below is held for the whole file.
+      pool: { min: 1, max: 1 },
     });
 
     // Fail fast (clear message) when the local DB is unreachable.
     await db.raw('select 1');
+    // Serialize against the hudu company-mappings test: this file's DROP TABLE
+    // and that file's tenants cascade-delete deadlock when run in parallel.
+    await db.raw("select pg_advisory_lock(hashtext('hudu-db-integration-tests'))");
 
     const tenantRow = await db('tenants').first<{ tenant: string }>('tenant');
     if (!tenantRow) {
@@ -68,6 +73,7 @@ describe('hudu_integrations migration + repository — DB integration', () => {
 
   afterAll(async () => {
     await db?.schema.dropTableIfExists(TABLE).catch(() => undefined);
+    await db?.raw('select pg_advisory_unlock_all()').catch(() => undefined);
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 

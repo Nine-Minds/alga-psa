@@ -718,6 +718,62 @@
       }
     },
     "hudu": {
+      "mapping": {
+        "title": "Company Mappings",
+        "description": "Map Hudu companies to AlgaPSA clients to surface their documentation.",
+        "loading": "Loading company mappings...",
+        "companyId": "ID",
+        "idInIntegration": "PSA id",
+        "selectClient": "Select client",
+        "buttons": {
+          "refresh": "Refresh Companies",
+          "refreshing": "Refreshing..."
+        },
+        "counters": {
+          "mapped": "mapped",
+          "suggested": "suggested",
+          "unmapped": "unmapped",
+          "total": "total"
+        },
+        "table": {
+          "huduCompany": "Hudu Company",
+          "algaClient": "AlgaPSA Client",
+          "status": "Status"
+        },
+        "status": {
+          "mapped": "Mapped",
+          "suggested": "Suggested",
+          "unmapped": "Unmapped"
+        },
+        "suggestion": {
+          "label": "Suggested",
+          "source": {
+            "integrationId": "PSA integration id",
+            "exactName": "Exact name",
+            "fuzzyName": "Similar name"
+          }
+        },
+        "empty": {
+          "title": "No Hudu companies loaded yet.",
+          "hint": "Click \"Refresh Companies\" to fetch companies from Hudu."
+        },
+        "unmappedHint": "Documentation is only surfaced for mapped clients. Map each Hudu company to an AlgaPSA client to enable it.",
+        "success": {
+          "refreshed": "Hudu companies refreshed."
+        },
+        "errors": {
+          "load": "Failed to load Hudu company mappings.",
+          "refresh": "Failed to refresh Hudu companies.",
+          "save": "Failed to update the mapping.",
+          "clientAlreadyMapped": "That client is already mapped to another Hudu company. Clear the existing mapping first.",
+          "companyAlreadyMapped": "This Hudu company is already mapped to another client. Clear the existing mapping first.",
+          "mappingConflict": "This mapping conflicts with an existing one. Refresh and try again.",
+          "notFound": "Mapping not found. Refresh and try again."
+        },
+        "toasts": {
+          "errorTitle": "Hudu mapping error"
+        }
+      },
       "settings": {
         "title": "Hudu",
         "description": "Connect your Hudu instance to surface client documentation and credentials inside AlgaPSA.",

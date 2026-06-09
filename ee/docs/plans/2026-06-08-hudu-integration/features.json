@@ -38,10 +38,10 @@
   { "id": "F045", "description": "setHuduCompanyMapping / clearHuduCompanyMapping server actions writing tenant_external_entity_mappings directly, gated on system_settings (NOT the billing_settings-gated externalMappingActions wrappers)", "implemented": true, "commitGroup": "company-mapping-data", "prdRefs": ["Functional Requirements", "Security / Permissions"] },
   { "id": "F046", "description": "Resolve a client_id -> Hudu company id (and reverse) helper for downstream data fetch", "implemented": true, "commitGroup": "company-mapping-data", "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F050", "description": "HuduCompanyMappingManager component modeled on NinjaOne OrganizationMappingManager (counters, table, Refresh companies)", "implemented": false, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F051", "description": "Per-row AlgaPSA client picker pre-filled with the suggested match; selecting persists immediately", "implemented": false, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F052", "description": "Status badges per row (Suggested / Mapped / Unmapped) and mapped/unmapped counters", "implemented": false, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F053", "description": "Refresh companies button re-pulls Hudu companies and recomputes suggestions without losing confirmed mappings", "implemented": false, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
+  { "id": "F050", "description": "HuduCompanyMappingManager component modeled on NinjaOne OrganizationMappingManager (counters, table, Refresh companies)", "implemented": true, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F051", "description": "Per-row AlgaPSA client picker pre-filled with the suggested match; selecting persists immediately", "implemented": true, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F052", "description": "Status badges per row (Suggested / Mapped / Unmapped) and mapped/unmapped counters", "implemented": true, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F053", "description": "Refresh companies button re-pulls Hudu companies and recomputes suggestions without losing confirmed mappings", "implemented": true, "commitGroup": "company-mapping-ui", "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
 
   { "id": "F060", "description": "huduDataActions.getCompanyAssets(client_id): resolve mapping, fetch Hudu assets by company_id (paginated)", "implemented": false, "commitGroup": "reference-fetch", "prdRefs": ["Functional Requirements"] },
   { "id": "F061", "description": "huduDataActions.getCompanyArticles(client_id): fetch Hudu articles by company_id", "implemented": false, "commitGroup": "reference-fetch", "prdRefs": ["Functional Requirements"] },

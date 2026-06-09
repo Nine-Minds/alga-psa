@@ -40,10 +40,10 @@
   { "id": "T047", "description": "Integration: clearHuduCompanyMapping removes the mapping row", "implemented": true, "commitGroup": "company-mapping-data", "featureIds": ["F045"] },
   { "id": "T048", "description": "Unit: client_id <-> hudu company id resolver works both directions and returns null when unmapped", "implemented": true, "commitGroup": "company-mapping-data", "featureIds": ["F046"] },
 
-  { "id": "T050", "description": "Component: mapping manager shows counters and a row per Hudu company", "implemented": false, "commitGroup": "company-mapping-ui", "featureIds": ["F050", "F052"] },
-  { "id": "T051", "description": "Component: client picker is pre-filled with the suggested match and persists on change", "implemented": false, "commitGroup": "company-mapping-ui", "featureIds": ["F051"] },
-  { "id": "T052", "description": "Component: row badge shows Suggested/Mapped/Unmapped correctly", "implemented": false, "commitGroup": "company-mapping-ui", "featureIds": ["F052"] },
-  { "id": "T053", "description": "Component: Refresh companies re-pulls list and keeps confirmed mappings intact", "implemented": false, "commitGroup": "company-mapping-ui", "featureIds": ["F053"] },
+  { "id": "T050", "description": "Component: mapping manager shows counters and a row per Hudu company", "implemented": true, "commitGroup": "company-mapping-ui", "featureIds": ["F050", "F052"] },
+  { "id": "T051", "description": "Component: client picker is pre-filled with the suggested match and persists on change", "implemented": true, "commitGroup": "company-mapping-ui", "featureIds": ["F051"] },
+  { "id": "T052", "description": "Component: row badge shows Suggested/Mapped/Unmapped correctly", "implemented": true, "commitGroup": "company-mapping-ui", "featureIds": ["F052"] },
+  { "id": "T053", "description": "Component: Refresh companies re-pulls list and keeps confirmed mappings intact", "implemented": true, "commitGroup": "company-mapping-ui", "featureIds": ["F053"] },
 
   { "id": "T060", "description": "Integration: getCompanyAssets resolves mapping and returns paginated Hudu assets for the company", "implemented": false, "commitGroup": "reference-fetch", "featureIds": ["F060"] },
   { "id": "T061", "description": "Integration: getCompanyArticles returns Hudu articles for the company", "implemented": false, "commitGroup": "reference-fetch", "featureIds": ["F061"] },

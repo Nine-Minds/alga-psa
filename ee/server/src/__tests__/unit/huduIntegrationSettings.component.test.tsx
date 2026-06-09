@@ -33,6 +33,12 @@ vi.mock('@ee/lib/actions/integrations/huduActions', () => ({
   testHuduConnection: testHuduConnectionMock,
 }));
 
+// The mapping manager has its own dedicated component tests; stub it here so
+// connected-state renders don't pull in the mapping actions module.
+vi.mock('@ee/components/settings/integrations/hudu/HuduCompanyMappingManager', () => ({
+  default: () => <div data-testid="hudu-company-mapping-manager-stub" />,
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   // Stable identity: the component memoizes callbacks on `t`.
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
@@ -347,6 +353,22 @@ describe('HuduIntegrationSettings', () => {
 
     await screen.findByText('Hudu rejected the API key (401). Enter a valid API key.');
     expect(document.getElementById('hudu-connection-status-badge')?.textContent).toBe('Error');
+  });
+
+  it('renders the company mapping manager below the card when connected', async () => {
+    getHuduConnectionStatusMock.mockResolvedValue({ success: true, data: connectedStatus });
+
+    render(<HuduIntegrationSettings />);
+
+    await screen.findByLabelText('Base URL');
+    expect(screen.getByTestId('hudu-company-mapping-manager-stub')).toBeTruthy();
+  });
+
+  it('does not render the company mapping manager when not connected', async () => {
+    render(<HuduIntegrationSettings />);
+
+    await screen.findByLabelText('Base URL');
+    expect(screen.queryByTestId('hudu-company-mapping-manager-stub')).toBeNull();
   });
 
   it('disconnect calls the action and reloads status', async () => {
