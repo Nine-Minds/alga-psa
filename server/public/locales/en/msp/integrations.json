@@ -717,6 +717,63 @@
         }
       }
     },
+    "hudu": {
+      "settings": {
+        "title": "Hudu",
+        "description": "Connect your Hudu instance to surface client documentation and credentials inside AlgaPSA.",
+        "loading": "Loading Hudu connection status...",
+        "detectedInstance": "Hudu instance",
+        "status": {
+          "connected": "Connected",
+          "notConnected": "Not connected",
+          "error": "Error"
+        },
+        "passwordAccess": {
+          "enabled": "Password access enabled",
+          "disabled": "Password access not enabled for this key"
+        },
+        "fields": {
+          "baseUrl": {
+            "label": "Base URL",
+            "placeholder": "https://your-instance.huducloud.com"
+          },
+          "apiKey": {
+            "label": "API key",
+            "placeholder": "Enter your Hudu API key",
+            "keepExisting": "Leave blank to keep the current API key",
+            "writeOnlyHint": "The stored API key is never displayed. Leave this blank to keep using it."
+          }
+        },
+        "buttons": {
+          "test": "Test Connection",
+          "testing": "Testing...",
+          "connect": "Connect",
+          "connecting": "Connecting...",
+          "disconnect": "Disconnect",
+          "disconnecting": "Disconnecting..."
+        },
+        "success": {
+          "connected": "Connected to Hudu.",
+          "testPassedWithPasswords": "Hudu connection test succeeded. Password access is enabled for this key.",
+          "testPassedNoPasswords": "Hudu connection test succeeded. Password access is not enabled for this key.",
+          "disconnected": "Hudu connection disconnected."
+        },
+        "errors": {
+          "loadStatus": "Failed to load the Hudu connection status.",
+          "baseUrlRequired": "Base URL is required.",
+          "baseUrlFormat": "Enter a valid URL, e.g. https://your-instance.huducloud.com",
+          "invalidBaseUrl": "No Hudu API was found at this base URL (404). Check the base URL.",
+          "unreachable": "Hudu could not be reached at this base URL. Check the URL and your network.",
+          "invalidKey": "Hudu rejected the API key (401). Enter a valid API key.",
+          "testFailed": "Hudu connection test failed.",
+          "connectFailed": "Failed to connect to Hudu.",
+          "disconnectFailed": "Failed to disconnect Hudu."
+        },
+        "toasts": {
+          "errorTitle": "Hudu connection error"
+        }
+      }
+    },
     "microsoft": {
       "settings": {
         "actions": {

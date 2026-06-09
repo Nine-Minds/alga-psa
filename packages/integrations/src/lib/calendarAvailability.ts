@@ -1,6 +1,7 @@
 import { isEnterprise } from '@alga-psa/core';
 
 export const CALENDAR_SETTINGS_CATEGORY = 'calendar';
+export const IT_DOCUMENTATION_SETTINGS_CATEGORY = 'it-documentation';
 export const CALENDAR_PROFILE_TAB = 'calendar';
 
 const BASE_INTEGRATION_CATEGORY_IDS = [
@@ -28,7 +29,11 @@ export function isCalendarEnterpriseEdition(env: NodeJS.ProcessEnv = process.env
 export function getVisibleIntegrationCategoryIds(isEnterpriseEdition = isCalendarEnterpriseEdition()): string[] {
   return isEnterpriseEdition
     ? [
-        ...BASE_INTEGRATION_CATEGORY_IDS.slice(0, 3),
+        ...BASE_INTEGRATION_CATEGORY_IDS.slice(0, 2),
+        // EE-only: the category itself is rendered only when the Hudu gate
+        // (EE + `hudu-integration` flag) is enabled.
+        IT_DOCUMENTATION_SETTINGS_CATEGORY,
+        BASE_INTEGRATION_CATEGORY_IDS[2],
         CALENDAR_SETTINGS_CATEGORY,
         ...BASE_INTEGRATION_CATEGORY_IDS.slice(3),
       ]

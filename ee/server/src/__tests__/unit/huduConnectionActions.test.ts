@@ -160,9 +160,39 @@ describe('T023: connectHudu', () => {
 
     const result = await connectHudu({ baseUrl: BASE_URL, apiKey: 'bad-key' });
 
-    expect(result).toEqual({ success: false, error: 'Hudu rejected the API key (401).' });
+    expect(result).toEqual({
+      success: false,
+      error: 'Hudu rejected the API key (401).',
+      errorKind: 'invalid_key',
+    });
     expect(setTenantSecretMock).not.toHaveBeenCalled();
     expect(upsertHuduIntegrationMock).not.toHaveBeenCalled();
+  });
+
+  it('F033: reuses the stored api key when the input omits it (keep-existing-key)', async () => {
+    getTenantSecretMock.mockImplementation(async (_tenant: string, name: string) =>
+      name === 'hudu_api_key' ? API_KEY : BASE_URL
+    );
+    const { connectHudu } = await importActions();
+
+    const result = await connectHudu({ baseUrl: 'https://new.example.com' });
+
+    expect(result).toMatchObject({ success: true, data: { connected: true } });
+    expect(huduClientConstructorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: 'https://new.example.com' } })
+    );
+    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_api_key', API_KEY);
+    expect(setTenantSecretMock).toHaveBeenCalledWith(TENANT, 'hudu_base_url', 'https://new.example.com');
+  });
+
+  it('F033: still requires an api key when none is stored', async () => {
+    const { connectHudu } = await importActions();
+
+    const result = await connectHudu({ baseUrl: BASE_URL });
+
+    expect(result).toEqual({ success: false, error: 'Hudu base URL and API key are required.' });
+    expect(validateConnectionMock).not.toHaveBeenCalled();
+    expect(setTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('rejects when the caller lacks system_settings update', async () => {
@@ -228,6 +258,21 @@ describe('T024: testHuduConnection', () => {
     expect(huduClientConstructorSpy).toHaveBeenCalledWith(
       expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: BASE_URL } })
     );
+  });
+
+  it('F033: merges a base-URL-only candidate with the stored api key', async () => {
+    getTenantSecretMock.mockImplementation(async (_tenant: string, name: string) =>
+      name === 'hudu_api_key' ? API_KEY : BASE_URL
+    );
+    const { testHuduConnection } = await importActions();
+
+    const result = await testHuduConnection({ baseUrl: 'https://new.example.com' });
+
+    expect(result).toEqual({ success: true, data: { connected: true, passwordAccess: true } });
+    expect(huduClientConstructorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ credentials: { apiKey: API_KEY, baseUrl: 'https://new.example.com' } })
+    );
+    expect(setTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('returns an actionable error when no credentials are configured', async () => {

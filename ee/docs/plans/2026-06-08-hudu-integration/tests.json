@@ -24,11 +24,11 @@
   { "id": "T027", "description": "Boundary: CE client-delete and tenant-delete paths never reference hudu_integrations (no error in CE); EE-only code/migrations own its deletes", "implemented": true, "commitGroup": "connection", "featureIds": ["F028"] },
   { "id": "T028", "description": "Boundary: deleting a client removes its hudu mapping rows from tenant_external_entity_mappings (shared CE table) in CE without touching hudu_integrations", "implemented": true, "commitGroup": "connection", "featureIds": ["F028"] },
 
-  { "id": "T030", "description": "Component: Hudu item only renders in Settings>Integrations under IT Documentation when EE+flag", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F030"] },
-  { "id": "T031", "description": "Component: settings panel renders base URL + masked key fields and Test/Connect/Disconnect", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F031"] },
-  { "id": "T032", "description": "Component: status badge reflects Not connected / Connected / Error and password-access indicator", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F032"] },
-  { "id": "T033", "description": "Component: submitting a blank key keeps the existing stored key; key is never pre-filled", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F033"] },
-  { "id": "T034", "description": "Component: invalid base URL shows 404 message, invalid key shows 401 message", "implemented": false, "commitGroup": "settings-ui", "featureIds": ["F034"] },
+  { "id": "T030", "description": "Component: Hudu item only renders in Settings>Integrations under IT Documentation when EE+flag", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F030"] },
+  { "id": "T031", "description": "Component: settings panel renders base URL + masked key fields and Test/Connect/Disconnect", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F031"] },
+  { "id": "T032", "description": "Component: status badge reflects Not connected / Connected / Error and password-access indicator", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F032"] },
+  { "id": "T033", "description": "Component: submitting a blank key keeps the existing stored key; key is never pre-filled", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F033"] },
+  { "id": "T034", "description": "Component: invalid base URL shows 404 message, invalid key shows 401 message", "implemented": true, "commitGroup": "settings-ui", "featureIds": ["F034"] },
 
   { "id": "T040", "description": "Integration: syncHuduCompanies fetches and caches the full paginated company list", "implemented": false, "commitGroup": "company-mapping-data", "featureIds": ["F040"] },
   { "id": "T041", "description": "Unit: matcher picks id_in_integration exact match over name match", "implemented": false, "commitGroup": "company-mapping-data", "featureIds": ["F041"] },

@@ -51,11 +51,20 @@ export interface HuduTestConnectionData {
 
 export type HuduActionResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; errorKind?: HuduErrorKind };
 
 export interface HuduCredentialsInput {
   baseUrl: string;
   apiKey: string;
+}
+
+/**
+ * Connect input. `apiKey` may be omitted to keep using the already-stored key
+ * (the UI never round-trips the stored value, so "blank key" means "keep").
+ */
+export interface HuduConnectInput {
+  baseUrl: string;
+  apiKey?: string;
 }
 
 type HuduActionPermission = 'read' | 'update';
@@ -116,14 +125,21 @@ async function validateCandidate(
 /**
  * Connect Hudu: validate the candidate credentials against the live instance,
  * store them via the secret provider, and upsert the tenant's connection row
- * as active. The api key never leaves the secret provider.
+ * as active. The api key never leaves the secret provider. A blank/omitted
+ * apiKey keeps the already-stored key (the UI never round-trips the value).
  */
 export const connectHudu = withHuduSettingsAccess(
   'update',
-  async (_user, { tenant }, input: HuduCredentialsInput): Promise<HuduActionResult<HuduConnectionStatusData>> => {
+  async (_user, { tenant }, input: HuduConnectInput): Promise<HuduActionResult<HuduConnectionStatusData>> => {
     try {
       const baseUrl = input?.baseUrl?.trim();
-      const apiKey = input?.apiKey?.trim();
+      let apiKey = input?.apiKey?.trim();
+      if (baseUrl && !apiKey) {
+        // Keep-existing-key: fall back to the stored credential.
+        apiKey = await resolveHuduCredentials(tenant)
+          .then((stored) => stored.apiKey)
+          .catch(() => undefined);
+      }
       if (!baseUrl || !apiKey) {
         return { success: false, error: 'Hudu base URL and API key are required.' };
       }
@@ -133,6 +149,7 @@ export const connectHudu = withHuduSettingsAccess(
         return {
           success: false,
           error: validation.error?.message ?? 'Hudu connection validation failed.',
+          errorKind: validation.error?.kind,
         };
       }
 
@@ -184,9 +201,13 @@ export const testHuduConnection = withHuduSettingsAccess(
       if (baseUrl && apiKey) {
         validation = await validateCandidate(tenant, { baseUrl, apiKey });
       } else {
-        const credentials = await resolveHuduCredentials(tenant);
-        const client = new HuduClient({ tenantId: tenant, credentials });
-        validation = await client.validateConnection();
+        // Merge partial candidates with the stored credentials so a blank key
+        // (or blank base URL) means "use the stored value".
+        const stored = await resolveHuduCredentials(tenant);
+        validation = await validateCandidate(tenant, {
+          baseUrl: baseUrl || stored.baseUrl,
+          apiKey: apiKey || stored.apiKey,
+        });
       }
 
       if (!validation.ok || !validation.connected) {

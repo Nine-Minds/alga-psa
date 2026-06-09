@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Connect remote monitoring and management tools"
       },
+      "itDocumentation": {
+        "label": "IT Documentation",
+        "description": "Connect IT documentation platforms to surface client documentation, assets, and credentials in context."
+      },
       "communication": {
         "label": "Communication",
         "description": "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "RMM Integrations",
         "description": "Select and configure your RMM provider"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connect a Hudu instance to view client documentation and credentials inside AlgaPSA."
       },
       "email": {
         "name": "Inbound Email",
