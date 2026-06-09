@@ -1,0 +1,471 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: add nullable `last_winback_email_at timestamptz` to `pending_tenant_deletions` (throttle store for login win-back emails).",
+    "implemented": true,
+    "commitGroup": "migration",
+    "prdRefs": [
+      "7",
+      "8"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Migration: create `pending_reactivation_refunds` table (deletion-side ledger for charged-but-refused / duplicate payments): tenant uuid, stripe_checkout_session_id, stripe_payment_intent_id, stripe_subscription_external_id, reason, created_at, resolved_at nullable; index on resolved_at for the open-queue view. Backing store for F034.",
+    "implemented": true,
+    "commitGroup": "migration",
+    "prdRefs": [
+      "3",
+      "10"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Migration: create `tenant_reactivation_tokens` durable single-use token ledger: tenant uuid, deletion_id uuid/text matching pending_tenant_deletions, token_hash text unique, expires_at timestamptz, reserved_at nullable, consumed_at nullable, checkout_session_id nullable, created_at, updated_at; indexes for tenant/deletion lookup and open unexpired tokens. Checkout creation atomically reserves a token row before Stripe Checkout; completion consumes it.",
+    "implemented": true,
+    "commitGroup": "migration",
+    "prdRefs": [
+      "7",
+      "12"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "alga helper `getActivePendingDeletion(tenantId)` reading the single `pending_tenant_deletions` row; returns `{ status, reactivatable (status IN pending/awaiting_confirmation/confirmed), effectiveDeletionDate = COALESCE(deletion_scheduled_for, scheduled_deletion_date), workflowId, workflowRunId, subscriptionExternalId, confirmationType }` or null.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "prdRefs": [
+      "5",
+      "7"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "alga helper to resolve tenant + admin email from an email, reusing the existing `check-tenant` lookup logic (tenants.email then internal-admin fallback).",
+    "implemented": true,
+    "commitGroup": "detection",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Extend `GET /api/billing/check-tenant` response with additive fields `pendingDeletion`, `reactivatable`, `deletionStatus`, and `effectiveDeletionDate` (= COALESCE(deletion_scheduled_for, scheduled_deletion_date)) (HMAC + existing shape unchanged).",
+    "implemented": true,
+    "commitGroup": "detection",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "nm-store `checkTenantExists`/`checkExistingTenant` surface the new `pendingDeletion`/`reactivatable`/`deletionStatus`/`effectiveDeletionDate` fields (fail-open on error preserved).",
+    "implemented": true,
+    "commitGroup": "detection",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "New alga endpoint `POST /api/billing/request-reactivation` with the same HMAC scheme as check-tenant; body `{ email }`; rejects invalid/missing signature.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "request-reactivation looks up active pending deletion via F002/F003; returns 200 regardless of outcome (anti-enumeration).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "7",
+      "10"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "request-reactivation sends the reactivation invite email ONLY when reactivatable, ONLY to the tenant's billing/admin email (resolved server-side — never the attempter or the entered email), with a signed reactivation token (F039) embedded in the link. nm-store never receives the admin email (anti-enumeration).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "4",
+      "7",
+      "12"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "nm-store server action `requestReactivation(email)` that signs and calls the alga endpoint.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "OrderForm divert: when `reactivatable`, replace the hard 'tenant already exists' block with a 'Welcome back' CTA that calls `requestReactivation` and shows 'we've emailed your account admin to reactivate' — the reactivation link is sent server-side to the tenant admin (NOT the entered email, even if a non-admin typed it). nm-store shows no admin address.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "4",
+      "6",
+      "12"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "OrderForm keeps the existing hard block when a tenant exists but is NOT reactivatable (healthy tenant); allows normal new-signup checkout when past the window (`deleting`/`deleted`).",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "4",
+      "6"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Recipient rule (authority): the reactivation/win-back email is ALWAYS sent to the tenant's billing/admin email — resolved server-side from the tenant owner/admin (the original adminEmail / Stripe customer email) — and NEVER to the attempter (login) or the entered email (order). This is the single authority anchor: only the admin-inbox holder can act.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "8",
+      "12"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Signed, single-use, expiring reactivation TOKEN bound to `tenant_id` (+ deletion_id), minted server-side by alga and embedded in the email link. The token is backed by the durable F040 ledger (`token_hash`, tenant, deletion_id, expires_at, reserved_at, consumed_at, checkout_session_id). The reactivation checkout (F014) requires it; it is validated server-side and atomically reserved before creating Stripe Checkout, then consumed on successful reactivation (replay rejected before or after payment). Authority = possession of the token = control of the billing/admin inbox. Payment alone is NOT authority.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "12"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "nm-store reactivation checkout builder: standard recurring price, `discounts` omitted (no `introCouponId`), no `trial_period_days`.",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "2",
+      "7"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Reactivation checkout sets `metadata.reactivation='true'`, `metadata.tenant_id`, `metadata.deletion_workflow_id`.",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "7",
+      "9"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Reactivation checkout is created with the tenant's EXISTING Stripe customer (`customer: cus_…`), so the new subscription attaches to the SAME Stripe customer — no new/divergent customer. Stripe keeps the customer after `customer.subscription.deleted`, so reuse is valid. VERIFIED: nm-store's `createCheckoutSession`/`createTieredCheckoutSession` (`packages/nm-store/src/utils/stripe.ts`) today pass NO `customer` field (Stripe auto-creates one per checkout) — this adds it. nm-store obtains the `cus_…` per F044 (a non-PII Stripe id, NOT alga's DB row shipped across the boundary, NOT the admin email). The reactivation block's `stripeCustomerId` carries this existing `cus_…`.",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "7",
+      "9",
+      "13"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Reactivation checkout entry page/route reachable from the email link; it REQUIRES a valid signed reactivation token (F039) — the checkout session cannot be created without one (validated server-side). No normal-order coupling.",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "4",
+      "6",
+      "12"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Reactivation checkout success page: 'Your account is being restored — check your email to set a new password.'",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Thin server trigger on reactivation-checkout success (gated on `metadata.reactivation==='true'`) that fires the enriched `rollbackDeletion` signal to the existing deletion workflow — NOT the normal provisioning trigger. Must handle a CLOSED workflow: once status is `rolled_back` the deletion workflow has returned, so signaling it throws — detect this and route to the already-reactivated / duplicate-payment path (F034) instead of signaling.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "9",
+      "10"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Stripe webhook branch: in `checkout.session.completed`, detect `session.metadata.reactivation === 'true'` before the normal `handleCheckoutCompleted` subscription import/update path. Reactivation sessions run only the F016/F017 reactivation trigger/guard path; normal checkout sessions continue through existing import/update handling. This prevents the webhook from importing the new subscription before the Temporal rollback handler owns completion.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "9"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Pre-signal guard on the trigger: (a) refuse + surface 'too late' when past the window (status `deleting`/`deleted`) — Stripe may have already captured payment, so route to F034 for a manual-refund alert; (b) if the tenant is already reactivated (status `rolled_back`) or already has an active linked subscription, treat as a duplicate payment (F034), do not re-signal. Mirrors the existing rollback endpoint's status rejection.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "10"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Extend `RollbackDeletionSignal` payload (tenant-deletion-types.ts) with an optional `reactivation` block `{ stripeCustomerId, stripeSubscriptionId, stripeSubscriptionItemId, stripePriceId, sendPasswordReset }`; the deletion workflow rollback handler branches on its presence while preserving existing rollback behavior: reactivate tenant users, remove the Canceled tag, and reactivate the master-tenant client and contacts.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "New activity `linkSubscriptionToExistingTenant`: inserts only the new `stripe_subscriptions` row for the EXISTING tenant, REUSING createTenantInDB's insert path via the F046 shared helper so Citus shard routing is identical (`tenant` set explicitly, from the worker) and `billing_tenant = MASTER_TENANT_ID` is preserved. Does NOT insert a tenant. CUSTOMER RECONCILIATION: the tenant already has a `stripe_customers` row from the original subscription — this activity must REUSE it (match on tenant), NOT create a second/divergent customer row. The subscription's `stripe_customer_id` FK points at the existing internal customer; if no customer row exists (edge), fall back to create. See SCRATCHPAD Citus + customer-reconciliation notes.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "9",
+      "13"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Rollback handler stamps `subscription.metadata.tenant_id = existing tenant` on the new subscription (reuses updateSubscriptionMetadata).",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "9"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "New activity `triggerPasswordReset`: AFTER reactivation clears `is_inactive`, force a password-reset (set-password) email when `sendPasswordReset` is set (default). It does NOT mint the link in the worker — the worker lacks NEXT_PUBLIC_BASE_URL/NEXTAUTH_URL and uses a different (Resend) sender. Instead it calls the app-side endpoint F035, which runs the existing `requestPasswordReset` in app context (correct baseUrl + branded auth email registry). Doubles as email-ownership verification after payment.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Idempotency keyed on the TENANT, not the sub id: before linking, if the tenant already has an active linked `stripe_subscriptions` row, do not insert a second (two genuine payments yield two distinct sub_… ids, which a sub-id-keyed guard would miss → double billing). A second/duplicate payment routes to F034 (alert + manual refund), and a re-sent signal / already-`rolled_back` workflow is a no-op (no error, no double-link).",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Reactivation path never invokes `startOrderInstallWorkflow` / `ensureOrderInstallWorkflowForCheckoutSession` (the create-tenant provisioning entry in nm-store `orderInstallTrigger.ts` / `orderInstallFromCheckoutSession.ts`), guarded by the reactivation metadata discriminator.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "9"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Admin rollback endpoint (`rollback-deletion/route.ts`) passes NO `reactivation` block → unchanged behavior (no subscription link, no password reset) — backward compatible.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Charged-but-refused / duplicate-payment alert: on any path where a reactivation payment was (or may have been) captured by Stripe but reactivation is refused — past-the-window race (status `deleting`/`deleted`) or a duplicate payment for an already-reactivated tenant. CONCRETE SINK (two channels so it can't degrade to an unwatched log): (1) insert a durable row in `pending_reactivation_refunds` (F036) with tenant, stripe checkout/payment_intent id, stripe_subscription id, reason, created_at, resolved_at=NULL; (2) email a monitored ops/billing inbox via the existing email service (worker Resend, from info@nineminds.com). No auto-refund — the row is the work queue, the email is the nudge.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "3",
+      "10"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "App-side HMAC endpoint (e.g. `POST /api/billing/reactivation-password-reset`, same signing scheme as check-tenant) that invokes the existing `requestPasswordReset(email,'internal')` in the app server context — so the reset link uses the app `baseUrl` and the branded auth email registry. Called by the worker's F021 activity. Resolves the worker-context env/sender gap.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "In `authenticateUser`, at the `is_inactive` gate (before the existing `return null`, which already short-circuits before verifyPassword), detect inactive user + active `pending_tenant_deletions` row for `user.tenant`. The password is NOT verified — no reordering, no verifyPassword call; the email fires on the attempt regardless of password correctness.",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Send a throttled login win-back email (at most once per 14 days per tenant, gated on `last_winback_email_at`) as a fire-and-forget side effect. Recipient is the tenant's billing/admin email (the party who can re-subscribe), NOT necessarily the user who attempted — a non-admin's attempt emails the admin. The throttle is intentionally per-tenant (a second attempter's email may be consumed by an earlier one's window).",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Update `last_winback_email_at` after a win-back email is sent.",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "8"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Preserve the generic `null` auth return and zero behavior change for active users and non-deletion inactive users; do NOT call verifyPassword for inactive users and do NOT reorder the gate.",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "3",
+      "8"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Reactivation invite email template: 'Welcome back', what reactivation does, standard-price note (no discount), scheduled deletion date, single CTA to the reactivation checkout.",
+    "implemented": true,
+    "commitGroup": "emails",
+    "prdRefs": [
+      "6"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Login win-back email template: 'We noticed a sign-in attempt', scheduled deletion date, reactivate CTA.",
+    "implemented": true,
+    "commitGroup": "emails",
+    "prdRefs": [
+      "6",
+      "8"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Both emails sent via the existing Resend/email service from `info@nineminds.com` with appropriate metadata.",
+    "implemented": true,
+    "commitGroup": "emails",
+    "prdRefs": [
+      "6",
+      "7"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Regression: end-to-end reactivation reattaches to the existing tenant with prior data intact and creates NO new tenant row.",
+    "implemented": true,
+    "commitGroup": "regression",
+    "prdRefs": [
+      "9",
+      "11"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Point-of-no-return handling: if status flips to `deleting` during the flow, completion refuses and the user is surfaced a 'too late — sign up fresh' outcome; any captured payment routes to F034 for durable manual-refund tracking plus ops/billing email (no auto-refund).",
+    "implemented": true,
+    "commitGroup": "regression",
+    "prdRefs": [
+      "10"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "EDITION PLACEMENT: `pending_tenant_deletions` is created ONLY by an EE migration (`ee/server/migrations/20260113120000`), so its readers must live in EE. The check-tenant route is currently CE (`server/src/app/api/billing/check-tenant/route.ts`); move it and the new HMAC endpoints (request-reactivation F006, reactivation-password-reset F035) under `ee/server/src/app/api/...` (alongside existing EE-only routes `internal/`, `provisioning/`, `v1/tenant-management/`), preserving the exact HMAC URL paths nm-store calls. EE routes resolve via aliases per `scripts/build-enterprise.sh` (no filesystem overlay). Any read of `pending_tenant_deletions` from a code path that can run in CE must degrade gracefully (table-absent ⇒ treat as no pending deletion), never throw.",
+    "implemented": true,
+    "commitGroup": "detection",
+    "prdRefs": [
+      "7",
+      "13"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Login win-back hook (F024/F025) must NOT inline a `pending_tenant_deletions` query in the shared `packages/auth/src/actions/auth.tsx` (the EE table is absent in CE → would throw on every inactive login). Implement via the EXISTING enterprise injection pattern: an `@enterprise/*` dynamic-import hook (mirroring `loadEnterpriseSsoProviderRegistryImpl` / `enterpriseSsoRegistryInitPromise` in `nextAuthOptions.ts`), gated by `isEnterprise`, that resolves to a CE no-op stub. The EE impl owns the table read + throttle + email; shared auth just invokes the (possibly no-op) hook at the `is_inactive` gate, then returns null as today.",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "8",
+      "13"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "nm-store resolves the existing Stripe customer (`cus_…`) for F037 WITHOUT receiving the admin email (preserves F038 anti-enumeration). VERIFIED: nm-store holds `STRIPE_SECRET_KEY` (`utils/stripe.ts`) and the token-exchange endpoint (F014/F039) returns a NON-PII Stripe id — the prior `subscription_external_id` and/or `cus_…` (resolved server-side by alga from `stripe_customers` by tenant). nm-store then sets `customer: cus_…` directly, or derives it from Stripe (`subscriptions.retrieve(sub_…).customer`). The admin EMAIL never crosses to nm-store; only opaque Stripe ids do.",
+    "implemented": true,
+    "commitGroup": "reactivation-checkout",
+    "prdRefs": [
+      "7",
+      "12",
+      "13"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Reactivated-but-unbilled partial-failure guard: the rollback handler sets status `rolled_back` and reactivates users BEFORE linking the subscription. If `linkSubscriptionToExistingTenant` (F019) permanently fails after users are active and payment was captured, the tenant is live with NO linked subscription — a state F034 (charged-but-refused/duplicate) does not cover. On exhausted retries of the link/metadata step, raise an F034 alert with a distinct `reactivated_unbilled` reason (durable refund/ops row + email) so it is never a silent unbilled-active tenant. Temporal activity retries handle transient failures first.",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "10",
+      "13"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Extract a shared subscription-insert helper from `createTenantInDB` (`ee/temporal-workflows/src/db/tenant-operations.ts`): the existing code couples the customer insert and subscription insert (the subscription's `stripe_customer_id` FK uses the just-inserted customer row, and rows carry `billing_tenant = MASTER_TENANT_ID`). The helper must accept an EXISTING internal `stripe_customer_id` (looked up by tenant) and insert ONLY the subscription row with `tenant` + `billing_tenant = MASTER_TENANT_ID` set explicitly, so F019 reuses identical Citus placement without creating a tenant or a second customer. createTenantInDB is refactored to call the same helper (no behavior change).",
+    "implemented": true,
+    "commitGroup": "reactivation-core",
+    "prdRefs": [
+      "7",
+      "13"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Win-back throttle is atomic: the F026 update must be a conditional `UPDATE pending_tenant_deletions SET last_winback_email_at = now() WHERE tenant = ? AND (last_winback_email_at IS NULL OR last_winback_email_at < now() - interval '14 days') RETURNING ...`, sending the email only when a row is returned. A read-check-then-update would let two concurrent login attempts both pass the check and double-send; the conditional update makes 'at most once per 14 days' a real guarantee.",
+    "implemented": true,
+    "commitGroup": "winback-login",
+    "prdRefs": [
+      "8",
+      "13"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Pin the billing/admin-email source of truth for F038 (the entire authority model depends on resolving it correctly server-side). Name the canonical field and order — e.g. tenant owner / original `adminEmail`, falling back to the master-tenant client's billing contact and/or the Stripe customer email — and use that single resolver in request-reactivation (F008) and the login win-back hook (F025). Document the resolution so 'always sent to the billing/admin email' is unambiguous and testable.",
+    "implemented": true,
+    "commitGroup": "request-reactivation",
+    "prdRefs": [
+      "12",
+      "13"
+    ]
+  }
+]

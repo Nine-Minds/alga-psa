@@ -1,4 +1,4 @@
-FROM node:20.19-bullseye-slim
+FROM node:20.19-bullseye-slim AS builder
 
 # Install required system dependencies
 RUN apt-get update && apt-get install -y \
@@ -122,6 +122,33 @@ RUN npm run build
 # Copy and make entrypoint executable
 COPY services/workflow-worker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# Trim build-time-only bulk HERE (in the builder), so the runtime COPY below
+# captures the already-trimmed tree — deleting after the COPY would not reclaim
+# space. server/ is type-imports-only at build; the worker's dist never loads it.
+RUN rm -rf /app/server /app/node_modules/server \
+    && npm cache clean --force 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Runtime stage: a fresh image with only what the worker needs at runtime.
+# The builder above keeps every workspace's source + devDeps + intermediate
+# layers (~10GB). The worker runs `node dist/.../index.js`, which resolves
+# @alga-psa/* via node_modules -> packages/*/dist, and does NOT load server/
+# (build-time type imports only) or the UI/build libs. Copying the final /app
+# into a clean stage drops the intermediate layers; removing server/ source
+# reclaims ~2GB more.
+# ---------------------------------------------------------------------------
+FROM node:20.19-bullseye-slim AS runtime
+
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    redis-tools \
+    curl \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app /app
 
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -787,6 +787,50 @@
       "ai.infer": {
         "label": "55555",
         "description": "55555"
+      },
+      "store.get": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "store.set": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "store.delete": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "store.increment": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "store.list": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "store.list_namespaces": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "links.upsert": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "links.lookup": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "links.delete": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "links.list": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "links.list_namespaces": {
+        "label": "55555",
+        "description": "55555"
       }
     },
     "validation": {
@@ -929,6 +973,10 @@
           "description": "55555"
         },
         "ai": {
+          "label": "55555",
+          "description": "55555"
+        },
+        "data-store": {
           "label": "55555",
           "description": "55555"
         }
@@ -1408,7 +1456,11 @@
       "openEditor": "55555",
       "apply": "55555",
       "cancel": "55555"
-    }
+    },
+    "softEnumPlaceholder": "55555",
+    "softEnumSearchPlaceholder": "55555",
+    "softEnumNoResults": "55555",
+    "softEnumUseCustom": "55555 {{value}} 55555"
   },
   "schemaReference": {
     "selectAction": "55555",
@@ -1984,6 +2036,23 @@
     "workflowWaitTiming": {
       "fixed": "55555",
       "expression": "55555"
+    },
+    "workflowEntityType": {
+      "project_task": "55555",
+      "ticket": "55555",
+      "contact": "55555",
+      "client": "55555",
+      "project": "55555",
+      "appointment": "55555",
+      "quote": "55555"
+    },
+    "workflowLinkRelation": {
+      "related": "55555",
+      "mirrors": "55555",
+      "maps_to": "55555",
+      "blocks": "55555",
+      "duplicate_of": "55555",
+      "synced_with": "55555"
     }
   },
   "automation": {

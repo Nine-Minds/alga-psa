@@ -37,6 +37,14 @@ async function publishNotificationEvent(
 }
 
 export class WorkflowEventPublisher implements IEventPublisher {
+  private readonly suppressCommentEmail: boolean;
+
+  // suppressCommentEmail keeps comment events on the in-app channel only. Used for the
+  // first comment on a new inbound-email ticket, which the TICKET_CREATED email already covers.
+  constructor(options?: { suppressCommentEmail?: boolean }) {
+    this.suppressCommentEmail = options?.suppressCommentEmail ?? false;
+  }
+
   async publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;
@@ -106,7 +114,15 @@ export class WorkflowEventPublisher implements IEventPublisher {
       }
     };
 
-    await publishNotificationEvent('TICKET_COMMENT_ADDED', payload, { channel: 'internal-notifications' });
+    // Inbound replies fan out to internal + email channels (like the other publish*
+    // methods) so the assigned tech/resources are emailed. The email subscriber excludes
+    // the comment author and only emails external contacts for agent-authored comments,
+    // so client replies never email the client back. The new-ticket first comment stays
+    // in-app only (suppressCommentEmail) to avoid duplicating the TICKET_CREATED email.
+    const options = this.suppressCommentEmail
+      ? { channel: 'internal-notifications' }
+      : undefined;
+    await publishNotificationEvent('TICKET_COMMENT_ADDED', payload, options);
   }
 
   /**

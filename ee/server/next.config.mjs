@@ -16,6 +16,7 @@ const nextConfig = {
     '@product/extensions-pages',
     '@alga-psa/event-schemas',
     '@alga-psa/core',
+    '@alga-psa/user-activities',
   ],
   // Turbopack-specific aliases
   turbopack: {
@@ -55,6 +56,9 @@ const nextConfig = {
       '@alga-psa/ee-stubs': './src',
       '@alga-psa/ee-stubs/': './src/',
       '@alga-psa/workflows/entry': './src/workflows/entry.tsx',
+      // user-activities workflow-task seam — EE app always uses the real implementations.
+      '@alga-psa/user-activities/server/workflow-tasks': './src/user-activities/workflowTasks.server.ts',
+      '@alga-psa/user-activities/client/workflow-tasks': './src/user-activities/workflowTasks.client.tsx',
       '@alga-psa/product-extension-actions': '../../packages/product-extension-actions/ee/entry.ts',
       '@alga-psa/product-extension-initialization': './src/lib/extensions/initialize.ts',
       '@alga-psa/product-auth-ee': '../../packages/product-auth-ee/ee/entry.ts',
@@ -137,6 +141,9 @@ const nextConfig = {
         '@alga-psa/ee-stubs': path.join(__dirname, 'src'),
         '@alga-psa/ee-stubs/': path.join(__dirname, 'src/'),
         '@alga-psa/workflows/entry': path.join(__dirname, 'src/workflows/entry.tsx'),
+        // user-activities workflow-task seam — EE app always uses the real implementations.
+        '@alga-psa/user-activities/server/workflow-tasks': path.join(__dirname, 'src/user-activities/workflowTasks.server.ts'),
+        '@alga-psa/user-activities/client/workflow-tasks': path.join(__dirname, 'src/user-activities/workflowTasks.client.tsx'),
         '@alga-psa/product-extension-actions': path.join(__dirname, '../../packages/product-extension-actions/ee/entry.ts'),
         '@alga-psa/product-extension-initialization': path.join(__dirname, 'src/lib/extensions/initialize.ts'),
         '@alga-psa/product-auth-ee': path.join(__dirname, '../../packages/product-auth-ee/ee/entry.ts'),

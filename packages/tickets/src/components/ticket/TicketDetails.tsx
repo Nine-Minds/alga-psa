@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
+import { preCheckDeletion } from "@alga-psa/auth/lib/preCheckDeletion";
+import type { DeletionValidationResult } from "@alga-psa/types";
 import {
     ITicket,
     IComment,
@@ -44,7 +47,7 @@ import { findCommentsByTicketId, deleteComment, createComment, updateComment, fi
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
-import { getTicketById, updateTicket } from "../../actions/ticketActions";
+import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
@@ -54,7 +57,7 @@ import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2 } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -257,6 +260,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         setHasHydrated(true);
@@ -297,6 +301,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
     const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
+    // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
+    const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
+    const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
+    const [isTicketDeleteValidating, setIsTicketDeleteValidating] = useState(false);
+    const [isTicketDeleteProcessing, setIsTicketDeleteProcessing] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
     const [client, setClient] = useState<IClient | null>(initialClient);
@@ -860,6 +869,80 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
     const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
+
+    const resetTicketDeleteState = useCallback(() => {
+        if (isTicketDeleteProcessing) return;
+        setIsDeleteTicketDialogOpen(false);
+        setTicketDeleteValidation(null);
+        setIsTicketDeleteValidating(false);
+    }, [isTicketDeleteProcessing]);
+
+    const runTicketDeleteValidation = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        setIsTicketDeleteValidating(true);
+        try {
+            const result = await preCheckDeletion('ticket', ticket.ticket_id);
+            setTicketDeleteValidation(result);
+        } catch (error: any) {
+            console.error('Failed to validate ticket deletion:', error);
+            setTicketDeleteValidation({
+                canDelete: false,
+                code: 'VALIDATION_FAILED',
+                message: t('delete.validationError', {
+                    defaultValue: 'Failed to validate deletion. Please try again.',
+                }),
+                dependencies: [],
+                alternatives: [],
+            });
+        } finally {
+            setIsTicketDeleteValidating(false);
+        }
+    }, [ticket.ticket_id, t]);
+
+    const handleDeleteTicket = useCallback(() => {
+        setIsDeleteTicketDialogOpen(true);
+        void runTicketDeleteValidation();
+    }, [runTicketDeleteValidation]);
+
+    const confirmTicketDelete = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        setIsTicketDeleteProcessing(true);
+        try {
+            const result = await deleteTicket(ticket.ticket_id);
+
+            if (!result.success) {
+                // Surface blocking dependencies / permission issues in the dialog.
+                setTicketDeleteValidation(result);
+                return;
+            }
+
+            setIsDeleteTicketDialogOpen(false);
+            setTicketDeleteValidation(null);
+            toast.success(t('delete.success', {
+                defaultValue: 'Ticket #{{number}} deleted successfully.',
+                number: ticket.ticket_number,
+            }));
+
+            if (isInDrawer) {
+                closeDrawer();
+                onClose?.();
+            } else {
+                // Preserve the list filters the user came in with (same mechanism
+                // as the Back button / BackNav) so the tickets list reopens filtered.
+                const returnFilters = searchParams?.get('returnFilters') ?? null;
+                const filtersQuery = returnFilters ? decodeURIComponent(returnFilters) : '';
+                router.push(filtersQuery ? `/msp/tickets?${filtersQuery}` : '/msp/tickets');
+            }
+        } catch (error: any) {
+            console.error('Failed to delete ticket:', error);
+            toast.error(error?.message || t('delete.error', {
+                defaultValue: 'Failed to delete ticket. Please try again.',
+            }));
+        } finally {
+            setIsTicketDeleteProcessing(false);
+        }
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
+
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
@@ -2440,6 +2523,16 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
+                                <Button
+                                    id={`${id}-delete-ticket-button`}
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleDeleteTicket}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>{t('actions.delete', { defaultValue: 'Delete' })}</span>
+                                </Button>
                             </div>
                         </div>
                         <h1
@@ -2482,6 +2575,18 @@ const handleClose = () => {
                         </p>
                     )}
                 </div>
+                {/* Delete Ticket Dialog (with dependency validation) */}
+                <DeleteEntityDialog
+                    id={`${id}-delete-ticket-dialog`}
+                    isOpen={isDeleteTicketDialogOpen}
+                    onClose={resetTicketDeleteState}
+                    onConfirmDelete={confirmTicketDelete}
+                    entityName={`#${ticket.ticket_number}`}
+                    validationResult={ticketDeleteValidation}
+                    isValidating={isTicketDeleteValidating}
+                    isDeleting={isTicketDeleteProcessing}
+                />
+
                 {/* Confirmation Dialog for Comment Deletion */}
                 <ConfirmationDialog
                     id={`${id}-delete-comment-dialog`}

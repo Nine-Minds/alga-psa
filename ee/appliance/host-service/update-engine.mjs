@@ -5,9 +5,13 @@ import { spawnSync } from 'node:child_process';
 import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
-const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
-const DEFAULT_RELEASE_SELECTION_FILE = '/etc/alga-appliance/release-selection.json';
-const DEFAULT_UPDATE_HISTORY_FILE = '/var/lib/alga-appliance/update-history.json';
+const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
+// Must honor ALGA_APPLIANCE_RELEASE_SELECTION_FILE like setup-engine/status-engine do:
+// the control-plane Deployment sets it to /var/lib/alga-appliance (the only writable
+// mount). Hardcoding /etc made POST /api/updates die at write-release-selection with
+// `EACCES: mkdir /etc/alga-appliance`, so the app-channel update flow never worked.
+const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
+const DEFAULT_UPDATE_HISTORY_FILE = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/var/lib/alga-appliance/update-history.json';
 const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
 
 function nowIso() {

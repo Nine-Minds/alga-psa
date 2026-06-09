@@ -135,6 +135,11 @@ export async function initializeApp() {
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     logger.info('Email provider registries initialized');
 
+    // Schedule entries are now read directly by @alga-psa/user-activities via the
+    // @alga-psa/scheduling getScheduleActivityEntries action, so there is no longer a
+    // process-global registry to wire at startup (this removes the cross-bundle
+    // "getAllScheduleEntries not registered" failure mode).
+
     // Initialize notification accumulator for batching ticket update emails
     // This is non-critical - if it fails, the system falls back to immediate sending
     try {
@@ -620,7 +625,7 @@ async function setupDevelopmentEnvironment() {
   if (glinda) {
     newPassword = generateSecurePassword();
     const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.email, hashedPassword);
+    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
   } else {
     logger.info('Glinda not found. Skipping password update.');
   }

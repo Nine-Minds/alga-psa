@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Hasło zostało zmienione pomyślnie",
-        "userUpdated": "Użytkownik został zaktualizowany pomyślnie"
+        "userUpdated": "Użytkownik został zaktualizowany pomyślnie",
+        "roleAdded": "Rola dodana pomyślnie",
+        "roleRemoved": "Rola usunięta pomyślnie"
       },
       "error": {
         "userNotFound": "Nie znaleziono użytkownika",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Wystąpił błąd podczas zmiany hasła",
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
       }
     },
     "loading": "Ładowanie szczegółów użytkownika..."

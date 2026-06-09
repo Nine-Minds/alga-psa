@@ -32,7 +32,8 @@ export type LicenseStateKind =
   | 'trial'         // Enterprise trial active
   | 'trial_expired' // Trial window elapsed, no license
   | 'licensed'      // Valid unexpired license present
-  | 'license_expired'; // License was present but has expired
+  | 'license_expired' // License was present but has expired
+  | 'license_wrong_tenant'; // Validly-signed license, but issued for a different tenant (aud mismatch)
 
 export interface ResolvedLicenseState {
   /** Current licensing state kind. */
@@ -85,8 +86,21 @@ export async function upsertLicenseState(
  *   3. Everything else         → 'essentials'
  *
  * Returns null when passed null (no row → caller falls through to SaaS logic).
+ *
+ * `expectedTenantId` is the tenant this install belongs to. When a license
+ * carries an `aud` (audience) claim it is bound to that tenant: if the caller
+ * supplies a tenant that doesn't match, the license resolves to
+ * `license_wrong_tenant`/essentials rather than granting its tier. Unbound
+ * licenses (no `aud`, every license issued to date) are accepted on any
+ * appliance, so this is forward-compatible — binding only takes effect once the
+ * issuer starts stamping `aud`. Callers that have no tenant in scope omit the
+ * argument and the check is skipped (the strict gate is submitLicense, which
+ * always has the session tenant at activation time).
  */
-export function resolveSelfHostTier(row: LicenseStateRow | null): ResolvedLicenseState | null {
+export function resolveSelfHostTier(
+  row: LicenseStateRow | null,
+  expectedTenantId?: string,
+): ResolvedLicenseState | null {
   if (!row) return null;
 
   const now = Date.now();
@@ -97,6 +111,13 @@ export function resolveSelfHostTier(row: LicenseStateRow | null): ResolvedLicens
     if (result.valid) {
       const expMs = result.claims.exp * 1000;
       if (expMs > now) {
+        // Per-tenant binding: a bound token (carries `aud`) is only honored on
+        // the appliance whose tenant matches. We only block when we actually
+        // have a tenant to compare against — an unbound token, or a missing
+        // expectedTenantId, falls through to the normal licensed result.
+        if (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId) {
+          return { state: 'license_wrong_tenant', tier: 'essentials', expiresAt: null, daysRemaining: null };
+        }
         const daysRemaining = Math.ceil((expMs - now) / (24 * 60 * 60 * 1000));
         return {
           state: 'licensed',
@@ -159,6 +180,11 @@ export async function eeRuntimeEnabledServer(): Promise<boolean> {
   if (!isEnterprise) return false;
   try {
     const row = await getLicenseStateRow();
+    // No tenant is threaded here (this is a global edition check, not a
+    // per-tenant action), so a tenant-bound license isn't re-validated against
+    // `aud`. That's intentional: submitLicense is the binding chokepoint — it
+    // refuses to store a token whose `aud` doesn't match this install's tenant —
+    // so a stored token is always either this tenant's or unbound (legacy).
     const resolved = resolveSelfHostTier(row);
     if (resolved === null) return true; // SaaS / no self-host record
     return resolved.tier !== 'essentials';

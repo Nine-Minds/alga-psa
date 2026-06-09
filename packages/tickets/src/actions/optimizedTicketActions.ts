@@ -1013,9 +1013,24 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereNull('t.master_ticket_id');
     }
 
-    // Apply filters to base query
-    if (validatedFilters.boardId) {
-      baseQuery = baseQuery.where('t.board_id', validatedFilters.boardId);
+    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
+    // legacy single `boardId`. An explicit board selection takes precedence over the
+    // active/inactive status restriction (the user has positively chosen boards).
+    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
+      ? validatedFilters.boardIds
+      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
+    const includeNoBoard = includeBoardIds.includes('no-board');
+    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
+    if (includeBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoBoard && includeRealBoardIds.length > 0) {
+          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
+        } else if (includeNoBoard) {
+          this.whereNull('t.board_id');
+        } else {
+          this.whereIn('t.board_id', includeRealBoardIds);
+        }
+      });
     } else if (validatedFilters.boardFilterState !== 'all') {
       const boardSubquery = trx('boards')
         .select('board_id')
@@ -1023,6 +1038,19 @@ async function buildTicketListBaseQuery(
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
+    }
+
+    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
+    // sentinel excludes tickets that have no board.
+    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
+    if (excludeBoardIds.includes('no-board')) {
+      baseQuery = baseQuery.whereNotNull('t.board_id');
+    }
+    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
+    if (excludeRealBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
+      });
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
@@ -1043,12 +1071,50 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId) {
-      if (validatedFilters.categoryId === 'no-category') {
-        baseQuery = baseQuery.whereNull('t.category_id');
-      } else if (validatedFilters.categoryId !== 'all') {
-        baseQuery = baseQuery.where('t.category_id', validatedFilters.categoryId);
-      }
+    // Category include filter. A ticket "has" a category if either its
+    // category_id (parent) or subcategory_id (child) matches the selection, so
+    // selecting a parent matches its subcategorized tickets and selecting a
+    // subcategory matches tickets that reference it via subcategory_id.
+    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
+    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
+      ? validatedFilters.categoryIds
+      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
+          ? [validatedFilters.categoryId]
+          : []);
+    const includeNoCategory = includeCategoryIds.includes('no-category');
+    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (includeNoCategory || includeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoCategory && includeRealCategoryIds.length > 0) {
+          this.whereNull('t.category_id').orWhere(function () {
+            this.whereIn('t.category_id', includeRealCategoryIds)
+              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+          });
+        } else if (includeNoCategory) {
+          this.whereNull('t.category_id');
+        } else {
+          this.whereIn('t.category_id', includeRealCategoryIds)
+            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+        }
+      });
+    }
+
+    // Category exclude filter. Excludes any ticket whose parent or subcategory is
+    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
+    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
+    const excludeNoCategory = excludeCategoryIds.includes('no-category');
+    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (excludeNoCategory) {
+      baseQuery = baseQuery.whereNotNull('t.category_id');
+    }
+    if (excludeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.where(function () {
+          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
+        }).andWhere(function () {
+          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
+        });
+      });
     }
 
     if (validatedFilters.clientId) {

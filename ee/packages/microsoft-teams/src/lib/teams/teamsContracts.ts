@@ -18,6 +18,10 @@ export interface TeamsIntegrationStatusResponse {
     botId: string | null;
     packageMetadata: Record<string, unknown> | null;
     lastError: string | null;
+    defaultMeetingOrganizerUpn: string | null;
+    defaultMeetingOrganizerObjectId: string | null;
+    downloadRecordings: boolean;
+    exposeRecordingsInPortal: boolean;
   };
 }
 
@@ -28,6 +32,10 @@ export interface TeamsIntegrationExecutionState {
   allowedActions: TeamsAllowedAction[];
   appId: string | null;
   packageMetadata: Record<string, unknown> | null;
+  defaultMeetingOrganizerUpn: string | null;
+  defaultMeetingOrganizerObjectId: string | null;
+  downloadRecordings: boolean;
+  exposeRecordingsInPortal: boolean;
 }
 
 export interface TeamsIntegrationSettingsInput {
@@ -37,6 +45,9 @@ export interface TeamsIntegrationSettingsInput {
   notificationCategories?: TeamsNotificationCategory[];
   allowedActions?: TeamsAllowedAction[];
   lastError?: string | null;
+  defaultMeetingOrganizerUpn?: string | null;
+  downloadRecordings?: boolean;
+  exposeRecordingsInPortal?: boolean;
 }
 
 export interface TeamsAppManifest {

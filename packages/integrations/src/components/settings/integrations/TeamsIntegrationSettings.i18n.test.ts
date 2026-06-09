@@ -28,6 +28,7 @@ const REQUIRED_DIAGNOSTICS_KEYS = [
   'steps.integrationStatus',
   'steps.capabilities',
   'steps.microsoftProfile',
+  'steps.recordingPermissions',
   'steps.packageMetadata',
   'steps.botConnector',
   'steps.userLinkage',
@@ -39,6 +40,8 @@ const REQUIRED_DIAGNOSTICS_KEYS = [
   'recommendation.profile',
   'recommendation.activeProfile',
   'recommendation.profileCredentials',
+  'recommendation.meetingOrganizer',
+  'recommendation.meetingOrganizerObjectId',
   'recommendation.package',
   'recommendation.baseUrl',
   'recommendation.botEnv',
@@ -57,6 +60,19 @@ const TEST_RESULT_REASON_KEYS = [
   'missingUserLinkage',
   'missingConversationReference',
   'skipped',
+] as const;
+
+const REQUIRED_MEETINGS_KEYS = [
+  'title',
+  'description',
+  'organizer.label',
+  'organizer.placeholder',
+  'organizer.help',
+  'organizer.resolved',
+  'downloadRecordings.label',
+  'downloadRecordings.description',
+  'exposeRecordingsInPortal.label',
+  'exposeRecordingsInPortal.description',
 ] as const;
 
 function readJson(filePath: string): unknown {
@@ -103,6 +119,21 @@ describe('TeamsIntegrationSettings diagnostics i18n coverage', () => {
         const value = getPathValue(locale, `integrations.teams.settings.diagnostics.test.${key}`);
         expect(value, `${filePath} is missing diagnostics.test.${key}`).toEqual(expect.any(String));
         expect(value).not.toBe(`integrations.teams.settings.diagnostics.test.${key}`);
+      }
+    }
+  });
+
+  it('defines all online-meetings keys in every integrations locale file', () => {
+    const localeFiles = listIntegrationLocaleFiles();
+    expect(localeFiles.length).toBeGreaterThan(0);
+
+    for (const filePath of localeFiles) {
+      const locale = readJson(filePath);
+
+      for (const key of REQUIRED_MEETINGS_KEYS) {
+        const value = getPathValue(locale, `integrations.teams.settings.meetings.${key}`);
+        expect(value, `${filePath} is missing meetings.${key}`).toEqual(expect.any(String));
+        expect(value).not.toBe(`integrations.teams.settings.meetings.${key}`);
       }
     }
   });

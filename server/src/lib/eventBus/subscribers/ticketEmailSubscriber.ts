@@ -34,6 +34,7 @@ import {
   normalizeRecipientEmail,
   extractActiveWatcherEmails,
   sendOneEmailPerWatcher,
+  resolveInternalWatcherEmails,
 } from './watcherRecipients';
 
 /**
@@ -1098,16 +1099,18 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }, 'Ticket Created', ticket.assigned_to);
     }
 
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
+        const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: emailSubject,
           template: 'ticket-created',
-          context: buildContext(portalUrl),
+          context: buildContext(watcherUrl),
           replyContext,
           from: ticketingFromAddress
         }, 'Ticket Created');
@@ -1829,16 +1832,18 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
     }
 
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
+        const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
           template: 'ticket-updated',
-          context: buildContext(portalUrl),
+          context: buildContext(watcherUrl),
           replyContext: {
             ticketId: ticket.ticket_id || ticketId,
             threadId: ticket.email_metadata?.threadId
@@ -2697,16 +2702,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         }
       }
 
+      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
+          const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
           await sendIfUnique({
             tenantId,
             ...emailEntityContext,
             to: watcherEmail,
             subject: `New Comment on Ticket: ${ticket.title}`,
             template: 'ticket-comment-added',
-            context: buildContext(portalUrl),
+            context: buildContext(watcherUrl),
             replyContext: {
               ticketId: ticket.ticket_id || payload.ticketId,
               commentId: payload.comment?.id,
@@ -3140,16 +3147,20 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     }
 
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
+        const watcherContext = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail))
+          ? internalContext
+          : externalContext;
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
-          context: externalContext,
+          context: watcherContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId

@@ -11,6 +11,7 @@ import * as planServiceConfigActions from './contractLineServiceConfigurationAct
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 async function findTemplateLine(
   trx: Knex.Transaction,
@@ -40,6 +41,9 @@ export const getContractLineServices = withAuth(async (
   { tenant },
   contractLineId: string
 ): Promise<IContractLineService[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -76,6 +80,9 @@ export const getContractLineServicesWithNames = withAuth(async (
   { tenant },
   contractLineId: string
 ): Promise<Array<IContractLineService & { service_name?: string }>> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const services = await trx('contract_line_services as cls')
@@ -105,6 +112,9 @@ export const getContractLineService = withAuth(async (
   contractLineId: string,
   serviceId: string
 ): Promise<IContractLineService | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -233,6 +243,9 @@ export const addServiceToContractLine = withAuth(async (
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
   typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
 ): Promise<string> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -452,6 +465,9 @@ export const updateContractLineService = withAuth(async (
   },
   rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here
 ): Promise<boolean> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
@@ -510,6 +526,9 @@ export const removeServiceFromContractLine = withAuth(async (
   contractLineId: string,
   serviceId: string
 ): Promise<boolean> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -596,6 +615,9 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
   userTypeRates?: IUserTypeRate[];
   bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
 }[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -753,6 +775,9 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
   typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
 }[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const configurations = await trx('contract_template_line_service_configuration')

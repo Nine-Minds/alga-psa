@@ -45,8 +45,8 @@ async function assertClientContractAssignmentIsAuthorable(
   }
 }
 
-function requireClientReadPermission(user: IUserWithRoles): void {
-  if (!hasPermission(user, 'client', 'read')) {
+async function requireClientReadPermission(user: IUserWithRoles): Promise<void> {
+  if (!await hasPermission(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
 }
@@ -136,6 +136,9 @@ export const createClientContractForBilling = withAuth(async (
   { tenant },
   input: ClientContractAssignmentCreateInput
 ): Promise<IClientContract> => {
+  if (!await hasPermission(user, 'client', 'create')) {
+    throw new Error('Permission denied: Cannot create client contract assignments');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -166,6 +169,9 @@ export const updateClientContractForBilling = withAuth(async (
   clientContractId: string,
   updateData: Partial<IClientContract>
 ): Promise<IClientContract> => {
+  if (!await hasPermission(user, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update client contract assignments');
+  }
   const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -202,6 +202,13 @@ export const createAssetRelationshipSchema = z.object({
   relationship_type: z.string().min(1, 'Relationship type is required')
 });
 
+// Link a ticket to an asset (POST /api/v1/assets/{id}/tickets).
+export const linkAssetTicketSchema = z.object({
+  ticket_id: uuidSchema,
+  relationship_type: z.string().min(1).optional(),
+  notes: z.string().optional()
+});
+
 export const assetRelationshipResponseSchema = z.object({
   relationship_id: uuidSchema,
   asset_id: uuidSchema,
@@ -363,10 +370,7 @@ export const assetSearchSchema = z.object({
 
 // Asset export schema
 export const assetExportQuerySchema = z.object({
-  format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_extension_data: booleanTransform.optional().default('false'),
-  include_maintenance: booleanTransform.optional().default('false'),
-  include_documents: booleanTransform.optional().default('false'),
+  format: z.enum(['csv', 'json']).optional().default('csv'),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   client_ids: z.array(uuidSchema).optional(),

@@ -10,6 +10,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { toPlainDate } from '@alga-psa/core';
 
 
@@ -18,6 +19,9 @@ export const getBillingCycle = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<BillingCycleType> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   const result: { billing_cycle?: BillingCycleType | null } | undefined = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -39,6 +43,9 @@ export const updateBillingCycle = withAuth(async (
   clientId: string,
   billingCycle: BillingCycleType
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -63,6 +70,9 @@ export const canCreateNextBillingCycle = withAuth(async (
   isEarly: boolean;
   periodEndDate?: string;
 }> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   // Get the client's current billing cycle type
@@ -121,6 +131,9 @@ export const getNextBillingCycleStatusForClients = withAuth(async (
     periodEndDate?: string;
   };
 }> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   if (clientIds.length === 0) {
     return {};
   }
@@ -184,6 +197,9 @@ export const createNextBillingCycle = withAuth(async (
   clientId: string,
   effectiveDate?: string
 ): Promise<BillingCycleCreationResult> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   const client = await withTransaction(conn, async (trx: Knex.Transaction) => {
@@ -291,6 +307,9 @@ export const removeBillingCycle = withAuth(async (
   { tenant },
   cycleId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex } = await createTenantKnex();
 
   // Check for existing invoices
@@ -316,6 +335,9 @@ export const hardDeleteBillingCycle = withAuth(async (
   { tenant },
   cycleId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex } = await createTenantKnex();
 
   // Check for existing invoices
@@ -532,6 +554,9 @@ export const reverseRecurringInvoice = withAuth(async (
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   await hardDeleteInvoice(params.invoiceId);
 });
 
@@ -540,6 +565,9 @@ export const hardDeleteRecurringInvoice = withAuth(async (
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   await hardDeleteInvoice(params.invoiceId);
 });
 
@@ -551,6 +579,9 @@ export const getInvoicedBillingCycles = withAuth(async (
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
 })[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   // Get all billing cycles that have invoices
@@ -769,6 +800,9 @@ export const getRecurringInvoiceHistoryPaginated = withAuth(async (
   { tenant },
   options: FetchRecurringInvoiceHistoryOptions = {}
 ): Promise<PaginatedRecurringInvoiceHistoryResult> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   return fetchRecurringInvoiceHistoryPage(tenant, options);
 });
 
@@ -780,6 +814,9 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
   { tenant },
   options: FetchInvoicedCyclesOptions = {}
 ): Promise<PaginatedInvoicedCyclesResult> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const result = await fetchRecurringInvoiceHistoryPage(tenant, options);
   return {
     cycles: result.rows,
@@ -794,6 +831,9 @@ export const getAllBillingCycles = withAuth(async (
   user,
   { tenant }
 ): Promise<{ [clientId: string]: BillingCycleType }> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex: conn } = await createTenantKnex();
 
   // Get billing cycles from clients table

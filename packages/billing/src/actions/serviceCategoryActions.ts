@@ -6,6 +6,7 @@ import { IServiceCategory } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 
 export const getServiceCategories = withAuth(async (user, { tenant }) => {
@@ -24,6 +25,9 @@ export const getServiceCategories = withAuth(async (user, { tenant }) => {
 });
 
 export const createServiceCategory = withAuth(async (user, { tenant }, categoryName: string, description?: string) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   if (!categoryName || categoryName.trim() === '') {
     throw new Error('Category name is required');
   }
@@ -67,6 +71,9 @@ export const createServiceCategory = withAuth(async (user, { tenant }, categoryN
 });
 
 export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryId: string) => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   if (!categoryId) {
     throw new Error('Category ID is required');
   }
@@ -110,6 +117,9 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 export const updateServiceCategory = withAuth(async (user, { tenant }, categoryId: string, categoryData: Partial<IServiceCategory>) => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   if (!categoryId) {
     throw new Error('Category ID is required');
   }

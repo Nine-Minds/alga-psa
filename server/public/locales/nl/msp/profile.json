@@ -134,7 +134,18 @@
         "inactiveHidden": "(inactieve gebruikers verborgen)"
       },
       "inactiveTag": "(Inactief)",
-      "unnamedUser": "Naamloze gebruiker"
+      "unnamedUser": "Naamloze gebruiker",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rol succesvol toegewezen",
+          "roleRemoved": "Rol succesvol verwijderd"
+        },
+        "error": {
+          "assignFailed": "Toewijzen van rol mislukt. Probeer het opnieuw.",
+          "removeFailed": "Verwijderen van rol mislukt. Probeer het opnieuw.",
+          "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+        }
+      }
     },
     "sessions": {
       "title": "Alle gebruikerssessies",

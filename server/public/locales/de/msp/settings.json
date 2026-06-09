@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Passwort erfolgreich geändert",
-        "userUpdated": "Benutzer erfolgreich aktualisiert"
+        "userUpdated": "Benutzer erfolgreich aktualisiert",
+        "roleAdded": "Rolle erfolgreich hinzugefügt",
+        "roleRemoved": "Rolle erfolgreich entfernt"
       },
       "error": {
         "userNotFound": "Benutzer nicht gefunden",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Beim Ändern des Passworts ist ein Fehler aufgetreten",
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
-        "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
+        "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+        "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern."
       }
     },
     "loading": "Benutzerdetails werden geladen..."

@@ -301,7 +301,15 @@ export async function confirmTenantDeletion(
 export async function rollbackTenantDeletion(
   workflowId: string,
   reason: string,
-  rolledBackBy: string
+  rolledBackBy: string,
+  reactivation?: {
+    stripeCustomerId: string;
+    stripeSubscriptionId: string;
+    stripeSubscriptionItemId?: string;
+    stripePriceId: string;
+    checkoutSessionId?: string;
+    sendPasswordReset?: boolean;
+  }
 ): Promise<SignalResult> {
   try {
     const mod: any = await import('@temporalio/client').catch(() => null);
@@ -317,7 +325,7 @@ export async function rollbackTenantDeletion(
 
     try {
       const handle = client.workflow.getHandle(workflowId);
-      await handle.signal('rollbackDeletion', { reason, rolledBackBy });
+      await handle.signal('rollbackDeletion', { reason, rolledBackBy, reactivation });
 
       return {
         available: true,

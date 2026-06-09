@@ -226,3 +226,6 @@ out
 secrets-playwright/
 server/secrets-playwright/
 .build-perf/
+
+# build memory harness artifacts
+.build-mem/

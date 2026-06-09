@@ -14,6 +14,7 @@ import { toPlainDate } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 // Types for paginated invoice fetching
 export interface FetchInvoicesOptions {
@@ -98,6 +99,10 @@ export const fetchInvoicesPaginated = withAuth(async (
   { tenant },
   options: FetchInvoicesOptions = {}
 ): Promise<PaginatedInvoicesResult> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   const {
     page = 1,
     pageSize = 10,
@@ -356,6 +361,10 @@ export const fetchInvoicesByClient = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<InvoiceViewModel[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   try {
     console.log(`Fetching invoices for client: ${clientId}`);
 
@@ -469,6 +478,10 @@ export const fetchInvoicesByContract = withAuth(async (
   { tenant },
   contractId: string
 ): Promise<InvoiceViewModel[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   try {
     const { knex } = await createTenantKnex();
 
@@ -547,6 +560,10 @@ export const getInvoiceForRendering = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   try {
     console.log('Fetching full invoice details for rendering:', invoiceId);
 
@@ -566,6 +583,10 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<import('@alga-psa/types').WasmInvoiceViewModel | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   const { knex } = await createTenantKnex();
   const dbInvoiceData = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   if (!dbInvoiceData) {
@@ -638,6 +659,10 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoicePurchaseOrderSummary | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   const { knex } = await createTenantKnex();
 
   const invoice = await knex('invoices')
@@ -686,6 +711,10 @@ export const getInvoiceLineItems = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<IInvoiceCharge[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
+
   try {
     const { knex } = await createTenantKnex();
     console.log('Fetching line items for invoice:', invoiceId);

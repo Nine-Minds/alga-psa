@@ -134,7 +134,18 @@
         "inactiveHidden": "(Inaktive Benutzer ausgeblendet)"
       },
       "inactiveTag": "(Inaktiv)",
-      "unnamedUser": "Unbenannter Benutzer"
+      "unnamedUser": "Unbenannter Benutzer",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rolle erfolgreich zugewiesen",
+          "roleRemoved": "Rolle erfolgreich entfernt"
+        },
+        "error": {
+          "assignFailed": "Rolle konnte nicht zugewiesen werden. Bitte versuchen Sie es erneut.",
+          "removeFailed": "Rolle konnte nicht entfernt werden. Bitte versuchen Sie es erneut.",
+          "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern."
+        }
+      }
     },
     "sessions": {
       "title": "Alle Benutzersitzungen",

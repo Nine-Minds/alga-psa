@@ -5,7 +5,6 @@
  * - companies → clients (see 20251003000001_company_to_client_migration.cjs)
  * - channels → boards (see 20250930000001_rename_channels_to_boards.cjs)
  * - billing_plans → contract_lines (see 20251008000001_rename_billing_to_contracts.cjs)
- * - service_categories → ticket_categories (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
  */
 
 exports.up = async function(knex) {
@@ -134,6 +133,9 @@ exports.up = async function(knex) {
     });
     // ⚠️ RENAMED: 'channels' → 'boards' (see 20250930000001_rename_channels_to_boards.cjs)
 
+    // `categories` is the TICKET categories table (NOT `ticket_categories`, which
+    // does not exist). Note: no description/is_active/updated_* columns, and
+    // display_order is NOT NULL — inserts must supply it.
     await knex.schema.createTable('categories', (table) => {
         table.uuid('tenant').notNullable();
         table.uuid('category_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -395,7 +397,7 @@ exports.up = async function(knex) {
         table.foreign(['tenant', 'ticket_id']).references(['tenant', 'ticket_id']).inTable('tickets');
     });
 
-    await knex.schema.createTable('service_categories', (table) => { // ⚠️ RENAMED to 'ticket_categories' (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
+    await knex.schema.createTable('service_categories', (table) => {
         table.uuid('tenant').notNullable();
         table.uuid('category_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('category_name').notNullable();
@@ -403,7 +405,6 @@ exports.up = async function(knex) {
         table.primary(['tenant', 'category_id']);
         table.foreign('tenant').references('tenants.tenant');
     });
-    // ⚠️ RENAMED: 'service_categories' → 'ticket_categories' (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
 
     await knex.schema.createTable('service_catalog', (table) => {
         table.uuid('tenant').notNullable();

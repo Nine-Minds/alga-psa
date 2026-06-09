@@ -1,7 +1,40 @@
 import type { IInteraction, IInteractionType } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import OnlineMeetingModel from './onlineMeeting';
+
+type DbOrTransaction = Knex | Knex.Transaction;
+
+async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {
+  if (trx) {
+    return { db: trx, tenant: tenantId };
+  }
+
+  const { knex: db, tenant } = await createTenantKnex(tenantId);
+  return { db, tenant: tenant ?? tenantId };
+}
 
 class InteractionModel {
+  private static async withOnlineMeeting(
+    interaction: IInteraction,
+    tenantId: string,
+  ): Promise<IInteraction> {
+    const onlineMeeting = await OnlineMeetingModel.getByInteractionId(interaction.interaction_id, tenantId);
+    return {
+      ...interaction,
+      online_meeting: onlineMeeting,
+    };
+  }
+
+  private static async withOnlineMeetings(
+    interactions: IInteraction[],
+    tenantId: string,
+  ): Promise<IInteraction[]> {
+    return await Promise.all(
+      interactions.map((interaction) => this.withOnlineMeeting(interaction, tenantId)),
+    );
+  }
+
   static async getForEntity(entityId: string, entityType: 'contact' | 'client', tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
 
@@ -63,10 +96,12 @@ class InteractionModel {
 
       const result = await query;
 
-      return result.map((row): IInteraction => ({
+      const interactions = result.map((row): IInteraction => ({
         ...row,
         type_name: row.type_name?.toLowerCase() || null,
       }));
+
+      return await this.withOnlineMeetings(interactions, tenant ?? tenantId);
     } catch (error) {
       console.error(`Error fetching interactions for ${entityType}:`, error);
       throw error;
@@ -222,8 +257,12 @@ class InteractionModel {
     }
   }
 
-  static async addInteraction(interactionData: Omit<IInteraction, 'interaction_id'>, tenantId: string): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
+  static async addInteraction(
+    interactionData: Omit<IInteraction, 'interaction_id'>,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const [newInteraction] = await db('interactions')
@@ -233,7 +272,7 @@ class InteractionModel {
         })
         .returning('*');
 
-      const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId);
+      const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId, db);
       if (!fullInteraction) {
         throw new Error('Failed to fetch created interaction');
       }
@@ -286,8 +325,12 @@ class InteractionModel {
     }
   }
 
-  static async getById(interactionId: string, tenantId: string): Promise<IInteraction | null> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
+  static async getById(
+    interactionId: string,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction | null> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const result = await db('interactions')
@@ -332,10 +375,10 @@ class InteractionModel {
         return null;
       }
 
-      return {
+      return await this.withOnlineMeeting({
         ...result,
         type_name: result.type_name?.toLowerCase() || null,
-      };
+      }, tenant);
     } catch (error) {
       console.error('Error fetching interaction by ID:', error);
       throw error;

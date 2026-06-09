@@ -95,7 +95,7 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
       return { success: false, error: 'Invoice is cancelled' };
     }
 
-    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(tenantId, invoiceId);
+    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(invoiceId);
     if (!paymentUrl) {
       return { success: false, error: 'payment_not_configured' };
     }
@@ -240,10 +240,10 @@ export const verifyClientPortalPayment = withAuth(async (
     }
 
     // Check payment status from the payment provider
-    const paymentStatus = await getInvoicePaymentStatus(tenantId, invoiceId);
+    const paymentStatus = await getInvoicePaymentStatus(invoiceId);
 
     // Get the most current payment URL (if needed for retry)
-    const paymentUrl = await getActiveInvoicePaymentLinkUrl(tenantId, invoiceId);
+    const paymentUrl = await getActiveInvoicePaymentLinkUrl(invoiceId);
 
     if (!paymentStatus) {
       return {

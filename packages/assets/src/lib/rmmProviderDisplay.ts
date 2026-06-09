@@ -10,8 +10,12 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
       return 'Tanium';
     case 'datto':
       return 'Datto';
+    case 'levelio':
+      return 'Level';
     case 'connectwise_automate':
       return 'CW Automate';
+    case 'huntress':
+      return 'Huntress';
     default:
       return provider || 'Unknown';
   }

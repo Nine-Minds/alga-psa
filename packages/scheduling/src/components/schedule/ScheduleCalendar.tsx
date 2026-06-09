@@ -516,12 +516,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
     try {
       console.log('Saving entry:', entryData);
+      const scheduleEntryData = entryData;
       let updatedEntry;
       if (selectedEvent) {
         const entryToUpdate = {
-          ...entryData,
-          recurrence_pattern: entryData.recurrence_pattern || null,
-          assigned_user_ids: entryData.assigned_user_ids,
+          ...scheduleEntryData,
+          recurrence_pattern: scheduleEntryData.recurrence_pattern || null,
+          assigned_user_ids: scheduleEntryData.assigned_user_ids,
           ...(selectedEvent.entry_id.includes('_') ? { original_entry_id: selectedEvent.original_entry_id } : {})
         };
 
@@ -540,8 +541,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         }
       } else {
         const result = await addScheduleEntry({
-          ...entryData,
-          recurrence_pattern: entryData.recurrence_pattern || null,
+          ...scheduleEntryData,
+          recurrence_pattern: scheduleEntryData.recurrence_pattern || null,
         });
         if (result.success && result.entry) {
           updatedEntry = result.entry;

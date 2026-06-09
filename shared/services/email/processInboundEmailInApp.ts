@@ -1580,6 +1580,9 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: serializedBlocks,
       source: 'email',
+      // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
+      // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
+      suppressTechEmailNotification: true,
       // Unmatched inbound senders are still customer-originated replies even
       // when we cannot resolve them to an existing contact record.
       author_type: commentAuthorType,

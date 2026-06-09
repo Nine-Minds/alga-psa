@@ -279,7 +279,7 @@ export const validateCreditBalance = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permission for credit reading
-    if (!hasPermission(user, 'credit', 'read')) {
+    if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit balance information');
     }
 
@@ -377,7 +377,7 @@ export const scheduledCreditBalanceValidation = withAuth(async (
     { tenant }
 ): Promise<void> => {
     // Check permission for credit reading (required for scheduled validation)
-    if (!hasPermission(user, 'credit', 'read')) {
+    if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot perform credit balance validation');
     }
 
@@ -402,7 +402,7 @@ export const createPrepaymentInvoice = withAuth(async (
     manualExpirationDate?: string
 ): Promise<IInvoice> => {
     // Check permission for credit creation
-    if (!hasPermission(user, 'credit', 'create')) {
+    if (!await hasPermission(user, 'credit', 'create')) {
         throw new Error('Permission denied: Cannot create prepayment invoices or issue credits');
     }
 
@@ -700,7 +700,7 @@ export const applyCreditToInvoice = withAuth(async (
     requestedAmount: number
 ): Promise<void> => {
     // Check permission for credit updates (applying credits modifies credit balances)
-    if (!hasPermission(user, 'credit', 'update')) {
+    if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
@@ -984,7 +984,7 @@ export const getCreditHistory = withAuth(async (
     endDate?: string
 ): Promise<ITransaction[]> => {
     // Check permission for credit reading
-    if (!hasPermission(user, 'credit', 'read')) {
+    if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit history');
     }
 
@@ -1033,7 +1033,7 @@ export const listClientCredits = withAuth(async (
     totalPages: number
 }> => {
     // Check permission for credit reading
-    if (!hasPermission(user, 'credit', 'read')) {
+    if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read client credits');
     }
 
@@ -1137,7 +1137,7 @@ export const getCreditDetails = withAuth(async (
     invoice_service_period_end?: string | null,
 }> => {
     // Check permission for credit reading
-    if (!hasPermission(user, 'credit', 'read')) {
+    if (!await hasPermission(user, 'credit', 'read')) {
         throw new Error('Permission denied: Cannot read credit details');
     }
 
@@ -1239,7 +1239,7 @@ export const updateCreditExpiration = withAuth(async (
     userId: string
 ): Promise<ICreditTracking> => {
     // Check permission for credit updates
-    if (!hasPermission(user, 'credit', 'update')) {
+    if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot update credit expiration dates');
     }
 
@@ -1338,7 +1338,7 @@ export const manuallyExpireCredit = withAuth(async (
     reason?: string
 ): Promise<ICreditTracking> => {
     // Check permission for credit updates
-    if (!hasPermission(user, 'credit', 'update')) {
+    if (!await hasPermission(user, 'credit', 'update')) {
         throw new Error('Permission denied: Cannot manually expire credits');
     }
 
@@ -1461,7 +1461,7 @@ export const transferCredit = withAuth(async (
     reason?: string
 ): Promise<ICreditTracking> => {
     // Check permission for credit transfers
-    if (!hasPermission(user, 'credit', 'transfer')) {
+    if (!await hasPermission(user, 'credit', 'transfer')) {
         throw new Error('Permission denied: Cannot transfer credits between clients');
     }
 

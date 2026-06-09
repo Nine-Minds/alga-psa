@@ -1543,6 +1543,58 @@ export class PermissionRoleService extends BaseService<IRole> {
     };
   }
 
+  /**
+   * List RBAC audit-log entries (role/permission/user-role changes recorded in
+   * audit_logs). Filterable by user_id, operation, table_name, record_id, and a
+   * timestamp range; newest first.
+   */
+  async listRbacAuditLogs(
+    options: {
+      page?: number;
+      limit?: number;
+      filters?: {
+        user_id?: string;
+        operation?: string;
+        table_name?: string;
+        record_id?: string;
+        start_date?: string;
+        end_date?: string;
+      };
+    },
+    context: ServiceContext
+  ): Promise<ListResult<any>> {
+    const { knex } = await this.getKnex();
+    const RBAC_TABLES = ['roles', 'permissions', 'role_permissions', 'user_roles'];
+    const page = options.page && options.page > 0 ? options.page : 1;
+    const limit = Math.min(options.limit || 25, 100);
+    const offset = (page - 1) * limit;
+    const f = options.filters || {};
+
+    const buildQuery = () => {
+      let q = knex('audit_logs').where('tenant', context.tenant);
+      if (f.table_name && RBAC_TABLES.includes(f.table_name)) {
+        q = q.where('table_name', f.table_name);
+      } else {
+        q = q.whereIn('table_name', RBAC_TABLES);
+      }
+      if (f.user_id) q = q.where('user_id', f.user_id);
+      if (f.operation) q = q.where('operation', f.operation);
+      if (f.record_id) q = q.where('record_id', f.record_id);
+      if (f.start_date) q = q.where('timestamp', '>=', f.start_date);
+      if (f.end_date) q = q.where('timestamp', '<=', f.end_date);
+      return q;
+    };
+
+    const [{ count }] = await buildQuery().count('* as count');
+    const data = await buildQuery()
+      .orderBy('timestamp', 'desc')
+      .limit(limit)
+      .offset(offset)
+      .select('audit_id', 'user_id', 'operation', 'table_name', 'record_id', 'changed_data', 'details', 'timestamp');
+
+    return { data, total: parseInt(count as string, 10) };
+  }
+
   // =============================================================================
   // BULK OPERATIONS
   // =============================================================================

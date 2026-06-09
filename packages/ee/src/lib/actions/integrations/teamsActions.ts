@@ -31,6 +31,10 @@ interface TeamsIntegrationStatusResponse {
     botId: string | null;
     packageMetadata: Record<string, unknown> | null;
     lastError: string | null;
+    defaultMeetingOrganizerUpn: string | null;
+    defaultMeetingOrganizerObjectId: string | null;
+    downloadRecordings: boolean;
+    exposeRecordingsInPortal: boolean;
   };
 }
 
@@ -41,6 +45,10 @@ interface TeamsIntegrationExecutionState {
   allowedActions: TeamsAllowedAction[];
   appId: string | null;
   packageMetadata: Record<string, unknown> | null;
+  defaultMeetingOrganizerUpn: string | null;
+  defaultMeetingOrganizerObjectId: string | null;
+  downloadRecordings: boolean;
+  exposeRecordingsInPortal: boolean;
 }
 
 interface TeamsIntegrationSettingsInput {
@@ -50,6 +58,9 @@ interface TeamsIntegrationSettingsInput {
   notificationCategories?: TeamsNotificationCategory[];
   allowedActions?: TeamsAllowedAction[];
   lastError?: string | null;
+  defaultMeetingOrganizerUpn?: string | null;
+  downloadRecordings?: boolean;
+  exposeRecordingsInPortal?: boolean;
 }
 
 const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
@@ -59,6 +70,10 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
   appId: null,
   packageMetadata: null,
+  defaultMeetingOrganizerUpn: null,
+  defaultMeetingOrganizerObjectId: null,
+  downloadRecordings: false,
+  exposeRecordingsInPortal: false,
 };
 
 export async function getTeamsIntegrationStatusImpl(

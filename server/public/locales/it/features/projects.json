@@ -436,6 +436,7 @@
     "selectFolderDescription": "Scegli dove salvare questo nuovo documento"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Dettagli limitati — non sei assegnato a questo ticket",
     "title": "Ticket associati",
     "linkExistingTitle": "Collega ticket esistente",
     "createTicket": "Crea ticket",
@@ -724,6 +725,7 @@
       "allPriorities": "Tutte le priorità"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Dettagli limitati — non sei assegnato a questa attività",
       "title": "Attività di progetto collegate",
       "loadFailed": "Impossibile caricare l'attività",
       "phaseNotFound": "Fase attività non trovata",
@@ -745,6 +747,9 @@
       "assigning": "Assegnazione...",
       "confirm": "Assegna attività",
       "teamReplaceNotice": "Le attività già assegnate a un altro team verranno riassegnate al team selezionato."
+    },
+    "convertAdHocToTask": {
+      "title": "Converti in attività di progetto"
     }
   },
   "filters": {

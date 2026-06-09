@@ -134,7 +134,18 @@
         "noUsers": "11111 {{type}} 11111",
         "inactiveHidden": "11111"
       },
-      "inactiveTag": "11111"
+      "inactiveTag": "11111",
+      "messages": {
+        "success": {
+          "roleAssigned": "11111",
+          "roleRemoved": "11111"
+        },
+        "error": {
+          "assignFailed": "11111",
+          "removeFailed": "11111",
+          "permissionDenied": "11111"
+        }
+      }
     },
     "sessions": {
       "title": "11111",

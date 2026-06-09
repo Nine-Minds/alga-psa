@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
 
 /**
@@ -13,6 +14,9 @@ export const getCreditExpirationSettings = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ICreditExpirationSettings> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('No tenant found');
 
@@ -62,6 +66,9 @@ export const updateCreditExpirationSettings = withAuth(async (
   clientId: string,
   settings: ICreditExpirationSettings
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   try {
     const { knex } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');

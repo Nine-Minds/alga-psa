@@ -787,6 +787,50 @@
       "ai.infer": {
         "label": "Inferir salida estructurada",
         "description": "Generar datos estructurados del flujo de trabajo a partir de una indicación usando el proveedor de IA configurado."
+      },
+      "store.get": {
+        "label": "Obtener valor almacenado",
+        "description": "Leer una entrada clave/valor de flujo de trabajo persistida."
+      },
+      "store.set": {
+        "label": "Establecer valor almacenado",
+        "description": "Conservar una entrada clave/valor de flujo de trabajo."
+      },
+      "store.delete": {
+        "label": "Eliminar valor almacenado",
+        "description": "Eliminar una entrada clave/valor de flujo de trabajo persistida."
+      },
+      "store.increment": {
+        "label": "Incrementar número almacenado",
+        "description": "Incrementar de forma atómica un número de flujo de trabajo persistido."
+      },
+      "store.list": {
+        "label": "Enumerar valores almacenados",
+        "description": "Enumerar las entradas clave/valor de flujo de trabajo persistidas en un espacio de nombres."
+      },
+      "store.list_namespaces": {
+        "label": "Enumerar espacios de nombres del almacén",
+        "description": "Enumerar los espacios de nombres del almacén de datos de flujo de trabajo usados por este inquilino."
+      },
+      "links.upsert": {
+        "label": "Crear o actualizar vínculo de entidad",
+        "description": "Crear o actualizar un vínculo persistido entre dos entidades de flujo de trabajo."
+      },
+      "links.lookup": {
+        "label": "Buscar vínculos de entidad",
+        "description": "Buscar vínculos de entidad persistidos por entidad de origen y dirección."
+      },
+      "links.delete": {
+        "label": "Eliminar vínculos de entidad",
+        "description": "Eliminar vínculos de entidad persistidos por lado y relación opcional."
+      },
+      "links.list": {
+        "label": "Enumerar vínculos de entidad",
+        "description": "Enumerar los vínculos de entidad persistidos en un espacio de nombres."
+      },
+      "links.list_namespaces": {
+        "label": "Enumerar espacios de nombres de vínculos",
+        "description": "Enumerar los espacios de nombres de vínculos de entidad de flujo de trabajo usados por este inquilino."
       }
     },
     "validation": {
@@ -931,6 +975,10 @@
         "ai": {
           "label": "IA",
           "description": "Acciones de IA"
+        },
+        "data-store": {
+          "label": "Almacén de datos",
+          "description": "Leer y escribir el estado duradero del flujo de trabajo entre ejecuciones."
         }
       }
     },
@@ -1408,7 +1456,11 @@
       "ariaLabel": "Pedir ayuda a la IA para transformaciones",
       "title": "Preguntar a la IA",
       "shortcutHint": "Abrir Quick Ask para obtener ayuda con transformaciones"
-    }
+    },
+    "softEnumPlaceholder": "Seleccionar o introducir un valor",
+    "softEnumSearchPlaceholder": "Buscar o introducir un valor personalizado",
+    "softEnumNoResults": "Sin sugerencias",
+    "softEnumUseCustom": "Usar «{{value}}»"
   },
   "schemaReference": {
     "selectAction": "Seleccione una acción para ver su esquema de entrada/salida",
@@ -1984,6 +2036,23 @@
     "workflowWaitTiming": {
       "fixed": "Fecha y hora específicas",
       "expression": "Expresión avanzada"
+    },
+    "workflowEntityType": {
+      "project_task": "Tarea de proyecto",
+      "ticket": "Ticket",
+      "contact": "Contacto",
+      "client": "Cliente",
+      "project": "Proyecto",
+      "appointment": "Cita",
+      "quote": "Presupuesto"
+    },
+    "workflowLinkRelation": {
+      "related": "Relacionado",
+      "mirrors": "Refleja",
+      "maps_to": "Se asigna a",
+      "blocks": "Bloquea",
+      "duplicate_of": "Duplicado de",
+      "synced_with": "Sincronizado con"
     }
   },
   "automation": {

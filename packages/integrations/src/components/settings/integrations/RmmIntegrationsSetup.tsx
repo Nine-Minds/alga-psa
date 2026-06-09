@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -14,6 +16,10 @@ import {
   getAvailableRmmProviderRegistry,
   type RmmProviderMetadata
 } from '../../../lib/rmm/providerRegistry';
+import {
+  getRmmIntegrationStatuses,
+  type RmmIntegrationStatus
+} from '../../../actions/integrations/rmmIntegrationStatusActions';
 
 import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
 
@@ -22,103 +28,69 @@ type RmmIntegrationOption = {
   component: React.ComponentType;
 };
 
-function BannerIcon({
-  className,
-  children
-}: {
-  className: string;
-  children: React.ReactNode;
-}) {
+const PROVIDER_ICON_STYLES: Record<RmmProviderMetadata['icon'], { className: string; label: string }> = {
+  tacticalrmm: { className: 'bg-amber-500 text-[9px] font-bold tracking-wider text-white', label: 'TRMM' },
+  ninjaone: { className: 'bg-slate-900 text-base font-bold text-white', label: 'N' },
+  tanium: { className: 'bg-red-600 text-base font-bold text-white', label: 'T' },
+  levelio: { className: 'bg-blue-600 text-base font-bold text-white', label: 'L' },
+  huntress: { className: 'bg-emerald-600 text-base font-bold text-white', label: 'H' }
+};
+
+function ProviderIcon({ icon }: { icon: RmmProviderMetadata['icon'] }) {
+  const style = PROVIDER_ICON_STYLES[icon] ?? { className: 'bg-muted text-xs text-foreground', label: 'RMM' };
   return (
     <div
       className={cn(
-        'flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold shadow-sm ring-1 ring-border',
-        className
+        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm ring-1 ring-border',
+        style.className
       )}
     >
-      {children}
+      {style.label}
     </div>
   );
 }
 
-function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
-  const icon = (() => {
-    switch (option.metadata.icon) {
-      case 'tacticalrmm':
-        return (
-          <BannerIcon className="bg-amber-500 text-[11px] font-bold tracking-wider text-white">
-            TRMM
-          </BannerIcon>
-        );
-      case 'ninjaone':
-        return <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>;
-      case 'tanium':
-        return <BannerIcon className="bg-red-600 text-xl font-bold text-white">T</BannerIcon>;
-      case 'huntress':
-        return <BannerIcon className="bg-emerald-700 text-xl font-bold text-white">H</BannerIcon>;
-      default:
-        return <BannerIcon className="bg-muted text-foreground">RMM</BannerIcon>;
-    }
-  })();
-
-  return (
-    <div className="relative flex h-24 w-full items-center justify-center rounded-lg bg-muted/40">
-      {option.metadata.badge ? (
-        <div className="absolute right-3 top-3">
-          <Badge variant={option.metadata.badge.variant}>{option.metadata.badge.label}</Badge>
-        </div>
-      ) : null}
-      {icon}
-    </div>
-  );
-}
-
-function NinjaOneLoading() {
+function ProviderStatus({ status, loaded }: { status?: RmmIntegrationStatus; loaded: boolean }) {
   const { t } = useTranslation('msp/integrations');
+
+  if (!loaded) {
+    return <span className="h-2 w-24 shrink-0 animate-pulse rounded bg-muted" aria-hidden="true" />;
+  }
+
+  if (status?.isActive && status.syncStatus === 'error') {
+    return (
+      <span className="flex shrink-0 items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+        <span className="h-2 w-2 rounded-full bg-amber-500" />
+        {t('integrations.rmm.setup.status.syncError', { defaultValue: 'Sync error' })}
+      </span>
+    );
+  }
+
+  if (status?.isActive) {
+    return (
+      <span className="flex shrink-0 items-center gap-1.5 text-xs text-foreground">
+        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        {status.deviceCount > 0
+          ? status.deviceCount === 1
+            ? t('integrations.rmm.setup.status.connectedOneDevice', { defaultValue: 'Connected · 1 device' })
+            : t('integrations.rmm.setup.status.connectedWithDevices', {
+                defaultValue: 'Connected · {{count}} devices',
+                count: status.deviceCount
+              })
+          : t('integrations.rmm.setup.status.connected', { defaultValue: 'Connected' })}
+      </span>
+    );
+  }
+
   return (
-    <Card>
-      <CardContent className="py-8">
-        <div className="flex flex-col items-center justify-center gap-2">
-          <Spinner size="md" />
-          <span className="text-sm text-muted-foreground">{t('integrations.rmm.ninjaOne.loading', { defaultValue: 'Loading NinjaOne integration settings...' })}</span>
-        </div>
-      </CardContent>
-    </Card>
+    <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
+      {t('integrations.rmm.setup.status.notConnected', { defaultValue: 'Not connected' })}
+    </span>
   );
 }
 
-function TaniumLoading() {
-  const { t } = useTranslation('msp/integrations');
-  return (
-    <Card>
-      <CardContent className="py-8">
-        <div className="flex flex-col items-center justify-center gap-2">
-          <Spinner size="md" />
-          <span className="text-sm text-muted-foreground">{t('integrations.rmm.tanium.loading', { defaultValue: 'Loading Tanium integration settings...' })}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Dynamic import for NinjaOne (EE feature).
-const NinjaOneIntegrationSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
-  {
-    loading: () => <NinjaOneLoading />,
-    ssr: false
-  }
-);
-
-const TaniumIntegrationSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/TaniumIntegrationSettings'),
-  {
-    loading: () => <TaniumLoading />,
-    ssr: false
-  }
-);
-
-function HuntressLoading() {
+function ProviderLoading({ title }: { title: string }) {
   const { t } = useTranslation('msp/integrations');
   return (
     <Card>
@@ -126,8 +98,9 @@ function HuntressLoading() {
         <div className="flex flex-col items-center justify-center gap-2">
           <Spinner size="md" />
           <span className="text-sm text-muted-foreground">
-            {t('integrations.rmm.huntress.loading', {
-              defaultValue: 'Loading Huntress integration settings...'
+            {t('integrations.rmm.setup.loadingProvider', {
+              defaultValue: 'Loading {{title}} integration settings...',
+              title
             })}
           </span>
         </div>
@@ -136,10 +109,35 @@ function HuntressLoading() {
   );
 }
 
+// Dynamic imports for EE providers.
+const NinjaOneIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="NinjaOne" />,
+    ssr: false
+  }
+);
+
+const TaniumIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/TaniumIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="Tanium" />,
+    ssr: false
+  }
+);
+
+const LevelIoIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/LevelIoIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="Level" />,
+    ssr: false
+  }
+);
+
 const HuntressIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/HuntressIntegrationSettings'),
   {
-    loading: () => <HuntressLoading />,
+    loading: () => <ProviderLoading title="Huntress" />,
     ssr: false
   }
 );
@@ -148,16 +146,22 @@ const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentTyp
   tacticalrmm: TacticalRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
   tanium: TaniumIntegrationSettings,
+  levelio: LevelIoIntegrationSettings,
   huntress: HuntressIntegrationSettings
 };
 
 export default function RmmIntegrationsSetup() {
   const { t } = useTranslation('msp/integrations');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
+  const levelIoFlag = useFeatureFlag('levelio-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;
   const isTaniumEnabled = !!taniumFlag?.enabled;
+  const isLevelIoEnabled = !!levelIoFlag?.enabled;
 
   const options = useMemo<RmmIntegrationOption[]>(
     () => {
@@ -165,7 +169,8 @@ export default function RmmIntegrationsSetup() {
         isEnterprise: isEEAvailable,
         enabledFeatureFlags: {
           'tactical-rmm-integration': isTacticalEnabled,
-          'tanium-rmm-integration': isTaniumEnabled
+          'tanium-rmm-integration': isTaniumEnabled,
+          'levelio-rmm-integration': isLevelIoEnabled
         }
       });
 
@@ -180,24 +185,55 @@ export default function RmmIntegrationsSetup() {
         })
         .filter((option): option is RmmIntegrationOption => option !== null);
     },
-    [isEEAvailable, isTacticalEnabled, isTaniumEnabled]
+    [isEEAvailable, isTacticalEnabled, isTaniumEnabled, isLevelIoEnabled]
   );
 
-  const [selected, setSelected] = useState<RmmProvider>(() => {
-    if (isTacticalEnabled) return 'tacticalrmm';
-    if (isEEAvailable) return 'ninjaone';
-    return 'tacticalrmm';
-  });
-  const selectedOption = options.find((option) => option.metadata.id === selected) ?? options[0];
+  const [selected, setSelected] = useState<RmmProvider | null>(
+    () => (searchParams?.get('rmmProvider') as RmmProvider | null) ?? null
+  );
+  const selectedOption = selected ? options.find((option) => option.metadata.id === selected) ?? null : null;
 
-  const rmmOptions = options.filter((o) => (o.metadata.category ?? 'rmm') === 'rmm');
-  const securityOptions = options.filter((o) => o.metadata.category === 'security');
+  const [statuses, setStatuses] = useState<Record<string, RmmIntegrationStatus>>({});
+  const [statusesLoaded, setStatusesLoaded] = useState(false);
+
+  const loadStatuses = useCallback(async () => {
+    try {
+      const result = await getRmmIntegrationStatuses();
+      if (result.success && result.statuses) {
+        setStatuses(result.statuses);
+      }
+    } catch {
+      // Status is supplemental; rows fall back to "Not connected".
+    } finally {
+      setStatusesLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
-    if (options.length > 0 && !options.some((option) => option.metadata.id === selected)) {
-      setSelected(options[0]?.metadata.id ?? 'ninjaone');
-    }
-  }, [options, selected]);
+    loadStatuses();
+  }, [loadStatuses]);
+
+  const selectProvider = useCallback(
+    (provider: RmmProvider | null) => {
+      setSelected(provider);
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      if (provider) {
+        params.set('rmmProvider', provider);
+      } else {
+        params.delete('rmmProvider');
+      }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const sortedOptions = useMemo(() => {
+    return [...options].sort((a, b) => {
+      const aActive = statuses[a.metadata.id]?.isActive ? 0 : 1;
+      const bActive = statuses[b.metadata.id]?.isActive ? 0 : 1;
+      return aActive - bActive;
+    });
+  }, [options, statuses]);
 
   // In CE, Tactical is the only supported RMM provider UI we expose today.
   if (!isEEAvailable) {
@@ -214,84 +250,65 @@ export default function RmmIntegrationsSetup() {
     return <TacticalRmmIntegrationSettings />;
   }
 
-  const renderCardGrid = (sectionOptions: RmmIntegrationOption[]) => (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-      {sectionOptions.map((option) => {
-        const isSelected = option.metadata.id === selected;
-        return (
-          <Card
-            key={option.metadata.id}
-            className={[
-              'relative overflow-hidden transition-shadow hover:shadow-md',
-              isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
-              'cursor-pointer'
-            ].join(' ')}
-            id={`rmm-integration-card-${option.metadata.id}`}
-          >
-            <CardHeader className="space-y-4 pb-3">
-              <IntegrationBanner option={option} />
-              <div className="space-y-1">
-                <CardTitle className="text-base">{option.metadata.title}</CardTitle>
-                <CardDescription className="text-sm">{option.metadata.description}</CardDescription>
-              </div>
-            </CardHeader>
+  if (selectedOption) {
+    const status = statuses[selectedOption.metadata.id];
+    return (
+      <div className="space-y-4" id="rmm-integrations-setup">
+        <Button
+          id="rmm-integrations-back"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            selectProvider(null);
+            void loadStatuses();
+          }}
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          {t('integrations.rmm.setup.backToList', { defaultValue: 'All RMM integrations' })}
+        </Button>
 
-            <CardContent className="space-y-4 pt-0">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                {option.metadata.highlights.map((h) => (
-                  <div key={`${option.metadata.id}-${h.label}`} className="flex items-center gap-1">
-                    <span className="font-medium text-foreground/80">{h.label}</span>
-                    <span>{h.value}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+        <div className="flex items-center gap-3">
+          <ProviderIcon icon={selectedOption.metadata.icon} />
+          <h3 className="text-base font-semibold">{selectedOption.metadata.title}</h3>
+          {selectedOption.metadata.badge ? (
+            <Badge variant={selectedOption.metadata.badge.variant}>{selectedOption.metadata.badge.label}</Badge>
+          ) : null}
+          <div className="ml-auto">
+            <ProviderStatus status={status} loaded={statusesLoaded} />
+          </div>
+        </div>
 
-            <CardFooter className="pt-0">
-              <Button
-                className="w-full"
-                variant={isSelected ? 'default' : 'outline'}
-                onClick={() => setSelected(option.metadata.id)}
-                id={`rmm-integration-configure-${option.metadata.id}`}
-              >
-                {t('integrations.rmm.setup.configure', { defaultValue: 'Configure Integration' })}
-              </Button>
-            </CardFooter>
-          </Card>
-        );
-      })}
-    </div>
-  );
+        <selectedOption.component />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6" id="rmm-integrations-setup">
-      {rmmOptions.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t('integrations.rmm.setup.rmmSection', { defaultValue: 'Remote Monitoring & Management' })}
-          </h3>
-          {renderCardGrid(rmmOptions)}
-        </div>
-      )}
-
-      {securityOptions.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t('integrations.rmm.setup.securitySection', { defaultValue: 'Security' })}
-          </h3>
-          {renderCardGrid(securityOptions)}
-        </div>
-      )}
-
-      <div className="border-t pt-6" id="rmm-integrations-active-config">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">{t('integrations.rmm.setup.activeConfiguration', { defaultValue: 'Active Configuration' })}</h3>
-          <span className="text-xs text-muted-foreground">
-            {selectedOption ? t('integrations.rmm.setup.selected', { defaultValue: '{{title}} selected', title: selectedOption.metadata.title }) : null}
-          </span>
-        </div>
-
-        {selectedOption ? <selectedOption.component /> : null}
+    <div id="rmm-integrations-setup">
+      <div className="divide-y rounded-lg border" role="list">
+        {sortedOptions.map((option) => (
+          <button
+            key={option.metadata.id}
+            type="button"
+            role="listitem"
+            id={`rmm-integration-row-${option.metadata.id}`}
+            className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+            onClick={() => selectProvider(option.metadata.id)}
+          >
+            <ProviderIcon icon={option.metadata.icon} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{option.metadata.title}</span>
+                {option.metadata.badge ? (
+                  <Badge variant={option.metadata.badge.variant}>{option.metadata.badge.label}</Badge>
+                ) : null}
+              </div>
+              <p className="truncate text-sm text-muted-foreground">{option.metadata.description}</p>
+            </div>
+            <ProviderStatus status={statuses[option.metadata.id]} loaded={statusesLoaded} />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        ))}
       </div>
     </div>
   );

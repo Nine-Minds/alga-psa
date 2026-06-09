@@ -186,9 +186,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
       setSelectedRole('');
+      toast.success(t('userDetails.messages.success.roleAdded'));
     } catch (err) {
       console.error('Error adding role:', err);
-      setError(t('userDetails.messages.error.addRoleFailed'));
+      const isPermissionError = err instanceof Error && err.message.toLowerCase().includes('permission denied');
+      toast.error(isPermissionError
+        ? t('userDetails.messages.error.permissionDenied')
+        : t('userDetails.messages.error.addRoleFailed'));
     }
   };
 
@@ -199,9 +203,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       await removeRoleFromUser(user.user_id, roleId);
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
+      toast.success(t('userDetails.messages.success.roleRemoved'));
     } catch (err) {
       console.error('Error removing role:', err);
-      setError(t('userDetails.messages.error.removeRoleFailed'));
+      const isPermissionError = err instanceof Error && err.message.toLowerCase().includes('permission denied');
+      toast.error(isPermissionError
+        ? t('userDetails.messages.error.permissionDenied')
+        : t('userDetails.messages.error.removeRoleFailed'));
     }
   };
 

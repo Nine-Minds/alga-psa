@@ -9,6 +9,22 @@
     background: #fff !important;
   }
 
+  /* The print hook marks the ancestor path to the print region and marks all
+     sibling branches as hidden. Use display:none for those sibling branches so
+     invisible app chrome cannot paginate into trailing blank pages. */
+  html.app-print-mode {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   html.app-print-mode body * {
     visibility: hidden;
     /* Neutralize positioned ancestors so the absolutely-positioned print
@@ -16,6 +32,26 @@
     position: static !important;
     transform: none !important;
     overflow: visible !important;
+  }
+
+  html.app-print-mode [data-app-print-hidden] {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-app-print-preserve] {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 
   html.app-print-mode [data-print-hide],
@@ -152,7 +188,7 @@
   html.app-print-mode [data-print-region],
   html.app-print-mode .app-print-root {
     display: block !important;
-    position: absolute !important;
+    position: static !important;
     left: 0 !important;
     top: 0 !important;
     right: 0 !important;

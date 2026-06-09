@@ -27,6 +27,13 @@ interface UserAndTeamPickerProps {
   teams: ITeam[];
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
   getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
+  // Pre-fetched avatar URLs supplied by the caller (e.g. a list/board that has
+  // already batch-loaded every assignee's avatar in a single request). When an
+  // id is present here the picker uses it for the collapsed display and skips
+  // its own per-instance fetch, which avoids a flood of one-avatar requests
+  // when many pickers mount at once.
+  initialUserAvatarUrls?: Record<string, string | null>;
+  initialTeamAvatarUrls?: Record<string, string | null>;
   disabled?: boolean;
   className?: string;
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
@@ -76,6 +83,8 @@ const UserAndTeamPicker = ({
   teams,
   getUserAvatarUrlsBatch,
   getTeamAvatarUrlsBatch,
+  initialUserAvatarUrls,
+  initialTeamAvatarUrls,
   disabled,
   className,
   labelStyle = 'bold',
@@ -100,6 +109,13 @@ const UserAndTeamPicker = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const pickerId = dataAutomationId || 'user-and-team-picker';
+
+  // Resolve an avatar URL preferring locally-fetched values, then any
+  // caller-supplied pre-fetched map. Returns null when unknown.
+  const resolveUserAvatar = (userId: string): string | null =>
+    avatarUrls[userId] ?? initialUserAvatarUrls?.[userId] ?? null;
+  const resolveTeamAvatar = (teamId: string): string | null =>
+    teamAvatarUrls[teamId] ?? initialTeamAvatarUrls?.[teamId] ?? null;
 
   const applyUserTypeFilter = (user: IUser) => {
     if (userTypeFilter === null) return true;
@@ -160,7 +176,9 @@ const UserAndTeamPicker = ({
     }
 
     const teamIdsToFetch = Array.from(teamIds).filter(
-      (teamId) => !fetchedTeamIdsRef.current.has(teamId) && teamAvatarUrls[teamId] === undefined
+      (teamId) => !fetchedTeamIdsRef.current.has(teamId)
+        && teamAvatarUrls[teamId] === undefined
+        && initialTeamAvatarUrls?.[teamId] === undefined
     );
 
     if (teamIdsToFetch.length === 0) {
@@ -182,7 +200,7 @@ const UserAndTeamPicker = ({
     };
 
     void fetchTeamAvatars();
-  }, [currentTeam, isOpen, teamEntries, getTeamAvatarUrlsBatch, teamAvatarUrls]);
+  }, [currentTeam, isOpen, teamEntries, getTeamAvatarUrlsBatch, teamAvatarUrls, initialTeamAvatarUrls]);
 
   useRegisterUIComponent<ContainerComponent>({
     type: 'container',
@@ -225,7 +243,9 @@ const UserAndTeamPicker = ({
       }
 
       const userIdsToFetch = Array.from(userIds).filter(
-        userId => !fetchedUserIdsRef.current.has(userId) && avatarUrls[userId] === undefined
+        userId => !fetchedUserIdsRef.current.has(userId)
+          && avatarUrls[userId] === undefined
+          && initialUserAvatarUrls?.[userId] === undefined
       );
 
       if (userIdsToFetch.length === 0) return;
@@ -262,7 +282,7 @@ const UserAndTeamPicker = ({
     };
 
     void fetchAvatarUrls();
-  }, [currentUser, isOpen, filteredUsers, users, getUserAvatarUrlsBatch, avatarUrls]);
+  }, [currentUser, isOpen, filteredUsers, users, getUserAvatarUrlsBatch, avatarUrls, initialUserAvatarUrls]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -432,7 +452,7 @@ const UserAndTeamPicker = ({
                   <UserAvatar
                     userId={user.user_id}
                     userName={userName}
-                    avatarUrl={avatarUrls[user.user_id] || null}
+                    avatarUrl={resolveUserAvatar(user.user_id)}
                     size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
                   />
                   <span>{userName}</span>
@@ -461,7 +481,7 @@ const UserAndTeamPicker = ({
                   <TeamAvatar
                     teamId={team.team_id}
                     teamName={team.team_name || 'Unnamed Team'}
-                    avatarUrl={teamAvatarUrls[team.team_id] ?? null}
+                    avatarUrl={resolveTeamAvatar(team.team_id)}
                     size="sm"
                   />
                   <div className="flex flex-col">
@@ -516,7 +536,7 @@ const UserAndTeamPicker = ({
             <UserAvatar
               userId={currentUser.user_id}
               userName={`${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()}
-              avatarUrl={avatarUrls[currentUser.user_id] || null}
+              avatarUrl={resolveUserAvatar(currentUser.user_id)}
               size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
             />
           )}
@@ -524,7 +544,7 @@ const UserAndTeamPicker = ({
             <TeamAvatar
               teamId={currentTeam.team_id}
               teamName={currentTeam.team_name || 'Unnamed Team'}
-              avatarUrl={teamAvatarUrls[currentTeam.team_id] ?? null}
+              avatarUrl={resolveTeamAvatar(currentTeam.team_id)}
               size={size === 'xs' ? 'xs' : 'sm'}
             />
           )}

@@ -47,7 +47,8 @@
     "printOptions": "Afdrukopties",
     "resetPrintOptions": "Afdrukopties resetten",
     "share": "Delen",
-    "done": "Klaar"
+    "done": "Klaar",
+    "continue": "Doorgaan"
   },
   "status": {
     "loading": "Bezig met laden...",

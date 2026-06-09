@@ -9,10 +9,12 @@
  */
 
 import { Context } from '@temporalio/activity';
+import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { retryOnReadOnly } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
+import { getSecret } from '@alga-psa/core/secrets';
 import type {
   TenantStats,
   DeactivateUsersResult,
@@ -24,7 +26,13 @@ import type {
   UpdateDeletionStatusInput,
   DeleteTenantDataResult,
   SendCancellationEmailResult,
+  LinkSubscriptionToExistingTenantInput,
+  LinkSubscriptionToExistingTenantResult,
+  TriggerReactivationPasswordResetInput,
+  RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
+import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -48,6 +56,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_run_steps', 'workflow_run_waits', 'workflow_run_snapshots',
   'workflow_action_invocations', 'workflow_definition_versions',
   'workflow_run_logs', 'workflow_runtime_events', 'workflow_step_usage_periods',
+  // Workflow data store + entity links (standalone; created_by_run_id is a soft
+  // ref with no FK, so order among these does not matter)
+  'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // Task/project details
@@ -179,6 +190,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
 
+  // Online meetings (reference interactions / appointment_requests / schedule_entries; artifacts reference meetings)
+  'online_meeting_artifacts', 'online_meetings',
+
   // Appointment
   'appointment_requests',
 
@@ -197,6 +211,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stripe_webhook_events', 'stripe_subscriptions', 'stripe_prices', 'stripe_products',
   'stripe_customers', 'stripe_accounts',
   'payment_webhook_events', 'payment_provider_configs', 'client_payment_customers',
+
+  // Tenant reactivation / win-back state (tenant-scoped; FK only to tenants).
+  // Tokens are single-use email-link state and refunds are a manual-review
+  // queue — both are purged with the tenant they belong to.
+  'tenant_reactivation_tokens', 'pending_reactivation_refunds',
 
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
@@ -371,6 +390,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
   'resources',                 // resources.user_id → users with NO ACTION
   'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
+
+  // === MCP agent governance (EE) ===
+  // Relations are enforced in application code (no DB FKs), so this order is
+  // advisory. Children first: agent_roles + mcp_agent_audit reference agents
+  // (agent_id); agents.created_by / backing user reference users, so delete the
+  // agent tables before users. agent_idp_providers is independent.
+  'agent_roles',
+  'mcp_agent_audit',
+  'agent_idp_providers',
+  'agents',
+
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
@@ -1837,4 +1867,183 @@ export async function sendCancellationConfirmationEmail(
     result.errors!.push(errorMsg);
     return result;
   }
+}
+
+export async function linkSubscriptionToExistingTenant(
+  input: LinkSubscriptionToExistingTenantInput,
+): Promise<LinkSubscriptionToExistingTenantResult> {
+  const log = Context.current().log;
+  const knex = await getAdminConnection();
+
+  const existingActiveSubscription = await knex('stripe_subscriptions')
+    .where({ tenant: input.tenantId })
+    .whereIn('status', ['active', 'trialing'])
+    .first('stripe_subscription_external_id');
+
+  if (existingActiveSubscription) {
+    log.warn('Tenant already has an active linked subscription; refusing duplicate link', {
+      tenantId: input.tenantId,
+      existingSubscription: existingActiveSubscription.stripe_subscription_external_id,
+      attemptedSubscription: input.stripeSubscriptionId,
+    });
+    return {
+      linked: false,
+      duplicateActiveSubscription: true,
+      stripeSubscriptionId: existingActiveSubscription.stripe_subscription_external_id,
+    };
+  }
+
+  const result = await knex.transaction(async (trx) => {
+    let stripeCustomer = await trx('stripe_customers')
+      .where({
+        tenant: input.tenantId,
+        stripe_customer_external_id: input.stripeCustomerId,
+      })
+      .first('*');
+
+    if (!stripeCustomer) {
+      stripeCustomer = await trx('stripe_customers')
+        .where({ tenant: input.tenantId })
+        .orderBy('created_at', 'asc')
+        .first('*');
+    }
+
+    if (!stripeCustomer) {
+      const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+      if (!MASTER_TENANT_ID) {
+        throw new Error('MASTER_BILLING_TENANT_ID not configured');
+      }
+
+      [stripeCustomer] = await trx('stripe_customers')
+        .insert({
+          tenant: input.tenantId,
+          stripe_customer_id: trx.raw('gen_random_uuid()'),
+          stripe_customer_external_id: input.stripeCustomerId,
+          billing_tenant: MASTER_TENANT_ID,
+          created_at: knex.fn.now(),
+          updated_at: knex.fn.now(),
+        })
+        .returning('*');
+    }
+
+    const subscriptionInsert = await insertStripeSubscriptionForTenant(trx, {
+      tenantId: input.tenantId,
+      stripeCustomerInternalId: stripeCustomer.stripe_customer_id,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      stripeSubscriptionItemId: input.stripeSubscriptionItemId,
+      stripePriceId: input.stripePriceId,
+      quantity: 1,
+    });
+
+    return subscriptionInsert.inserted;
+  });
+
+  return {
+    linked: result,
+    duplicateActiveSubscription: false,
+    stripeSubscriptionId: input.stripeSubscriptionId,
+  };
+}
+
+export async function stampReactivationSubscriptionMetadata(input: {
+  tenantId: string;
+  stripeSubscriptionId: string;
+}): Promise<void> {
+  await updateSubscriptionMetadata(input.stripeSubscriptionId, {
+    tenant_id: input.tenantId,
+  });
+}
+
+export async function triggerReactivationPasswordReset(
+  input: TriggerReactivationPasswordResetInput,
+): Promise<{ success: boolean }> {
+  const knex = await getAdminConnection();
+  const tenant = await knex('tenants')
+    .where('tenant', input.tenantId)
+    .first('email');
+  const email = tenant?.email;
+  if (!email) {
+    throw new Error(`No tenant email found for ${input.tenantId}`);
+  }
+
+  const secret = process.env.ALGA_WEBHOOK_SECRET;
+  const baseUrl = process.env.ALGA_APP_BASE_URL || process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL;
+  if (!secret || !baseUrl) {
+    throw new Error('ALGA_WEBHOOK_SECRET and app base URL are required for password reset trigger');
+  }
+
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${email}:${timestamp}`)
+    .digest('hex');
+
+  const response = await fetch(`${baseUrl}/api/billing/reactivation-password-reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Webhook-Signature': signature,
+      'X-Timestamp': timestamp,
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  // Throw on a non-2xx so Temporal retries (the proxyActivities policy bounds
+  // this at maximumAttempts). A swallowed failure would leave a reactivated,
+  // billed tenant with no way to log in and no signal to anyone.
+  if (!response.ok) {
+    throw new Error(`Reactivation password reset request failed: ${response.status}`);
+  }
+
+  return { success: true };
+}
+
+export async function recordReactivationPaymentAlert(
+  input: RecordReactivationPaymentAlertInput,
+): Promise<{ success: boolean }> {
+  const log = Context.current().log;
+  const knex = await getAdminConnection();
+
+  await knex('pending_reactivation_refunds').insert({
+    tenant: input.tenantId,
+    stripe_checkout_session_id: input.stripeCheckoutSessionId ?? null,
+    stripe_payment_intent_id: input.stripePaymentIntentId ?? null,
+    stripe_subscription_external_id: input.stripeSubscriptionExternalId ?? null,
+    reason: input.reason,
+    created_at: knex.fn.now(),
+  });
+
+  const opsEmail = process.env.REACTIVATION_REFUND_ALERT_EMAIL || process.env.BILLING_OPS_EMAIL;
+  if (opsEmail) {
+    try {
+      const { emailService: emailServicePromise } = await import('../services/email-service.js');
+      const emailServiceInstance = await emailServicePromise;
+      await emailServiceInstance.sendEmail({
+        to: opsEmail,
+        from: 'info@nineminds.com',
+        subject: `Manual reactivation payment review: ${input.reason}`,
+        html: [
+          '<h1>Manual reactivation payment review</h1>',
+          `<p>Tenant: ${input.tenantId}</p>`,
+          `<p>Reason: ${input.reason}</p>`,
+          `<p>Checkout session: ${input.stripeCheckoutSessionId ?? 'n/a'}</p>`,
+          `<p>Payment intent: ${input.stripePaymentIntentId ?? 'n/a'}</p>`,
+          `<p>Subscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}</p>`,
+        ].join(''),
+        text: `Manual reactivation payment review\nTenant: ${input.tenantId}\nReason: ${input.reason}\nCheckout session: ${input.stripeCheckoutSessionId ?? 'n/a'}\nPayment intent: ${input.stripePaymentIntentId ?? 'n/a'}\nSubscription: ${input.stripeSubscriptionExternalId ?? 'n/a'}`,
+        metadata: {
+          tenantId: input.tenantId,
+          entityType: 'tenant_reactivation',
+          entityId: input.stripeCheckoutSessionId ?? input.tenantId,
+        },
+      });
+    } catch (error) {
+      log.error('Failed to send reactivation payment alert email', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        tenantId: input.tenantId,
+      });
+    }
+  }
+
+  return { success: true };
 }

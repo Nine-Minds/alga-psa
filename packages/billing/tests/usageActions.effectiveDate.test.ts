@@ -8,6 +8,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
 }));
