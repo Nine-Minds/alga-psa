@@ -5,11 +5,46 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { getSystemEmailService } from '@alga-psa/email';
 import { getPendingDeletionSummary } from '@enterprise/lib/billing/tenantReactivationDetection';
 import { rollbackTenantDeletion } from '@ee/lib/tenant-management/workflowClient';
+import { getStripeService } from '@ee/lib/stripe/StripeService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type RefusalReason = 'past_window' | 'duplicate_payment';
+
+// pending_tenant_deletions.rolled_back_by is a uuid column (the admin path passes
+// a user id). Reactivation is system-triggered with no user, so use the nil-uuid
+// sentinel; the rollback reason carries the human-readable context.
+const REACTIVATION_SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Authoritative, server-side confirmation that Stripe actually captured the
+ * payment for this checkout session — independent of nm-store's pre-call gate
+ * and of the (HMAC-signed) caller. Reactivation re-bills the customer and
+ * resurrects their tenant + data, so we never signal the rollback on an
+ * unpaid/incomplete session.
+ */
+async function isCheckoutSessionPaid(checkoutSessionId: string): Promise<boolean> {
+  const stripe = await getStripeService().getStripeClient();
+  const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+  return session.status === 'complete' && session.payment_status === 'paid';
+}
+
+// Idempotency anchor: has THIS checkout session's subscription already been
+// linked as the tenant's active subscription? If so, a re-fired completion
+// (e.g. the success page being refreshed) is a harmless no-op rather than a
+// duplicate payment.
+async function sessionAlreadyReactivated(
+  tenantId: string,
+  stripeSubscriptionId: string,
+): Promise<boolean> {
+  const knex = await getAdminConnection();
+  const row = await knex('stripe_subscriptions')
+    .where({ tenant: tenantId, stripe_subscription_external_id: stripeSubscriptionId })
+    .whereIn('status', ['active', 'trialing'])
+    .first('stripe_subscription_id');
+  return !!row;
+}
 
 function verifyWebhookSignature(
   signature: string | null,
@@ -107,8 +142,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required reactivation fields' }, { status: 400 });
   }
 
+  // Confirm the payment was actually captured before doing anything else. This
+  // runs BEFORE the reactivatable check on purpose: the refusal paths below
+  // write a refund row (they assume money was taken), so an unpaid session must
+  // bail here — with no refund row, because nothing was charged.
+  let paymentCaptured: boolean;
+  try {
+    paymentCaptured = await isCheckoutSessionPaid(checkoutSessionId);
+  } catch (error) {
+    console.error('[complete-reactivation] Failed to verify checkout payment status', {
+      checkoutSessionId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    // Fail closed: never reactivate without a confirmed payment. 502 lets the
+    // caller retry a transient Stripe error.
+    return NextResponse.json({ success: false, state: 'payment_unverified' }, { status: 502 });
+  }
+
+  if (!paymentCaptured) {
+    return NextResponse.json({ success: false, state: 'payment_not_captured' }, { status: 402 });
+  }
+
   const pendingDeletion = await getPendingDeletionSummary(tenantId);
   if (!pendingDeletion?.reactivatable) {
+    // Re-fired completion for the same session (e.g. success-page refresh): if
+    // this session's subscription is already the tenant's active link, no-op.
+    if (await sessionAlreadyReactivated(tenantId, stripeSubscriptionId)) {
+      return NextResponse.json({ success: true, state: 'already_reactivated' });
+    }
     const reason: RefusalReason = pendingDeletion?.status === 'rolled_back'
       ? 'duplicate_payment'
       : 'past_window';
@@ -125,7 +186,7 @@ export async function POST(req: NextRequest) {
   const result = await rollbackTenantDeletion(
     deletionWorkflowId,
     'Paid tenant reactivation',
-    'reactivation_checkout',
+    REACTIVATION_SYSTEM_ACTOR,
     {
       stripeCustomerId,
       stripeSubscriptionId,
@@ -139,6 +200,12 @@ export async function POST(req: NextRequest) {
   );
 
   if (!result.success) {
+    // The workflow may have already closed from a prior completion of THIS same
+    // session (e.g. a near-simultaneous refresh). If this session's sub is
+    // already linked, treat as a no-op rather than a duplicate payment.
+    if (await sessionAlreadyReactivated(tenantId, stripeSubscriptionId)) {
+      return NextResponse.json({ success: true, state: 'already_reactivated' });
+    }
     await alertManualRefund({
       tenantId,
       checkoutSessionId,

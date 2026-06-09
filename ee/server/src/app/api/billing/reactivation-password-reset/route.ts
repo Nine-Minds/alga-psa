@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { requestPasswordReset } from '@alga-psa/auth/actions/auth-actions/passwordResetActions';
+import { recoverPassword } from '@alga-psa/auth/actions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  await requestPasswordReset(email, 'internal');
+  // Use the MSP recover flow: it mints the JWT and links to the real
+  // /auth/password-reset/set-new-password?...&portal=msp page. (requestPasswordReset
+  // pointed at /auth/reset-password, which is not a real page.)
+  await recoverPassword(email, 'msp');
   return NextResponse.json({ success: true });
 }

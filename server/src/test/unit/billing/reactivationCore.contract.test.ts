@@ -62,11 +62,14 @@ describe('reactivation core contract', () => {
     expect(workflow).toContain("reason: 'reactivated_unbilled'");
   });
 
-  it('T032/T035: app-side password-reset endpoint runs requestPasswordReset and worker calls it', () => {
+  it('T032/T035: app-side password-reset endpoint runs the MSP recover flow and worker calls it', () => {
     const route = read('ee/server/src/app/api/billing/reactivation-password-reset/route.ts');
     const activities = read('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
 
-    expect(route).toContain("requestPasswordReset(email, 'internal')");
+    // recoverPassword('msp') mints the JWT and links to /auth/password-reset/set-new-password
+    // (the real page), unlike requestPasswordReset which pointed at the non-existent
+    // /auth/reset-password.
+    expect(route).toContain("recoverPassword(email, 'msp')");
     expect(activities).toContain('/api/billing/reactivation-password-reset');
     expect(activities).toContain('X-Webhook-Signature');
   });
@@ -88,6 +91,49 @@ describe('reactivation core contract', () => {
     const noAccessIndex = workflow.indexOf("reason: 'reactivated_no_access'");
     const resetIndex = workflow.indexOf('await triggerReactivationPasswordReset');
     expect(noAccessIndex).toBeGreaterThan(resetIndex);
+  });
+
+  it('complete-reactivation authoritatively verifies captured payment before signaling rollback', () => {
+    const route = read('ee/server/src/app/api/billing/complete-reactivation/route.ts');
+
+    // Server-side payment confirmation via Stripe, independent of nm-store and
+    // the signed caller.
+    expect(route).toContain('getStripeService().getStripeClient()');
+    expect(route).toContain("session.status === 'complete' && session.payment_status === 'paid'");
+
+    // Runs before the reactivatable check AND before the rollback signal.
+    const payIndex = route.indexOf('isCheckoutSessionPaid(checkoutSessionId)');
+    const summaryIndex = route.indexOf('getPendingDeletionSummary(tenantId)');
+    const signalIndex = route.indexOf('rollbackTenantDeletion(');
+    expect(payIndex).toBeGreaterThan(-1);
+    expect(payIndex).toBeLessThan(summaryIndex);
+    expect(summaryIndex).toBeLessThan(signalIndex);
+
+    // An unpaid session is refused (402) WITHOUT queueing a refund (no money taken):
+    // the payment gate runs before any alertManualRefund() call.
+    expect(route).toContain("state: 'payment_not_captured' }, { status: 402 }");
+    const firstRefundCallIndex = route.indexOf('await alertManualRefund(');
+    expect(firstRefundCallIndex).toBeGreaterThan(-1);
+    expect(payIndex).toBeLessThan(firstRefundCallIndex);
+  });
+
+  it('complete-reactivation is idempotent on the session (success-page refresh is a no-op, not duplicate_payment)', () => {
+    const route = read('ee/server/src/app/api/billing/complete-reactivation/route.ts');
+
+    expect(route).toContain('async function sessionAlreadyReactivated');
+    expect(route).toContain('stripe_subscription_external_id: stripeSubscriptionId');
+    expect(route).toContain("state: 'already_reactivated'");
+
+    // The guard runs in BOTH refusal paths (not-reactivatable + rollback-signal failure).
+    const guardCalls = (route.match(/sessionAlreadyReactivated\(tenantId, stripeSubscriptionId\)/g) || []).length;
+    expect(guardCalls).toBeGreaterThanOrEqual(2);
+
+    // In the not-reactivatable branch the no-op check precedes the duplicate_payment alert.
+    const branchIdx = route.indexOf('!pendingDeletion?.reactivatable');
+    const guardIdx = route.indexOf('sessionAlreadyReactivated(tenantId, stripeSubscriptionId)', branchIdx);
+    const refundIdx = route.indexOf('await alertManualRefund(', branchIdx);
+    expect(guardIdx).toBeGreaterThan(branchIdx);
+    expect(guardIdx).toBeLessThan(refundIdx);
   });
 
   it('T064b: every reactivation HMAC endpoint enforces a 5-minute timestamp freshness window', () => {

@@ -45,6 +45,10 @@ export async function handleInactiveLoginWinback(input: {
     return;
   }
 
+  const tenantRow = await knex('tenants')
+    .where('tenant', input.tenantId)
+    .first('client_name');
+
   const token = await createTenantReactivationToken({
     tenantId: input.tenantId,
     deletionId: row.deletion_id,
@@ -54,7 +58,7 @@ export async function handleInactiveLoginWinback(input: {
   await sendLoginWinbackEmail({
     to: adminEmail.email,
     tenantId: input.tenantId,
-    tenantName: null,
+    tenantName: tenantRow?.client_name ?? null,
     effectiveDeletionDate: row.deletion_scheduled_for ?? row.scheduled_deletion_date ?? null,
     reactivationUrl: buildReactivationCheckoutUrl(token.token),
   });
