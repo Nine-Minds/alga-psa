@@ -22,17 +22,17 @@ export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium';
+  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio';
   badge?: RmmProviderBadge;
   highlights: RmmProviderHighlight[];
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
-  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration';
+  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration';
 }
 
 export interface RmmProviderAvailabilityContext {
   isEnterprise: boolean;
-  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration', boolean>>;
+  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration', boolean>>;
 }
 
 const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
@@ -93,6 +93,26 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     },
     requiresEnterprise: true,
     featureFlagKey: 'tanium-rmm-integration'
+  },
+  {
+    id: 'levelio',
+    title: 'Level',
+    description: 'Sync devices and groups from Level (level.io) with alert ingestion via automation webhooks (Enterprise).',
+    icon: 'levelio',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    highlights: [
+      { label: 'Sync', value: 'Devices' },
+      { label: 'Realtime', value: 'Alerts' }
+    ],
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: false
+    },
+    requiresEnterprise: true,
+    featureFlagKey: 'levelio-rmm-integration'
   }
 ];
 

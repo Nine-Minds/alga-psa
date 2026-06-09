@@ -54,6 +54,8 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
         return <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>;
       case 'tanium':
         return <BannerIcon className="bg-red-600 text-xl font-bold text-white">T</BannerIcon>;
+      case 'levelio':
+        return <BannerIcon className="bg-blue-600 text-xl font-bold text-white">L</BannerIcon>;
       default:
         return <BannerIcon className="bg-muted text-foreground">RMM</BannerIcon>;
     }
@@ -99,6 +101,20 @@ function TaniumLoading() {
   );
 }
 
+function LevelIoLoading() {
+  const { t } = useTranslation('msp/integrations');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Spinner size="md" />
+          <span className="text-sm text-muted-foreground">{t('integrations.rmm.levelio.loading', { defaultValue: 'Loading Level integration settings...' })}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Dynamic import for NinjaOne (EE feature).
 const NinjaOneIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
@@ -116,10 +132,19 @@ const TaniumIntegrationSettings = dynamic(
   }
 );
 
+const LevelIoIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/LevelIoIntegrationSettings'),
+  {
+    loading: () => <LevelIoLoading />,
+    ssr: false
+  }
+);
+
 const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
   tacticalrmm: TacticalRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
-  tanium: TaniumIntegrationSettings
+  tanium: TaniumIntegrationSettings,
+  levelio: LevelIoIntegrationSettings
 };
 
 export default function RmmIntegrationsSetup() {
@@ -127,8 +152,10 @@ export default function RmmIntegrationsSetup() {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
+  const levelIoFlag = useFeatureFlag('levelio-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;
   const isTaniumEnabled = !!taniumFlag?.enabled;
+  const isLevelIoEnabled = !!levelIoFlag?.enabled;
 
   const options = useMemo<RmmIntegrationOption[]>(
     () => {
@@ -136,7 +163,8 @@ export default function RmmIntegrationsSetup() {
         isEnterprise: isEEAvailable,
         enabledFeatureFlags: {
           'tactical-rmm-integration': isTacticalEnabled,
-          'tanium-rmm-integration': isTaniumEnabled
+          'tanium-rmm-integration': isTaniumEnabled,
+          'levelio-rmm-integration': isLevelIoEnabled
         }
       });
 
@@ -151,7 +179,7 @@ export default function RmmIntegrationsSetup() {
         })
         .filter((option): option is RmmIntegrationOption => option !== null);
     },
-    [isEEAvailable, isTacticalEnabled, isTaniumEnabled]
+    [isEEAvailable, isTacticalEnabled, isTaniumEnabled, isLevelIoEnabled]
   );
 
   const [selected, setSelected] = useState<RmmProvider>(() => {

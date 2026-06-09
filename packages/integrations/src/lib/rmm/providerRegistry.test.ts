@@ -14,4 +14,19 @@ describe('RMM provider registry', () => {
       remoteActions: false,
     });
   });
+
+  it('exposes Level metadata gated by enterprise and feature flag', () => {
+    const levelio = getRmmProviderMetadata('levelio');
+    expect(levelio).toBeDefined();
+    expect(levelio?.title).toBe('Level');
+    expect(levelio?.requiresEnterprise).toBe(true);
+    expect(levelio?.featureFlagKey).toBe('levelio-rmm-integration');
+    expect(levelio?.capabilities).toEqual({
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: false,
+    });
+  });
 });
