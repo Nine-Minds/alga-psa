@@ -733,6 +733,24 @@
         "serial": "Serial",
         "folder": "Folder"
       },
+      "passwordsTab": {
+        "source": "Source: Hudu",
+        "openInHudu": "Open in Hudu",
+        "refresh": "Refresh",
+        "loading": "Loading Hudu passwords...",
+        "notConnected": "Hudu is not connected. An administrator can connect it under Settings → Integrations.",
+        "unmapped": "This client is not mapped to a Hudu company yet. Map it under Settings → Integrations → Hudu.",
+        "unreachable": "Hudu could not be reached. Try again later.",
+        "noPasswordAccess": "The Hudu API key does not have password access enabled, so passwords cannot be listed. Generate a key with password access in Hudu admin.",
+        "title": "Passwords",
+        "empty": "No Hudu passwords for this company.",
+        "reveal": "Reveal",
+        "hide": "Hide",
+        "copy": "Copy",
+        "revealNoAccess": "The Hudu API key does not have password access enabled.",
+        "revealNotFound": "This password could not be found in Hudu.",
+        "revealFailed": "The password could not be revealed. Try again later."
+      },
       "mapping": {
         "title": "Company Mappings",
         "description": "Map Hudu companies to AlgaPSA clients to surface their documentation.",

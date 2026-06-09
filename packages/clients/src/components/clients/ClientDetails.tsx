@@ -83,6 +83,7 @@ import {
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
 import HuduClientTab from './HuduClientTab';
+import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import { useHuduClientTab } from './useHuduClientTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
@@ -1839,13 +1840,21 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
-    // EE-only Hudu tab: registered only when EE + flag + connected + mapped (F070).
+    // EE-only Hudu tabs: registered only when EE + flag + connected + mapped (F070/F080).
     ...(huduClientTab.visible ? [{
       id: 'hudu',
       label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <HuduClientTab clientId={client.client_id} />
+        </div>
+      )
+    }, {
+      id: 'hudu-passwords',
+      label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientPasswordsTab clientId={client.client_id} />
         </div>
       )
     }] : [])

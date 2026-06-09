@@ -61,10 +61,10 @@
   { "id": "T073", "description": "Component: empty/error states for not-connected, unmapped, unreachable", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F074"] },
   { "id": "T074", "description": "Component: Hudu source attribution is visible on the tab", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F075"] },
 
-  { "id": "T080", "description": "Component: a separate 'Passwords' tab appears on the Client page only when EE+flag, Hudu connected, and client mapped (hidden otherwise)", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F080"] },
-  { "id": "T081", "description": "Component: Passwords tab lists the company's Hudu credentials (name/username/url) with a count and no values", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F081"] },
-  { "id": "T082", "description": "Component: Reveal triggers a live fetch and shows the value masked/reveal-on-click; Open-in-Hudu links out; the value is never written to any persistent store", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F082"] },
-  { "id": "T083", "description": "Component: Passwords tab empty/error states for unmapped/disconnected/no-password-permission", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F083"] },
+  { "id": "T080", "description": "Component: a separate 'Passwords' tab appears on the Client page only when EE+flag, Hudu connected, and client mapped (hidden otherwise)", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F080"] },
+  { "id": "T081", "description": "Component: Passwords tab lists the company's Hudu credentials (name/username/url) with a count and no values", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F081"] },
+  { "id": "T082", "description": "Component: Reveal triggers a live fetch and shows the value masked/reveal-on-click; Open-in-Hudu links out; the value is never written to any persistent store", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F082"] },
+  { "id": "T083", "description": "Component: Passwords tab empty/error states for unmapped/disconnected/no-password-permission", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F083"] },
 
   { "id": "T090", "description": "Integration: manage actions (connect/disconnect/mapping) denied without system_settings.update", "implemented": false, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
   { "id": "T091", "description": "Integration: view-gated surfacing denied without system_settings.read", "implemented": false, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
