@@ -22,12 +22,14 @@ export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium';
+  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'huntress';
   badge?: RmmProviderBadge;
   highlights: RmmProviderHighlight[];
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
   featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration';
+  /** Card-grid grouping on the setup page. Defaults to 'rmm'. */
+  category?: 'rmm' | 'security';
 }
 
 export interface RmmProviderAvailabilityContext {
@@ -93,6 +95,27 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     },
     requiresEnterprise: true,
     featureFlagKey: 'tanium-rmm-integration'
+  },
+  {
+    id: 'huntress',
+    title: 'Huntress',
+    description:
+      'Managed security: SOC-reviewed incident reports become tickets automatically (Enterprise).',
+    icon: 'huntress',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    highlights: [
+      { label: 'Ingest', value: 'SOC incidents' },
+      { label: 'Cadence', value: '5-min poll' }
+    ],
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: false,
+      events: false,
+      remoteActions: false
+    },
+    requiresEnterprise: true,
+    category: 'security'
   }
 ];
 

@@ -54,6 +54,8 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
         return <BannerIcon className="bg-slate-900 text-xl font-bold text-white">N</BannerIcon>;
       case 'tanium':
         return <BannerIcon className="bg-red-600 text-xl font-bold text-white">T</BannerIcon>;
+      case 'huntress':
+        return <BannerIcon className="bg-emerald-700 text-xl font-bold text-white">H</BannerIcon>;
       default:
         return <BannerIcon className="bg-muted text-foreground">RMM</BannerIcon>;
     }
@@ -116,10 +118,37 @@ const TaniumIntegrationSettings = dynamic(
   }
 );
 
+function HuntressLoading() {
+  const { t } = useTranslation('msp/integrations');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Spinner size="md" />
+          <span className="text-sm text-muted-foreground">
+            {t('integrations.rmm.huntress.loading', {
+              defaultValue: 'Loading Huntress integration settings...'
+            })}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const HuntressIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/HuntressIntegrationSettings'),
+  {
+    loading: () => <HuntressLoading />,
+    ssr: false
+  }
+);
+
 const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
   tacticalrmm: TacticalRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
-  tanium: TaniumIntegrationSettings
+  tanium: TaniumIntegrationSettings,
+  huntress: HuntressIntegrationSettings
 };
 
 export default function RmmIntegrationsSetup() {
@@ -161,6 +190,9 @@ export default function RmmIntegrationsSetup() {
   });
   const selectedOption = options.find((option) => option.metadata.id === selected) ?? options[0];
 
+  const rmmOptions = options.filter((o) => (o.metadata.category ?? 'rmm') === 'rmm');
+  const securityOptions = options.filter((o) => o.metadata.category === 'security');
+
   useEffect(() => {
     if (options.length > 0 && !options.some((option) => option.metadata.id === selected)) {
       setSelected(options[0]?.metadata.id ?? 'ninjaone');
@@ -182,54 +214,74 @@ export default function RmmIntegrationsSetup() {
     return <TacticalRmmIntegrationSettings />;
   }
 
+  const renderCardGrid = (sectionOptions: RmmIntegrationOption[]) => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+      {sectionOptions.map((option) => {
+        const isSelected = option.metadata.id === selected;
+        return (
+          <Card
+            key={option.metadata.id}
+            className={[
+              'relative overflow-hidden transition-shadow hover:shadow-md',
+              isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
+              'cursor-pointer'
+            ].join(' ')}
+            id={`rmm-integration-card-${option.metadata.id}`}
+          >
+            <CardHeader className="space-y-4 pb-3">
+              <IntegrationBanner option={option} />
+              <div className="space-y-1">
+                <CardTitle className="text-base">{option.metadata.title}</CardTitle>
+                <CardDescription className="text-sm">{option.metadata.description}</CardDescription>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 pt-0">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                {option.metadata.highlights.map((h) => (
+                  <div key={`${option.metadata.id}-${h.label}`} className="flex items-center gap-1">
+                    <span className="font-medium text-foreground/80">{h.label}</span>
+                    <span>{h.value}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+
+            <CardFooter className="pt-0">
+              <Button
+                className="w-full"
+                variant={isSelected ? 'default' : 'outline'}
+                onClick={() => setSelected(option.metadata.id)}
+                id={`rmm-integration-configure-${option.metadata.id}`}
+              >
+                {t('integrations.rmm.setup.configure', { defaultValue: 'Configure Integration' })}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="space-y-6" id="rmm-integrations-setup">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-        {options.map((option) => {
-          const isSelected = option.metadata.id === selected;
-          return (
-            <Card
-              key={option.metadata.id}
-              className={[
-                'relative overflow-hidden transition-shadow hover:shadow-md',
-                isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
-                'cursor-pointer'
-              ].join(' ')}
-              id={`rmm-integration-card-${option.metadata.id}`}
-            >
-              <CardHeader className="space-y-4 pb-3">
-                <IntegrationBanner option={option} />
-                <div className="space-y-1">
-                  <CardTitle className="text-base">{option.metadata.title}</CardTitle>
-                  <CardDescription className="text-sm">{option.metadata.description}</CardDescription>
-                </div>
-              </CardHeader>
+      {rmmOptions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('integrations.rmm.setup.rmmSection', { defaultValue: 'Remote Monitoring & Management' })}
+          </h3>
+          {renderCardGrid(rmmOptions)}
+        </div>
+      )}
 
-              <CardContent className="space-y-4 pt-0">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  {option.metadata.highlights.map((h) => (
-                    <div key={`${option.metadata.id}-${h.label}`} className="flex items-center gap-1">
-                      <span className="font-medium text-foreground/80">{h.label}</span>
-                      <span>{h.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-
-              <CardFooter className="pt-0">
-                <Button
-                  className="w-full"
-                  variant={isSelected ? 'default' : 'outline'}
-                  onClick={() => setSelected(option.metadata.id)}
-                  id={`rmm-integration-configure-${option.metadata.id}`}
-                >
-                  {t('integrations.rmm.setup.configure', { defaultValue: 'Configure Integration' })}
-                </Button>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
+      {securityOptions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('integrations.rmm.setup.securitySection', { defaultValue: 'Security' })}
+          </h3>
+          {renderCardGrid(securityOptions)}
+        </div>
+      )}
 
       <div className="border-t pt-6" id="rmm-integrations-active-config">
         <div className="mb-4 flex items-center justify-between gap-3">
