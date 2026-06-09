@@ -186,7 +186,7 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.groupSyncFailed', { defaultValue: 'Group discovery failed' }));
+        setError(('error' in result && result.error) || t('integrations.rmm.levelio.errors.groupSyncFailed', { defaultValue: 'Group discovery failed' }));
       }
       await refresh(true);
     });
@@ -207,7 +207,7 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
+        setError(('error' in result && result.error) || t('integrations.rmm.levelio.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
       }
       await refresh(true);
     });
@@ -226,7 +226,7 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.alertBackfillFailed', { defaultValue: 'Alert backfill failed' }));
+        setError(('error' in result && result.error) || t('integrations.rmm.levelio.errors.alertBackfillFailed', { defaultValue: 'Alert backfill failed' }));
       }
       await refresh(true);
     });
