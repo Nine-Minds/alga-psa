@@ -70,7 +70,7 @@
   { "id": "T091", "description": "Integration: view-gated surfacing denied without system_settings.read", "implemented": true, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
   { "id": "T093", "description": "Integration: every Hudu route/action enforces EE + flag + system_settings RBAC", "implemented": true, "commitGroup": "permissions", "featureIds": ["F092"] },
 
-  { "id": "T100", "description": "Static: no hardcoded user-facing strings in Hudu components; all keys resolve", "implemented": false, "commitGroup": "i18n", "featureIds": ["F100"] },
+  { "id": "T100", "description": "Static: no hardcoded user-facing strings in Hudu components; all keys resolve", "implemented": true, "commitGroup": "i18n", "featureIds": ["F100"] },
 
   { "id": "T110", "description": "Security regression: assert no Hudu password value is ever written to any DB table, Vault, cache, or log sink (reveal value transits only to the client)", "implemented": false, "commitGroup": "regression", "featureIds": ["F062", "F064", "F067", "F082"] },
   { "id": "T111", "description": "Regression: disconnect then reconnect with a new key works and surfaces fresh data", "implemented": false, "commitGroup": "regression", "featureIds": ["F024", "F027"] },

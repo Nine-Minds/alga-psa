@@ -67,5 +67,5 @@
   { "id": "F090", "description": "Gate all Hudu server entry points on the existing system_settings RBAC resource (read=view surfaced data, update=connect/disconnect/manage mappings); no new resource, no seeding", "implemented": true, "commitGroup": "permissions", "prdRefs": ["Security / Permissions"] },
   { "id": "F092", "description": "Apply EE + flag guard and system_settings RBAC checks to every Hudu server action and route", "implemented": true, "commitGroup": "permissions", "prdRefs": ["Security / Permissions", "Non-functional Requirements"] },
 
-  { "id": "F100", "description": "Add translation keys for all Hudu UI strings (settings, mapping, tabs, empty/error states)", "implemented": false, "commitGroup": "i18n", "prdRefs": ["Non-functional Requirements"] }
+  { "id": "F100", "description": "Add translation keys for all Hudu UI strings (settings, mapping, tabs, empty/error states)", "implemented": true, "commitGroup": "i18n", "prdRefs": ["Non-functional Requirements"] }
 ]
