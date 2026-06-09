@@ -62,4 +62,36 @@ export type {
   UpsertHuduIntegrationInput,
 } from './huduIntegrationRepository';
 
-// TODO(company-mapping-data): export mapping/suggest helpers (F040-F046).
+export {
+  HUDU_MAPPING_ENTITY_TYPE,
+  HUDU_MAPPING_SYNC_STATUS,
+  HUDU_FUZZY_MATCH_THRESHOLD,
+  HUDU_EXACT_NAME_CONFIDENCE,
+  HUDU_INTEGRATION_ID_CONFIDENCE,
+  HUDU_COMPANIES_CACHE_KEY,
+  toCompanyCacheEntry,
+  buildCompaniesCache,
+  parseCompaniesCache,
+  huduNameSimilarity,
+  suggestHuduCompanyMappings,
+  setHuduCompanyMappingRow,
+  clearHuduCompanyMappingRow,
+  getHuduCompanyMappingRows,
+  resolveHuduCompanyIdForClient,
+  resolveClientIdForHuduCompany,
+} from './companyMapping';
+export type {
+  HuduCompanyCacheEntry,
+  HuduCompaniesCache,
+  HuduSuggestionSource,
+  HuduMappingSuggestion,
+  HuduMatcherClient,
+  HuduMatcherCompany,
+  HuduExistingMappingRef,
+  HuduMappingMetadata,
+  HuduCompanyMappingRow,
+  HuduMappingErrorCode,
+  HuduMappingWriteResult,
+  SetHuduCompanyMappingInput,
+  ClearHuduCompanyMappingRef,
+} from './companyMapping';
