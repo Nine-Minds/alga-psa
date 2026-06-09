@@ -6,7 +6,7 @@
  * mapping/suggest helpers, and data-fetch helpers.
  */
 
-export { HUDU_INTEGRATION_TYPE } from './contracts';
+export { HUDU_INTEGRATION_TYPE, HUDU_MAPPING_TABLE } from './contracts';
 export type {
   HuduResource,
   HuduCompany,
@@ -51,5 +51,15 @@ export {
 } from './secrets';
 export type { HuduCredentials, HuduSecretKey } from './secrets';
 
-// TODO(connection): export hudu_integrations model/repository (F023).
+export {
+  getHuduIntegration,
+  upsertHuduIntegration,
+  setHuduIntegrationActive,
+  touchHuduIntegrationLastSynced,
+} from './huduIntegrationRepository';
+export type {
+  HuduIntegrationRecord,
+  UpsertHuduIntegrationInput,
+} from './huduIntegrationRepository';
+
 // TODO(company-mapping-data): export mapping/suggest helpers (F040-F046).

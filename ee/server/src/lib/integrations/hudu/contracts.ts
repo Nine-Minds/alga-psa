@@ -12,6 +12,14 @@
 
 export const HUDU_INTEGRATION_TYPE = 'hudu' as const;
 
+/**
+ * Company↔client mappings live in the SHARED CE table (filtered by
+ * `integration_type='hudu'`) — never in the EE-only `hudu_integrations` table.
+ * CE cleanup paths may delete mapping rows; only EE code touches
+ * hudu_integrations (NFR7).
+ */
+export const HUDU_MAPPING_TABLE = 'tenant_external_entity_mappings' as const;
+
 /** UI label -> API resource name. Always hit the API name. */
 export type HuduResource = 'companies' | 'assets' | 'articles' | 'asset_passwords';
 
