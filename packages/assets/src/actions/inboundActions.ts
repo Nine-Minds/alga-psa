@@ -10,6 +10,7 @@ const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',
   'tacticalrmm',
   'tanium',
+  'levelio',
   'datto',
   'connectwise_automate',
 ]);
