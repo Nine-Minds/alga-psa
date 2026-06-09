@@ -104,6 +104,12 @@ const apiKeySkipPaths = [
   '/api/billing/check-tenant',
   '/api/billing/licence-count',
   '/api/billing/licence-usage/',
+  // Reactivation / win-back HMAC endpoints (server-to-server from nm-store and
+  // the temporal worker; each verifies ALGA_WEBHOOK_SECRET in its route handler).
+  '/api/billing/request-reactivation',
+  '/api/billing/complete-reactivation',
+  '/api/billing/reactivation-token',          // startsWith also covers /reactivation-token/session
+  '/api/billing/reactivation-password-reset',
   '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth

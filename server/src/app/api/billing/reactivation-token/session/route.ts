@@ -2,4 +2,4 @@
 // re-export `dynamic`/`runtime`); only the handler is re-exported from EE.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export { GET } from '@enterprise/app/api/billing/check-tenant/route';
+export { POST } from '@enterprise/app/api/billing/reactivation-token/session/route';
