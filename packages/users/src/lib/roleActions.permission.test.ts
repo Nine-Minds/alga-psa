@@ -39,7 +39,7 @@ const INTERNAL_USER = { user_id: 'target-1', user_type: 'internal' };
 const CLIENT_USER = { user_id: 'target-2', user_type: 'client' };
 
 /** Build a trx() for assignRoleToUser: users.first(), roles.first(), user_roles.insert().returning() */
-function buildAssignTrx(user: any, role: any, insertSpy: ReturnType<typeof vi.fn>) {
+function buildAssignTrx(user: any, role: any, insertSpy: (...args: any[]) => any) {
   return (table: string) => {
     if (table === 'users') return { where: () => ({ first: async () => user }) };
     if (table === 'roles') return { where: () => ({ first: async () => role }) };
@@ -56,7 +56,7 @@ function buildAssignTrx(user: any, role: any, insertSpy: ReturnType<typeof vi.fn
 }
 
 /** Build a trx() for removeRoleFromUser: roles.first(), user_roles.where().del() */
-function buildRemoveTrx(role: any, delSpy: ReturnType<typeof vi.fn>) {
+function buildRemoveTrx(role: any, delSpy: (...args: any[]) => any) {
   return (table: string) => {
     if (table === 'roles') return { where: () => ({ first: async () => role }) };
     if (table === 'user_roles') return { where: () => ({ del: delSpy }) };
