@@ -15,6 +15,7 @@
 - `@alga-psa/shared/rmm/contracts` and `@alga-psa/shared/rmm/sharedAssetIngestionService` are the canonical shared-RMM modules; they resolve in **both** `ee/server` and `ee/temporal-workflows` (the `packages/integrations` copies are just re-exports).
 - The Temporal worker resolves `@ee/*` → `ee/server/src/*`, so worker activities import the sync engine without duplication (same pattern as NinjaOne).
 - All RMM tables (`rmm_integrations`, `rmm_organization_mappings`, `rmm_alerts`, `tenant_external_entity_mappings`, asset extension tables) are provider-agnostic; **no migrations in this plan**.
+- `rmm_alerts` columns (per `server/migrations/20251124000001_create_rmm_integration_tables.cjs`) include `source_type` (varchar 50), `alert_class`, `device_name`, and `metadata` (jsonb) — there are NO `activity_type`/`source_data` columns. (The NinjaOne webhook handler and Tactical webhook/backfill reference those nonexistent columns — a pre-existing latent bug; do NOT copy that convention.)
 - Alga alert severities are `'critical' | 'major' | 'moderate' | 'minor' | 'none'` (see `RmmAlertSeverity` in `ee/server/src/interfaces/rmm.interfaces.ts`). Level severities are `information | warning | critical | emergency`.
 - `RmmSyncResult` (defined in `ee/server/src/interfaces/rmm.interfaces.ts:317`) is the result shape for all sync operations.
 - The `@enterprise/*` alias is CE-first: it maps to `packages/ee/src/*` (stubs) and webpack overrides it to `ee/server/src/*` in EE builds. That's why EE features need a real file in `ee/server/src/...`, a stub in `packages/ee/src/...`, and (for API routes) a re-export in `server/src/app/...`.
@@ -1054,6 +1055,9 @@ describe('runLevelIoAlertsBackfill', () => {
     expect(insertedAlerts[0].severity).toBe('critical');
     expect(insertedAlerts[0].asset_id).toBe('asset-1');
     expect(insertedAlerts[0].status).toBe('active');
+    expect(insertedAlerts[0].source_type).toBe('levelio_alert');
+    expect(insertedAlerts[0].device_name).toBe('WS-01');
+    expect(insertedAlerts[0].metadata.id).toBe('al-1');
     expect(insertedAlerts[1].severity).toBe('moderate');
     expect(insertedAlerts[1].asset_id).toBeNull();
     expect(insertedAlerts[1].status).toBe('resolved');
@@ -1466,12 +1470,13 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
         asset_id: assetIdByDeviceId.get(alert.device_id) ?? null,
         severity: mapLevelIoSeverity(alert.severity),
         priority: null,
-        activity_type: 'levelio_alert',
+        source_type: 'levelio_alert',
         status: alert.is_resolved ? 'resolved' : 'active',
         message: alert.payload
           ? `${alert.name}: ${alert.description} (${alert.payload})`
           : `${alert.name}: ${alert.description}`,
-        source_data: JSON.stringify(alert),
+        device_name: alert.device_hostname ?? null,
+        metadata: alert,
         triggered_at: alert.started_at,
         resolved_at: alert.resolved_at ?? null,
         updated_at: deps.knex.fn.now(),
@@ -1525,6 +1530,7 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
     };
   } catch (error) {
     const message = sanitizeError(error);
+    await setSyncStatus(deps.knex, args.tenant, { sync_status: 'error', sync_error: message }).catch(() => undefined);
     await emitSyncEvent(deps, {
       eventName: 'RMM_SYNC_FAILED',
       tenant: args.tenant,
@@ -2590,10 +2596,11 @@ export async function POST(req: Request) {
       asset_id: assetId || null,
       severity,
       priority: null,
-      activity_type: 'levelio_webhook',
+      source_type: 'levelio_webhook',
       status,
       message,
-      source_data: JSON.stringify(body),
+      device_name: body.hostname ? String(body.hostname) : null,
+      metadata: body,
       triggered_at: body.alert_time ? String(body.alert_time) : new Date().toISOString(),
       resolved_at: status === 'resolved' ? new Date().toISOString() : null,
       updated_at: knex.fn.now(),
