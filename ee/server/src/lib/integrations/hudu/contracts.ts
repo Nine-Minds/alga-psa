@@ -84,6 +84,8 @@ export interface HuduAssetPassword {
   username?: string | null;
   /** SECURITY: plaintext; reveal-only, never persisted or logged. */
   password?: string | null;
+  /** SECURITY: TOTP seed; value-bearing like `password`, never persisted or logged. */
+  otp_secret?: string | null;
   url?: string | null;
   password_folder_name?: string | null;
   description?: string | null;
@@ -91,8 +93,8 @@ export interface HuduAssetPassword {
   updated_at?: string | null;
 }
 
-/** Metadata-only projection of an asset password (no value field). */
-export type HuduAssetPasswordSummary = Omit<HuduAssetPassword, 'password'>;
+/** Metadata-only projection of an asset password (no value-bearing field). */
+export type HuduAssetPasswordSummary = Omit<HuduAssetPassword, 'password' | 'otp_secret'>;
 
 /** Collection responses are keyed by the plural resource name. */
 export interface HuduCompaniesResponse {

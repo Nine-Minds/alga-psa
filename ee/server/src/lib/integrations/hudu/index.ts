@@ -95,3 +95,24 @@ export type {
   SetHuduCompanyMappingInput,
   ClearHuduCompanyMappingRef,
 } from './companyMapping';
+
+export {
+  HUDU_REFERENCE_CACHE_TTL_MS,
+  HUDU_REFERENCE_CACHE_MAX_ENTRIES,
+  getCachedHuduList,
+  setCachedHuduList,
+  clearHuduReferenceCache,
+  getHuduReferenceCacheSize,
+  toHuduAssetPasswordSummary,
+  huduInstanceBaseUrl,
+  buildHuduRecordUrl,
+  buildHuduCompanyUrl,
+} from './referenceData';
+export type {
+  HuduReferenceResource,
+  HuduReferenceCacheHit,
+  HuduCompanyLinkSource,
+} from './referenceData';
+
+export { writeHuduPasswordRevealAudit } from './revealAudit';
+export type { HuduPasswordRevealAuditParams } from './revealAudit';
