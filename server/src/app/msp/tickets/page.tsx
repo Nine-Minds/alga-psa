@@ -60,6 +60,18 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.boardId && typeof params.boardId === 'string') {
       filtersFromURL.boardId = params.boardId;
     }
+    if (params?.boardIds && typeof params.boardIds === 'string') {
+      const boardIds = params.boardIds.split(',').filter(id => id.trim().length > 0);
+      if (boardIds.length > 0) {
+        filtersFromURL.boardIds = boardIds;
+      }
+    }
+    if (params?.excludeBoardIds && typeof params.excludeBoardIds === 'string') {
+      const excludeBoardIds = params.excludeBoardIds.split(',').filter(id => id.trim().length > 0);
+      if (excludeBoardIds.length > 0) {
+        filtersFromURL.excludeBoardIds = excludeBoardIds;
+      }
+    }
     if (params?.clientId && typeof params.clientId === 'string') {
       filtersFromURL.clientId = params.clientId;
     }
@@ -71,6 +83,18 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     }
     if (params?.categoryId && typeof params.categoryId === 'string') {
       filtersFromURL.categoryId = params.categoryId;
+    }
+    if (params?.categoryIds && typeof params.categoryIds === 'string') {
+      const categoryIds = params.categoryIds.split(',').filter(id => id.trim().length > 0);
+      if (categoryIds.length > 0) {
+        filtersFromURL.categoryIds = categoryIds;
+      }
+    }
+    if (params?.excludeCategoryIds && typeof params.excludeCategoryIds === 'string') {
+      const excludeCategoryIds = params.excludeCategoryIds.split(',').filter(id => id.trim().length > 0);
+      if (excludeCategoryIds.length > 0) {
+        filtersFromURL.excludeCategoryIds = excludeCategoryIds;
+      }
     }
     if (params?.searchQuery && typeof params.searchQuery === 'string') {
       filtersFromURL.searchQuery = params.searchQuery;
@@ -178,9 +202,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Create full filter object for data fetching
     const fetchFilters: ITicketListFilters = {
       boardId: initialFilters.boardId || undefined,
+      boardIds: initialFilters.boardIds || undefined,
+      excludeBoardIds: initialFilters.excludeBoardIds || undefined,
       statusId: initialFilters.statusId || TICKET_STATUS_FILTER_OPEN,
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,
+      categoryIds: initialFilters.categoryIds || undefined,
+      excludeCategoryIds: initialFilters.excludeCategoryIds || undefined,
       clientId: initialFilters.clientId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',

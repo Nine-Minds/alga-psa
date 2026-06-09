@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle, ExternalLink, Download } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
+import type { OnlineMeetingAppointmentArtifact } from './types';
 
 /** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
 function normalizeDateValue(value: unknown): string | null {
@@ -51,6 +52,7 @@ interface AppointmentRequestDetails {
   approved_at?: string;
   declined_reason?: string;
   online_meeting_url?: string | null;
+  online_meeting_artifacts?: OnlineMeetingAppointmentArtifact[];
   created_at: string;
 }
 
@@ -127,6 +129,49 @@ export function AppointmentRequestDetailsPage() {
 
     const config = variants[status];
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const renderOnlineMeetingArtifacts = () => {
+    const artifacts = appointment?.online_meeting_artifacts ?? [];
+    if (artifacts.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {artifacts.map((artifact) => {
+          if (artifact.artifact_type === 'transcript' && !artifact.document_id) {
+            return null;
+          }
+
+          const label = artifact.artifact_type === 'transcript'
+            ? t('details.viewTranscript', 'View transcript')
+            : t('details.downloadRecording', 'Download recording');
+          const href = artifact.artifact_type === 'transcript'
+            ? `/api/documents/${encodeURIComponent(artifact.document_id!)}/download`
+            : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}?portal=true`;
+
+          return (
+            <Button
+              key={artifact.artifact_id}
+              id={`client-portal-appointment-artifact-details-${artifact.artifact_type}-${artifact.artifact_id}`}
+              asChild
+              variant="outline"
+              size="sm"
+            >
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {artifact.artifact_type === 'transcript' ? (
+                  <FileText className="h-4 w-4 mr-2" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {label}
+              </a>
+            </Button>
+          );
+        })}
+      </div>
+    );
   };
 
   const formatRequestedDateTime = (dateValue: unknown, timeValue: unknown, tz?: string | null) => {
@@ -276,6 +321,7 @@ export function AppointmentRequestDetailsPage() {
                       <ExternalLink className="h-4 w-4 mr-2" />
                       {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
                     </Button>
+                    {renderOnlineMeetingArtifacts()}
                   </div>
                 </div>
               )}

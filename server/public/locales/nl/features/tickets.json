@@ -39,7 +39,8 @@
     "breached": "Overtreden",
     "paused": "Gepauzeerd",
     "allResponseStatuses": "Alle antwoordstatussen",
-    "responseStatus": "Antwoordstatus"
+    "responseStatus": "Antwoordstatus",
+    "board": "Filteren op board"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -377,7 +378,10 @@
       "onTrack": "Op schema",
       "breached": "Overschreden",
       "paused": "Gepauzeerd",
-      "bundled": "Gebundeld"
+      "bundled": "Gebundeld",
+      "activeBoards": "Actieve boards",
+      "inactiveBoards": "Inactieve boards",
+      "allBoards": "Alle boards"
     },
     "selection": {
       "pageSelected_one": "Alle {{count}} ticket op deze pagina zijn geselecteerd.",
@@ -1261,5 +1265,22 @@
       "reconnecting": "Live-updates offline - opnieuw verbinden...",
       "unavailable": "Live-updates niet beschikbaar"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} succesvol verwijderd.",
+    "error": "Verwijderen van ticket is mislukt. Probeer het opnieuw.",
+    "validationError": "Kan verwijdering niet valideren. Probeer het opnieuw."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inactief",
+    "noBoard": "Geen board",
+    "selectedCount_one": "{{count}} board",
+    "selectedCount_other": "{{count}} boards",
+    "excludingPrefix": "exclusief {{name}}",
+    "excludingCount_one": "exclusief {{count}} board",
+    "excludingCount_other": "exclusief {{count}} boards",
+    "placeholder": "Filteren op board",
+    "title": "Board-kiezer",
+    "searchPlaceholder": "Boards zoeken..."
   }
 }

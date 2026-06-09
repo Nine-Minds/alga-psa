@@ -286,6 +286,34 @@ export class ApiMetadataController extends ApiBaseController {
     };
   }
 
+  /**
+   * GET /api/v1/meta/mcp-registry
+   * Serve the MCP endpoint registry (edition-aware) for the local connector
+   * and remote MCP server. Any valid API key may read it — it is API metadata,
+   * not tenant data; the per-endpoint ACL still applies at call time. CE builds
+   * always serve the CE registry; EE builds serve the EE registry, falling back
+   * to CE if the EE artifact is unavailable.
+   */
+  getMcpRegistry() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
+
+        const { loadMcpRegistry } = await import('@/lib/mcp/loadRegistry');
+        const { edition, entries } = await loadMcpRegistry();
+
+        return createSuccessResponse(
+          { edition, count: entries.length, entries },
+          200,
+          { message: 'MCP API registry retrieved successfully' },
+        );
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   // ============================================================================
   // SCHEMA DISCOVERY
   // ============================================================================

@@ -11,14 +11,17 @@ import {
   updatePermissionSchema,
   permissionListQuerySchema
 } from '../schemas/permissionRoleSchemas';
-import { 
-  runWithTenant 
+import {
+  runWithTenant
 } from '../../db';
+import { getConnection } from '../../db/db';
+import { hasPermission } from '../../auth/rbac';
 import {
   ApiRequest,
   AuthenticatedApiRequest,
   NotFoundError,
   ConflictError,
+  ForbiddenError,
   ValidationError,
   createSuccessResponse,
   createPaginatedResponse,
@@ -91,6 +94,40 @@ export class ApiPermissionController extends ApiBaseController {
               { sort, order, filters }
             );
           }
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/rbac/audit - List RBAC audit-log entries (role/permission/
+   * user-role changes recorded in audit_logs). Gated on role:read.
+   */
+  audit() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          const knex = await getConnection(apiRequest.context!.tenant);
+          if (!(await hasPermission(apiRequest.context!.user!, 'role', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read role');
+          }
+
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+
+          const filters: Record<string, string> = {};
+          for (const key of ['user_id', 'operation', 'table_name', 'record_id', 'start_date', 'end_date']) {
+            const value = url.searchParams.get(key);
+            if (value) filters[key] = value;
+          }
+
+          const result = await this.permissionRoleService.listRbacAuditLogs({ page, limit, filters }, apiRequest.context!);
+          return createPaginatedResponse(result.data, result.total, page, limit, { filters });
         });
       } catch (error) {
         return handleApiError(error);

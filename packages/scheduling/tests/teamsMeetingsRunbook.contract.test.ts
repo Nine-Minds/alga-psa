@@ -16,11 +16,14 @@ describe('Teams meetings setup runbook contract', () => {
     expect(doc).toContain('Scheduling -> Availability Settings -> Teams Meetings');
   });
 
-  it('links the Availability Settings banner to the browser-served runbook copy', () => {
-    const componentSource = readRepoFile('packages/scheduling/src/components/schedule/AvailabilitySettings.tsx');
+  it('serves a browser-readable runbook copy referenced by the canonical doc', () => {
+    // Meeting setup moved out of Availability Settings onto the Teams integration
+    // settings page (Settings -> Integrations -> Microsoft Teams), so the runbook is
+    // surfaced from there / the docs rather than an Availability Settings banner.
+    const doc = readRepoFile('docs/integrations/teams-meetings-setup.md');
     const publicCopy = readRepoFile('server/public/docs/integrations/teams-meetings-setup.md');
 
-    expect(componentSource).toContain("window.open('/docs/integrations/teams-meetings-setup.md'");
+    expect(doc).toContain('Settings -> Integrations -> Microsoft Teams');
     expect(publicCopy).toContain('Canonical source:');
     expect(publicCopy).toContain('docs/integrations/teams-meetings-setup.md');
   });

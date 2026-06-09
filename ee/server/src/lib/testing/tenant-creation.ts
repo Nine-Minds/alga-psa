@@ -179,7 +179,7 @@ export async function createAdminUser(
 
     // Find or create Admin role
     let adminRole = await trx('roles')
-      .where({ role_name: 'Admin', tenant: input.tenantId })
+      .where({ role_name: 'Admin', tenant: input.tenantId, msp: true, client: false })
       .first();
 
     let roleId: string;
@@ -191,6 +191,8 @@ export async function createAdminUser(
           role_name: 'Admin',
           tenant: input.tenantId,
           description: 'Administrator role with full access',
+          msp: true,
+          client: false,
           created_at: new Date(),
           updated_at: new Date()
         })

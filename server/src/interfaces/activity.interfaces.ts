@@ -192,6 +192,8 @@ export interface ActivityFilters {
   workItemType?: string;
   executionId?: string;
   includeHidden?: boolean;
+  /** View another user's activities (requires user_schedule:update or user_schedule:read_all). */
+  targetUserId?: string;
 }
 
 /**

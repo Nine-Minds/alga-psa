@@ -11,7 +11,7 @@ import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
+import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';

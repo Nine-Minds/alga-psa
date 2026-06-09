@@ -1,3 +1,8 @@
+// ⚠️ `asset_ticket_associations` is effectively an ORPHAN table — nothing in the
+// UI or server actions reads it. Asset↔ticket links actually live in
+// `asset_associations` (entity_type='ticket', entity_id=ticket_id), created in
+// 20241112031331_create_asset_associations.cjs. Use `asset_associations` for any
+// new asset/ticket linkage. (`asset_service_history`, also created here, IS used.)
 exports.up = async function(knex) {
     await knex.schema.createTable('asset_ticket_associations', function(table) {
         table.uuid('tenant').notNullable();

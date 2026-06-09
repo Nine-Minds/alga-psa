@@ -787,6 +787,50 @@
       "ai.infer": {
         "label": "11111",
         "description": "11111"
+      },
+      "store.get": {
+        "label": "11111 store.get 11111",
+        "description": "11111 store.get description 11111"
+      },
+      "store.set": {
+        "label": "11111 store.set 11111",
+        "description": "11111 store.set description 11111"
+      },
+      "store.delete": {
+        "label": "11111 store.delete 11111",
+        "description": "11111 store.delete description 11111"
+      },
+      "store.increment": {
+        "label": "11111 store.increment 11111",
+        "description": "11111 store.increment description 11111"
+      },
+      "store.list": {
+        "label": "11111 store.list 11111",
+        "description": "11111 store.list description 11111"
+      },
+      "store.list_namespaces": {
+        "label": "11111 store.list_namespaces 11111",
+        "description": "11111 store.list_namespaces description 11111"
+      },
+      "links.upsert": {
+        "label": "11111 links.upsert 11111",
+        "description": "11111 links.upsert description 11111"
+      },
+      "links.lookup": {
+        "label": "11111 links.lookup 11111",
+        "description": "11111 links.lookup description 11111"
+      },
+      "links.delete": {
+        "label": "11111 links.delete 11111",
+        "description": "11111 links.delete description 11111"
+      },
+      "links.list": {
+        "label": "11111 links.list 11111",
+        "description": "11111 links.list description 11111"
+      },
+      "links.list_namespaces": {
+        "label": "11111 links.list_namespaces 11111",
+        "description": "11111 links.list_namespaces description 11111"
       }
     },
     "validation": {
@@ -931,6 +975,10 @@
         "ai": {
           "label": "11111",
           "description": "11111"
+        },
+        "data-store": {
+          "label": "11111 data-store 11111",
+          "description": "11111 durable workflow state 11111"
         }
       }
     },
@@ -1408,7 +1456,11 @@
       "openEditor": "11111",
       "apply": "11111",
       "cancel": "11111"
-    }
+    },
+    "softEnumPlaceholder": "11111 select-or-enter 11111",
+    "softEnumSearchPlaceholder": "11111 search-custom 11111",
+    "softEnumNoResults": "11111 no-suggestions 11111",
+    "softEnumUseCustom": "11111 use {{value}} 11111"
   },
   "schemaReference": {
     "selectAction": "11111",
@@ -1984,6 +2036,23 @@
     "workflowWaitTiming": {
       "fixed": "11111",
       "expression": "11111"
+    },
+    "workflowEntityType": {
+      "project_task": "11111 project_task 11111",
+      "ticket": "11111 ticket 11111",
+      "contact": "11111 contact 11111",
+      "client": "11111 client 11111",
+      "project": "11111 project 11111",
+      "appointment": "11111 appointment 11111",
+      "quote": "11111 quote 11111"
+    },
+    "workflowLinkRelation": {
+      "related": "11111 related 11111",
+      "mirrors": "11111 mirrors 11111",
+      "maps_to": "11111 maps_to 11111",
+      "blocks": "11111 blocks 11111",
+      "duplicate_of": "11111 duplicate_of 11111",
+      "synced_with": "11111 synced_with 11111"
     }
   },
   "automation": {

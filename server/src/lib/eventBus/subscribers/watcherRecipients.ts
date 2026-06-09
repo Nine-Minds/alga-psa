@@ -1,8 +1,37 @@
 import { isValidEmail } from '@alga-psa/core';
 import { getActiveWatchListEmails } from '@shared/lib/tickets/watchList';
+import type { Knex } from 'knex';
 
 export function normalizeRecipientEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/**
+ * Given a list of watcher emails, return the subset that belong to internal
+ * (MSP) users for this tenant, normalized for comparison. Callers use this to
+ * decide whether a watcher should receive the MSP (/msp/...) link or the
+ * client-portal link: watchers can be either internal agents or external
+ * client contacts, and the watch list itself stores only bare email strings
+ * with no type distinction.
+ */
+export async function resolveInternalWatcherEmails(
+  db: Knex,
+  tenantId: string,
+  emails: string[]
+): Promise<Set<string>> {
+  const normalized = Array.from(
+    new Set(emails.map((email) => normalizeRecipientEmail(email)).filter((email) => isValidEmail(email)))
+  );
+  if (normalized.length === 0) {
+    return new Set<string>();
+  }
+
+  const rows = await db('users')
+    .select('email')
+    .where({ tenant: tenantId, user_type: 'internal' })
+    .whereIn(db.raw('lower(email)') as unknown as string, normalized);
+
+  return new Set<string>(rows.map((row: { email: string }) => normalizeRecipientEmail(row.email)));
 }
 
 export function extractActiveWatcherEmails(attributes: unknown): string[] {

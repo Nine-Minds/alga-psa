@@ -48,6 +48,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_run_steps', 'workflow_run_waits', 'workflow_run_snapshots',
   'workflow_action_invocations', 'workflow_definition_versions',
   'workflow_run_logs', 'workflow_runtime_events', 'workflow_step_usage_periods',
+  // Workflow data store + entity links (standalone; created_by_run_id is a soft
+  // ref with no FK, so order among these does not matter)
+  'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // Task/project details
@@ -178,6 +181,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
+
+  // Online meetings (reference interactions / appointment_requests / schedule_entries; artifacts reference meetings)
+  'online_meeting_artifacts', 'online_meetings',
 
   // Appointment
   'appointment_requests',
@@ -371,6 +377,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
   'resources',                 // resources.user_id → users with NO ACTION
   'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
+
+  // === MCP agent governance (EE) ===
+  // Relations are enforced in application code (no DB FKs), so this order is
+  // advisory. Children first: agent_roles + mcp_agent_audit reference agents
+  // (agent_id); agents.created_by / backing user reference users, so delete the
+  // agent tables before users. agent_idp_providers is independent.
+  'agent_roles',
+  'mcp_agent_audit',
+  'agent_idp_providers',
+  'agents',
+
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)

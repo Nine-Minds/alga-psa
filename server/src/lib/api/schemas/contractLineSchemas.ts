@@ -713,7 +713,9 @@ export const planTemplateResponseSchema = z.object({
 
 // Create plan from template
 export const createPlanFromTemplateSchema = z.object({
-  template_id: uuidSchema,
+  // Sourced from the {id} path param on POST /contract-line-templates/{id}/create-contract-line;
+  // optional in the body and overridden by the path when present.
+  template_id: uuidSchema.optional(),
   contract_line_name: z.string().min(1).max(255),
   modify_rates: z.object({
     percentage_change: z.number().optional(),

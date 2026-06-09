@@ -57,6 +57,8 @@ import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
+import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
@@ -98,6 +100,11 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  // Dark-release gate for the remote MCP server admin UI. Off by default
+  // everywhere (PostHog returns false for an unknown flag, and it resolves false
+  // when PostHog is unavailable); Nine Minds enables it per-tenant in PostHog.
+  // UI-only: the /api/mcp + /api/v1/mcp endpoints stay live regardless.
+  const { enabled: mcpServerUiEnabled } = useFeatureFlag('mcp-server');
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const { hasFeature, hasAddOn } = useTier();
   const canUseEntraSync = hasAddOn(ADD_ONS.ENTERPRISE);
@@ -310,15 +317,26 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     content: <ExtensionManagement />,
   };
 
+  // MCP server governance (Enterprise only).
+  const mcpTab: SettingsTabContent = {
+    id: 'mcp-server',
+    label: 'MCP Server',
+    icon: Settings,
+    content: <McpServerSettings />,
+  };
+
   // Create a map of tab content by label for easy lookup
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
+    if (isEEAvailable && mcpServerUiEnabled) {
+      tabs.push(mcpTab);
+    }
     if (!isAlgaDesk) {
       return tabs;
     }
 
     return tabs.filter((tab) => allowedTabIds.has(tab.id));
-  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgaDesk]);
+  }, [allowedTabIds, baseTabContent, extensionsTab, mcpTab, isEEAvailable, mcpServerUiEnabled, isAlgaDesk]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

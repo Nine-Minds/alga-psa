@@ -426,7 +426,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/permissions/{id}/roles', summary: 'List roles using permission', description: 'Lists roles currently assigned the specified permission UUID.', action: 'read', resource: 'permission', handler: 'getRolesByPermission' },
 
     { method: 'get', path: '/api/v1/rbac/analytics', summary: 'Get RBAC analytics', description: 'Returns access-control metrics from PermissionRoleService.getAccessControlMetrics().', action: 'read', resource: 'role', handler: 'getAccessControlMetrics' },
-    { method: 'get', path: '/api/v1/rbac/audit', summary: 'Get RBAC audit log (not implemented)', description: 'Current route returns a static 501 Not Implemented payload and does not call an RBAC controller.', action: 'read', resource: 'role', handler: 'rbacAuditNotImplemented', authMode: 'none' },
+    { method: 'get', path: '/api/v1/rbac/audit', summary: 'Get RBAC audit log', description: 'Lists RBAC audit-log entries from audit_logs (roles, permissions, role_permissions, user_roles), newest first. Supports page/limit pagination and user_id, operation, table_name, record_id, start_date, and end_date filters. Gated on role:read.', action: 'read', resource: 'role', handler: 'listRbacAudit' },
 
     { method: 'get', path: '/api/v1/roles', summary: 'List roles', description: 'Lists tenant roles with role-name and permission filters.', action: 'read', resource: 'role', handler: 'listRoles' },
     { method: 'post', path: '/api/v1/roles', summary: 'Create role', description: 'Creates one tenant role, optionally with initial permission assignments.', action: 'create', resource: 'role', handler: 'createRole' },

@@ -43,6 +43,7 @@ export * from './interaction.interfaces';
 export * from './invoice.interfaces';
 export * from './material.interfaces';
 export * from './microsoft365-diagnostics.interfaces';
+export * from './online-meeting.interfaces';
 export * from './payment.interfaces';
 export * from './phaseTaskImport.interfaces';
 export * from './project.interfaces';

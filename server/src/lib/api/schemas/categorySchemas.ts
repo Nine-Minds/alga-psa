@@ -60,16 +60,15 @@ export const serviceCategoryResponseSchema = z.object({
 // ============================================================================
 
 // Ticket Category Schemas
+// NOTE: ticket categories live in the `categories` table, which has no
+// description/updated_* columns. Fields here mirror the real column set.
 export const createTicketCategorySchema = z.object({
   category_name: z.string()
     .min(1, 'Category name is required')
     .max(255, 'Category name too long')
     .trim(),
   board_id: uuidSchema,
-  parent_category: uuidSchema.optional(),
-  description: z.string()
-    .max(1000, 'Description too long')
-    .optional()
+  parent_category: uuidSchema.optional()
 });
 
 export const updateTicketCategorySchema = createUpdateSchema(createTicketCategorySchema);
@@ -78,12 +77,11 @@ export const ticketCategoryResponseSchema: z.ZodType<any> = z.object({
   category_id: uuidSchema,
   category_name: z.string(),
   parent_category: uuidSchema.nullable(),
-  board_id: uuidSchema,
-  description: z.string().nullable(),
+  board_id: uuidSchema.nullable(),
+  display_order: z.number().optional(),
+  is_from_itil_standard: z.boolean().nullable().optional(),
   created_by: uuidSchema,
-  updated_by: uuidSchema,
   created_at: dateSchema,
-  updated_at: dateSchema,
   tenant: uuidSchema,
   // Hierarchical data
   children: z.array(z.lazy(() => ticketCategoryResponseSchema)).optional(),

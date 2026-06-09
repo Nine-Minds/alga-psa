@@ -10,6 +10,7 @@ import * as invoiceService from '../services/invoiceService';
 import Invoice from '../models/invoice';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
@@ -44,6 +45,10 @@ export const generateManualInvoice = withAuth(async (
   { tenant },
   request: ManualInvoiceRequest
 ): Promise<ManualInvoiceResult> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
+
   // Validate session and tenant context
   const { session, knex } = await invoiceService.validateSessionAndTenant();
   const { clientId, items, expirationDate, isPrepayment } = request;
@@ -149,6 +154,10 @@ export const updateManualInvoice = withAuth(async (
   invoiceId: string,
   request: ManualInvoiceRequest
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+
   const { session, knex } = await invoiceService.validateSessionAndTenant();
   const { clientId, items } = request;
 

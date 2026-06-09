@@ -28,7 +28,8 @@
       "noDueDate": "Pas de date d'échéance",
       "emDash": "—",
       "unread": "Non lu",
-      "recurringEvent": "Événement récurrent"
+      "recurringEvent": "Événement récurrent",
+      "adHocBadge": "Ad hoc"
     },
     "actions": {
       "refresh": "Actualiser",
@@ -43,7 +44,8 @@
       "noMatching": "Aucune activité ne correspond aux filtres"
     },
     "errors": {
-      "loadFailed": "Échec du chargement des activités. Veuillez réessayer plus tard."
+      "loadFailed": "Échec du chargement des activités. Veuillez réessayer plus tard.",
+      "addAdHocFailed": "Échec de l'ajout de l'élément ad hoc. Veuillez réessayer."
     },
     "activityTypes": {
       "schedule": "Calendrier",
@@ -60,6 +62,18 @@
         "title": "Options d'impression",
         "description": "Choisissez les colonnes à inclure lors de l'impression des activités."
       }
+    },
+    "adHoc": {
+      "addPlaceholder": "Ajouter une activité",
+      "addButton": "Ajouter",
+      "markDone": "Marquer comme terminé",
+      "markNotDone": "Marquer comme non terminé",
+      "convertToTicket": "Convertir en ticket",
+      "convertToTask": "Convertir en tâche de projet"
+    },
+    "viewingUser": {
+      "label": "Affichage :",
+      "me": "Mes activités"
     }
   },
   "card": {
@@ -417,11 +431,27 @@
       "allProjects": "Tous les projets",
       "allPriorities": "Toutes les priorités",
       "selectPriority": "Sélectionner une priorité...",
-      "search": "Rechercher des activités..."
+      "search": "Rechercher des activités...",
+      "searchBoards": "Rechercher des tableaux...",
+      "searchStatuses": "Rechercher des statuts...",
+      "searchProjects": "Rechercher des projets..."
     },
     "actions": {
       "reset": "Réinitialiser"
     },
-    "statusClosedSuffix": " (fermé)"
+    "statusClosedSuffix": " (fermé)",
+    "summary": {
+      "boards_one": "{{count}} tableau",
+      "boards_other": "{{count}} tableaux",
+      "statuses_one": "{{count}} statut",
+      "statuses_other": "{{count}} statuts",
+      "projects_one": "{{count}} projet",
+      "projects_other": "{{count}} projets",
+      "phases_one": "{{count}} phase",
+      "phases_other": "{{count}} phases",
+      "excludingName": "hors {{name}}",
+      "excludingCount_one": "hors {{count}}",
+      "excludingCount_other": "hors {{count}}"
+    }
   }
 }

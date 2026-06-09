@@ -1,1 +1,4 @@
 .env
+
+# Transient merged CE+EE migrations workspace (run-ee-migrations.js)
+.ee-combined-migrations-*/

@@ -1,0 +1,197 @@
+[
+  {
+    "id": "T001",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "description": "Search ranking: intent-bearing queries (create/update/delete/list/detail) rank the correct endpoint method/shape at top"
+  },
+  {
+    "id": "T002",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "description": "Search ranking: relevant entries returned, clearly-irrelevant entries excluded; placeholder-metadata entries penalized"
+  },
+  {
+    "id": "T003",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "description": "Request-building: registry entry + args -> correct method + path with path params substituted"
+  },
+  {
+    "id": "T004",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "description": "Request-building: query/body placed correctly; GET classified read (auto), POST/PUT/PATCH/DELETE classified mutation"
+  },
+  {
+    "id": "T005",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "description": "Dual-edition registry generation: CE spec yields CE registry, EE spec yields EE registry (EE is a superset; EE-only endpoints absent from CE)"
+  },
+  {
+    "id": "T006",
+    "phase": 1,
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ],
+    "description": "Regression: existing EE chat assistant search->call tool flow behaves unchanged after re-point onto agent-tooling"
+  },
+  {
+    "id": "T007",
+    "phase": 1,
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011"
+    ],
+    "description": "meta/mcp-registry endpoint returns edition-correct registry and requires auth (401 without a valid API key)"
+  },
+  {
+    "id": "T008",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ],
+    "description": "Connector startup: missing env vars fail fast with a clear message; registry fetch failure reported clearly"
+  },
+  {
+    "id": "T009",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "description": "call_api_endpoint dispatches to /api/v1 with the user token and returns the parsed result"
+  },
+  {
+    "id": "T010",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019"
+    ],
+    "description": "API 4xx/5xx (incl. 401) surfaces as a structured tool error, not a crash"
+  },
+  {
+    "id": "T011",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F015",
+      "F016",
+      "F017"
+    ],
+    "description": "MCP protocol conformance (stdio): tools/list returns exactly the 3 meta-tools; tools/call invokes each successfully"
+  },
+  {
+    "id": "T012",
+    "phase": 1,
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "description": "E2E smoke: configured connector lists and reads a ticket from a real instance under the user's permissions"
+  },
+  {
+    "id": "T013",
+    "phase": 2,
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023"
+    ],
+    "description": "MCP protocol conformance (Streamable HTTP): single endpoint serves tools/list + tools/call for the 3 meta-tools"
+  },
+  {
+    "id": "T014",
+    "phase": 2,
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025"
+    ],
+    "description": "OAuth: unauthenticated MCP request rejected; protected-resource metadata advertised; auth-code+PKCE yields a token that authorizes calls"
+  },
+  {
+    "id": "T015",
+    "phase": 2,
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F030",
+      "F031"
+    ],
+    "description": "Agent authz: kernel enforces agent subject \u2014 allowed tool/resource permitted, denied blocked"
+  },
+  {
+    "id": "T016",
+    "phase": 2,
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "description": "Agent authz: a mutation is blocked when the agent lacks permission (reads still allowed)"
+  },
+  {
+    "id": "T017",
+    "phase": 2,
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033"
+    ],
+    "description": "Audit completeness: every tool invocation writes an audit row with required fields; export returns them"
+  },
+  {
+    "id": "T018",
+    "phase": 3,
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F036"
+    ],
+    "description": "Agent ABAC: read-only-on-billing policy blocks billing mutations while allowing billing reads"
+  },
+  {
+    "id": "T019",
+    "phase": 3,
+    "implemented": false,
+    "featureIds": [
+      "F037",
+      "F038",
+      "F039"
+    ],
+    "description": "Approval queue: gated mutation enqueues; approve executes it; reject blocks it; timeout expires it"
+  },
+  {
+    "id": "T020",
+    "phase": 3,
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ],
+    "description": "Quotas: per-agent rate limit is enforced once the threshold is exceeded"
+  }
+]

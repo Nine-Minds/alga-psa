@@ -5,7 +5,6 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
-import { registerScheduleEntryIntegration } from "@alga-psa/msp-composition/workflows/registerScheduleEntryIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
@@ -65,7 +64,6 @@ export default async function MspLayout({
   if (productCode === 'psa') {
     // Keep PSA-only integrations out of AlgaDesk composition.
     registerSlaIntegration();
-    registerScheduleEntryIntegration();
   }
 
   return (

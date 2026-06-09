@@ -96,10 +96,14 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
 }
 
 export interface ITicketListFilters {
-  boardId?: string;
+  boardId?: string;                   // Legacy single-board include (deep links)
+  boardIds?: string[];                // Boards to include ('no-board' sentinel matches tickets with no board)
+  excludeBoardIds?: string[];         // Boards to exclude ('no-board' sentinel excludes tickets with no board)
   statusId?: string;
   priorityId?: string;
-  categoryId?: string;
+  categoryId?: string;                // Legacy single-category include (deep links)
+  categoryIds?: string[];             // Categories to include (parent or subcategory ids; 'no-category' sentinel matches uncategorized)
+  excludeCategoryIds?: string[];      // Categories to exclude (parent or subcategory ids; 'no-category' sentinel excludes uncategorized)
   clientId?: string;
   contactId?: string;
   searchQuery?: string;
@@ -109,6 +113,7 @@ export interface ITicketListFilters {
   assignedToIds?: string[];        // Array of user IDs to filter by
   assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
+  assignedToMe?: boolean;          // Restrict to tickets where caller is assignee (incl. additional agents + team membership). Server bypasses for project:read admins.
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
   dueDateFrom?: string;            // ISO date string for custom range start

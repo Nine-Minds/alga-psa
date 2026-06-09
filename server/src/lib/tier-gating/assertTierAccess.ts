@@ -76,7 +76,10 @@ async function getTenantTier(tenantId: string): Promise<TenantTier> {
   // yet (rolling deploy hitting an un-migrated DB) — fall through to the SaaS
   // plan/Stripe resolution rather than 500-ing every tier-gated action.
   try {
-    const selfHost = resolveSelfHostTier(await getLicenseStateRow());
+    // Pass the request's tenant so a tenant-bound license that was issued for a
+    // different install resolves to essentials (license_wrong_tenant) instead of
+    // unlocking its tier here.
+    const selfHost = resolveSelfHostTier(await getLicenseStateRow(), tenantId);
     if (selfHost !== null) {
       return selfHost.tier;
     }

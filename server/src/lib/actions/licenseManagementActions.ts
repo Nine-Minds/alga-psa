@@ -26,9 +26,15 @@ export interface LicenseStatus {
   /** Connected-appliance status */
   connected: boolean;
   lastCheckinAt: string | null;
+  /**
+   * This install's tenant UUID. Shown on the License page so a customer can
+   * supply it when purchasing an air-gapped/manual license — the issuer binds
+   * the key to this tenant (its `aud`) so it can't be reused on another install.
+   */
+  tenantId: string | null;
 }
 
-async function assertAdminPermission(): Promise<void> {
+async function assertAdminPermission() {
   // Must use getCurrentUser (returns a full IUserWithRoles with user_id) — the
   // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
   // binds user_roles.user_id, so passing session.user yields an undefined-binding
@@ -37,6 +43,8 @@ async function assertAdminPermission(): Promise<void> {
   if (!user) throw new Error('Unauthorized');
   const allowed = await hasPermission(user, 'account_management', 'read');
   if (!allowed) throw new Error('Forbidden: account_management permission required');
+  // Returned so callers can bind license checks to this install's tenant.
+  return user;
 }
 
 /**
@@ -44,14 +52,16 @@ async function assertAdminPermission(): Promise<void> {
  * In SaaS mode (no license_state row) returns { selfHostMode: false }.
  */
 export async function getLicenseStatus(): Promise<LicenseStatus> {
-  await assertAdminPermission();
+  const user = await assertAdminPermission();
 
   const row = await getLicenseStateRow();
   if (!row) {
-    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null };
+    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null };
   }
 
-  const resolved: ResolvedLicenseState = resolveSelfHostTier(row)!;
+  // Pass the tenant so a tenant-bound license issued for a different install
+  // surfaces as license_wrong_tenant rather than reporting its tier.
+  const resolved: ResolvedLicenseState = resolveSelfHostTier(row, user.tenant)!;
   let customer: string | null = null;
   if (row.license_token) {
     const v = verifyLicense(row.license_token);
@@ -68,6 +78,7 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
     trialUsed: row.trial_started_at !== null,
     connected: !!(row.appliance_credential && row.check_in_url),
     lastCheckinAt: row.last_checkin_at?.toISOString() ?? null,
+    tenantId: user.tenant ?? null,
   };
 }
 
@@ -76,7 +87,7 @@ export async function getLicenseStatus(): Promise<LicenseStatus> {
  * Rejects invalid/expired/wrong-kid tokens.
  */
 export async function submitLicense(token: string): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
-  await assertAdminPermission();
+  const user = await assertAdminPermission();
 
   const result = verifyLicense(token.trim());
   if (!result.valid) {
@@ -84,6 +95,11 @@ export async function submitLicense(token: string): Promise<{ success: boolean; 
   }
   if (result.claims.exp * 1000 <= Date.now()) {
     return { success: false, error: 'License has already expired' };
+  }
+  // Per-tenant binding: refuse a license bound (via `aud`) to a different tenant
+  // before it is ever stored. Unbound licenses (no `aud`) activate anywhere.
+  if (result.claims.aud && result.claims.aud !== user.tenant) {
+    return { success: false, error: 'This license was issued for a different tenant and cannot be activated on this appliance.' };
   }
 
   await upsertLicenseState({ license_token: token.trim() });
@@ -97,7 +113,7 @@ export async function submitLicense(token: string): Promise<{ success: boolean; 
  * Blocked if: trial already used, or a valid license is already active.
  */
 export async function startTrial(): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
-  await assertAdminPermission();
+  const user = await assertAdminPermission();
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -106,7 +122,7 @@ export async function startTrial(): Promise<{ success: boolean; error?: string; 
     return { success: false, error: 'Trial has already been used for this install' };
   }
 
-  const resolved = resolveSelfHostTier(row);
+  const resolved = resolveSelfHostTier(row, user.tenant);
   if (resolved?.state === 'licensed') {
     return { success: false, error: 'A valid license is already active' };
   }
@@ -125,7 +141,7 @@ export async function startTrial(): Promise<{ success: boolean; error?: string; 
 export async function connectAppliance(
   claimCode: string
 ): Promise<{ success: boolean; error?: string; status?: LicenseStatus }> {
-  await assertAdminPermission();
+  const user = await assertAdminPermission();
 
   const row = await getLicenseStateRow();
   if (!row) return { success: false, error: 'Not a self-hosted install' };
@@ -137,10 +153,12 @@ export async function connectAppliance(
   const applianceId = `appliance-${row.id}-${crypto.createHash('sha256').update(String(row.id)).digest('hex').slice(0, 8)}`;
 
   try {
+    // Send tenant_id so the alga-license service can bind the issued JWT (its
+    // `aud` claim) to this install's tenant.
     const res = await fetch(`${serviceUrl.replace(/\/$/, '')}/register`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ claim_code: claimCode.trim().toUpperCase(), appliance_id: applianceId }),
+      body: JSON.stringify({ claim_code: claimCode.trim().toUpperCase(), appliance_id: applianceId, tenant_id: user.tenant }),
     });
 
     if (!res.ok) {

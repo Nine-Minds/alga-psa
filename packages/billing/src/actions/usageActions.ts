@@ -7,10 +7,14 @@ import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } fr
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
 
-export const createUsageRecord = withAuth(async (_user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord> => {
+export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
@@ -100,7 +104,10 @@ export const createUsageRecord = withAuth(async (_user, { tenant }, data: ICreat
   });
 });
 
-export const updateUsageRecord = withAuth(async (_user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord> => {
+export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
@@ -213,7 +220,10 @@ export const updateUsageRecord = withAuth(async (_user, { tenant }, data: IUpdat
   });
 });
 
-export const deleteUsageRecord = withAuth(async (_user, { tenant }, usageId: string): Promise<void> => {
+export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex } = await createTenantKnex();
 
   await knex.transaction(async (trx) => {
@@ -287,7 +297,10 @@ export const deleteUsageRecord = withAuth(async (_user, { tenant }, usageId: str
   revalidatePath('/msp/billing');
 });
 
-export const getUsageRecords = withAuth(async (_user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[]> => {
+export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   let query = knex('usage_tracking')

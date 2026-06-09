@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -5,6 +6,10 @@ import {
   listRequestServiceCatalogGroupsAction,
   listMyRecentServiceRequestsAction,
 } from './actions';
+
+export const metadata: Metadata = {
+  title: 'Request Services',
+};
 import { ServiceRequestCard } from './ServiceRequestCard';
 import { MyRequestsTable, type MyRequestsTableRow } from './my-requests/MyRequestsTable';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';

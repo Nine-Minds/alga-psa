@@ -36,8 +36,10 @@ import {
 import { createTenantSecretProvider } from '@alga-psa/workflows/secrets';
 import {
   WorkflowActionInvocationModelV2,
+  WorkflowDataStoreModel,
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
+  WorkflowEntityLinkModel,
   WorkflowRunLogModelV2,
   WorkflowRunModelV2,
   WorkflowRunSnapshotModelV2,
@@ -3363,6 +3365,21 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
     examples: node.examples ?? null,
     defaultRetry: node.defaultRetry ?? null
   }));
+});
+
+// Designer soft-enum support: the namespace combobox suggests namespaces already
+// used by this tenant across both the data-store and entity-link tables.
+export const listWorkflowDataStoreNamespacesAction = withAuth(async (user, { tenant }): Promise<string[]> => {
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const [storeNamespaces, linkNamespaces] = await Promise.all([
+    WorkflowDataStoreModel.listNamespaces(knex, tenant),
+    WorkflowEntityLinkModel.listNamespaces(knex, tenant),
+  ]);
+  const namespaces = new Set<string>();
+  for (const entry of storeNamespaces) namespaces.add(entry.namespace);
+  for (const entry of linkNamespaces) namespaces.add(entry.namespace);
+  return Array.from(namespaces).sort((a, b) => a.localeCompare(b));
 });
 
 const applyWorkflowDesignerInputPresentationMetadata = (

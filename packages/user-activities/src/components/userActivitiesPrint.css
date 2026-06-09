@@ -1,0 +1,145 @@
+/* Print styles for the User Activities page — the "marching orders" view.
+ * Strips interactive chrome, renders each activity as a checklist row with
+ * an empty checkbox square, and keeps group headings for context.
+ *
+ * Activated by toggling .app-print-mode on <html> via the shared PrintButton.
+ * The legacy .ua-print-mode selector is kept while older callers migrate.
+ */
+
+@media print {
+  html.app-print-mode,
+  html.app-print-mode body,
+  html.ua-print-mode,
+  html.ua-print-mode body {
+    background: #fff !important;
+  }
+
+  /* The shared print hook marks the ancestor path to the print root and marks
+     all sibling branches as hidden. Use display:none for those sibling branches
+     so invisible app chrome cannot paginate into trailing blank pages. */
+  html.app-print-mode,
+  html.ua-print-mode {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode body,
+  html.ua-print-mode body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide everything by default in print mode */
+  html.app-print-mode body *,
+  html.ua-print-mode body * {
+    visibility: hidden;
+  }
+
+  html.app-print-mode [data-app-print-hidden],
+  html.ua-print-mode [data-app-print-hidden] {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-app-print-preserve],
+  html.ua-print-mode [data-app-print-preserve] {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Re-show the print root and its contents */
+  html.app-print-mode .ua-print-root,
+  html.app-print-mode .ua-print-root *,
+  html.ua-print-mode .ua-print-root,
+  html.ua-print-mode .ua-print-root * {
+    visibility: visible;
+  }
+
+  /* Position the print root at the top of the page */
+  html.app-print-mode .ua-print-root,
+  html.ua-print-mode .ua-print-root {
+    position: static;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 16pt;
+    color: #000;
+    background: #fff;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+
+  /* Things to hide even within the print root */
+  html.app-print-mode .ua-print-hide,
+  html.ua-print-mode .ua-print-hide {
+    display: none !important;
+  }
+
+  /* Things that are only visible when printing */
+  html.app-print-mode .ua-print-only,
+  html.ua-print-mode .ua-print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  html.app-print-mode .ua-print-root,
+  html.ua-print-mode .ua-print-root {
+    padding: 14pt;
+  }
+
+  html.app-print-mode .ua-print-root .app-print-table-section + .app-print-table-section,
+  html.ua-print-mode .ua-print-root .app-print-table-section + .app-print-table-section {
+    margin-top: 16pt;
+  }
+
+  html.app-print-mode .ua-print-type-column,
+  html.ua-print-mode .ua-print-type-column {
+    width: 16%;
+  }
+
+  html.app-print-mode .ua-print-title-column,
+  html.ua-print-mode .ua-print-title-column {
+    width: 42%;
+  }
+
+  html.app-print-mode .ua-print-date-column,
+  html.ua-print-mode .ua-print-date-column {
+    width: 16%;
+  }
+
+  html.app-print-mode .ua-print-root td,
+  html.ua-print-mode .ua-print-root td {
+    font-size: 9.5pt;
+  }
+
+  html.app-print-mode .ua-print-root .app-print-table-header p,
+  html.ua-print-mode .ua-print-root .app-print-table-header p {
+    color: #444;
+  }
+
+  /* Groups should not split across pages where possible */
+  html.app-print-mode .ua-print-group,
+  html.ua-print-mode .ua-print-group {
+    page-break-inside: avoid;
+  }
+}
+
+/* Hide print-only elements when NOT printing */
+.ua-print-only,
+.app-print-only {
+  display: none;
+}

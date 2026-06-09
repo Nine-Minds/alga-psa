@@ -23,6 +23,12 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  renewTeamsMeetingArtifactSubscriptions,
+  processTeamsMeetingArtifactNotification,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
+} from './handlers/teamsMeetingArtifactWebhookHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
   workflowQuotaResumeScanHandler,
@@ -191,6 +197,22 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
+    if (isEnterpriseWorkflowEdition()) {
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+        'renew-teams-meeting-artifact-subscriptions',
+        async (job: Job<TeamsMeetingArtifactSubscriptionRenewalJobData>) => {
+          await renewTeamsMeetingArtifactSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactNotificationJobData>(
+        'process-teams-meeting-artifact-notification',
+        async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
+          await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+    }
+
     // Register SLA timer handler (CE only — EE uses Temporal workflows)
     if (process.env.EDITION !== 'enterprise') {
       jobScheduler.registerJobHandler<SlaTimerJobData>(
@@ -243,6 +265,8 @@ export type {
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
   EmailWebhookMaintenanceJobData,
@@ -424,6 +448,21 @@ export const scheduleGooglePubSubVerificationJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<GooglePubSubVerificationJobData>(
     'verify-google-calendar-pubsub',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
+  tenantId: string,
+  cronExpression: string = '*/30 * * * *'
+): Promise<string | null> => {
+  if (!isEnterpriseWorkflowEdition()) {
+    return null;
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+    'renew-teams-meeting-artifact-subscriptions',
     cronExpression,
     { tenantId }
   );

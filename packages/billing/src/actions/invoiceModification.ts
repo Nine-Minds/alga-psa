@@ -25,6 +25,7 @@ import {
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -138,6 +139,9 @@ export const updateDraftInvoiceProperties = withAuth(async (
   invoiceId: string,
   input: DraftInvoicePropertiesUpdateInput
 ): Promise<DraftInvoicePropertiesUpdateResult> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const trimmedInvoiceNumber = input.invoiceNumber?.trim();
 
   if (!trimmedInvoiceNumber) {
@@ -237,6 +241,9 @@ export const finalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
@@ -541,6 +548,9 @@ export const unfinalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -602,6 +612,9 @@ export const updateInvoiceManualItems = withAuth(async (
   invoiceId: string,
   changes: ManualItemsUpdate
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
   const billingEngine = new BillingEngine();
 
@@ -870,6 +883,9 @@ export const addManualItemsToInvoice = withAuth(async (
   invoiceId: string,
   items: IInvoiceCharge[]
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
 
   if (!session?.user?.id) {
@@ -986,6 +1002,9 @@ export const hardDeleteInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ) => {
+  if (!await hasPermission(user, 'invoice', 'delete')) {
+    throw new Error('Permission denied: invoice delete required');
+  }
   const { knex } = await createTenantKnex();
   let voidedCreditNotes: Array<{
     creditNoteId: string;

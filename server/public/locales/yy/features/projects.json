@@ -436,6 +436,7 @@
     "selectFolderDescription": "55555"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "55555",
     "title": "55555",
     "linkExistingTitle": "55555",
     "createTicket": "55555",
@@ -724,6 +725,7 @@
       "allPriorities": "55555"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "55555",
       "title": "55555",
       "loadFailed": "55555",
       "phaseNotFound": "55555",
@@ -745,6 +747,9 @@
       "assigning": "55555",
       "confirm": "55555",
       "teamReplaceNotice": "55555"
+    },
+    "convertAdHocToTask": {
+      "title": "55555"
     }
   },
   "filters": {
