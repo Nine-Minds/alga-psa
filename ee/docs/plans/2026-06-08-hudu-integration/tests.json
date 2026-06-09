@@ -66,9 +66,9 @@
   { "id": "T082", "description": "Component: Reveal triggers a live fetch and shows the value masked/reveal-on-click; Open-in-Hudu links out; the value is never written to any persistent store", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F082"] },
   { "id": "T083", "description": "Component: Passwords tab empty/error states for unmapped/disconnected/no-password-permission", "implemented": true, "commitGroup": "client-passwords-tab", "featureIds": ["F083"] },
 
-  { "id": "T090", "description": "Integration: manage actions (connect/disconnect/mapping) denied without system_settings.update", "implemented": false, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
-  { "id": "T091", "description": "Integration: view-gated surfacing denied without system_settings.read", "implemented": false, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
-  { "id": "T093", "description": "Integration: every Hudu route/action enforces EE + flag + system_settings RBAC", "implemented": false, "commitGroup": "permissions", "featureIds": ["F092"] },
+  { "id": "T090", "description": "Integration: manage actions (connect/disconnect/mapping) denied without system_settings.update", "implemented": true, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
+  { "id": "T091", "description": "Integration: view-gated surfacing denied without system_settings.read", "implemented": true, "commitGroup": "permissions", "featureIds": ["F090", "F092"] },
+  { "id": "T093", "description": "Integration: every Hudu route/action enforces EE + flag + system_settings RBAC", "implemented": true, "commitGroup": "permissions", "featureIds": ["F092"] },
 
   { "id": "T100", "description": "Static: no hardcoded user-facing strings in Hudu components; all keys resolve", "implemented": false, "commitGroup": "i18n", "featureIds": ["F100"] },
 

@@ -64,8 +64,8 @@
   { "id": "F082", "description": "Each password row supports inline Reveal via live GET (masked/reveal-on-click, audited, never persisted to DB/Vault/cache) plus an Open-in-Hudu link", "implemented": true, "commitGroup": "client-passwords-tab", "prdRefs": ["Security / Permissions", "UX / UI Notes"] },
   { "id": "F083", "description": "Client Passwords tab empty/error states for unmapped client / disconnected / no password permission", "implemented": true, "commitGroup": "client-passwords-tab", "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
 
-  { "id": "F090", "description": "Gate all Hudu server entry points on the existing system_settings RBAC resource (read=view surfaced data, update=connect/disconnect/manage mappings); no new resource, no seeding", "implemented": false, "commitGroup": "permissions", "prdRefs": ["Security / Permissions"] },
-  { "id": "F092", "description": "Apply EE + flag guard and system_settings RBAC checks to every Hudu server action and route", "implemented": false, "commitGroup": "permissions", "prdRefs": ["Security / Permissions", "Non-functional Requirements"] },
+  { "id": "F090", "description": "Gate all Hudu server entry points on the existing system_settings RBAC resource (read=view surfaced data, update=connect/disconnect/manage mappings); no new resource, no seeding", "implemented": true, "commitGroup": "permissions", "prdRefs": ["Security / Permissions"] },
+  { "id": "F092", "description": "Apply EE + flag guard and system_settings RBAC checks to every Hudu server action and route", "implemented": true, "commitGroup": "permissions", "prdRefs": ["Security / Permissions", "Non-functional Requirements"] },
 
   { "id": "F100", "description": "Add translation keys for all Hudu UI strings (settings, mapping, tabs, empty/error states)", "implemented": false, "commitGroup": "i18n", "prdRefs": ["Non-functional Requirements"] }
 ]
