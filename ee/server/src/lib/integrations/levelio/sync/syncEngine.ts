@@ -69,6 +69,10 @@ async function setSyncStatus(knex: Knex, tenant: string, patch: Record<string, u
     .update({ ...patch, updated_at: knex.fn.now() });
 }
 
+/**
+ * Throws on sync-level failure (after recording status + emitting RMM_SYNC_FAILED);
+ * per-group failures abort the sync.
+ */
 export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSyncDeps): Promise<RmmSyncResult> {
   const startedAt = new Date().toISOString();
   await emitSyncEvent(deps, {
@@ -176,6 +180,10 @@ export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSy
   }
 }
 
+/**
+ * Throws on sync-level failure (after recording status + emitting RMM_SYNC_FAILED);
+ * per-device failures are collected in the returned result's errors[].
+ */
 export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyncDeps): Promise<RmmSyncResult> {
   const startedAt = new Date().toISOString();
   const ingest = deps.ingest ?? ingestNormalizedRmmDeviceSnapshot;
@@ -305,6 +313,9 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
   }
 }
 
+/**
+ * Returns a 'skipped' result when no mapped group ancestor exists; throws on API/DB failure.
+ */
 export async function runLevelIoDeviceSync(
   args: LevelIoSyncArgs & { deviceId: string },
   deps: LevelIoSyncDeps
@@ -354,6 +365,10 @@ export async function runLevelIoDeviceSync(
   });
 }
 
+/**
+ * Throws on sync-level failure (after recording status + emitting RMM_SYNC_FAILED);
+ * per-alert failures are collected in the returned result's errors[].
+ */
 export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: LevelIoSyncDeps): Promise<RmmSyncResult> {
   const startedAt = new Date().toISOString();
   await emitSyncEvent(deps, {
@@ -393,12 +408,13 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
         asset_id: assetIdByDeviceId.get(alert.device_id) ?? null,
         severity: mapLevelIoSeverity(alert.severity),
         priority: null,
-        activity_type: 'levelio_alert',
+        source_type: 'levelio_alert',
         status: alert.is_resolved ? 'resolved' : 'active',
         message: alert.payload
           ? `${alert.name}: ${alert.description} (${alert.payload})`
           : `${alert.name}: ${alert.description}`,
-        source_data: JSON.stringify(alert),
+        device_name: alert.device_hostname ?? null,
+        metadata: alert,
         triggered_at: alert.started_at,
         resolved_at: alert.resolved_at ?? null,
         updated_at: deps.knex.fn.now(),
@@ -452,6 +468,7 @@ export async function runLevelIoAlertsBackfill(args: LevelIoSyncArgs, deps: Leve
     };
   } catch (error) {
     const message = sanitizeError(error);
+    await setSyncStatus(deps.knex, args.tenant, { sync_status: 'error', sync_error: message }).catch(() => undefined);
     await emitSyncEvent(deps, {
       eventName: 'RMM_SYNC_FAILED',
       tenant: args.tenant,

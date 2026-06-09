@@ -148,6 +148,9 @@ describe('runLevelIoAlertsBackfill', () => {
     expect(insertedAlerts[0].severity).toBe('critical');
     expect(insertedAlerts[0].asset_id).toBe('asset-1');
     expect(insertedAlerts[0].status).toBe('active');
+    expect(insertedAlerts[0].source_type).toBe('levelio_alert');
+    expect(insertedAlerts[0].device_name).toBe('WS-01');
+    expect(insertedAlerts[0].metadata.id).toBe('al-1');
     expect(insertedAlerts[1].severity).toBe('moderate');
     expect(insertedAlerts[1].asset_id).toBeNull();
     expect(insertedAlerts[1].status).toBe('resolved');
