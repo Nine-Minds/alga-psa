@@ -25,6 +25,7 @@ import {
   updateHuntressSettings,
   type HuntressConnectionStatus,
 } from '../../../lib/actions/integrations/huntressActions';
+import HuntressOrganizationMappingManager from './huntress/OrganizationMappingManager';
 
 type RoutingOptions = Awaited<ReturnType<typeof getHuntressRoutingOptions>>;
 
@@ -403,9 +404,13 @@ const HuntressIntegrationSettings: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Organization mapping manager is added in the next task:
-              <HuntressOrganizationMappingManager refreshKey={mappingRefreshKey}
-                onMappingChanged={() => { setMappingRefreshKey((k) => k + 1); void loadAll(); }} /> */}
+          <HuntressOrganizationMappingManager
+            refreshKey={mappingRefreshKey}
+            onMappingChanged={() => {
+              setMappingRefreshKey((k) => k + 1);
+              void loadAll();
+            }}
+          />
         </>
       )}
     </div>
