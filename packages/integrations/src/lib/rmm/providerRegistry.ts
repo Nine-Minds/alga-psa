@@ -13,26 +13,20 @@ export interface RmmProviderBadge {
   variant: 'default' | 'secondary' | 'outline';
 }
 
-export interface RmmProviderHighlight {
-  label: string;
-  value: string;
-}
-
 export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium';
+  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio';
   badge?: RmmProviderBadge;
-  highlights: RmmProviderHighlight[];
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
-  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration';
+  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration';
 }
 
 export interface RmmProviderAvailabilityContext {
   isEnterprise: boolean;
-  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration', boolean>>;
+  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration', boolean>>;
 }
 
 const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
@@ -41,10 +35,6 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     title: 'Tactical RMM',
     description: 'Sync devices and ingest alerts via Tactical RMM (beta API + alert-action webhooks).',
     icon: 'tacticalrmm',
-    highlights: [
-      { label: 'Sync', value: 'Devices' },
-      { label: 'Realtime', value: 'Alerts' }
-    ],
     capabilities: {
       connection: true,
       scopeSync: true,
@@ -58,13 +48,9 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
   {
     id: 'ninjaone',
     title: 'NinjaOne',
-    description: 'Sync devices, receive alerts, and enable remote access (Enterprise).',
+    description: 'Sync devices, receive alerts, and enable remote access.',
     icon: 'ninjaone',
     badge: { label: 'Enterprise', variant: 'secondary' },
-    highlights: [
-      { label: 'Sync', value: 'Devices' },
-      { label: 'Realtime', value: 'Webhooks' }
-    ],
     capabilities: {
       connection: true,
       scopeSync: true,
@@ -80,10 +66,6 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     description: 'Gateway-first inventory sync with scope discovery and capability-gated advanced actions.',
     icon: 'tanium',
     badge: { label: 'Enterprise', variant: 'secondary' },
-    highlights: [
-      { label: 'Sync', value: 'Inventory' },
-      { label: 'Scopes', value: 'Computer Groups' }
-    ],
     capabilities: {
       connection: true,
       scopeSync: true,
@@ -93,6 +75,22 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     },
     requiresEnterprise: true,
     featureFlagKey: 'tanium-rmm-integration'
+  },
+  {
+    id: 'levelio',
+    title: 'Level',
+    description: 'Sync devices and groups from Level (level.io) with alert ingestion via automation webhooks.',
+    icon: 'levelio',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: false
+    },
+    requiresEnterprise: true,
+    featureFlagKey: 'levelio-rmm-integration'
   }
 ];
 

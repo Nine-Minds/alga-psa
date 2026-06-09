@@ -58,6 +58,7 @@ export default defineConfig({
       // Root shared + server imports.
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      { find: /^@alga-psa\/workflow-streams$/, replacement: `${path.resolve(__dirname, '../../packages/workflow-streams/src/streams/index.ts')}` },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/billing$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src/index.ts')}` },
