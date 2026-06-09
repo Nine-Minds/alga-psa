@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -61,6 +62,8 @@ export default function LevelIoIntegrationSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [isSaving, startSaving] = useTransition();
   const [isTesting, startTesting] = useTransition();
@@ -69,8 +72,8 @@ export default function LevelIoIntegrationSettings() {
   const [isDeviceSyncing, startDeviceSyncing] = useTransition();
   const [isAlertSyncing, startAlertSyncing] = useTransition();
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const refresh = useCallback(async (background = false) => {
+    if (!background) setIsLoading(true);
     setError(null);
     try {
       const [settingsResult, mappingResult, webhookResult, summaryResult] = await Promise.all([
@@ -91,20 +94,28 @@ export default function LevelIoIntegrationSettings() {
         setHasApiKey(Boolean(settingsResult.credentials?.hasApiKey));
       }
 
-      if (mappingResult.success) {
+      if (!mappingResult.success) {
+        setError((prev) => prev || mappingResult.error || t('integrations.rmm.levelio.errors.loadMappings', { defaultValue: 'Failed to load Level group mappings' }));
+      } else {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
         setClients((mappingResult.clients || []) as ClientRow[]);
       }
-      if (webhookResult.success && webhookResult.webhook) {
-        setWebhook(webhookResult.webhook as WebhookInfo);
+
+      if (!webhookResult.success) {
+        setError((prev) => prev || webhookResult.error || t('integrations.rmm.levelio.errors.loadWebhook', { defaultValue: 'Failed to load Level webhook details' }));
+      } else {
+        setWebhook((webhookResult.webhook as WebhookInfo | null) ?? null);
       }
-      if (summaryResult.success && summaryResult.summary) {
-        setSummary(summaryResult.summary);
+
+      if (!summaryResult.success) {
+        setError((prev) => prev || summaryResult.error || t('integrations.rmm.levelio.errors.loadSummary', { defaultValue: 'Failed to load Level connection summary' }));
+      } else {
+        setSummary(summaryResult.summary ?? null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('integrations.rmm.levelio.errors.loadState', { defaultValue: 'Failed to load Level integration state' }));
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   }, [t]);
 
@@ -112,10 +123,10 @@ export default function LevelIoIntegrationSettings() {
     refresh();
   }, [refresh]);
 
-  const statusBadge = useMemo(() => {
-    if (isActive) return <Badge variant="default">{t('integrations.rmm.levelio.status.connected', { defaultValue: 'Connected' })}</Badge>;
-    return <Badge variant="outline">{t('integrations.rmm.levelio.status.disconnected', { defaultValue: 'Not connected' })}</Badge>;
-  }, [isActive, t]);
+  const statusBadge = isActive
+    ? <Badge variant="default">{t('integrations.rmm.levelio.status.connected', { defaultValue: 'Connected' })}</Badge>
+    : <Badge variant="outline">{t('integrations.rmm.levelio.status.disconnected', { defaultValue: 'Not connected' })}</Badge>;
+  const syncStatusLabel = syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1);
 
   const handleSave = () => {
     startSaving(async () => {
@@ -125,7 +136,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setApiKey('');
         setSuccess(t('integrations.rmm.levelio.success.configurationSaved', { defaultValue: 'Level configuration saved' }));
-        await refresh();
+        await refresh(true);
       } else {
         setError(result.error || t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' }));
       }
@@ -142,7 +153,7 @@ export default function LevelIoIntegrationSettings() {
       } else {
         setError(result.error || t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' }));
       }
-      await refresh();
+      await refresh(true);
     });
   };
 
@@ -156,7 +167,7 @@ export default function LevelIoIntegrationSettings() {
       } else {
         setError(result.error || t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' }));
       }
-      await refresh();
+      await refresh(true);
     });
   };
 
@@ -175,9 +186,9 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((result as any).error || t('integrations.rmm.levelio.errors.groupSyncFailed', { defaultValue: 'Group discovery failed' }));
+        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.groupSyncFailed', { defaultValue: 'Group discovery failed' }));
       }
-      await refresh();
+      await refresh(true);
     });
   };
 
@@ -196,9 +207,9 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((result as any).error || t('integrations.rmm.levelio.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
+        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
       }
-      await refresh();
+      await refresh(true);
     });
   };
 
@@ -215,9 +226,9 @@ export default function LevelIoIntegrationSettings() {
           })
         );
       } else {
-        setError((result as any).error || t('integrations.rmm.levelio.errors.alertBackfillFailed', { defaultValue: 'Alert backfill failed' }));
+        setError((!result.success ? result.error : undefined) || t('integrations.rmm.levelio.errors.alertBackfillFailed', { defaultValue: 'Alert backfill failed' }));
       }
-      await refresh();
+      await refresh(true);
     });
   };
 
@@ -231,9 +242,21 @@ export default function LevelIoIntegrationSettings() {
         setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
         return;
       }
-      await refresh();
+      await refresh(true);
     })();
   };
+
+  const handleCopy = (field: string, value: string) => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 2000);
+    });
+  };
+
+  const copyLabel = (field: string) =>
+    copiedField === field
+      ? t('integrations.rmm.levelio.webhook.copied', { defaultValue: 'Copied' })
+      : t('integrations.rmm.levelio.webhook.copy', { defaultValue: 'Copy' });
 
   return (
     <div className="space-y-6" id="levelio-integration-settings">
@@ -264,13 +287,13 @@ export default function LevelIoIntegrationSettings() {
             </div>
             <div className="text-sm text-muted-foreground">
               {syncError
-                ? t('integrations.rmm.levelio.connection.syncLabelWithError', { defaultValue: 'Sync: {{status}} ({{error}})', status: syncStatus, error: syncError })
-                : t('integrations.rmm.levelio.connection.syncLabel', { defaultValue: 'Sync: {{status}}', status: syncStatus })}
+                ? t('integrations.rmm.levelio.connection.syncLabelWithError', { defaultValue: 'Sync: {{status}} ({{error}})', status: syncStatusLabel, error: syncError })
+                : t('integrations.rmm.levelio.connection.syncLabel', { defaultValue: 'Sync: {{status}}', status: syncStatusLabel })}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label className="text-sm font-medium" htmlFor="levelio-api-key">
               {t('integrations.rmm.levelio.fields.apiKey', {
                 defaultValue: 'API key ({{state}})',
                 state: hasApiKey
@@ -290,13 +313,13 @@ export default function LevelIoIntegrationSettings() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button id="levelio-save-config" onClick={handleSave} disabled={isSaving || isLoading}>
+            <Button id="levelio-save-config" onClick={handleSave} disabled={isSaving || isLoading || (!apiKey.trim() && !hasApiKey)}>
               {t('integrations.rmm.levelio.actions.saveConfiguration', { defaultValue: 'Save Configuration' })}
             </Button>
-            <Button id="levelio-test-connection" variant="outline" onClick={handleTest} disabled={isTesting || isLoading}>
+            <Button id="levelio-test-connection" variant="outline" onClick={handleTest} disabled={isTesting || isLoading || !hasApiKey}>
               {t('integrations.rmm.levelio.actions.testConnection', { defaultValue: 'Test Connection' })}
             </Button>
-            <Button id="levelio-disconnect" variant="outline" onClick={handleDisconnect} disabled={isDisconnecting || isLoading}>
+            <Button id="levelio-disconnect" variant="outline" onClick={handleDisconnect} disabled={isDisconnecting || isLoading || (!isActive && !hasApiKey)}>
               {t('integrations.rmm.levelio.actions.disconnect', { defaultValue: 'Disconnect' })}
             </Button>
           </div>
@@ -321,13 +344,13 @@ export default function LevelIoIntegrationSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Button id="levelio-sync-groups" onClick={handleGroupSync} disabled={isGroupSyncing || isLoading}>
+            <Button id="levelio-sync-groups" onClick={handleGroupSync} disabled={isGroupSyncing || isLoading || !isActive}>
               {t('integrations.rmm.levelio.actions.discoverGroups', { defaultValue: 'Discover Groups' })}
             </Button>
-            <Button id="levelio-sync-devices" onClick={handleDeviceSync} disabled={isDeviceSyncing || isLoading}>
+            <Button id="levelio-sync-devices" onClick={handleDeviceSync} disabled={isDeviceSyncing || isLoading || !isActive}>
               {t('integrations.rmm.levelio.actions.runDeviceSync', { defaultValue: 'Run Device Sync' })}
             </Button>
-            <Button id="levelio-backfill-alerts" variant="outline" onClick={handleAlertBackfill} disabled={isAlertSyncing || isLoading}>
+            <Button id="levelio-backfill-alerts" variant="outline" onClick={handleAlertBackfill} disabled={isAlertSyncing || isLoading || !isActive}>
               {t('integrations.rmm.levelio.actions.backfillAlerts', { defaultValue: 'Backfill Alerts' })}
             </Button>
           </div>
@@ -365,6 +388,8 @@ export default function LevelIoIntegrationSettings() {
                     </td>
                     <td className="px-3 py-2">
                       <select
+                        id={`levelio-mapping-client-${mapping.mapping_id}`}
+                        aria-label={t('integrations.rmm.levelio.mappings.mappedClient', { defaultValue: 'Mapped Client' })}
                         className="h-9 w-full rounded-md border px-2"
                         value={mapping.client_id || ''}
                         onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
@@ -412,17 +437,56 @@ export default function LevelIoIntegrationSettings() {
           {webhook ? (
             <>
               <div className="space-y-1">
-                <div className="text-sm font-medium">{t('integrations.rmm.levelio.webhook.url', { defaultValue: 'Webhook URL' })}</div>
-                <code className="block break-all rounded bg-muted px-2 py-1 text-xs">{webhook.url}</code>
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">
-                  {t('integrations.rmm.levelio.webhook.header', { defaultValue: 'Header: {{name}}', name: webhook.headerName })}
+                <label className="text-sm font-medium" htmlFor="levelio-webhook-url">
+                  {t('integrations.rmm.levelio.webhook.url', { defaultValue: 'Webhook URL' })}
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input id="levelio-webhook-url" value={webhook.url} readOnly containerClassName="flex-1" className="font-mono text-xs" />
+                  <Button id="levelio-copy-webhook-url" type="button" variant="outline" size="sm" onClick={() => handleCopy('url', webhook.url)}>
+                    <Copy className="mr-1 h-4 w-4" />
+                    {copyLabel('url')}
+                  </Button>
                 </div>
-                <code className="block break-all rounded bg-muted px-2 py-1 text-xs">{webhook.secret}</code>
               </div>
               <div className="space-y-1">
-                <div className="text-sm font-medium">{t('integrations.rmm.levelio.webhook.payload', { defaultValue: 'Payload template' })}</div>
+                <label className="text-sm font-medium" htmlFor="levelio-webhook-secret">
+                  {t('integrations.rmm.levelio.webhook.header', { defaultValue: 'Header: {{name}}', name: webhook.headerName })}
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="levelio-webhook-secret"
+                    type={showWebhookSecret ? 'text' : 'password'}
+                    value={webhook.secret}
+                    readOnly
+                    containerClassName="flex-1"
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    id="levelio-toggle-webhook-secret"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={showWebhookSecret
+                      ? t('integrations.rmm.levelio.webhook.hideSecret', { defaultValue: 'Hide secret' })
+                      : t('integrations.rmm.levelio.webhook.showSecret', { defaultValue: 'Show secret' })}
+                    onClick={() => setShowWebhookSecret((current) => !current)}
+                  >
+                    {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button id="levelio-copy-webhook-secret" type="button" variant="outline" size="sm" onClick={() => handleCopy('secret', webhook.secret)}>
+                    <Copy className="mr-1 h-4 w-4" />
+                    {copyLabel('secret')}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">{t('integrations.rmm.levelio.webhook.payload', { defaultValue: 'Payload template' })}</div>
+                  <Button id="levelio-copy-webhook-payload" type="button" variant="outline" size="sm" onClick={() => handleCopy('payload', webhook.payloadTemplate)}>
+                    <Copy className="mr-1 h-4 w-4" />
+                    {copyLabel('payload')}
+                  </Button>
+                </div>
                 <pre className="overflow-x-auto rounded bg-muted px-2 py-1 text-xs">{webhook.payloadTemplate}</pre>
               </div>
             </>
