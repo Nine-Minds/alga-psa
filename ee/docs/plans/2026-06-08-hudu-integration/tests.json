@@ -56,10 +56,10 @@
   { "id": "T069", "description": "Integration: revealHuduPassword on a key lacking password permission returns a 403 state, not the value", "implemented": true, "commitGroup": "reference-fetch", "featureIds": ["F067", "F066"] },
   { "id": "T066", "description": "Integration: fetch for an unmapped client returns an unmapped state, no Hudu call made", "implemented": true, "commitGroup": "reference-fetch", "featureIds": ["F060", "F061", "F062"] },
 
-  { "id": "T070", "description": "Component: client Hudu tab hidden unless EE+flag and client mapped + connected", "implemented": false, "commitGroup": "client-hudu-tab", "featureIds": ["F070"] },
-  { "id": "T071", "description": "Component: assets and articles sections render rows with counts and deep-links", "implemented": false, "commitGroup": "client-hudu-tab", "featureIds": ["F071", "F072"] },
-  { "id": "T073", "description": "Component: empty/error states for not-connected, unmapped, unreachable", "implemented": false, "commitGroup": "client-hudu-tab", "featureIds": ["F074"] },
-  { "id": "T074", "description": "Component: Hudu source attribution is visible on the tab", "implemented": false, "commitGroup": "client-hudu-tab", "featureIds": ["F075"] },
+  { "id": "T070", "description": "Component: client Hudu tab hidden unless EE+flag and client mapped + connected", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F070"] },
+  { "id": "T071", "description": "Component: assets and articles sections render rows with counts and deep-links", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F071", "F072"] },
+  { "id": "T073", "description": "Component: empty/error states for not-connected, unmapped, unreachable", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F074"] },
+  { "id": "T074", "description": "Component: Hudu source attribution is visible on the tab", "implemented": true, "commitGroup": "client-hudu-tab", "featureIds": ["F075"] },
 
   { "id": "T080", "description": "Component: a separate 'Passwords' tab appears on the Client page only when EE+flag, Hudu connected, and client mapped (hidden otherwise)", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F080"] },
   { "id": "T081", "description": "Component: Passwords tab lists the company's Hudu credentials (name/username/url) with a count and no values", "implemented": false, "commitGroup": "client-passwords-tab", "featureIds": ["F081"] },

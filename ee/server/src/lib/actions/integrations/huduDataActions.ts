@@ -77,6 +77,12 @@ export interface HuduCompanyFetchOptions {
   refresh?: boolean;
 }
 
+/** F070: light gating probe for the client "Hudu"/"Passwords" tabs. */
+export interface HuduClientContext {
+  connected: boolean;
+  mapped: boolean;
+}
+
 type HuduActionPermission = 'read' | 'update';
 
 function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
@@ -189,6 +195,33 @@ async function fetchCompanyList<TRaw, TItem extends { url?: string | null }>(
     return toErrorResult(error);
   }
 }
+
+/**
+ * F070: is Hudu connected for the tenant AND is this client mapped to a Hudu
+ * company? One cheap call (no Hudu traffic) for the client-tab visibility
+ * gate; any failure resolves to hidden rather than throwing at the UI.
+ */
+export const getHuduClientContext = withHuduSettingsAccess(
+  'read',
+  async (_user, { tenant }, clientId: string): Promise<HuduClientContext> => {
+    try {
+      const { knex } = await createTenantKnex(tenant);
+      const row = await getHuduIntegration(knex, tenant);
+      if (row?.is_active !== true) {
+        return { connected: false, mapped: false };
+      }
+      const huduCompanyId = await resolveHuduCompanyIdForClientRow(knex, tenant, clientId);
+      return { connected: true, mapped: huduCompanyId !== null };
+    } catch (error) {
+      logger.error('[HuduDataActions] getHuduClientContext failed', {
+        tenant,
+        clientId,
+        error: toErrorMessage(error),
+      });
+      return { connected: false, mapped: false };
+    }
+  }
+);
 
 /** F060: a mapped client's Hudu assets (paginated, cached, refreshable). */
 export const getHuduCompanyAssets = withHuduSettingsAccess(

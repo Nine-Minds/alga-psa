@@ -718,6 +718,21 @@
       }
     },
     "hudu": {
+      "clientTab": {
+        "source": "Source: Hudu",
+        "openInHudu": "Open in Hudu",
+        "refresh": "Refresh",
+        "loading": "Loading Hudu data...",
+        "notConnected": "Hudu is not connected. An administrator can connect it under Settings → Integrations.",
+        "unmapped": "This client is not mapped to a Hudu company yet. Map it under Settings → Integrations → Hudu.",
+        "unreachable": "Hudu could not be reached. Try again later.",
+        "assetsTitle": "Assets",
+        "assetsEmpty": "No Hudu assets for this company.",
+        "articlesTitle": "Articles",
+        "articlesEmpty": "No Hudu articles for this company.",
+        "serial": "Serial",
+        "folder": "Folder"
+      },
       "mapping": {
         "title": "Company Mappings",
         "description": "Map Hudu companies to AlgaPSA clients to surface their documentation.",

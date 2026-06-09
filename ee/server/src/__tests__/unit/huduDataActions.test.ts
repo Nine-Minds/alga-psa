@@ -534,3 +534,51 @@ describe('T069: reveal against a key lacking password permission', () => {
     expect(revealAuditMock).not.toHaveBeenCalled();
   });
 });
+
+describe('F070: getHuduClientContext (client-tab gating probe)', () => {
+  it('reports connected + mapped without any Hudu API call', async () => {
+    const { getHuduClientContext } = await importActions();
+
+    const result = await getHuduClientContext(CLIENT_1);
+
+    expect(result).toEqual({ connected: true, mapped: true });
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+  });
+
+  it('reports unmapped for a client with no mapping row', async () => {
+    const { getHuduClientContext } = await importActions();
+
+    const result = await getHuduClientContext('99999999-9999-9999-9999-999999999999');
+
+    expect(result).toEqual({ connected: true, mapped: false });
+  });
+
+  it('short-circuits to not connected (no mapping lookup) when no active integration row', async () => {
+    getHuduIntegrationMock.mockResolvedValue(null);
+    const { getHuduClientContext } = await importActions();
+
+    const result = await getHuduClientContext(CLIENT_1);
+
+    expect(result).toEqual({ connected: false, mapped: false });
+    expect(resolveCompanyIdMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves hidden (not throwing) on an internal failure', async () => {
+    getHuduIntegrationMock.mockRejectedValue(new Error('db down'));
+    const { getHuduClientContext } = await importActions();
+
+    const result = await getHuduClientContext(CLIENT_1);
+
+    expect(result).toEqual({ connected: false, mapped: false });
+    expect(loggerErrorMock).toHaveBeenCalled();
+  });
+
+  it('is read-gated', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    const { getHuduClientContext } = await importActions();
+
+    await expect(getHuduClientContext(CLIENT_1)).rejects.toThrow(
+      'Forbidden: insufficient permissions (read)'
+    );
+  });
+});

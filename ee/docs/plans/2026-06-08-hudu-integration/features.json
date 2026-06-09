@@ -53,11 +53,11 @@
   { "id": "F067", "description": "revealHuduPassword(client_id, hudu_password_id): single live GET of one asset_password, return the value transiently to the caller, never persist it (DB/Vault/cache) or log it", "implemented": true, "commitGroup": "reference-fetch", "prdRefs": ["Security / Permissions", "Functional Requirements"] },
   { "id": "F068", "description": "Audit every password reveal (who, when, which password/company); audit entry never contains the value", "implemented": true, "commitGroup": "reference-fetch", "prdRefs": ["Security / Permissions"] },
 
-  { "id": "F070", "description": "Client detail 'Hudu' tab host registered (visible only when EE+flag and client is mapped + connected)", "implemented": false, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F071", "description": "Assets section: list name/type/serial with deep-link and count", "implemented": false, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F072", "description": "Articles section: list title/folder with deep-link and count", "implemented": false, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
-  { "id": "F074", "description": "Tab Refresh button and empty/error states (not connected / unmapped / unreachable)", "implemented": false, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
-  { "id": "F075", "description": "Hudu source attribution shown on the tab", "implemented": false, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F070", "description": "Client detail 'Hudu' tab host registered (visible only when EE+flag and client is mapped + connected)", "implemented": true, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F071", "description": "Assets section: list name/type/serial with deep-link and count", "implemented": true, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F072", "description": "Articles section: list title/folder with deep-link and count", "implemented": true, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
+  { "id": "F074", "description": "Tab Refresh button and empty/error states (not connected / unmapped / unreachable)", "implemented": true, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes", "Functional Requirements"] },
+  { "id": "F075", "description": "Hudu source attribution shown on the tab", "implemented": true, "commitGroup": "client-hudu-tab", "prdRefs": ["UX / UI Notes"] },
 
   { "id": "F080", "description": "Add a dedicated 'Passwords' tab to the Client detail page (separate from the Hudu tab), visible only when EE+flag AND Hudu connected AND client mapped", "implemented": false, "commitGroup": "client-passwords-tab", "prdRefs": ["UX / UI Notes", "Problem"] },
   { "id": "F081", "description": "Client Passwords tab lists the mapped company's Hudu asset_passwords (name/username/url) with a count (metadata only, no values)", "implemented": false, "commitGroup": "client-passwords-tab", "prdRefs": ["UX / UI Notes", "Security / Permissions"] },
