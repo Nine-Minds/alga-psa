@@ -109,3 +109,15 @@ Research thread A (Hudu ecosystem) + thread B (repo mapping patterns) drove thes
 ## Reference plan (house style)
 
 - `ee/docs/plans/2026-04-06-tanium-rmm-integration-plan/` — closest analog (EE, pull-oriented RMM). Note: its features.json predates commitGroup; THIS plan WILL include `commitGroup` per software-planner spec.
+
+## Implementation log
+
+### `scaffold` (F001–F005) — DONE + verified 2026-06-09 (uncommitted)
+CE↔EE wiring pattern (reuse for ALL later route/lib groups):
+- `@enterprise` alias is edition-swapped in `server/next.config.mjs:319-320`: EE → `ee/server/src`, CE → `packages/ee/src`. (`server/tsconfig.json` statically points `@enterprise` at `packages/ee/src` for typecheck.)
+- So every EE route needs TWO files: the REAL impl at `ee/server/src/app/api/integrations/hudu/<route>` and a 501 stub copy at `packages/ee/src/app/api/integrations/hudu/<route>`. The CE entry at `server/src/app/api/integrations/hudu/<route>` lazy-imports `@enterprise/app/api/integrations/hudu/<route>` guarded by `isEnterpriseEdition` + `assertSessionProductAccess`, else `eeUnavailable()` 501.
+- Files created: EE lib `ee/server/src/lib/integrations/hudu/{contracts.ts,index.ts}`; EE route `ee/server/src/app/api/integrations/hudu/{_guards.ts,_responses.ts,route.ts}`; EE stub `packages/ee/src/app/api/integrations/hudu/{_stub.ts,route.ts}`; CE entry `server/src/app/api/integrations/hudu/{_ceStub.ts,route.ts}`; client gate `packages/integrations/src/components/settings/integrations/useHuduIntegrationEnabled.ts`.
+- Guard `requireHuduUiFlagEnabled('read'|'update')` mirrors Entra `requireEntraUiFlagEnabled`: flag `hudu-integration` via `featureFlags.isEnabled`, RBAC `system_settings`, EE tier+add-on, 404 when flag off. **Reuse this guard in every EE Hudu route/action.**
+- `contracts.ts` exports `HUDU_INTEGRATION_TYPE` + value-stripped `HuduAssetPasswordSummary` (no `password` field) for list payloads.
+- Verified: focused tsc on all 10 files = 0 errors; `tsc -p packages/integrations/tsconfig.json` clean for our files; remaining server/ee baseline errors are pre-existing and reference no hudu file.
+- Tests T001–T004 NOT yet written (group not commit-ready until they are).

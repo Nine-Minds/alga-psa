@@ -1,8 +1,8 @@
 [
-  { "id": "T001", "description": "Unit: requireHuduFlag guard returns 404/501 when EE off or flag disabled, passes context when both on", "implemented": false, "commitGroup": "scaffold", "featureIds": ["F001"] },
-  { "id": "T002", "description": "Unit: client gating helper returns false by default when flag absent", "implemented": false, "commitGroup": "scaffold", "featureIds": ["F002"] },
-  { "id": "T003", "description": "Integration: CE build of /api/integrations/hudu/* returns 501 eeUnavailable", "implemented": false, "commitGroup": "scaffold", "featureIds": ["F004"] },
-  { "id": "T004", "description": "Integration: EE build resolves the real route (not 501) when flag on", "implemented": false, "commitGroup": "scaffold", "featureIds": ["F003"] },
+  { "id": "T001", "description": "Unit: requireHuduFlag guard returns 404/501 when EE off or flag disabled, passes context when both on", "implemented": true, "commitGroup": "scaffold", "featureIds": ["F001"] },
+  { "id": "T002", "description": "Unit: client gating helper returns false by default when flag absent", "implemented": true, "commitGroup": "scaffold", "featureIds": ["F002"] },
+  { "id": "T003", "description": "Integration: CE build of /api/integrations/hudu/* returns 501 eeUnavailable", "implemented": true, "commitGroup": "scaffold", "featureIds": ["F004"] },
+  { "id": "T004", "description": "Integration: EE build resolves the real route (not 501) when flag on", "implemented": true, "commitGroup": "scaffold", "featureIds": ["F003"] },
 
   { "id": "T010", "description": "Unit: client injects x-api-key header and base URL from resolved credentials", "implemented": false, "commitGroup": "hudu-client", "featureIds": ["F010", "F011"] },
   { "id": "T011", "description": "Unit: credential resolution prefers tenant secret, falls back to env, errors when neither present", "implemented": false, "commitGroup": "hudu-client", "featureIds": ["F011"] },
