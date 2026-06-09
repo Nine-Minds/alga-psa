@@ -598,6 +598,19 @@ async function initializeJobScheduler(storageService: StorageService) {
       logger.error(`Failed to schedule createNextTimePeriods job for tenant ${tenant}:`, error);
     }
   }
+
+  // Huntress incident polling (Enterprise only). The @enterprise alias
+  // resolves to the CE no-op stub in community builds.
+  if (isEnterprise) {
+    try {
+      const { registerHuntressPolling } = await import(
+        '@enterprise/lib/integrations/huntress/scheduling'
+      );
+      await registerHuntressPolling(jobScheduler);
+    } catch (error) {
+      logger.error('Failed to register Huntress incident polling:', error);
+    }
+  }
 }
 
 // Helper function to setup development environment
