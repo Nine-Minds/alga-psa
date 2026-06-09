@@ -21,7 +21,12 @@ export interface LicenseStateRow {
   /** Connected-appliance columns (added by migration 20260531000000) */
   appliance_id: string | null;
   check_in_url: string | null;
-  /** SHA-256 hex hash of the per-appliance credential; plaintext is never stored. */
+  /**
+   * The per-appliance credential, stored in PLAINTEXT (high-entropy random
+   * bytes; the DB is access-controlled). The daily check-in caller posts it to
+   * `check_in_url` to renew the connected license; alga-license hashes it
+   * server-side for lookup. (The *hash* lives only in alga-license, not here.)
+   */
   appliance_credential: string | null;
   last_checkin_at: Date | null;
 }
