@@ -163,7 +163,7 @@ Assets and tickets can be linked to each other (the same association surfaced in
 | `POST` | `/tickets/{id}/assets` | Link an asset to a ticket. Requires `asset_id`; accepts optional `relationship_type` (default `affected`) and `notes` |
 | `DELETE` | `/tickets/{id}/assets/{assetId}` | Remove the link between a ticket and an asset |
 
-**Permissions:** the asset-side routes require `asset:update` plus `ticket:read`; the ticket-side routes require `ticket:update` plus `asset:read`. In each case you need *update* on the resource whose links you are changing and *read* on the one you reference.
+**Permissions:** the GET routes on both sides require only *read* on both resources — `asset:read` + `ticket:read`. The POST and DELETE routes need *update* on the resource whose links you are mutating and *read* on the one you reference: `asset:update` + `ticket:read` for the asset-side mutations, `ticket:update` + `asset:read` for the ticket-side mutations.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
