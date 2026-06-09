@@ -72,9 +72,9 @@
 
   { "id": "T100", "description": "Static: no hardcoded user-facing strings in Hudu components; all keys resolve", "implemented": true, "commitGroup": "i18n", "featureIds": ["F100"] },
 
-  { "id": "T110", "description": "Security regression: assert no Hudu password value is ever written to any DB table, Vault, cache, or log sink (reveal value transits only to the client)", "implemented": false, "commitGroup": "regression", "featureIds": ["F062", "F064", "F067", "F082"] },
-  { "id": "T111", "description": "Regression: disconnect then reconnect with a new key works and surfaces fresh data", "implemented": false, "commitGroup": "regression", "featureIds": ["F024", "F027"] },
-  { "id": "T112", "description": "Regression: tenant A cannot read tenant B Hudu connection, mappings, or fetched data", "implemented": false, "commitGroup": "regression", "featureIds": ["F042", "F060", "F062"] },
-  { "id": "T113", "description": "Regression: Hudu unreachable / timeout degrades every surface to an error state without crashing", "implemented": false, "commitGroup": "regression", "featureIds": ["F014", "F074", "F083"] },
-  { "id": "T114", "description": "Regression: removing a client's mapping immediately empties its Hudu tab and its client Passwords tab", "implemented": false, "commitGroup": "regression", "featureIds": ["F045", "F070", "F080"] }
+  { "id": "T110", "description": "Security regression: assert no Hudu password value is ever written to any DB table, Vault, cache, or log sink (reveal value transits only to the client)", "implemented": true, "commitGroup": "regression", "featureIds": ["F062", "F064", "F067", "F082"] },
+  { "id": "T111", "description": "Regression: disconnect then reconnect with a new key works and surfaces fresh data", "implemented": true, "commitGroup": "regression", "featureIds": ["F024", "F027"] },
+  { "id": "T112", "description": "Regression: tenant A cannot read tenant B Hudu connection, mappings, or fetched data", "implemented": true, "commitGroup": "regression", "featureIds": ["F042", "F060", "F062"] },
+  { "id": "T113", "description": "Regression: Hudu unreachable / timeout degrades every surface to an error state without crashing", "implemented": true, "commitGroup": "regression", "featureIds": ["F014", "F074", "F083"] },
+  { "id": "T114", "description": "Regression: removing a client's mapping immediately empties its Hudu tab and its client Passwords tab", "implemented": true, "commitGroup": "regression", "featureIds": ["F045", "F070", "F080"] }
 ]

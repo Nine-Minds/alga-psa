@@ -68,6 +68,18 @@ export function clearHuduReferenceCache(): void {
   referenceCache.clear();
 }
 
+/**
+ * Drop every cached list for one tenant (keys are `${tenant}:…`-prefixed).
+ * Called on disconnect so a later reconnect with a different key can never be
+ * served data fetched under the previous credentials (T111).
+ */
+export function clearHuduReferenceCacheForTenant(tenant: string): void {
+  const prefix = `${tenant}:`;
+  for (const key of referenceCache.keys()) {
+    if (key.startsWith(prefix)) referenceCache.delete(key);
+  }
+}
+
 export function getHuduReferenceCacheSize(): number {
   return referenceCache.size;
 }

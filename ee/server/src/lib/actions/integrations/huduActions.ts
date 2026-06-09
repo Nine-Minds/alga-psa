@@ -27,6 +27,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { HuduClient } from '../../integrations/hudu/huduClient';
 import type { HuduErrorKind, HuduValidationResult } from '../../integrations/hudu/huduClient';
 import { HUDU_SECRET_KEYS, resolveHuduCredentials } from '../../integrations/hudu/secrets';
+import { clearHuduReferenceCacheForTenant } from '../../integrations/hudu/referenceData';
 import {
   getHuduIntegration,
   setHuduIntegrationActive,
@@ -291,6 +292,10 @@ export const disconnectHudu = withHuduSettingsAccess(
 
       const { knex } = await createTenantKnex(tenant);
       await setHuduIntegrationActive(knex, tenant, false);
+
+      // T111: drop this tenant's cached Hudu lists so a reconnect with a new
+      // key can never be served data fetched under the old credentials.
+      clearHuduReferenceCacheForTenant(tenant);
 
       logger.info('[HuduActions] Hudu disconnected', { tenant });
 
