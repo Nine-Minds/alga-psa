@@ -1782,6 +1782,10 @@
         "label": "RMM",
         "description": "Połącz narzędzia do zdalnego monitorowania i zarządzania"
       },
+      "itDocumentation": {
+        "label": "Dokumentacja IT",
+        "description": "Połącz platformy dokumentacji IT, aby wyświetlać dokumentację klientów, zasoby i poświadczenia w kontekście."
+      },
       "communication": {
         "label": "Komunikacja",
         "description": "Połącz powierzchnie skrzynki odbiorczej i współpracy do przetwarzania zgłoszeń, przepływów pracy operatorów i dostępu do Microsoft Teams."
@@ -1814,6 +1818,10 @@
       "rmmSetup": {
         "name": "Integracje RMM",
         "description": "Wybierz i skonfiguruj swojego dostawcę RMM"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Połącz instancję Hudu, aby przeglądać dokumentację i poświadczenia klientów w AlgaPSA."
       },
       "email": {
         "name": "Poczta przychodząca",

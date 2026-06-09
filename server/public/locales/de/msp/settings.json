@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Verbinden Sie Remote-Monitoring- und Management-Tools"
       },
+      "itDocumentation": {
+        "label": "IT-Dokumentation",
+        "description": "Verbinden Sie IT-Dokumentationsplattformen, um Kundendokumentation, Assets und Zugangsdaten im Kontext anzuzeigen."
+      },
       "communication": {
         "label": "Kommunikation",
         "description": "Verbinden Sie Posteingangs- und Kollaborationsoberflächen für Ticketverarbeitung, Operator-Workflows und Microsoft Teams-Zugriff."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "RMM-Integrationen",
         "description": "Wählen und konfigurieren Sie Ihren RMM-Anbieter"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Verbinden Sie eine Hudu-Instanz, um Kundendokumentation und Zugangsdaten in AlgaPSA anzuzeigen."
       },
       "email": {
         "name": "Eingehende E-Mail",

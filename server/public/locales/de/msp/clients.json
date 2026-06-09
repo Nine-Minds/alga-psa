@@ -187,6 +187,8 @@
     "billing": "Abrechnung",
     "interactions": "Interaktionen",
     "notes": "Notizen",
+    "huduTab": "Hudu",
+    "huduPasswordsTab": "Passwörter",
     "clientLocations": "Kundenstandorte",
     "billingDashboard": "Abrechnungs-Dashboard",
     "clientAndContacts": "Kunde und Kontakte",

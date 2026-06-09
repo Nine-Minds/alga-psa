@@ -36,9 +36,9 @@ import integrationsSettingsPageSource from '@alga-psa/integrations/components/se
 
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
-function readLocale(file: string): Record<string, unknown> {
+function readLocale(file: string, locale = 'en'): Record<string, unknown> {
   return JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'server', 'public', 'locales', 'en', 'msp', file), 'utf8')
+    fs.readFileSync(path.join(repoRoot, 'server', 'public', 'locales', locale, 'msp', file), 'utf8')
   );
 }
 
@@ -141,6 +141,36 @@ describe('T100: every Hudu translation key resolves in the en locale', () => {
   it('the two ClientDetails Hudu tab labels are exactly the expected keys', () => {
     const keys = collectHuduKeys(clientDetailsSource as string).sort();
     expect(keys).toEqual(['clientDetails.huduPasswordsTab', 'clientDetails.huduTab']);
+  });
+});
+
+// Every shipped real language (xx/yy pseudo-locales excluded by convention).
+const TRANSLATED_LOCALES = ['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt'] as const;
+const NAMESPACE_FILES: Record<Namespace, string> = {
+  'msp/integrations': 'integrations.json',
+  'msp/clients': 'clients.json',
+  'msp/settings': 'settings.json',
+};
+
+describe('T100: every Hudu translation key is translated in every shipped locale', () => {
+  it.each(TRANSLATED_LOCALES)('all Hudu keys resolve in the %s locale', (locale) => {
+    const localeData = Object.fromEntries(
+      (Object.keys(NAMESPACE_FILES) as Namespace[]).map((ns) => [
+        ns,
+        readLocale(NAMESPACE_FILES[ns], locale),
+      ])
+    ) as Record<Namespace, Record<string, unknown>>;
+
+    const missing: string[] = [];
+    for (const { source, namespace } of keySources) {
+      for (const key of collectHuduKeys(source)) {
+        const value = resolveKey(localeData[namespace], key);
+        if (typeof value !== 'string' || value.trim() === '') {
+          missing.push(`${locale}:${namespace}:${key}`);
+        }
+      }
+    }
+    expect(missing, `keys missing or empty in the ${locale} locale`).toEqual([]);
   });
 });
 

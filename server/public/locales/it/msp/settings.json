@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Collega strumenti di monitoraggio e gestione remota"
       },
+      "itDocumentation": {
+        "label": "Documentazione IT",
+        "description": "Collega piattaforme di documentazione IT per mostrare nel contesto documentazione, asset e credenziali dei clienti."
+      },
       "communication": {
         "label": "Comunicazione",
         "description": "Collega superfici di posta in arrivo e collaborazione per l'elaborazione dei ticket, i flussi di lavoro degli operatori e l'accesso a Microsoft Teams."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "Integrazioni RMM",
         "description": "Seleziona e configura il tuo fornitore RMM"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Connetti un'istanza Hudu per visualizzare la documentazione e le credenziali dei clienti all'interno di AlgaPSA."
       },
       "email": {
         "name": "E-mail in entrata",

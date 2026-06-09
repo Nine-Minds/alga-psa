@@ -717,6 +717,152 @@
         }
       }
     },
+    "hudu": {
+      "clientTab": {
+        "source": "Source : Hudu",
+        "openInHudu": "Ouvrir dans Hudu",
+        "refresh": "Actualiser",
+        "loading": "Chargement des données Hudu...",
+        "notConnected": "Hudu n'est pas connecté. Un administrateur peut le connecter dans Paramètres → Intégrations.",
+        "unmapped": "Ce client n'est pas encore mappé à une entreprise Hudu. Mappez-le dans Paramètres → Intégrations → Hudu.",
+        "unreachable": "Impossible de joindre Hudu. Réessayez plus tard.",
+        "assetsTitle": "Actifs",
+        "assetsEmpty": "Aucun actif Hudu pour cette entreprise.",
+        "articlesTitle": "Articles",
+        "articlesEmpty": "Aucun article Hudu pour cette entreprise.",
+        "serial": "Numéro de série",
+        "folder": "Dossier"
+      },
+      "passwordsTab": {
+        "source": "Source : Hudu",
+        "openInHudu": "Ouvrir dans Hudu",
+        "refresh": "Actualiser",
+        "loading": "Chargement des mots de passe Hudu...",
+        "notConnected": "Hudu n'est pas connecté. Un administrateur peut le connecter dans Paramètres → Intégrations.",
+        "unmapped": "Ce client n'est pas encore mappé à une entreprise Hudu. Mappez-le dans Paramètres → Intégrations → Hudu.",
+        "unreachable": "Impossible de joindre Hudu. Réessayez plus tard.",
+        "noPasswordAccess": "L'accès aux mots de passe n'est pas activé pour la clé API Hudu, les mots de passe ne peuvent donc pas être listés. Générez une clé avec accès aux mots de passe dans l'administration Hudu.",
+        "title": "Mots de passe",
+        "empty": "Aucun mot de passe Hudu pour cette entreprise.",
+        "reveal": "Afficher",
+        "hide": "Masquer",
+        "copy": "Copier",
+        "revealNoAccess": "L'accès aux mots de passe n'est pas activé pour la clé API Hudu.",
+        "revealNotFound": "Ce mot de passe est introuvable dans Hudu.",
+        "revealFailed": "Le mot de passe n'a pas pu être affiché. Réessayez plus tard."
+      },
+      "mapping": {
+        "title": "Mappages d'entreprises",
+        "description": "Mappez les entreprises Hudu aux clients AlgaPSA pour afficher leur documentation.",
+        "loading": "Chargement des mappages d'entreprises...",
+        "companyId": "ID",
+        "idInIntegration": "ID PSA",
+        "selectClient": "Sélectionner un client",
+        "buttons": {
+          "refresh": "Actualiser les entreprises",
+          "refreshing": "Actualisation..."
+        },
+        "counters": {
+          "mapped": "mappées",
+          "suggested": "suggérées",
+          "unmapped": "non mappées",
+          "total": "total"
+        },
+        "table": {
+          "huduCompany": "Entreprise Hudu",
+          "algaClient": "Client AlgaPSA",
+          "status": "Statut"
+        },
+        "status": {
+          "mapped": "Mappée",
+          "suggested": "Suggérée",
+          "unmapped": "Non mappée"
+        },
+        "suggestion": {
+          "label": "Suggestion",
+          "source": {
+            "integrationId": "ID d'intégration PSA",
+            "exactName": "Nom exact",
+            "fuzzyName": "Nom similaire"
+          }
+        },
+        "empty": {
+          "title": "Aucune entreprise Hudu chargée pour le moment.",
+          "hint": "Cliquez sur « Actualiser les entreprises » pour récupérer les entreprises depuis Hudu."
+        },
+        "unmappedHint": "La documentation n'est affichée que pour les clients mappés. Mappez chaque entreprise Hudu à un client AlgaPSA pour l'activer.",
+        "success": {
+          "refreshed": "Entreprises Hudu actualisées."
+        },
+        "errors": {
+          "load": "Échec du chargement des mappages d'entreprises Hudu.",
+          "refresh": "Échec de l'actualisation des entreprises Hudu.",
+          "save": "Échec de la mise à jour du mappage.",
+          "clientAlreadyMapped": "Ce client est déjà mappé à une autre entreprise Hudu. Supprimez d'abord le mappage existant.",
+          "companyAlreadyMapped": "Cette entreprise Hudu est déjà mappée à un autre client. Supprimez d'abord le mappage existant.",
+          "mappingConflict": "Ce mappage est en conflit avec un mappage existant. Actualisez et réessayez.",
+          "notFound": "Mappage introuvable. Actualisez et réessayez."
+        },
+        "toasts": {
+          "errorTitle": "Erreur de mappage Hudu"
+        }
+      },
+      "settings": {
+        "title": "Hudu",
+        "description": "Connectez votre instance Hudu pour afficher la documentation et les identifiants des clients dans AlgaPSA.",
+        "loading": "Chargement du statut de connexion Hudu...",
+        "detectedInstance": "Instance Hudu",
+        "status": {
+          "connected": "Connecté",
+          "notConnected": "Non connecté",
+          "error": "Erreur"
+        },
+        "passwordAccess": {
+          "enabled": "Accès aux mots de passe activé",
+          "disabled": "Accès aux mots de passe non activé pour cette clé"
+        },
+        "fields": {
+          "baseUrl": {
+            "label": "URL de base",
+            "placeholder": "https://votre-instance.huducloud.com"
+          },
+          "apiKey": {
+            "label": "Clé API",
+            "placeholder": "Saisissez votre clé API Hudu",
+            "keepExisting": "Laissez vide pour conserver la clé API actuelle",
+            "writeOnlyHint": "La clé API enregistrée n'est jamais affichée. Laissez ce champ vide pour continuer à l'utiliser."
+          }
+        },
+        "buttons": {
+          "test": "Tester la connexion",
+          "testing": "Test en cours...",
+          "connect": "Connecter",
+          "connecting": "Connexion...",
+          "disconnect": "Déconnecter",
+          "disconnecting": "Déconnexion..."
+        },
+        "success": {
+          "connected": "Connecté à Hudu.",
+          "testPassedWithPasswords": "Test de connexion Hudu réussi. L'accès aux mots de passe est activé pour cette clé.",
+          "testPassedNoPasswords": "Test de connexion Hudu réussi. L'accès aux mots de passe n'est pas activé pour cette clé.",
+          "disconnected": "Connexion Hudu déconnectée."
+        },
+        "errors": {
+          "loadStatus": "Échec du chargement du statut de connexion Hudu.",
+          "baseUrlRequired": "L'URL de base est requise.",
+          "baseUrlFormat": "Saisissez une URL valide, p. ex. https://votre-instance.huducloud.com",
+          "invalidBaseUrl": "Aucune API Hudu n'a été trouvée à cette URL de base (404). Vérifiez l'URL de base.",
+          "unreachable": "Impossible de joindre Hudu à cette URL de base. Vérifiez l'URL et votre réseau.",
+          "invalidKey": "Hudu a rejeté la clé API (401). Saisissez une clé API valide.",
+          "testFailed": "Échec du test de connexion Hudu.",
+          "connectFailed": "Échec de la connexion à Hudu.",
+          "disconnectFailed": "Échec de la déconnexion de Hudu."
+        },
+        "toasts": {
+          "errorTitle": "Erreur de connexion Hudu"
+        }
+      }
+    },
     "microsoft": {
       "settings": {
         "actions": {

@@ -1768,6 +1768,10 @@
         "label": "RMM",
         "description": "Verbind tools voor monitoring en beheer op afstand"
       },
+      "itDocumentation": {
+        "label": "IT-documentatie",
+        "description": "Verbind IT-documentatieplatformen om klantdocumentatie, assets en inloggegevens in context weer te geven."
+      },
       "communication": {
         "label": "Communicatie",
         "description": "Verbind inbox- en samenwerkingsoppervlakken voor ticketverwerking, operatorworkflows en Microsoft Teams-toegang."
@@ -1800,6 +1804,10 @@
       "rmmSetup": {
         "name": "RMM-integraties",
         "description": "Selecteer en configureer uw RMM-provider"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Verbind een Hudu-instantie om klantdocumentatie en inloggegevens te bekijken binnen AlgaPSA."
       },
       "email": {
         "name": "Inkomende e-mail",
