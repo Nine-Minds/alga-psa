@@ -120,4 +120,10 @@ CE↔EE wiring pattern (reuse for ALL later route/lib groups):
 - Guard `requireHuduUiFlagEnabled('read'|'update')` mirrors Entra `requireEntraUiFlagEnabled`: flag `hudu-integration` via `featureFlags.isEnabled`, RBAC `system_settings`, EE tier+add-on, 404 when flag off. **Reuse this guard in every EE Hudu route/action.**
 - `contracts.ts` exports `HUDU_INTEGRATION_TYPE` + value-stripped `HuduAssetPasswordSummary` (no `password` field) for list payloads.
 - Verified: focused tsc on all 10 files = 0 errors; `tsc -p packages/integrations/tsconfig.json` clean for our files; remaining server/ee baseline errors are pre-existing and reference no hudu file.
-- Tests T001–T004 NOT yet written (group not commit-ready until they are).
+- Tests T001–T004 written + green (13 cases). Group committed `eca8008` (also includes the plan folder).
+
+### `hudu-client` (F010–F017, T010–T018) — DONE + verified 2026-06-09, committed
+- `ee/server/src/lib/integrations/hudu/huduClient.ts` (axios, x-api-key, pagination stop-at-<25, 429 Retry-After+jitter backoff capped at 4 attempts, 5xx exp backoff, validateConnection w/ password-access probe) + `secrets.ts` (`HUDU_SECRET_KEYS` = `hudu_api_key`/`hudu_base_url`; resolve tenant secret → env via `getSecretProviderInstance()`/`getTenantSecret`). Barrel updated.
+- Result shape: `HuduResult<T> = {ok:true,data} | {ok:false,error:HuduError}`; `HuduError.kind ∈ invalid_key|no_password_access|not_found|validation|rate_limited|server_error|network_error|unknown`. Read methods THROW `HuduRequestError` (carrying the typed HuduError); consuming actions (connection/reference-fetch groups) map throw→envelope. `validateConnection()` returns the struct directly.
+- Backoff `sleep` is injectable so tests run fast (no real timers). Redaction: errors built from status only, never bodies/headers/key.
+- 22 unit tests (axios `vi.mock`ed, no network). Reuse `createHuduClient()` in later groups; do NOT add OAuth (x-api-key only).

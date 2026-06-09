@@ -22,6 +22,34 @@ export type {
   HuduAssetPasswordResponse,
 } from './contracts';
 
-// TODO(hudu-client): export huduClient + credential resolution (F010-F017).
+export {
+  HuduClient,
+  createHuduClient,
+  mapHuduResource,
+  toHuduError,
+  redactSecret,
+  buildHuduApiBaseUrl,
+  HuduRequestError,
+  HUDU_RESOURCE_MAP,
+  DEFAULT_RETRY_OPTIONS,
+} from './huduClient';
+export type {
+  HuduClientConfig,
+  HuduResult,
+  HuduError,
+  HuduErrorKind,
+  HuduValidationResult,
+  HuduRetryOptions,
+  HuduDomainResource,
+} from './huduClient';
+
+export {
+  resolveHuduCredentials,
+  HuduCredentialsError,
+  HUDU_SECRET_KEYS,
+  HUDU_ENV_VARS,
+} from './secrets';
+export type { HuduCredentials, HuduSecretKey } from './secrets';
+
 // TODO(connection): export hudu_integrations model/repository (F023).
 // TODO(company-mapping-data): export mapping/suggest helpers (F040-F046).
