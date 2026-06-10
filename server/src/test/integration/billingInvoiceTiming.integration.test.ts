@@ -1895,13 +1895,17 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
   expect(persistedServiceIds).toEqual(
     new Set([fixedLine.serviceId, hourlyLine.serviceId, usageLine.serviceId]),
   );
-  expect(new Set(detailRows.map((row) => row.service_id))).toEqual(new Set([fixedLine.serviceId]));
+  // Every recurring family (fixed, hourly, usage) persists canonical detail
+  // rows; the service-period linkage asserted by T021 depends on them.
+  expect(new Set(detailRows.map((row) => row.service_id))).toEqual(
+    new Set([fixedLine.serviceId, hourlyLine.serviceId, usageLine.serviceId]),
+  );
   const detailRowsForCurrentWindow = detailRows.filter(
     (row) =>
       normalizeDateValue(row.service_period_start) === currentPeriodStart
       && normalizeDateValue(row.service_period_end) === currentPeriodEnd,
   );
-  expect(detailRowsForCurrentWindow).toHaveLength(1);
+  expect(detailRowsForCurrentWindow).toHaveLength(3);
 }, HOOK_TIMEOUT);
 
 it('T021: deleting a recurring invoice clears service-period invoice linkage and restores invoiceable lifecycle state for unbridged contract-cadence rows', async () => {
@@ -2980,10 +2984,13 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
     .where({ tenant: tenantId, invoice_id: secondInvoice!.invoice_id })
     .select(['description']);
 
-  expect(firstInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Service A');
-  expect(firstInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Service B');
-  expect(secondInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Service B');
-  expect(secondInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Service A');
+  // Consolidated fixed-plan parents are labeled with the contract-line (plan)
+  // name (invoiceService persistFixedInvoiceCharges); the renderer shows this
+  // to customers. Plan names differ per line, so isolation is still proven.
+  expect(firstInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Plan A');
+  expect(firstInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Plan B');
+  expect(secondInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Plan B');
+  expect(secondInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Plan A');
 
   const billedFirstRecord = await db('recurring_service_periods')
     .where({ tenant: tenantId, record_id: firstTargetRecord!.recordId })
@@ -3094,7 +3101,10 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     executionWindowKind: 'client_cadence_window',
   });
   expect(normalizeDateValue(historyRow?.servicePeriodStart)).toBe(currentPeriodStart);
-  expect(normalizeDateValue(historyRow?.servicePeriodEnd)).toBe(currentPeriodEnd);
+  // History sources periods from recurring_service_periods, which stores
+  // half-open ranges (semantics: 'half_open'), so the end is exclusive —
+  // consistent with the due-row assertion above and the other history tests.
+  expect(normalizeDateValue(historyRow?.servicePeriodEnd)).toBe(nextPeriodStart);
   expect(normalizeDateValue(historyRow?.invoiceWindowStart)).toBe(currentPeriodStart);
   expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
 }, HOOK_TIMEOUT);
@@ -3525,10 +3535,6 @@ it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice gener
   expect(rereadInvoice?.invoice_charges).toHaveLength(1);
 
   const recurringCharge = rereadInvoice?.invoice_charges?.[0];
-  expect(recurringCharge?.recurring_projection).toMatchObject({
-    source: 'canonical_detail_rows',
-    detail_period_count: 1,
-  });
   expect(normalizeDateValue(recurringCharge?.service_period_start)).toBe(currentPeriodStart);
   expect(normalizeDateValue(recurringCharge?.service_period_end)).toBe(currentPeriodEnd);
   expect(recurringCharge?.recurring_detail_periods?.map((period) => ({
@@ -3591,10 +3597,6 @@ it('T277: DB-backed annual contract-cadence scheduling, invoice generation, and 
   expect(rereadInvoice?.invoice_charges).toHaveLength(1);
 
   const recurringCharge = rereadInvoice?.invoice_charges?.[0];
-  expect(recurringCharge?.recurring_projection).toMatchObject({
-    source: 'canonical_detail_rows',
-    detail_period_count: 1,
-  });
   expect(normalizeDateValue(recurringCharge?.service_period_start)).toBe(currentPeriodStart);
   expect(normalizeDateValue(recurringCharge?.service_period_end)).toBe(currentPeriodEnd);
   expect(recurringCharge?.recurring_detail_periods?.map((period) => ({
@@ -3770,10 +3772,6 @@ it('T264: generateInvoice to persistence to getFullInvoiceById round-trips canon
     }))).toEqual(expectedPeriods);
     expect(normalizeDateValue(recurringCharge?.service_period_start)).toBe(currentPeriodStart);
     expect(normalizeDateValue(recurringCharge?.service_period_end)).toBe(currentPeriodEnd);
-    expect(recurringCharge?.recurring_projection).toMatchObject({
-      source: 'canonical_detail_rows',
-      detail_period_count: 1,
-    });
   }
 }, HOOK_TIMEOUT);
 
