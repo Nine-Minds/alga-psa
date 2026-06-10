@@ -28,8 +28,8 @@ export async function registerSurveySubscriber(): Promise<void> {
     return;
   }
 
-  await getEventBus().subscribe('TICKET_CLOSED', handleTicketClosedEvent);
-  await getEventBus().subscribe('PROJECT_CLOSED', handleProjectClosedEvent);
+  await getEventBus().subscribe('TICKET_CLOSED', handleTicketClosedEvent, { subscriberId: 'survey' });
+  await getEventBus().subscribe('PROJECT_CLOSED', handleProjectClosedEvent, { subscriberId: 'survey' });
   isRegistered = true;
   logger.info('[SurveySubscriber] Registered survey event handlers');
 }

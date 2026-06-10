@@ -17,5 +17,9 @@ max_db_connections = 100
 max_user_connections = 100
 server_reset_query = DISCARD ALL
 ignore_startup_parameters = extra_float_digits
-idle_transaction_timeout = 300
+; Last-resort reaper for stuck transactions. Postgres-side role GUCs
+; (idle_in_transaction_session_timeout=60s on the app role) fire first;
+; this only catches sessions those don't cover, and must stay above the
+; role GUC so the gentler server-side abort wins over a connection kill.
+idle_transaction_timeout = 120
 server_idle_timeout = 600

@@ -10,6 +10,7 @@ import { getKnexConfig } from './knexfile';
 import logger from '@alga-psa/core/logger';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { isReadOnlyError, retryOnReadOnly } from './readOnlyRetry';
+import { flushAfterCommitHooks } from './afterCommit';
 
 type PoolConfig = KnexType.PoolConfig & {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
@@ -139,7 +140,7 @@ export async function withTransaction<T>(
   if (typeof tenantIdOrKnexOrTrx === 'string') {
     const tenantId = tenantIdOrKnexOrTrx;
     const knex = await getConnection(tenantId);
-    return tenantContext.run(tenantId, () => knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx))));
+    return ownTransaction(knex, tenantId, callback);
   }
 
   const maybeTrx = tenantIdOrKnexOrTrx as unknown as {
@@ -150,6 +151,9 @@ export async function withTransaction<T>(
   const tenantId = getTenantContext();
 
   if (typeof maybeTrx?.commit === 'function' && typeof maybeTrx?.rollback === 'function') {
+    // Nested frame: reuse the caller's trx and do NOT own the commit.
+    // After-commit hooks registered in here attach to the shared trx and
+    // flush only when the outermost owning frame commits.
     if (tenantId) {
       return tenantContext.run(tenantId, () => callback(tenantIdOrKnexOrTrx as KnexType.Transaction));
     }
@@ -157,11 +161,32 @@ export async function withTransaction<T>(
   }
 
   const knex = tenantIdOrKnexOrTrx as KnexType;
-  if (tenantId) {
-    return tenantContext.run(tenantId, () => knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx))));
-  }
+  return ownTransaction(knex, tenantId, callback);
+}
 
-  return knex.transaction(callback);
+/**
+ * Run `callback` in a new transaction this frame owns: open it (inside the
+ * tenant context when one applies), and after a successful commit flush any
+ * hooks registered via registerAfterCommit() before returning.
+ */
+async function ownTransaction<T>(
+  knex: KnexType,
+  tenantId: string | undefined,
+  callback: (trx: KnexType.Transaction) => Promise<T>
+): Promise<T> {
+  const run = async (): Promise<T> => {
+    let owned: KnexType.Transaction | undefined;
+    const result = await knex.transaction((trx) => {
+      owned = trx;
+      return tenantId ? tenantContext.run(tenantId, () => callback(trx)) : callback(trx);
+    });
+    if (owned) {
+      await flushAfterCommitHooks(owned);
+    }
+    return result;
+  };
+
+  return tenantId ? tenantContext.run(tenantId, run) : run();
 }
 
 /**
@@ -184,9 +209,7 @@ export async function withTenantTransactionRetryReadOnly<T>(
 ): Promise<T> {
   try {
     const knex = await getConnection(tenantId);
-    return await tenantContext.run(tenantId, () =>
-      knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx)))
-    );
+    return await ownTransaction(knex, tenantId, callback);
   } catch (err) {
     if (!isReadOnlyError(err)) throw err;
     logger.warn(
@@ -195,9 +218,7 @@ export async function withTenantTransactionRetryReadOnly<T>(
     );
     await refreshTenantConnection();
     const knex = await getConnection(tenantId);
-    return await tenantContext.run(tenantId, () =>
-      knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx)))
-    );
+    return await ownTransaction(knex, tenantId, callback);
   }
 }
 
