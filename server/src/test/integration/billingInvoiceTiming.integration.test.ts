@@ -43,6 +43,7 @@ let calculateBillingForSelectionInputAction: typeof import('@alga-psa/billing/ac
 let previewInvoiceForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoiceForSelectionInput;
 let getAvailableRecurringDueWorkAction: typeof import('@alga-psa/billing/actions/billingAndTax').getAvailableRecurringDueWork;
 let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
+let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let getInvoicedBillingCyclesPaginatedAction: typeof import('@alga-psa/billing/actions/billingCycleActions').getInvoicedBillingCyclesPaginated;
 let reverseRecurringInvoiceAction: typeof import('@alga-psa/billing/actions/billingCycleActions').reverseRecurringInvoice;
 let hardDeleteRecurringInvoiceAction: typeof import('@alga-psa/billing/actions/billingCycleActions').hardDeleteRecurringInvoice;
@@ -156,6 +157,7 @@ describe('Billing Invoice Timing Integration', () => {
       getAvailableRecurringDueWork: getAvailableRecurringDueWorkAction,
     } = await import('@alga-psa/billing/actions/billingAndTax'));
     ({ hardDeleteInvoice: hardDeleteInvoiceAction } = await import('@alga-psa/billing/actions/invoiceModification'));
+    ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({
       getInvoicedBillingCyclesPaginated: getInvoicedBillingCyclesPaginatedAction,
       reverseRecurringInvoice: reverseRecurringInvoiceAction,
@@ -222,13 +224,14 @@ describe('Billing Invoice Timing Integration', () => {
       decemberEnd
     } = await createClientWithCycles('Arrears Invoice Client');
 
-    const { serviceId } = await createFixedContractLine(contextLike, {
+    const { serviceId, contractLineId } = await createFixedContractLine(contextLike, {
       serviceName: 'Arrears Invoice Support',
       planName: 'Arrears Invoice Plan',
       baseRateCents: 15000,
       startDate: '2024-12-01',
       billingTiming: 'arrears'
     });
+    await syncContractLineRecurringPeriods(contractLineId);
 
     const invoice = await generateInvoice(januaryCycleId);
     expect(invoice).toBeTruthy();
@@ -251,13 +254,14 @@ describe('Billing Invoice Timing Integration', () => {
       januaryEnd
     } = await createClientWithCycles('Advance Invoice Client');
 
-    const { serviceId } = await createFixedContractLine(contextLike, {
+    const { serviceId, contractLineId } = await createFixedContractLine(contextLike, {
       serviceName: 'Advance Invoice Support',
       planName: 'Advance Invoice Plan',
       baseRateCents: 18000,
       startDate: '2024-12-01',
       billingTiming: 'advance'
     });
+    await syncContractLineRecurringPeriods(contractLineId);
 
     const invoice = await generateInvoice(januaryCycleId);
     expect(invoice).toBeTruthy();
@@ -299,6 +303,8 @@ describe('Billing Invoice Timing Integration', () => {
     contractId: arrearsLine.contractId,
     clientContractId: arrearsLine.clientContractId
   });
+  await syncContractLineRecurringPeriods(arrearsLine.contractLineId);
+  await syncContractLineRecurringPeriods(advanceLine.contractLineId);
 
     const invoice = await generateInvoice(januaryCycleId);
     expect(invoice).toBeTruthy();
@@ -359,6 +365,8 @@ it('T152: DB-backed monthly client-cadence recurring invoices preserve mixed adv
     contractId: arrearsLine.contractId,
     clientContractId: arrearsLine.clientContractId
   });
+  await syncContractLineRecurringPeriods(arrearsLine.contractLineId);
+  await syncContractLineRecurringPeriods(advanceLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -422,6 +430,8 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
     contractId: arrearsLine.contractId,
     clientContractId: arrearsLine.clientContractId
   });
+  await syncContractLineRecurringPeriods(arrearsLine.contractLineId);
+  await syncContractLineRecurringPeriods(advanceLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -472,6 +482,7 @@ it('T171: DB-backed monthly client-cadence recurring fixed invoice generation st
     billingTiming: 'advance',
     billingFrequency: 'monthly'
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -524,7 +535,7 @@ it('T029: billed recurring service periods link back to invoice charge detail ro
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -602,6 +613,7 @@ it('T172: DB-backed quarterly client-cadence recurring fixed invoice generation 
     billingTiming: 'arrears',
     billingFrequency: 'quarterly'
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -1984,7 +1996,7 @@ it('T051/T078: invoiced-history reader returns client-cadence recurring invoices
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2149,7 +2161,7 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2245,7 +2257,7 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2262,7 +2274,7 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2442,7 +2454,7 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2576,7 +2588,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientFixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3146,7 +3158,7 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3369,7 +3381,7 @@ it('T078: reversing a client-cadence recurring invoice restores due selection by
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
+      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4804,6 +4816,24 @@ async function createClientWithRecurringCycles(
     januaryStart: currentPeriodStart,
     januaryEnd: currentPeriodEnd
   };
+}
+
+/**
+ * Mirrors what contractActions/contractLineAction do in production after a
+ * contract line is created or changed: run the real recurring-service-period
+ * sync so recurring_service_periods rows exist. The post-cutover invoice
+ * engine treats those rows as mandatory (see T082). Tests that materialize
+ * periods manually with explicit windows must NOT also call this, or the
+ * (tenant, schedule_key, period_key, revision) unique constraint collides.
+ */
+async function syncContractLineRecurringPeriods(contractLineId: string): Promise<void> {
+  await db.transaction(async (trx) => {
+    await syncRecurringServicePeriodsForContractLine(trx, {
+      tenant: tenantId,
+      contractLineId,
+      sourceRunPrefix: 'integration-fixture',
+    });
+  });
 }
 
 async function createFixedContractLine(
