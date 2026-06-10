@@ -101,6 +101,23 @@ export function listTimePeriods(
   });
 }
 
+export function getCurrentTimePeriod(
+  client: ApiClient,
+  params: { apiKey: string; date?: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TimePeriod>>> {
+  return client.request<SuccessResponse<TimePeriod>>({
+    method: "GET",
+    path: "/api/v1/time-periods/current",
+    query: {
+      date: params.date,
+    },
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
 export type ListTimeEntriesParams = {
   apiKey: string;
   page: number;

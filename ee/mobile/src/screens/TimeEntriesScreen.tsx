@@ -8,7 +8,13 @@ import { Badge } from "../ui/components/Badge";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { listTimeEntries, listTimePeriods, type TimeEntryListItem, type WorkItemType } from "../api/timeEntries";
+import {
+  getCurrentTimePeriod,
+  listTimeEntries,
+  listTimePeriods,
+  type TimeEntryListItem,
+  type WorkItemType,
+} from "../api/timeEntries";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAppResume } from "../hooks/useAppResume";
 import { useTheme } from "../ui/ThemeContext";
@@ -18,6 +24,7 @@ import {
   formatPeriodRange,
   inclusiveEndDate,
   localDateOnly,
+  periodFromCurrentResponse,
   resolveCurrentPeriod,
   type ResolvedPeriod,
 } from "../features/timeEntries/currentPeriod";
@@ -124,20 +131,28 @@ export function TimeEntriesScreen() {
     const signal = abortController.signal;
 
     const today = localDateOnly();
-    const periodsResult = await listTimePeriods(client, { apiKey: session.accessToken, signal });
+    const currentResult = await getCurrentTimePeriod(client, { apiKey: session.accessToken, date: today, signal });
     if (signal.aborted) return;
+    if (!currentResult.ok && currentResult.error.kind === "canceled") return;
 
-    let resolved: ResolvedPeriod;
-    if (periodsResult.ok) {
-      resolved = resolveCurrentPeriod(periodsResult.data.data ?? [], today);
-    } else {
-      if (periodsResult.error.kind === "canceled") return;
-      logger.warn("Time periods fetch failed", { error: periodsResult.error });
-      if (periodsResult.error.kind !== "permission") {
-        setError(t("list.unableToLoadDescription", { defaultValue: "Please check your connection and try again." }));
-        return;
+    let resolved: ResolvedPeriod | null = currentResult.ok
+      ? periodFromCurrentResponse(currentResult.data.data)
+      : null;
+
+    if (!resolved) {
+      const periodsResult = await listTimePeriods(client, { apiKey: session.accessToken, signal });
+      if (signal.aborted) return;
+      if (periodsResult.ok) {
+        resolved = resolveCurrentPeriod(periodsResult.data.data ?? [], today);
+      } else {
+        if (periodsResult.error.kind === "canceled") return;
+        logger.warn("Time periods fetch failed", { error: periodsResult.error });
+        if (periodsResult.error.kind !== "permission") {
+          setError(t("list.unableToLoadDescription", { defaultValue: "Please check your connection and try again." }));
+          return;
+        }
+        resolved = resolveCurrentPeriod([], today);
       }
-      resolved = resolveCurrentPeriod([], today);
     }
     setPeriod(resolved);
 

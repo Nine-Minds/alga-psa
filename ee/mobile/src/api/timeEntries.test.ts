@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { createTimeEntry, getServices, getTicketTimeEntries, listTimeEntries, listTimePeriods } from "./timeEntries";
+import {
+  createTimeEntry,
+  getCurrentTimePeriod,
+  getServices,
+  getTicketTimeEntries,
+  listTimeEntries,
+  listTimePeriods,
+} from "./timeEntries";
 import type { ApiClient } from "./client";
 
 function mockClient(response: unknown): ApiClient {
@@ -105,6 +112,24 @@ describe("timeEntries api", () => {
     expect(client.request).toHaveBeenCalledWith({
       method: "GET",
       path: "/api/v1/time-periods",
+      signal: undefined,
+      headers: {
+        "x-api-key": "api-key-1",
+      },
+    });
+  });
+
+  it("calls GET /api/v1/time-periods/current with the reference date", async () => {
+    const client = mockClient({ ok: true, data: { data: { period_id: "p1" } } });
+
+    await getCurrentTimePeriod(client, { apiKey: "api-key-1", date: "2026-06-10" });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "GET",
+      path: "/api/v1/time-periods/current",
+      query: {
+        date: "2026-06-10",
+      },
       signal: undefined,
       headers: {
         "x-api-key": "api-key-1",

@@ -5,6 +5,7 @@ import {
   formatPeriodRange,
   inclusiveEndDate,
   localDateOnly,
+  periodFromCurrentResponse,
   resolveCurrentPeriod,
   toDateOnly,
 } from "./currentPeriod";
@@ -102,6 +103,42 @@ describe("resolveCurrentPeriod", () => {
       endDateExclusive: "2026-07-01",
       isFallback: true,
     });
+  });
+});
+
+describe("periodFromCurrentResponse", () => {
+  it("accepts a valid period and normalizes datetime strings", () => {
+    expect(
+      periodFromCurrentResponse({
+        period_id: "p1",
+        start_date: "2026-06-01T00:00:00.000Z",
+        end_date: "2026-06-16",
+      }),
+    ).toEqual({
+      periodId: "p1",
+      startDate: "2026-06-01",
+      endDateExclusive: "2026-06-16",
+      isFallback: false,
+    });
+  });
+
+  it("rejects array payloads from mis-wired older servers", () => {
+    expect(periodFromCurrentResponse([{ period_id: "p1", start_date: "2026-06-01", end_date: "2026-06-16" }])).toBeNull();
+  });
+
+  it("rejects objects without a period id", () => {
+    expect(periodFromCurrentResponse({ start_date: "2026-06-01", end_date: "2026-06-16" })).toBeNull();
+  });
+
+  it("rejects objects with invalid dates", () => {
+    expect(periodFromCurrentResponse({ period_id: "p1", start_date: "not-a-date", end_date: "2026-06-16" })).toBeNull();
+    expect(periodFromCurrentResponse({ period_id: "p1", start_date: "2026-06-01" })).toBeNull();
+  });
+
+  it("rejects null and primitive payloads", () => {
+    expect(periodFromCurrentResponse(null)).toBeNull();
+    expect(periodFromCurrentResponse(undefined)).toBeNull();
+    expect(periodFromCurrentResponse("p1")).toBeNull();
   });
 });
 
