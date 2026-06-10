@@ -1,11 +1,11 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import net from 'node:net';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { describeWithDb } from '../../../test-utils/requireDb';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 
 let db: Knex;
@@ -16,20 +16,7 @@ let statusId: string;
 let priorityId: string;
 let enteredByUserId: string;
 
-const dbReachable: boolean = await new Promise((resolve) => {
-  const host = process.env.DB_HOST || 'localhost';
-  const port = Number(process.env.DB_PORT || '5432');
-  const socket = net.createConnection({ host, port });
-  const done = (value: boolean) => {
-    socket.removeAllListeners();
-    socket.destroy();
-    resolve(value);
-  };
-  socket.on('connect', () => done(true));
-  socket.on('error', () => done(false));
-  socket.setTimeout(500, () => done(false));
-});
-const describeDb = dbReachable ? describe : describe.skip;
+const describeDb = await describeWithDb();
 
 describeDb('Workflow worker v2 + inbound email smoke', () => {
   beforeAll(async () => {
