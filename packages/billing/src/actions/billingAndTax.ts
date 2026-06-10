@@ -1007,6 +1007,14 @@ function applyClientCadenceMaterializationGapBlocks(
             `${gap.clientId}:${gap.scheduleKey}:${gap.periodKey}:${gap.invoiceWindowStart}:${gap.invoiceWindowEnd}`,
         ),
     );
+    // Gaps describe obligations that have NO persisted row, so they can never
+    // match a candidate member key one-to-one. A candidate window is partially
+    // materialized when any gap targets the same client + invoice window.
+    const blockedClientWindowKeys = new Set(
+        materializationGaps.map((gap) =>
+            `${gap.clientId}:${normalizeDateOnly(gap.invoiceWindowStart)}:${normalizeDateOnly(gap.invoiceWindowEnd)}`,
+        ),
+    );
 
     return invoiceCandidates.map((candidate) => {
         const isClientCadenceCandidate = candidate.cadenceOwners.includes('client');
@@ -1014,20 +1022,22 @@ function applyClientCadenceMaterializationGapBlocks(
             return candidate;
         }
 
-        const hasBlockedMember = candidate.members.some((member) => {
-            if (blockedExecutionIdentityKeys.has(member.executionIdentityKey)) {
-                return true;
-            }
-            if (blockedSelectionKeys.has(member.selectionKey)) {
-                return true;
-            }
-            if (!member.scheduleKey || !member.periodKey) {
-                return false;
-            }
+        const candidateWindowKey = `${candidate.clientId}:${normalizeDateOnly(candidate.windowStart)}:${normalizeDateOnly(candidate.windowEnd)}`;
+        const hasBlockedMember = blockedClientWindowKeys.has(candidateWindowKey)
+            || candidate.members.some((member) => {
+                if (blockedExecutionIdentityKeys.has(member.executionIdentityKey)) {
+                    return true;
+                }
+                if (blockedSelectionKeys.has(member.selectionKey)) {
+                    return true;
+                }
+                if (!member.scheduleKey || !member.periodKey) {
+                    return false;
+                }
 
-            const memberSchedulePeriodKey = `${candidate.clientId}:${member.scheduleKey}:${member.periodKey}:${member.invoiceWindowStart}:${member.invoiceWindowEnd}`;
-            return blockedSchedulePeriodKeys.has(memberSchedulePeriodKey);
-        });
+                const memberSchedulePeriodKey = `${candidate.clientId}:${member.scheduleKey}:${member.periodKey}:${member.invoiceWindowStart}:${member.invoiceWindowEnd}`;
+                return blockedSchedulePeriodKeys.has(memberSchedulePeriodKey);
+            });
 
         if (!hasBlockedMember) {
             return candidate;
