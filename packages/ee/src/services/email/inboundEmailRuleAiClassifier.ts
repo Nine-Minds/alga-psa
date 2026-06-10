@@ -163,7 +163,7 @@ const eeClassifier: InboundEmailAiClassifier = {
 
       // Structured usage line so per-tenant token metering can be layered on
       // without changing this module.
-      const usage = (completion as { usage?: Record<string, unknown> }).usage;
+      const usage = completion.usage;
       if (usage) {
         console.info('inboundEmailRuleAiClassifier: token usage', {
           tenantId: input.tenantId,
