@@ -540,9 +540,12 @@ export class QboClientService {
     if (qboError) {
       message += `: ${qboError.Message ?? 'Unknown QBO Error'} (Code: ${qboError.code ?? 'N/A'}, Detail: ${qboError.Detail ?? 'N/A'})`;
 
-      if (qboError.code === '6240') {
+      if (qboError.code === '5010') {
         code = 'QBO_STALE_OBJECT';
         message = `QBO ${entityType || 'entity'} has been updated since it was last read. Please refresh and try again. (SyncToken mismatch)`;
+      } else if (qboError.code === '6240') {
+        code = 'QBO_DUPLICATE_NAME';
+        message = `A QBO ${entityType || 'entity'} with this name already exists. Please use a different name. (Duplicate Name Exists)`;
       } else if (qboError.code?.startsWith('2')) {
         code = 'QBO_VALIDATION_ERROR';
       } else if (qboError.code?.startsWith('4') || qboError.code?.startsWith('5')) {
