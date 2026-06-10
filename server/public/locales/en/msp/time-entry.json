@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} user",
       "additionalUsersOther": "{{name}}, +{{count}} users"
     },
-    "bundledTicket": "Bundled ticket — log time on the master ticket{{suffix}}.",
+    "bundledUnder": "Bundled → {{number}}",
+    "bundled": "Bundled",
     "pagination": {
       "previous": "Previous",
       "next": "Next",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Failed to save changes",
     "changesSaved": "Changes saved successfully",
     "workItemDeleted": "Work item deleted successfully"
+  },
+  "bundleNotice": {
+    "withNumber": "This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.",
+    "withoutNumber": "This ticket is part of a bundle. Bundle time is usually logged on the master ticket."
   }
 }

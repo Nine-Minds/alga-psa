@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} Benutzer",
       "additionalUsersOther": "{{name}}, +{{count}} Benutzer"
     },
-    "bundledTicket": "Gebündeltes Ticket – Protokollierungszeit auf dem Master-Ticket{{suffix}}.",
+    "bundledUnder": "Gebündelt → {{number}}",
+    "bundled": "Gebündelt",
     "pagination": {
       "previous": "Zurück",
       "next": "Weiter",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
     "changesSaved": "Änderungen erfolgreich gespeichert",
     "workItemDeleted": "Arbeitsposten erfolgreich gelöscht"
+  },
+  "bundleNotice": {
+    "withNumber": "Dieses Ticket ist unter {{number}} gebündelt. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst.",
+    "withoutNumber": "Dieses Ticket ist Teil eines Bündels. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst."
   }
 }
