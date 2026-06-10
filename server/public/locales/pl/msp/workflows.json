@@ -283,6 +283,10 @@
       "replayRunFailed": "Nie udało się powtórzyć uruchomienia",
       "auditExportReady": "Eksport audytu gotowy",
       "exportAuditLogsFailed": "Nie udało się wyeksportować dzienników audytu"
+    },
+    "queuedWarning": {
+      "title": "W kolejce — oczekiwanie na proces roboczy przepływu pracy",
+      "description": "To uruchomienie rozpoczęło się ponad minutę temu, ale nie wykonano jeszcze żadnego kroku. Sprawdź, czy usługa procesu roboczego przepływu pracy działa i jest połączona z Temporal."
     }
   },
   "runDialog": {

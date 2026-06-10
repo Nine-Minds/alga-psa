@@ -283,6 +283,10 @@
       "replayRunFailed": "Impossibile ripetere l’esecuzione",
       "auditExportReady": "Esportazione audit pronta",
       "exportAuditLogsFailed": "Impossibile esportare i log di audit"
+    },
+    "queuedWarning": {
+      "title": "In coda — in attesa di un worker del flusso di lavoro",
+      "description": "Questa esecuzione è iniziata più di un minuto fa, ma non è ancora stato eseguito alcun passaggio. Verifica che il servizio worker del flusso di lavoro sia in esecuzione e connesso a Temporal."
     }
   },
   "runDialog": {

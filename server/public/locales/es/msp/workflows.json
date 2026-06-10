@@ -283,6 +283,10 @@
       "replayRunFailed": "Error al repetir la ejecución",
       "auditExportReady": "Exportación de auditoría lista",
       "exportAuditLogsFailed": "Error al exportar los registros de auditoría"
+    },
+    "queuedWarning": {
+      "title": "En cola — esperando a un worker de flujos de trabajo",
+      "description": "Esta ejecución comenzó hace más de un minuto, pero todavía no se ha ejecutado ningún paso. Comprueba que el servicio de worker de flujos de trabajo esté en ejecución y conectado a Temporal."
     }
   },
   "runDialog": {

@@ -283,6 +283,10 @@
       "replayRunFailed": "Kan uitvoering niet herhalen",
       "auditExportReady": "Auditexport gereed",
       "exportAuditLogsFailed": "Kan auditlogs niet exporteren"
+    },
+    "queuedWarning": {
+      "title": "In wachtrij — wachten op een workflow-worker",
+      "description": "Deze uitvoering is meer dan een minuut geleden gestart, maar er zijn nog geen stappen uitgevoerd. Controleer of de workflow-workerservice actief is en verbonden met Temporal."
     }
   },
   "runDialog": {

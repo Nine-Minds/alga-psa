@@ -283,6 +283,10 @@
       "replayRunFailed": "Échec de la relecture de l’exécution",
       "auditExportReady": "Export d’audit prêt",
       "exportAuditLogsFailed": "Échec de l’exportation des journaux d’audit"
+    },
+    "queuedWarning": {
+      "title": "En file d’attente — en attente d’un worker de workflow",
+      "description": "Cette exécution a démarré il y a plus d’une minute, mais aucune étape n’a encore été exécutée. Vérifiez que le service worker de workflow est en cours d’exécution et connecté à Temporal."
     }
   },
   "runDialog": {

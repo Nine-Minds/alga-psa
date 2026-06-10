@@ -283,6 +283,10 @@
       "replayRunFailed": "Wiederholung der Ausführung fehlgeschlagen",
       "auditExportReady": "Audit-Export bereit",
       "exportAuditLogsFailed": "Export der Audit-Protokolle fehlgeschlagen"
+    },
+    "queuedWarning": {
+      "title": "In Warteschlange — Warten auf einen Workflow-Worker",
+      "description": "Dieser Lauf wurde vor über einer Minute gestartet, es wurden jedoch noch keine Schritte ausgeführt. Prüfen Sie, ob der Workflow-Worker-Dienst läuft und mit Temporal verbunden ist."
     }
   },
   "runDialog": {

@@ -283,6 +283,10 @@
       "replayRunFailed": "Failed to replay run",
       "auditExportReady": "Audit export ready",
       "exportAuditLogsFailed": "Failed to export audit logs"
+    },
+    "queuedWarning": {
+      "title": "Na fila — aguardando um worker de fluxo de trabalho",
+      "description": "Esta execução começou há mais de um minuto, mas nenhuma etapa foi executada ainda. Verifique se o serviço de worker de fluxo de trabalho está em execução e conectado ao Temporal."
     }
   },
   "runDialog": {
