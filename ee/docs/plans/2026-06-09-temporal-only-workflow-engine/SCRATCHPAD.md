@@ -69,6 +69,32 @@ Design: `../2026-06-09-temporal-only-workflow-engine-design.md`.
 - Stranded-run migration: also check `workflow_run_waits` rows whose run is
   being canceled — resolve with a status that the run studio renders sanely.
 
+## Implementation notes (2026-06-09)
+
+- `launchPublishedWorkflowRun`'s `execute` flag was only ever passed as `true`
+  (4 call sites) — removed along with the engine ternary. `executionKey` is
+  genuinely used (schedules, webhooks, event launch) and stays.
+- `WorkflowRuntimeV2` is now only the run-row projection writer (`startRun`);
+  the whole DB interpreter (~1,300 lines) was deleted after confirming the
+  Temporal interpreter never called it (`executeWorkflowRuntimeV2Run` was
+  exported but never registered/invoked).
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2Worker.ts` was already
+  unreferenced (index.ts imported the shared copy) — both deleted.
+- Bulk Resume in `WorkflowRunList` used the legacy resume action — removed
+  with the per-run buttons; bulk Cancel stays.
+- Replay payload-dirty detection compares the textarea string against the
+  pre-filled pristine string (ref) — exact-match is sufficient because
+  untouched textareas don't reformat.
+- `server/src/test/unit/workflowRunLauncher.unit.test.ts` fails to LOAD even
+  unmodified (pre-existing: `@alga-psa/db/workDate` unresolvable through
+  `importOriginal` of the runtime in this worktree). Updated for the new API
+  anyway; failure is environmental, also see quota test's stale `tenant_id`
+  field which suggests these server unit tests aren't in the active CI gate.
+- Playwright workflow suites: host-run server needs `TEMPORAL_ADDRESS`
+  pointing at the new `temporal-playwright` service (host port 17233 via
+  `PLAYWRIGHT_TEMPORAL_PORT`) for replay/run-start flows to function.
+- ee/server full typecheck needs `NODE_OPTIONS=--max-old-space-size=12288`.
+
 ## Commands
 
 - Find engine references: `grep -rn "engine.*'db'\|'db'.*engine" --include="*.ts" shared ee services server | grep -v node_modules`

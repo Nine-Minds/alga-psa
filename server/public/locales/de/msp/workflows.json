@@ -57,7 +57,6 @@
       "runNow": "Jetzt ausführen",
       "exportCsv": "CSV exportieren",
       "refresh": "Aktualisieren",
-      "resumeSelected": "Auswahl fortsetzen ({{count}})",
       "cancelSelected": "Auswahl abbrechen ({{count}})",
       "clearSelection": "Auswahl aufheben",
       "details": "Details",
@@ -85,14 +84,10 @@
       "empty": "Keine Ausführungen entsprechen den aktuellen Filtern."
     },
     "bulk": {
-      "resumeTitle": "Ausgewählte Ausführungen fortsetzen",
-      "resumeMessage": "{{count}} gewählte Ausführung(en) fortsetzen?",
       "cancelTitle": "Ausgewählte Ausführungen abbrechen",
       "cancelMessage": "{{count}} gewählte Ausführung(en) abbrechen? Dies kann nicht rückgängig gemacht werden.",
       "reasonLabel": "Grund",
-      "resumeReasonPlaceholder": "Geben Sie einen Grund für die Fortsetzung an",
       "cancelReasonPlaceholder": "Geben Sie einen Grund für den Abbruch an",
-      "resumeConfirm": "Ausführungen fortsetzen",
       "cancelConfirm": "Ausführungen abbrechen"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Wählen Sie Ausführungen aus, um diese Aktion auszuführen.",
       "bulkReasonTooShort": "Der Grund muss mindestens 3 Zeichen lang sein.",
       "noEligibleRuns": "Keine der gewählten Ausführungen ist für diese Aktion zulässig.",
-      "bulkResumeFailedCount": "Fortsetzen von {{count}} Ausführung(en) fehlgeschlagen.",
       "bulkCancelFailedCount": "Abbruch von {{count}} Ausführung(en) fehlgeschlagen.",
-      "bulkResumeSuccessCount": "{{count}} Ausführung(en) fortgesetzt.",
       "bulkCancelSuccessCount": "{{count}} Ausführung(en) abgebrochen.",
       "bulkSkippedIneligibleCount": "{{count}} nicht zulässige Ausführung(en) übersprungen.",
       "bulkActionFailed": "Massenaktion fehlgeschlagen"
@@ -143,12 +136,9 @@
       "triggerLabel": "Auslöser:"
     },
     "actions": {
-      "resume": "Fortsetzen",
       "cancel": "Abbrechen",
       "export": "Exportieren",
-      "retry": "Erneut versuchen",
       "replay": "Wiederholen",
-      "requeueEvent": "Ereignis erneut einreihen",
       "close": "Schließen",
       "view": "Anzeigen",
       "apply": "Anwenden",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Grund",
-      "resumeTitle": "Workflow-Ausführung fortsetzen",
-      "resumeMessage": "Diese Ausführung jetzt fortsetzen?",
-      "resumeReasonPlaceholder": "Geben Sie einen Grund für die Fortsetzung an",
       "cancelTitle": "Workflow-Ausführung abbrechen",
       "cancelMessage": "Diese Ausführung abbrechen? Dies kann nicht rückgängig gemacht werden.",
       "cancelReasonPlaceholder": "Geben Sie einen Grund für den Abbruch an",
       "cancelConfirm": "Ausführung abbrechen",
-      "retryTitle": "Workflow-Ausführung wiederholen",
-      "retryMessage": "Diese Ausführung ab dem letzten fehlgeschlagenen Schritt wiederholen?",
-      "retryReasonPlaceholder": "Geben Sie einen Grund für den Wiederholungsversuch an",
-      "retryConfirm": "Ausführung wiederholen",
       "replayTitle": "Workflow-Ausführung wiederholen",
       "replayMessage": "Diese Ausführung mit neuen Nutzdaten wiederholen.",
       "replayReasonPlaceholder": "Geben Sie einen Grund für die Wiederholung an",
       "payloadLabel": "Nutzdaten (JSON)",
-      "replayConfirm": "Ausführung wiederholen",
-      "requeueTitle": "Ereignis-Warten erneut einreihen",
-      "requeueMessage": "Das jüngste Ereignis-Warten dieser Ausführung erneut einreihen?",
-      "requeueReasonPlaceholder": "Geben Sie einen Grund für das erneute Einreihen an",
-      "requeueConfirm": "Warten erneut einreihen"
+      "replayConfirm": "Ausführung wiederholen"
     },
     "toasts": {
       "loadRunDetailsFailed": "Ausführungsdetails konnten nicht geladen werden",
@@ -295,19 +274,13 @@
       "logExportReady": "Protokoll-Export bereit",
       "exportLogsFailed": "Export der Protokolle fehlgeschlagen",
       "reasonTooShort": "Der Grund muss mindestens 3 Zeichen lang sein.",
-      "runResumed": "Ausführung fortgesetzt",
-      "resumeRunFailed": "Fortsetzen der Ausführung fehlgeschlagen",
       "runCanceled": "Ausführung abgebrochen",
       "cancelRunFailed": "Abbruch der Ausführung fehlgeschlagen",
       "runExportReady": "Ausführungs-Export bereit",
       "exportRunFailed": "Export der Ausführung fehlgeschlagen",
-      "runRetryStarted": "Wiederholungsversuch gestartet",
-      "retryRunFailed": "Wiederholungsversuch fehlgeschlagen",
       "replayPayloadInvalid": "Wiederholungs-Nutzdaten müssen gültiges JSON sein.",
       "runReplayStarted": "Ausführungs-Wiederholung gestartet",
       "replayRunFailed": "Wiederholung der Ausführung fehlgeschlagen",
-      "eventWaitRequeued": "Ereignis-Warten erneut eingereiht",
-      "requeueEventWaitFailed": "Erneutes Einreihen des Ereignis-Wartens fehlgeschlagen",
       "auditExportReady": "Audit-Export bereit",
       "exportAuditLogsFailed": "Export der Audit-Protokolle fehlgeschlagen"
     }

@@ -57,7 +57,6 @@
       "runNow": "Ejecutar ahora",
       "exportCsv": "Exportar CSV",
       "refresh": "Actualizar",
-      "resumeSelected": "Reanudar selección ({{count}})",
       "cancelSelected": "Cancelar selección ({{count}})",
       "clearSelection": "Borrar selección",
       "details": "Detalles",
@@ -85,14 +84,10 @@
       "empty": "Ninguna ejecución coincide con los filtros actuales."
     },
     "bulk": {
-      "resumeTitle": "Reanudar ejecuciones seleccionadas",
-      "resumeMessage": "¿Reanudar {{count}} ejecución(es) seleccionada(s)?",
       "cancelTitle": "Cancelar ejecuciones seleccionadas",
       "cancelMessage": "¿Cancelar {{count}} ejecución(es) seleccionada(s)? No se puede deshacer.",
       "reasonLabel": "Motivo",
-      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
       "cancelReasonPlaceholder": "Indique un motivo para cancelar",
-      "resumeConfirm": "Reanudar ejecuciones",
       "cancelConfirm": "Cancelar ejecuciones"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Seleccione ejecuciones para realizar esta acción.",
       "bulkReasonTooShort": "El motivo debe tener al menos 3 caracteres.",
       "noEligibleRuns": "Ninguna de las ejecuciones seleccionadas es elegible para esa acción.",
-      "bulkResumeFailedCount": "Error al reanudar {{count}} ejecución(es).",
       "bulkCancelFailedCount": "Error al cancelar {{count}} ejecución(es).",
-      "bulkResumeSuccessCount": "{{count}} ejecución(es) reanudada(s).",
       "bulkCancelSuccessCount": "{{count}} ejecución(es) cancelada(s).",
       "bulkSkippedIneligibleCount": "{{count}} ejecución(es) no elegible(s) omitida(s).",
       "bulkActionFailed": "Acción masiva fallida"
@@ -143,12 +136,9 @@
       "triggerLabel": "Disparador:"
     },
     "actions": {
-      "resume": "Reanudar",
       "cancel": "Cancelar",
       "export": "Exportar",
-      "retry": "Reintentar",
       "replay": "Repetir",
-      "requeueEvent": "Reencolar evento",
       "close": "Cerrar",
       "view": "Ver",
       "apply": "Aplicar",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motivo",
-      "resumeTitle": "Reanudar ejecución del flujo de trabajo",
-      "resumeMessage": "¿Reanudar esta ejecución ahora?",
-      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
       "cancelTitle": "Cancelar la ejecución del flujo de trabajo",
       "cancelMessage": "¿Cancelar esta ejecución? No se puede deshacer.",
       "cancelReasonPlaceholder": "Indique un motivo para cancelar",
       "cancelConfirm": "Cancelar ejecución",
-      "retryTitle": "Reintentar ejecución del flujo de trabajo",
-      "retryMessage": "¿Reintentar esta ejecución desde el último paso fallido?",
-      "retryReasonPlaceholder": "Indique un motivo para reintentar",
-      "retryConfirm": "Reintentar ejecución",
       "replayTitle": "Repetir la ejecución del flujo de trabajo",
       "replayMessage": "Repetir esta ejecución con una nueva carga útil.",
       "replayReasonPlaceholder": "Indique un motivo para repetir",
       "payloadLabel": "Carga útil (JSON)",
-      "replayConfirm": "Repetir ejecución",
-      "requeueTitle": "Reencolar espera de evento",
-      "requeueMessage": "¿Reencolar la espera de evento más reciente de esta ejecución?",
-      "requeueReasonPlaceholder": "Indique un motivo para reencolar",
-      "requeueConfirm": "Reencolar espera"
+      "replayConfirm": "Repetir ejecución"
     },
     "toasts": {
       "loadRunDetailsFailed": "Error al cargar los detalles de la ejecución",
@@ -295,19 +274,13 @@
       "logExportReady": "Exportación de registros lista",
       "exportLogsFailed": "Error al exportar los registros",
       "reasonTooShort": "El motivo debe tener al menos 3 caracteres.",
-      "runResumed": "Ejecución reanudada",
-      "resumeRunFailed": "Error al reanudar la ejecución",
       "runCanceled": "Ejecución cancelada",
       "cancelRunFailed": "Error al cancelar la ejecución",
       "runExportReady": "Exportación de ejecución lista",
       "exportRunFailed": "Error al exportar la ejecución",
-      "runRetryStarted": "Reintento de ejecución iniciado",
-      "retryRunFailed": "Error al reintentar la ejecución",
       "replayPayloadInvalid": "La carga útil de la repetición debe ser JSON válido.",
       "runReplayStarted": "Repetición de ejecución iniciada",
       "replayRunFailed": "Error al repetir la ejecución",
-      "eventWaitRequeued": "Espera de evento reencolada",
-      "requeueEventWaitFailed": "Error al reencolar la espera de evento",
       "auditExportReady": "Exportación de auditoría lista",
       "exportAuditLogsFailed": "Error al exportar los registros de auditoría"
     }

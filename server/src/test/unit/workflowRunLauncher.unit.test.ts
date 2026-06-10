@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   initializeWorkflowRuntimeV2Mock,
   startRunMock,
-  executeRunMock,
   startWorkflowRuntimeV2TemporalRunMock,
   getByTriggerFireKeyMock,
   createRunMock,
@@ -14,7 +13,6 @@ const {
 } = vi.hoisted(() => ({
   initializeWorkflowRuntimeV2Mock: vi.fn(),
   startRunMock: vi.fn(),
-  executeRunMock: vi.fn(),
   startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
   getByTriggerFireKeyMock: vi.fn(),
   createRunMock: vi.fn(),
@@ -44,10 +42,6 @@ vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
   class WorkflowRuntimeV2Mock {
     async startRun(...args: unknown[]) {
       return startRunMock(...args);
-    }
-
-    async executeRun(...args: unknown[]) {
-      return executeRunMock(...args);
     }
   }
 
@@ -89,7 +83,6 @@ describe('Workflow run launcher', () => {
   beforeEach(() => {
     initializeWorkflowRuntimeV2Mock.mockReset();
     startRunMock.mockReset();
-    executeRunMock.mockReset();
     startWorkflowRuntimeV2TemporalRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
     createRunMock.mockReset();
@@ -142,8 +135,7 @@ describe('Workflow run launcher', () => {
       workflowId: 'workflow-1',
       workflowVersion: 5,
       tenantId: 'tenant-1',
-      payload: {},
-      execute: true
+      payload: {}
     });
 
     expect(result).toEqual({
@@ -164,12 +156,10 @@ describe('Workflow run launcher', () => {
       knexMock,
       'run-started',
       expect.objectContaining({
-        engine: 'temporal',
         temporal_workflow_id: 'workflow-runtime-v2:run:run-started',
         temporal_run_id: 'temporal-run-1'
       })
     );
-    expect(executeRunMock).not.toHaveBeenCalled();
   });
 
   it('T044: duplicate recurring fire keys return the existing run without executing twice', async () => {
@@ -202,8 +192,7 @@ describe('Workflow run launcher', () => {
       triggerMetadata: {
         fireKey: 'workflow-schedule-fire:schedule-2:job-2'
       },
-      triggerFireKey: 'workflow-schedule-fire:schedule-2:job-2',
-      execute: true
+      triggerFireKey: 'workflow-schedule-fire:schedule-2:job-2'
     });
 
     expect(result).toEqual({
@@ -212,7 +201,6 @@ describe('Workflow run launcher', () => {
     });
     expect(startRunMock).toHaveBeenCalledTimes(1);
     expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
-    expect(executeRunMock).not.toHaveBeenCalled();
     expect(getByTriggerFireKeyMock).toHaveBeenCalledTimes(2);
   });
 
@@ -228,7 +216,6 @@ describe('Workflow run launcher', () => {
       eventType: 'PING',
       sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1',
       triggerMappingApplied: false,
-      execute: true,
       executionKey: 'exec-1'
     });
 
@@ -250,20 +237,17 @@ describe('Workflow run launcher', () => {
         workflowId: 'workflow-1',
         version: 5,
         definitionHash: expect.any(String),
-        runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
-        engine: 'temporal'
+        runtimeSemanticsVersion: '2026-04-08.temporal-native.v1'
       })
     );
     expect(updateRunMock).toHaveBeenCalledWith(
       knexMock,
       'run-created',
       expect.objectContaining({
-        engine: 'temporal',
         temporal_workflow_id: 'workflow-runtime-v2:run:run-created',
         temporal_run_id: 'temporal-run-1'
       })
     );
-    expect(executeRunMock).not.toHaveBeenCalled();
   });
 
   it('marks the run failed when Temporal start throws after the run row is created', async () => {
@@ -276,7 +260,6 @@ describe('Workflow run launcher', () => {
       tenantId: 'tenant-1',
       payload: { foo: 'bar' },
       triggerType: 'event',
-      execute: true,
       executionKey: 'exec-fail'
     })).rejects.toThrow('temporal unavailable');
 

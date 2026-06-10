@@ -57,7 +57,6 @@
       "runNow": "Exécuter maintenant",
       "exportCsv": "Exporter en CSV",
       "refresh": "Actualiser",
-      "resumeSelected": "Reprendre la sélection ({{count}})",
       "cancelSelected": "Annuler la sélection ({{count}})",
       "clearSelection": "Effacer la sélection",
       "details": "Détails",
@@ -85,14 +84,10 @@
       "empty": "Aucune exécution ne correspond aux filtres."
     },
     "bulk": {
-      "resumeTitle": "Reprendre les exécutions sélectionnées",
-      "resumeMessage": "Reprendre {{count}} exécution(s) sélectionnée(s) ?",
       "cancelTitle": "Annuler les exécutions sélectionnées",
       "cancelMessage": "Annuler {{count}} exécution(s) sélectionnée(s) ? Cette action est irréversible.",
       "reasonLabel": "Motif",
-      "resumeReasonPlaceholder": "Indiquez un motif pour la reprise",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
-      "resumeConfirm": "Reprendre les exécutions",
       "cancelConfirm": "Annuler les exécutions"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Sélectionnez des exécutions pour effectuer cette action.",
       "bulkReasonTooShort": "Le motif doit comporter au moins 3 caractères.",
       "noEligibleRuns": "Aucune des exécutions sélectionnées n’est éligible pour cette action.",
-      "bulkResumeFailedCount": "Échec de la reprise de {{count}} exécution(s).",
       "bulkCancelFailedCount": "Échec de l’annulation de {{count}} exécution(s).",
-      "bulkResumeSuccessCount": "{{count}} exécution(s) reprise(s).",
       "bulkCancelSuccessCount": "{{count}} exécution(s) annulée(s).",
       "bulkSkippedIneligibleCount": "{{count}} exécution(s) non éligible(s) ignorée(s).",
       "bulkActionFailed": "Échec de l’action groupée"
@@ -143,12 +136,9 @@
       "triggerLabel": "Déclencheur :"
     },
     "actions": {
-      "resume": "Reprendre",
       "cancel": "Annuler",
       "export": "Exporter",
-      "retry": "Réessayer",
       "replay": "Rejouer",
-      "requeueEvent": "Remettre en file l’événement",
       "close": "Fermer",
       "view": "Voir",
       "apply": "Appliquer",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motif",
-      "resumeTitle": "Reprendre l’exécution du workflow",
-      "resumeMessage": "Reprendre cette exécution maintenant ?",
-      "resumeReasonPlaceholder": "Indiquez un motif pour la reprise",
       "cancelTitle": "Annuler l’exécution du workflow",
       "cancelMessage": "Annuler cette exécution ? Cette action est irréversible.",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
       "cancelConfirm": "Annuler l’exécution",
-      "retryTitle": "Relancer l’exécution du workflow",
-      "retryMessage": "Relancer cette exécution à partir de la dernière étape en échec ?",
-      "retryReasonPlaceholder": "Indiquez un motif pour la nouvelle tentative",
-      "retryConfirm": "Relancer l’exécution",
       "replayTitle": "Rejouer l’exécution du workflow",
       "replayMessage": "Rejouer cette exécution avec une nouvelle charge utile.",
       "replayReasonPlaceholder": "Indiquez un motif pour la relecture",
       "payloadLabel": "Charge utile (JSON)",
-      "replayConfirm": "Rejouer l’exécution",
-      "requeueTitle": "Remettre en file l’attente d’événement",
-      "requeueMessage": "Remettre en file la dernière attente d’événement de cette exécution ?",
-      "requeueReasonPlaceholder": "Indiquez un motif pour la remise en file",
-      "requeueConfirm": "Remettre en file l’attente"
+      "replayConfirm": "Rejouer l’exécution"
     },
     "toasts": {
       "loadRunDetailsFailed": "Échec du chargement des détails de l’exécution",
@@ -295,19 +274,13 @@
       "logExportReady": "Export des journaux prêt",
       "exportLogsFailed": "Échec de l’exportation des journaux",
       "reasonTooShort": "Le motif doit comporter au moins 3 caractères.",
-      "runResumed": "Exécution reprise",
-      "resumeRunFailed": "Échec de la reprise de l’exécution",
       "runCanceled": "Exécution annulée",
       "cancelRunFailed": "Échec de l’annulation de l’exécution",
       "runExportReady": "Export d’exécution prêt",
       "exportRunFailed": "Échec de l’exportation de l’exécution",
-      "runRetryStarted": "Nouvelle tentative démarrée",
-      "retryRunFailed": "Échec de la relance de l’exécution",
       "replayPayloadInvalid": "La charge utile de relecture doit être un JSON valide.",
       "runReplayStarted": "Relecture de l’exécution démarrée",
       "replayRunFailed": "Échec de la relecture de l’exécution",
-      "eventWaitRequeued": "Attente d’événement remise en file",
-      "requeueEventWaitFailed": "Échec de la remise en file de l’attente d’événement",
       "auditExportReady": "Export d’audit prêt",
       "exportAuditLogsFailed": "Échec de l’exportation des journaux d’audit"
     }

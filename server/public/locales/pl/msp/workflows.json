@@ -57,7 +57,6 @@
       "runNow": "Uruchom teraz",
       "exportCsv": "Eksportuj CSV",
       "refresh": "Odśwież",
-      "resumeSelected": "Wznów zaznaczone ({{count}})",
       "cancelSelected": "Anuluj zaznaczone ({{count}})",
       "clearSelection": "Wyczyść zaznaczenie",
       "details": "Szczegóły",
@@ -85,14 +84,10 @@
       "empty": "Żadne uruchomienia przepływu pracy nie pasują do bieżących filtrów."
     },
     "bulk": {
-      "resumeTitle": "Wznów zaznaczone uruchomienia",
-      "resumeMessage": "Wznowić {{count}} zaznaczonych uruchomień?",
       "cancelTitle": "Anuluj zaznaczone uruchomienia",
       "cancelMessage": "Anulować {{count}} zaznaczonych uruchomień? Operacji nie można cofnąć.",
       "reasonLabel": "Powód",
-      "resumeReasonPlaceholder": "Proszę podać powód wznowienia",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
-      "resumeConfirm": "Wznów uruchomienia",
       "cancelConfirm": "Anuluj uruchomienia"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Proszę zaznaczyć uruchomienia, aby wykonać tę akcję.",
       "bulkReasonTooShort": "Powód musi mieć co najmniej 3 znaki.",
       "noEligibleRuns": "Żadne z zaznaczonych uruchomień nie kwalifikuje się do tej akcji.",
-      "bulkResumeFailedCount": "Nie udało się wznowić {{count}} uruchomień.",
       "bulkCancelFailedCount": "Nie udało się anulować {{count}} uruchomień.",
-      "bulkResumeSuccessCount": "Wznowiono {{count}} uruchomień.",
       "bulkCancelSuccessCount": "Anulowano {{count}} uruchomień.",
       "bulkSkippedIneligibleCount": "Pominięto {{count}} niekwalifikujących się uruchomień.",
       "bulkActionFailed": "Akcja zbiorcza nie powiodła się"
@@ -143,12 +136,9 @@
       "triggerLabel": "Wyzwalacz:"
     },
     "actions": {
-      "resume": "Wznów",
       "cancel": "Anuluj",
       "export": "Eksportuj",
-      "retry": "Ponów",
       "replay": "Powtórz",
-      "requeueEvent": "Ponownie zakolejkuj zdarzenie",
       "close": "Zamknij",
       "view": "Zobacz",
       "apply": "Zastosuj",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Powód",
-      "resumeTitle": "Wznów uruchomienie przepływu pracy",
-      "resumeMessage": "Wznowić teraz to uruchomienie przepływu pracy?",
-      "resumeReasonPlaceholder": "Proszę podać powód wznowienia",
       "cancelTitle": "Anuluj uruchomienie przepływu pracy",
       "cancelMessage": "Anulować to uruchomienie przepływu pracy? Operacji nie można cofnąć.",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
       "cancelConfirm": "Anuluj uruchomienie",
-      "retryTitle": "Ponów uruchomienie przepływu pracy",
-      "retryMessage": "Ponowić to uruchomienie od ostatniego kroku, który się nie powiódł?",
-      "retryReasonPlaceholder": "Proszę podać powód ponownej próby",
-      "retryConfirm": "Ponów uruchomienie",
       "replayTitle": "Powtórz uruchomienie przepływu pracy",
       "replayMessage": "Powtórz to uruchomienie z nowym ładunkiem.",
       "replayReasonPlaceholder": "Proszę podać powód powtórzenia",
       "payloadLabel": "Ładunek (JSON)",
-      "replayConfirm": "Powtórz uruchomienie",
-      "requeueTitle": "Ponownie zakolejkuj oczekiwanie na zdarzenie",
-      "requeueMessage": "Ponownie zakolejkować najnowsze oczekiwanie na zdarzenie dla tego uruchomienia?",
-      "requeueReasonPlaceholder": "Proszę podać powód ponownego kolejkowania",
-      "requeueConfirm": "Ponownie zakolejkuj oczekiwanie"
+      "replayConfirm": "Powtórz uruchomienie"
     },
     "toasts": {
       "loadRunDetailsFailed": "Nie udało się wczytać szczegółów uruchomienia",
@@ -295,19 +274,13 @@
       "logExportReady": "Eksport dziennika gotowy",
       "exportLogsFailed": "Nie udało się wyeksportować dzienników",
       "reasonTooShort": "Powód musi mieć co najmniej 3 znaki.",
-      "runResumed": "Uruchomienie wznowione",
-      "resumeRunFailed": "Nie udało się wznowić uruchomienia",
       "runCanceled": "Uruchomienie anulowane",
       "cancelRunFailed": "Nie udało się anulować uruchomienia",
       "runExportReady": "Eksport uruchomienia gotowy",
       "exportRunFailed": "Nie udało się wyeksportować uruchomienia",
-      "runRetryStarted": "Rozpoczęto ponowną próbę uruchomienia",
-      "retryRunFailed": "Nie udało się ponowić uruchomienia",
       "replayPayloadInvalid": "Ładunek powtórzenia musi być prawidłowym JSON.",
       "runReplayStarted": "Rozpoczęto powtórzenie uruchomienia",
       "replayRunFailed": "Nie udało się powtórzyć uruchomienia",
-      "eventWaitRequeued": "Oczekiwanie na zdarzenie ponownie zakolejkowane",
-      "requeueEventWaitFailed": "Nie udało się ponownie zakolejkować oczekiwania na zdarzenie",
       "auditExportReady": "Eksport audytu gotowy",
       "exportAuditLogsFailed": "Nie udało się wyeksportować dzienników audytu"
     }

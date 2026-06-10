@@ -57,7 +57,6 @@
       "runNow": "Esegui ora",
       "exportCsv": "Esporta CSV",
       "refresh": "Aggiorna",
-      "resumeSelected": "Riprendi selezionati ({{count}})",
       "cancelSelected": "Annulla selezionati ({{count}})",
       "clearSelection": "Cancella selezione",
       "details": "Dettagli",
@@ -85,14 +84,10 @@
       "empty": "Nessuna esecuzione di workflow corrisponde ai filtri attuali."
     },
     "bulk": {
-      "resumeTitle": "Riprendi esecuzioni selezionate",
-      "resumeMessage": "Riprendere {{count}} esecuzione/i selezionata/e?",
       "cancelTitle": "Annulla esecuzioni selezionate",
       "cancelMessage": "Annullare {{count}} esecuzione/i selezionata/e? L’operazione non è reversibile.",
       "reasonLabel": "Motivo",
-      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
       "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
-      "resumeConfirm": "Riprendi esecuzioni",
       "cancelConfirm": "Annulla esecuzioni"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Selezioni le esecuzioni per eseguire questa azione.",
       "bulkReasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
       "noEligibleRuns": "Nessuna delle esecuzioni selezionate è idonea per quell’azione.",
-      "bulkResumeFailedCount": "Impossibile riprendere {{count}} esecuzione/i.",
       "bulkCancelFailedCount": "Impossibile annullare {{count}} esecuzione/i.",
-      "bulkResumeSuccessCount": "Ripresa/e {{count}} esecuzione/i.",
       "bulkCancelSuccessCount": "Annullata/e {{count}} esecuzione/i.",
       "bulkSkippedIneligibleCount": "Saltata/e {{count}} esecuzione/i non idonea/e.",
       "bulkActionFailed": "Azione multipla non riuscita"
@@ -143,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Riprendi",
       "cancel": "Annulla",
       "export": "Esporta",
-      "retry": "Riprova",
       "replay": "Ripeti",
-      "requeueEvent": "Rimetti in coda evento",
       "close": "Chiudi",
       "view": "Visualizza",
       "apply": "Applica",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motivo",
-      "resumeTitle": "Riprendi esecuzione del workflow",
-      "resumeMessage": "Riprendere ora questa esecuzione del workflow?",
-      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
       "cancelTitle": "Annulla esecuzione del workflow",
       "cancelMessage": "Annullare questa esecuzione del workflow? L’operazione non è reversibile.",
       "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
       "cancelConfirm": "Annulla esecuzione",
-      "retryTitle": "Riprova esecuzione del workflow",
-      "retryMessage": "Riprovare questa esecuzione dall’ultimo passaggio fallito?",
-      "retryReasonPlaceholder": "Fornisca un motivo per il nuovo tentativo",
-      "retryConfirm": "Riprova esecuzione",
       "replayTitle": "Ripeti esecuzione del workflow",
       "replayMessage": "Ripeta questa esecuzione con un nuovo payload.",
       "replayReasonPlaceholder": "Fornisca un motivo per la ripetizione",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Ripeti esecuzione",
-      "requeueTitle": "Rimetti in coda attesa evento",
-      "requeueMessage": "Rimettere in coda l’attesa evento più recente per questa esecuzione?",
-      "requeueReasonPlaceholder": "Fornisca un motivo per il reinserimento in coda",
-      "requeueConfirm": "Rimetti in coda attesa"
+      "replayConfirm": "Ripeti esecuzione"
     },
     "toasts": {
       "loadRunDetailsFailed": "Impossibile caricare i dettagli dell’esecuzione",
@@ -295,19 +274,13 @@
       "logExportReady": "Esportazione log pronta",
       "exportLogsFailed": "Impossibile esportare i log",
       "reasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
-      "runResumed": "Esecuzione ripresa",
-      "resumeRunFailed": "Impossibile riprendere l’esecuzione",
       "runCanceled": "Esecuzione annullata",
       "cancelRunFailed": "Impossibile annullare l’esecuzione",
       "runExportReady": "Esportazione esecuzione pronta",
       "exportRunFailed": "Impossibile esportare l’esecuzione",
-      "runRetryStarted": "Nuovo tentativo di esecuzione avviato",
-      "retryRunFailed": "Impossibile riprovare l’esecuzione",
       "replayPayloadInvalid": "Il payload di ripetizione deve essere JSON valido.",
       "runReplayStarted": "Ripetizione dell’esecuzione avviata",
       "replayRunFailed": "Impossibile ripetere l’esecuzione",
-      "eventWaitRequeued": "Attesa evento rimessa in coda",
-      "requeueEventWaitFailed": "Impossibile reinserire in coda l’attesa evento",
       "auditExportReady": "Esportazione audit pronta",
       "exportAuditLogsFailed": "Impossibile esportare i log di audit"
     }

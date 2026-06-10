@@ -57,7 +57,6 @@
       "runNow": "Nu uitvoeren",
       "exportCsv": "CSV exporteren",
       "refresh": "Vernieuwen",
-      "resumeSelected": "Selectie hervatten ({{count}})",
       "cancelSelected": "Selectie annuleren ({{count}})",
       "clearSelection": "Selectie wissen",
       "details": "Details",
@@ -85,14 +84,10 @@
       "empty": "Geen uitvoeringen voldoen aan de huidige filters."
     },
     "bulk": {
-      "resumeTitle": "Geselecteerde uitvoeringen hervatten",
-      "resumeMessage": "{{count}} geselecteerde uitvoering(en) hervatten?",
       "cancelTitle": "Geselecteerde uitvoeringen annuleren",
       "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
       "reasonLabel": "Reden",
-      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
-      "resumeConfirm": "Uitvoeringen hervatten",
       "cancelConfirm": "Uitvoeringen annuleren"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Selecteer uitvoeringen om deze actie uit te voeren.",
       "bulkReasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
       "noEligibleRuns": "Geen van de geselecteerde uitvoeringen komt in aanmerking voor die actie.",
-      "bulkResumeFailedCount": "Kan {{count}} uitvoering(en) niet hervatten.",
       "bulkCancelFailedCount": "Kan {{count}} uitvoering(en) niet annuleren.",
-      "bulkResumeSuccessCount": "{{count}} uitvoering(en) hervat.",
       "bulkCancelSuccessCount": "{{count}} uitvoering(en) geannuleerd.",
       "bulkSkippedIneligibleCount": "{{count}} niet-geschikte uitvoering(en) overgeslagen.",
       "bulkActionFailed": "Bulkactie mislukt"
@@ -143,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Hervatten",
       "cancel": "Annuleren",
       "export": "Exporteren",
-      "retry": "Opnieuw proberen",
       "replay": "Opnieuw afspelen",
-      "requeueEvent": "Gebeurtenis opnieuw in de wachtrij plaatsen",
       "close": "Sluiten",
       "view": "Bekijken",
       "apply": "Toepassen",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Reden",
-      "resumeTitle": "Workflow-uitvoering hervatten",
-      "resumeMessage": "Deze uitvoering nu hervatten?",
-      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
       "cancelTitle": "Workflowuitvoering annuleren",
       "cancelMessage": "Deze uitvoering annuleren? Dit kan niet ongedaan worden gemaakt.",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
       "cancelConfirm": "Uitvoering annuleren",
-      "retryTitle": "Workflow-uitvoering opnieuw proberen",
-      "retryMessage": "Deze uitvoering hervatten vanaf de laatste mislukte stap?",
-      "retryReasonPlaceholder": "Geef een reden voor opnieuw proberen",
-      "retryConfirm": "Uitvoering opnieuw proberen",
       "replayTitle": "Workflowuitvoering opnieuw afspelen",
       "replayMessage": "Deze uitvoering herhalen met een nieuwe payload.",
       "replayReasonPlaceholder": "Geef een reden voor herhaling",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Uitvoering herhalen",
-      "requeueTitle": "Gebeurteniswacht opnieuw in de wachtrij plaatsen",
-      "requeueMessage": "De meest recente gebeurteniswacht voor deze uitvoering opnieuw in de wachtrij plaatsen?",
-      "requeueReasonPlaceholder": "Geef een reden voor opnieuw in de wachtrij plaatsen",
-      "requeueConfirm": "Wacht opnieuw in de wachtrij plaatsen"
+      "replayConfirm": "Uitvoering herhalen"
     },
     "toasts": {
       "loadRunDetailsFailed": "Kan uitvoeringsdetails niet laden",
@@ -295,19 +274,13 @@
       "logExportReady": "Logexport gereed",
       "exportLogsFailed": "Kan logs niet exporteren",
       "reasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
-      "runResumed": "Uitvoering hervat",
-      "resumeRunFailed": "Kan uitvoering niet hervatten",
       "runCanceled": "Uitvoering geannuleerd",
       "cancelRunFailed": "Kan uitvoering niet annuleren",
       "runExportReady": "Uitvoeringsexport gereed",
       "exportRunFailed": "Kan uitvoering niet exporteren",
-      "runRetryStarted": "Nieuwe poging gestart",
-      "retryRunFailed": "Kan uitvoering niet opnieuw proberen",
       "replayPayloadInvalid": "Herhalingspayload moet geldige JSON zijn.",
       "runReplayStarted": "Herhaling van uitvoering gestart",
       "replayRunFailed": "Kan uitvoering niet herhalen",
-      "eventWaitRequeued": "Gebeurteniswacht opnieuw in de wachtrij geplaatst",
-      "requeueEventWaitFailed": "Kan gebeurteniswacht niet opnieuw in de wachtrij plaatsen",
       "auditExportReady": "Auditexport gereed",
       "exportAuditLogsFailed": "Kan auditlogs niet exporteren"
     }
