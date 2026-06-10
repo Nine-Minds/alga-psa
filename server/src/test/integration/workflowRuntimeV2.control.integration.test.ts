@@ -244,7 +244,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
     const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
     expect(result.status).toBe('resumed');
 
-    const eventsResult = await listWorkflowEventsAction();
+    const eventsResult = await listWorkflowEventsAction({});
     expect(eventsResult.events.some((event) => event.event_name === 'PING')).toBe(true);
     expect(signalWorkflowRuntimeV2EventMock).toHaveBeenCalledTimes(1);
     expect(signalWorkflowRuntimeV2EventMock).toHaveBeenCalledWith(
@@ -255,7 +255,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
   it('Submit workflow event server action with no matching wait still records event for audit. Mocks: non-target dependencies.', async () => {
     const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'missing', payload: {} });
     expect(result.status).toBe('no_wait');
-    const eventsResult = await listWorkflowEventsAction();
+    const eventsResult = await listWorkflowEventsAction({});
     expect(eventsResult.events.some((event) => event.event_name === 'PING')).toBe(true);
     expect(signalWorkflowRuntimeV2EventMock).not.toHaveBeenCalled();
   });
@@ -497,7 +497,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
 
   it('Workflow runtime event list server action returns recent events (API delegates). Mocks: non-target dependencies.', async () => {
     await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
-    const eventsResult = await listWorkflowEventsAction();
+    const eventsResult = await listWorkflowEventsAction({});
     expect(eventsResult.events.length).toBeGreaterThan(0);
   });
 
