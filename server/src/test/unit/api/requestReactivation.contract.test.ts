@@ -40,9 +40,12 @@ describe('request-reactivation route contract', () => {
   });
 
   it('T071: route path resolves through @enterprise with a CE no-op stub', () => {
-    expect(sharedRoute.trim()).toBe(
-      "export { dynamic, POST, runtime } from '@enterprise/app/api/billing/request-reactivation/route';",
-    );
+    // The shim must export the handler DIRECTLY (delegating to EE), not re-export it:
+    // Next's webpack production build doesn't register re-exported route handlers.
+    expect(sharedRoute).toContain("from '@enterprise/app/api/billing/request-reactivation/route'");
+    expect(sharedRoute).toMatch(/export async function POST/);
+    expect(sharedRoute).toContain("export const runtime = 'nodejs'");
+    expect(sharedRoute).toContain("export const dynamic = 'force-dynamic'");
     expect(ceRoute).not.toContain('pending_tenant_deletions');
     expect(ceRoute).toContain('return NextResponse.json({ success: true });');
   });

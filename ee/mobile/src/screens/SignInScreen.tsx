@@ -4,7 +4,8 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { getAppConfig } from "../config/appConfig";
+import { isDefaultHost, isHostLocked } from "../config/appConfig";
+import { useAuth } from "../auth/AuthContext";
 import { logger } from "../logging/logger";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -35,7 +36,7 @@ export function SignInScreen() {
   const { t } = useTranslation("auth");
   const theme = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const config = useMemo(() => getAppConfig(), []);
+  const { baseUrl } = useAuth();
   const [status, setStatus] = useState<"idle" | "opening" | "apple">("idle");
   const [error, setError] = useState<string | null>(null);
   const [errorTone, setErrorTone] = useState<"danger" | "info">("danger");
@@ -55,7 +56,6 @@ export function SignInScreen() {
     };
   }, []);
 
-  const baseUrl = config.ok ? config.baseUrl : null;
   const baseHost = useMemo(() => {
     if (!baseUrl) return null;
     try {
@@ -64,6 +64,8 @@ export function SignInScreen() {
       return null;
     }
   }, [baseUrl]);
+
+  const mobileEnabled = capabilities?.enabled !== false;
 
   const hostAllowed = useMemo(() => {
     const allowlist = capabilities?.hostedDomainAllowlist;
@@ -249,7 +251,8 @@ export function SignInScreen() {
           disabled={
             status !== "idle" ||
             !baseUrl ||
-            !hostAllowed
+            !hostAllowed ||
+            !mobileEnabled
           }
           accessibilityLabel={t("signIn.cta")}
           accessibilityHint={t("signIn.accessibilityHint")}
@@ -258,7 +261,7 @@ export function SignInScreen() {
         </PrimaryButton>
       </View>
 
-      {Platform.OS === "ios" && appleAvailable ? (
+      {Platform.OS === "ios" && appleAvailable && isDefaultHost(baseUrl) ? (
         <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -293,7 +296,7 @@ export function SignInScreen() {
         </View>
       ) : null}
 
-      {Platform.OS === "ios" ? (
+      {Platform.OS === "ios" && isDefaultHost(baseUrl) ? (
         <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>
           <Text
             onPress={() => navigation.navigate("CreateWorkspace")}
@@ -323,6 +326,23 @@ export function SignInScreen() {
         </Text>
       ) : null}
 
+      {!isHostLocked() ? (
+        <View style={{ alignItems: "center" }}>
+          <Text
+            onPress={() => navigation.navigate("ServerEntry")}
+            accessibilityRole="button"
+            accessibilityLabel={t("signIn.changeServer", "Change server")}
+            style={{
+              ...theme.typography.body,
+              color: theme.colors.secondary,
+              paddingVertical: theme.spacing.sm,
+            }}
+          >
+            {t("signIn.changeServer", "Change server")}
+          </Text>
+        </View>
+      ) : null}
+
       {error ? (
         <Text
           style={{
@@ -350,6 +370,10 @@ export function SignInScreen() {
             {t("common:retry")}
           </PrimaryButton>
         </View>
+      ) : capabilities && !mobileEnabled ? (
+        <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.danger }}>
+          {t("signIn.errors.mobileNotAvailable")}
+        </Text>
       ) : capabilities && !hostAllowed ? (
         <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.danger }}>
           {t("signIn.errors.domainNotAllowed")}
