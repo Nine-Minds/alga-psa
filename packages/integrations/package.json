@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
