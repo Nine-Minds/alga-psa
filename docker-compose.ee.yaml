@@ -236,7 +236,10 @@ services:
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
-      WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING: ${WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING:-false}
+      APPLICATION_URL: ${APPLICATION_URL:-http://localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-local-nextauth-secret}
+      ALGA_AUTH_KEY: ${ALGA_AUTH_KEY:-local-alga-auth-key}
       # WorkerServer listens on PORT (defaults to 4000)
       PORT: "4000"
     ports:
@@ -269,6 +272,8 @@ services:
       redis:
         condition: service_started
       server:
+        condition: service_started
+      temporal-dev:
         condition: service_started
     # Enable scaling of worker instances
     deploy:
@@ -408,6 +413,113 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: pgbouncer
+
+  temporal-dev:
+    image: temporalio/auto-setup:1.24.2
+    ports:
+      - "${EXPOSE_TEMPORAL_PORT:-7233}:7233"
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_SEEDS=postgres
+      - POSTGRES_USER=postgres
+    entrypoint: ["/bin/sh"]
+    command:
+      - -c
+      - |
+        export POSTGRES_PWD=$(cat /run/secrets/postgres_password)
+        exec /etc/temporal/entrypoint.sh autosetup
+    secrets:
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_started
+    networks:
+      - app-network
+
+  temporal-worker:
+    image: temporal-worker-dev
+    build:
+      context: .
+      dockerfile: ee/temporal-workflows/Dockerfile
+      target: production
+    working_dir: /app/ee/temporal-workflows
+    entrypoint: ["docker-entrypoint.sh"]
+    command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
+    environment:
+      - LOG_LEVEL=INFO
+      - SECRET_READ_CHAIN=filesystem,env
+      - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
+      - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
+      - DB_HOST=${DB_HOST:-pgbouncer}
+      - DB_PORT=${DB_PORT:-6432}
+      - DB_NAME_SERVER=${DB_NAME_SERVER:-server}
+      - DB_USER_SERVER=${DB_USER_SERVER:-app_user}
+      - DB_USER_ADMIN=${DB_USER_ADMIN:-postgres}
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal-dev:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
+      - TEMPORAL_TASK_QUEUE=${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      # Authored runtime queue ownership belongs to workflow-worker.
+      - TEMPORAL_TASK_QUEUES=tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
+      - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
+      # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
+      - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}
+      # Smoke-only: partitions the self-tenant /users response into N synthetic managed
+      # tenants so cross-client bleed (Flow 2) can be exercised without CSP/GDAP. Format:
+      # comma-separated `id|primary_domain|display_name` entries.
+      - ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS=${ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS:-}
+      # Smoke-only: forces accountEnabled=false for listed emails/UPNs so the
+      # offboard → deactivate path (Flow 5) can be exercised without disabling
+      # real users in Entra. Format: comma-separated email/UPN list.
+      - ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS=${ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS:-}
+      # Smoke-only: injects fake users into the /users response pinned to a
+      # specific synthetic tenant bucket so Flow 7 (ambiguous match) can be
+      # exercised without adding real users to Entra. Format: comma-separated
+      # `objectId|upn|displayName|bucketIndex` entries.
+      - ENTRA_DIRECT_SMOKE_EXTRA_USERS=${ENTRA_DIRECT_SMOKE_EXTRA_USERS:-}
+    volumes:
+      - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
+        read_only: true
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/DB_PASSWORD_ADMIN
+        read_only: true
+    secrets:
+      - db_password_server
+      - postgres_password
+      - alga_auth_key
+      - nextauth_secret
+      - redis_password
+      - ninjaone_client_id
+      - ninjaone_client_secret
+    depends_on:
+      temporal-dev:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      - TEMPORAL_ADDRESS=temporal-dev:7233
+    ports:
+      - "${EXPOSE_TEMPORAL_UI_PORT:-8088}:8080"
+    depends_on:
+      temporal-dev:
+        condition: service_started
+    networks:
+      - app-network
 
 volumes:
   ngrok-data:
