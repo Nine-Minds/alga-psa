@@ -14,7 +14,13 @@ vi.mock('next/dynamic', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback?: string | Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    },
   }),
 }));
 

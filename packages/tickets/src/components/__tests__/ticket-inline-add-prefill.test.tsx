@@ -68,6 +68,24 @@ vi.mock('../../actions/clientLookupActions', () => ({
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
 }));
 
+// Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
+// content (the QuickAddContact/QuickAddClient mocks render as siblings), which
+// breaks role-based queries that work against the real portalled dialogs.
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children, title, footer }: any) =>
+    isOpen ? (
+      <div role="dialog" data-testid="quick-add-dialog-root">
+        {title ? <h2>{title}</h2> : null}
+        {children}
+        {footer}
+      </div>
+    ) : null,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+  DialogFooter: ({ children }: any) => <div>{children}</div>,
+}));
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
   ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, onAddNew, clients }: any) {
@@ -257,6 +275,22 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   }
 }));
 
+// QuickAddTicket now renders UserAndTeamPicker/MultiUserAndTeamPicker for assignment.
+vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
+  __esModule: true,
+  default: function UserAndTeamPickerMock({ onValueChange }: any) {
+    useEffect(() => {
+      onValueChange('user-1');
+    }, []);
+    return <div data-testid="user-picker" />;
+  }
+}));
+
+vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
+  __esModule: true,
+  default: () => <div data-testid="multi-user-picker" />,
+}));
+
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   __esModule: true,
   BoardPicker: ({ onSelect }: any) => {
@@ -437,7 +471,13 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+    t: (_key: string, fallback?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        options = fallback;
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+
       if (!fallback) {
         return _key;
       }

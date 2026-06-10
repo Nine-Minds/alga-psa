@@ -10,6 +10,10 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -138,9 +142,17 @@ function buildTrx(params: {
     }
 
     if (table === 'ticket_resources') {
-      return {
-        where: vi.fn().mockResolvedValue(params.additionalAgents ?? []),
+      // Chainable + awaitable builder: supports the legacy `await trx(...).where(...)`
+      // shape and the newer `.where().whereIn().whereNotNull().select()` chain.
+      const rows = params.additionalAgents ?? [];
+      const builder: any = {
+        where: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
+        whereNotNull: vi.fn(() => builder),
+        select: vi.fn(async () => rows),
+        then: (resolve: any, reject: any) => Promise.resolve(rows).then(resolve, reject),
       };
+      return builder;
     }
 
     if (table === 'users') {

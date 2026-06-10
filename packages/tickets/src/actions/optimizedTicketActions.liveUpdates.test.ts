@@ -220,6 +220,12 @@ function buildTrx(params: {
       };
     }
 
+    if (table === 'ticket_audit_logs') {
+      return {
+        insert: vi.fn(async () => undefined),
+      };
+    }
+
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
 }

@@ -15,7 +15,13 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog-root">{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: any) =>
+    isOpen ? (
+      <div data-testid="dialog-root">
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));

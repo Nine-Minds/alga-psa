@@ -10,6 +10,9 @@ const revalidatePathMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
+  withOptionalAuth: (fn: any) => fn,
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/db', () => ({
