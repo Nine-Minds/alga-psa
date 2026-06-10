@@ -185,7 +185,6 @@ async function runScheduledWorkflow(
         fireKey
       },
       triggerFireKey: fireKey,
-      execute: true,
       executionKey: fireKey
     });
 

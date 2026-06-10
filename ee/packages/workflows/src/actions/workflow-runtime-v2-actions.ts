@@ -3077,8 +3077,7 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  const hasExplicitReplayPayload = parsed.payload && Object.keys(parsed.payload).length > 0;
-  const replayPayload = hasExplicitReplayPayload
+  const replayPayload = parsed.payload !== undefined
     ? parsed.payload
     : (isObjectRecord(run.input_json) ? run.input_json : {});
   const launched = await launchPublishedWorkflowRun(knex, {
