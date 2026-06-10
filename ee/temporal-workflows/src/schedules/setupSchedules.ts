@@ -4,6 +4,7 @@ import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { ADD_ONS } from '@alga-psa/types';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
+  applianceCheckInWorkflow,
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   entraAllTenantsSyncWorkflow,
@@ -289,6 +290,39 @@ export async function setupSchedules() {
         catchupWindow: '1m',
       },
     });
+
+    // Appliance connected-license check-in (runs daily). Renews this install's
+    // connected license token before its ~31-day exp by calling the
+    // alga-license /check-in endpoint, and propagates soft-revocation. No-ops on
+    // SaaS/cloud (no license_state row) and on non-connected installs
+    // (essentials/airgap/CE/trial). Mirrors the premium-trial daily maintenance.
+    const applianceCheckInScheduleId = 'appliance-license-check-in-schedule';
+    await upsertSchedule(client, applianceCheckInScheduleId, {
+      spec: {
+        intervals: [{ every: '24h' }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: applianceCheckInWorkflow,
+        args: [],
+        taskQueue: 'tenant-workflows',
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    // Trigger one immediate check-in at boot so a box that was powered off (its
+    // token aging toward expiry) renews promptly rather than waiting up to 24h.
+    // Best-effort — a failed trigger must never block worker startup.
+    try {
+      await client.schedule.getHandle(applianceCheckInScheduleId).trigger();
+      logger.info('Triggered immediate appliance license check-in at boot');
+    } catch (error: any) {
+      logger.warn(`Failed to trigger boot-time appliance check-in: ${error?.message || 'unknown error'}`);
+    }
 
     // Entra recurring all-tenant sync schedules are created per tenant so each tenant
     // can honor its own configured sync cadence.

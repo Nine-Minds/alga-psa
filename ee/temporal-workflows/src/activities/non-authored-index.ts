@@ -22,6 +22,7 @@ export * from './tenant-deletion-activities';
 export * from './tenant-export-activities';
 export * from './sla-activities';
 export * from './premium-trial-activities';
+export * from './appliance-check-in-activities';
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,
