@@ -26,6 +26,7 @@ import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { DatePickerField } from "../ui/components/DatePickerField";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
+import { withClientFilter } from "./ticketsClientFilter";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -75,9 +76,12 @@ function dateOnlyToIsoUtc(dateOnly: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function TicketsListScreen({ navigation }: Props) {
+export function TicketsListScreen({ navigation, route }: Props) {
   const { t } = useTranslation("tickets");
+  const { t: tClients } = useTranslation("clients");
   const theme = useTheme();
+  const clientFilterId = route.params?.clientId;
+  const clientFilterName = route.params?.clientName;
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
@@ -192,8 +196,12 @@ export function TicketsListScreen({ navigation }: Props) {
       out.updated_from = new Date(Date.now() - filters.updatedSinceDays * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    return out;
-  }, [filters, session]);
+    return withClientFilter(out, clientFilterId);
+  }, [clientFilterId, filters, session]);
+
+  const clearClientFilter = useCallback(() => {
+    navigation.setParams({ clientId: undefined, clientName: undefined });
+  }, [navigation]);
 
   const listCacheKey = useMemo(() => {
     if (!session) return null;
@@ -401,6 +409,15 @@ export function TicketsListScreen({ navigation }: Props) {
     [onPressTicket],
   );
 
+  const clientFilterChip = clientFilterId ? (
+    <ClientFilterChip
+      theme={theme}
+      label={tClients("ticketsFilter.chip", { name: clientFilterName ?? clientFilterId })}
+      clearLabel={tClients("ticketsFilter.clear")}
+      onClear={clearClientFilter}
+    />
+  ) : null;
+
   const onEndReached = useCallback(async () => {
     if (!client || !session) return;
     if (initialLoading || refreshing || loadingMoreRef.current) return;
@@ -453,6 +470,7 @@ export function TicketsListScreen({ navigation }: Props) {
   }
 
   const hasActiveFilters =
+    Boolean(clientFilterId) ||
     filters.status !== DEFAULT_FILTERS.status ||
     filters.statusIds.length > 0 ||
     filters.assignee !== DEFAULT_FILTERS.assignee ||
@@ -528,6 +546,7 @@ export function TicketsListScreen({ navigation }: Props) {
               <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
             </Pressable>
           </View>
+          {clientFilterChip}
           <FilterChipBar
             theme={theme}
             filters={filters}
@@ -632,6 +651,7 @@ export function TicketsListScreen({ navigation }: Props) {
           <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
         </Pressable>
       </View>
+      {clientFilterChip}
       <FilterChipBar
         theme={theme}
         filters={filters}
@@ -733,6 +753,43 @@ function FilterChipBar({
       <View style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
         <QuickChip theme={theme} label={t("filters.clearAll")} onPress={onClearAll} />
       </View>
+    </View>
+  );
+}
+
+function ClientFilterChip({
+  theme,
+  label,
+  clearLabel,
+  onClear,
+}: {
+  theme: Theme;
+  label: string;
+  clearLabel: string;
+  onClear: () => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+      <Pressable
+        onPress={onClear}
+        accessibilityRole="button"
+        accessibilityLabel={clearLabel}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 6,
+          borderRadius: theme.borderRadius.full,
+          borderWidth: 1,
+          borderColor: theme.colors.primary,
+          backgroundColor: theme.colors.primary,
+          opacity: pressed ? 0.95 : 1,
+        })}
+      >
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textInverse, fontWeight: "600" }}>{label}</Text>
+        <View style={{ width: theme.spacing.xs }} />
+        <Feather name="x" size={14} color={theme.colors.textInverse} />
+      </Pressable>
     </View>
   );
 }

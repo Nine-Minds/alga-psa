@@ -1,8 +1,37 @@
 {
   "title": "Clients",
-  "comingSoon": "Your clients will show up here soon.",
+  "list": {
+    "searchPlaceholder": "Search clients",
+    "searchAccessibility": "Search clients",
+    "loadingClients": "Loading clients…",
+    "unableToLoad": "Unable to load clients",
+    "unableToLoadDescription": "Something went wrong while loading clients. Pull to refresh or retry.",
+    "noClients": "No clients",
+    "noClientsDescription": "No active clients were found for your workspace.",
+    "noResults": "No matching clients",
+    "noResultsDescription": "Try a different search.",
+    "noAccess": "No access to clients",
+    "noAccessDescription": "Your account does not have permission to view clients.",
+    "clientAccessibility": "Client {{name}}"
+  },
   "detail": {
     "title": "Client",
-    "comingSoon": "Client details will show up here soon."
+    "loading": "Loading client…",
+    "unableToLoad": "Unable to load client",
+    "unableToLoadDescription": "Something went wrong while loading this client. Pull to refresh or retry.",
+    "inactive": "Inactive",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "address": "Address",
+    "accountManager": "Account manager",
+    "viewTickets": "View tickets",
+    "locations": "Locations",
+    "locationFallback": "Location",
+    "defaultLocation": "Default"
+  },
+  "ticketsFilter": {
+    "chip": "Client: {{name}}",
+    "clear": "Clear client filter"
   }
 }
