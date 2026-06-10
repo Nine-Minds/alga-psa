@@ -430,8 +430,36 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
     contractId: arrearsLine.contractId,
     clientContractId: arrearsLine.clientContractId
   });
-  await syncContractLineRecurringPeriods(arrearsLine.contractLineId);
-  await syncContractLineRecurringPeriods(advanceLine.contractLineId);
+
+  // The production sync only materializes 180 days ahead of the contract start
+  // (later windows are replenished after earlier cycles are invoiced), so an
+  // annual fixture that invoices the second year must materialize its ledger
+  // explicitly with a horizon long enough to cover the 2025 window.
+  for (const line of [
+    { contractLineId: arrearsLine.contractLineId, duePosition: 'arrears' as const, runKey: 'integration-annual-parity-arrears' },
+    { contractLineId: advanceLine.contractLineId, duePosition: 'advance' as const, runKey: 'integration-annual-parity-advance' },
+  ]) {
+    const plan = materializeClientCadenceServicePeriods({
+      asOf: `${previousPeriodStart}T00:00:00Z`,
+      materializedAt: '2026-03-18T12:00:00.000Z',
+      billingCycle: 'annually',
+      sourceObligation: {
+        tenant: tenantId,
+        obligationId: line.contractLineId,
+        obligationType: 'client_contract_line',
+        chargeFamily: 'fixed',
+      },
+      duePosition: line.duePosition,
+      sourceRuleVersion: `${line.contractLineId}:v1`,
+      sourceRunKey: line.runKey,
+      targetHorizonDays: 800,
+      replenishmentThresholdDays: 45,
+      recordIdFactory: () => uuidv4(),
+    });
+    for (const record of plan.records) {
+      await upsertRecurringServicePeriodRecord(record);
+    }
+  }
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -659,6 +687,7 @@ it('T173: DB-backed recurring product invoices continue to generate correctly un
     quantity: 2,
     isLicense: false
   });
+  await syncContractLineRecurringPeriods(productLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -700,6 +729,7 @@ it('T174: DB-backed recurring license invoices continue to generate correctly un
     quantity: 3,
     isLicense: true
   });
+  await syncContractLineRecurringPeriods(licenseLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -752,6 +782,7 @@ it('F221: DB-backed recurring invoice generation succeeds while dropped recurren
     billingTiming: 'advance',
     billingFrequency: 'monthly',
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -817,6 +848,10 @@ it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment
       serviceId: line.serviceId,
       contractLineId: line.contractLineId,
     });
+  }
+
+  for (const line of createdLines) {
+    await syncContractLineRecurringPeriods(line.contractLineId);
   }
 
   const invoice = await generateInvoice(cycleId);
@@ -927,6 +962,7 @@ it('T167: DB-backed recurring outputs still persist canonical partial service pe
       enable_proration: true,
       updated_at: db.fn.now()
     });
+  await syncContractLineRecurringPeriods(line.contractLineId);
 
   const invoice = await generateInvoice(cycleId);
   expect(invoice).toBeTruthy();
@@ -967,6 +1003,7 @@ it('T140/T175/T252: DB-backed monthly contract-cadence billing persists contract
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const selectorInput = buildContractCadenceDueSelectionInput({
     clientId: contextLike.clientId,
@@ -1673,6 +1710,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  await syncContractLineRecurringPeriods(usageLine.contractLineId);
 
   const februaryUsage = await createUsageRecordForContractLine({
     clientId: contextLike.clientId,
@@ -1746,6 +1784,7 @@ it('T072: usage recurring charges with no usage inside the service period produc
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  await syncContractLineRecurringPeriods(usageLine.contractLineId);
 
   await createUsageRecordForContractLine({
     clientId: contextLike.clientId,
@@ -1821,6 +1860,10 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     contractId: fixedLine.contractId,
     clientContractId: fixedLine.clientContractId,
   });
+
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
+  await syncContractLineRecurringPeriods(hourlyLine.contractLineId);
+  await syncContractLineRecurringPeriods(usageLine.contractLineId);
 
   await createApprovedTimeEntryForContractLine({
     clientId: contextLike.clientId,
@@ -2977,7 +3020,7 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     nextPeriodStart: '2025-02-01',
   });
 
-  await createFixedContractLine(contextLike, {
+  const happyPathLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client Happy Path Service',
     planName: 'Client Happy Path Plan',
     baseRateCents: 19800,
@@ -2986,6 +3029,7 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
+  await syncContractLineRecurringPeriods(happyPathLine.contractLineId);
 
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1,
@@ -3453,6 +3497,7 @@ it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice gener
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const selectorInput = buildContractCadenceDueSelectionInput({
     clientId: contextLike.clientId,
@@ -3524,6 +3569,7 @@ it('T277: DB-backed annual contract-cadence scheduling, invoice generation, and 
     billingFrequency: 'annually',
     cadenceOwner: 'contract',
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const selectorInput = buildContractCadenceDueSelectionInput({
     clientId: contextLike.clientId,
@@ -3609,12 +3655,14 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
     billingCycle: 'monthly',
     sourceObligation: {
       tenant: tenantId,
-      obligationId: clientCadenceLine.clientContractLineId,
+      // The engine resolves obligations by joining contract_lines on
+      // obligation_id, so the live contract_line_id is the canonical id.
+      obligationId: clientCadenceLine.contractLineId,
       obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
-    sourceRuleVersion: `${clientCadenceLine.clientContractLineId}:v1`,
+    sourceRuleVersion: `${clientCadenceLine.contractLineId}:v1`,
     sourceRunKey: 'mixed-cadence-client',
     targetHorizonDays: 32,
     replenishmentThresholdDays: 15,
@@ -3628,12 +3676,14 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
     anchorDate: `${currentPeriodStart}T00:00:00Z`,
     sourceObligation: {
       tenant: tenantId,
-      obligationId: contractCadenceLine.clientContractLineId,
-      obligationType: 'client_contract_line',
+      // Contract-cadence rows are persisted with the live contract_line_id and
+      // the 'contract_line' obligation type that the invoice engine queries.
+      obligationId: contractCadenceLine.contractLineId,
+      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
-    sourceRuleVersion: `${contractCadenceLine.clientContractLineId}:v1`,
+    sourceRuleVersion: `${contractCadenceLine.contractLineId}:v1`,
     sourceRunKey: 'mixed-cadence-contract',
     targetHorizonDays: 32,
     replenishmentThresholdDays: 15,
@@ -3688,6 +3738,7 @@ it('T264: generateInvoice to persistence to getFullInvoiceById round-trips canon
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
+  await syncContractLineRecurringPeriods(fixedLine.contractLineId);
 
   const generatedInvoice = await generateInvoice(cycleId);
   expect(generatedInvoice).toBeTruthy();
@@ -4882,6 +4933,7 @@ async function createHourlyContractLine(
     unit_of_measure: 'hour',
     tax_region: 'US-NY'
   });
+  await ensureUsdServicePrice(serviceId, options.baseRateCents);
 
   const result = await createFixedPlanAssignment(contextLike as any, serviceId, {
     planName: options.planName,
@@ -4924,6 +4976,7 @@ async function createUsageContractLine(
     unit_of_measure: 'unit',
     tax_region: 'US-NY'
   });
+  await ensureUsdServicePrice(serviceId, options.baseRateCents);
 
   const result = await createFixedPlanAssignment(contextLike as any, serviceId, {
     planName: options.planName,
@@ -5071,7 +5124,7 @@ async function convertContractLineToMeteredType(
 async function createRecurringCatalogLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: RecurringCatalogLineOptions
-): Promise<{ serviceId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'fixed',
@@ -5118,10 +5171,35 @@ async function createRecurringCatalogLine(
 
   return {
     serviceId,
+    contractLineId: result.contractLineId,
     clientContractLineId: result.clientContractLineId,
     contractId: result.contractId,
     clientContractId: result.clientContractId
   };
+}
+
+/**
+ * The post-cutover billing engine only prices time entries and usage records
+ * from currency-tagged service_prices rows (or explicit custom rates); the
+ * legacy currency-untagged service_catalog.default_rate is intentionally not
+ * used (see billingEngine calculateTimeBasedCharges/calculateUsageBasedCharges).
+ * Mirror what production catalog management does and register a USD price.
+ */
+async function ensureUsdServicePrice(serviceId: string, rateCents: number): Promise<void> {
+  await db('service_prices')
+    .insert({
+      tenant: tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: rateCents,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    })
+    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .merge({
+      rate: rateCents,
+      updated_at: db.fn.now()
+    });
 }
 
 async function getInvoiceDetailRows(invoiceId: string) {
