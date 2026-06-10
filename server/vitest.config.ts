@@ -53,6 +53,19 @@ export default defineConfig({
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
     },
+    // Must live under test.server (a top-level `server` key is Vite dev-server
+    // config and is silently ignored). Inlining next-auth/next is what lets the
+    // next/server stub alias below apply to next-auth's internals.
+    server: {
+      deps: {
+        inline: [
+          'next-auth',
+          '@auth/core',
+          'next',
+          '@tiptap/react',
+        ],
+      },
+    },
   },
   resolve: {
     alias: [
@@ -207,14 +220,6 @@ export default defineConfig({
     ],
   },
   server: {
-    deps: {
-      inline: [
-        'next-auth',
-        '@auth/core',
-        'next',
-        '@tiptap/react',
-      ],
-    },
     fs: {
       allow: [path.resolve(__dirname, '..')],
     },
