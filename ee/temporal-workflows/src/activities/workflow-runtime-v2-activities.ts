@@ -33,21 +33,6 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
-export async function executeWorkflowRuntimeV2Run(input: {
-  runId: string;
-  executionKey: string;
-}): Promise<void> {
-  return retryOnAdminReadOnly(
-    async () => {
-      const knex = await getAdminConnection();
-      initializeWorkflowRuntimeV2();
-      const runtime = new WorkflowRuntimeV2();
-      await runtime.executeRun(knex, input.runId, `temporal:${input.executionKey}`);
-    },
-    { logLabel: 'executeWorkflowRuntimeV2Run' }
-  );
-}
-
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
   runId: string;
   workflowId: string;

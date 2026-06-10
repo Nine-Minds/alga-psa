@@ -11,7 +11,6 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { withAuth, hasPermission, getCurrentUser } from '@alga-psa/auth';
 import {
-  WorkflowRuntimeV2,
   getActionRegistryV2,
   getNodeTypeRegistry,
   getSchemaRegistry,
@@ -1235,34 +1234,6 @@ const requireRunTenantAccess = async (
     }
   }
   return run;
-};
-
-const TEMPORAL_UNSUPPORTED_ACTION_CODE = 'WORKFLOW_TEMPORAL_ACTION_UNSUPPORTED';
-
-const throwUnsupportedTemporalRunControlAction = (
-  runId: string,
-  action: string
-): never => {
-  return throwHttpError(
-    409,
-    `Unsupported action "${action}" for Temporal-backed workflow run`,
-    {
-      code: TEMPORAL_UNSUPPORTED_ACTION_CODE,
-      action,
-      engine: 'temporal',
-      runId,
-      hint: 'Workflow Runtime V2 Temporal runs are controlled by Temporal; legacy DB runtime control actions are disabled during hard cutover.'
-    }
-  );
-};
-
-const assertLegacyRunControlSupported = (
-  run: { run_id: string; engine?: string | null },
-  action: string
-) => {
-  if (run.engine === 'temporal') {
-    throwUnsupportedTemporalRunControlAction(run.run_id, action);
-  }
 };
 
 const requireWorkflowPermission = async (
@@ -2944,26 +2915,24 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   await requireWorkflowPermission(user, 'admin', knex);
 
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  if (runRecord.engine === 'temporal') {
-    try {
-      await cancelWorkflowRuntimeV2TemporalRun({
+  try {
+    await cancelWorkflowRuntimeV2TemporalRun({
+      runId: parsed.runId,
+    });
+  } catch (error) {
+    return throwHttpError(
+      409,
+      'Failed to cancel Temporal-backed workflow run',
+      {
+        code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
+        action: 'cancel',
+        engine: 'temporal',
         runId: parsed.runId,
-      });
-    } catch (error) {
-      return throwHttpError(
-        409,
-        'Failed to cancel Temporal-backed workflow run',
-        {
-          code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
-          action: 'cancel',
-          engine: 'temporal',
-          runId: parsed.runId,
-          reason: parsed.reason ?? null,
-          hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      );
-    }
+        reason: parsed.reason ?? null,
+        hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
+        error: error instanceof Error ? error.message : String(error)
+      }
+    );
   }
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
@@ -2994,86 +2963,6 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
     tableName: 'workflow_runs',
     recordId: parsed.runId,
     changedData: { status: 'CANCELED' },
-    details: { reason: parsed.reason },
-    source: parsed.source ?? 'api'
-  });
-
-  return { ok: true };
-});
-
-export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(runRecord, 'resume');
-
-  const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
-  const waiting = waits.filter((wait) => wait.status === 'WAITING');
-  const primaryWait = waiting[0] ?? null;
-  if (waiting.length > 0) {
-    const resolvedAt = new Date().toISOString();
-    for (const wait of waiting) {
-      await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
-        status: 'RESOLVED',
-        resolved_at: resolvedAt
-      });
-    }
-  }
-
-  const resumePayload = {
-    __admin_override: true,
-    reason: parsed.reason,
-    waitId: primaryWait?.wait_id ?? null,
-    waitType: primaryWait?.wait_type ?? null
-  };
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'RUNNING',
-    resume_event_name: primaryWait?.event_name ?? 'ADMIN_RESUME',
-    resume_event_payload: resumePayload,
-    resume_error: null
-  });
-
-  const processedAt = new Date().toISOString();
-  await WorkflowRuntimeEventModelV2.create(knex, {
-    tenant: runRecord?.tenant ?? null,
-    event_name: 'ADMIN_RESUME',
-    correlation_key: parsed.runId,
-    payload: resumePayload,
-    processed_at: processedAt,
-    matched_run_id: parsed.runId,
-    matched_wait_id: primaryWait?.wait_id ?? null,
-    matched_step_path: primaryWait?.step_path ?? null
-  });
-
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    resume_event_name: primaryWait?.event_name ?? 'ADMIN_RESUME',
-    resume_event_payload: resumePayload
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant: runRecord?.tenant ?? null,
-    level: 'INFO',
-    message: 'Run resumed by operator',
-    context_json: {
-      reason: parsed.reason,
-      waitId: primaryWait?.wait_id ?? null,
-      waitType: primaryWait?.wait_type ?? null
-    },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_resume',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'RUNNING' },
     details: { reason: parsed.reason },
     source: parsed.source ?? 'api'
   });
@@ -3143,8 +3032,8 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
     status: 'RUNNING',
-    resume_event_name: runRecord.engine === 'temporal' ? null : 'ADMIN_RESUME',
-    resume_event_payload: runRecord.engine === 'temporal' ? null : resumePayload,
+    resume_event_name: null,
+    resume_event_payload: null,
     resume_error: null,
     error_json: null,
   });
@@ -3172,75 +3061,14 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
     source: parsed.source ?? 'api'
   });
 
-  if (runRecord.engine === 'temporal') {
-    await signalWorkflowRuntimeV2QuotaResume({
-      runId: parsed.runId,
-      waitId: quotaWait.wait_id,
-      reason: parsed.reason,
-      resumedBy: `admin-${user.user_id}`,
-    });
-  } else {
-    const runtime = new WorkflowRuntimeV2();
-    await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
-  }
+  await signalWorkflowRuntimeV2QuotaResume({
+    runId: parsed.runId,
+    waitId: quotaWait.wait_id,
+    reason: parsed.reason,
+    resumedBy: `admin-${user.user_id}`,
+  });
 
   return { ok: true, resumed: true };
-});
-
-export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-
-  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(run, 'retry');
-  if (run.status !== 'FAILED') {
-    return throwHttpError(409, 'Run is not failed');
-  }
-
-  const failedStep = await knex('workflow_run_steps')
-    .where({ run_id: parsed.runId, status: 'FAILED' })
-    .orderBy('completed_at', 'desc')
-    .first();
-  const nodePath =
-    failedStep?.step_path ?? (run.error_json as { nodePath?: string } | null)?.nodePath ?? null;
-  if (!nodePath) {
-    return throwHttpError(409, 'Failed step not found');
-  }
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'RUNNING',
-    node_path: nodePath,
-    completed_at: null,
-    error_json: null,
-    resume_error: null,
-    resume_event_name: null,
-    resume_event_payload: null
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant: run.tenant ?? null,
-    level: 'INFO',
-    message: 'Run retry requested',
-    context_json: { reason: parsed.reason, nodePath },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_retry',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'RUNNING' },
-    details: { reason: parsed.reason, nodePath },
-    source: parsed.source ?? 'api'
-  });
-
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, parsed.runId, `admin-retry-${user.user_id}`);
-
-  return { ok: true };
 });
 
 export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3297,59 +3125,6 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   });
 
   return { ok: true, runId: newRunId };
-});
-
-export const requeueWorkflowRunEventWaitAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-
-  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(run, 'requeue_event_wait');
-
-  const wait = await knex('workflow_run_waits')
-    .where({ run_id: parsed.runId, wait_type: 'event' })
-    .orderBy('created_at', 'desc')
-    .first();
-  if (!wait) {
-    return throwHttpError(409, 'No event wait found for run');
-  }
-
-  await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
-    status: 'WAITING',
-    resolved_at: null
-  });
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'WAITING',
-    node_path: wait.step_path ?? run.node_path ?? null,
-    completed_at: null,
-    error_json: null,
-    resume_error: null,
-    resume_event_name: null,
-    resume_event_payload: null
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant: run.tenant ?? null,
-    level: 'INFO',
-    message: 'Event wait requeued by operator',
-    context_json: { reason: parsed.reason, waitId: wait.wait_id },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_requeue_event',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'WAITING' },
-    details: { reason: parsed.reason, waitId: wait.wait_id },
-    source: parsed.source ?? 'api'
-  });
-
-  return { ok: true };
 });
 
 export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant }) => {
@@ -3591,7 +3366,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
       for (const wait of waits) {
         const matchedRun = await getRun(wait.run_id);
-        if (matchedRun?.engine !== 'temporal') {
+        if (!matchedRun) {
           continue;
         }
         if (wait.wait_type === 'human') {
