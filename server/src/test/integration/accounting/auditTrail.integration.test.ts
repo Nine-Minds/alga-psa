@@ -92,6 +92,10 @@ describe('Accounting export audit trail integration', () => {
 
     const dbModule = await import('server/src/lib/db');
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
+    // The billing-package repositories resolve tenant via @alga-psa/db, not
+    // the legacy server/src/lib/db module; pin both to the test context.
+    const algaDbModule = await import('@alga-psa/db');
+    vi.spyOn(algaDbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {

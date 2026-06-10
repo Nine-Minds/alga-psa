@@ -19,6 +19,11 @@ export default defineConfig({
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
     maxConcurrency: 1,
+    // Integration suites share one test_database and drop/recreate it in
+    // beforeAll; parallel files corrupt each other's bootstrap. Vitest 4
+    // removed singleFork/singleThread, so state serialization explicitly —
+    // fileParallelism is honored by both v3 and v4.
+    fileParallelism: false,
     sequence: {
       concurrent: false,
       shuffle: true,
@@ -117,6 +122,9 @@ export default defineConfig({
       { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../packages/authorization/src/$1') },
       { find: /^@alga-psa\/reference-data$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/index.ts') },
       { find: /^@alga-psa\/reference-data\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/$1') },
+      { find: /^@alga-psa\/reporting$/, replacement: path.resolve(__dirname, '../packages/reporting/src/index.ts') },
+      { find: /^@alga-psa\/reporting\/actions$/, replacement: path.resolve(__dirname, '../packages/reporting/src/actions/index.ts') },
+      { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reporting/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },

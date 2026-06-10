@@ -88,6 +88,22 @@ vi.mock('@/lib/auth/rbac', () => ({
   )
 }));
 
+// Package actions (billing, integrations, clients, …) import rbac from
+// @alga-psa/auth; route it through the same permissionCheck as the legacy paths.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  )
+}));
+
+// Integration tests have no Redis (none in CI; local creds differ); the real
+// publishers would block on connection retries until tests time out. Tests
+// that assert on publishes can vi.spyOn these mocked functions as usual.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+}));
+
 /**
  * Creates a mock Headers object with tenant context
  * @param tenantId Optional tenant ID (defaults to a test UUID)

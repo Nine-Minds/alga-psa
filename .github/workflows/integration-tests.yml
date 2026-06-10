@@ -104,12 +104,12 @@ jobs:
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
 
+      # No npm install fallback: a failing npm ci means the lockfile is out of
+      # sync with a package.json, and regenerating dependencies on the fly once
+      # swapped vitest 3→4 and silently broke test-file serialization. Fail
+      # loudly instead.
       - name: Install dependencies
-        run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps
-          fi
+        run: npm ci
 
       - name: Wait for Postgres to be ready
         run: |

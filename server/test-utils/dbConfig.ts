@@ -72,6 +72,16 @@ export async function createTestDbConnection(
   if (runSeeds) {
     await adminKnex.seed.run();
   }
+
+  // The DB-guardrail migration sets cluster-wide role GUCs
+  // (idle_in_transaction_session_timeout, lock_timeout) on the app role.
+  // They are production insurance; in tests they turn legitimate lock waits
+  // and slow in-transaction work into spurious timeouts. Reset them after
+  // every bootstrap (the migration re-sets them each run).
+  const safeAppUser = appUser.replace(/[^a-zA-Z0-9_]/g, '');
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET idle_in_transaction_session_timeout`);
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET lock_timeout`);
+
   await adminKnex.destroy();
 
   const db = knex({

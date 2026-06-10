@@ -14,6 +14,7 @@ import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { knex } from 'knex';
 
 const HOOK_TIMEOUT = 180_000;
@@ -432,10 +433,16 @@ async function createTestDbConnection(): Promise<Knex> {
 async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+  // The EE ai_schema migration declares vector-typed columns and no migration
+  // creates the extension; create it when the server ships pgvector (CI's
+  // ankane/pgvector does), otherwise let the migration fail with its own error.
+  await connection.raw('CREATE EXTENSION IF NOT EXISTS "vector"').catch(() => undefined);
 
-  // Tests run from project root
-  const projectRoot = process.cwd();
-  const serverDir = path.join(projectRoot, 'server');
+  // Derive paths from this file's location: cwd differs between running
+  // vitest from the repo root and from server/ (the npm workspace scripts).
+  const testDir = path.dirname(fileURLToPath(import.meta.url));
+  const serverDir = path.resolve(testDir, '..', '..', '..', '..');
+  const projectRoot = path.resolve(serverDir, '..');
 
   const migrationsDir = path.join(serverDir, 'migrations');
   const eeMigrationsDir = path.join(projectRoot, 'ee', 'server', 'migrations');

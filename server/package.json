@@ -259,7 +259,7 @@
     "null-loader": "^4.0.1",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
-    "vitest": "^4.0.18"
+    "vitest": "^3.2.4"
   },
   "optionalDependencies": {
     "ngrok": "^4.3.3"
