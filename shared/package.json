@@ -41,6 +41,8 @@
     "./lib/ticketActivity/index.js": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketChecklists": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
+    "./lib/ticketCloseRules": "./dist/lib/ticketCloseRules/index.js",
+    "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
     "./*": "./dist/*"
   },
   "scripts": {

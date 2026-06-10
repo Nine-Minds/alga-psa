@@ -14,7 +14,15 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { enforceTicketCloseRules } from '@alga-psa/tickets/lib';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@shared/lib/ticketActivity';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
   applyVisibilityBoardFilter,
@@ -775,7 +783,7 @@ export const updateTicketStatus = withAuth(async (
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
-        .first('status_id');
+        .first('status_id', 'is_closed', 'name');
 
       if (!statusForBoard) {
         throw new Error('Selected status is not valid for the ticket board');
@@ -783,8 +791,42 @@ export const updateTicketStatus = withAuth(async (
 
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
+      const oldStatus = await trx('statuses')
+        .where({ tenant, status_id: oldStatusId })
+        .first('status_id', 'is_closed');
 
-      // Update the ticket status
+      const isClosing = !!statusForBoard.is_closed && !oldStatus?.is_closed;
+      const isReopening = !statusForBoard.is_closed && !!oldStatus?.is_closed;
+      const occurredAt = new Date().toISOString();
+      const actorDisplayName =
+        `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User';
+
+      // Close rules deliberately do NOT block portal users — customers can't
+      // satisfy internal-hygiene gates (time entries, internal checklists).
+      // The exemption is recorded as an audited bypass on gated boards.
+      if (isClosing) {
+        await enforceTicketCloseRules(trx, tenant, {
+          ticket: {
+            ticket_id: ticketId,
+            board_id: ticket.board_id,
+            category_id: ticket.category_id ?? null,
+            subcategory_id: ticket.subcategory_id ?? null,
+            priority_id: ticket.priority_id ?? null,
+            assigned_to: ticket.assigned_to ?? null,
+          },
+          bypass: { source: 'client_portal' },
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: user.user_id,
+            displayName: actorDisplayName,
+          },
+          source: TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL,
+        });
+      }
+
+      // Update the ticket status with full closure semantics: the denormalized
+      // is_closed flag and closed_at/closed_by transitions mirror the MSP-side
+      // update paths.
       await trx('tickets')
         .where({
           ticket_id: ticketId,
@@ -792,24 +834,90 @@ export const updateTicketStatus = withAuth(async (
         })
         .update({
           status_id: newStatusId,
-          updated_at: new Date().toISOString(),
+          is_closed: !!statusForBoard.is_closed,
+          ...(isClosing ? { closed_at: occurredAt, closed_by: user.user_id } : {}),
+          ...(isReopening ? { closed_at: null, closed_by: null } : {}),
+          ...(isClosing && ticket.response_state ? { response_state: null } : {}),
+          updated_at: occurredAt,
           updated_by: user.user_id
         });
 
-      // Publish ticket updated event
-      await publishEvent({
-        eventType: 'TICKET_UPDATED',
-        payload: {
-          tenantId: tenant,
-          ticketId: ticketId,
-          userId: user.user_id,
-          changes: {
-            status_id: {
-              old: oldStatusId,
-              new: newStatusId
-            }
-          }
+      const statusChanges = {
+        status_id: {
+          old: oldStatusId,
+          new: newStatusId
         }
+      };
+
+      if (isClosing) {
+        await publishWorkflowEvent({
+          eventType: 'TICKET_CLOSED',
+          payload: {
+            ticketId: ticketId,
+            userId: user.user_id,
+            closedByUserId: user.user_id,
+            closedAt: occurredAt,
+            changes: statusChanges,
+          },
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            occurredAt,
+          },
+          eventName: 'Ticket Closed',
+          fromState: oldStatusId,
+          toState: newStatusId,
+        });
+      } else if (isReopening) {
+        await publishWorkflowEvent({
+          eventType: 'TICKET_REOPENED',
+          payload: {
+            ticketId: ticketId,
+            userId: user.user_id,
+            reopenedByUserId: user.user_id,
+            changes: statusChanges,
+          },
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            occurredAt,
+          },
+          eventName: 'Ticket Reopened',
+          fromState: oldStatusId,
+          toState: newStatusId,
+        });
+      } else {
+        // Publish ticket updated event
+        await publishEvent({
+          eventType: 'TICKET_UPDATED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketId,
+            userId: user.user_id,
+            changes: statusChanges
+          }
+        });
+      }
+
+      // Activity-timeline row so portal-driven transitions are attributable.
+      await writeTicketActivity(trx, {
+        tenant,
+        ticketId,
+        eventType: isClosing
+          ? TICKET_ACTIVITY_EVENT.CLOSED
+          : isReopening
+            ? TICKET_ACTIVITY_EVENT.REOPENED
+            : TICKET_ACTIVITY_EVENT.STATUS_CHANGED,
+        entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+        entityId: ticketId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: user.user_id,
+          displayName: actorDisplayName,
+        },
+        source: TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL,
+        occurredAt,
+        changes: statusChanges,
       });
     });
 

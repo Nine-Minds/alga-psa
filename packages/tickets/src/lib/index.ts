@@ -62,3 +62,14 @@ export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRunti
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
 export { isResponseStateTrackingEnabled } from './responseStateSettings';
+export {
+  enforceTicketCloseRules,
+  TicketCloseValidationError,
+} from './validateTicketClosure';
+export type {
+  CloseRuleFailure,
+  CloseRuleId,
+  CloseRuleBypassSource,
+  EnforceTicketCloseRulesOptions,
+  EnforceTicketCloseRulesResult,
+} from './validateTicketClosure';

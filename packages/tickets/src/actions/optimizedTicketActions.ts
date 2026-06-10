@@ -49,6 +49,8 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -2072,12 +2074,28 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
  * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
  * a single check and reuse this core per ticket, avoiding one permission lookup per row.
  */
+export interface UpdateTicketInTransactionOptions {
+  /** Close despite unmet close rules; honored only with ticket:close_override. */
+  overrideCloseRules?: boolean;
+  overrideCloseRulesReason?: string | null;
+  /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
+  bypassCloseRules?: { source: CloseRuleBypassSource };
+  /**
+   * Attribute the change to the system rather than `user` (auto-close engine):
+   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
+   * system-sourced. `user` is still required for the call signature but is not
+   * referenced for attribution.
+   */
+  systemActor?: boolean;
+}
+
 export async function updateTicketInTransaction(
   trx: Knex.Transaction,
   user: IUserWithRoles,
   tenant: string,
   id: string,
   data: Partial<ITicket>,
+  options?: UpdateTicketInTransactionOptions,
 ): Promise<'success'> {
     try {
       // Validate update data
@@ -2196,7 +2214,45 @@ export async function updateTicketInTransaction(
         tenant: tenant
       })
       .first();
-    
+
+    const isSystemActor = options?.systemActor === true;
+
+    // Pre-close validation gates: when this update flips the ticket from an
+    // open to a closed status, enforce the board's close rules before any
+    // writes. Throws TicketCloseValidationError (aborting the transaction)
+    // unless gates pass, a permissioned override applies, or the caller is an
+    // exempt automation path (bypassCloseRules).
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const nextStatus = await trx('statuses')
+        .where({ status_id: updateData.status_id, tenant: tenant })
+        .first();
+      if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+        const merged = { ...currentTicket, ...updateData };
+        await enforceTicketCloseRules(trx, tenant, {
+          ticket: {
+            ticket_id: id,
+            board_id: merged.board_id ?? null,
+            category_id: merged.category_id ?? null,
+            subcategory_id: merged.subcategory_id ?? null,
+            priority_id: merged.priority_id ?? null,
+            assigned_to: merged.assigned_to ?? null,
+          },
+          override: options?.overrideCloseRules
+            ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
+            : undefined,
+          bypass: options?.bypassCloseRules,
+          actor: isSystemActor
+            ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+            : {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+          source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        });
+      }
+    }
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -2284,7 +2340,9 @@ export async function updateTicketInTransaction(
     const occurredAt = new Date().toISOString();
     const workflowCtx = {
       tenantId: tenant,
-      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      actor: isSystemActor
+        ? { actorType: 'SYSTEM' as const }
+        : { actorType: 'USER' as const, actorUserId: user.user_id },
       occurredAt,
     };
 
@@ -2392,13 +2450,16 @@ export async function updateTicketInTransaction(
       updatedTicket.is_closed = nextIsClosed;
     }
 
-    // Record closed_at / closed_by when transitioning to/from closed status
+    // Record closed_at / closed_by when transitioning to/from closed status.
+    // System closes (auto-close engine) leave closed_by null — attribution
+    // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      const closedBy = isSystemActor ? null : user.user_id;
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
-        .update({ closed_at: occurredAt, closed_by: user.user_id });
+        .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
-      updatedTicket.closed_by = user.user_id;
+      updatedTicket.closed_by = closedBy;
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
@@ -2407,15 +2468,47 @@ export async function updateTicketInTransaction(
       updatedTicket.closed_by = null;
     }
 
+    // Auto-apply checklist templates when the ticket's targeting attributes
+    // (board/category/subcategory/priority) changed. Idempotent per template.
+    const checklistTargetingChanged =
+      (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) ||
+      (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) ||
+      (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) ||
+      (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id);
+    if (checklistTargetingChanged) {
+      try {
+        await applyMatchingChecklistTemplates(trx, tenant, {
+          ticket_id: id,
+          board_id: updatedTicket.board_id,
+          category_id: updatedTicket.category_id,
+          subcategory_id: updatedTicket.subcategory_id,
+          priority_id: updatedTicket.priority_id,
+        }, isSystemActor
+          ? undefined
+          : {
+              actor: {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              source: TICKET_ACTIVITY_SOURCE.UI,
+            });
+      } catch (error) {
+        console.error('Failed to auto-apply checklist templates:', error);
+      }
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      // Ticket was closed
+      // Ticket was closed. System closes omit user attribution — the v2
+      // ticketClosedEventPayloadSchema treats closedByUserId as optional.
       await publishWorkflowEvent({
         eventType: 'TICKET_CLOSED',
         payload: {
           ticketId: id,
-          userId: user.user_id,
-          closedByUserId: user.user_id,
+          ...(isSystemActor
+            ? {}
+            : { userId: user.user_id, closedByUserId: user.user_id }),
           closedAt: occurredAt,
           changes: structuredChanges,
         },
@@ -2473,27 +2566,31 @@ export async function updateTicketInTransaction(
       });
     }
 
-    await publishTicketUpdate({
-      tenantId: tenant,
-      ticketId: id,
-      updatedFields,
-      updatedBy: {
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
-    });
+    if (!isSystemActor) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: id,
+        updatedFields,
+        updatedBy: {
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
+      });
+    }
 
     // Write a unified activity-timeline row for this update. We pick the
     // most specific event type so the UI can render a tight, human-readable
     // line ("Morgan changed status from New to In Progress") rather than a
     // generic "ticket updated" entry. The curated diff includes resolved
     // labels for IDs where possible.
-    const actorInfo = {
-      actorType: TICKET_ACTIVITY_ACTOR.USER,
-      userId: user.user_id,
-      displayName: formatLiveUpdateDisplayName(user),
-    };
+    const actorInfo = isSystemActor
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        };
     const curated = await buildCuratedTicketDiffWithLabels(
       trx,
       tenant,
@@ -2532,7 +2629,7 @@ export async function updateTicketInTransaction(
         entityType: TICKET_ACTIVITY_ENTITY.TICKET,
         entityId: id,
         actor: actorInfo,
-        source: TICKET_ACTIVITY_SOURCE.UI,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         occurredAt,
         changes: curated,
       });
@@ -2618,7 +2715,13 @@ export async function updateTicketInTransaction(
     }
 }
 
-export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+export const updateTicketWithCache = withAuth(async (
+  user,
+  { tenant },
+  id: string,
+  data: Partial<ITicket>,
+  options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
+) => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2626,7 +2729,7 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       throw new Error('Permission denied: Cannot update ticket');
     }
 
-    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data);
+    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
   });
 });
 
