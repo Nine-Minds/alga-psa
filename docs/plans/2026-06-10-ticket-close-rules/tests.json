@@ -163,7 +163,7 @@
   },
   {
     "id": "T028",
-    "description": "Integration: workflow action tickets.apply_checklist applies the template through the action registry with idempotent re-run, and is present in the action catalog exposed to the automation UI.",
+    "description": "Integration: workflow action tickets.apply_checklist applies the template through the action registry with idempotent re-run.",
     "implemented": false,
     "featureIds": ["F030"]
   },
@@ -187,9 +187,9 @@
   },
   {
     "id": "T032",
-    "description": "Integration (scan close): a due ticket closes to close_to_status_id with is_closed/closed_at set, closed_by null, system-attributed audit row, automatic comment, and TICKET_CLOSED published — verifying the normal-path side effects fire.",
+    "description": "Integration (scan close): a due ticket — on a board with enabled close gates it cannot satisfy — closes to close_to_status_id with is_closed/closed_at set, closed_by null, system-attributed audit row, automatic comment, CLOSE_RULES_BYPASSED (source 'auto_close') audit entry, and TICKET_CLOSED published — verifying the normal-path side effects fire and gates never block the engine.",
     "implemented": false,
-    "featureIds": ["F033"]
+    "featureIds": ["F033", "F022"]
   },
   {
     "id": "T033",
@@ -198,76 +198,16 @@
     "featureIds": ["F033"]
   },
   {
-    "id": "T034",
-    "description": "Integration: auto-close on a gated board succeeds via bypass and logs CLOSE_RULES_BYPASSED with source 'auto_close'.",
-    "implemented": false,
-    "featureIds": ["F033", "F022"]
-  },
-  {
     "id": "T035",
     "description": "Integration (scan resilience): a ticket that throws during the close phase (e.g. deleted target status) is skipped with the error recorded, and the remaining due tickets in the same run still close.",
     "implemented": false,
     "featureIds": ["F031", "F033"]
   },
   {
-    "id": "T036",
-    "description": "Integration: 'auto-close-tickets' is registered in the JobHandlerRegistry and scheduled per tenant at '*/15 * * * *' by initializeScheduledJobs.",
-    "implemented": false,
-    "featureIds": ["F034"]
-  },
-  {
     "id": "T037",
     "description": "Integration: tenant isolation across the scan — tenant A's rules never match tenant B's tickets, and state/warning/close writes stay within the rule's tenant.",
     "implemented": false,
     "featureIds": ["F031", "F033"]
-  },
-  {
-    "id": "T038",
-    "description": "Playwright: board settings dialog — enable gates and required fields in the Close Rules section, save, reopen, verify persistence; add an auto-close rule and verify validation messages for a closed trigger status or warning >= inactivity days.",
-    "implemented": false,
-    "featureIds": ["F011", "F012"]
-  },
-  {
-    "id": "T039",
-    "description": "Playwright: Checklist Templates settings tab — create a template with ordered items (up/down reorder), mark one optional, add an apply rule scoped to a board, edit and delete the template.",
-    "implemented": false,
-    "featureIds": ["F018"]
-  },
-  {
-    "id": "T040",
-    "description": "Playwright: ticket checklist section — add items, check one and see the acting user's name and timestamp appear inline; uncheck and see the signoff cleared; apply a template and see its items appended; progress chip shows 'N of M required done' and updates as items are checked.",
-    "implemented": false,
-    "featureIds": ["F019", "F020"]
-  },
-  {
-    "id": "T041",
-    "description": "Playwright: blocked-close dialog — attempting to close a gated ticket lists each unmet condition; quick actions navigate (checklist scroll, comment focus); after satisfying all gates the close succeeds.",
-    "implemented": false,
-    "featureIds": ["F027"]
-  },
-  {
-    "id": "T042",
-    "description": "Playwright: override flow — an admin with ticket:close_override sees 'Close anyway', provides a reason, ticket closes, and the override entry with failures appears in the activity timeline; a user without the permission sees no 'Close anyway' control.",
-    "implemented": false,
-    "featureIds": ["F027", "F022", "F016"]
-  },
-  {
-    "id": "T043",
-    "description": "Playwright: bulk close from the ticket list with mixed pass/fail tickets shows the blocked-summary with per-ticket reasons.",
-    "implemented": false,
-    "featureIds": ["F028"]
-  },
-  {
-    "id": "T044",
-    "description": "Playwright: auto-close banner renders the scheduled close date on a ticket with pending state and disappears after new activity resets the timer.",
-    "implemented": false,
-    "featureIds": ["F035"]
-  },
-  {
-    "id": "T045",
-    "description": "Playwright: activity timeline renders human-readable entries for checklist check/uncheck, template applied, close-rules override/bypass, and auto-close warning.",
-    "implemented": false,
-    "featureIds": ["F016"]
   },
   {
     "id": "T046",
@@ -280,11 +220,5 @@
     "description": "Regression: reopening a closed ticket still clears is_closed/closed_at/closed_by and publishes TICKET_REOPENED on every wired path, including the portal after F029.",
     "implemented": false,
     "featureIds": ["F023", "F024", "F029"]
-  },
-  {
-    "id": "T048",
-    "description": "i18n smoke: all new UI strings resolve from translation keys (no raw key leakage) in the default locale.",
-    "implemented": false,
-    "featureIds": ["F036"]
   }
 ]

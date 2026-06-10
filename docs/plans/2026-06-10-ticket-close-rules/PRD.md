@@ -216,4 +216,5 @@ Admin by default. New notification subtype + system email template
 - Portal status changes to a closed status set `is_closed`/`closed_at`/
   `closed_by` and publish `TICKET_CLOSED`, without gate enforcement.
 - All features in `features.json` implemented; all tests in `tests.json`
-  passing.
+  passing; the manual smoke pass in `SMOKE_TESTS.md` executed clean against
+  the running app.

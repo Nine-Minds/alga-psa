@@ -13,6 +13,7 @@
 - (2026-06-10) Template items are **copied** onto tickets (provenance via `template_id`), never referenced — template edits must not mutate history. Idempotency key = template_id present among ticket's items.
 - (2026-06-10) `closed_by = null` for auto-closes; attribution via audit row (`actor_type: 'system'`, `source: 'system'`). No dedicated system user UUID exists in the codebase.
 - (2026-06-10) Checklist accountability = permanent `completed_by`/`completed_at` displayed inline, no confirm dialog; uncheck clears but audit preserves prior signoff.
+- (2026-06-10) Test strategy 80/20: automated tests own logic/data correctness (units, integration, races, tenant isolation, regressions — 37 tests); screen flows, job wiring, and i18n moved to the risk-framed manual pass in `SMOKE_TESTS.md`. Former T034 folded into T032; T036/T038–T045/T048 replaced by smoke flows.
 
 ## Discoveries / Constraints
 
