@@ -13,6 +13,7 @@ import {
 import { evaluateInboundEmailRules } from '@alga-psa/shared/services/email/inboundEmailRules/engine';
 import type {
   InboundEmailRule,
+  InboundEmailRuleCondition,
   InboundEmailRuleEvaluation,
 } from '@alga-psa/shared/services/email/inboundEmailRules/types';
 
@@ -366,7 +367,10 @@ export const testInboundEmailRule = withAuth(async (
     // The tester has no receiving mailbox; provider filtering is not part of
     // what it exercises.
     provider_ids: null,
-    conditions: ruleInput.conditions,
+    // Cast: zod's inferred object type loses required-ness under consumers
+    // compiled with strict: false (e.g. ee/server), though the parsed value
+    // always has every field.
+    conditions: ruleInput.conditions as InboundEmailRuleCondition[],
     action_type: ruleInput.action_type,
     action_config: ruleInput.action_config,
     on_no_match: ruleInput.on_no_match,

@@ -65,6 +65,8 @@ async function loadEeClassifier(): Promise<InboundEmailAiClassifier | null> {
 
   eeClassifierLoadAttempted = true;
   try {
+    // @ts-ignore -- @ee resolves to packages/ee/src only in EE builds; other
+    // tsconfigs (e.g. ee/server) map @ee elsewhere and the catch handles it.
     const module = await import('@ee/services/email/inboundEmailRuleAiClassifier');
     if (module && typeof module.createInboundEmailRuleAiClassifier === 'function') {
       eeClassifier = module.createInboundEmailRuleAiClassifier();
