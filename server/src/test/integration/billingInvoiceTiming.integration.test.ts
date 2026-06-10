@@ -107,6 +107,22 @@ vi.mock('@alga-psa/auth', () => ({
         { tenant: authRef.tenantId },
         ...args
       ),
+  withOptionalAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        {
+          user_id: authRef.userId,
+          tenant: authRef.tenantId,
+          roles: [],
+        },
+        { tenant: authRef.tenantId },
+        ...args
+      ),
+  // test-utils/testMocks.ts re-points these via vi.mocked(...) in setupCommonMocks,
+  // so the factory has to export them.
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({

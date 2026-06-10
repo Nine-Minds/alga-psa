@@ -120,6 +120,13 @@ export function mockNextAuth(userId: string = 'mock-user-id', tenantId: string =
 export function mockNextCache() {
   vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    // Pass-through: callers get the wrapped function without Next's cache layer.
+    unstable_cache: vi.fn(
+      (fn: (...args: unknown[]) => unknown) =>
+        (...args: unknown[]) =>
+          fn(...args)
+    ),
   }));
 }
 
