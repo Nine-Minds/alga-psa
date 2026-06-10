@@ -665,8 +665,10 @@
         "created": "55555",
         "lines": "55555",
         "errors": "55555",
-        "delivered": "55555"
-      }
+        "delivered": "55555",
+        "notes": "55555"
+      },
+      "errorDetails": "55555"
     },
     "toast": {
       "created": "55555",

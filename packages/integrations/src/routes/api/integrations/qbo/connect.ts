@@ -1,15 +1,14 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server'; // Keep only one import
-import crypto from 'crypto';
-// --- Import Actual Implementations ---
-import { ISecretProvider } from '@alga-psa/core'; // Import the interface
+import { NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db'; // Import createTenantKnex
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
-// TODO: Import the actual CSRF token storage mechanism
-// import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import {
+  QBO_OAUTH_CSRF_COOKIE_NAME,
+  QBO_OAUTH_CSRF_COOKIE_PATH,
+  QBO_OAUTH_CSRF_TTL_SECONDS,
+  generateQboOauthCsrfToken,
+} from '../../../../lib/qbo/oauthCsrf';
 
 // Constants
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2'; // Use sandbox URL for development if needed
@@ -26,14 +25,14 @@ export async function GET(
   const secretProvider = await getSecretProviderInstance();
 
   try {
-    // Get tenant ID from knex
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      console.error('QBO Connect: Tenant ID not found in current context.');
-      // Redirecting to an error page might be better UX than just returning JSON
+    // Resolve the tenant from the authenticated session. The same session is
+    // re-checked in the callback, so the state's tenantId cannot be swapped.
+    const user = await getCurrentUser();
+    if (!user?.tenant) {
+      console.error('QBO Connect: No authenticated session found.');
       return NextResponse.json({ error: 'Unauthorized - Tenant ID missing' }, { status: 401 });
     }
-    tenantId = tenant;
+    tenantId = user.tenant;
 
     // Retrieve QBO Client ID (App-level secret) using secret provider
     const clientId = await secretProvider.getAppSecret(QBO_CLIENT_ID_SECRET_NAME);
@@ -43,12 +42,9 @@ export async function GET(
       return NextResponse.json({ error: 'QBO integration is not configured correctly.' }, { status: 500 });
     }
 
-    // Generate secure CSRF token
-    const csrfToken = crypto.randomBytes(16).toString('hex');
-
-    // TODO: Store the CSRF token temporarily, associated with the user/tenant session, using the actual mechanism.
-    // await storeCsrfToken(tenantId, csrfToken); // Store CSRF token with a short TTL (e.g., 10 minutes)
-    console.log(`QBO Connect: Generated CSRF token for tenant ${tenantId}. Needs to be stored.`);
+    // Generate secure CSRF token; it travels back in the state parameter and
+    // in an HttpOnly cookie that only the initiating browser holds.
+    const csrfToken = generateQboOauthCsrfToken();
 
     // Create the state parameter including tenantId and CSRF token
     // Encode as base64url for safe transmission in URL
@@ -71,8 +67,18 @@ export async function GET(
     const authorizationUrl = `${INTUIT_AUTH_URL}?${params.toString()}`;
 
     console.log(`QBO Connect: Redirecting tenant ${tenantId} to Intuit for authorization.`);
-    // Redirect the user's browser
-    return NextResponse.redirect(authorizationUrl);
+    // Redirect the user's browser, carrying the CSRF token in an HttpOnly
+    // cookie scoped to the callback route so the callback can verify that the
+    // response landed in the same browser that started the flow.
+    const response = NextResponse.redirect(authorizationUrl);
+    response.cookies.set(QBO_OAUTH_CSRF_COOKIE_NAME, csrfToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: QBO_OAUTH_CSRF_COOKIE_PATH,
+      maxAge: QBO_OAUTH_CSRF_TTL_SECONDS,
+    });
+    return response;
 
   } catch (error: any) {
     console.error(`QBO Connect: Error initiating OAuth flow for tenant ${tenantId || 'UNKNOWN'}`, error);

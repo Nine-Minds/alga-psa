@@ -50,8 +50,22 @@ export interface AccountingExportDeliveryLineResult {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * A document that could not be delivered while the rest of the batch continued.
+ * API adapters report these instead of throwing so one rejected invoice does not
+ * abort delivery of the remaining documents.
+ */
+export interface AccountingExportDeliveryDocumentFailure {
+  documentId: string;
+  lineIds: string[];
+  code: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface AccountingExportDeliveryResult {
   deliveredLines: AccountingExportDeliveryLineResult[];
+  failedDocuments?: AccountingExportDeliveryDocumentFailure[];
   artifacts?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }

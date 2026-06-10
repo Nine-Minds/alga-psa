@@ -79,6 +79,8 @@ export default defineConfig({
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
+      { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../packages/licensing/src/index.ts') },
+      { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/index.ts') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },

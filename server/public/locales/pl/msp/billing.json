@@ -665,8 +665,10 @@
         "created": "Stworzony",
         "lines": "Wiersze",
         "errors": "Błędy",
-        "delivered": "Dostarczony"
-      }
+        "delivered": "Dostarczony",
+        "notes": "Notatki"
+      },
+      "errorDetails": "Szczegóły błędów"
     },
     "toast": {
       "created": "Utworzono partię eksportu księgowego",
