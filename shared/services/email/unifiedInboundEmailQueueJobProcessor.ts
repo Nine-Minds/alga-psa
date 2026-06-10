@@ -800,7 +800,7 @@ async function insertProcessingRecord(params: {
 async function updateProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
-  status: 'success' | 'partial' | 'failed';
+  status: 'success' | 'partial' | 'failed' | 'skipped';
   emailData?: EmailMessageDetails;
   ticketId?: string | null;
   errorMessage?: string | null;
@@ -953,7 +953,13 @@ export async function processUnifiedInboundEmailQueueJob(
       }, {
         collectDiagnostics: true,
       });
-      const status = result.outcome === 'skipped' ? 'partial' : 'success';
+      // Rule-driven skips are intentional outcomes, not partial failures.
+      const status =
+        result.outcome === 'skipped'
+          ? result.reason === 'rule_skip'
+            ? 'skipped'
+            : 'partial'
+          : 'success';
       await updateProcessingRecord({
         job,
         externalIdentity,

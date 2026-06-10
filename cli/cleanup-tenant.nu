@@ -424,6 +424,7 @@ def "main cleanup" [
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings" "client_inbound_email_domains"
+        "client_name_aliases"
         "tenant_companies"
         
         # Project/task entities
@@ -565,6 +566,8 @@ def "main cleanup" [
         "tenant_telemetry_settings"
         "tenant_external_entity_mappings" "telemetry_consent_log"
         "default_billing_settings" "notification_settings"
+        # inbound_email_rules references inbound_ticket_defaults (fallback destination)
+        "inbound_email_rules"
         "inbound_ticket_defaults" "user_type_rates" "next_number"
         "event_catalog" "provider_events"
 

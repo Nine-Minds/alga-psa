@@ -249,7 +249,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Client details (must come before clients)
   'client_tax_rates', 'client_tax_settings',
-  'client_inbound_email_domains',
+  'client_inbound_email_domains', 'client_name_aliases',
   'tenant_companies',
 
   // Entra integration (dependent rows first, then parents)
@@ -458,6 +458,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Other tenant settings (tenant_telemetry_settings moved earlier, before users)
   'tenant_external_entity_mappings', 'telemetry_consent_log',
   'default_billing_settings', 'notification_settings',
+  // inbound_email_rules references inbound_ticket_defaults (fallback destination),
+  // so it must be deleted first.
+  'inbound_email_rules',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog',
 

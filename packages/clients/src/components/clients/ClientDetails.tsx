@@ -32,6 +32,9 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  listClientNameAliases,
+  addClientNameAlias,
+  removeClientNameAlias,
   listInboundTicketDestinationOptions,
   startClientEntraSync,
 } from '@alga-psa/clients/actions';
@@ -1165,6 +1168,63 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   }, [editedClient.client_id]);
 
+  const [clientNameAliases, setClientNameAliases] = useState<Array<{ id: string; alias: string }>>([]);
+  const [aliasDraft, setAliasDraft] = useState('');
+  const [isAliasBusy, setIsAliasBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await listClientNameAliases(editedClient.client_id);
+        if (cancelled) return;
+        setClientNameAliases((rows ?? []).map((r: any) => ({ id: r.id, alias: r.alias })));
+      } catch (error) {
+        // Non-blocking; if this fails we don't want to prevent other client edits.
+        console.error('Failed to load client name aliases:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editedClient.client_id]);
+
+  const handleAddClientNameAlias = useCallback(async () => {
+    const alias = aliasDraft.replace(/\s+/g, ' ').trim();
+    if (!alias) return;
+    setIsAliasBusy(true);
+    try {
+      const created = await addClientNameAlias(editedClient.client_id, alias);
+      setClientNameAliases((prev) => {
+        const next = [...prev, { id: (created as any).id, alias: (created as any).alias }].filter(
+          (a, idx, arr) => idx === arr.findIndex((x) => x.id === a.id)
+        );
+        next.sort((a, b) => a.alias.localeCompare(b.alias));
+        return next;
+      });
+      setAliasDraft('');
+      toast.success(t('clientDetails.nameAliasAdded', { defaultValue: 'Alias added' }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
+    } finally {
+      setIsAliasBusy(false);
+    }
+  }, [aliasDraft, editedClient.client_id]);
+
+  const handleRemoveClientNameAlias = useCallback(async (aliasId: string) => {
+    if (!aliasId) return;
+    setIsAliasBusy(true);
+    try {
+      await removeClientNameAlias(editedClient.client_id, aliasId);
+      setClientNameAliases((prev) => prev.filter((a) => a.id !== aliasId));
+      toast.success(t('clientDetails.nameAliasRemoved', { defaultValue: 'Alias removed' }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
+    } finally {
+      setIsAliasBusy(false);
+    }
+  }, [editedClient.client_id]);
+
   const baseTabContent = useMemo(() => [
     {
       id: 'details',
@@ -1337,6 +1397,69 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                     <Text size="1" className="text-gray-500">
                       {t('clientDetails.noInboundDomains', {
                         defaultValue: 'No inbound email domains configured. Domain matching will not be used.',
+                      })}
+                    </Text>
+                  )}
+                </div>
+              </FieldContainer>
+
+              <FieldContainer
+                label={t('clientDetails.nameAliases', { defaultValue: 'Matching aliases' })}
+                fieldType="textField"
+                value={clientNameAliases.map((a) => a.alias).join(', ')}
+                helperText="Alternate names for this client as they appear in third-party emails (e.g. monitoring alert subjects). Used by inbound email rules; aliases must be unique across clients."
+                automationId="client-name-aliases-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">
+                  {t('clientDetails.nameAliases', { defaultValue: 'Matching aliases' })}
+                </Text>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      id="client-name-alias-input"
+                      type="text"
+                      value={aliasDraft}
+                      onChange={(e) => setAliasDraft(e.target.value)}
+                      placeholder="ACME Corp"
+                      className="flex-1"
+                      autoComplete="off"
+                      data-bwignore
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                    <Button
+                      id="client-name-alias-add"
+                      type="button"
+                      variant="default"
+                      disabled={isAliasBusy || !aliasDraft.trim()}
+                      onClick={handleAddClientNameAlias}
+                    >
+                      Add
+                    </Button>
+                  </div>
+
+                  {clientNameAliases.length > 0 ? (
+                    <div className="space-y-2">
+                      {clientNameAliases.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+                          <Text size="2" className="text-gray-800">{a.alias}</Text>
+                          <Button
+                            id={`client-name-alias-remove-${a.id}`}
+                            type="button"
+                            variant="ghost"
+                            disabled={isAliasBusy}
+                            onClick={() => handleRemoveClientNameAlias(a.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Text size="1" className="text-gray-500">
+                      {t('clientDetails.noNameAliases', {
+                        defaultValue: 'No aliases configured. The client name itself always matches.',
                       })}
                     </Text>
                   )}
