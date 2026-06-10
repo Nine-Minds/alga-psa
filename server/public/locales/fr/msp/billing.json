@@ -665,8 +665,10 @@
         "created": "Créé",
         "lines": "Lignes",
         "errors": "Erreurs",
-        "delivered": "Livré"
-      }
+        "delivered": "Livré",
+        "notes": "Notes"
+      },
+      "errorDetails": "Détails des erreurs"
     },
     "toast": {
       "created": "Lot d'export comptable créé",

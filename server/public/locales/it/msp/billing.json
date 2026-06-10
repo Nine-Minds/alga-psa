@@ -665,8 +665,10 @@
         "created": "Creato",
         "lines": "Linee",
         "errors": "Errori",
-        "delivered": "Consegnato"
-      }
+        "delivered": "Consegnato",
+        "notes": "Note"
+      },
+      "errorDetails": "Dettagli errori"
     },
     "toast": {
       "created": "Batch di esportazione contabile creato",

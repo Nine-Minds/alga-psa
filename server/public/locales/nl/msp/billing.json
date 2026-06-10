@@ -665,8 +665,10 @@
         "created": "Gemaakt",
         "lines": "Regels",
         "errors": "Fouten",
-        "delivered": "Afgeleverd"
-      }
+        "delivered": "Afgeleverd",
+        "notes": "Notities"
+      },
+      "errorDetails": "Foutdetails"
     },
     "toast": {
       "created": "Boekhoudexportbatch gemaakt",
