@@ -191,6 +191,24 @@ vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({
   TimeEntriesSection: (props: Record<string, unknown>) => React.createElement("MockTimeEntriesSection", props),
 }));
 
+vi.mock("../features/ticketDetail/components/TagsSection", () => ({
+  TagsSection: (props: Record<string, unknown>) => React.createElement("MockTagsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/TagPickerModal", () => ({
+  TagPickerModal: (props: Record<string, unknown>) => React.createElement("MockTagPickerModal", props),
+}));
+
+vi.mock("../api/tags", () => ({
+  getTicketTags: vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    data: { data: { entity_id: "t", entity_type: "ticket", tags: [], total_tags: 0 } },
+  }),
+  addTicketTag: vi.fn(),
+  removeTicketTag: vi.fn(),
+}));
+
 vi.mock("../features/ticketRichText/TicketRichTextEditor", async () => {
   const React = await import("react");
 

@@ -294,6 +294,32 @@ vi.mock("../features/ticketDetail/components/ContactPickerModal", () => ({
   ContactPickerModal: (props: Record<string, unknown>) => React.createElement("MockContactPickerModal", props),
 }));
 
+vi.mock("../features/ticketDetail/hooks/useTicketTags", () => ({
+  useTicketTags: () => ({
+    tags: [],
+    tagsLoading: false,
+    tagsHidden: false,
+    tagsError: null,
+    tagUpdating: false,
+    tagActionError: null,
+    tagPickerOpen: false,
+    fetchTags: vi.fn(),
+    addTag: vi.fn(),
+    removeTag: vi.fn(),
+    selectTag: vi.fn(),
+    openTagPicker: vi.fn(),
+    closeTagPicker: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/components/TagsSection", () => ({
+  TagsSection: (props: Record<string, unknown>) => React.createElement("MockTagsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/TagPickerModal", () => ({
+  TagPickerModal: (props: Record<string, unknown>) => React.createElement("MockTagPickerModal", props),
+}));
+
 vi.mock("../features/ticketDetail/components/KeyValue", () => ({
   KeyValue: (props: Record<string, unknown>) =>
     React.createElement("MockKeyValue", null, props.value as React.ReactNode, props.children as React.ReactNode),

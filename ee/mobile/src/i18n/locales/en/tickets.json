@@ -282,6 +282,28 @@
       "rate": "Enter a valid rate."
     }
   },
+  "tags": {
+    "title": "Tags",
+    "addTag": "Add tag",
+    "removeTag": "Remove tag {{tag}}",
+    "tagAccessibility": "Tag {{tag}}",
+    "empty": "No tags.",
+    "pickerTitle": "Add tag",
+    "searchPlaceholder": "Search tags…",
+    "selectTag": "Add tag {{tag}}",
+    "createNew": "Add \"{{tag}}\"",
+    "alreadyAdded": "Added",
+    "noResults": "No tags found.",
+    "errors": {
+      "load": "Unable to load tags.",
+      "suggestions": "Unable to load tags.",
+      "addPermission": "You don't have permission to add tags.",
+      "addValidation": "Tag was rejected by the server.",
+      "addGeneric": "Unable to add tag. Please try again.",
+      "removePermission": "You don't have permission to remove tags.",
+      "removeGeneric": "Unable to remove tag. Please try again."
+    }
+  },
   "statusPicker": {
     "title": "Select status",
     "setStatus": "Set status {{name}}",
