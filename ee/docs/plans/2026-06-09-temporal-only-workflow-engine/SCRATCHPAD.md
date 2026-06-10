@@ -95,6 +95,23 @@ Design: `../2026-06-09-temporal-only-workflow-engine-design.md`.
   `PLAYWRIGHT_TEMPORAL_PORT`) for replay/run-start flows to function.
 - ee/server full typecheck needs `NODE_OPTIONS=--max-old-space-size=12288`.
 
+## Remaining follow-ups (tests.json items still false)
+
+- Migration coverage (T046–T049): the stranded-run migration has no automated
+  test; needs the DB-backed integration harness.
+- Stuck-run banner (T042–T045) and removed-button absence (T033–T035): no
+  component tests written; behavior is hand-verifiable in the run studio.
+- Replay UI dirty-detection (T036/T039): server-side contract is covered;
+  the client-side "send nothing when unedited" path is not unit-tested.
+- Full-stack runs (T030/T050/T052): need a live compose stack with Temporal;
+  `docker compose -f docker-compose.ee.yaml up` then start a manual run.
+- DB-backed integration suites (control/publish/e2e) were verified by
+  typecheck + vitest collection only in this worktree (no DB available);
+  CI run pending.
+- EventStreamWorker vitest suite (7 cases) fails in this worktree on real
+  Redis/mock-resolution grounds — confirmed identical failure on pre-change
+  code; not a regression.
+
 ## Commands
 
 - Find engine references: `grep -rn "engine.*'db'\|'db'.*engine" --include="*.ts" shared ee services server | grep -v node_modules`

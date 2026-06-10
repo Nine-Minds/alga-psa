@@ -304,7 +304,7 @@
   {
     "id": "F038",
     "description": "workflowRuntimeV2.e2e.test.ts rewritten to drive the Temporal path; DB-poller-driven cases removed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -312,7 +312,7 @@
   {
     "id": "F039",
     "description": "workflowRuntimeV2.control.integration.test.ts: DB-engine setup/cases removed; Temporal control cases retained and passing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -320,7 +320,7 @@
   {
     "id": "F040",
     "description": "workflowRuntimeV2.publish.integration.test.ts rewritten without executeRun/acquireRunnableRun",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
