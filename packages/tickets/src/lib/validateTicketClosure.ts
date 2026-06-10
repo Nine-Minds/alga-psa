@@ -4,8 +4,6 @@ import {
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
   writeTicketActivity,
-  type TicketActivityActorInfo,
-  type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
 import {
   auditCloseRulesBypassIfGated,
@@ -13,8 +11,18 @@ import {
   getBoardCloseRulesRow,
   parseCloseRuleRequiredFields,
   type BoardCloseRulesRow,
-  type CloseRuleBypassSource,
 } from '@alga-psa/shared/lib/ticketCloseRules';
+import {
+  TicketCloseValidationError,
+  CLOSE_RULE_REQUIRED_FIELDS,
+  CLOSE_RULE_REQUIRED_FIELD_LABELS,
+  type CloseRuleId,
+  type CloseRuleFailure,
+  type CloseRuleBypassSource,
+  type CloseRuleRequiredField,
+  type EnforceTicketCloseRulesOptions,
+  type EnforceTicketCloseRulesResult,
+} from './closeRuleConstants';
 
 /**
  * Pre-close validation gates ("close rules"), evaluated inside the caller's
@@ -23,65 +31,27 @@ import {
  * paths (workflow tickets.close, CSV import, auto-close engine, client
  * portal) bypass with an audit trail instead of being blocked.
  * See docs/plans/2026-06-10-ticket-close-rules/PRD.md §5.1.
+ *
+ * The client-safe types, constants, and TicketCloseValidationError live in
+ * ./closeRuleConstants so the settings/ticket UI and the @alga-psa/tickets/lib
+ * barrel can use them without pulling in hasPermission/DB (which would drag
+ * node:async_hooks into client bundles). They are re-exported here so existing
+ * deep-path importers of this module are unchanged. The functions below are
+ * server-only.
  */
 
-export type CloseRuleId =
-  | 'resolution_comment'
-  | 'time_entry'
-  | 'checklist_incomplete'
-  | 'open_children'
-  | 'required_fields';
-
-export interface CloseRuleFailure {
-  rule: CloseRuleId;
-  message: string;
-  meta?: Record<string, unknown>;
-}
-
-export class TicketCloseValidationError extends Error {
-  readonly failures: CloseRuleFailure[];
-
-  constructor(failures: CloseRuleFailure[]) {
-    super(`Ticket cannot be closed: ${failures.map((f) => f.message).join('; ')}`);
-    this.name = 'TicketCloseValidationError';
-    this.failures = failures;
-  }
-}
-
-export type { CloseRuleBypassSource };
-
-export interface EnforceTicketCloseRulesOptions {
-  /** Post-update field values relevant to the gates (current row merged with pending changes). */
-  ticket: {
-    ticket_id: string;
-    board_id: string | null;
-    category_id?: string | null;
-    subcategory_id?: string | null;
-    priority_id?: string | null;
-    assigned_to?: string | null;
-  };
-  /** Close-anyway request; honored only when the user holds ticket:close_override. */
-  override?: { requested: boolean; reason?: string | null; user: unknown };
-  /** Automation exemption; skips gate evaluation and audit-logs the bypass. */
-  bypass?: { source: CloseRuleBypassSource };
-  actor: TicketActivityActorInfo;
-  source: TicketActivitySource | string;
-}
-
-export const CLOSE_RULE_REQUIRED_FIELDS = [
-  'category_id',
-  'subcategory_id',
-  'priority_id',
-  'assigned_to',
-] as const;
-
-export type CloseRuleRequiredField = (typeof CLOSE_RULE_REQUIRED_FIELDS)[number];
-
-export const CLOSE_RULE_REQUIRED_FIELD_LABELS: Record<string, string> = {
-  category_id: 'Category',
-  subcategory_id: 'Subcategory',
-  priority_id: 'Priority',
-  assigned_to: 'Assignee',
+export {
+  TicketCloseValidationError,
+  CLOSE_RULE_REQUIRED_FIELDS,
+  CLOSE_RULE_REQUIRED_FIELD_LABELS,
+};
+export type {
+  CloseRuleId,
+  CloseRuleFailure,
+  CloseRuleBypassSource,
+  CloseRuleRequiredField,
+  EnforceTicketCloseRulesOptions,
+  EnforceTicketCloseRulesResult,
 };
 
 const REQUIRED_FIELD_LABELS = CLOSE_RULE_REQUIRED_FIELD_LABELS;
@@ -192,11 +162,6 @@ async function evaluateGates(
   }
 
   return failures;
-}
-
-export interface EnforceTicketCloseRulesResult {
-  overridden: boolean;
-  bypassed: boolean;
 }
 
 /**

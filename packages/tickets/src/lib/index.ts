@@ -62,13 +62,16 @@ export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRunti
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
 export { isResponseStateTrackingEnabled } from './responseStateSettings';
+// Only the client-safe close-rule types/constants/error are exported from this
+// barrel. enforceTicketCloseRules / evaluateTicketCloseRules are server-only
+// (they import hasPermission + DB) and must be imported from the deep path
+// '@alga-psa/tickets/lib/validateTicketClosure' so they never reach client
+// bundles that consume this barrel.
 export {
-  enforceTicketCloseRules,
-  evaluateTicketCloseRules,
   TicketCloseValidationError,
   CLOSE_RULE_REQUIRED_FIELDS,
   CLOSE_RULE_REQUIRED_FIELD_LABELS,
-} from './validateTicketClosure';
+} from './closeRuleConstants';
 export type {
   CloseRuleFailure,
   CloseRuleId,
@@ -76,4 +79,4 @@ export type {
   CloseRuleRequiredField,
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
-} from './validateTicketClosure';
+} from './closeRuleConstants';

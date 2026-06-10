@@ -15,7 +15,7 @@ import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { enforceTicketCloseRules } from '@alga-psa/tickets/lib';
+import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
