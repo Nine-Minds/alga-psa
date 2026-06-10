@@ -1211,6 +1211,9 @@ export async function createTicketFromEmail(
               subject: (ticketData.email_metadata as any)?.subject ?? null,
               provider: (ticketData.email_metadata as any)?.provider ?? null,
               receivedAt: (ticketData.email_metadata as any)?.receivedAt ?? null,
+              appliedRuleId: (ticketData.email_metadata as any)?.appliedRuleId ?? null,
+              appliedRuleName: (ticketData.email_metadata as any)?.appliedRuleName ?? null,
+              clientMatchSource: (ticketData.email_metadata as any)?.clientMatchSource ?? null,
             }
           : undefined;
 

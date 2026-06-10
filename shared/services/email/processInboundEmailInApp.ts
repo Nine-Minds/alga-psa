@@ -16,6 +16,7 @@ import {
   resolveInboundReplyAcknowledgementDecider,
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
+import { evaluateInboundEmailRules } from './inboundEmailRules';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -67,6 +68,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'invalid_email_data'
       | 'missing_defaults'
       | 'self_notification'
+      | 'rule_skip'
       | 'new_ticket_created'
       | 'deduped'
       | null;
@@ -78,14 +80,16 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
     ticketNumber?: string;
     commentId?: string;
     dedupeKey?: string;
-    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification';
+    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+    rule?: { ruleId: string; ruleName: string };
   };
 }
 
 type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'skipped';
-      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification';
+      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+      rule?: { ruleId: string; ruleName: string };
     }
   | {
       outcome: 'deduped';
@@ -230,7 +234,7 @@ function withDiagnostics<T extends ProcessInboundEmailInAppBaseResult>(
 
   diagnostics.outcome =
     result.outcome === 'skipped'
-      ? { kind: result.outcome, reason: result.reason }
+      ? { kind: result.outcome, reason: result.reason, ...(result.rule ? { rule: result.rule } : {}) }
       : result.outcome === 'deduped'
         ? {
             kind: result.outcome,
@@ -1423,8 +1427,49 @@ export async function processInboundEmailInApp(
   }
 
   // New ticket path.
+  // Inbound email rules run only here — replies that threaded above never reach
+  // this point — and before defaults resolution so skip rules work even for
+  // tenants with no inbound defaults configured.
+  const ruleEvaluation = await evaluateInboundEmailRules({ tenantId, providerId, emailData });
+  const ruleOutcome = ruleEvaluation.outcome;
+  if (ruleEvaluation.trace.length > 0 || ruleOutcome.kind !== 'none') {
+    console.info('processInboundEmailInApp: inbound email rules evaluated', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      rulesConsidered: ruleEvaluation.trace.length,
+      matchedRuleId: 'ruleId' in ruleOutcome ? ruleOutcome.ruleId : null,
+      matchedRuleName: 'ruleName' in ruleOutcome ? ruleOutcome.ruleName : null,
+      outcome: ruleOutcome.kind,
+    });
+  }
+
+  if (ruleOutcome.kind === 'skip') {
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'rule_skip';
+    }
+    return withDiagnostics(
+      {
+        outcome: 'skipped',
+        reason: 'rule_skip',
+        rule: { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName },
+      },
+      diagnostics
+    );
+  }
+
+  const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
+  const ruleDestinationDefaults =
+    ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
+      ? (ruleOutcome.defaults as any)
+      : null;
+  const appliedRule =
+    ruleOutcome.kind !== 'none'
+      ? { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName }
+      : null;
+
   const providerDefaults = await resolveInboundTicketDefaults(tenantId, providerId);
-  if (!providerDefaults) {
+  if (!providerDefaults && !ruleDestinationDefaults) {
     console.warn('processInboundEmailInApp: missing inbound ticket defaults; skipping email', {
       tenantId,
       providerId,
@@ -1437,12 +1482,12 @@ export async function processInboundEmailInApp(
   }
 
   const matchedSenderContact = await resolveSenderContact({
-    defaultClientId: providerDefaults.client_id ?? null,
+    defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
   });
 
   let domainMatchedClientId: string | null = null;
   let domainMatchedContactId: string | null = null;
-  if (!matchedSenderContact && senderEmail) {
+  if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
     const senderDomain = extractEmailDomain(senderEmail);
     if (senderDomain) {
       domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
@@ -1455,23 +1500,64 @@ export async function processInboundEmailInApp(
   const matchedSenderClientId = matchedSenderContact?.client_id || undefined;
   const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
 
-  const destinationResolution = await resolveEffectiveInboundTicketDefaults({
-    tenant: tenantId,
-    providerId,
-    providerDefaults,
-    matchedContactId: matchedSenderContactId ?? null,
-    matchedContactClientId: matchedSenderClientId ?? null,
-    domainMatchedClientId,
-  });
+  // A rule-assigned client wins over sender-based matching: the sender is a
+  // service mailbox, not the client the email is about. The sender contact is
+  // only kept when it belongs to the assigned client.
+  const senderContactInRuleClient = Boolean(
+    ruleAssignedClientId &&
+      matchedSenderContact?.contact_id &&
+      matchedSenderClientId === ruleAssignedClientId
+  );
+  let ruleAssignedContactId: string | null = null;
+  if (ruleAssignedClientId) {
+    ruleAssignedContactId = senderContactInRuleClient
+      ? matchedSenderContactId ?? null
+      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
+  }
 
-  const defaults = destinationResolution.defaults;
+  // Rule destination defaults (set_destination / non-match fallback) sit above
+  // the contact/client/provider cascade.
+  let defaults: any = ruleDestinationDefaults;
+  let destinationSource: string | null = ruleDestinationDefaults
+    ? ruleOutcome.kind === 'set_destination'
+      ? 'rule_destination'
+      : 'rule_fallback_destination'
+    : null;
+  let destinationFallbackReason: string | null = null;
+
+  if (!defaults) {
+    const destinationResolution = await resolveEffectiveInboundTicketDefaults({
+      tenant: tenantId,
+      providerId,
+      providerDefaults,
+      matchedContactId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? matchedSenderContactId ?? null
+          : null
+        : matchedSenderContactId ?? null,
+      matchedContactClientId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? ruleAssignedClientId
+          : null
+        : matchedSenderClientId ?? null,
+      domainMatchedClientId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? null
+          : ruleAssignedClientId
+        : domainMatchedClientId,
+    });
+    defaults = destinationResolution.defaults;
+    destinationSource = destinationResolution.source;
+    destinationFallbackReason = destinationResolution.fallbackReason ?? null;
+  }
+
   if (!defaults) {
     console.warn('processInboundEmailInApp: no effective inbound destination resolved; skipping email', {
       tenantId,
       providerId,
       emailId: emailData.id,
-      source: destinationResolution.source,
-      fallbackReason: destinationResolution.fallbackReason ?? null,
+      source: destinationSource,
+      fallbackReason: destinationFallbackReason,
     });
     if (diagnostics) {
       diagnostics.threading.failureReason = 'missing_defaults';
@@ -1483,23 +1569,39 @@ export async function processInboundEmailInApp(
     tenantId,
     providerId,
     emailId: emailData.id,
-    source: destinationResolution.source,
-    fallbackReason: destinationResolution.fallbackReason ?? null,
+    source: destinationSource,
+    fallbackReason: destinationFallbackReason,
   });
-  let targetClientId = matchedSenderClientId ?? defaults.client_id;
-  let targetContactId = matchedSenderContactId;
+  let targetClientId = ruleAssignedClientId ?? matchedSenderClientId ?? defaults.client_id;
+  let targetContactId = ruleAssignedClientId
+    ? ruleAssignedContactId ?? undefined
+    : matchedSenderContactId;
 
   // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
-  if (!matchedSenderContact && domainMatchedClientId) {
+  if (!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId) {
     targetClientId = domainMatchedClientId;
     targetContactId = domainMatchedContactId ?? undefined;
   }
 
-  // Only treat the email as authored by a contact when we have an exact sender email match.
+  // Only treat the email as authored by a contact when we have an exact sender
+  // email match that is consistent with the ticket's client.
   const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-  const commentAuthorContactId = matchedSenderIsInternalUser ? undefined : matchedSenderContactId;
-  const commentAuthorUserId = matchedSenderContact?.user_id ?? null;
+  const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
+  const commentAuthorContactId =
+    matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
+  const commentAuthorUserId = senderContactUsableAsAuthor
+    ? matchedSenderContact?.user_id ?? null
+    : null;
   const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
+
+  const clientMatchSource =
+    ruleOutcome.kind === 'assign_client'
+      ? ruleOutcome.matchSource
+      : matchedSenderContact?.contact_id
+        ? 'email_match'
+        : domainMatchedClientId
+          ? 'domain_match'
+          : 'provider_default';
 
   // Ticket creation requires a client. If neither defaults nor sender/domain matching
   // can resolve one, skip without failing the webhook.
@@ -1569,6 +1671,10 @@ export async function processInboundEmailInApp(
         inReplyTo: emailData.inReplyTo,
         references: emailData.references,
         providerId,
+        clientMatchSource,
+        ...(appliedRule
+          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
+          : {}),
       },
       attributes: seededAttributes ?? undefined,
     },
