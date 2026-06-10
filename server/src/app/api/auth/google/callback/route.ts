@@ -3,6 +3,7 @@ import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
 
 // make this dynamic
@@ -108,6 +109,26 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'invalid_state',
         errorDescription: 'Invalid state parameter'
+      });
+    }
+
+    // The state parameter is not integrity-protected, so its tenant cannot be
+    // trusted on its own. Require an authenticated session whose tenant matches
+    // the state tenant before resolving credentials or writing any tokens —
+    // otherwise a forged callback could overwrite another tenant's Gmail
+    // provider credentials.
+    const sessionUser = await getCurrentUser();
+    if (!sessionUser?.tenant || sessionUser.tenant !== stateData.tenant) {
+      console.error('[Google OAuth] Session tenant does not match state tenant', {
+        hasSession: Boolean(sessionUser?.tenant),
+        stateTenant: stateData.tenant,
+      });
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: false,
+        error: 'tenant_mismatch',
+        errorDescription: 'Your session does not match the requested tenant. Please sign in and retry.'
       });
     }
 

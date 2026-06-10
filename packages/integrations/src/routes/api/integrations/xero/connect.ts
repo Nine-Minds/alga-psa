@@ -14,6 +14,8 @@ import {
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
+import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
+import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
@@ -72,7 +74,7 @@ export async function GET(): Promise<NextResponse> {
 
   try {
     const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
-    const csrfToken = toBase64Url(crypto.randomBytes(24));
+    const csrfToken = generateOauthCsrfToken();
     const { verifier, challenge } = createPkcePair();
     const statePayload = {
       tenantId: tenant,
@@ -97,7 +99,17 @@ export async function GET(): Promise<NextResponse> {
     });
 
     const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
-    return NextResponse.redirect(authorizeUrl);
+    // Carry the CSRF token in an HttpOnly cookie scoped to the callback route so
+    // the callback can confirm the response landed in the same browser that
+    // started the flow (the PKCE code_verifier lives in the unsigned state and
+    // must not be the only binding).
+    const response = NextResponse.redirect(authorizeUrl);
+    response.cookies.set(
+      XERO_OAUTH_CSRF_COOKIE.name,
+      csrfToken,
+      buildOauthCsrfCookieOptions(XERO_OAUTH_CSRF_COOKIE)
+    );
+    return response;
   } catch (error) {
     const message =
       error instanceof Error
