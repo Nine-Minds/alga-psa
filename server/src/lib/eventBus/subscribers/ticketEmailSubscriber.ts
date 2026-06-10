@@ -1078,11 +1078,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         contactId: primaryContactId,
         to: primaryEmail,
         subject: emailSubject,
-        template: 'ticket-created',
+        template: 'ticket-created-client',
         context: buildContext(portalUrl),
         replyContext,
         from: ticketingFromAddress
-      }, 'Ticket Created');
+      }, 'Ticket Created Client');
     }
 
     // Send to assigned user if different from primary recipient
@@ -1103,17 +1103,17 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
-        const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
+        const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: emailSubject,
-          template: 'ticket-created',
-          context: buildContext(watcherUrl),
+          template: isInternalWatcher ? 'ticket-created' : 'ticket-created-client',
+          context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext,
           from: ticketingFromAddress
-        }, 'Ticket Created');
+        }, isInternalWatcher ? 'Ticket Created' : 'Ticket Created Client');
       },
       {
         excludeEmails: sentEmails,
@@ -1372,14 +1372,14 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         contactId: primaryContactId,
         to: primaryEmail,
         subject: `Ticket Updated: ${ticket.title}`,
-        template: 'ticket-updated',
+        template: 'ticket-updated-client',
         context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
         from: ticketingFromAddress
-      }, 'Ticket Updated');
+      }, 'Ticket Updated Client');
     }
 
     // Send to assigned user if different from primary recipient
@@ -1430,22 +1430,24 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     }
 
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
+        const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: `Ticket Updated: ${ticket.title}`,
-          template: 'ticket-updated',
-          context: buildContext(portalUrl),
+          template: isInternalWatcher ? 'ticket-updated' : 'ticket-updated-client',
+          context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           },
           from: ticketingFromAddress
-        }, 'Ticket Updated');
+        }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
       },
       {
         excludeEmails: sentEmails,
@@ -1777,14 +1779,14 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         contactId: primaryContactId,
         to: primaryEmail,
         subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-        template: 'ticket-updated',
+        template: 'ticket-updated-client',
         context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || ticketId,
           threadId: ticket.email_metadata?.threadId
         },
         from: ticketingFromAddress
-      }, 'Ticket Updated');
+      }, 'Ticket Updated Client');
     }
 
     if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
@@ -1836,20 +1838,20 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
-        const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
+        const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
           subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-          template: 'ticket-updated',
-          context: buildContext(watcherUrl),
+          template: isInternalWatcher ? 'ticket-updated' : 'ticket-updated-client',
+          context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext: {
             ticketId: ticket.ticket_id || ticketId,
             threadId: ticket.email_metadata?.threadId
           },
           from: ticketingFromAddress
-        }, 'Ticket Updated');
+        }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
       },
       {
         excludeEmails: sentEmails,
