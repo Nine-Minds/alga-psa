@@ -479,6 +479,16 @@ def "main cleanup" [
         # Workflow templates
         "workflow_registrations" "workflow_templates" "workflow_template_categories"
         
+        # === Ticket close rules (2026-06-10) ===
+        # All seven FK to tickets / boards / statuses, so they must be deleted
+        # BEFORE those. Internal order follows the FKs among them:
+        # ticket_auto_close_state → board_auto_close_rules, and
+        # checklist_template_items / _apply_rules → checklist_templates.
+        "ticket_auto_close_state" "board_auto_close_rules"
+        "ticket_checklist_items"
+        "checklist_template_apply_rules" "checklist_template_items" "checklist_templates"
+        "board_close_rules"
+
         # === LEVEL 5: Tickets and related ===
         # Tickets MUST be deleted BEFORE categories, statuses, etc that it references
         # AND BEFORE client_locations that tickets reference via location_id

@@ -53,6 +53,8 @@ import {
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -602,7 +604,13 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
   }
 });
 
-export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+export interface UpdateTicketOptions {
+  /** Close despite unmet close rules; honored only with ticket:close_override. */
+  overrideCloseRules?: boolean;
+  overrideCloseRulesReason?: string | null;
+}
+
+export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions) => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
@@ -738,6 +746,37 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           tenant: tenant
         })
         .first();
+
+      // Pre-close validation gates: when this update flips the ticket from an
+      // open to a closed status, enforce the board's close rules before any
+      // writes. Throws TicketCloseValidationError (aborting the transaction)
+      // unless gates pass or a permissioned override applies.
+      if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+        const nextStatus = await trx('statuses')
+          .where({ status_id: updateData.status_id, tenant: tenant })
+          .first();
+        if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+          const merged = { ...currentTicket, ...updateData };
+          await enforceTicketCloseRules(trx, tenant, {
+            ticket: {
+              ticket_id: id,
+              board_id: merged.board_id ?? null,
+              category_id: merged.category_id ?? null,
+              subcategory_id: merged.subcategory_id ?? null,
+              priority_id: merged.priority_id ?? null,
+              assigned_to: merged.assigned_to ?? null,
+            },
+            override: options?.overrideCloseRules
+              ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
+              : undefined,
+            actor: {
+              actorType: TICKET_ACTIVITY_ACTOR.USER,
+              userId: user.user_id,
+            },
+            source: TICKET_ACTIVITY_SOURCE.UI,
+          });
+        }
+      }
 
       let updatedTicket;
 
@@ -958,6 +997,30 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updatedTicket.closed_by = null;
       }
 
+      // Auto-apply checklist templates when the ticket's targeting attributes
+      // (board/category/subcategory/priority) changed. Idempotent per template.
+      const checklistTargetingChanged =
+        (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) ||
+        (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) ||
+        (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) ||
+        (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id);
+      if (checklistTargetingChanged) {
+        try {
+          await applyMatchingChecklistTemplates(trx, tenant, {
+            ticket_id: id,
+            board_id: updatedTicket.board_id,
+            category_id: updatedTicket.category_id,
+            subcategory_id: updatedTicket.subcategory_id,
+            priority_id: updatedTicket.priority_id,
+          }, {
+            actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+            source: TICKET_ACTIVITY_SOURCE.UI,
+          });
+        } catch (error) {
+          console.error('Failed to auto-apply checklist templates:', error);
+        }
+      }
+
       // Handle response_state changes
       const previousResponseState = currentTicket.response_state as TicketResponseState;
       let responseStateChanged = false;
@@ -1090,6 +1153,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
     return 'success';
   } catch (error) {
     console.error(error);
+    // Close-rule failures carry the user-facing explanation of what's unmet —
+    // don't flatten them into the generic message.
+    if (error instanceof TicketCloseValidationError) {
+      throw error;
+    }
     throw new Error('Failed to update ticket');
   }
 });
@@ -1943,7 +2011,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   statusId: string,
 ): Promise<{
   updatedIds: string[];
-  failed: Array<{ ticketId: string; message: string }>;
+  failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
@@ -1958,7 +2026,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   }
 
   const updatedIds: string[] = [];
-  const failed: Array<{ ticketId: string; message: string }> = [];
+  const failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }> = [];
 
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
@@ -1971,6 +2039,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
       failed.push({
         ticketId,
         message: error instanceof Error ? error.message : 'Failed to update status',
+        closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
   }

@@ -382,7 +382,8 @@
       "boards": "Borden",
       "statuses": "Statussen",
       "priorities": "Prioriteiten",
-      "categories": "Categorieën"
+      "categories": "Categorieën",
+      "checklistTemplates": "Checklistsjablonen"
     },
     "numbering": {
       "title": "Nummerformaat",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
           "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Sluitregels",
+        "enabledHelp": "Vereist dat aan voorwaarden is voldaan voordat tickets op dit bord kunnen worden gesloten.",
+        "requireResolutionCommentLabel": "Resolutieopmerking vereisen",
+        "requireResolutionCommentHelp": "Er moet een resolutieopmerking aanwezig zijn voordat het ticket gesloten kan worden.",
+        "requireTimeEntryLabel": "Tijdinvoer vereisen",
+        "requireTimeEntryHelp": "Er moet minimaal één tijdinvoer zijn geregistreerd voordat het ticket gesloten kan worden.",
+        "requireChecklistCompleteLabel": "Voltooiing van checklist vereisen",
+        "requireChecklistCompleteHelp": "Alle verplichte checklistitems moeten zijn afgevinkt voordat het ticket gesloten kan worden.",
+        "requireNoOpenChildrenLabel": "Gebundelde tickets gesloten vereisen",
+        "requireNoOpenChildrenHelp": "Een bundel-master kan niet worden gesloten zolang gebundelde onderliggende tickets nog open zijn.",
+        "requiredFieldsLabel": "Verplichte velden bij sluiting",
+        "requiredFieldsHelp": "Deze ticketvelden moeten zijn ingevuld voordat het ticket gesloten kan worden.",
+        "autoCloseLabel": "Automatisch-sluitenregels",
+        "autoCloseHelp": "Sluit tickets automatisch die zonder activiteit in een status staan. Optioneel wordt er een waarschuwingsmail naar de contactpersoon gestuurd vóór sluiting.",
+        "addAutoCloseRule": "Regel toevoegen",
+        "triggerStatusLabel": "Wanneer ticket de status heeft",
+        "triggerStatusPlaceholder": "Status selecteren",
+        "targetStatusLabel": "Sluiten naar status",
+        "targetStatusPlaceholder": "Gesloten status selecteren",
+        "inactivityDaysLabel": "Dagen inactiviteit",
+        "warningDaysLabel": "Waarschuwingsdagen vóór sluiting",
+        "warningDaysPlaceholder": "Geen waarschuwing",
+        "ruleEnabledLabel": "Ingeschakeld",
+        "removeRule": "Verwijderen",
+        "messages": {
+          "fetchFailed": "Kan sluitregels voor dit bord niet laden",
+          "autoCloseStatusRequired": "Elke automatisch-sluitenregel vereist een triggerstatus en een gesloten doelstatus",
+          "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
+          "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "deze prioriteit"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Checklistsjablonen",
+      "alert": "Checklistsjablonen definiëren herbruikbare checklists voor tickets. Sjabloonitems worden gekopieerd naar tickets bij toepassing, zodat het bewerken van een sjabloon nooit invloed heeft op al bestaande checklists op tickets.",
+      "table": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "items": "Items",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      },
+      "actions": {
+        "addTemplate": "Sjabloon toevoegen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "create": "Aanmaken",
+        "update": "Bijwerken",
+        "up": "Omhoog",
+        "down": "Omlaag",
+        "remove": "Verwijderen",
+        "addItem": "Item toevoegen",
+        "addRule": "Regel toevoegen"
+      },
+      "fields": {
+        "name": {
+          "label": "Sjabloonnaam",
+          "placeholder": "Sjabloonnaam invoeren"
+        },
+        "description": {
+          "label": "Beschrijving",
+          "placeholder": "Beschrijving invoeren"
+        },
+        "active": "Actief",
+        "items": {
+          "label": "Checklistitems",
+          "help": "Items worden in deze volgorde aan tickets toegevoegd wanneer het sjabloon wordt toegepast.",
+          "itemName": "Itemnaam",
+          "required": "Verplicht",
+          "newItemLabel": "Nieuw item",
+          "newItemPlaceholder": "Itemnaam invoeren"
+        },
+        "rules": {
+          "label": "Automatisch-toepassenregels",
+          "help": "Het sjabloon wordt automatisch toegepast op nieuwe tickets die overeenkomen met een van deze regels. Laat een veld op \"Willekeurig\" staan om alle waarden te matchen.",
+          "empty": "Geen automatisch-toepassenregels. Dit sjabloon kan nog steeds handmatig op tickets worden toegepast.",
+          "board": "Bord",
+          "category": "Categorie",
+          "subcategory": "Subcategorie",
+          "priority": "Prioriteit",
+          "any": "Willekeurig"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Checklistsjabloon toevoegen",
+        "editTemplate": "Checklistsjabloon bewerken",
+        "createFirstHelp": "Maak eerst het sjabloon aan en voeg daarna checklistitems en automatisch-toepassenregels toe.",
+        "deleteTitle": "Checklistsjabloon verwijderen",
+        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed."
+      },
+      "messages": {
+        "success": {
+          "created": "Checklistsjabloon succesvol aangemaakt",
+          "updated": "Checklistsjabloon succesvol bijgewerkt",
+          "deleted": "Checklistsjabloon succesvol verwijderd"
+        },
+        "error": {
+          "fetchFailed": "Kan checklistsjablonen niet ophalen",
+          "fetchRulesFailed": "Kan automatisch-toepassenregels niet ophalen",
+          "nameRequired": "Sjabloonnaam is vereist",
+          "saveFailed": "Kan checklistsjabloon niet opslaan",
+          "deleteFailed": "Kan checklistsjabloon niet verwijderen",
+          "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
+          "itemSaveFailed": "Kan checklistitem niet opslaan",
+          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+        }
       }
     }
   },

@@ -48,6 +48,16 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
+import {
+    checkTicketClosure,
+    getTicketAutoCloseState,
+    type ITicketAutoCloseState,
+} from "../../actions/close-rules/closeRuleActions";
+import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
+import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
+import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
+import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
@@ -303,6 +313,56 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
     // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
     const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
+
+    // Close rules: blocked-close dialog + checklist + auto-close banner state
+    const [closeBlockedDialog, setCloseBlockedDialog] = useState<{
+        isOpen: boolean;
+        statusId: string | null;
+        failures: CloseRuleFailure[];
+        canOverride: boolean;
+    }>({ isOpen: false, statusId: null, failures: [], canOverride: false });
+    const [closeOverrideReason, setCloseOverrideReason] = useState('');
+    const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
+    const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(undefined);
+    const [autoCloseState, setAutoCloseState] = useState<ITicketAutoCloseState | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!ticket.ticket_id) return;
+        getTicketChecklistItems(ticket.ticket_id)
+            .then((items) => { if (!cancelled) setChecklistItems(items); })
+            .catch((err) => console.error('Failed to load ticket checklist:', err));
+        getTicketAutoCloseState(ticket.ticket_id)
+            .then((state) => { if (!cancelled) setAutoCloseState(state); })
+            .catch((err) => console.error('Failed to load auto-close state:', err));
+        return () => { cancelled = true; };
+        // Re-check the pending auto-close whenever the status changes — a
+        // status move usually cancels or reschedules it.
+    }, [ticket.ticket_id, ticket.status_id]);
+
+    const checklistSummary = useMemo(
+        () => summarizeChecklist(checklistItems ?? []),
+        [checklistItems]
+    );
+
+    const submitCloseOverride = async () => {
+        if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
+        setIsSubmittingCloseOverride(true);
+        try {
+            await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
+                overrideCloseRules: true,
+                overrideCloseRulesReason: closeOverrideReason.trim() || null,
+            });
+            setTicket((prev: any) => ({ ...prev, status_id: closeBlockedDialog.statusId, response_state: null }));
+            setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+            setCloseOverrideReason('');
+            toast.success('Ticket closed');
+        } catch (error) {
+            handleError(error, 'Failed to close ticket');
+        } finally {
+            setIsSubmittingCloseOverride(false);
+        }
+    };
     const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
     const [isTicketDeleteValidating, setIsTicketDeleteValidating] = useState(false);
     const [isTicketDeleteProcessing, setIsTicketDeleteProcessing] = useState(false);
@@ -1389,9 +1449,32 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
+        // Pre-close check: when this status change would close the ticket,
+        // surface unmet close rules in a dialog instead of submitting a write
+        // that the server would reject. The write paths re-enforce, so this is
+        // UX only — never trust it for correctness.
+        if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
+            try {
+                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
+                if (check.wouldClose && !check.allowed) {
+                    setCloseOverrideReason('');
+                    setCloseBlockedDialog({
+                        isOpen: true,
+                        statusId: normalizedValue,
+                        failures: check.failures,
+                        canOverride: check.canOverride,
+                    });
+                    return;
+                }
+            } catch (checkError) {
+                // Fall through to the normal update; the server still enforces.
+                console.error('Close rules pre-check failed:', checkError);
+            }
+        }
+
         // Store the previous value before updating
         const previousValue = ticket[field];
-        
+
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
@@ -2604,6 +2687,101 @@ const handleClose = () => {
                     isConfirming={isDeletingComment}
                 />
                 
+                {/* Blocked-close dialog: unmet close rules with quick actions and
+                    a permissioned "Close anyway" override. */}
+                <Dialog
+                    id={`${id}-close-blocked-dialog`}
+                    isOpen={closeBlockedDialog.isOpen}
+                    onClose={() => {
+                        setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                        setCloseOverrideReason('');
+                    }}
+                    title="This ticket can't be closed yet"
+                >
+                    <DialogContent>
+                        <p className="text-sm text-gray-600 mb-3">
+                            The board's close rules require the following before this ticket can be closed:
+                        </p>
+                        <ul className="space-y-2 mb-4">
+                            {closeBlockedDialog.failures.map((failure) => (
+                                <li
+                                    key={failure.rule}
+                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                >
+                                    <span>{failure.message}</span>
+                                    {failure.rule === 'checklist_incomplete' && (
+                                        <Button
+                                            id={`${id}-close-blocked-view-checklist`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                document
+                                                    .getElementById(`${id}-checklist-section`)
+                                                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                        >
+                                            View checklist
+                                        </Button>
+                                    )}
+                                    {failure.rule === 'resolution_comment' && (
+                                        <Button
+                                            id={`${id}-close-blocked-add-comment`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                document
+                                                    .getElementById(`${id}-conversation`)
+                                                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                        >
+                                            Add comment
+                                        </Button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                        {closeBlockedDialog.canOverride && (
+                            <div className="mb-2">
+                                <TextArea
+                                    id={`${id}-close-override-reason`}
+                                    value={closeOverrideReason}
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCloseOverrideReason(e.target.value)}
+                                    placeholder="Reason for closing anyway (optional, recorded in the audit log)"
+                                    rows={2}
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-close-blocked-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                    setCloseOverrideReason('');
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            {closeBlockedDialog.canOverride && (
+                                <Button
+                                    id={`${id}-close-blocked-close-anyway`}
+                                    type="button"
+                                    variant="destructive"
+                                    onClick={submitCloseOverride}
+                                    disabled={isSubmittingCloseOverride}
+                                >
+                                    {isSubmittingCloseOverride ? 'Closing…' : 'Close anyway'}
+                                </Button>
+                            )}
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 {/* Timer Replace Confirmation */}
                 <ConfirmationDialog
                     id={`${id}-replace-timer-dialog`}
@@ -2823,6 +3001,38 @@ const handleClose = () => {
                                     </div>
                                 ) : null}
 
+                                {(autoCloseState || checklistSummary.requiredTotal > 0) && (
+                                    <div id={`${id}-close-rules-banner`} className="mb-4 flex flex-wrap items-center gap-2">
+                                        {autoCloseState && (
+                                            <div
+                                                id={`${id}-auto-close-banner`}
+                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                            >
+                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
+                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                            </div>
+                                        )}
+                                        {checklistSummary.requiredTotal > 0 && (
+                                            <button
+                                                type="button"
+                                                id={`${id}-checklist-progress-chip`}
+                                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
+                                                    checklistSummary.requiredDone === checklistSummary.requiredTotal
+                                                        ? 'border-green-300 bg-green-50 text-green-800'
+                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
+                                                }`}
+                                                onClick={() =>
+                                                    document
+                                                        .getElementById(`${id}-checklist-section`)
+                                                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                                }
+                                            >
+                                                {`${checklistSummary.requiredDone} of ${checklistSummary.requiredTotal} required checklist items done`}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
                                 <TicketInfo
                                     id={`${id}-info`}
                                     titleRef={cardTitleRef}
@@ -2918,6 +3128,15 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                         
+                        <div className="mb-6">
+                            <TicketChecklistSection
+                                id={`${id}-checklist-section`}
+                                ticketId={ticket.ticket_id || ''}
+                                initialItems={checklistItems}
+                                onItemsChanged={setChecklistItems}
+                            />
+                        </div>
+
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}

@@ -382,7 +382,8 @@
       "boards": "Boards",
       "statuses": "Status",
       "priorities": "Prioritäten",
-      "categories": "Kategorien"
+      "categories": "Kategorien",
+      "checklistTemplates": "Checklisten-Vorlagen"
     },
     "numbering": {
       "title": "Nummernformat",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Boardstatus konnte nicht aktualisiert werden",
           "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Abschlussregeln",
+        "enabledHelp": "Bedingungen müssen erfüllt sein, bevor Tickets auf diesem Board geschlossen werden können.",
+        "requireResolutionCommentLabel": "Lösungskommentar erforderlich",
+        "requireResolutionCommentHelp": "Ein Lösungskommentar muss vorhanden sein, bevor das Ticket geschlossen werden kann.",
+        "requireTimeEntryLabel": "Zeiteintrag erforderlich",
+        "requireTimeEntryHelp": "Mindestens ein Zeiteintrag muss erfasst sein, bevor das Ticket geschlossen werden kann.",
+        "requireChecklistCompleteLabel": "Checklisten-Abschluss erforderlich",
+        "requireChecklistCompleteHelp": "Alle Pflichtpunkte der Checkliste müssen abgehakt sein, bevor das Ticket geschlossen werden kann.",
+        "requireNoOpenChildrenLabel": "Gebündelte Tickets müssen geschlossen sein",
+        "requireNoOpenChildrenHelp": "Ein Bundle-Master kann nicht geschlossen werden, solange gebündelte Untertickets noch offen sind.",
+        "requiredFieldsLabel": "Pflichtfelder beim Schließen",
+        "requiredFieldsHelp": "Diese Ticket-Felder müssen ausgefüllt sein, bevor das Ticket geschlossen werden kann.",
+        "autoCloseLabel": "Automatische Abschlussregeln",
+        "autoCloseHelp": "Tickets, die sich ohne Aktivität in einem Status befinden, werden automatisch geschlossen. Optional wird vor dem Schließen eine Warn-E-Mail an den Kontakt gesendet.",
+        "addAutoCloseRule": "Regel hinzufügen",
+        "triggerStatusLabel": "Wenn Ticket sich in Status befindet",
+        "triggerStatusPlaceholder": "Status auswählen",
+        "targetStatusLabel": "Schließen mit Status",
+        "targetStatusPlaceholder": "Geschlossenen Status auswählen",
+        "inactivityDaysLabel": "Inaktivitätstage",
+        "warningDaysLabel": "Warntage vor Schließung",
+        "warningDaysPlaceholder": "Keine Warnung",
+        "ruleEnabledLabel": "Aktiv",
+        "removeRule": "Entfernen",
+        "messages": {
+          "fetchFailed": "Abschlussregeln für dieses Board konnten nicht geladen werden",
+          "autoCloseStatusRequired": "Jede automatische Abschlussregel benötigt einen Auslösestatus und einen geschlossenen Zielstatus",
+          "autoCloseDaysInvalid": "Die Inaktivitätstage für den automatischen Abschluss müssen eine positive ganze Zahl sein",
+          "autoCloseWarningInvalid": "Die Warnvorlaufzeit muss kleiner als die Inaktivitätstage sein"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "diese Priorität"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Checklisten-Vorlagen",
+      "alert": "Checklisten-Vorlagen definieren wiederverwendbare Checklisten für Tickets. Vorlagenelemente werden beim Anwenden auf Tickets kopiert – das Bearbeiten einer Vorlage hat keinen Einfluss auf bereits vorhandene Checklisten auf Tickets.",
+      "table": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "items": "Elemente",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "actions": {
+        "addTemplate": "Vorlage hinzufügen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "close": "Schließen",
+        "create": "Erstellen",
+        "update": "Aktualisieren",
+        "up": "Nach oben",
+        "down": "Nach unten",
+        "remove": "Entfernen",
+        "addItem": "Element hinzufügen",
+        "addRule": "Regel hinzufügen"
+      },
+      "fields": {
+        "name": {
+          "label": "Vorlagenname",
+          "placeholder": "Vorlagenname eingeben"
+        },
+        "description": {
+          "label": "Beschreibung",
+          "placeholder": "Beschreibung eingeben"
+        },
+        "active": "Aktiv",
+        "items": {
+          "label": "Checklisten-Elemente",
+          "help": "Elemente werden beim Anwenden der Vorlage in dieser Reihenfolge zu Tickets hinzugefügt.",
+          "itemName": "Elementname",
+          "required": "Pflichtfeld",
+          "newItemLabel": "Neues Element",
+          "newItemPlaceholder": "Elementname eingeben"
+        },
+        "rules": {
+          "label": "Regeln für automatische Anwendung",
+          "help": "Die Vorlage wird automatisch auf neue Tickets angewendet, die einer dieser Regeln entsprechen. Lassen Sie ein Feld auf \"Beliebig\", um alle Werte zu erfassen.",
+          "empty": "Keine Regeln für automatische Anwendung. Diese Vorlage kann weiterhin manuell auf Tickets angewendet werden.",
+          "board": "Board",
+          "category": "Kategorie",
+          "subcategory": "Unterkategorie",
+          "priority": "Priorität",
+          "any": "Beliebig"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Checklisten-Vorlage hinzufügen",
+        "editTemplate": "Checklisten-Vorlage bearbeiten",
+        "createFirstHelp": "Erstellen Sie zuerst die Vorlage, dann fügen Sie Checklisten-Elemente und Regeln für die automatische Anwendung hinzu.",
+        "deleteTitle": "Checklisten-Vorlage löschen",
+        "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Checklisten, die bereits zu Tickets hinzugefügt wurden, sind davon nicht betroffen."
+      },
+      "messages": {
+        "success": {
+          "created": "Checklisten-Vorlage erfolgreich erstellt",
+          "updated": "Checklisten-Vorlage erfolgreich aktualisiert",
+          "deleted": "Checklisten-Vorlage erfolgreich gelöscht"
+        },
+        "error": {
+          "fetchFailed": "Checklisten-Vorlagen konnten nicht abgerufen werden",
+          "fetchRulesFailed": "Regeln für automatische Anwendung konnten nicht abgerufen werden",
+          "nameRequired": "Vorlagenname ist erforderlich",
+          "saveFailed": "Checklisten-Vorlage konnte nicht gespeichert werden",
+          "deleteFailed": "Checklisten-Vorlage konnte nicht gelöscht werden",
+          "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
+          "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
+          "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+        }
       }
     }
   },

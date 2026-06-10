@@ -14,6 +14,7 @@ import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImport
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
@@ -149,6 +150,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ReconcileBucketUsageJobData>('reconcile-bucket-usage', async (job: Job<ReconcileBucketUsageJobData>) => {
       // Directly call the handler function
       await handleReconcileBucketUsage(job);
+    });
+
+    // Register auto-close tickets handler
+    jobScheduler.registerJobHandler<AutoCloseTicketsJobData>('auto-close-tickets', async (job: Job<AutoCloseTicketsJobData>) => {
+      await autoCloseTicketsHandler(job.data);
     });
 
     // Register email webhook maintenance handler
@@ -426,6 +432,18 @@ export const scheduleReconcileBucketUsageJob = async (
     'reconcile-bucket-usage',
     cronExpression,
     { tenantId } // Only needs tenantId
+  );
+};
+
+export const scheduleAutoCloseTicketsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/15 * * * *' // Default: every 15 minutes
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<AutoCloseTicketsJobData>(
+    'auto-close-tickets',
+    cronExpression,
+    { tenantId }
   );
 };
 

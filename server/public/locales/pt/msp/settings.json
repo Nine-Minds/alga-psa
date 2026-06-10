@@ -382,7 +382,8 @@
       "boards": "Boards",
       "statuses": "Statuses",
       "priorities": "Priorities",
-      "categories": "Categories"
+      "categories": "Categories",
+      "checklistTemplates": "Modelos de checklist"
     },
     "numbering": {
       "title": "Number Format",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Falha ao atualizar o estado do quadro",
           "updateDefaultFailed": "Falha ao atualizar o quadro predefinido"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Regras de encerramento",
+        "enabledHelp": "Exigir que determinadas condições sejam cumpridas antes de os tickets deste quadro poderem ser encerrados.",
+        "requireResolutionCommentLabel": "Exigir comentário de resolução",
+        "requireResolutionCommentHelp": "É necessário um comentário de resolução antes de o ticket poder ser encerrado.",
+        "requireTimeEntryLabel": "Exigir registo de tempo",
+        "requireTimeEntryHelp": "É necessário pelo menos um registo de tempo antes de o ticket poder ser encerrado.",
+        "requireChecklistCompleteLabel": "Exigir conclusão da checklist",
+        "requireChecklistCompleteHelp": "Todos os itens obrigatórios da checklist têm de ser marcados antes de o ticket poder ser encerrado.",
+        "requireNoOpenChildrenLabel": "Exigir encerramento dos tickets agrupados",
+        "requireNoOpenChildrenHelp": "Um ticket principal de agrupamento não pode ser encerrado enquanto existirem tickets secundários agrupados ainda abertos.",
+        "requiredFieldsLabel": "Campos obrigatórios no encerramento",
+        "requiredFieldsHelp": "Estes campos do ticket têm de ser preenchidos antes de o ticket poder ser encerrado.",
+        "autoCloseLabel": "Regras de encerramento automático",
+        "autoCloseHelp": "Encerra automaticamente tickets que permaneçam num estado sem atividade. Pode ser enviado um email de aviso ao contacto antes do encerramento.",
+        "addAutoCloseRule": "Adicionar regra",
+        "triggerStatusLabel": "Quando o ticket está no estado",
+        "triggerStatusPlaceholder": "Selecionar estado",
+        "targetStatusLabel": "Encerrar para o estado",
+        "targetStatusPlaceholder": "Selecionar estado encerrado",
+        "inactivityDaysLabel": "Dias de inatividade",
+        "warningDaysLabel": "Dias de aviso antes do encerramento",
+        "warningDaysPlaceholder": "Sem aviso",
+        "ruleEnabledLabel": "Ativo",
+        "removeRule": "Remover",
+        "messages": {
+          "fetchFailed": "Falha ao carregar as regras de encerramento deste quadro",
+          "autoCloseStatusRequired": "Cada regra de encerramento automático necessita de um estado de acionamento e de um estado de destino encerrado",
+          "autoCloseDaysInvalid": "Os dias de inatividade para encerramento automático têm de ser um número inteiro positivo",
+          "autoCloseWarningInvalid": "O tempo de antecedência do aviso tem de ser inferior aos dias de inatividade"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "esta prioridade"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Modelos de checklist",
+      "alert": "Os modelos de checklist definem checklists reutilizáveis para tickets. Os itens do modelo são copiados para os tickets quando aplicados, pelo que editar um modelo nunca altera as checklists já existentes nos tickets.",
+      "table": {
+        "name": "Nome",
+        "description": "Descrição",
+        "items": "Itens",
+        "status": "Estado",
+        "actions": "Ações"
+      },
+      "statusLabels": {
+        "active": "Ativo",
+        "inactive": "Inativo"
+      },
+      "actions": {
+        "addTemplate": "Adicionar modelo",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "close": "Fechar",
+        "create": "Criar",
+        "update": "Atualizar",
+        "up": "Subir",
+        "down": "Descer",
+        "remove": "Remover",
+        "addItem": "Adicionar item",
+        "addRule": "Adicionar regra"
+      },
+      "fields": {
+        "name": {
+          "label": "Nome do modelo",
+          "placeholder": "Introduza o nome do modelo"
+        },
+        "description": {
+          "label": "Descrição",
+          "placeholder": "Introduza a descrição"
+        },
+        "active": "Ativo",
+        "items": {
+          "label": "Itens da checklist",
+          "help": "Os itens são adicionados aos tickets por esta ordem quando o modelo é aplicado.",
+          "itemName": "Nome do item",
+          "required": "Obrigatório",
+          "newItemLabel": "Novo item",
+          "newItemPlaceholder": "Introduza o nome do item"
+        },
+        "rules": {
+          "label": "Regras de aplicação automática",
+          "help": "O modelo é automaticamente aplicado a novos tickets que correspondam a qualquer uma destas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
+          "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado manualmente aos tickets.",
+          "board": "Quadro",
+          "category": "Categoria",
+          "subcategory": "Subcategoria",
+          "priority": "Prioridade",
+          "any": "Qualquer"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Adicionar modelo de checklist",
+        "editTemplate": "Editar modelo de checklist",
+        "createFirstHelp": "Crie primeiro o modelo e depois adicione itens de checklist e regras de aplicação automática.",
+        "deleteTitle": "Eliminar modelo de checklist",
+        "deleteMessage": "Tem a certeza de que pretende eliminar \"{{name}}\"? As checklists já adicionadas aos tickets não serão afetadas."
+      },
+      "messages": {
+        "success": {
+          "created": "Modelo de checklist criado com sucesso",
+          "updated": "Modelo de checklist atualizado com sucesso",
+          "deleted": "Modelo de checklist eliminado com sucesso"
+        },
+        "error": {
+          "fetchFailed": "Falha ao obter os modelos de checklist",
+          "fetchRulesFailed": "Falha ao obter as regras de aplicação automática",
+          "nameRequired": "O nome do modelo é obrigatório",
+          "saveFailed": "Falha ao guardar o modelo de checklist",
+          "deleteFailed": "Falha ao eliminar o modelo de checklist",
+          "updateStatusFailed": "Falha ao atualizar o estado do modelo",
+          "itemSaveFailed": "Falha ao guardar o item da checklist",
+          "ruleSaveFailed": "Falha ao guardar a regra de aplicação automática"
+        }
       }
     }
   },
