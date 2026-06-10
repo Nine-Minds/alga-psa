@@ -1138,6 +1138,86 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
+   * Get current time period
+   */
+  getCurrentTimePeriod() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(
+          user,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time periods');
+        }
+
+        // Optional reference date (defaults to today in UTC)
+        const url = new URL(req.url);
+        const date = url.searchParams.get('date') || undefined;
+
+        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          throw new ValidationError('Invalid date format, expected YYYY-MM-DD');
+        }
+
+        // Get current time period within tenant context
+        const period = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getCurrentTimePeriod({
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          }, date);
+        });
+
+        if (!period) {
+          throw new NotFoundError('No current time period');
+        }
+
+        return createSuccessResponse(period);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Create time period
    */
   createTimePeriod() {

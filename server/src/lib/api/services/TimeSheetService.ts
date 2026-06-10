@@ -27,6 +27,7 @@ import {
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 
 export class TimeSheetService extends BaseService<any> {
   constructor() {
@@ -680,6 +681,16 @@ export class TimeSheetService extends BaseService<any> {
       return knex('time_periods')
         .where({ tenant: context.tenant })
         .orderBy('start_date', 'desc');
+    }
+
+
+  async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
+      const { knex } = await this.getKnex();
+
+      const targetDate = date ?? new Date().toISOString().slice(0, 10);
+      const period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+
+      return period ? this.getTimePeriod(period.period_id, context) : null;
     }
 
 
