@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PgBossSlaBackend } from '../backends/PgBossSlaBackend';
 
 const loadFactory = async () => {
   vi.resetModules();
   return import('../backends/SlaBackendFactory');
 };
 
+// vi.resetModules() gives the factory a fresh module graph, so class identity
+// can't be compared against a statically imported class — assert by name.
 describe('SlaBackendFactory', () => {
   const originalEdition = process.env.EDITION;
 
@@ -15,19 +16,20 @@ describe('SlaBackendFactory', () => {
 
   afterEach(() => {
     process.env.EDITION = originalEdition;
+    vi.doUnmock('@enterprise/lib/sla/TemporalSlaBackend');
   });
 
   it('returns PgBossSlaBackend when isEnterprise is false', async () => {
     process.env.EDITION = 'ce';
     const { SlaBackendFactory } = await loadFactory();
     const backend = await SlaBackendFactory.getBackend();
-    expect(backend).toBeInstanceOf(PgBossSlaBackend);
+    expect(backend.constructor.name).toBe('PgBossSlaBackend');
     SlaBackendFactory.getInstance().reset();
   });
 
   it('returns TemporalSlaBackend when isEnterprise is true and Temporal available', async () => {
     process.env.EDITION = 'ee';
-    vi.mock('@enterprise/lib/sla/TemporalSlaBackend', () => ({
+    vi.doMock('@enterprise/lib/sla/TemporalSlaBackend', () => ({
       TemporalSlaBackend: class TemporalSlaBackendMock {},
     }));
 
@@ -39,7 +41,7 @@ describe('SlaBackendFactory', () => {
 
   it('falls back to PgBossSlaBackend when Temporal unavailable in EE', async () => {
     process.env.EDITION = 'enterprise';
-    vi.mock('@enterprise/lib/sla/TemporalSlaBackend', () => ({
+    vi.doMock('@enterprise/lib/sla/TemporalSlaBackend', () => ({
       TemporalSlaBackend: class TemporalSlaBackendMock {
         constructor() {
           throw new Error('Temporal unavailable');
@@ -49,7 +51,7 @@ describe('SlaBackendFactory', () => {
 
     const { SlaBackendFactory } = await loadFactory();
     const backend = await SlaBackendFactory.getBackend();
-    expect(backend).toBeInstanceOf(PgBossSlaBackend);
+    expect(backend.constructor.name).toBe('PgBossSlaBackend');
     SlaBackendFactory.getInstance().reset();
   });
 });

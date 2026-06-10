@@ -29,7 +29,7 @@ export async function registerWebhookSubscriber(): Promise<void> {
   }
 
   for (const eventType of WEBHOOK_TICKET_EVENT_TYPES) {
-    await getEventBus().subscribe(eventType, handleTicketEvent);
+    await getEventBus().subscribe(eventType, handleTicketEvent, { subscriberId: 'webhook' });
   }
 
   isRegistered = true;
