@@ -263,7 +263,7 @@ export interface QboApiErrorResponse {
   Fault?: QboFault;
   warnings?: any; // Define warnings structure if needed
   time: string; // ISO 8601 timestamp
-  intuit_tid?: string; // Transaction ID
+  intuit_tid?: string; // Transaction ID (Intuit sends this as a response header, not in the body)
 }
 
 /**

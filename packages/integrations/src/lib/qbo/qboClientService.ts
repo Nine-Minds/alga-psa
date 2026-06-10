@@ -11,6 +11,17 @@ const logger = {
   error: (...args: any[]) => console.error('[QboClientService]', ...args)
 };
 
+// Intuit returns an `intuit_tid` header on every API response; their support
+// team uses it to locate a request when troubleshooting, so capture it in
+// logs and error details.
+function extractIntuitTid(headers: unknown): string | undefined {
+  if (!headers || typeof headers !== 'object') {
+    return undefined;
+  }
+  const value = (headers as Record<string, unknown>)['intuit_tid'];
+  return typeof value === 'string' && value ? value : undefined;
+}
+
 const QBO_TOKEN_ENDPOINT = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const QBO_SANDBOX_API_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 const QBO_PRODUCTION_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
@@ -127,11 +138,12 @@ export class QboClientService {
       try {
         await this.refreshToken();
       } catch (error) {
-        logger.error({ tenantId: this.tenantId, realmId: this.realmId, error }, 'Failed to refresh QBO token');
+        const intuitTid = axios.isAxiosError(error) ? extractIntuitTid(error.response?.headers) : undefined;
+        logger.error({ tenantId: this.tenantId, realmId: this.realmId, intuitTid, error }, 'Failed to refresh QBO token');
         if (axios.isAxiosError(error) && error.response?.status === 400) {
-          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: error });
+          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: error, intuitTid });
         }
-        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: error });
+        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: error, intuitTid });
       }
     }
 
@@ -198,7 +210,8 @@ export class QboClientService {
 
       logger.info({ tenantId: this.tenantId, realmId: this.realmId }, 'Successfully refreshed QBO token.');
     } catch (error) {
-      logger.error({ tenantId: this.tenantId, realmId: this.realmId, error }, 'Error refreshing QBO token');
+      const intuitTid = axios.isAxiosError(error) ? extractIntuitTid(error.response?.headers) : undefined;
+      logger.error({ tenantId: this.tenantId, realmId: this.realmId, intuitTid, error }, 'Error refreshing QBO token');
       throw error;
     }
   }
@@ -249,26 +262,48 @@ export class QboClientService {
         }
       });
 
+      logger.debug(
+        {
+          tenantId: this.tenantId,
+          realmId: this.realmId,
+          operation,
+          entityType,
+          intuitTid: extractIntuitTid(response.headers)
+        },
+        'QBO request completed'
+      );
+
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
+        const intuitTid = extractIntuitTid(error.response?.headers);
 
         if (status === 401 && attempt === 0) {
+          logger.info(
+            { tenantId: this.tenantId, realmId: this.realmId, operation, entityType, intuitTid },
+            'QBO request returned 401, refreshing token and retrying'
+          );
           await this.refreshToken();
           return this.requestQbo<T>(config, operation, entityType, attempt + 1);
         }
+
+        logger.error(
+          { tenantId: this.tenantId, realmId: this.realmId, operation, entityType, status, intuitTid },
+          'QBO request failed'
+        );
 
         if (status === 404) {
           throw new AppError('QBO_NOT_FOUND', `QBO ${entityType ?? 'entity'} not found.`, {
             originalError: error,
             qboOperation: operation,
-            qboEntityType: entityType
+            qboEntityType: entityType,
+            intuitTid
           });
         }
 
         const payload = error.response?.data ?? error;
-        throw this.mapQboError(payload, operation, entityType);
+        throw this.mapQboError(payload, operation, entityType, intuitTid);
       }
 
       if (error instanceof AppError) {
@@ -525,7 +560,7 @@ export class QboClientService {
     }
   }
 
-  private mapQboError(err: any, operation: string, entityType?: string): AppError {
+  private mapQboError(err: any, operation: string, entityType?: string, intuitTid?: string): AppError {
     let message = `QBO API Error during ${operation}`;
     if (entityType) {
       message += ` on ${entityType}`;
@@ -560,10 +595,15 @@ export class QboClientService {
       message += ': An unknown error occurred.';
     }
 
+    if (intuitTid) {
+      message += ` (intuit_tid: ${intuitTid})`;
+    }
+
     return new AppError(code, message, {
       originalError: err,
       qboOperation: operation,
-      qboEntityType: entityType
+      qboEntityType: entityType,
+      intuitTid
     });
   }
 }
