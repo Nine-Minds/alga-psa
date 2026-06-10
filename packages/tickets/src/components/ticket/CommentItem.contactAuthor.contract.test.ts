@@ -36,7 +36,19 @@ describe('CommentItem contact-authored rendering contract', () => {
     const source = readCommentItemSource();
 
     expect(source).toContain("resolvedAuthor.source === 'unknown'");
-    expect(source).toContain('userName="Unknown User"');
+    // The fallback label is now i18n-backed; the English locale must still
+    // resolve the key to "Unknown User".
+    expect(source).toContain("userName={t('conversation.unknownUser')}");
+    const locale = JSON.parse(
+      fs.readFileSync(
+        path.resolve(
+          __dirname,
+          '../../../../../server/public/locales/en/features/tickets.json'
+        ),
+        'utf8'
+      )
+    );
+    expect(locale?.conversation?.unknownUser).toBe('Unknown User');
   });
 
   it('T032: unmatched inbound-email comments use metadata email sender identity for display', () => {

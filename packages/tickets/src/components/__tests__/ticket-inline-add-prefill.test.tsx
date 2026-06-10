@@ -579,6 +579,17 @@ vi.mock('../lib/ticketRichTextImages', () => ({
     ),
 }));
 
+// The default status is applied by an effect that runs after the async
+// getTicketStatuses fetch settles; clicking Create before that flips
+// statusId from '' trips the "Please select a status" validation. Wait for
+// the (latest-rendered) status select to actually have "Open" selected.
+async function waitForDefaultStatusSelected() {
+  await waitFor(() => {
+    const option = screen.getAllByRole('option', { name: 'Open' }).at(-1) as HTMLOptionElement | undefined;
+    expect(option?.selected).toBe(true);
+  });
+}
+
 describe('QuickAddTicket prefills', () => {
   beforeEach(() => {
     addTicketMock.mockReset();
@@ -793,6 +804,7 @@ describe('QuickAddTicket prefills', () => {
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-1'));
+    await waitForDefaultStatusSelected();
 
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'Rich text quick add' }
@@ -885,8 +897,9 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    renderQuickAdd(false);
+    const psaView = renderQuickAdd(false);
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await waitForDefaultStatusSelected();
     expect(screen.getByTestId('quick-add-ticket-asset-pill')).toHaveTextContent('Linked asset: Router A');
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'PSA asset-linked quick add' }
@@ -898,8 +911,14 @@ describe('QuickAddTicket prefills', () => {
 
     addTicketMock.mockClear();
 
+    // `open` is a controlled prop pinned to true, so the PSA-mode dialog stays
+    // mounted; unmount it before rendering the AlgaDesk-mode instance so the
+    // queries below target a single dialog.
+    psaView.unmount();
+
     renderQuickAdd(true);
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await waitForDefaultStatusSelected();
     expect(screen.queryByTestId('quick-add-ticket-asset-pill')).not.toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'AlgaDesk quick add' }

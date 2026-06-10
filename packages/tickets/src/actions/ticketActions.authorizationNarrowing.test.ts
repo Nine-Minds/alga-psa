@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Static import keeps the (expensive) ticketActions module evaluation in the
+// collection phase instead of counting against the 5s timeout of whichever
+// test happens to run first. vi.mock factories below are hoisted above this
+// import by vitest.
+import { getTicketById, getTicketsForList } from './ticketActions';
+
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
 
@@ -347,8 +353,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
         )
     );
 
-    const { getTicketById, getTicketsForList } = await import('./ticketActions');
-
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
@@ -393,8 +397,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
         )
     );
 
-    const { getTicketById, getTicketsForList } = await import('./ticketActions');
-
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
@@ -436,7 +438,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
       async (_db: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(trx)
     );
 
-    const { getTicketsForList } = await import('./ticketActions');
     const {
       BuiltinAuthorizationKernelProvider,
       BundleAuthorizationKernelProvider,

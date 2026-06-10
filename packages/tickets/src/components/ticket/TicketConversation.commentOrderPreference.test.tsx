@@ -181,10 +181,14 @@ describe('TicketConversation comment order preference', () => {
       configurable: true,
     });
     Object.defineProperty(window, 'IntersectionObserver', {
-      value: vi.fn(() => ({
-        observe: vi.fn(),
-        disconnect: vi.fn(),
-      })),
+      // Must be constructible: the component calls `new IntersectionObserver(...)`.
+      value: class {
+        observe = vi.fn();
+        unobserve = vi.fn();
+        disconnect = vi.fn();
+        takeRecords = vi.fn(() => []);
+        constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
+      },
       configurable: true,
     });
     vi.clearAllMocks();
