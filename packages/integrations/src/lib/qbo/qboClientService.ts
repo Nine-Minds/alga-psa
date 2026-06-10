@@ -22,6 +22,22 @@ function extractIntuitTid(headers: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined;
 }
 
+// Never log or store a raw AxiosError: its request config carries the
+// Authorization header (Bearer/Basic credentials) and request body (refresh
+// token), and these logs ship to a shared aggregator. Reduce it to the safe,
+// useful fields.
+function describeAxiosError(error: unknown): Record<string, unknown> {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      intuitTid: extractIntuitTid(error.response?.headers)
+    };
+  }
+  return { message: error instanceof Error ? error.message : String(error) };
+}
+
 const QBO_TOKEN_ENDPOINT = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const QBO_SANDBOX_API_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 const QBO_PRODUCTION_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
@@ -138,12 +154,12 @@ export class QboClientService {
       try {
         await this.refreshToken();
       } catch (error) {
-        const intuitTid = axios.isAxiosError(error) ? extractIntuitTid(error.response?.headers) : undefined;
-        logger.error({ tenantId: this.tenantId, realmId: this.realmId, intuitTid, error }, 'Failed to refresh QBO token');
+        const errorInfo = describeAxiosError(error);
+        logger.error({ tenantId: this.tenantId, realmId: this.realmId, ...errorInfo }, 'Failed to refresh QBO token');
         if (axios.isAxiosError(error) && error.response?.status === 400) {
-          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: error, intuitTid });
+          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
         }
-        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: error, intuitTid });
+        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
       }
     }
 
@@ -210,8 +226,10 @@ export class QboClientService {
 
       logger.info({ tenantId: this.tenantId, realmId: this.realmId }, 'Successfully refreshed QBO token.');
     } catch (error) {
-      const intuitTid = axios.isAxiosError(error) ? extractIntuitTid(error.response?.headers) : undefined;
-      logger.error({ tenantId: this.tenantId, realmId: this.realmId, intuitTid, error }, 'Error refreshing QBO token');
+      logger.error(
+        { tenantId: this.tenantId, realmId: this.realmId, ...describeAxiosError(error) },
+        'Error refreshing QBO token'
+      );
       throw error;
     }
   }
@@ -295,14 +313,14 @@ export class QboClientService {
 
         if (status === 404) {
           throw new AppError('QBO_NOT_FOUND', `QBO ${entityType ?? 'entity'} not found.`, {
-            originalError: error,
+            originalError: describeAxiosError(error),
             qboOperation: operation,
             qboEntityType: entityType,
             intuitTid
           });
         }
 
-        const payload = error.response?.data ?? error;
+        const payload = error.response?.data ?? describeAxiosError(error);
         throw this.mapQboError(payload, operation, entityType, intuitTid);
       }
 
@@ -575,9 +593,15 @@ export class QboClientService {
     if (qboError) {
       message += `: ${qboError.Message ?? 'Unknown QBO Error'} (Code: ${qboError.code ?? 'N/A'}, Detail: ${qboError.Detail ?? 'N/A'})`;
 
-      if (qboError.code === '6240') {
+      // Intuit error codes: 5010 = Stale Object (SyncToken mismatch),
+      // 6240 = Duplicate Name Exists. 5010 must be matched before the
+      // generic startsWith('5') auth bucket below.
+      if (qboError.code === '5010') {
         code = 'QBO_STALE_OBJECT';
         message = `QBO ${entityType || 'entity'} has been updated since it was last read. Please refresh and try again. (SyncToken mismatch)`;
+      } else if (qboError.code === '6240') {
+        code = 'QBO_DUPLICATE_NAME';
+        message = `QBO ${entityType || 'entity'} name already exists in QuickBooks (duplicate DisplayName).`;
       } else if (qboError.code?.startsWith('2')) {
         code = 'QBO_VALIDATION_ERROR';
       } else if (qboError.code?.startsWith('4') || qboError.code?.startsWith('5')) {
