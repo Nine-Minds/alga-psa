@@ -18,7 +18,8 @@ import { SMTPEmailProvider } from '../SMTPEmailProvider';
 function createTransporterMock() {
   return {
     verify: vi.fn(async () => true),
-    sendMail: vi.fn(async () => ({
+    // Explicit arg signature: vitest 4 types mock.calls from the implementation.
+    sendMail: vi.fn(async (_options?: any) => ({
       messageId: '<smtp-msg-1@test>',
       response: '250 OK',
       envelope: { from: 'noreply@alga.test', to: ['one@example.com'] }

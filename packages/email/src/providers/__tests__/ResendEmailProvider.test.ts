@@ -21,11 +21,13 @@ import { ResendEmailProvider } from '../ResendEmailProvider';
 let providerCounter = 0;
 
 function createClientMock() {
+  // Explicit arg signatures: vitest 4 types mock.calls from the implementation,
+  // and zero-arg implementations make the call tuples unindexable.
   return {
-    post: vi.fn(async () => ({
+    post: vi.fn(async (_url: string, _payload?: any) => ({
       data: { id: 'resend-msg-1', from: 'a@b.c', to: ['x@y.z'], created_at: '2024-06-01T00:00:00.000Z' }
     })),
-    get: vi.fn(async () => ({ data: { data: [] } }))
+    get: vi.fn(async (_url?: string) => ({ data: { data: [] } }))
   };
 }
 
