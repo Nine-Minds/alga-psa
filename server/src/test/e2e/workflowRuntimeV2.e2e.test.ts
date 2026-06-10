@@ -262,7 +262,7 @@ describe('workflow runtime v2 trigger validation + launch E2E tests', () => {
     });
 
     const row = await db('workflow_runtime_events')
-      .where({ tenant_id: tenantId, event_name: 'PING_CONFLICT', correlation_key: 'k-conflict' })
+      .where({ tenant: tenantId, event_name: 'PING_CONFLICT', correlation_key: 'k-conflict' })
       .first();
 
     expect(row?.payload_schema_ref).toBe(TEST_SCHEMA_REF);
