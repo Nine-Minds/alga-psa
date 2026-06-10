@@ -256,6 +256,89 @@ export const reorderInboundEmailRules = withAuth(async (
 });
 
 /**
+ * AI rule availability for the editor: the action type is always shown, but
+ * only enabled when running EE with the AI Assistant add-on active.
+ */
+export const getInboundEmailRuleAiAvailability = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ enterprise: boolean; aiAddonActive: boolean }> => {
+  await assertEmailSettingsPermission(user, 'read');
+
+  const { isEnterprise } = await import('@alga-psa/core/features');
+  if (!isEnterprise) {
+    return { enterprise: false, aiAddonActive: false };
+  }
+
+  try {
+    const { ADD_ONS, tenantHasAddOn } = await import('@alga-psa/types');
+    const { knex } = await createTenantKnex();
+    const rows = await knex('tenant_addons')
+      .select('addon_key', 'expires_at')
+      .where({ tenant }) as Array<{ addon_key: string; expires_at: string | Date | null }>;
+
+    const now = Date.now();
+    const knownAddOns = new Set<string>(Object.values(ADD_ONS));
+    const active = rows
+      .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
+      .map((row) => row.addon_key)
+      .filter((value): value is Parameters<typeof tenantHasAddOn>[1] => knownAddOns.has(value));
+
+    return { enterprise: true, aiAddonActive: tenantHasAddOn(active as any, ADD_ONS.AI_ASSISTANT) };
+  } catch {
+    return { enterprise: true, aiAddonActive: false };
+  }
+});
+
+/**
+ * Tester quick-add: when extraction succeeds but no client resolves, let the
+ * admin register the extracted value as an alias without leaving the editor.
+ */
+export const addClientNameAliasFromRuleTester = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  rawAlias: string
+): Promise<{ success: true }> => {
+  await assertEmailSettingsPermission(user, 'update');
+
+  const alias = String(rawAlias ?? '').replace(/\s+/g, ' ').trim();
+  if (!alias) {
+    throw new Error('Alias is required');
+  }
+  if (alias.length > 255) {
+    throw new Error('Alias is too long');
+  }
+  if (typeof clientId !== 'string' || !clientId) {
+    throw new Error('Client is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const client = await trx('clients').select('client_id').where({ tenant, client_id: clientId }).first();
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    try {
+      await trx('client_name_aliases').insert({
+        tenant,
+        id: trx.raw('gen_random_uuid()'),
+        client_id: clientId,
+        alias,
+      });
+    } catch (e: any) {
+      if (String(e?.code ?? '') === '23505') {
+        throw new Error(`Alias "${alias}" is already assigned to a client.`);
+      }
+      throw e;
+    }
+  });
+
+  return { success: true };
+});
+
+/**
  * Run the production rules evaluator against a draft rule and a pasted sample
  * email. Persists nothing; client/alias matching and destination validation
  * hit the real tables so the tester shows exactly what processing would do.

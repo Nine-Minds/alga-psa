@@ -20,6 +20,7 @@ import {
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -59,7 +60,7 @@ function EmailProviderConfigurationContent({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
-  const [activeSection, setActiveSection] = useState<'providers' | 'defaults'>('providers');
+  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
@@ -505,6 +506,20 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Defaults',
             })}
           </Button>
+          <Button
+            id="nav-inbound-rules"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'rules'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
+            }`}
+            onClick={() => setActiveSection('rules')}
+          >
+            {t('configuration.nav.inboundRules', {
+              defaultValue: 'Inbound Rules',
+            })}
+          </Button>
         </nav>
       </div>
       <div className="flex-1 min-w-0">
@@ -523,13 +538,17 @@ function EmailProviderConfigurationContent({
               provider={diagnosticsProvider}
             />
           </>
-        ) : (
+        ) : activeSection === 'defaults' ? (
           <div className="space-y-4">
             <InboundTicketDefaultsManager onDefaultsChange={() => {
               // Refresh providers and notify forms to reload defaults lists
               loadProviders();
               window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
             }} />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <InboundEmailRulesManager />
           </div>
         )}
       </div>
