@@ -8,9 +8,80 @@ const GlobalHeaders = globalThis.Headers;
  * standard Fetch API classes available in the test environment.
  */
 
+type StubCookieSetOptions = {
+  httpOnly?: boolean;
+  sameSite?: 'lax' | 'strict' | 'none' | boolean;
+  secure?: boolean;
+  path?: string;
+  maxAge?: number;
+  domain?: string;
+  expires?: Date;
+};
+
+class StubResponseCookies {
+  constructor(private headers: Headers) {}
+
+  set(name: string, value: string, options: StubCookieSetOptions = {}): this {
+    const parts = [`${name}=${encodeURIComponent(value)}`];
+    if (options.path) parts.push(`Path=${options.path}`);
+    if (typeof options.maxAge === 'number') parts.push(`Max-Age=${options.maxAge}`);
+    if (options.domain) parts.push(`Domain=${options.domain}`);
+    if (options.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
+    if (options.httpOnly) parts.push('HttpOnly');
+    if (options.secure) parts.push('Secure');
+    if (options.sameSite) {
+      const sameSite = typeof options.sameSite === 'string' ? options.sameSite : 'strict';
+      parts.push(`SameSite=${sameSite.charAt(0).toUpperCase()}${sameSite.slice(1)}`);
+    }
+    this.headers.append('set-cookie', parts.join('; '));
+    return this;
+  }
+
+  delete(name: string): this {
+    return this.set(name, '', { maxAge: 0 });
+  }
+}
+
+class StubRequestCookies {
+  private map = new Map<string, string>();
+
+  constructor(cookieHeader: string | null) {
+    if (!cookieHeader) return;
+    for (const pair of cookieHeader.split(';')) {
+      const idx = pair.indexOf('=');
+      if (idx === -1) continue;
+      const name = pair.slice(0, idx).trim();
+      if (!name) continue;
+      this.map.set(name, decodeURIComponent(pair.slice(idx + 1).trim()));
+    }
+  }
+
+  get(name: string): { name: string; value: string } | undefined {
+    const value = this.map.get(name);
+    return value === undefined ? undefined : { name, value };
+  }
+
+  has(name: string): boolean {
+    return this.map.has(name);
+  }
+
+  getAll(): Array<{ name: string; value: string }> {
+    return [...this.map.entries()].map(([name, value]) => ({ name, value }));
+  }
+}
+
 class StubNextResponse extends GlobalResponse {
+  private cookiesInstance?: StubResponseCookies;
+
   constructor(body?: BodyInit | null, init?: ResponseInit) {
     super(body ?? null, init);
+  }
+
+  get cookies(): StubResponseCookies {
+    if (!this.cookiesInstance) {
+      this.cookiesInstance = new StubResponseCookies(this.headers);
+    }
+    return this.cookiesInstance;
   }
 
   static redirect(url: string | URL, init?: number | ResponseInit): StubNextResponse {
@@ -39,6 +110,8 @@ class StubNextResponse extends GlobalResponse {
 }
 
 class StubNextRequest extends GlobalRequest {
+  private cookiesInstance?: StubRequestCookies;
+
   constructor(input: RequestInfo | URL, init?: RequestInit) {
     if (input instanceof GlobalRequest) {
       super(input);
@@ -49,6 +122,13 @@ class StubNextRequest extends GlobalRequest {
 
   get nextUrl(): URL {
     return new URL(this.url);
+  }
+
+  get cookies(): StubRequestCookies {
+    if (!this.cookiesInstance) {
+      this.cookiesInstance = new StubRequestCookies(this.headers.get('cookie'));
+    }
+    return this.cookiesInstance;
   }
 }
 

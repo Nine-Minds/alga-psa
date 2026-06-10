@@ -1,14 +1,17 @@
 export const dynamic = 'force-dynamic';
 
 // server/src/app/api/integrations/qbo/callback/route.ts
-// server/src/app/api/integrations/qbo/callback/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
 import { getSecretProviderInstance } from '@alga-psa/core/secrets'; // Corrected import path
-// TODO: Import actual CSRF token validation logic
-// import { getAndVerifyCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import {
+  QBO_OAUTH_CSRF_COOKIE_NAME,
+  QBO_OAUTH_CSRF_COOKIE_PATH,
+  qboOauthCsrfTokensMatch,
+} from '../../../../lib/qbo/oauthCsrf';
 
 // --- Constants ---
 const QBO_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -26,12 +29,24 @@ const FAILURE_REDIRECT_URL = `/msp/settings?tab=integrations&qbo_status=failure&
 
 // --- Handler ---
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state'); // Contains base64url encoded { tenantId, csrf }
   const realmId = searchParams.get('realmId');
   const qboError = searchParams.get('error');
+
+  // The CSRF cookie is single-use: clear it on every outcome.
+  const clearCsrfCookie = (response: NextResponse) => {
+    response.cookies.set(QBO_OAUTH_CSRF_COOKIE_NAME, '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: QBO_OAUTH_CSRF_COOKIE_PATH,
+      maxAge: 0,
+    });
+    return response;
+  };
 
   const failureRedirect = (errorCode: string, message?: string) => {
     const url = new URL(FAILURE_REDIRECT_URL + encodeURIComponent(errorCode), APP_BASE_URL);
@@ -39,13 +54,13 @@ export async function GET(request: Request) {
       url.searchParams.append('message', message);
     }
     console.log(`Redirecting to failure URL: ${url.toString()}`);
-    return NextResponse.redirect(url);
+    return clearCsrfCookie(NextResponse.redirect(url));
   };
 
   const successRedirect = () => {
     const url = new URL(SUCCESS_REDIRECT_URL, APP_BASE_URL);
     console.log(`Redirecting to success URL: ${url.toString()}`);
-    return NextResponse.redirect(url);
+    return clearCsrfCookie(NextResponse.redirect(url));
   };
 
   if (qboError) {
@@ -69,7 +84,7 @@ export async function GET(request: Request) {
       const stateJson = Buffer.from(state, 'base64url').toString('utf-8');
       decodedStatePayload = JSON.parse(stateJson);
       tenantId = decodedStatePayload.tenantId; // Assign tenantId early for logging/cleanup
-      if (!tenantId || !decodedStatePayload.csrf) {
+      if (!tenantId || typeof tenantId !== 'string' || typeof decodedStatePayload.csrf !== 'string' || !decodedStatePayload.csrf) {
         throw new Error('Invalid state payload structure.');
       }
       console.log(`QBO Callback: Decoded state for tenant ${tenantId}`);
@@ -78,15 +93,29 @@ export async function GET(request: Request) {
       return failureRedirect('invalid_state');
     }
 
-    // TODO: Implement actual CSRF token validation using getAndVerifyCsrfToken(tenantId, decodedStatePayload.csrf)
-    // This function should retrieve the stored token, compare it, and delete it if valid.
-    // const isValidCsrf = await getAndVerifyCsrfToken(tenantId, decodedStatePayload.csrf);
-    const isValidCsrf = true; // Placeholder: Assume valid for now
-    if (!isValidCsrf) {
+    // Verify the CSRF token in the state against the HttpOnly cookie set by
+    // the connect route. Only the browser that initiated the flow holds the
+    // cookie, so a forged or replayed callback URL fails here.
+    const csrfCookie = request.cookies.get(QBO_OAUTH_CSRF_COOKIE_NAME)?.value;
+    if (!csrfCookie || !qboOauthCsrfTokensMatch(csrfCookie, decodedStatePayload.csrf)) {
       console.error(`QBO Callback: CSRF token mismatch or validation failed for tenant ${tenantId}.`);
       return failureRedirect('csrf_mismatch');
     }
-    console.log(`QBO Callback: CSRF token validated (placeholder) for tenant ${tenantId}.`);
+
+    // The state payload is not integrity-protected, so never trust its
+    // tenantId on its own: require it to match the authenticated session's
+    // tenant. This blocks a logged-in user from binding a QBO connection to
+    // another tenant by tampering with the state.
+    const user = await getCurrentUser();
+    if (!user?.tenant) {
+      console.error('QBO Callback: No authenticated session found.');
+      return failureRedirect('session_expired');
+    }
+    if (user.tenant !== tenantId) {
+      console.error(`QBO Callback: State tenant ${tenantId} does not match session tenant ${user.tenant}.`);
+      return failureRedirect('tenant_mismatch');
+    }
+    console.log(`QBO Callback: CSRF token and session tenant validated for tenant ${tenantId}.`);
 
 
     // 2. Exchange Authorization Code for Tokens (Task 83)
