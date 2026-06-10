@@ -29,7 +29,9 @@ import {
   recordFirstResponse,
   recordResolution,
   handlePriorityChange,
-  handlePolicyChange
+  handlePolicyChange,
+  dispatchSlaBackendActions,
+  type SlaBackendAction
 } from '@alga-psa/sla';
 import {
   handleStatusChange,
@@ -44,11 +46,14 @@ export async function registerSlaSubscriber(): Promise<void> {
     return;
   }
 
-  await getEventBus().subscribe('TICKET_CREATED', handleTicketCreatedEvent);
-  await getEventBus().subscribe('TICKET_UPDATED', handleTicketUpdatedEvent);
-  await getEventBus().subscribe('TICKET_CLOSED', handleTicketClosedEvent);
-  await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleTicketCommentAddedEvent);
-  await getEventBus().subscribe('TICKET_RESPONSE_STATE_CHANGED', handleResponseStateChangedEvent);
+  // subscriberId disambiguates per-(event, handler) processed tracking from
+  // other subscribers on the same default-channel streams (survey/webhook
+  // handlers share function names like handleTicketClosedEvent).
+  await getEventBus().subscribe('TICKET_CREATED', handleTicketCreatedEvent, { subscriberId: 'sla' });
+  await getEventBus().subscribe('TICKET_UPDATED', handleTicketUpdatedEvent, { subscriberId: 'sla' });
+  await getEventBus().subscribe('TICKET_CLOSED', handleTicketClosedEvent, { subscriberId: 'sla' });
+  await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleTicketCommentAddedEvent, { subscriberId: 'sla' });
+  await getEventBus().subscribe('TICKET_RESPONSE_STATE_CHANGED', handleResponseStateChangedEvent, { subscriberId: 'sla' });
 
   isRegistered = true;
   logger.info('[SlaSubscriber] Registered SLA event handlers');
@@ -82,54 +87,69 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // The TICKET_CREATED event is published inside the creation
-        // transaction, so the row may not be visible yet on a separate
-        // connection. Wait briefly for the transaction to commit.
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const ticket = await trx('tickets')
+      // The main creation paths publish TICKET_CREATED after their
+      // transaction commits, so the row is normally visible immediately.
+      // Some paths still publish in-transaction; retry the read briefly
+      // (outside any transaction, so no locks are held while waiting).
+      let ticket: { client_id: string; board_id: string; priority_id: string; entered_at: string | Date | null } | undefined;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        if (attempt > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        ticket = await knex('tickets')
           .where({ tenant: tenantId, ticket_id: ticketId })
           .select('client_id', 'board_id', 'priority_id', 'entered_at')
           .first();
-
-        if (!ticket) {
-          logger.warn('[SlaSubscriber] Ticket not found for TICKET_CREATED', { tenantId, ticketId });
-          return;
+        if (ticket) {
+          break;
         }
+      }
 
-        const result = await startSlaForTicket(
+      if (!ticket) {
+        // Throw so the bus redelivers (bounded by maxDeliveries, then
+        // dead-letter) instead of acking and silently never starting SLA.
+        // Genuinely deleted tickets end up in the dead-letter stream.
+        throw new Error(`Ticket not found for TICKET_CREATED: ${ticketId}`);
+      }
+      const createdTicket = ticket;
+
+      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const startResult = await startSlaForTicket(
           trx,
           tenantId,
           ticketId,
-          ticket.client_id,
-          ticket.board_id,
-          ticket.priority_id,
-          ticket.entered_at ? new Date(ticket.entered_at) : new Date()
+          createdTicket.client_id,
+          createdTicket.board_id,
+          createdTicket.priority_id,
+          createdTicket.entered_at ? new Date(createdTicket.entered_at) : new Date()
         );
 
-        if (result.success && result.sla_policy_id) {
+        if (startResult.success && startResult.sla_policy_id) {
           logger.info('[SlaSubscriber] Started SLA tracking for ticket', {
             tenantId,
             ticketId,
-            policyId: result.sla_policy_id,
-            responseDueAt: result.sla_response_due_at?.toISOString(),
-            resolutionDueAt: result.sla_resolution_due_at?.toISOString()
+            policyId: startResult.sla_policy_id,
+            responseDueAt: startResult.sla_response_due_at?.toISOString(),
+            resolutionDueAt: startResult.sla_resolution_due_at?.toISOString()
           });
-        } else if (!result.success) {
+        } else if (!startResult.success) {
           logger.error('[SlaSubscriber] Failed to start SLA tracking', {
             tenantId,
             ticketId,
-            error: result.error
+            error: startResult.error
           });
         }
         // If no policy assigned, that's normal - just log at debug level
+        return startResult;
       });
+
+      await dispatchSlaBackendActions(result?.backendActions);
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_CREATED event', {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
+    throw error;
   }
 }
 
@@ -150,7 +170,9 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const backendActions = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const collected: SlaBackendAction[] = [];
+
         // Handle priority change
         if (changes.priority_id) {
           const priorityChange = changes.priority_id as { old?: string; new?: string };
@@ -161,13 +183,14 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
               newPriorityId: priorityChange.new
             });
 
-            await handlePriorityChange(
+            const priorityResult = await handlePriorityChange(
               trx,
               tenantId,
               ticketId,
               priorityChange.new,
               userId
             );
+            collected.push(...priorityResult.backendActions);
           }
         }
 
@@ -190,6 +213,7 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
               statusChange.new,
               userId
             );
+            collected.push(...(result.backendActions ?? []));
 
             if (result.was_paused !== result.is_now_paused) {
               logger.info('[SlaSubscriber] SLA pause state changed', {
@@ -213,16 +237,21 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
               toPolicyId: policyChange.new
             });
 
-            await handlePolicyChange(
+            const policyResult = await handlePolicyChange(
               trx,
               tenantId,
               ticketId,
               policyChange.new ?? null,
               userId
             );
+            collected.push(...policyResult.backendActions);
           }
         }
+
+        return collected;
       });
+
+      await dispatchSlaBackendActions(backendActions);
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_UPDATED event', {
@@ -241,7 +270,7 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
   logger.info('[SlaSubscriber] Handling TICKET_CLOSED', { tenantId, ticketId });
 
   try {
-    await withTenantTransactionRetryReadOnly(tenantId, async (trx: Knex.Transaction) => {
+    const result = await withTenantTransactionRetryReadOnly(tenantId, async (trx: Knex.Transaction) => {
       // Get the closed_at time from the ticket
       const ticket = await trx('tickets')
         .where({ tenant: tenantId, ticket_id: ticketId })
@@ -250,7 +279,7 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
 
       const closedAt = ticket?.closed_at ? new Date(ticket.closed_at) : new Date();
 
-      const result = await recordResolution(
+      const resolutionResult = await recordResolution(
         trx,
         tenantId,
         ticketId,
@@ -258,31 +287,33 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
         userId
       );
 
-      if (result.success && result.met !== null) {
+      if (resolutionResult.success && resolutionResult.met !== null) {
         logger.info('[SlaSubscriber] Recorded ticket resolution', {
           tenantId,
           ticketId,
-          met: result.met,
-          resolvedAt: result.recorded_at.toISOString()
+          met: resolutionResult.met,
+          resolvedAt: resolutionResult.recorded_at.toISOString()
         });
-        return;
+        return resolutionResult;
       }
 
-      if (result.success && result.met === null) {
+      if (resolutionResult.success && resolutionResult.met === null) {
         logger.info('[SlaSubscriber] TICKET_CLOSED handled but no SLA tracked', {
           tenantId,
           ticketId
         });
-        return;
+        return resolutionResult;
       }
 
       logger.error('[SlaSubscriber] recordResolution returned failure', {
         tenantId,
         ticketId,
-        error: result.error
+        error: resolutionResult.error
       });
-      throw new Error(result.error || 'recordResolution failed');
+      throw new Error(resolutionResult.error || 'recordResolution failed');
     });
+
+    await runWithTenant(tenantId, () => dispatchSlaBackendActions(result.backendActions));
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_CLOSED event', {
       tenantId,
@@ -320,8 +351,8 @@ async function handleTicketCommentAddedEvent(event: unknown): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const result = await recordFirstResponse(
+      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const responseResult = await recordFirstResponse(
           trx,
           tenantId,
           ticketId,
@@ -329,15 +360,19 @@ async function handleTicketCommentAddedEvent(event: unknown): Promise<void> {
           userId
         );
 
-        if (result.success && result.met !== null) {
+        if (responseResult.success && responseResult.met !== null) {
           logger.info('[SlaSubscriber] Recorded first response', {
             tenantId,
             ticketId,
-            met: result.met,
-            respondedAt: result.recorded_at.toISOString()
+            met: responseResult.met,
+            respondedAt: responseResult.recorded_at.toISOString()
           });
         }
+
+        return responseResult;
       });
+
+      await dispatchSlaBackendActions(result.backendActions);
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_COMMENT_ADDED event', {
@@ -395,8 +430,8 @@ async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
         return;
       }
 
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const result = await handleResponseStateChange(
+      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const changeResult = await handleResponseStateChange(
           trx,
           tenantId,
           ticketId,
@@ -405,15 +440,19 @@ async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
           userId ?? undefined
         );
 
-        if (result.was_paused !== result.is_now_paused) {
+        if (changeResult.was_paused !== changeResult.is_now_paused) {
           logger.info('[SlaSubscriber] SLA pause state changed due to response state', {
             tenantId,
             ticketId,
-            wasPaused: result.was_paused,
-            isNowPaused: result.is_now_paused
+            wasPaused: changeResult.was_paused,
+            isNowPaused: changeResult.is_now_paused
           });
         }
+
+        return changeResult;
       });
+
+      await dispatchSlaBackendActions(result.backendActions);
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_RESPONSE_STATE_CHANGED event', {

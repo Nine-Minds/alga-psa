@@ -171,6 +171,10 @@ export class EventBus {
   private static createdConsumerGroups: Set<string> = new Set<string>();
   // Map<EventType, Map<Channel, Handlers>> so channel-specific consumers do not step on each other.
   private handlers: Map<EventType, Map<string, Set<EventHandler>>>;
+  // Stable per-handler ids for per-(event, handler) processed tracking.
+  // Subscribers sharing a stream with same-named handlers must pass an
+  // explicit subscriberId to disambiguate.
+  private handlerIds: WeakMap<EventHandler, string> = new WeakMap();
   private initialized: boolean = false;
   private consumerName: string;
   private processingEvents: boolean = false;
@@ -299,6 +303,28 @@ export class EventBus {
     const client = await getClient();
     const setKey = this.getProcessedSetKey(event.payload.tenantId);
     await client.sAdd(setKey, event.id);
+    // Set expiration to prevent unbounded growth (3 days)
+    await client.expire(setKey, 60 * 60 * 24 * 3);
+  }
+
+  private getHandlerKey(handler: EventHandler): string {
+    return this.handlerIds.get(handler) || handler.name || 'anonymous';
+  }
+
+  private getProcessedHandlersSetKey(tenantId: string): string {
+    return `processed_event_handlers:${tenantId}`;
+  }
+
+  private async isHandlerProcessed(event: Event, handlerKey: string): Promise<boolean> {
+    const client = await getClient();
+    const setKey = this.getProcessedHandlersSetKey(event.payload.tenantId);
+    return await client.sIsMember(setKey, `${event.id}:${handlerKey}`);
+  }
+
+  private async markHandlerProcessed(event: Event, handlerKey: string): Promise<void> {
+    const client = await getClient();
+    const setKey = this.getProcessedHandlersSetKey(event.payload.tenantId);
+    await client.sAdd(setKey, `${event.id}:${handlerKey}`);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
   }
@@ -460,24 +486,40 @@ export class EventBus {
       }
 
       const event = eventSchema.parse(rawEvent) as Event;
-      const handler = subscription.handlers.values().next().value as EventHandler | undefined;
+      const handlers = Array.from(subscription.handlers);
 
-      if (handler) {
+      if (handlers.length > 0) {
         const isProcessed = await this.isEventProcessed(event);
         if (!isProcessed) {
-          try {
-            await handler(event);
-            await this.markEventProcessed(event);
-          } catch (error) {
-            logger.error('[EventBus] Error in event handler:', {
-              error,
-              eventType: baseEvent.eventType,
-              handler: handler.name,
-              channel: subscription.channel
-            });
-            // Don't acknowledge message on error to allow retry
+          // Invoke every registered handler for (eventType, channel) — not
+          // just the first — and track success per (event, handler) so a
+          // failing handler's redelivery never re-runs co-subscribers that
+          // already succeeded.
+          let anyFailure = false;
+          for (const handler of handlers) {
+            const handlerKey = this.getHandlerKey(handler);
+            try {
+              if (await this.isHandlerProcessed(event, handlerKey)) {
+                continue;
+              }
+              await handler(event);
+              await this.markHandlerProcessed(event, handlerKey);
+            } catch (error) {
+              anyFailure = true;
+              logger.error('[EventBus] Error in event handler:', {
+                error,
+                eventType: baseEvent.eventType,
+                handler: handler.name,
+                channel: subscription.channel
+              });
+            }
+          }
+
+          if (anyFailure) {
+            // Don't acknowledge message on any failure to allow retry.
             return;
           }
+          await this.markEventProcessed(event);
         } else {
           logger.info('[EventBus] Skipping already processed event:', {
             eventId: event.id,
@@ -541,9 +583,16 @@ export class EventBus {
           );
 
           if (pendingMessages && pendingMessages.length > 0) {
-            const claimIds = pendingMessages
-              .filter(msg => msg.millisecondsSinceLastDelivery > config.eventBus.claimTimeout)
-              .map(msg => msg.id);
+            const stalePending = pendingMessages.filter(
+              msg => msg.millisecondsSinceLastDelivery > config.eventBus.claimTimeout
+            );
+            // Fresh xReadGroup deliveries carry no delivery counter, but
+            // xPendingRange does — enforce the dead-letter cap here so no
+            // message can redeliver forever.
+            const deliveriesById = new Map(
+              stalePending.map(msg => [msg.id, msg.deliveriesCounter])
+            );
+            const claimIds = stalePending.map(msg => msg.id);
 
             if (claimIds.length > 0) {
               const claimed = await client.xClaim(
@@ -557,6 +606,11 @@ export class EventBus {
               const subscription = subscriptionLookup.get(stream);
               if (subscription && Array.isArray(claimed) && claimed.length > 0) {
                 for (const message of claimed as Array<{ id: string; message: Record<string, string> }>) {
+                  const deliveries = deliveriesById.get(message.id) ?? 0;
+                  if (deliveries > config.eventBus.maxDeliveries) {
+                    await this.deadLetterMessage(client, config, stream, message, deliveries);
+                    continue;
+                  }
                   await this.processStreamMessage(client, config, stream, subscription, message);
                 }
               }
@@ -569,16 +623,77 @@ export class EventBus {
     }
   }
 
+  /**
+   * Move a message that exceeded the delivery cap onto the stream's
+   * dead-letter sibling and ack it so it stops storming the consumer group.
+   * Dead-letter volume should be monitored; entries carry the original
+   * payload for manual inspection/replay.
+   */
+  private async deadLetterMessage(
+    client: Awaited<ReturnType<typeof createRedisClient>>,
+    config: ReturnType<typeof getRedisConfig>,
+    stream: string,
+    message: { id: string; message: Record<string, string> },
+    deliveries: number
+  ): Promise<void> {
+    const deadLetterStream = `${stream}:dead-letter`;
+    // Marker set makes the xAdd idempotent: if a previous attempt wrote the
+    // dead-letter entry but failed to ack, the retry only re-acks instead of
+    // writing a duplicate entry.
+    const markerKey = `dead_lettered_messages:${stream}`;
+    try {
+      if (!(await client.sIsMember(markerKey, message.id))) {
+        await client.xAdd(
+          deadLetterStream,
+          '*',
+          {
+            ...message.message,
+            sourceStream: stream,
+            sourceMessageId: message.id,
+            deliveries: String(deliveries),
+            deadLetteredAt: new Date().toISOString()
+          },
+          {
+            TRIM: {
+              strategy: 'MAXLEN',
+              threshold: config.eventBus.maxStreamLength,
+              strategyModifier: '~'
+            }
+          }
+        );
+        await client.sAdd(markerKey, message.id);
+        await client.expire(markerKey, 60 * 60 * 24 * 3);
+      }
+      await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+      logger.error('[EventBus] Dead-lettered message after exceeding max deliveries', {
+        stream,
+        deadLetterStream,
+        messageId: message.id,
+        deliveries,
+        maxDeliveries: config.eventBus.maxDeliveries
+      });
+    } catch (error) {
+      logger.error('[EventBus] Failed to dead-letter message', {
+        stream,
+        messageId: message.id,
+        error
+      });
+    }
+  }
+
   public async subscribe(
     eventType: EventType,
     handler: EventHandler,
-    options?: { channel?: string }
+    options?: { channel?: string; subscriberId?: string }
   ): Promise<void> {
     await this.initialize();
 
     const channel = options?.channel || this.defaultChannel;
     const handlers = this.getChannelHandlers(eventType, channel, true)!;
     handlers.add(handler);
+    if (options?.subscriberId) {
+      this.handlerIds.set(handler, options.subscriberId);
+    }
 
     const stream = this.getStreamKey(eventType, channel);
     await this.ensureStreamAndGroup(stream);
