@@ -2281,8 +2281,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     tenantId: tenant,
     eventType: parsed.eventType ?? null,
     sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
-    triggerMappingApplied: triggerMappingApplied,
-    execute: true
+    triggerMappingApplied: triggerMappingApplied
   });
 
   try {
@@ -3752,7 +3751,6 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         eventType: parsed.eventName,
         sourcePayloadSchemaRef: effectiveSourceSchemaRef,
         triggerMappingApplied: mappingApplied,
-        execute: true,
         executionKey: `event-${Date.now()}`
       });
       startedRuns.push(launched.runId);

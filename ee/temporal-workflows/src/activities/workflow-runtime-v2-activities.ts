@@ -696,7 +696,6 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     },
     definitionHash,
     runtimeSemanticsVersion: parentRun.runtime_semantics_version ?? null,
-    engine: 'temporal',
     parentRunId: parentRun.run_id,
     rootRunId,
   });

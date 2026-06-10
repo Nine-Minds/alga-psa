@@ -60,7 +60,6 @@ export type StartRunParams = {
   triggerMappingApplied?: boolean;
   definitionHash?: string | null;
   runtimeSemanticsVersion?: string | null;
-  engine?: 'temporal' | 'db';
   parentRunId?: string | null;
   rootRunId?: string | null;
   secretResolver?: SecretResolver;
@@ -128,7 +127,7 @@ export class WorkflowRuntimeV2 {
       trigger_mapping_applied: params.triggerMappingApplied ?? false,
       definition_hash: params.definitionHash ?? null,
       runtime_semantics_version: params.runtimeSemanticsVersion ?? null,
-      engine: params.engine ?? null,
+      engine: 'temporal',
       parent_run_id: params.parentRunId ?? null,
       root_run_id: params.rootRunId ?? null,
       resume_event_name: params.triggerEvent?.name ?? null,
