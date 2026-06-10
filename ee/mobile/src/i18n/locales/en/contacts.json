@@ -1,8 +1,42 @@
 {
   "title": "Contacts",
-  "comingSoon": "Your contacts will show up here soon.",
+  "list": {
+    "searchPlaceholder": "Search contacts…",
+    "searchAccessibility": "Search contacts",
+    "loadingContacts": "Loading contacts…",
+    "unableToLoad": "Unable to load contacts",
+    "unableToLoadDescription": "Something went wrong while loading contacts. Please try again.",
+    "noAccess": "No access to contacts",
+    "noAccessDescription": "Your account does not have permission to view contacts.",
+    "noContacts": "No contacts yet",
+    "noContactsDescription": "Contacts will show up here once they are added.",
+    "noResults": "No matching contacts",
+    "noResultsDescription": "Try a different name, email, or client.",
+    "contactAccessibility": "Contact {{name}}"
+  },
   "detail": {
     "title": "Contact",
-    "comingSoon": "Contact details will show up here soon."
+    "loadingContact": "Loading contact…",
+    "unableToLoad": "Unable to load contact",
+    "unableToLoadDescription": "Something went wrong while loading this contact. Please try again.",
+    "inactive": "Inactive",
+    "client": "Client",
+    "noClient": "No client",
+    "contactInfo": "Contact info",
+    "noContactInfo": "No contact info on file.",
+    "phone": "Phone",
+    "email": "Email",
+    "callAccessibility": "Call {{name}} at {{number}}",
+    "emailAccessibility": "Email {{name}} at {{email}}",
+    "notes": "Notes",
+    "types": {
+      "work": "Work",
+      "mobile": "Mobile",
+      "home": "Home",
+      "fax": "Fax",
+      "other": "Other",
+      "personal": "Personal",
+      "billing": "Billing"
+    }
   }
 }
