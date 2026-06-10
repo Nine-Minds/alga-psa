@@ -422,7 +422,6 @@ export const searchPickerWorkItems = withAuth(async (
       })
       .leftJoin('standard_statuses as s_standard', function() {
         this.on('psm.standard_status_id', '=', 's_standard.standard_status_id')
-            .andOn('psm.tenant', '=', 's_standard.tenant')
             .andOn('psm.is_standard', '=', db.raw('true'));
       })
       .leftJoin(

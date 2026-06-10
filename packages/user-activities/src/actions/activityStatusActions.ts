@@ -291,11 +291,7 @@ export const getActivityStatusOptions = withAuth(async (
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
         .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id").andOn(
-            "psm.tenant",
-            "=",
-            "ss.tenant"
-          );
+          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
         })
         .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)
@@ -325,11 +321,7 @@ export const getActivityStatusOptions = withAuth(async (
           this.on("psm.status_id", "=", "s.status_id").andOn("psm.tenant", "=", "s.tenant");
         })
         .leftJoin("standard_statuses as ss", function () {
-          this.on("psm.standard_status_id", "=", "ss.standard_status_id").andOn(
-            "psm.tenant",
-            "=",
-            "ss.tenant"
-          );
+          this.on("psm.standard_status_id", "=", "ss.standard_status_id");
         })
         .where("psm.tenant", tenant)
         .where("psm.project_id", task.project_id)

@@ -351,7 +351,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // === LEVEL 8: Lookup tables previously referenced by boards and tickets ===
   // Must be deleted AFTER boards (see FK notes above) and AFTER tickets.
-  'standard_statuses', 'statuses',
+  // standard_statuses is a global reference catalog (no tenant column) and
+  // must never be touched by tenant deletion.
+  'statuses',
   'priorities', 'severities', 'urgencies', 'impacts',
 
   // === LEVEL 8: Breaking circular dependencies ===

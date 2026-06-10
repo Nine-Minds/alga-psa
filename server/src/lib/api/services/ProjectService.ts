@@ -79,7 +79,7 @@ async function resolveProjectStatusInfo(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -1157,8 +1157,7 @@ export class ProjectService extends BaseService<IProject> {
               .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
           })
           .leftJoin('standard_statuses', function joinStandardStatuses(this: Knex.JoinClause) {
-            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id')
-              .andOn('project_status_mappings.tenant', '=', 'standard_statuses.tenant');
+            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id');
           })
           .first()
       ]);
@@ -1295,7 +1294,7 @@ export class ProjectService extends BaseService<IProject> {
         this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
       })
       .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+        this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
       })
       .select(
         'psm.*',
