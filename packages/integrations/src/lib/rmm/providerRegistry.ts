@@ -17,7 +17,7 @@ export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio';
+  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio' | 'huntress';
   badge?: RmmProviderBadge;
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
@@ -91,6 +91,21 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     },
     requiresEnterprise: true,
     featureFlagKey: 'levelio-rmm-integration'
+  },
+  {
+    id: 'huntress',
+    title: 'Huntress',
+    description: 'Managed security: SOC-reviewed incident reports become tickets automatically.',
+    icon: 'huntress',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: false,
+      events: false,
+      remoteActions: false
+    },
+    requiresEnterprise: true
   }
 ];
 

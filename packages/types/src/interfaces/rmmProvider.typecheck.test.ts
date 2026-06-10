@@ -25,4 +25,12 @@ describe('RmmProvider', () => {
     const asset: Partial<Asset> = { rmm_provider: provider };
     expect(asset.rmm_provider).toBe('levelio');
   });
+
+  it('accepts huntress', () => {
+    const provider: RmmProvider = 'huntress';
+    expect(provider).toBe('huntress');
+
+    const asset: Partial<Asset> = { rmm_provider: provider };
+    expect(asset.rmm_provider).toBe('huntress');
+  });
 });

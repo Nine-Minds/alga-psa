@@ -32,7 +32,8 @@ const PROVIDER_ICON_STYLES: Record<RmmProviderMetadata['icon'], { className: str
   tacticalrmm: { className: 'bg-amber-500 text-[9px] font-bold tracking-wider text-white', label: 'TRMM' },
   ninjaone: { className: 'bg-slate-900 text-base font-bold text-white', label: 'N' },
   tanium: { className: 'bg-red-600 text-base font-bold text-white', label: 'T' },
-  levelio: { className: 'bg-blue-600 text-base font-bold text-white', label: 'L' }
+  levelio: { className: 'bg-blue-600 text-base font-bold text-white', label: 'L' },
+  huntress: { className: 'bg-emerald-600 text-base font-bold text-white', label: 'H' }
 };
 
 function ProviderIcon({ icon }: { icon: RmmProviderMetadata['icon'] }) {
@@ -133,11 +134,20 @@ const LevelIoIntegrationSettings = dynamic(
   }
 );
 
+const HuntressIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/HuntressIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="Huntress" />,
+    ssr: false
+  }
+);
+
 const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentType>> = {
   tacticalrmm: TacticalRmmIntegrationSettings,
   ninjaone: NinjaOneIntegrationSettings,
   tanium: TaniumIntegrationSettings,
-  levelio: LevelIoIntegrationSettings
+  levelio: LevelIoIntegrationSettings,
+  huntress: HuntressIntegrationSettings
 };
 
 export default function RmmIntegrationsSetup() {

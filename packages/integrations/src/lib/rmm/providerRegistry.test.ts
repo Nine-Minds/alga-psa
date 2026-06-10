@@ -29,4 +29,19 @@ describe('RMM provider registry', () => {
       remoteActions: false,
     });
   });
+
+  it('exposes Huntress metadata gated by enterprise without a feature flag', () => {
+    const huntress = getRmmProviderMetadata('huntress');
+    expect(huntress).toBeDefined();
+    expect(huntress?.title).toBe('Huntress');
+    expect(huntress?.requiresEnterprise).toBe(true);
+    expect(huntress?.featureFlagKey).toBeUndefined();
+    expect(huntress?.capabilities).toEqual({
+      connection: true,
+      scopeSync: true,
+      deviceSync: false,
+      events: false,
+      remoteActions: false,
+    });
+  });
 });

@@ -14,6 +14,8 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
       return 'Level';
     case 'connectwise_automate':
       return 'CW Automate';
+    case 'huntress':
+      return 'Huntress';
     default:
       return provider || 'Unknown';
   }

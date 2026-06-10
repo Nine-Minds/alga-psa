@@ -13,6 +13,7 @@ const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'levelio',
   'datto',
   'connectwise_automate',
+  'huntress',
 ]);
 
 type SupportedPlainAssetType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'printer' | 'unknown';
