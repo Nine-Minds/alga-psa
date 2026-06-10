@@ -1,11 +1,11 @@
 import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
-import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
+import type { DrawerParamList, RootStackParamList, TicketsStackParamList } from "../navigation/types";
 import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
@@ -30,7 +30,7 @@ import { AgentPickerModal } from "../features/ticketDetail/components/AgentPicke
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
   CompositeScreenProps<
-    BottomTabScreenProps<TabsParamList, "TicketsTab">,
+    DrawerScreenProps<DrawerParamList, "TicketsTab">,
     NativeStackScreenProps<RootStackParamList>
   >
 >;

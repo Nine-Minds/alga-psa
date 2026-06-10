@@ -1,7 +1,7 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TicketsStackParamList } from "./types";
 import type { RootStackParamList } from "./types";
@@ -10,6 +10,28 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 
 const Stack = createNativeStackNavigator<TicketsStackParamList>();
+
+function DrawerToggleButton() {
+  const theme = useTheme();
+  const { t } = useTranslation("common");
+  const navigation = useNavigation();
+  return (
+    <Pressable
+      onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+      accessibilityRole="button"
+      accessibilityLabel={t("menu", { defaultValue: "Menu" })}
+      style={({ pressed }) => ({
+        width: 36,
+        height: 36,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Feather name="menu" size={22} color={theme.colors.text} />
+    </Pressable>
+  );
+}
 
 function CreateTicketButton() {
   const theme = useTheme();
@@ -59,6 +81,7 @@ export function TicketsStackNavigator() {
         component={TicketsListScreen}
         options={{
           title: tTickets("list.title", "Tickets"),
+          headerLeft: () => <DrawerToggleButton />,
           headerRight: () => <View><CreateTicketButton /></View>,
         }}
       />

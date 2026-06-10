@@ -24,14 +24,20 @@ export type RootStackParamList = {
   CreateTicket: undefined;
   AccountDeletion: undefined;
   MutedUsers: undefined;
+  ClientDetail: { clientId: string; clientName?: string };
+  ContactDetail: { contactId: string; contactName?: string };
 };
 
 export type TicketsStackParamList = {
-  TicketsList: undefined;
+  TicketsList: { clientId?: string; clientName?: string } | undefined;
 };
 
-export type TabsParamList = {
+export type DrawerParamList = {
   TicketsTab: undefined;
+  ScheduleTab: undefined;
+  TimeEntriesTab: undefined;
+  ClientsTab: undefined;
+  ContactsTab: undefined;
   SettingsTab: undefined;
 };
 

@@ -2,7 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Platform, Pressable, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { RootStackParamList } from "./types";
-import { TabsNavigator } from "./TabsNavigator";
+import { DrawerNavigator } from "./DrawerNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
 import { ServerEntryScreen } from "../screens/ServerEntryScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
@@ -11,6 +11,8 @@ import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
 import { CreateWorkspaceScreen } from "../screens/CreateWorkspaceScreen";
 import { AccountDeletionScreen } from "../screens/AccountDeletionScreen";
 import { MutedUsersScreen } from "../screens/MutedUsersScreen";
+import { ClientDetailScreen } from "../screens/ClientDetailScreen";
+import { ContactDetailScreen } from "../screens/ContactDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -22,6 +24,8 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tAuth } = useTranslation("auth");
   const { t: tTickets } = useTranslation("tickets");
   const { t: tSettings } = useTranslation("settings");
+  const { t: tClients } = useTranslation("clients");
+  const { t: tContacts } = useTranslation("contacts");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
   useNotifications();
@@ -43,7 +47,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
     >
       {isSignedIn ? (
         <>
-          <Stack.Screen name="Tabs" component={TabsNavigator} options={{ headerShown: false }} />
+          <Stack.Screen name="Tabs" component={DrawerNavigator} options={{ headerShown: false }} />
           <Stack.Screen
             name="AuthCallback"
             component={AuthCallbackScreen}
@@ -105,6 +109,20 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
                   </Pressable>
                 ),
               } : {}),
+            })}
+          />
+          <Stack.Screen
+            name="ClientDetail"
+            component={ClientDetailScreen}
+            options={({ route }) => ({
+              title: route.params.clientName ?? tClients("detail.title", "Client"),
+            })}
+          />
+          <Stack.Screen
+            name="ContactDetail"
+            component={ContactDetailScreen}
+            options={({ route }) => ({
+              title: route.params.contactName ?? tContacts("detail.title", "Contact"),
             })}
           />
         </>
