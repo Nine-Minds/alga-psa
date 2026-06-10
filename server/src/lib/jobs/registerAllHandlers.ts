@@ -59,6 +59,7 @@ import {
   WorkflowScheduledRunJobData,
 } from './handlers/workflowScheduledRunHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
@@ -281,6 +282,19 @@ export async function registerAllJobHandlers(
         await processRenewalQueueHandler(data);
       },
       retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Auto-close stale tickets per board auto-close rules
+  JobHandlerRegistry.register<AutoCloseTicketsJobData & BaseJobData>(
+    {
+      name: 'auto-close-tickets',
+      handler: async (_jobId, data) => {
+        await autoCloseTicketsHandler(data);
+      },
+      retry: { maxAttempts: 2 },
+      timeoutMs: 600000,
     },
     registerOpts
   );
