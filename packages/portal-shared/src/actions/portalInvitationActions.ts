@@ -28,6 +28,10 @@ class PortalInvitationError extends Error {
 function normalizeCreateClientPortalUserError(
   error: unknown
 ): { message: string; errorCode: PortalInvitationErrorCode } {
+  if (error instanceof PortalInvitationError) {
+    return { message: error.message, errorCode: error.errorCode };
+  }
+
   const dbError = error as { code?: string };
   if (dbError?.code === '23505') {
     return {
@@ -138,6 +142,22 @@ export const createClientPortalUser = withAuth(async (
       if (!contact) {
         // Could not resolve contact
         throw new Error('Contact not found. Provide contact details to create a new contact.');
+      }
+
+      // Validate the resolved contact's email before creating the user account.
+      // Throwing here also rolls back a contact inserted above with a bad email.
+      const contactEmail = typeof contact.email === 'string' ? contact.email.trim() : '';
+      if (!contactEmail) {
+        throw new PortalInvitationError(
+          'Contact does not have an email address. Please add an email address to the contact before creating a portal user.',
+          'CONTACT_MISSING_EMAIL'
+        );
+      }
+      if (!isValidEmail(contactEmail)) {
+        throw new PortalInvitationError(
+          'Contact has an invalid email address. Please update the contact with a valid email address before creating a portal user.',
+          'CONTACT_INVALID_EMAIL'
+        );
       }
 
       // 2) Ensure no existing user for contact
@@ -444,9 +464,12 @@ export const sendPortalInvitation = withAuth(async (
       console.error('Transaction failed:', error);
       const errorCode: PortalInvitationErrorCode =
         error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
+      // Leave `error` unset when there is no specific message so clients fall
+      // back to their localized generic string instead of hardcoded English.
+      const message = error instanceof Error ? error.message.trim() : '';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send invitation',
+        error: message || undefined,
         errorCode
       };
     });
@@ -455,7 +478,10 @@ export const sendPortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error sending portal invitation:', error);
-    return { success: false, error: 'Failed to send invitation', errorCode: 'INVITATION_FAILED' };
+    const errorCode: PortalInvitationErrorCode =
+      error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
+    const message = error instanceof Error ? error.message.trim() : '';
+    return { success: false, error: message || undefined, errorCode };
   }
 });
 
@@ -744,7 +770,8 @@ export const revokePortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error revoking portal invitation:', error);
-    return { success: false, error: 'Failed to revoke invitation', errorCode: 'REVOKE_FAILED' };
+    const message = error instanceof Error ? error.message.trim() : '';
+    return { success: false, error: message || undefined, errorCode: 'REVOKE_FAILED' };
   }
 });
 
