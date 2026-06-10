@@ -1,96 +1,776 @@
 [
-  { "id": "T001", "description": "Unit: equals operator matches case-insensitively on subject", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T002", "description": "Unit: contains operator matches substring case-insensitively", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T003", "description": "Unit: starts_with and ends_with operators match case-insensitively", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T004", "description": "Unit: ALL-of semantics — rule with two conditions does not match when one fails", "implemented": false, "featureIds": ["F006", "F015"] },
-  { "id": "T005", "description": "Unit: from_domain field derives domain from sender address", "implemented": false, "featureIds": ["F008"] },
-  { "id": "T006", "description": "Unit: to_address condition matches when any recipient (to/cc) matches", "implemented": false, "featureIds": ["F008"] },
-  { "id": "T007", "description": "Unit: body_text input is sliced to the cap before condition evaluation", "implemented": false, "featureIds": ["F008"] },
-  { "id": "T008", "description": "Unit: matches_regex evaluates a valid pattern case-insensitively", "implemented": false, "featureIds": ["F007"] },
-  { "id": "T009", "description": "Unit: invalid regex pattern evaluates the condition as false without throwing", "implemented": false, "featureIds": ["F007"] },
-  { "id": "T010", "description": "Unit: regex pattern exceeding the length cap is rejected as non-matching", "implemented": false, "featureIds": ["F007"] },
-  { "id": "T011", "description": "Unit: between extraction pulls text inside delimiters from subject", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T012", "description": "Unit: between extraction with missing end delimiter is a non-match", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T013", "description": "Unit: between extraction occurrence=first vs occurrence=last with repeated delimiters", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T014", "description": "Unit: after extraction returns text following the marker to end of line/value", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T015", "description": "Unit: before extraction returns text preceding the marker", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T016", "description": "Unit: regex extraction returns capture group 1", "implemented": false, "featureIds": ["F010"] },
-  { "id": "T017", "description": "Unit: regex extraction with no capture group in pattern is a non-match", "implemented": false, "featureIds": ["F010"] },
-  { "id": "T018", "description": "Unit: friendly templates and equivalent raw regex produce identical extraction results (single code path)", "implemented": false, "featureIds": ["F009", "F010"] },
-  { "id": "T019", "description": "Unit: normalization trims, collapses internal whitespace, lowercases", "implemented": false, "featureIds": ["F011"] },
-  { "id": "T020", "description": "Unit: extraction yielding empty/whitespace-only value is a non-match", "implemented": false, "featureIds": ["F011"] },
-  { "id": "T021", "description": "Unit: extraction handles unicode client names (accents, non-latin)", "implemented": false, "featureIds": ["F009", "F011"] },
-  { "id": "T022", "description": "Unit: client matcher resolves normalized client_name match", "implemented": false, "featureIds": ["F012"] },
-  { "id": "T023", "description": "Unit: client matcher excludes inactive clients", "implemented": false, "featureIds": ["F012"] },
-  { "id": "T024", "description": "Unit: client matcher falls back to alias lookup when name match fails", "implemented": false, "featureIds": ["F013"] },
-  { "id": "T025", "description": "Unit: client name match takes precedence over alias when both would resolve", "implemented": false, "featureIds": ["F012", "F013"] },
-  { "id": "T026", "description": "DB: client_name_aliases unique index rejects duplicate (tenant, lower(alias))", "implemented": false, "featureIds": ["F002"] },
-  { "id": "T027", "description": "Unit: rules evaluated in position order", "implemented": false, "featureIds": ["F014", "F015"] },
-  { "id": "T028", "description": "Unit: rule with provider_ids=NULL applies to all providers", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T029", "description": "Unit: rule scoped to another provider is not evaluated", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T030", "description": "Unit: inactive rule is not evaluated", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T031", "description": "Unit: first matching rule wins — later matching rules are not executed", "implemented": false, "featureIds": ["F015"] },
-  { "id": "T032", "description": "Unit: on_no_match=proceed continues to the next matching rule (regex rule fails, later AI/catch-all rule evaluates)", "implemented": false, "featureIds": ["F015"] },
-  { "id": "T033", "description": "Unit: proceed with no later matching rule falls through to normal pipeline outcome", "implemented": false, "featureIds": ["F015"] },
-  { "id": "T034", "description": "Unit: on_no_match=skip stops evaluation and skips the email", "implemented": false, "featureIds": ["F016"] },
-  { "id": "T035", "description": "Unit: on_no_match=fallback_destination resolves the fallback defaults set", "implemented": false, "featureIds": ["F017"] },
-  { "id": "T036", "description": "Unit: evaluator exception (malformed conditions JSONB) logs warning and returns no-rules outcome", "implemented": false, "featureIds": ["F018"] },
-  { "id": "T037", "description": "Integration: skip rule — no ticket or comment created; email_processed_messages row has processing_status='skipped' with ruleId/ruleName metadata", "implemented": false, "featureIds": ["F020"] },
-  { "id": "T038", "description": "Integration: skip rule — attachments are not uploaded or linked", "implemented": false, "featureIds": ["F020"] },
-  { "id": "T039", "description": "Integration: skip rule works for a tenant with no inbound_ticket_defaults configured", "implemented": false, "featureIds": ["F021"] },
-  { "id": "T040", "description": "Integration: Huntress scenario — from @huntress.com with subject 'Alert (Acme Corp)' creates ticket assigned to Acme Corp", "implemented": false, "featureIds": ["F019", "F022"] },
-  { "id": "T041", "description": "Integration: rule-assigned client wins when sender email exactly matches a contact of a different client", "implemented": false, "featureIds": ["F022"] },
-  { "id": "T042", "description": "Integration: rule-assigned client wins over sender-domain match to a different client", "implemented": false, "featureIds": ["F022"] },
-  { "id": "T043", "description": "Integration: contact attribution uses sender contact when it belongs to the assigned client", "implemented": false, "featureIds": ["F023"] },
-  { "id": "T044", "description": "Integration: contact attribution falls back to assigned client's primary contact", "implemented": false, "featureIds": ["F023"] },
-  { "id": "T045", "description": "Integration: assigned client's own inbound_ticket_defaults_id override applies to the created ticket", "implemented": false, "featureIds": ["F024"] },
-  { "id": "T046", "description": "Integration: set_destination applies the referenced defaults set above contact/client overrides", "implemented": false, "featureIds": ["F025"] },
-  { "id": "T047", "description": "Integration: set_destination still attributes client/contact via normal sender matching", "implemented": false, "featureIds": ["F025"] },
-  { "id": "T048", "description": "Integration: extraction non-match with fallback_destination creates the ticket at the fallback destination", "implemented": false, "featureIds": ["F017"] },
-  { "id": "T049", "description": "Integration: tenant with zero rules — pipeline outcome identical to pre-feature behavior (regression)", "implemented": false, "featureIds": ["F019"] },
-  { "id": "T050", "description": "Integration: reply threading onto an existing ticket bypasses rules — a matching skip rule does not suppress the comment", "implemented": false, "featureIds": ["F019"] },
-  { "id": "T051", "description": "Integration: created ticket email_metadata contains appliedRuleId and clientMatchSource='rule_extraction'", "implemented": false, "featureIds": ["F026"] },
-  { "id": "T052", "description": "Integration: INBOUND_EMAIL_RECEIVED activity log row includes the rule name", "implemented": false, "featureIds": ["F027"] },
-  { "id": "T053", "description": "Integration: structured evaluation log line emitted with rules considered, matched rule, outcome", "implemented": false, "featureIds": ["F028"] },
-  { "id": "T054", "description": "Integration: deleted fallback defaults set degrades to proceed with warning (no crash, no drop)", "implemented": false, "featureIds": ["F029"] },
-  { "id": "T055", "description": "Integration: alias pointing at a deleted/inactive client is a non-match", "implemented": false, "featureIds": ["F029"] },
-  { "id": "T056", "description": "DB: email_processed_messages accepts processing_status='skipped' after constraint migration", "implemented": false, "featureIds": ["F003"] },
-  { "id": "T057", "description": "Unit: OSS AI stub returns no_decision and the rule routes to on_no_match", "implemented": false, "featureIds": ["F030"] },
-  { "id": "T058", "description": "EE: AI skip decision suppresses ticket when 'skip' is in allowed_outcomes", "implemented": false, "featureIds": ["F032", "F034"] },
-  { "id": "T059", "description": "EE: AI decision outside allowed_outcomes is treated as no_decision", "implemented": false, "featureIds": ["F034"] },
-  { "id": "T060", "description": "EE: AI assign_client resolves extracted_client_name via the exact+alias matcher", "implemented": false, "featureIds": ["F033"] },
-  { "id": "T061", "description": "EE: AI extracted_client_name with no client/alias match routes to on_no_match", "implemented": false, "featureIds": ["F033", "F035"] },
-  { "id": "T062", "description": "EE: AI timeout/error treated as non-match; ticket creation proceeds via on_no_match", "implemented": false, "featureIds": ["F035"] },
-  { "id": "T063", "description": "EE: malformed AI JSON response treated as no_decision", "implemented": false, "featureIds": ["F032", "F035"] },
-  { "id": "T064", "description": "EE: AI prompt contains instruction and email excerpt but no tenant client list", "implemented": false, "featureIds": ["F031"] },
-  { "id": "T065", "description": "EE: AI token usage recorded via existing usage tracking", "implemented": false, "featureIds": ["F036"] },
-  { "id": "T066", "description": "Action: create rule rejects unknown condition field or operator", "implemented": false, "featureIds": ["F005", "F038"] },
-  { "id": "T067", "description": "Action: create rule rejects action_config not matching action_type (e.g. extraction config on a skip rule)", "implemented": false, "featureIds": ["F005", "F038"] },
-  { "id": "T068", "description": "Action: create rule rejects fallback_destination without fallback_inbound_ticket_defaults_id", "implemented": false, "featureIds": ["F005", "F038"] },
-  { "id": "T069", "description": "Action: create rule rejects over-length regex pattern", "implemented": false, "featureIds": ["F005", "F038"] },
-  { "id": "T070", "description": "Action: update rule persists changes and re-validates payload", "implemented": false, "featureIds": ["F039"] },
-  { "id": "T071", "description": "Action: delete rule removes it from evaluation", "implemented": false, "featureIds": ["F040"] },
-  { "id": "T072", "description": "Action: reorder persists new positions and evaluation respects them", "implemented": false, "featureIds": ["F041"] },
-  { "id": "T073", "description": "Action: list rules returns tenant's rules only (tenant isolation)", "implemented": false, "featureIds": ["F037"] },
-  { "id": "T074", "description": "Action: rule CRUD rejected without email-admin permission", "implemented": false, "featureIds": ["F044"] },
-  { "id": "T075", "description": "Action: alias CRUD rejected without email-admin permission", "implemented": false, "featureIds": ["F043", "F044"] },
-  { "id": "T076", "description": "Action: test-rule returns per-condition pass/fail, extracted value, resolved client, and final outcome for a draft rule", "implemented": false, "featureIds": ["F042"] },
-  { "id": "T077", "description": "Action: test-rule persists nothing (no rule row, no processed-message row, no ticket)", "implemented": false, "featureIds": ["F042"] },
-  { "id": "T078", "description": "Action: alias create surfaces a friendly error on duplicate alias", "implemented": false, "featureIds": ["F043"] },
-  { "id": "T079", "description": "UI: Inbound Rules section renders in email settings for an authorized admin", "implemented": false, "featureIds": ["F045"] },
-  { "id": "T080", "description": "UI: create a Huntress-style rule end-to-end through the builder and see it in the list", "implemented": false, "featureIds": ["F046", "F050", "F051", "F052", "F054"] },
-  { "id": "T081", "description": "UI: add and remove condition rows; matches-regex selectable as an operator", "implemented": false, "featureIds": ["F051"] },
-  { "id": "T082", "description": "UI: AI action disabled with upsell hint when add-on inactive; enabled when EE + AI add-on active", "implemented": false, "featureIds": ["F053"] },
-  { "id": "T083", "description": "UI: drag-to-reorder persists and survives reload", "implemented": false, "featureIds": ["F047"] },
-  { "id": "T084", "description": "UI: active toggle flips rule state from the list row", "implemented": false, "featureIds": ["F049"] },
-  { "id": "T085", "description": "UI: rule summary text reflects conditions and action", "implemented": false, "featureIds": ["F048"] },
-  { "id": "T086", "description": "UI: mailbox filter chips shown for provider-scoped rules", "implemented": false, "featureIds": ["F046", "F050"] },
-  { "id": "T087", "description": "UI: non-match select shows fallback destination picker only for fallback_destination", "implemented": false, "featureIds": ["F057"] },
-  { "id": "T088", "description": "UI: server validation errors render inline in the editor", "implemented": false, "featureIds": ["F058"] },
-  { "id": "T089", "description": "UI: tester shows per-condition pass/fail for a sample email", "implemented": false, "featureIds": ["F059", "F060"] },
-  { "id": "T090", "description": "UI: tester shows extracted value and resolved client for a matching sample", "implemented": false, "featureIds": ["F060"] },
-  { "id": "T091", "description": "UI: tester alias quick-add creates the alias and re-test resolves the client", "implemented": false, "featureIds": ["F061"] },
-  { "id": "T092", "description": "UI: client record aliases section lists, adds, and removes aliases", "implemented": false, "featureIds": ["F062"] },
-  { "id": "T093", "description": "UI: AI config inputs (instruction, allowed outcomes) persist through save and reopen", "implemented": false, "featureIds": ["F056"] },
-  { "id": "T094", "description": "Smoke: end-to-end via dev mail tooling — send Huntress-style email, verify ticket client assignment; send status-update email, verify skip", "implemented": false, "featureIds": ["F019", "F020", "F022"] }
+  {
+    "id": "T001",
+    "description": "Unit: equals operator matches case-insensitively on subject",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: contains operator matches substring case-insensitively",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: starts_with and ends_with operators match case-insensitively",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: ALL-of semantics \u2014 rule with two conditions does not match when one fails",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F015"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: from_domain field derives domain from sender address",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: to_address condition matches when any recipient (to/cc) matches",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: body_text input is sliced to the cap before condition evaluation",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: matches_regex evaluates a valid pattern case-insensitively",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: invalid regex pattern evaluates the condition as false without throwing",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: regex pattern exceeding the length cap is rejected as non-matching",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: between extraction pulls text inside delimiters from subject",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: between extraction with missing end delimiter is a non-match",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: between extraction occurrence=first vs occurrence=last with repeated delimiters",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: after extraction returns text following the marker to end of line/value",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: before extraction returns text preceding the marker",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: regex extraction returns capture group 1",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: regex extraction with no capture group in pattern is a non-match",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: friendly templates and equivalent raw regex produce identical extraction results (single code path)",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: normalization trims, collapses internal whitespace, lowercases",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: extraction yielding empty/whitespace-only value is a non-match",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: extraction handles unicode client names (accents, non-latin)",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F011"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: client matcher resolves normalized client_name match",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: client matcher excludes inactive clients",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: client matcher falls back to alias lookup when name match fails",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: client name match takes precedence over alias when both would resolve",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "DB: client_name_aliases unique index rejects duplicate (tenant, lower(alias))",
+    "implemented": false,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Unit: rules evaluated in position order",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Unit: rule with provider_ids=NULL applies to all providers",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Unit: rule scoped to another provider is not evaluated",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: inactive rule is not evaluated",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Unit: first matching rule wins \u2014 later matching rules are not executed",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: on_no_match=proceed continues to the next matching rule (regex rule fails, later AI/catch-all rule evaluates)",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unit: proceed with no later matching rule falls through to normal pipeline outcome",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: on_no_match=skip stops evaluation and skips the email",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: on_no_match=fallback_destination resolves the fallback defaults set",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Unit: evaluator exception (malformed conditions JSONB) logs warning and returns no-rules outcome",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: skip rule \u2014 no ticket or comment created; email_processed_messages row has processing_status='skipped' with ruleId/ruleName metadata",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: skip rule \u2014 attachments are not uploaded or linked",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: skip rule works for a tenant with no inbound_ticket_defaults configured",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Integration: Huntress scenario \u2014 from @huntress.com with subject 'Alert (Acme Corp)' creates ticket assigned to Acme Corp",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F022"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Integration: rule-assigned client wins when sender email exactly matches a contact of a different client",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Integration: rule-assigned client wins over sender-domain match to a different client",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Integration: contact attribution uses sender contact when it belongs to the assigned client",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Integration: contact attribution falls back to assigned client's primary contact",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Integration: assigned client's own inbound_ticket_defaults_id override applies to the created ticket",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Integration: set_destination applies the referenced defaults set above contact/client overrides",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Integration: set_destination still attributes client/contact via normal sender matching",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Integration: extraction non-match with fallback_destination creates the ticket at the fallback destination",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Integration: tenant with zero rules \u2014 pipeline outcome identical to pre-feature behavior (regression)",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Integration: reply threading onto an existing ticket bypasses rules \u2014 a matching skip rule does not suppress the comment",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Integration: created ticket email_metadata contains appliedRuleId and clientMatchSource='rule_extraction'",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Integration: INBOUND_EMAIL_RECEIVED activity log row includes the rule name",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Integration: structured evaluation log line emitted with rules considered, matched rule, outcome",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Integration: deleted fallback defaults set degrades to proceed with warning (no crash, no drop)",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Integration: alias pointing at a deleted/inactive client is a non-match",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "DB: email_processed_messages accepts processing_status='skipped' after constraint migration",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Unit: OSS AI stub returns no_decision and the rule routes to on_no_match",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "EE: AI skip decision suppresses ticket when 'skip' is in allowed_outcomes",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F034"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "EE: AI decision outside allowed_outcomes is treated as no_decision",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "EE: AI assign_client resolves extracted_client_name via the exact+alias matcher",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "EE: AI extracted_client_name with no client/alias match routes to on_no_match",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F035"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "EE: AI timeout/error treated as non-match; ticket creation proceeds via on_no_match",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "EE: malformed AI JSON response treated as no_decision",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F035"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "EE: AI prompt contains instruction and email excerpt but no tenant client list",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "EE: AI token usage recorded via existing usage tracking",
+    "implemented": false,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Action: create rule rejects unknown condition field or operator",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F038"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Action: create rule rejects action_config not matching action_type (e.g. extraction config on a skip rule)",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F038"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Action: create rule rejects fallback_destination without fallback_inbound_ticket_defaults_id",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F038"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Action: create rule rejects over-length regex pattern",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F038"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Action: update rule persists changes and re-validates payload",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Action: delete rule removes it from evaluation",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Action: reorder persists new positions and evaluation respects them",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Action: list rules returns tenant's rules only (tenant isolation)",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Action: rule CRUD rejected without email-admin permission",
+    "implemented": false,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Action: alias CRUD rejected without email-admin permission",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F044"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Action: test-rule returns per-condition pass/fail, extracted value, resolved client, and final outcome for a draft rule",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Action: test-rule persists nothing (no rule row, no processed-message row, no ticket)",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Action: alias create surfaces a friendly error on duplicate alias",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "UI: Inbound Rules section renders in email settings for an authorized admin",
+    "implemented": false,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "UI: create a Huntress-style rule end-to-end through the builder and see it in the list",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F050",
+      "F051",
+      "F052",
+      "F054"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "UI: add and remove condition rows; matches-regex selectable as an operator",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "UI: AI action disabled with upsell hint when add-on inactive; enabled when EE + AI add-on active",
+    "implemented": false,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "UI: drag-to-reorder persists and survives reload",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "UI: active toggle flips rule state from the list row",
+    "implemented": false,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "UI: rule summary text reflects conditions and action",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "UI: mailbox filter chips shown for provider-scoped rules",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F050"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "UI: non-match select shows fallback destination picker only for fallback_destination",
+    "implemented": false,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "UI: server validation errors render inline in the editor",
+    "implemented": false,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "UI: tester shows per-condition pass/fail for a sample email",
+    "implemented": false,
+    "featureIds": [
+      "F059",
+      "F060"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "UI: tester shows extracted value and resolved client for a matching sample",
+    "implemented": false,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "UI: tester alias quick-add creates the alias and re-test resolves the client",
+    "implemented": false,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "UI: client record aliases section lists, adds, and removes aliases",
+    "implemented": false,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "UI: AI config inputs (instruction, allowed outcomes) persist through save and reopen",
+    "implemented": false,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Smoke: end-to-end via dev mail tooling \u2014 send Huntress-style email, verify ticket client assignment; send status-update email, verify skip",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F022"
+    ]
+  }
 ]

@@ -60,6 +60,41 @@ Approved design: `docs/plans/2026-06-10-inbound-email-rules-design.md` (commit f
   inbound-domains UI (`packages/clients/src/actions/clientInboundEmailDomainActions.ts`
   is the actions-layer sibling).
 
+## Implementation Notes (2026-06-10)
+
+- Implemented in commits `824f5a9178` (engine/pipeline/EE/migrations),
+  `a3df3eb94e` (server actions), `a2b564237c` (UI).
+- Engine lives in `shared/services/email/inboundEmailRules/` with injectable
+  deps (`loadRules`, `matchClientByName`, `resolveDefaultsById`,
+  `classifyWithAi`) so the walk semantics are unit-testable without a DB; the
+  default deps hit the real tables. The tester server action injects only
+  `loadRules` (the draft rule), so client/alias matching is live.
+- **Deviation — reorder**: up/down arrow controls instead of drag-and-drop;
+  the repo has no dnd dependency and adding one wasn't justified. Positions
+  persist through `reorderInboundEmailRules` the same way.
+- **Deviation — alias quick-add**: `packages/integrations` does not depend on
+  `packages/clients`, so the tester quick-add uses its own
+  `addClientNameAliasFromRuleTester` action (system_settings RBAC) writing the
+  same table the clients-package CRUD uses.
+- AI usage logging: there was no pre-existing usage-tracking module; the EE
+  classifier emits a structured `token usage` log line (tenant/provider/rule/
+  model/usage) that metering can consume later.
+- `email_processed_messages.processing_status='skipped'` is only used for
+  rule skips; other skip reasons (missing_defaults etc.) keep `partial` to
+  avoid changing existing diagnostics semantics.
+- The rule tester does not exercise provider filtering (draft rule runs with
+  `provider_ids: null`) — testers have no receiving mailbox.
+- Migrations were applied against the worktree's local-test DB
+  (port 5472) and the resulting schema verified, including the
+  `lower(regexp_replace(trim(...), '\s+', ' ', 'g'))` matcher expression.
+  Citus distribution was skipped there (non-Citus dev DB) as designed.
+- Pre-existing test failures on this branch (NOT from this work):
+  `processInboundEmailInApp.test.ts` (2) and
+  `processInboundEmailInApp.additionalPaths.test.ts` (1) fail at HEAD too.
+- Remaining unimplemented tests in `tests.json` need a DB-backed harness
+  (matcher SQL, unique index, inactive-rule filtering), an EE/AI mock harness
+  (T058–T065), action-layer tests (T070–T078), and UI tests (T079–T094).
+
 ## Commands / Runbooks
 
 - (2026-06-10) Integration tests: see `integration-testing` skill (DB bootstrap,

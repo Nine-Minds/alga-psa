@@ -2,7 +2,7 @@
 
 - Slug: `2026-06-10-inbound-email-rules`
 - Date: `2026-06-10`
-- Status: Draft
+- Status: Accepted — core implementation landed 2026-06-10
 - Design: [../2026-06-10-inbound-email-rules-design.md](../2026-06-10-inbound-email-rules-design.md)
 
 ## Summary
