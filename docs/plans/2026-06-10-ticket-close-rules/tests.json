@@ -1,0 +1,290 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration smoke: all seven new tables exist after migrate with composite (tenant, id) PKs, FKs, defaults (is_required true, completed false, source 'manual'), and RLS policies; migrate:down removes them cleanly.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration: permissions table gains { resource 'ticket', action 'close_override' } per tenant, role_permissions grants it to Admin, and re-running the migration is a no-op (idempotent).",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T003",
+    "description": "Migration: notification_subtypes contains the auto-close-warning subtype under the Tickets category and system_email_templates has a matching row whose name equals the string used by the warn phase.",
+    "implemented": false,
+    "featureIds": ["F008", "F032"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: getBoardCloseRules returns all-gates-off defaults when no row exists; upsertBoardCloseRules persists and round-trips config; required_fields outside the allowed set is rejected.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: auto-close rule actions reject close_to_status_id that is not is_closed, trigger_status_id that is closed, warning_days_before >= inactivity_days, and a duplicate (board_id, trigger_status_id) pair.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: validateTicketClosure returns allowed=true when the board has no board_close_rules row and when is_enabled=false, without running any gate queries.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: resolution-comment gate fails with no qualifying comment; passes with a comments.is_resolution=true row; passes with metadata closes_ticket=true; ignores comments on other tickets/tenants.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: time-entry gate fails with zero time entries; passes with one time_entries row (work_item_type 'ticket'); ignores time entries with other work_item_types or other tickets.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: checklist gate fails while any is_required item is incomplete; passes when all required items are complete even if optional items remain unchecked; passes on a ticket with no checklist items.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: open-children gate fails when a child ticket (master_ticket_id set) has closed_at IS NULL; passes once all children are closed; passes for non-master tickets.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: required-fields gate fails listing each null configured field (e.g. category_id, assigned_to) in failures meta; passes when all configured fields are set; unconfigured fields are ignored.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: multiple failing gates produce one failure entry per gate in a single result (not first-failure-only).",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: override with ticket:close_override permission yields allowed=true and a CLOSE_RULES_OVERRIDDEN audit write including the failure list and reason; override without the permission is refused (still blocked).",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: bypass skips gate evaluation and writes CLOSE_RULES_BYPASSED with the source only when the board has enabled gates; no audit noise on ungated boards.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: updateTicket to a closed status on a gated board throws TicketCloseValidationError, the transaction rolls back (status unchanged, closed_at/closed_by/is_closed untouched), and no TICKET_CLOSED event is published.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: updateTicket close succeeds once all gates pass — closure fields set, TICKET_CLOSED published, audit row written (regression: identical to pre-feature behavior on ungated boards).",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: updateTicketInTransaction enforces gates identically (blocked then allowed), covering the TicketDetails/board-view path.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: bulkUpdateTicketStatus to a closed status with a mix of passing and failing tickets closes the passing ones and returns per-ticket results with failures for the blocked ones; no batch-wide abort.",
+    "implemented": false,
+    "featureIds": ["F024", "F028"]
+  },
+  {
+    "id": "T019",
+    "description": "Integration (API): PUT /api/v1/tickets/:id with a closed status on a gated board returns 422 with structured failures in details; succeeds with 200 once gates pass; override_close_rules works only for a caller whose user has ticket:close_override.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: workflow tickets.close and CSV import close tickets on a gated board without gate failures, and a CLOSE_RULES_BYPASSED audit entry is recorded with the correct source.",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: portal updateTicketStatus to a closed status sets is_closed/closed_at/closed_by (portal user id), publishes TICKET_CLOSED, and is never gate-blocked; moving back to open clears the closure fields. Regression: closure emails/SLA recording fire for portal closes.",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: checklist item lifecycle — add, edit, reorder, delete via ticketChecklistActions; ordering persists; tenant isolation enforced (cannot touch another tenant's items).",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T023",
+    "description": "Integration: setChecklistItemCompleted(true) stamps completed_by = acting user and completed_at; (false) clears both; each transition writes the matching CHECKLIST_ITEM_* audit row, with the uncheck row preserving the prior signoff in details.",
+    "implemented": false,
+    "featureIds": ["F013", "F016"]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: applyChecklistTemplateToTicket copies items with order, is_required, source and template_id provenance; calling it again for the same template is a no-op (idempotent); two different templates stack their items.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: template edits after application do not alter items already copied onto tickets.",
+    "implemented": false,
+    "featureIds": ["F015", "F014"]
+  },
+  {
+    "id": "T026",
+    "description": "Integration: auto-apply on ticket creation — a rule matching the new ticket's board/category attaches the template; null matcher fields match any; non-matching rules don't fire; disabled rules don't fire.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: auto-apply on board/category change — moving a ticket into a matching board/category attaches the template once; moving it back and forth does not duplicate items.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Integration: workflow action tickets.apply_checklist applies the template through the action registry with idempotent re-run, and is present in the action catalog exposed to the automation UI.",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T029",
+    "description": "Integration: template/apply-rule/item CRUD actions reject callers without settings-admin permission; checklist item actions reject callers without ticket update permission.",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T030",
+    "description": "Integration (scan match): a ticket in a rule's trigger status with stale activity gets a ticket_auto_close_state row with scheduled_close_at = last_activity + inactivity_days; new activity (comment) on the next run recomputes/clears the row; status change away from the trigger status clears it; disabling the rule clears it.",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T031",
+    "description": "Integration (scan warn): warning sent exactly once when inside the warning window (sendNotificationIfEnabled called with the auto-close-warning subtype, warning_sent_at stamped, AUTO_CLOSE_WARNING_SENT audit row); not resent on subsequent runs; not sent at all when warning_days_before is null; respects tenant notification settings (disabled subtype = no send).",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration (scan close): a due ticket closes to close_to_status_id with is_closed/closed_at set, closed_by null, system-attributed audit row, automatic comment, and TICKET_CLOSED published — verifying the normal-path side effects fire.",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration (scan race): activity recorded between the match snapshot and the close phase prevents the close (in-transaction revalidation); re-running the scan after a completed close is a no-op (idempotent).",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T034",
+    "description": "Integration: auto-close on a gated board succeeds via bypass and logs CLOSE_RULES_BYPASSED with source 'auto_close'.",
+    "implemented": false,
+    "featureIds": ["F033", "F022"]
+  },
+  {
+    "id": "T035",
+    "description": "Integration (scan resilience): a ticket that throws during the close phase (e.g. deleted target status) is skipped with the error recorded, and the remaining due tickets in the same run still close.",
+    "implemented": false,
+    "featureIds": ["F031", "F033"]
+  },
+  {
+    "id": "T036",
+    "description": "Integration: 'auto-close-tickets' is registered in the JobHandlerRegistry and scheduled per tenant at '*/15 * * * *' by initializeScheduledJobs.",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: tenant isolation across the scan — tenant A's rules never match tenant B's tickets, and state/warning/close writes stay within the rule's tenant.",
+    "implemented": false,
+    "featureIds": ["F031", "F033"]
+  },
+  {
+    "id": "T038",
+    "description": "Playwright: board settings dialog — enable gates and required fields in the Close Rules section, save, reopen, verify persistence; add an auto-close rule and verify validation messages for a closed trigger status or warning >= inactivity days.",
+    "implemented": false,
+    "featureIds": ["F011", "F012"]
+  },
+  {
+    "id": "T039",
+    "description": "Playwright: Checklist Templates settings tab — create a template with ordered items (up/down reorder), mark one optional, add an apply rule scoped to a board, edit and delete the template.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T040",
+    "description": "Playwright: ticket checklist section — add items, check one and see the acting user's name and timestamp appear inline; uncheck and see the signoff cleared; apply a template and see its items appended; progress chip shows 'N of M required done' and updates as items are checked.",
+    "implemented": false,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T041",
+    "description": "Playwright: blocked-close dialog — attempting to close a gated ticket lists each unmet condition; quick actions navigate (checklist scroll, comment focus); after satisfying all gates the close succeeds.",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T042",
+    "description": "Playwright: override flow — an admin with ticket:close_override sees 'Close anyway', provides a reason, ticket closes, and the override entry with failures appears in the activity timeline; a user without the permission sees no 'Close anyway' control.",
+    "implemented": false,
+    "featureIds": ["F027", "F022", "F016"]
+  },
+  {
+    "id": "T043",
+    "description": "Playwright: bulk close from the ticket list with mixed pass/fail tickets shows the blocked-summary with per-ticket reasons.",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T044",
+    "description": "Playwright: auto-close banner renders the scheduled close date on a ticket with pending state and disappears after new activity resets the timer.",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T045",
+    "description": "Playwright: activity timeline renders human-readable entries for checklist check/uncheck, template applied, close-rules override/bypass, and auto-close warning.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T046",
+    "description": "Regression: closing a ticket on a board with no close rules behaves byte-for-byte as before (no validation queries in the hot path beyond the single board_close_rules lookup, no new audit entries, identical events).",
+    "implemented": false,
+    "featureIds": ["F021", "F023", "F024"]
+  },
+  {
+    "id": "T047",
+    "description": "Regression: reopening a closed ticket still clears is_closed/closed_at/closed_by and publishes TICKET_REOPENED on every wired path, including the portal after F029.",
+    "implemented": false,
+    "featureIds": ["F023", "F024", "F029"]
+  },
+  {
+    "id": "T048",
+    "description": "i18n smoke: all new UI strings resolve from translation keys (no raw key leakage) in the default locale.",
+    "implemented": false,
+    "featureIds": ["F036"]
+  }
+]

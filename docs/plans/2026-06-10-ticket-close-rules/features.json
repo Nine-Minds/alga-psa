@@ -1,0 +1,218 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: create board_close_rules — one row per board: tenant, board_id (composite PK (tenant, board_id), FK to boards), require_resolution_comment / require_time_entry / require_checklist_complete / require_no_open_children booleans (default false), required_fields jsonb (default '[]', values from: category_id, subcategory_id, priority_id, assigned_to), is_enabled boolean default true, created_at/updated_at. Citus-safe composite PK per 20250804000001_fix_primary_keys_for_citus.cjs conventions; add RLS policy following 20241015134100_add_rls_policies.cjs.",
+    "implemented": false,
+    "prdRefs": ["5.1", "6"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: create ticket_checklist_items — tenant, checklist_item_id (PK (tenant, checklist_item_id)), ticket_id FK (tenant, ticket_id) → tickets ON DELETE CASCADE, item_name text NOT NULL, description text, order_number int, assigned_to uuid nullable, is_required boolean NOT NULL default true, completed boolean NOT NULL default false, completed_by uuid nullable, completed_at timestamptz nullable, source text NOT NULL default 'manual' (manual|template|workflow), template_id uuid nullable, created_by uuid, created_at/updated_at. Modeled on 20241009225600_create_task_checklist_items.cjs plus accountability/provenance fields. Index (tenant, ticket_id). RLS policy.",
+    "implemented": false,
+    "prdRefs": ["5.2", "6"]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: create checklist_templates (tenant, template_id PK, name NOT NULL, description, is_active boolean default true, created_at/updated_at) and checklist_template_items (tenant, template_item_id PK, template_id FK ON DELETE CASCADE, item_name NOT NULL, description, order_number, is_required boolean default true). RLS policies on both.",
+    "implemented": false,
+    "prdRefs": ["5.2", "6"]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: create checklist_template_apply_rules — tenant, apply_rule_id PK, template_id FK ON DELETE CASCADE, board_id / category_id / subcategory_id / priority_id all uuid nullable (null = match any), is_enabled boolean default true, created_at/updated_at. RLS policy.",
+    "implemented": false,
+    "prdRefs": ["5.2", "6"]
+  },
+  {
+    "id": "F005",
+    "description": "Migration: create board_auto_close_rules — tenant, rule_id PK, board_id FK, trigger_status_id uuid NOT NULL (FK statuses), inactivity_days int NOT NULL CHECK > 0, warning_days_before int nullable CHECK < inactivity_days, close_to_status_id uuid NOT NULL (FK statuses; must reference an is_closed status — enforced in the server action, not the DB), is_enabled boolean default true, created_at/updated_at. Multiple rows per board allowed; unique (tenant, board_id, trigger_status_id). RLS policy.",
+    "implemented": false,
+    "prdRefs": ["5.3", "6"]
+  },
+  {
+    "id": "F006",
+    "description": "Migration: create ticket_auto_close_state — tenant, ticket_id (PK (tenant, ticket_id), FK tickets ON DELETE CASCADE), rule_id FK board_auto_close_rules ON DELETE CASCADE, scheduled_close_at timestamptz NOT NULL, warning_sent_at timestamptz nullable, updated_at. Index (tenant, scheduled_close_at) for the scan. RLS policy.",
+    "implemented": false,
+    "prdRefs": ["5.3", "6"]
+  },
+  {
+    "id": "F007",
+    "description": "Migration: insert permission row { resource: 'ticket', action: 'close_override', msp: true, client: false } into permissions for every tenant and grant via role_permissions to each tenant's Admin role, following 20250619120000_add_comprehensive_permissions.cjs. Idempotent (ON CONFLICT DO NOTHING) and also added to the tenant-onboarding permission seed source so new tenants get it.",
+    "implemented": false,
+    "prdRefs": ["6", "8"]
+  },
+  {
+    "id": "F008",
+    "description": "Migration: notification template 'ticket-auto-close-warning' — insert notification_subtypes row under the existing Tickets notification category and a system_email_templates row (subject ~'Your ticket {{ticket.title}} will close soon', html/text bodies with ticket link, scheduled close date, and 'reply to keep it open' guidance), following 20250226090000_add_credit_expiration_notification.cjs. Subtype name must exactly match the string later passed to sendNotificationIfEnabled.",
+    "implemented": false,
+    "prdRefs": ["5.3", "6"]
+  },
+  {
+    "id": "F009",
+    "description": "Server actions for board close rules in packages/tickets/src/actions/closeRuleActions.ts: getBoardCloseRules(boardId), upsertBoardCloseRules(boardId, config) — settings-admin permission, zod-validated, required_fields restricted to the allowed set. Returns defaults (all gates off) when no row exists.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F010",
+    "description": "Server actions for auto-close rules in closeRuleActions.ts: list/create/update/delete board_auto_close_rules. Validation: close_to_status_id must reference a status with is_closed = true on the same board; trigger_status_id must be an open status; warning_days_before < inactivity_days; reject duplicate (board_id, trigger_status_id).",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F011",
+    "description": "BoardsSettings.tsx (server/src/components/settings/general/BoardsSettings.tsx): add 'Close Rules' bordered section to the board Add/Edit dialog following the existing inbound-reply-reopen section pattern (Switch + Input + CustomSelect in a rounded-md border div) — four gate toggles plus a required-fields multi-select. Loads via getBoardCloseRules, saves via upsertBoardCloseRules alongside updateBoard.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F012",
+    "description": "BoardsSettings.tsx: add 'Auto-Close Rules' list editor in the board dialog — rows of {trigger status (open statuses of this board), inactivity days, optional warning lead days, target status (closed statuses of this board), enabled}, add/remove rows, persisted through the F010 actions. Status selects reuse the board's statuses already loaded in the dialog.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F013",
+    "description": "Checklist item server actions in packages/tickets/src/actions/ticketChecklistActions.ts: addChecklistItem, updateChecklistItem (name/description/assignee/is_required), deleteChecklistItem, reorderChecklistItems, setChecklistItemCompleted(itemId, completed). Completion sets completed_by = current user and completed_at = now; uncompletion clears both. Permission: ticket update. All writes inside withTransaction; each check/uncheck writes a ticket_audit_logs row via writeTicketActivity (F016).",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F014",
+    "description": "Checklist template server actions in packages/tickets/src/actions/checklistTemplateActions.ts: template CRUD, template item CRUD with ordering, apply-rule CRUD (validating matcher refs). Settings-admin permission.",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F015",
+    "description": "applyChecklistTemplateToTicket(trx, tenant, ticketId, templateId, source) helper + server action: copies checklist_template_items into ticket_checklist_items (source 'template'|'workflow', template_id provenance, appended after existing items by order_number). Idempotent: no-op if any item with this template_id already exists on the ticket. Writes a 'checklist template applied' audit entry.",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F016",
+    "description": "Audit log support: add TICKET_ACTIVITY_EVENT entries (shared/lib/ticketActivity/types.ts) — CHECKLIST_ITEM_COMPLETED, CHECKLIST_ITEM_UNCOMPLETED (details include item name and, for uncheck, the prior completed_by/completed_at signoff), CHECKLIST_TEMPLATE_APPLIED, CLOSE_RULES_OVERRIDDEN (details: failure list + optional reason), CLOSE_RULES_BYPASSED (details: bypass source), AUTO_CLOSE_WARNING_SENT, plus rendering for each in packages/tickets/src/components/ticket/TicketActivityTimeline.tsx.",
+    "implemented": false,
+    "prdRefs": ["5.1", "5.2", "5.3", "7"]
+  },
+  {
+    "id": "F017",
+    "description": "Auto-apply engine: applyMatchingChecklistTemplates(trx, tenant, ticket) — loads enabled checklist_template_apply_rules, matches board/category/subcategory/priority (null = any), applies each matching template via F015 (idempotency makes re-evaluation safe). Called from the ticket creation paths (addTicket in packages/tickets/src/actions/ticketActions.ts, the optimized create path, TicketService.create, and email-created tickets) and from board/category change detection in updateTicket/updateTicketInTransaction.",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F018",
+    "description": "ChecklistTemplatesSettings component: new 'checklist-templates' sub-tab in TicketingSettings.tsx (TICKETING_TAB_IDS + CustomTabs entry) — template list + Add/Edit dialog with item list (up/down reorder buttons per the BoardsSettings status-ordering pattern, per-item is_required toggle) and an apply-rules editor (board/category/subcategory/priority selects with 'Any' option).",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F019",
+    "description": "TicketChecklistSection.tsx in packages/tickets/src/components/ticket/, composed into TicketDetails.tsx like sibling sections: checkbox list with inline add, edit, delete, reorder; required badge on is_required items; 'Apply template' picker; checked items permanently show checker name/avatar + timestamp inline. Check/uncheck calls setChecklistItemCompleted with optimistic update.",
+    "implemented": false,
+    "prdRefs": ["5.2", "7"]
+  },
+  {
+    "id": "F020",
+    "description": "Checklist progress chip near the TicketDetails status control: 'N of M required done' (only required items counted), visible whenever the ticket has checklist items, so closure readiness is visible before attempting a close.",
+    "implemented": false,
+    "prdRefs": ["7"]
+  },
+  {
+    "id": "F021",
+    "description": "validateTicketClosure(trx, tenant, ticketId, user, opts) in packages/tickets/src/lib/validateTicketClosure.ts returning { allowed, failures: [{ rule, message, meta }] }. Loads board_close_rules for the ticket's board (skip when absent/disabled); evaluates only enabled gates: resolution comment (comments.is_resolution = true OR metadata->>'closes_ticket' = 'true'), time entry (any time_entries row with work_item_id = ticket_id AND work_item_type = 'ticket'), checklist (no ticket_checklist_items with is_required AND NOT completed), open children (no tickets with master_ticket_id = ticket_id AND closed_at IS NULL), required fields (null checks per required_fields). Exports typed TicketCloseValidationError carrying the failures array.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F022",
+    "description": "Override + bypass semantics in validateTicketClosure opts: { override?: { reason?: string }, bypass?: { source: 'workflow'|'import'|'auto_close'|'client_portal' } }. Override allowed only when hasPermission(user, 'ticket', 'close_override') verified server-side → writes CLOSE_RULES_OVERRIDDEN audit entry with failures + reason. Bypass skips evaluation entirely → writes CLOSE_RULES_BYPASSED audit entry only when the board has enabled gates.",
+    "implemented": false,
+    "prdRefs": ["5.1", "8"]
+  },
+  {
+    "id": "F023",
+    "description": "Wire validateTicketClosure into updateTicket (packages/tickets/src/actions/ticketActions.ts) at the existing open→closed flip detection (~lines 724-1064), before any closure field writes, passing through an overrideCloseRules option from the caller. Throws TicketCloseValidationError on failure, aborting the transaction.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F024",
+    "description": "Wire validateTicketClosure into updateTicketInTransaction (packages/tickets/src/actions/optimizedTicketActions.ts, closure detection ~lines 2386-2442) with the same option pass-through. Covers board view, TicketDetails, move-to-board, and bulk paths. bulkUpdateTicketStatus (ticketActions.ts:1928) catches TicketCloseValidationError per ticket and returns per-ticket results { ticketId, ok, failures } instead of failing the batch.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F025",
+    "description": "Wire validateTicketClosure into TicketService.update (server/src/lib/api/services/TicketService.ts:1188-1221). TicketCloseValidationError maps to the existing ValidationError 422 pattern (ApiBaseController) with details = failures array, so API/mobile clients receive structured unmet conditions. Accept override_close_rules in the update schema, honored only with the permission.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F026",
+    "description": "Bypass wiring for existing automation paths: workflow tickets.close action (shared/workflow/runtime/actions/businessOperations/tickets.ts:1162-1336) and CSV import closedUpdates (packages/tickets/src/actions/ticketImportActions.ts:498-656) pass bypass source 'workflow' / 'import' so gates never block them but the bypass is audit-logged on gated boards.",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F027",
+    "description": "Blocked-close dialog in packages/tickets/src/components/ticket/: on TicketCloseValidationError from a close attempt (status dropdown or resolution-comment close in TicketDetails.tsx ~1612-1656), show each failure with a quick action — checklist → scroll to checklist section; time entry → open the add-time-entry flow; resolution comment → focus comment editor; required fields → highlight the field. If the user has ticket:close_override, show 'Close anyway' with optional reason textarea that re-submits with overrideCloseRules.",
+    "implemented": false,
+    "prdRefs": ["5.1", "7"]
+  },
+  {
+    "id": "F028",
+    "description": "Bulk-close result reporting in the ticket list UI: after bulkUpdateTicketStatus to a closed status, show a summary of skipped tickets ('3 closed, 2 blocked by close rules') with per-ticket failure reasons.",
+    "implemented": false,
+    "prdRefs": ["5.1", "7"]
+  },
+  {
+    "id": "F029",
+    "description": "Client portal closure-recording fix: updateTicketStatus (packages/client-portal/src/actions/client-portal-actions/client-tickets.ts:712) detects open→closed flips and applies full closure semantics — is_closed = true, closed_at, closed_by = portal user id, response-state clearing, TICKET_CLOSED publication (plus reopen semantics on closed→open) — ideally by routing through the shared closure logic rather than duplicating it. Gates are NOT evaluated (bypass source 'client_portal', audit-logged on gated boards).",
+    "implemented": false,
+    "prdRefs": ["2", "5.1"]
+  },
+  {
+    "id": "F030",
+    "description": "Workflow action tickets.apply_checklist (A09) registered in registerTicketActions() with zod input { ticket_id, template_id }, sideEffectful, idempotent via F015's template_id guard, ui metadata { label: 'Apply checklist template', category: 'Tickets' } so it appears in the automation UI catalog.",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F031",
+    "description": "Auto-close job handler server/src/lib/jobs/handlers/autoCloseTicketsHandler.ts: per-tenant handler with match → warn → close phases as pure functions. Match: join open tickets to enabled board_auto_close_rules on current status; compute last_activity_at = GREATEST(latest comment created_at, latest ticket_audit_logs status-change occurred_at, ticket updated_at fallback); upsert ticket_auto_close_state with scheduled_close_at = last_activity_at + inactivity_days; delete state rows for tickets no longer matching (activity reset, status changed, rule disabled).",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F032",
+    "description": "Auto-close warn phase: where warning_days_before is set, warning_sent_at IS NULL, and now >= scheduled_close_at - warning_days_before, send 'ticket-auto-close-warning' to the ticket contact via sendNotificationIfEnabled (template variables: ticket, scheduled close date) and stamp warning_sent_at; write AUTO_CLOSE_WARNING_SENT audit entry. One warning per pending close; a timer reset (state recompute) clears warning_sent_at with the row.",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F033",
+    "description": "Auto-close close phase: where now >= scheduled_close_at, close via updateTicketInTransaction with system attribution (closed_by null; audit actor_type 'system', source 'system'), bypass source 'auto_close', an automatic comment ('Closed automatically after N days of inactivity'), and target status = rule.close_to_status_id. Re-validates inactivity inside the closing transaction (last_activity_at unchanged) so activity racing the scan never closes a live ticket. Per-ticket try/catch; one failure never stalls the sweep. Riding updateTicketInTransaction means TICKET_CLOSED, emails, SLA resolution, surveys, webhooks, and search reindex all fire normally.",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F034",
+    "description": "Job registration: register 'auto-close-tickets' in registerAllHandlers.ts (JobHandlerRegistry.register, following the reconcile-bucket-usage model with retry + timeoutMs) and schedule per-tenant every 15 minutes ('*/15 * * * *') in initializeScheduledJobs.ts via a scheduleAutoCloseTicketsJob helper exported from server/src/lib/jobs/index.ts. Runs identically under PgBossJobRunner and TemporalJobRunner via IJobRunner.",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F035",
+    "description": "Auto-close banner in TicketDetails: when a ticket_auto_close_state row exists for the ticket, show 'Will close automatically on <scheduled_close_at> unless there's new activity' (with warning-sent variant once warning_sent_at is set). State fetched with the ticket detail payload.",
+    "implemented": false,
+    "prdRefs": ["5.3", "7"]
+  },
+  {
+    "id": "F036",
+    "description": "i18n + permissions polish: translation keys for all new UI strings (board dialog sections, templates settings tab, checklist section, blocked-close dialog, banner) in the msp locale files; ticket:close_override surfaced in the roles/permissions settings matrix UI so admins can grant it.",
+    "implemented": false,
+    "prdRefs": ["7", "8"]
+  }
+]
