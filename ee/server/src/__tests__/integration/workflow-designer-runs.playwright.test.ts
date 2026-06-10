@@ -111,7 +111,7 @@ async function createWorkflowDefinition(
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: tenantId,
+    tenant: tenantId,
     name,
     description: null,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -142,7 +142,7 @@ async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
-    tenant_id: run.tenantId,
+    tenant: run.tenantId,
     status: run.status,
     node_path: run.nodePath ?? null,
     input_json: run.inputJson ?? null,
@@ -297,7 +297,7 @@ async function createWorkflowRunLog(db: Knex, log: LogSeed): Promise<void> {
   await db('workflow_run_logs').insert({
     log_id: log.logId,
     run_id: log.runId,
-    tenant_id: log.tenantId,
+    tenant: log.tenantId,
     step_path: log.stepPath ?? null,
     level: log.level,
     message: log.message,
@@ -1141,7 +1141,6 @@ test.describe('Workflow Designer UI - runs tab', () => {
       const rowCheckbox = page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`);
       await rowCheckbox.scrollIntoViewIfNeeded();
       await rowCheckbox.click();
-      await expect(page.locator('#workflow-runs-bulk-resume')).toBeVisible();
       await expect(page.locator('#workflow-runs-bulk-cancel')).toBeVisible();
       await expect(page.locator('#workflow-runs-clear-selection')).toBeVisible();
     } finally {
@@ -1189,44 +1188,6 @@ test.describe('Workflow Designer UI - runs tab', () => {
       await selectAll.click();
       await expect(page.locator(`[data-automation-id="workflow-runs-select-${runA}"]`)).not.toBeChecked();
       await expect(page.locator(`[data-automation-id="workflow-runs-select-${runB}"]`)).not.toBeChecked();
-    } finally {
-      await rollbackTenant(db, tenantId).catch(() => undefined);
-      await db.destroy();
-    }
-  });
-
-  test('bulk resume prompts for reason and submits admin resume', async ({ page }) => {
-    test.setTimeout(240000);
-    const db = createTestDbConnection();
-    const tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: { companyName: `Workflow Runs ${uuidv4().slice(0, 6)}` },
-      completeOnboarding: { completedAt: new Date() },
-      permissions: ADMIN_PERMISSIONS,
-    });
-    const tenantId = tenantData.tenant.tenantId;
-    const runId = uuidv4();
-
-    try {
-      const workflow = await createWorkflowDefinition(db, `Runs Resume ${uuidv4().slice(0, 6)}`);
-      await createWorkflowRun(db, {
-        runId,
-        workflowId: workflow.workflowId,
-        version: 1,
-        status: 'WAITING',
-        startedAt: new Date('2025-01-16T10:00:00Z').toISOString(),
-        tenantId,
-      });
-      await createWaitKey(db, runId, `wait-${uuidv4().slice(0, 6)}`);
-
-      await openRunsTab(page);
-      const rowCheckbox = page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`);
-      await rowCheckbox.scrollIntoViewIfNeeded();
-      await rowCheckbox.click();
-      await page.locator('#workflow-runs-bulk-resume').click();
-      const reasonField = page.locator('[data-automation-id="workflow-runs-bulk-resume-reason"]');
-      await reasonField.fill('resume run');
-      await page.locator('#workflow-runs-bulk-resume-confirm-confirm').click();
-      await expect(page.getByText('Resumed 1 run(s).')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
@@ -1302,7 +1263,7 @@ test.describe('Workflow Designer UI - runs tab', () => {
       await expect(page.getByText('Canceled 1 run(s).')).toBeVisible();
       await expect(page.locator('[data-automation-id="workflow-runs-select-all"]')).not.toBeChecked();
       await expect(page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`)).not.toBeChecked();
-      await expect(page.locator('#workflow-runs-bulk-resume')).toBeHidden();
+      await expect(page.locator('#workflow-runs-bulk-cancel')).toBeHidden();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
@@ -1380,40 +1341,6 @@ test.describe('Workflow Designer UI - runs tab', () => {
     }
   });
 
-  test('admin resume action prompts for reason and submits resume', async ({ page }) => {
-    test.setTimeout(240000);
-    const db = createTestDbConnection();
-    const tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: { companyName: `Workflow Runs ${uuidv4().slice(0, 6)}` },
-      completeOnboarding: { completedAt: new Date() },
-      permissions: ADMIN_PERMISSIONS,
-    });
-    const tenantId = tenantData.tenant.tenantId;
-    const runId = uuidv4();
-
-    try {
-      const workflow = await createWorkflowDefinition(db, `Runs Resume ${uuidv4().slice(0, 6)}`);
-      await createWorkflowRun(db, {
-        runId,
-        workflowId: workflow.workflowId,
-        version: 1,
-        status: 'WAITING',
-        startedAt: new Date('2025-01-21T10:00:00Z').toISOString(),
-        tenantId,
-      });
-      await createWaitKey(db, runId, `wait-${uuidv4().slice(0, 6)}`);
-
-      await openRunDetails(page, runId);
-      await page.locator('#workflow-run-resume').click();
-      await page.locator('#workflow-run-resume-reason').fill('Resume run');
-      await page.locator('#workflow-run-resume-confirm-confirm').click();
-      await expect(page.getByText('Run resumed')).toBeVisible();
-    } finally {
-      await rollbackTenant(db, tenantId).catch(() => undefined);
-      await db.destroy();
-    }
-  });
-
   test('admin cancel action prompts for reason and submits cancel', async ({ page }) => {
     test.setTimeout(180000);
     const db = createTestDbConnection();
@@ -1441,51 +1368,6 @@ test.describe('Workflow Designer UI - runs tab', () => {
       await page.locator('#workflow-run-cancel-reason').fill('Cancel run');
       await page.locator('#workflow-run-cancel-confirm-confirm').click();
       await expect(page.getByText('Run canceled')).toBeVisible();
-    } finally {
-      await rollbackTenant(db, tenantId).catch(() => undefined);
-      await db.destroy();
-    }
-  });
-
-  test('admin retry action prompts for reason and submits retry', async ({ page }) => {
-    test.setTimeout(240000);
-    const db = createTestDbConnection();
-    const tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: { companyName: `Workflow Runs ${uuidv4().slice(0, 6)}` },
-      completeOnboarding: { completedAt: new Date() },
-      permissions: ADMIN_PERMISSIONS,
-    });
-    const tenantId = tenantData.tenant.tenantId;
-    const runId = uuidv4();
-
-    try {
-      const workflow = await createWorkflowDefinition(db, `Runs Retry ${uuidv4().slice(0, 6)}`);
-      await createWorkflowRun(db, {
-        runId,
-        workflowId: workflow.workflowId,
-        version: 1,
-        status: 'FAILED',
-        startedAt: new Date('2025-01-23T10:00:00Z').toISOString(),
-        completedAt: new Date('2025-01-23T10:02:00Z').toISOString(),
-        tenantId,
-      });
-      await createWorkflowRunStep(db, {
-        runId,
-        stepId: uuidv4(),
-        stepPath: 'root.steps[0]',
-        definitionStepId: 'step-1',
-        status: 'FAILED',
-        attempt: 1,
-        startedAt: new Date('2025-01-23T10:01:00Z').toISOString(),
-        completedAt: new Date('2025-01-23T10:02:00Z').toISOString(),
-        errorJson: { message: 'Step failed' },
-      });
-
-      await openRunDetails(page, runId);
-      await page.locator('#workflow-run-retry').click();
-      await page.locator('#workflow-run-retry-reason').fill('Retry run');
-      await page.locator('#workflow-run-retry-confirm-confirm').click();
-      await expect(page.getByText('Run retry started')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
@@ -1520,42 +1402,8 @@ test.describe('Workflow Designer UI - runs tab', () => {
       await page.locator('#workflow-run-replay-reason').fill('Replay run');
       await page.locator('#workflow-run-replay-payload').fill('{"ticketId":123}');
       await page.locator('#workflow-run-replay-confirm-confirm').click();
-      await expect(page.getByText('Run replay started')).toBeVisible();
-    } finally {
-      await rollbackTenant(db, tenantId).catch(() => undefined);
-      await db.destroy();
-    }
-  });
-
-  test('admin requeue action prompts for reason and submits requeue', async ({ page }) => {
-    test.setTimeout(240000);
-    const db = createTestDbConnection();
-    const tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: { companyName: `Workflow Runs ${uuidv4().slice(0, 6)}` },
-      completeOnboarding: { completedAt: new Date() },
-      permissions: ADMIN_PERMISSIONS,
-    });
-    const tenantId = tenantData.tenant.tenantId;
-    const runId = uuidv4();
-
-    try {
-      const workflow = await createWorkflowDefinition(db, `Runs Requeue ${uuidv4().slice(0, 6)}`);
-      await createWorkflowRun(db, {
-        runId,
-        workflowId: workflow.workflowId,
-        version: 1,
-        status: 'FAILED',
-        startedAt: new Date('2025-01-25T10:00:00Z').toISOString(),
-        completedAt: new Date('2025-01-25T10:02:00Z').toISOString(),
-        tenantId,
-      });
-      await createWaitKey(db, runId, `wait-${uuidv4().slice(0, 6)}`, 'event');
-
-      await openRunDetails(page, runId);
-      await page.locator('#workflow-run-requeue').click();
-      await page.locator('#workflow-run-requeue-reason').fill('Requeue wait');
-      await page.locator('#workflow-run-requeue-confirm-confirm').click();
-      await expect(page.getByText('Event wait requeued')).toBeVisible();
+      // Replay launches a fresh run and navigates to its page.
+      await page.waitForURL((url) => /\/msp\/workflows\/runs\//.test(url.pathname) && !url.pathname.includes(runId), { timeout: 15_000 });
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();

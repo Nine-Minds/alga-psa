@@ -191,7 +191,7 @@ cd ee/server && npm run test:playwright
 Temporal + UI:
 
 ```
-docker-compose -f docker-compose.temporal.ee.yaml up -d
+docker-compose -f docker-compose.ee.yaml up -d temporal-dev temporal-ui
 cd ee/temporal-workflows && npm run dev
 cd ee/server && npm run dev
 ```

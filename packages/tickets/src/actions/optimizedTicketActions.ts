@@ -16,7 +16,7 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
@@ -308,8 +308,8 @@ async function updateTicketResponseStateFromComment(
       .where({ ticket_id: ticketId, tenant })
       .update({ response_state: newState });
 
-    try {
-      await publishEvent({
+    registerAfterCommit(trx, () =>
+      publishEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
@@ -319,10 +319,9 @@ async function updateTicketResponseStateFromComment(
           newState,
           trigger: 'comment',
         },
-      });
-    } catch (eventError) {
-      console.error('[updateTicketResponseStateFromComment] Failed to publish event:', eventError);
-    }
+      }),
+      `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
+    );
   }
 
   return { previousState, newState };
@@ -2498,25 +2497,30 @@ export async function updateTicketInTransaction(
       }
     }
 
-    // Publish appropriate event based on the update
+    // Publish appropriate event based on the update — after the save
+    // transaction commits, so subscribers never contend with our row locks.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      // Ticket was closed. System closes omit user attribution — the v2
-      // ticketClosedEventPayloadSchema treats closedByUserId as optional.
-      await publishWorkflowEvent({
-        eventType: 'TICKET_CLOSED',
-        payload: {
-          ticketId: id,
-          ...(isSystemActor
-            ? {}
-            : { userId: user.user_id, closedByUserId: user.user_id }),
-          closedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Closed',
-        fromState: currentTicket.status_id,
-        toState: updatedTicket.status_id,
-      });
+      // Ticket was closed. System closes (auto-close engine) omit user
+      // attribution — the v2 ticketClosedEventPayloadSchema treats
+      // closedByUserId as optional.
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_CLOSED',
+          payload: {
+            ticketId: id,
+            ...(isSystemActor
+              ? {}
+              : { userId: user.user_id, closedByUserId: user.user_id }),
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
+        }),
+        `TICKET_CLOSED ticket=${id}`
+      );
 
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
@@ -2526,57 +2530,70 @@ export async function updateTicketInTransaction(
         closedAt: occurredAt,
       });
       if (slaCompletionEvent) {
-        await publishWorkflowEvent({
-          eventType: slaCompletionEvent.eventType,
-          payload: slaCompletionEvent.payload,
-          ctx: workflowCtx,
-          idempotencyKey: slaCompletionEvent.idempotencyKey,
-        });
+        registerAfterCommit(trx, () =>
+          publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          }),
+          `${slaCompletionEvent.eventType} ticket=${id}`
+        );
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          ticketId: id,
-          userId: updateData.assigned_to, // Legacy: assigned user
-          assignedByUserId: user.user_id,
-          previousAssigneeId: currentTicket.assigned_to ?? undefined,
-          previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-          newAssigneeId: updateData.assigned_to,
-          newAssigneeType: 'user',
-          assignedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Assigned',
-      });
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            ticketId: id,
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
+        }),
+        `TICKET_ASSIGNED ticket=${id}`
+      );
     } else {
       // Regular update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_UPDATED',
-        payload: {
-          ticketId: id,
-          userId: user.user_id,
-          updatedByUserId: user.user_id,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Updated',
-      });
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_UPDATED',
+          payload: {
+            ticketId: id,
+            userId: user.user_id,
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
+        }),
+        `TICKET_UPDATED ticket=${id}`
+      );
     }
 
+    // System closes (auto-close engine) skip the live UI update entirely.
     if (!isSystemActor) {
-      await publishTicketUpdate({
-        tenantId: tenant,
-        ticketId: id,
-        updatedFields,
-        updatedBy: {
-          userId: user.user_id,
-          displayName: formatLiveUpdateDisplayName(user),
-        },
-        updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
-      });
+      registerAfterCommit(trx, () =>
+        publishTicketUpdate({
+          tenantId: tenant,
+          ticketId: id,
+          updatedFields,
+          updatedBy: {
+            userId: user.user_id,
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
+        }),
+        `ticket-live-update ticket=${id}`
+      );
     }
 
     // Write a unified activity-timeline row for this update. We pick the
@@ -2637,8 +2654,8 @@ export async function updateTicketInTransaction(
 
     // Publish response state change event if response_state was explicitly changed
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
-      try {
-        await publishEvent({
+      registerAfterCommit(trx, () =>
+        publishEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: {
             tenantId: tenant,
@@ -2648,10 +2665,9 @@ export async function updateTicketInTransaction(
             newState: updateData.response_state || null,
             trigger: 'manual',
           },
-        });
-      } catch (error) {
-        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
-      }
+        }),
+        `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
+      );
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
@@ -2687,16 +2703,19 @@ export async function updateTicketInTransaction(
           .update(propagate);
 
         for (const childPublish of childPublishes) {
-          await publishTicketUpdate({
-            tenantId: tenant,
-            ticketId: childPublish.ticketId,
-            updatedFields: childPublish.updatedFields,
-            updatedBy: {
-              userId: user.user_id,
-              displayName: formatLiveUpdateDisplayName(user),
-            },
-            updatedAt: propagate.updated_at,
-          });
+          registerAfterCommit(trx, () =>
+            publishTicketUpdate({
+              tenantId: tenant,
+              ticketId: childPublish.ticketId,
+              updatedFields: childPublish.updatedFields,
+              updatedBy: {
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              updatedAt: propagate.updated_at,
+            }),
+            `ticket-live-update ticket=${childPublish.ticketId}`
+          );
         }
       }
     }
@@ -2931,22 +2950,25 @@ export const addTicketCommentWithCache = withAuth(async (
       }
     }
 
-    // Publish comment added event
-    await publishEvent({
-      eventType: 'TICKET_COMMENT_ADDED',
-      payload: {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: user.user_id,
-        comment: {
-          id: newComment.comment_id,
-          content: content,
-          author: `${user.first_name} ${user.last_name}`,
-          isInternal,
-          authorType,
+    // Publish comment added event after the comment transaction commits.
+    registerAfterCommit(trx, () =>
+      publishEvent({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: user.user_id,
+          comment: {
+            id: newComment.comment_id,
+            content: content,
+            author: `${user.first_name} ${user.last_name}`,
+            isInternal,
+            authorType,
+          }
         }
-      }
-    });
+      }),
+      `TICKET_COMMENT_ADDED ticket=${ticketId}`
+    );
 
     // Publish workflow v2 ticket message events (additive).
     try {
@@ -2968,22 +2990,29 @@ export const addTicketCommentWithCache = withAuth(async (
       });
 
       for (const ev of events) {
-        await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        registerAfterCommit(
+          trx,
+          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+          `${ev.eventType} ticket=${ticketId}`
+        );
       }
     } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
+      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
     }
 
-    await publishTicketUpdate({
-      tenantId: tenant,
-      ticketId,
-      updatedFields: ['comments'],
-      updatedBy: {
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-    });
+    registerAfterCommit(trx, () =>
+      publishTicketUpdate({
+        tenantId: tenant,
+        ticketId,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+      }),
+      `ticket-live-update ticket=${ticketId}`
+    );
 
     // Activity-timeline row for the MSP-side "add comment" flow. This path
     // is hit by the ticket detail UI, so source is always 'ui'. Internal

@@ -16,7 +16,7 @@ import Ticket from '../models/ticket';
 import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from '@alga-psa/auth/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
@@ -296,14 +296,15 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
     try {
         const {knex: db} = await createTenantKnex();
 
-        const result = await db.transaction(async (trx) => {
+        const result = await withTransaction(db, async (trx) => {
             // Server-specific: Check permissions
             if (!await hasPermission(user, 'ticket', 'create', trx)) {
                 throw new Error('Permission denied: Cannot create ticket');
             }
 
-            // Server-specific: Create adapters for dependency injection
-            const eventPublisher = new TicketModelEventPublisher();
+            // Server-specific: Create adapters for dependency injection.
+            // Passing trx defers event publishing until the commit.
+            const eventPublisher = new TicketModelEventPublisher(trx);
             const analyticsTracker = new TicketModelAnalyticsTracker();
 
             // Use shared TicketModel for asset ticket creation
@@ -343,18 +344,21 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               enteredAt: fullTicket.entered_at,
             });
             if (enteredSlaEvent) {
-              await publishWorkflowEvent({
-                eventType: enteredSlaEvent.eventType,
-                payload: enteredSlaEvent.payload,
-                ctx: {
-                  tenantId: tenant,
-                  actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-                  occurredAt: (fullTicket.entered_at instanceof Date
-                    ? fullTicket.entered_at.toISOString()
-                    : fullTicket.entered_at) || new Date().toISOString(),
-                },
-                idempotencyKey: enteredSlaEvent.idempotencyKey,
-              });
+              registerAfterCommit(trx, () =>
+                publishWorkflowEvent({
+                  eventType: enteredSlaEvent.eventType,
+                  payload: enteredSlaEvent.payload,
+                  ctx: {
+                    tenantId: tenant,
+                    actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+                    occurredAt: (fullTicket.entered_at instanceof Date
+                      ? fullTicket.entered_at.toISOString()
+                      : fullTicket.entered_at) || new Date().toISOString(),
+                  },
+                  idempotencyKey: enteredSlaEvent.idempotencyKey,
+                }),
+                `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
+              );
             }
 
             return convertDates(fullTicket);
@@ -376,7 +380,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
   try {
     const {knex: db} = await createTenantKnex();
 
-    return await db.transaction(async (trx) => {
+    return await withTransaction(db, async (trx) => {
       // Server-specific: Check permissions
       if (!await hasPermission(user, 'ticket', 'create', trx)) {
         throw new Error('Permission denied: Cannot create ticket');
@@ -440,8 +444,9 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         ticket_origin: TICKET_ORIGINS.INTERNAL,
       };
 
-      // Server-specific: Create adapters for dependency injection
-      const eventPublisher = new TicketModelEventPublisher();
+      // Server-specific: Create adapters for dependency injection.
+      // Passing trx defers event publishing until the commit.
+      const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
@@ -471,15 +476,18 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {
-        await publishEvent({
-          eventType: 'TICKET_ASSIGNED',
-          payload: {
-            tenantId: tenant,
-            ticketId: ticketResult.ticket_id,
-            userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
-            assignedByUserId: user.user_id  // The user who created and assigned the ticket
-          }
-        });
+        registerAfterCommit(trx, () =>
+          publishEvent({
+            eventType: 'TICKET_ASSIGNED',
+            payload: {
+              tenantId: tenant,
+              ticketId: ticketResult.ticket_id,
+              userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+              assignedByUserId: user.user_id  // The user who created and assigned the ticket
+            }
+          }),
+          `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
+        );
       }
 
       // Server-specific: Get full ticket data for return
@@ -530,18 +538,21 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         enteredAt: fullTicket.entered_at,
       });
       if (enteredSlaEvent) {
-        await publishWorkflowEvent({
-          eventType: enteredSlaEvent.eventType,
-          payload: enteredSlaEvent.payload,
-          ctx: {
-            tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-            occurredAt: (fullTicket.entered_at instanceof Date
-              ? fullTicket.entered_at.toISOString()
-              : fullTicket.entered_at) || new Date().toISOString(),
-          },
-          idempotencyKey: enteredSlaEvent.idempotencyKey,
-        });
+        registerAfterCommit(trx, () =>
+          publishWorkflowEvent({
+            eventType: enteredSlaEvent.eventType,
+            payload: enteredSlaEvent.payload,
+            ctx: {
+              tenantId: tenant,
+              actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+              occurredAt: (fullTicket.entered_at instanceof Date
+                ? fullTicket.entered_at.toISOString()
+                : fullTicket.entered_at) || new Date().toISOString(),
+            },
+            idempotencyKey: enteredSlaEvent.idempotencyKey,
+          }),
+          `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
+        );
       }
 
       // Server-specific: Revalidate cache paths

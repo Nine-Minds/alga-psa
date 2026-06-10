@@ -75,6 +75,11 @@ import {
   checkTicketClosure,
 } from '../../../../packages/tickets/src/actions/close-rules/closeRuleActions';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
+// Real withTransaction (the @alga-psa/db mock spreads the original): it flushes
+// the after-commit hooks that defer TICKET_CLOSED/live-update publishing, so the
+// close path must run through it — exactly as the production callers do — for the
+// event mocks to observe the publishes.
+import { withTransaction } from '@alga-psa/db';
 import { bulkUpdateTicketStatus, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
 import { updateTicketStatus as portalUpdateTicketStatus } from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
@@ -511,7 +516,7 @@ describe('ticket close rules', () => {
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
     await insertTicketTimeEntry(db, fixture, ticketId);
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.closedStatusId,
       })
@@ -658,7 +663,7 @@ describe('ticket close rules', () => {
   it('T046: closing on an ungated board behaves exactly as before', async () => {
     const ticketId = await insertTicket(db, fixture);
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.closedStatusId,
       })

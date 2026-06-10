@@ -28,6 +28,20 @@ services:
       timeout: 3s
       retries: 20
 
+  temporal-playwright:
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres-playwright
+      POSTGRES_USER: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
+      POSTGRES_PWD: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
+    ports:
+      - "${PLAYWRIGHT_TEMPORAL_PORT:-17233}:7233"
+    depends_on:
+      postgres-playwright:
+        condition: service_healthy
+
   workflow-worker-playwright:
     build:
       context: .
@@ -42,8 +56,8 @@ services:
       WORKFLOW_WORKER_VERBOSE: "true"
       WORKFLOW_WORKER_MODE: v2
       WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP: workflow-runtime-v2
-      WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING: "false"
-      WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING: "true"
+      TEMPORAL_ADDRESS: temporal-playwright:7233
+      TEMPORAL_NAMESPACE: default
 
       # DB (internal docker network)
       DB_TYPE: postgres
@@ -76,6 +90,8 @@ services:
         condition: service_healthy
       redis-playwright:
         condition: service_healthy
+      temporal-playwright:
+        condition: service_started
     ports:
       - "4000"
 

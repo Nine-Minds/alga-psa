@@ -162,7 +162,6 @@ async function dispatchWorkflow(input: DispatchInboundWebhookHandlerInput): Prom
     triggerFireKey: `inbound-webhook:${input.deliveryId}`,
     eventType: 'INBOUND_WEBHOOK_RECEIVED',
     sourcePayloadSchemaRef: 'payload.InboundWebhookReceived.v1',
-    execute: true,
     executionKey: `inbound-webhook:${input.deliveryId}`,
   });
 

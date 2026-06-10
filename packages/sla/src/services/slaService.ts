@@ -30,7 +30,8 @@ import {
   isWithinBusinessHours,
   formatRemainingTime
 } from './businessHoursCalculator';
-import { SlaBackendFactory } from './backends/SlaBackendFactory';
+import { SlaBackendAction } from './slaBackendActions';
+import { acquireTicketSlaLock } from './slaLock';
 
 /**
  * Result of starting SLA tracking for a ticket
@@ -42,6 +43,8 @@ export interface StartSlaResult {
   sla_response_due_at: Date | null;
   sla_resolution_due_at: Date | null;
   error?: string;
+  /** Dispatch with dispatchSlaBackendActions() after the transaction commits. */
+  backendActions?: SlaBackendAction[];
 }
 
 /**
@@ -52,6 +55,8 @@ export interface RecordSlaEventResult {
   met: boolean | null;
   recorded_at: Date;
   error?: string;
+  /** Dispatch with dispatchSlaBackendActions() after the transaction commits. */
+  backendActions?: SlaBackendAction[];
 }
 
 /**
@@ -81,6 +86,8 @@ export async function startSlaForTicket(
   createdAt: Date = new Date()
 ): Promise<StartSlaResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // 1. Resolve the SLA policy for this ticket
     const policy = await resolveSlaPolicy(trx, tenant, clientId, boardId);
 
@@ -165,35 +172,30 @@ export async function startSlaForTicket(
       resolution_due_at: resolutionDueAt?.toISOString()
     });
 
-    try {
-      // Query configured notification thresholds for this policy
-      const thresholdRows = await trx('sla_notification_thresholds')
-        .where({ tenant, sla_policy_id: policy.sla_policy_id })
-        .select('threshold_percent')
-        .orderBy('threshold_percent', 'asc');
+    // Query configured notification thresholds for this policy
+    const thresholdRows = await trx('sla_notification_thresholds')
+      .where({ tenant, sla_policy_id: policy.sla_policy_id })
+      .select('threshold_percent')
+      .orderBy('threshold_percent', 'asc');
 
-      const notificationThresholds = thresholdRows.map(
-        (r: { threshold_percent: number }) => r.threshold_percent
-      );
-
-      const backend = await SlaBackendFactory.getBackend();
-      await backend.startSlaTracking(
-        ticketId,
-        policy.sla_policy_id,
-        [target],
-        schedule,
-        notificationThresholds
-      );
-    } catch (error) {
-      console.warn('Failed to start SLA backend tracking:', error);
-    }
+    const notificationThresholds = thresholdRows.map(
+      (r: { threshold_percent: number }) => r.threshold_percent
+    );
 
     return {
       success: true,
       sla_policy_id: policy.sla_policy_id,
       sla_started_at: createdAt,
       sla_response_due_at: responseDueAt,
-      sla_resolution_due_at: resolutionDueAt
+      sla_resolution_due_at: resolutionDueAt,
+      backendActions: [{
+        kind: 'start',
+        ticketId,
+        policyId: policy.sla_policy_id,
+        targets: [target],
+        schedule,
+        notificationThresholds
+      }]
     };
   } catch (error) {
     console.error('Error starting SLA for ticket:', error);
@@ -225,10 +227,11 @@ export async function recordFirstResponse(
   tenant: string,
   ticketId: string,
   respondedAt: Date = new Date(),
-  respondedBy?: string,
-  options?: { skipBackend?: boolean }
+  respondedBy?: string
 ): Promise<RecordSlaEventResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Get current ticket SLA state
     const ticket = await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
@@ -273,16 +276,14 @@ export async function recordFirstResponse(
       met
     });
 
-    if (!options?.skipBackend && met !== null) {
-      try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.completeSla(ticketId, 'response', met);
-      } catch (error) {
-        console.warn('Failed to complete SLA backend response:', error);
-      }
-    }
-
-    return { success: true, met, recorded_at: respondedAt };
+    return {
+      success: true,
+      met,
+      recorded_at: respondedAt,
+      ...(met !== null
+        ? { backendActions: [{ kind: 'complete' as const, ticketId, type: 'response' as const, met }] }
+        : {})
+    };
   } catch (error) {
     console.error('Error recording first response:', error);
     return {
@@ -311,10 +312,11 @@ export async function recordResolution(
   tenant: string,
   ticketId: string,
   resolvedAt: Date = new Date(),
-  resolvedBy?: string,
-  options?: { skipBackend?: boolean }
+  resolvedBy?: string
 ): Promise<RecordSlaEventResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Get current ticket SLA state
     const ticket = await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
@@ -359,16 +361,12 @@ export async function recordResolution(
       met
     });
 
-    if (!options?.skipBackend) {
-      try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.completeSla(ticketId, 'resolution', met);
-      } catch (error) {
-        console.warn('Failed to complete SLA backend resolution:', error);
-      }
-    }
-
-    return { success: true, met, recorded_at: resolvedAt };
+    return {
+      success: true,
+      met,
+      recorded_at: resolvedAt,
+      backendActions: [{ kind: 'complete', ticketId, type: 'resolution', met }]
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error recording resolution:', error);
@@ -527,7 +525,9 @@ export async function handlePriorityChange(
   ticketId: string,
   newPriorityId: string,
   changedBy?: string
-): Promise<void> {
+): Promise<{ backendActions: SlaBackendAction[] }> {
+  await acquireTicketSlaLock(trx, tenant, ticketId);
+
   // Get current ticket state
   const ticket = await trx('tickets')
     .where({ tenant, ticket_id: ticketId })
@@ -546,18 +546,18 @@ export async function handlePriorityChange(
     .first();
 
   if (!ticket || !ticket.sla_policy_id || !ticket.sla_started_at) {
-    return;
+    return { backendActions: [] };
   }
 
   const oldPriorityId = ticket.priority_id;
 
   // Get the policy with targets
   const policy = await getSlaPolicyWithTargets(trx, tenant, ticket.sla_policy_id);
-  if (!policy) return;
+  if (!policy) return { backendActions: [] };
 
   // Get new target
   const newTarget = policy.targets.find(t => t.priority_id === newPriorityId);
-  if (!newTarget) return;
+  if (!newTarget) return { backendActions: [] };
 
   // Get business hours schedule
   const schedule = await getBusinessHoursSchedule(trx, tenant, policy, newTarget);
@@ -614,13 +614,26 @@ export async function handlePriorityChange(
     total_pause_minutes_applied: ticket.sla_total_pause_minutes,
     changed_by: changedBy
   });
+
+  // Restart backend timers on the recalculated deadlines. When both stages
+  // are already recorded nothing was recalculated, so leave the backend alone.
+  if (!newResponseDue && !newResolutionDue) {
+    return { backendActions: [] };
+  }
+
+  return {
+    backendActions: [
+      { kind: 'cancel', tenantId: tenant, ticketId },
+      { kind: 'start', ticketId, policyId: policy.sla_policy_id, targets: [newTarget], schedule }
+    ]
+  };
 }
 
 /**
  * Update SLA tracking when the SLA policy changes for a ticket.
  *
- * Cancels the existing SLA backend workflow and starts a new one with the
- * updated policy targets.
+ * Returns backend actions (cancel the existing workflow, start a new one
+ * with the updated targets) for the caller to dispatch after commit.
  */
 export async function handlePolicyChange(
   trx: Knex.Transaction,
@@ -628,7 +641,9 @@ export async function handlePolicyChange(
   ticketId: string,
   newPolicyId: string | null,
   changedBy?: string
-): Promise<void> {
+): Promise<{ backendActions: SlaBackendAction[] }> {
+  await acquireTicketSlaLock(trx, tenant, ticketId);
+
   const ticket = await trx('tickets')
     .where({ tenant, ticket_id: ticketId })
     .select(
@@ -643,7 +658,7 @@ export async function handlePolicyChange(
     .first();
 
   if (!ticket) {
-    return;
+    return { backendActions: [] };
   }
 
   if (!newPolicyId) {
@@ -659,19 +674,12 @@ export async function handlePolicyChange(
       changed_by: changedBy
     });
 
-    try {
-      const backend = await SlaBackendFactory.getBackend();
-      await backend.cancelSla(tenant, ticketId);
-    } catch (error) {
-      console.warn('Failed to cancel SLA backend on policy clear:', error);
-    }
-
-    return;
+    return { backendActions: [{ kind: 'cancel', tenantId: tenant, ticketId }] };
   }
 
   const policy = await getSlaPolicyWithTargets(trx, tenant, newPolicyId);
   if (!policy) {
-    return;
+    return { backendActions: [] };
   }
 
   const target = policy.targets.find(t => t.priority_id === ticket.priority_id);
@@ -683,7 +691,7 @@ export async function handlePolicyChange(
         sla_response_due_at: null,
         sla_resolution_due_at: null
       });
-    return;
+    return { backendActions: [] };
   }
 
   const schedule = await getBusinessHoursSchedule(trx, tenant, policy, target);
@@ -733,13 +741,12 @@ export async function handlePolicyChange(
     changed_by: changedBy
   });
 
-  try {
-    const backend = await SlaBackendFactory.getBackend();
-    await backend.cancelSla(tenant, ticketId);
-    await backend.startSlaTracking(ticketId, policy.sla_policy_id, [target], schedule);
-  } catch (error) {
-    console.warn('Failed to restart SLA backend on policy change:', error);
-  }
+  return {
+    backendActions: [
+      { kind: 'cancel', tenantId: tenant, ticketId },
+      { kind: 'start', ticketId, policyId: policy.sla_policy_id, targets: [target], schedule }
+    ]
+  };
 }
 
 // ============================================================================

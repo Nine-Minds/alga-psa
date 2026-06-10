@@ -22,7 +22,8 @@
 
 import { Knex } from 'knex';
 import { SlaPauseReason } from '../types';
-import { SlaBackendFactory } from './backends/SlaBackendFactory';
+import { SlaBackendAction } from './slaBackendActions';
+import { acquireTicketSlaLock } from './slaLock';
 
 /**
  * Result of a pause/resume operation
@@ -33,6 +34,8 @@ export interface PauseResult {
   is_now_paused: boolean;
   pause_duration_minutes?: number;
   error?: string;
+  /** Dispatch with dispatchSlaBackendActions() after the transaction commits. */
+  backendActions?: SlaBackendAction[];
 }
 
 /**
@@ -55,10 +58,11 @@ export async function pauseSla(
   tenant: string,
   ticketId: string,
   reason: SlaPauseReason,
-  triggeredBy?: string,
-  options?: { skipBackend?: boolean }
+  triggeredBy?: string
 ): Promise<PauseResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Get current ticket state
     const ticket = await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
@@ -95,16 +99,12 @@ export async function pauseSla(
       triggered_by: triggeredBy
     });
 
-    if (!options?.skipBackend) {
-      try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.pauseSla(ticketId, reason);
-      } catch (error) {
-        console.warn('Failed to pause SLA backend:', error);
-      }
-    }
-
-    return { success: true, was_paused: false, is_now_paused: true };
+    return {
+      success: true,
+      was_paused: false,
+      is_now_paused: true,
+      backendActions: [{ kind: 'pause', ticketId, reason }]
+    };
   } catch (error) {
     console.error('Error pausing SLA:', error);
     return {
@@ -134,10 +134,11 @@ export async function resumeSla(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  triggeredBy?: string,
-  options?: { skipBackend?: boolean }
+  triggeredBy?: string
 ): Promise<PauseResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Get current ticket state (including due dates for shifting)
     const ticket = await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
@@ -213,20 +214,12 @@ export async function resumeSla(
       triggered_by: triggeredBy
     });
 
-    if (!options?.skipBackend) {
-      try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.resumeSla(ticketId);
-      } catch (error) {
-        console.warn('Failed to resume SLA backend:', error);
-      }
-    }
-
     return {
       success: true,
       was_paused: true,
       is_now_paused: false,
-      pause_duration_minutes: pauseDurationMinutes
+      pause_duration_minutes: pauseDurationMinutes,
+      backendActions: [{ kind: 'resume', ticketId }]
     };
   } catch (error) {
     console.error('Error resuming SLA:', error);
@@ -262,6 +255,10 @@ export async function handleStatusChange(
   triggeredBy?: string
 ): Promise<PauseResult> {
   try {
+    // Take the per-ticket lock before reading pause state so concurrent
+    // SLA writers can't interleave between this read and the pause/resume.
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Check if new status is configured to pause SLA
     const newStatusConfig = await trx('status_sla_pause_config')
       .where({ tenant, status_id: newStatusId })
@@ -352,6 +349,8 @@ export async function handleResponseStateChange(
   triggeredBy?: string
 ): Promise<PauseResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     // Get SLA settings
     const slaSettings = await trx('sla_settings')
       .where({ tenant })
@@ -498,6 +497,8 @@ export async function syncPauseState(
   triggeredBy?: string
 ): Promise<PauseResult> {
   try {
+    await acquireTicketSlaLock(trx, tenant, ticketId);
+
     const { paused, reason } = await shouldSlaBePaused(trx, tenant, ticketId);
 
     const ticket = await trx('tickets')
