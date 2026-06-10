@@ -2,6 +2,7 @@ import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
 export type RootStackParamList = {
   SignIn: undefined;
+  ServerEntry: { url?: string } | undefined;
   CreateWorkspace: undefined;
   AuthCallback:
     | {

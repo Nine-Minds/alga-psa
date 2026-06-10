@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import type { RootStackParamList } from "./types";
 import { TabsNavigator } from "./TabsNavigator";
 import { SignInScreen } from "../screens/SignInScreen";
+import { ServerEntryScreen } from "../screens/ServerEntryScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
 import { CreateTicketScreen } from "../screens/CreateTicketScreen";
 import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
@@ -113,6 +114,11 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             name="SignIn"
             component={SignInScreen}
             options={{ title: tAuth("signIn.title", "Sign in") }}
+          />
+          <Stack.Screen
+            name="ServerEntry"
+            component={ServerEntryScreen}
+            options={{ title: tAuth("serverEntry.title", "Server") }}
           />
           {Platform.OS === "ios" ? (
             <Stack.Screen

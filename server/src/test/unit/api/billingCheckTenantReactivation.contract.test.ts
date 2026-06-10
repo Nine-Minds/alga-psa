@@ -34,9 +34,12 @@ describe('billing check-tenant reactivation contract', () => {
   });
 
   it('T071: CE resolves to the no-table stub and EE owns the pending_tenant_deletions read at the same route path', () => {
-    expect(sharedRoute.trim()).toBe(
-      "export { dynamic, GET, runtime } from '@enterprise/app/api/billing/check-tenant/route';",
-    );
+    // The shim must export the handler DIRECTLY (delegating to EE), not re-export it:
+    // Next's webpack production build doesn't register re-exported route handlers.
+    expect(sharedRoute).toContain("from '@enterprise/app/api/billing/check-tenant/route'");
+    expect(sharedRoute).toMatch(/export async function GET/);
+    expect(sharedRoute).toContain("export const runtime = 'nodejs'");
+    expect(sharedRoute).toContain("export const dynamic = 'force-dynamic'");
     expect(ceRoute).not.toContain('pending_tenant_deletions');
     expect(eeRoute).toContain("from '@enterprise/lib/billing/tenantReactivationDetection'");
     expect(eeRoute).toContain('pendingDeletion: false');

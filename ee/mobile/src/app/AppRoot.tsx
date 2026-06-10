@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import type { InitialState } from "@react-navigation/native";
-import { getAppConfig } from "../config/appConfig";
+import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
+import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
 import { linking } from "../navigation/linking";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
-import { ErrorState, LoadingState } from "../ui/states";
+import { LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
 import { AuthContext, type MobileSession } from "../auth/AuthContext";
@@ -33,7 +34,7 @@ import { getActiveRouteName } from "../navigation/activeRoute";
 import { t } from "../i18n/i18n";
 
 export function AppRoot() {
-  const config = useMemo(() => getAppConfig(), []);
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const [bootStatus, setBootStatus] = useState<"booting" | "ready">("booting");
   const [session, setSessionState] = useState<MobileSession | null>(null);
   const sessionRef = useRef<MobileSession | null>(null);
@@ -49,7 +50,6 @@ export function AppRoot() {
   const lastBiometricUnlockAtMs = useRef(0);
 
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
-  const baseUrl = config.ok ? config.baseUrl : null;
 
   const setSession = useCallback(
     (next: MobileSession | null) => {
@@ -70,10 +70,10 @@ export function AppRoot() {
     let canceled = false;
 
     const run = async () => {
-      if (!config.ok) {
-        if (!canceled) setBootStatus("ready");
-        return;
-      }
+      const storedHost = await loadStoredHost();
+      hydrateAppConfig(storedHost);
+      const config = getAppConfig();
+      if (!canceled) setBaseUrl(config.ok ? config.baseUrl : null);
 
       const stored = await getStoredSession();
       if (stored) {
@@ -97,7 +97,7 @@ export function AppRoot() {
     return () => {
       canceled = true;
     };
-  }, [config]);
+  }, []);
 
   useEffect(() => {
     let canceled = false;
@@ -299,11 +299,24 @@ export function AppRoot() {
     }
   }, [baseUrl, session, setSession]);
 
-  if (!config.ok) {
-    return (
-      <ErrorState title={t("common:configurationError")} description={config.error} />
-    );
-  }
+  const setHost = useCallback(
+    async (url: string) => {
+      const normalized = await saveStoredHost(url);
+      setActiveBaseUrl(normalized);
+      const config = getAppConfig();
+      setBaseUrl(config.ok ? config.baseUrl : null);
+      setSession(null);
+    },
+    [setSession],
+  );
+
+  const clearHost = useCallback(async () => {
+    await clearStoredHost();
+    setActiveBaseUrl(null);
+    const config = getAppConfig();
+    setBaseUrl(config.ok ? config.baseUrl : null);
+    setSession(null);
+  }, [setSession]);
 
   if (bootStatus === "booting") {
     return <LoadingState message={t("common:loadingEllipsis")} />;
@@ -323,6 +336,9 @@ export function AppRoot() {
           setSession,
           refreshSession,
           logout,
+          baseUrl,
+          setHost,
+          clearHost,
         }}
       >
         {session && isBiometricLocked ? (

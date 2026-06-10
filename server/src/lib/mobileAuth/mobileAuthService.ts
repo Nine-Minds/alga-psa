@@ -8,6 +8,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 
 import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
+import { isEnterpriseEdition } from '../features';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
 import { TierAccessError, assertTenantTierAccess } from '../tier-gating/assertTierAccess';
@@ -329,6 +330,12 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
 }
 
 async function assertMobileAccess(tenantId: string): Promise<void> {
+  // Tier gating no-ops on CE, so gate the edition explicitly: mobile sign-in
+  // is licensed (Cloud / EE appliance), not an open-source self-host feature.
+  if (!isEnterpriseEdition()) {
+    throw new ForbiddenError('Mobile app access is not available on this edition');
+  }
+
   try {
     await assertTenantTierAccess(tenantId, TIER_FEATURES.MOBILE_ACCESS);
   } catch (error) {
@@ -492,6 +499,7 @@ async function safeAuditLog(input: {
 }
 
 export type MobileAuthCapabilities = {
+  enabled: boolean;
   providers: { microsoft: boolean; google: boolean };
   hostedDomainAllowlist?: string[];
   accessTtlSec?: number;
@@ -499,10 +507,40 @@ export type MobileAuthCapabilities = {
   ottTtlSec?: number;
 };
 
-export function getCapabilitiesResponse(): MobileAuthCapabilities {
+// Mirrors buildAuthOptions: a provider is available iff its OAuth client id
+// and secret resolve (app secret with env fallback).
+async function resolveConfiguredSsoProviders(): Promise<{ microsoft: boolean; google: boolean }> {
+  try {
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+    const secretProvider = await getSecretProviderInstance();
+    const [googleClientId, googleClientSecret, microsoftClientId, microsoftClientSecret] =
+      await Promise.all([
+        secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
+        secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_ID'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_SECRET'),
+      ]);
+    return {
+      google: Boolean(
+        (googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID) &&
+          (googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET),
+      ),
+      microsoft: Boolean(
+        (microsoftClientId || process.env.MICROSOFT_OAUTH_CLIENT_ID) &&
+          (microsoftClientSecret || process.env.MICROSOFT_OAUTH_CLIENT_SECRET),
+      ),
+    };
+  } catch (error) {
+    console.warn('[mobileAuth] failed to resolve SSO provider configuration', error);
+    return { microsoft: true, google: true };
+  }
+}
+
+export async function getCapabilitiesResponse(): Promise<MobileAuthCapabilities> {
   const config = getMobileAuthConfig();
   return {
-    providers: { microsoft: true, google: true },
+    enabled: isEnterpriseEdition(),
+    providers: await resolveConfiguredSsoProviders(),
     hostedDomainAllowlist: config.hostedDomainAllowlist.length ? config.hostedDomainAllowlist : undefined,
     accessTtlSec: config.accessTtlSec,
     refreshTtlSec: config.refreshTtlSec,
