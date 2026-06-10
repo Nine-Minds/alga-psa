@@ -60,10 +60,11 @@
     },
     "next:dev": {},
     "test": {
-      "dependsOn": [
-        "build"
-      ],
-      "cache": true
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default"
+      ]
     },
     "lint": {
       "cache": true
