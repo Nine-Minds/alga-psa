@@ -1192,7 +1192,10 @@ export class BillingEngine {
           largestUnit: "minutes",
         }).minutes,
       );
-      const duration = Math.ceil(durationMinutes / 60);
+      // Bill the actual elapsed hours. Unresolved (non-contract) entries have no
+      // contract-line rounding config, so fall back to exact time rather than
+      // Math.ceil to a whole hour, which overbilled every partial-hour entry.
+      const duration = durationMinutes / 60;
       const rate = Math.ceil(entry.custom_rate ?? entry.default_rate ?? 0);
       const total = Math.round(duration * rate);
       const { taxRegion: serviceTaxRegion, isTaxable } =
@@ -3268,8 +3271,14 @@ export class BillingEngine {
           }
         }
 
-        // Convert to hours
-        const duration = Math.ceil(durationMinutes / 60);
+        // Convert to hours. Bill the fractional hours that remain after the
+        // minimum-billable-time and round-up-to-nearest rules above. Previously
+        // this used Math.ceil(durationMinutes / 60), which forced every entry up
+        // to a whole hour and silently overrode the configured rounding
+        // increment (e.g. a 4h10m entry on a 15-minute increment was rounded to
+        // 4h15m and then ceiled to 5h). The rate is per hour, so the quantity
+        // must carry the partial hour.
+        const duration = durationMinutes / 60;
 
         // Resolve rate, preferring overrides over the currency-specific catalog price.
         // Order: per-entry custom rate → per-user-type rate (contract-line config) → service_prices

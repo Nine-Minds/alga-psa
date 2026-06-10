@@ -13,6 +13,8 @@ export { default as WorkflowActionInvocationModelV2 } from './workflowActionInvo
 export { default as WorkflowRunSnapshotModelV2 } from './workflowRunSnapshotModelV2';
 export { default as WorkflowRuntimeEventModelV2 } from './workflowRuntimeEventModelV2';
 export { default as WorkflowScheduleStateModel } from './workflowScheduleStateModel';
+export { default as WorkflowDataStoreModel } from './workflowDataStoreModel';
+export { default as WorkflowEntityLinkModel } from './workflowEntityLinkModel';
 export type {
   WorkflowScheduleDayTypeFilter,
   WorkflowScheduleStateStatus,

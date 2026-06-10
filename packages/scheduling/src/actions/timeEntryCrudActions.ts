@@ -341,16 +341,6 @@ export const saveTimeEntry = withAuth(async (
 
     await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
 
-    if (validatedTimeEntry.work_item_type === 'ticket') {
-      const ticket = await db('tickets')
-        .select('ticket_id', 'master_ticket_id')
-        .where({ tenant, ticket_id: validatedTimeEntry.work_item_id })
-        .first();
-      if (ticket?.master_ticket_id) {
-        throw new Error('This ticket is bundled; time entries must be added on the master ticket.');
-      }
-    }
-
     // Extract only the fields that exist in the database schema
     const {
       entry_id,

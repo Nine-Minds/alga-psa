@@ -1468,63 +1468,84 @@
         },
         "title": "55555",
         "diagnostics": {
-          "title": "Diagnostics & Test Message",
-          "description": "Verify the Teams setup and send a proactive test message to your Teams bot conversation.",
-          "run": "Run diagnostics",
-          "running": "Running...",
-          "sendTest": "Send test message",
-          "sending": "Sending...",
-          "disabled": "Diagnostics and test messages are available after the Teams integration is active.",
-          "completedAt": "Completed {{time}}",
-          "lastSuccess": "Last success",
-          "lastFailure": "Last failure",
-          "noneRecorded": "None recorded",
-          "recommendations": "Recommendations",
+          "title": "55555",
+          "description": "55555",
+          "run": "55555",
+          "running": "55555",
+          "sendTest": "55555",
+          "sending": "55555",
+          "disabled": "55555",
+          "completedAt": "55555 {{time}} 55555",
+          "lastSuccess": "55555",
+          "lastFailure": "55555",
+          "noneRecorded": "55555",
+          "recommendations": "55555",
           "status": {
-            "pass": "Pass",
-            "warn": "Warn",
-            "fail": "Fail",
-            "skip": "Skip"
+            "pass": "55555",
+            "warn": "55555",
+            "fail": "55555",
+            "skip": "55555"
           },
           "errors": {
-            "run": "Failed to run Teams diagnostics",
-            "testMessage": "Failed to send Teams test message"
+            "run": "55555",
+            "testMessage": "55555"
           },
           "test": {
-            "sent": "Teams test message sent.",
-            "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
-            "integrationInactive": "Activate the Teams integration before sending a test message.",
-            "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
-            "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
-            "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
-            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "skipped": "Teams test message was skipped."
+            "sent": "55555",
+            "failed": "55555",
+            "addonInactive": "55555",
+            "integrationInactive": "55555",
+            "capabilityDisabled": "55555",
+            "botNotConfigured": "55555",
+            "missingUserLinkage": "55555",
+            "missingConversationReference": "55555",
+            "skipped": "55555"
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
-            "integrationStatus": "Teams integration status",
-            "capabilities": "Teams capabilities",
-            "microsoftProfile": "Microsoft profile readiness",
-            "packageMetadata": "Teams package metadata",
-            "botConnector": "Bot connector credentials",
-            "userLinkage": "Admin Microsoft account linkage",
-            "conversationReference": "Admin Teams conversation reference",
-            "recentDeliveryHealth": "Recent Teams delivery health"
+            "addonEntitlement": "55555",
+            "integrationStatus": "55555",
+            "capabilities": "55555",
+            "microsoftProfile": "55555",
+            "recordingPermissions": "55555",
+            "packageMetadata": "55555",
+            "botConnector": "55555",
+            "userLinkage": "55555",
+            "conversationReference": "55555",
+            "recentDeliveryHealth": "55555"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
-            "activate": "Activate the Teams integration in settings.",
-            "capabilities": "Enable personal bot and activity notifications for Teams.",
-            "profile": "Select a ready Microsoft profile for Teams.",
-            "activeProfile": "Select an active Microsoft profile for Teams.",
-            "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
-            "package": "Generate the Teams app package before running end-to-end validation.",
-            "baseUrl": "Regenerate the Teams package with a reachable base URL.",
-            "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Link your Microsoft account in your profile settings.",
-            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+            "addon": "55555",
+            "activate": "55555",
+            "capabilities": "55555",
+            "profile": "55555",
+            "activeProfile": "55555",
+            "profileCredentials": "55555",
+            "meetingOrganizer": "55555",
+            "meetingOrganizerObjectId": "55555",
+            "package": "55555",
+            "baseUrl": "55555",
+            "botEnv": "55555",
+            "userLinkage": "55555",
+            "conversationReference": "55555",
+            "deliveryFailure": "55555"
+          }
+        },
+        "meetings": {
+          "title": "55555",
+          "description": "55555",
+          "organizer": {
+            "label": "55555",
+            "placeholder": "55555",
+            "help": "55555",
+            "resolved": "55555 {{objectId}} 55555"
+          },
+          "downloadRecordings": {
+            "label": "55555",
+            "description": "55555"
+          },
+          "exposeRecordingsInPortal": {
+            "label": "55555",
+            "description": "55555"
           }
         }
       }

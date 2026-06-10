@@ -601,7 +601,7 @@ export class QboClientService {
         message = `QBO ${entityType || 'entity'} has been updated since it was last read. Please refresh and try again. (SyncToken mismatch)`;
       } else if (qboError.code === '6240') {
         code = 'QBO_DUPLICATE_NAME';
-        message = `QBO ${entityType || 'entity'} name already exists in QuickBooks (duplicate DisplayName).`;
+        message = `A QBO ${entityType || 'entity'} with this name already exists. Please use a different name. (Duplicate Name Exists)`;
       } else if (qboError.code?.startsWith('2')) {
         code = 'QBO_VALIDATION_ERROR';
       } else if (qboError.code?.startsWith('4') || qboError.code?.startsWith('5')) {

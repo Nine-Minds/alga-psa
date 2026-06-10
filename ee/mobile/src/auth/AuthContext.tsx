@@ -13,6 +13,9 @@ export type AuthContextValue = {
   setSession: (session: MobileSession | null) => void;
   refreshSession: () => Promise<string | null>;
   logout: () => Promise<void>;
+  baseUrl: string | null;
+  setHost: (url: string) => Promise<void>;
+  clearHost: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

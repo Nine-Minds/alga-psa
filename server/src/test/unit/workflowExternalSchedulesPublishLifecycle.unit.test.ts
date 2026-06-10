@@ -323,7 +323,7 @@ function seedSchedule(params: {
   const id = uuidv4();
   scheduleRecords.set(id, {
     id,
-    tenant_id: 'tenant-1',
+    tenant: 'tenant-1',
     workflow_id: params.workflowId,
     workflow_version: params.workflowVersion ?? 1,
     name: params.name,

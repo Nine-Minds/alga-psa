@@ -35,9 +35,13 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
 
   return {
     boardId: params.get('boardId') || undefined,
+    boardIds: params.get('boardIds') ? params.get('boardIds')!.split(',').filter(Boolean) : undefined,
+    excludeBoardIds: params.get('excludeBoardIds') ? params.get('excludeBoardIds')!.split(',').filter(Boolean) : undefined,
     statusId,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
+    categoryIds: params.get('categoryIds') ? params.get('categoryIds')!.split(',').filter(Boolean) : undefined,
+    excludeCategoryIds: params.get('excludeCategoryIds') ? params.get('excludeCategoryIds')!.split(',').filter(Boolean) : undefined,
     clientId: params.get('clientId') || undefined,
     contactId: params.get('contactId') || undefined,
     searchQuery: params.get('searchQuery') || '',

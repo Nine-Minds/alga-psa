@@ -682,6 +682,16 @@ export const deleteScheduleEntry = withAuth(async (
               .first();
           })
         : null;
+    const onlineMeetingRow = appointmentRequestRow
+      ? await withTransaction(db, async (trx: Knex.Transaction) => {
+          return await trx('online_meetings')
+            .where({
+              appointment_request_id: appointmentRequestRow.appointment_request_id,
+              tenant,
+            })
+            .first();
+        })
+      : null;
 
     const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, db, tenant, async (trx, tenantId) => {
       // Clean up schedule conflicts referencing this entry
@@ -727,13 +737,25 @@ export const deleteScheduleEntry = withAuth(async (
             tenant,
           })
           .update(nextUpdate);
+
+        await trx('online_meetings')
+          .where({
+            appointment_request_id: appointmentRequestRow.appointment_request_id,
+            tenant,
+          })
+          .update({
+            status: 'cancelled',
+            updated_at: new Date(),
+          });
       });
 
-      if (appointmentRequestRow.online_meeting_provider === 'teams' && appointmentRequestRow.online_meeting_id) {
+      const teamsMeetingId = onlineMeetingRow?.provider_meeting_id ?? appointmentRequestRow.online_meeting_id;
+      if ((onlineMeetingRow?.provider === 'teams' || appointmentRequestRow.online_meeting_provider === 'teams') && teamsMeetingId) {
         const teamsMeetingService = await resolveTeamsMeetingService();
         await teamsMeetingService.deleteTeamsMeeting({
           tenantId: tenant,
-          meetingId: appointmentRequestRow.online_meeting_id,
+          meetingId: teamsMeetingId,
+          eventId: onlineMeetingRow?.provider_event_id ?? null,
           appointmentRequestId: appointmentRequestRow.appointment_request_id,
         });
       }

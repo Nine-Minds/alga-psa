@@ -1,5 +1,12 @@
 export type AppointmentStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 
+export interface OnlineMeetingAppointmentArtifact {
+  artifact_id: string;
+  artifact_type: 'recording' | 'transcript';
+  document_id: string | null;
+  created_date_time?: string | Date | null;
+}
+
 /** Minimum fields required to render an appointment in lists/cards/calendar. */
 export interface AppointmentSummary {
   appointment_request_id: string;
@@ -21,5 +28,6 @@ export interface AppointmentRequest extends AppointmentSummary {
   approved_at?: string;
   declined_reason?: string;
   online_meeting_url?: string | null;
+  online_meeting_artifacts?: OnlineMeetingAppointmentArtifact[];
   created_at: string;
 }

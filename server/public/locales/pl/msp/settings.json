@@ -291,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Hasło zostało zmienione pomyślnie",
-        "userUpdated": "Użytkownik został zaktualizowany pomyślnie"
+        "userUpdated": "Użytkownik został zaktualizowany pomyślnie",
+        "roleAdded": "Rola dodana pomyślnie",
+        "roleRemoved": "Rola usunięta pomyślnie"
       },
       "error": {
         "userNotFound": "Nie znaleziono użytkownika",
@@ -305,7 +307,8 @@
         "passwordChangeError": "Wystąpił błąd podczas zmiany hasła",
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
       }
     },
     "loading": "Ładowanie szczegółów użytkownika..."
@@ -379,7 +382,8 @@
       "boards": "Tablice",
       "statuses": "Statusy",
       "priorities": "Priorytety",
-      "categories": "Kategorie"
+      "categories": "Kategorie",
+      "checklistTemplates": "Szablony list kontrolnych"
     },
     "numbering": {
       "title": "Format numeru",
@@ -673,6 +677,38 @@
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
           "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Reguły zamknięcia",
+        "enabledHelp": "Wymagaj spełnienia warunków przed zamknięciem zgłoszeń na tej tablicy.",
+        "requireResolutionCommentLabel": "Wymagaj komentarza rozwiązania",
+        "requireResolutionCommentHelp": "Komentarz rozwiązania musi istnieć, zanim zgłoszenie będzie mogło zostać zamknięte.",
+        "requireTimeEntryLabel": "Wymagaj wpisu czasu",
+        "requireTimeEntryHelp": "Co najmniej jeden wpis czasu musi być zarejestrowany, zanim zgłoszenie będzie mogło zostać zamknięte.",
+        "requireChecklistCompleteLabel": "Wymagaj ukończenia listy kontrolnej",
+        "requireChecklistCompleteHelp": "Wszystkie wymagane elementy listy kontrolnej muszą być odznaczone, zanim zgłoszenie będzie mogło zostać zamknięte.",
+        "requireNoOpenChildrenLabel": "Wymagaj zamknięcia zgłoszeń powiązanych",
+        "requireNoOpenChildrenHelp": "Zgłoszenie nadrzędne nie może zostać zamknięte, dopóki powiązane zgłoszenia podrzędne są nadal otwarte.",
+        "requiredFieldsLabel": "Wymagane pola przy zamknięciu",
+        "requiredFieldsHelp": "Te pola zgłoszenia muszą być wypełnione, zanim zgłoszenie będzie mogło zostać zamknięte.",
+        "autoCloseLabel": "Reguły automatycznego zamknięcia",
+        "autoCloseHelp": "Automatycznie zamykaj zgłoszenia, które pozostają w danym statusie bez aktywności. Opcjonalny e-mail ostrzegawczy jest wysyłany do kontaktu przed zamknięciem.",
+        "addAutoCloseRule": "Dodaj regułę",
+        "triggerStatusLabel": "Gdy zgłoszenie ma status",
+        "triggerStatusPlaceholder": "Wybierz status",
+        "targetStatusLabel": "Zamknij do statusu",
+        "targetStatusPlaceholder": "Wybierz status zamknięcia",
+        "inactivityDaysLabel": "Dni braku aktywności",
+        "warningDaysLabel": "Dni ostrzeżenia przed zamknięciem",
+        "warningDaysPlaceholder": "Bez ostrzeżenia",
+        "ruleEnabledLabel": "Włączona",
+        "removeRule": "Usuń",
+        "messages": {
+          "fetchFailed": "Nie udało się załadować reguł zamknięcia dla tej tablicy",
+          "autoCloseStatusRequired": "Każda reguła automatycznego zamknięcia wymaga statusu wyzwalacza i docelowego statusu zamknięcia",
+          "autoCloseDaysInvalid": "Liczba dni braku aktywności musi być dodatnią liczbą całkowitą",
+          "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności"
+        }
       }
     },
     "priorities": {
@@ -753,6 +789,88 @@
       },
       "entity": {
         "fallback": "ten priorytet"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Szablony list kontrolnych",
+      "alert": "Szablony list kontrolnych definiują wielokrotnego użytku listy kontrolne dla zgłoszeń. Elementy szablonu są kopiowane na zgłoszenia przy zastosowaniu, więc edycja szablonu nie zmienia list kontrolnych już dodanych do zgłoszeń.",
+      "table": {
+        "name": "Nazwa",
+        "description": "Opis",
+        "items": "Elementy",
+        "status": "Status",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "active": "Aktywny",
+        "inactive": "Nieaktywny"
+      },
+      "actions": {
+        "addTemplate": "Dodaj szablon",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "close": "Zamknij",
+        "create": "Utwórz",
+        "update": "Zaktualizuj",
+        "up": "W górę",
+        "down": "W dół",
+        "remove": "Usuń",
+        "addItem": "Dodaj element",
+        "addRule": "Dodaj regułę"
+      },
+      "fields": {
+        "name": {
+          "label": "Nazwa szablonu",
+          "placeholder": "Wprowadź nazwę szablonu"
+        },
+        "description": {
+          "label": "Opis",
+          "placeholder": "Wprowadź opis"
+        },
+        "active": "Aktywny",
+        "items": {
+          "label": "Elementy listy kontrolnej",
+          "help": "Elementy są dodawane do zgłoszeń w tej kolejności po zastosowaniu szablonu.",
+          "itemName": "Nazwa elementu",
+          "required": "Wymagany",
+          "newItemLabel": "Nowy element",
+          "newItemPlaceholder": "Wprowadź nazwę elementu"
+        },
+        "rules": {
+          "label": "Reguły automatycznego stosowania",
+          "help": "Szablon jest automatycznie stosowany do nowych zgłoszeń pasujących do którejkolwiek z tych reguł. Pozostaw pole jako \"Dowolny\", aby dopasować wszystkie wartości.",
+          "empty": "Brak reguł automatycznego stosowania. Szablon nadal można stosować do zgłoszeń ręcznie.",
+          "board": "Tablica",
+          "category": "Kategoria",
+          "subcategory": "Podkategoria",
+          "priority": "Priorytet",
+          "any": "Dowolny"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Dodaj szablon listy kontrolnej",
+        "editTemplate": "Edytuj szablon listy kontrolnej",
+        "createFirstHelp": "Najpierw utwórz szablon, a następnie dodaj elementy listy kontrolnej i reguły automatycznego stosowania.",
+        "deleteTitle": "Usuń szablon listy kontrolnej",
+        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione."
+      },
+      "messages": {
+        "success": {
+          "created": "Szablon listy kontrolnej został utworzony pomyślnie",
+          "updated": "Szablon listy kontrolnej został zaktualizowany pomyślnie",
+          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie"
+        },
+        "error": {
+          "fetchFailed": "Nie udało się pobrać szablonów list kontrolnych",
+          "fetchRulesFailed": "Nie udało się pobrać reguł automatycznego stosowania",
+          "nameRequired": "Nazwa szablonu jest wymagana",
+          "saveFailed": "Nie udało się zapisać szablonu listy kontrolnej",
+          "deleteFailed": "Nie udało się usunąć szablonu listy kontrolnej",
+          "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
+          "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
+          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+        }
       }
     }
   },

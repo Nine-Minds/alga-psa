@@ -1,5 +1,10 @@
+import type { Metadata } from 'next';
 import { KnowledgeBasePage } from '@alga-psa/documents/components';
 import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
+
+export const metadata: Metadata = {
+  title: 'Knowledge Base',
+};
 
 export default async function KBArticlesPage() {
   let aiAssistantEnabled = false;

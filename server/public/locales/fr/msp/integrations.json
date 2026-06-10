@@ -1468,63 +1468,84 @@
         },
         "title": "Microsoft Teams",
         "diagnostics": {
-          "title": "Diagnostics & Test Message",
-          "description": "Verify the Teams setup and send a proactive test message to your Teams bot conversation.",
-          "run": "Run diagnostics",
-          "running": "Running...",
-          "sendTest": "Send test message",
-          "sending": "Sending...",
-          "disabled": "Diagnostics and test messages are available after the Teams integration is active.",
-          "completedAt": "Completed {{time}}",
-          "lastSuccess": "Last success",
-          "lastFailure": "Last failure",
-          "noneRecorded": "None recorded",
-          "recommendations": "Recommendations",
+          "title": "Diagnostics et message de test",
+          "description": "Vérifiez la configuration de Teams et envoyez un message de test proactif à votre conversation de bot Teams.",
+          "run": "Exécuter les diagnostics",
+          "running": "Exécution en cours...",
+          "sendTest": "Envoyer un message de test",
+          "sending": "Envoi en cours...",
+          "disabled": "Les diagnostics et les messages de test sont disponibles une fois l'intégration Teams active.",
+          "completedAt": "Terminé {{time}}",
+          "lastSuccess": "Dernière réussite",
+          "lastFailure": "Dernier échec",
+          "noneRecorded": "Aucun enregistrement",
+          "recommendations": "Recommandations",
           "status": {
-            "pass": "Pass",
-            "warn": "Warn",
-            "fail": "Fail",
-            "skip": "Skip"
+            "pass": "Réussite",
+            "warn": "Avertissement",
+            "fail": "Échec",
+            "skip": "Ignoré"
           },
           "errors": {
-            "run": "Failed to run Teams diagnostics",
-            "testMessage": "Failed to send Teams test message"
+            "run": "Échec de l'exécution des diagnostics Teams",
+            "testMessage": "Échec de l'envoi du message de test Teams"
           },
           "test": {
-            "sent": "Teams test message sent.",
-            "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
-            "integrationInactive": "Activate the Teams integration before sending a test message.",
-            "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
-            "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
-            "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
-            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "skipped": "Teams test message was skipped."
+            "sent": "Message de test Teams envoyé.",
+            "failed": "Échec du message de test Teams.",
+            "addonInactive": "Le module complémentaire Teams n'est pas actif pour ce locataire.",
+            "integrationInactive": "Activez l'intégration Teams avant d'envoyer un message de test.",
+            "capabilityDisabled": "Activez la fonctionnalité de bot personnel avant d'envoyer un message de test.",
+            "botNotConfigured": "Configurez les identifiants du bot Teams avant d'envoyer un message de test.",
+            "missingUserLinkage": "Liez votre compte Microsoft avant d'envoyer un message de test Teams.",
+            "missingConversationReference": "Ouvrez le bot Alga PSA dans Teams et envoyez-lui d'abord un message, puis réessayez.",
+            "skipped": "Le message de test Teams a été ignoré."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
-            "integrationStatus": "Teams integration status",
-            "capabilities": "Teams capabilities",
-            "microsoftProfile": "Microsoft profile readiness",
-            "packageMetadata": "Teams package metadata",
-            "botConnector": "Bot connector credentials",
-            "userLinkage": "Admin Microsoft account linkage",
-            "conversationReference": "Admin Teams conversation reference",
-            "recentDeliveryHealth": "Recent Teams delivery health"
+            "addonEntitlement": "Droit au module complémentaire Teams",
+            "integrationStatus": "État de l'intégration Teams",
+            "capabilities": "Fonctionnalités Teams",
+            "microsoftProfile": "Disponibilité du profil Microsoft",
+            "recordingPermissions": "Autorisations d'enregistrement et de transcription Teams",
+            "packageMetadata": "Métadonnées du package Teams",
+            "botConnector": "Identifiants du connecteur de bot",
+            "userLinkage": "Liaison du compte Microsoft de l'administrateur",
+            "conversationReference": "Référence de conversation Teams de l'administrateur",
+            "recentDeliveryHealth": "Santé récente de la distribution Teams"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
-            "activate": "Activate the Teams integration in settings.",
-            "capabilities": "Enable personal bot and activity notifications for Teams.",
-            "profile": "Select a ready Microsoft profile for Teams.",
-            "activeProfile": "Select an active Microsoft profile for Teams.",
-            "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
-            "package": "Generate the Teams app package before running end-to-end validation.",
-            "baseUrl": "Regenerate the Teams package with a reachable base URL.",
-            "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Link your Microsoft account in your profile settings.",
-            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+            "addon": "Activez le module complémentaire Microsoft Teams pour ce locataire.",
+            "activate": "Activez l'intégration Teams dans les paramètres.",
+            "capabilities": "Activez le bot personnel et les notifications d'activité pour Teams.",
+            "profile": "Sélectionnez un profil Microsoft prêt pour Teams.",
+            "activeProfile": "Sélectionnez un profil Microsoft actif pour Teams.",
+            "profileCredentials": "Complétez les identifiants du profil Microsoft avant d'activer Teams.",
+            "meetingOrganizer": "Configurez l'organisateur de réunion Teams par défaut dans les paramètres Teams.",
+            "meetingOrganizerObjectId": "Enregistrez à nouveau l'organisateur de réunion Teams par défaut afin qu'Alga PSA puisse résoudre son ID d'objet Microsoft Entra.",
+            "package": "Générez le package de l'application Teams avant d'exécuter la validation de bout en bout.",
+            "baseUrl": "Régénérez le package Teams avec une URL de base accessible.",
+            "botEnv": "Configurez TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID et TEAMS_BOT_APP_PASSWORD.",
+            "userLinkage": "Liez votre compte Microsoft dans les paramètres de votre profil.",
+            "conversationReference": "Ouvrez le bot Alga PSA dans Teams et envoyez-lui d'abord un message, puis réessayez.",
+            "deliveryFailure": "Examinez le dernier échec de distribution Teams et réessayez après avoir corrigé la cause."
+          }
+        },
+        "meetings": {
+          "title": "Réunions en ligne et enregistrements",
+          "description": "Utilisez un seul compte de service Microsoft pour organiser les réunions Teams et contrôler la conservation des enregistrements.",
+          "organizer": {
+            "label": "UPN de l'organisateur de réunion par défaut",
+            "placeholder": "scheduler@acme.com",
+            "help": "L'enregistrement résout et stocke l'ID d'objet Microsoft Entra utilisé pour les appels de réunion Graph.",
+            "resolved": "ID d'objet résolu : {{objectId}}"
+          },
+          "downloadRecordings": {
+            "label": "Télécharger les enregistrements vers le stockage interne",
+            "description": "Lorsque cette option est activée, les blobs d'enregistrement sont copiés dans le stockage du locataire, en plus du proxy Graph authentifié."
+          },
+          "exposeRecordingsInPortal": {
+            "label": "Afficher les enregistrements et les transcriptions dans le portail client",
+            "description": "Désactivé par défaut ; les utilisateurs MSP peuvent toujours consulter les artefacts depuis les détails des interactions et des rendez-vous."
           }
         }
       }

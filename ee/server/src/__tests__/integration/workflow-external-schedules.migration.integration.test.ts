@@ -76,9 +76,10 @@ describe('Workflow external schedules migration – DB integration', () => {
     await resetToLegacyWorkflowScheduleTable();
 
     const workflowId = uuidv4();
+    const tenantA = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
-      tenant_id: 'tenant-a',
+      tenant: tenantA,
       name: 'Legacy Workflow',
       description: null,
       payload_schema_ref: 'payload.Empty.v1',
@@ -92,7 +93,7 @@ describe('Workflow external schedules migration – DB integration', () => {
     const scheduleId = uuidv4();
     await db('tenant_workflow_schedule').insert({
       id: scheduleId,
-      tenant_id: 'tenant-a',
+      tenant_id: tenantA,
       workflow_id: workflowId,
       workflow_version: 1,
       trigger_type: 'recurring',

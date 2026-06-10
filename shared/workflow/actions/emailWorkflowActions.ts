@@ -1211,6 +1211,9 @@ export async function createTicketFromEmail(
               subject: (ticketData.email_metadata as any)?.subject ?? null,
               provider: (ticketData.email_metadata as any)?.provider ?? null,
               receivedAt: (ticketData.email_metadata as any)?.receivedAt ?? null,
+              appliedRuleId: (ticketData.email_metadata as any)?.appliedRuleId ?? null,
+              appliedRuleName: (ticketData.email_metadata as any)?.appliedRuleName ?? null,
+              clientMatchSource: (ticketData.email_metadata as any)?.clientMatchSource ?? null,
             }
           : undefined;
 
@@ -1403,6 +1406,9 @@ export async function createCommentFromEmail(
     author_id?: string;
     contact_id?: string;
     metadata?: any;
+    // Keep this comment in-app only (no tech email). Set for the first comment on a new
+    // inbound-email ticket, which the TICKET_CREATED email already covers.
+    suppressTechEmailNotification?: boolean;
     inboundReplyEvent?: {
       messageId: string;
       threadId?: string;
@@ -1445,7 +1451,9 @@ export async function createCommentFromEmail(
   const createCommentInTransaction = async (content: string): Promise<string> =>
     withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
-      const eventPublisher = new WorkflowEventPublisher();
+      const eventPublisher = new WorkflowEventPublisher({
+        suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
+      });
       const analyticsTracker = new WorkflowAnalyticsTracker();
 
       // Use enhanced TicketModel with events and analytics

@@ -22,6 +22,8 @@ const RedisConfigSchema = z.object({
     blockingTimeout: z.number().int().nonnegative().default(5000), // ms
     claimTimeout: z.number().int().positive().default(30000), // ms
     batchSize: z.number().int().positive().default(10),
+    // Deliveries (initial read + claims) before a message is dead-lettered.
+    maxDeliveries: z.number().int().positive().default(10),
     reconnectStrategy: z.object({
       retries: z.number().int().positive().default(10),
       initialDelay: z.number().int().positive().default(100), // ms
@@ -43,6 +45,7 @@ const validateConfig = () => {
         blockingTimeout: parseInt(process.env.REDIS_STREAM_BLOCKING_TIMEOUT || '5000', 10),
         claimTimeout: parseInt(process.env.REDIS_STREAM_CLAIM_TIMEOUT || '30000', 10),
         batchSize: parseInt(process.env.REDIS_STREAM_BATCH_SIZE || '10', 10),
+        maxDeliveries: parseInt(process.env.REDIS_STREAM_MAX_DELIVERIES || '10', 10),
         reconnectStrategy: {
           retries: parseInt(process.env.REDIS_RECONNECT_RETRIES || '10', 10),
           initialDelay: parseInt(process.env.REDIS_RECONNECT_INITIAL_DELAY || '100', 10),

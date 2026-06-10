@@ -4,17 +4,19 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
+import { redactSensitiveFields } from '../lib/api/utils/redactSensitiveFields';
 
 export function withErrorHandler(handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void> | void) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       return await handler(req, res);
     } catch (error: any) {
+      const redactedDetails = redactSensitiveFields(error.details || []);
       console.error('API Error:', {
         method: req.method,
         url: req.url,
         error: error.message,
-        stack: error.stack,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         timestamp: new Date().toISOString()
       });
 
@@ -23,7 +25,7 @@ export function withErrorHandler(handler: (req: NextApiRequest, res: NextApiResp
         return res.status(400).json({
           error: 'Validation failed',
           message: error.message,
-          details: error.details || []
+          details: redactedDetails
         });
       }
 

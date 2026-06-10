@@ -4,6 +4,7 @@ import AlgaDeskDashboard from '@/components/dashboard/AlgaDeskDashboard';
 import { getDashboardMobileAppCardDismissedAction } from '@/lib/actions/dashboardMobileAppActions';
 import { getAlgaDeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { isSelfHostLicensing } from '@alga-psa/licensing';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
 import type { Metadata } from 'next';
@@ -23,6 +24,7 @@ async function DashboardPage() {
   }
 
   const mobileAppCardDismissed = await getDashboardMobileAppCardDismissedAction().catch(() => false);
+  const selfHost = await isSelfHostLicensing().catch(() => false);
 
   return (
     <DashboardContainer
@@ -34,6 +36,7 @@ async function DashboardPage() {
         ) : undefined
       }
       initialMobileAppCardDismissed={mobileAppCardDismissed}
+      selfHost={selfHost}
     />
   );
 }

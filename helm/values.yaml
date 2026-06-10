@@ -107,6 +107,14 @@ hocuspocus:
     type: "ClusterIP"
     port: 1234
 
+# OpenTelemetry app observability (traces). Off by default; opt-in per deployment.
+# When enabled, the app exports OTLP traces to otlpEndpoint (the Alloy collector
+# in production). See templates/deployment.yaml OBSERVABILITY block.
+observability:
+  enabled: false
+  otlpEndpoint: ""
+  # deploymentId: ""   # optional; sent as the X-Deployment-Id OTLP header
+
 temporal:
   address: "temporal-frontend.temporal.svc.cluster.local:7233"
   namespace: "default"

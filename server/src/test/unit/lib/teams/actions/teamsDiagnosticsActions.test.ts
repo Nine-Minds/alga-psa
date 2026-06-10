@@ -212,6 +212,8 @@ function activeIntegration(capabilities: string[] = ['personal_bot', 'activity_n
     enabled_capabilities: capabilities,
     app_id: 'teams-app-1',
     package_metadata: { baseUrl: 'https://psa.example.com' },
+    default_meeting_organizer_upn: 'scheduler@example.com',
+    default_meeting_organizer_object_id: 'organizer-object-1',
   });
 }
 
@@ -503,6 +505,7 @@ describe('Teams diagnostics report action', () => {
       'integration_status',
       'capabilities',
       'microsoft_profile',
+      'recording_permissions',
       'package_metadata',
       'bot_connector',
       'user_linkage',
@@ -578,6 +581,36 @@ describe('Teams diagnostics report action', () => {
     expect(report.steps.find((step) => step.id === 'microsoft_profile')).toMatchObject({
       status: 'fail',
       detail: 'Selected Microsoft profile is missing a client secret reference.',
+    });
+  });
+
+  it('T074/T075: warns when recording capture cannot use organizer object id and names required Microsoft permissions', async () => {
+    activeIntegration();
+    readyProfile();
+    hoisted.state.integrations[0].default_meeting_organizer_object_id = null;
+
+    const report = await diagnose();
+    expect(report.steps.find((step) => step.id === 'recording_permissions')).toMatchObject({
+      status: 'warn',
+      data: {
+        recordingsAvailable: false,
+        reason: 'missing_organizer_object_id',
+      },
+    });
+
+    hoisted.state.integrations[0].default_meeting_organizer_object_id = 'organizer-object-1';
+    const readyReport = await diagnose();
+    expect(readyReport.steps.find((step) => step.id === 'recording_permissions')).toMatchObject({
+      status: 'pass',
+      data: {
+        recordingsAvailable: true,
+        requiredGraphApplicationPermissions: [
+          'Calendars.ReadWrite',
+          'OnlineMeetingRecording.Read.All',
+          'OnlineMeetingTranscript.Read.All',
+        ],
+        exchangeMailboxScopingRequired: true,
+      },
     });
   });
 

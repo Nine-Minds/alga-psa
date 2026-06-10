@@ -10,8 +10,10 @@ const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',
   'tacticalrmm',
   'tanium',
+  'levelio',
   'datto',
   'connectwise_automate',
+  'huntress',
 ]);
 
 type SupportedPlainAssetType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'printer' | 'unknown';

@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { SearchableSelect, type SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,11 @@ import {
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
+import {
+  useWorkflowEntityTypeOptions,
+  useWorkflowLinkRelationOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import { listWorkflowDataStoreNamespacesAction } from '@alga-psa/workflows/actions';
 import {
   ExpressionEditorField,
   type ExpressionContext,
@@ -166,6 +172,7 @@ export interface ActionInputField {
     picker?: {
       resource: string;
     };
+    softEnum?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorSoftEnumMetadata;
   };
   picker?: {
     kind: string;
@@ -1031,6 +1038,18 @@ const FixedValueEditorShell: React.FC<{
   );
 };
 
+// Cached once per session so the namespace combobox does not re-fetch for every
+// field instance / re-render. Failures fall back to free-text-only (empty list).
+let workflowDataStoreNamespacesPromise: Promise<string[]> | null = null;
+const loadWorkflowDataStoreNamespaces = (): Promise<string[]> => {
+  if (!workflowDataStoreNamespacesPromise) {
+    workflowDataStoreNamespacesPromise = Promise.resolve()
+      .then(() => listWorkflowDataStoreNamespacesAction())
+      .catch(() => [] as string[]);
+  }
+  return workflowDataStoreNamespacesPromise;
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
@@ -1065,9 +1084,27 @@ const LiteralValueEditor: React.FC<{
   referenceBrowseContext,
 }) => {
   const { t } = useTranslation('msp/workflows');
+  const workflowEntityTypeOptions = useWorkflowEntityTypeOptions();
+  const workflowLinkRelationOptions = useWorkflowLinkRelationOptions();
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
+  const softEnum = fieldEditor?.softEnum;
+  const isNamespaceSoftEnum =
+    softEnum?.component === 'soft-enum-combobox' &&
+    softEnum?.suggestionKind === 'workflow-data-store-namespace' &&
+    (softEnum?.suggestionActionIds?.length ?? 0) > 0;
+  const [dynamicNamespaceOptions, setDynamicNamespaceOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isNamespaceSoftEnum) return;
+    let active = true;
+    loadWorkflowDataStoreNamespaces().then((namespaces) => {
+      if (active) setDynamicNamespaceOptions(namespaces);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isNamespaceSoftEnum]);
   const pickerResource = fieldEditor?.picker?.resource;
   const hasMultiUserPickerEditor =
     hasPickerEditor &&
@@ -1195,6 +1232,61 @@ const LiteralValueEditor: React.FC<{
             disabled={disabled}
           />
         }
+      />
+    );
+  }
+
+  if (fieldType === 'string' && softEnum?.component === 'soft-enum-combobox') {
+    const currentValue = typeof value === 'string' ? value : '';
+    const localizedCuratedOptions =
+      softEnum.suggestionKind === 'workflow-entity-type'
+        ? workflowEntityTypeOptions
+        : softEnum.suggestionKind === 'workflow-link-relation'
+          ? workflowLinkRelationOptions
+          : [];
+    const optionLabels = new Map<string, string>();
+
+    for (const option of localizedCuratedOptions) {
+      optionLabels.set(option.value, option.label);
+    }
+
+    for (const optionValue of softEnum.curatedValues ?? []) {
+      if (typeof optionValue === 'string' && optionValue.trim().length > 0 && !optionLabels.has(optionValue)) {
+        optionLabels.set(optionValue, optionValue);
+      }
+    }
+
+    for (const namespaceValue of dynamicNamespaceOptions) {
+      if (namespaceValue.trim().length > 0 && !optionLabels.has(namespaceValue)) {
+        optionLabels.set(namespaceValue, namespaceValue);
+      }
+    }
+
+    if (currentValue && !optionLabels.has(currentValue)) {
+      optionLabels.set(currentValue, currentValue);
+    }
+
+    const options: SearchableSelectOption[] = Array.from(optionLabels, ([optionValue, label]) => ({
+      value: optionValue,
+      label,
+    }));
+
+    return wrapNullableEditor(
+      <SearchableSelect
+        id={`${idPrefix}-literal-soft-enum`}
+        options={options}
+        value={currentValue}
+        onChange={(nextValue) => onChange(nextValue)}
+        placeholder={fieldEditor?.fixedValueHint ?? t('inputMappingEditor.softEnumPlaceholder', { defaultValue: 'Select or enter value' })}
+        searchPlaceholder={t('inputMappingEditor.softEnumSearchPlaceholder', { defaultValue: 'Search or enter a custom value' })}
+        emptyMessage={t('inputMappingEditor.softEnumNoResults', { defaultValue: 'No suggestions' })}
+        allowCustomValue={softEnum.allowCustomValue !== false}
+        customValueLabel={(nextValue) => t('inputMappingEditor.softEnumUseCustom', {
+          defaultValue: 'Use "{{value}}"',
+          value: nextValue,
+        })}
+        dropdownMode="overlay"
+        disabled={disabled}
       />
     );
   }

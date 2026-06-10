@@ -125,7 +125,9 @@ export const RunActionInput = z.object({
 export const ReplayWorkflowRunInput = z.object({
   runId: z.string().min(1),
   reason: z.string().min(3),
-  payload: z.record(z.any()).default({}),
+  // Omitted payload means "replay with the original run's input"; an explicit
+  // value (including {}) overrides it.
+  payload: z.record(z.any()).optional(),
   source: z.string().optional()
 });
 

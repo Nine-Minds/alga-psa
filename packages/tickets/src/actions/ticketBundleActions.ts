@@ -574,9 +574,9 @@ export const searchEligibleChildTicketsAction = withAuth(async (user, { tenant }
         this.on('tickets.client_id', 'clients.client_id')
           .andOn('tickets.tenant', 'clients.tenant');
       })
-      .where({ 
+      .where({
         'tickets.tenant': tenant,
-        'tickets.board_id': data.boardId 
+        'tickets.board_id': data.boardId
       })
       .andWhere((builder) => {
         builder.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');

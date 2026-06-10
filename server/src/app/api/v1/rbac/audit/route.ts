@@ -1,21 +1,13 @@
 /**
  * RBAC Audit API Route
- * GET /api/v1/rbac/audit - Get RBAC audit logs
+ * GET /api/v1/rbac/audit - List RBAC audit-log entries (role/permission/user-role changes)
  */
 
-import { NextResponse } from 'next/server';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-export async function GET(request: Request) {
-  // TODO: Implement RBAC audit log functionality in a dedicated audit controller
-  // This endpoint is not yet implemented
-  return NextResponse.json(
-    { 
-      error: 'Not Implemented',
-      message: 'RBAC audit log functionality is not yet implemented. This endpoint will be available in a future release.'
-    },
-    { status: 501 }
-  );
-}
+const controller = new ApiPermissionController();
+
+export const GET = controller.audit();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

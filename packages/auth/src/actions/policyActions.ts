@@ -8,6 +8,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
+import { hasPermission } from '../lib/rbac';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 const policyEngine = new PolicyEngine();
@@ -157,7 +158,7 @@ export const removePermissionFromRole = withAuth(async (_user, { tenant }, roleI
 });
 
 // User-Role actions
-export const assignRoleToUser = withAuth(async (_user, { tenant }, userId: string, roleId: string): Promise<IUserRole> => {
+export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<IUserRole> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
         // Validate that the role and user exist and are compatible
@@ -165,6 +166,17 @@ export const assignRoleToUser = withAuth(async (_user, { tenant }, userId: strin
             trx('users').where({ user_id: userId, tenant }).first(),
             trx('roles').where({ role_id: roleId, tenant }).first()
         ]);
+
+        // Authorization: assigning an MSP role requires 'user:update'.
+        // Pure client-portal roles may also be managed with 'client:update'
+        // (mirrors the client/contact portal admin model).
+        const canUpdateUsers = await hasPermission(currentUser, 'user', 'update', trx);
+        const canManageClientRole = role?.client && !role?.msp
+            ? await hasPermission(currentUser, 'client', 'update', trx)
+            : false;
+        if (!canUpdateUsers && !canManageClientRole) {
+            throw new Error('Permission denied: You do not have permission to change user roles.');
+        }
 
         if (!user) {
             throw new Error('User not found');
@@ -190,9 +202,21 @@ export const assignRoleToUser = withAuth(async (_user, { tenant }, userId: strin
     });
 });
 
-export const removeRoleFromUser = withAuth(async (_user, { tenant }, userId: string, roleId: string): Promise<void> => {
+export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userId: string, roleId: string): Promise<void> => {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        const role = await trx('roles').where({ role_id: roleId, tenant }).first();
+
+        // Authorization mirrors assignRoleToUser: removing an MSP role requires
+        // 'user:update'; pure client-portal roles may also use 'client:update'.
+        const canUpdateUsers = await hasPermission(currentUser, 'user', 'update', trx);
+        const canManageClientRole = role?.client && !role?.msp
+            ? await hasPermission(currentUser, 'client', 'update', trx)
+            : false;
+        if (!canUpdateUsers && !canManageClientRole) {
+            throw new Error('Permission denied: You do not have permission to change user roles.');
+        }
+
         await trx('user_roles').where({ user_id: userId, role_id: roleId, tenant }).del();
     });
 });

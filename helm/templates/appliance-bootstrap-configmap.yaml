@@ -185,7 +185,9 @@ data:
       require_initial_tenant_value INITIAL_ADMIN_PASSWORD
 
       log "Creating initial appliance tenant and admin user"
-      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" npx tsx /app/server/scripts/create-tenant.ts \
+      # INITIAL_TENANT_ID (set when an install code was redeemed) makes
+      # create-tenant adopt the registry-minted tenant id; empty => DB-generated.
+      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" INITIAL_TENANT_ID="${INITIAL_TENANT_ID:-}" npx tsx /app/server/scripts/create-tenant.ts \
         --tenant "${INITIAL_TENANT_NAME}" \
         --companyName "${INITIAL_TENANT_NAME}" \
         --clientName "${INITIAL_TENANT_NAME}" \
@@ -330,28 +332,41 @@ data:
       pg_password="$(get_admin_password)"
       edition_choice="${EDITION_CHOICE:-ee}"
       license_token="${LICENSE_TOKEN:-}"
-      log "Seeding license_state (edition_choice=${edition_choice})"
+      # Registry edition from an install-code redeem (essentials|pro|premium);
+      # empty on the manual editionChoice/licenseKey path.
+      install_edition="${INSTALL_EDITION:-}"
+      # Connected-appliance refresh fields (paid install-code redeem only).
+      appliance_id="${APPLIANCE_ID:-}"
+      check_in_url="${CHECK_IN_URL:-}"
+      appliance_credential="${APPLIANCE_CREDENTIAL:-}"
+      log "Seeding license_state (edition_choice=${edition_choice}${install_edition:+ install_edition=${install_edition}})"
 
-      # Determine trial_started_at: set to NOW() only for 'ee' with no license key.
-      if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ]; then
+      # trial_started_at: NOW() only for an 'ee' install with no license AND not an
+      # explicit essentials registration (essentials should resolve to essentials
+      # tier, not auto-start a premium trial; the operator can start one later).
+      if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ] && [ "${install_edition}" != "essentials" ]; then
         trial_expr="NOW()"
       else
         trial_expr="NULL"
       fi
 
-      # Build license_token SQL value (NULL if empty, else single-quoted).
-      if [ -z "${license_token}" ]; then
-        license_token_sql="NULL"
-      else
-        # Escape single quotes in the token (should never contain them, but be safe).
-        escaped_token=$(echo "${license_token}" | sed "s/'/''/g")
-        license_token_sql="'${escaped_token}'"
-      fi
+      # Build a SQL value (NULL if empty, else single-quoted + escaped).
+      sql_value() {
+        if [ -z "$1" ]; then
+          echo "NULL"
+        else
+          echo "'$(echo "$1" | sed "s/'/''/g")'"
+        fi
+      }
+      license_token_sql="$(sql_value "${license_token}")"
+      appliance_id_sql="$(sql_value "${appliance_id}")"
+      check_in_url_sql="$(sql_value "${check_in_url}")"
+      appliance_credential_sql="$(sql_value "${appliance_credential}")"
 
       PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" \
         -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" <<SQL
-    INSERT INTO license_state (edition_choice, trial_started_at, license_token, updated_at)
-    SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, NOW()
+    INSERT INTO license_state (edition_choice, trial_started_at, license_token, appliance_id, check_in_url, appliance_credential, updated_at)
+    SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, ${appliance_id_sql}, ${check_in_url_sql}, ${appliance_credential_sql}, NOW()
     WHERE NOT EXISTS (SELECT 1 FROM license_state);
     SQL
       log "license_state seeded (edition_choice=${edition_choice})"

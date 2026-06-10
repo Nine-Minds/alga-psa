@@ -9,6 +9,7 @@ const loggerMock = vi.hoisted(() => ({
 
 const withTenantTransactionRetryReadOnlyMock = vi.hoisted(() => vi.fn());
 const recordResolutionMock = vi.hoisted(() => vi.fn());
+const dispatchSlaBackendActionsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: loggerMock,
@@ -16,7 +17,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
-  runWithTenant: vi.fn(),
+  runWithTenant: vi.fn(async (_tenantId: string, fn: () => Promise<unknown>) => fn()),
   withTransaction: vi.fn(),
   withTenantTransactionRetryReadOnly: (
     tenantId: string,
@@ -32,6 +33,7 @@ vi.mock('@alga-psa/sla', () => ({
   handlePolicyChange: vi.fn(),
   handleStatusChange: vi.fn(),
   handleResponseStateChange: vi.fn(),
+  dispatchSlaBackendActions: (...args: unknown[]) => dispatchSlaBackendActionsMock(...args),
 }));
 
 import { __testHooks } from '../../../lib/eventBus/subscribers/slaSubscriber';
@@ -61,6 +63,7 @@ describe('slaSubscriber TICKET_CLOSED handling', () => {
     loggerMock.debug.mockReset();
     recordResolutionMock.mockReset();
     withTenantTransactionRetryReadOnlyMock.mockReset();
+    dispatchSlaBackendActionsMock.mockReset();
   });
 
   it('rethrows recordResolution failures so the event bus can retry', async () => {
@@ -93,5 +96,46 @@ describe('slaSubscriber TICKET_CLOSED handling', () => {
         error: 'transient failure',
       })
     );
+    // Nothing committed, so no backend action may be dispatched.
+    expect(dispatchSlaBackendActionsMock).not.toHaveBeenCalled();
+  });
+
+  it('dispatches backend actions only after the transaction resolves', async () => {
+    const trx = createClosedTicketTrx();
+    const callOrder: string[] = [];
+    withTenantTransactionRetryReadOnlyMock.mockImplementation(async (_tenantId, callback) => {
+      const result = await callback(trx);
+      callOrder.push('transaction-resolved');
+      return result;
+    });
+    dispatchSlaBackendActionsMock.mockImplementation(async () => {
+      callOrder.push('dispatch');
+    });
+
+    const backendActions = [
+      { kind: 'complete', ticketId: '00000000-0000-0000-0000-000000000003', type: 'resolution', met: true },
+    ];
+    recordResolutionMock.mockResolvedValue({
+      success: true,
+      met: true,
+      recorded_at: new Date('2026-04-28T22:24:44Z'),
+      backendActions,
+    });
+
+    const event = {
+      id: '00000000-0000-0000-0000-000000000005',
+      eventType: 'TICKET_CLOSED' as const,
+      timestamp: '2026-04-28T22:24:45Z',
+      payload: {
+        tenantId: '00000000-0000-0000-0000-000000000002',
+        ticketId: '00000000-0000-0000-0000-000000000003',
+        userId: '00000000-0000-0000-0000-000000000004',
+      },
+    };
+
+    await __testHooks.handleTicketClosedEvent(event);
+
+    expect(dispatchSlaBackendActionsMock).toHaveBeenCalledWith(backendActions);
+    expect(callOrder).toEqual(['transaction-resolved', 'dispatch']);
   });
 });

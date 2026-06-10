@@ -14,6 +14,7 @@ export * from './job-activities';
 export * from './email-webhook-maintenance-activities';
 export * from './calendar-webhook-maintenance-activities';
 export * from './ninjaone-sync-activities';
+export * from './levelio-sync-activities';
 export * from './ninjaone-token-refresh-activities';
 export * from './entra-discovery-activities';
 export * from './entra-sync-activities';
@@ -21,6 +22,7 @@ export * from './tenant-deletion-activities';
 export * from './tenant-export-activities';
 export * from './sla-activities';
 export * from './premium-trial-activities';
+export * from './appliance-check-in-activities';
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

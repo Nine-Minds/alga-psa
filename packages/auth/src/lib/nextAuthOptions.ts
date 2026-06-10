@@ -1390,7 +1390,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -1535,7 +1535,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -1822,6 +1822,25 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 } catch (error) {
                     console.error('[auth] Session revocation check error:', error);
                     // Don't block on session check errors
+                }
+            }
+
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
                 }
             }
 
@@ -2220,7 +2239,7 @@ export const options: NextAuthConfig = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -2363,7 +2382,7 @@ export const options: NextAuthConfig = {
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -2601,6 +2620,25 @@ export const options: NextAuthConfig = {
                 } catch (error) {
                     console.error('[auth] Session revocation check error:', error);
                     // Don't block on session check errors
+                }
+            }
+
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
                 }
             }
 

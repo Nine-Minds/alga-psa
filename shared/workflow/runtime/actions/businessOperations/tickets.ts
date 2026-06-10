@@ -4,6 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
+import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
+import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1235,11 +1238,24 @@ export function registerTicketActions(): void {
 
       const nowIso = ctx.nowIso();
 
+      // Workflow closes are exempt from board close rules; the exemption is
+      // recorded as an audited bypass when the board has enabled gates.
+      await auditCloseRulesBypassIfGated(
+        tx.trx,
+        tx.tenantId,
+        input.ticket_id,
+        ticket.board_id,
+        'workflow',
+        { actorType: TICKET_ACTIVITY_ACTOR.WORKFLOW, userId: tx.actorUserId ?? null },
+        TICKET_ACTIVITY_SOURCE.WORKFLOW
+      );
+
       // Update ticket closure fields.
       await tx.trx('tickets')
         .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
         .update({
           status_id: closedStatus.status_id,
+          is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
           resolution_code: input.resolution.code,
@@ -1680,6 +1696,72 @@ export function registerTicketActions(): void {
       });
 
       return result;
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // A09 — tickets.apply_checklist
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'tickets.apply_checklist',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: uuidSchema.describe('Ticket id'),
+      template_id: uuidSchema.describe('Checklist template id')
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      template_id: uuidSchema,
+      applied: z.boolean().describe('False when the template was already on the ticket (idempotent no-op)'),
+      items_added: z.number().int()
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Apply checklist template',
+      category: 'Business Operations',
+      description: 'Copy a checklist template\'s items onto a ticket (never applies the same template twice)'
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+
+      const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
+      if (!ticket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
+      }
+
+      let applyResult;
+      try {
+        applyResult = await applyChecklistTemplateToTicket(
+          tx.trx,
+          tx.tenantId,
+          input.ticket_id,
+          input.template_id,
+          'workflow',
+          {
+            actor: { actorType: TICKET_ACTIVITY_ACTOR.WORKFLOW, userId: tx.actorUserId ?? null },
+            source: TICKET_ACTIVITY_SOURCE.WORKFLOW,
+          }
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Checklist template not found') {
+          throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Checklist template not found', details: { template_id: input.template_id } });
+        }
+        throw error;
+      }
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:tickets.apply_checklist',
+        changedData: { ticket_id: input.ticket_id, template_id: input.template_id, items_added: applyResult.itemsAdded },
+        details: { action_id: 'tickets.apply_checklist', action_version: 1, applied: applyResult.applied }
+      });
+
+      return {
+        ticket_id: input.ticket_id,
+        template_id: input.template_id,
+        applied: applyResult.applied,
+        items_added: applyResult.itemsAdded
+      };
     })
   });
 }

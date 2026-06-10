@@ -4,17 +4,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withApiKeyAuth } from 'server/src/lib/api/middleware/apiAuthMiddleware';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+
+function isTestAuthEndpointEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_TEST_AUTH === 'true';
+}
 
 export async function GET(request: NextRequest) {
+  if (!isTestAuthEndpointEnabled()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   const handler = await withApiKeyAuth(async (req) => {
-    console.log('Auth successful, context:', req.context);
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Authentication successful',
-      context: req.context 
+      context: {
+        userId: req.context?.userId,
+        tenant: req.context?.tenant,
+        apiKeyId: req.context?.apiKeyId
+      }
     });
   });
-  
+
   return await handler(request);
 }
 

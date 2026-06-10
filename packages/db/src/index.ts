@@ -19,6 +19,10 @@ export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, wit
 // Tenant Connection
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
 
+// After-commit hooks (flushed by the transaction-owning withTransaction frame)
+export { registerAfterCommit } from './lib/afterCommit';
+export type { AfterCommitHook } from './lib/afterCommit';
+
 // Read-only error helpers (for callers building their own retry strategies)
 export { isReadOnlyError, READ_ONLY_ERROR_RE, retryOnReadOnly } from './lib/readOnlyRetry';
 export { resolveTenantId, requireTenantId } from './lib/tenantId';

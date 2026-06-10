@@ -7,6 +7,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# The repo root .npmrc sets legacy-peer-deps=true, but this build copies only
+# package*.json (not .npmrc) before running npm, so npm would fall back to
+# strict peer resolution and fail ERESOLVE (e.g. nodemailer@^8 vs next-auth's
+# peerOptional nodemailer@^7). Set it via env so every npm step (ci + install,
+# in any WORKDIR) honors it — matching the repo .npmrc and the EE image build.
+ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
+
 # Development stage - build everything
 FROM base AS development
 

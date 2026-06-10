@@ -113,6 +113,7 @@ export const API_RULES: readonly ApiRule[] = [
     dynamicPatterns: [
       /^\/api\/v1\/tickets\/[^/]+\/time-entries(?:\/.*)?$/,
       /^\/api\/v1\/tickets\/[^/]+\/materials(?:\/.*)?$/,
+      /^\/api\/v1\/tickets\/[^/]+\/assets(?:\/.*)?$/,
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: true, algadesk: false },

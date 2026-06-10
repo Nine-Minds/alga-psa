@@ -114,6 +114,8 @@ The workflow system uses several database tables to store its data:
 
 11. **system_workflow_form_definitions**: Stores definitions for system-wide, reusable UI forms. These are referenced by task definitions. Key fields include `name` (unique identifier for the form), `json_schema` (defines the data structure and properties of the form), and `ui_schema` (provides hints for rendering the form).
 12. **workflow_form_definitions**: Stores tenant-specific UI form definitions, mirroring the structure of `system_workflow_form_definitions`.
+13. **workflow_data_store**: A cross-run key-value store scoped by `(tenant, namespace, key)`. Values are stored as JSON, support an optional TTL (lazily expired on read and periodically swept), and carry a revision counter for optimistic concurrency. Accessed via `store.*` workflow actions (`store.get`, `store.set`, `store.delete`, `store.increment`, `store.list`, `store.list_namespaces`).
+14. **workflow_entity_links**: Stores typed bidirectional links between two entities (identified by entity type + ID pairs). Supports forward, reverse, and bidirectional traversal. Accessed via `links.*` workflow actions (`links.upsert`, `links.lookup`, `links.delete`, `links.list`, `links.list_namespaces`).
 
 ### Human Task Forms and Dynamic Data Display
 

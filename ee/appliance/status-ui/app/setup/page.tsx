@@ -6,6 +6,13 @@ import { AlgaLogo } from '../AlgaLogo';
 import { LogoutButton } from '../auth/LogoutButton';
 import styles from '../status.module.css';
 
+// The manual edition selector + airgap license-key entry are hidden for now: the
+// install code is the only supported entitlement path (operators re-issue a fresh
+// code rather than choosing an edition or pasting a signed license by hand). Kept
+// in source (guarded, not deleted) so the airgap/manual flow is trivial to bring
+// back — flip this to true.
+const SHOW_MANUAL_EDITION_AND_LICENSE = false;
+
 type SetupConfig = {
   mode?: string;
   defaults?: {
@@ -21,7 +28,7 @@ type SetupConfig = {
   };
 };
 
-type FieldErrors = Partial<Record<'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef' | 'licenseKey', string>>;
+type FieldErrors = Partial<Record<'installCode' | 'tenantName' | 'adminFirstName' | 'adminLastName' | 'adminEmail' | 'adminPassword' | 'adminPasswordConfirm' | 'appHostname' | 'dnsServers' | 'releaseRef' | 'licenseKey', string>>;
 
 function isValidIpv4(value: string) {
   const parts = value.split('.');
@@ -41,9 +48,12 @@ function isWellFormedJwt(value: string) {
   return /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value);
 }
 
-function validateSetupForm(payload: { tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string; licenseKey?: string }) {
+function validateSetupForm(payload: { installCode?: string; tenantName: string; adminFirstName: string; adminLastName: string; adminEmail: string; adminPassword: string; adminPasswordConfirm: string; appHostname: string; dnsMode: string; dnsServers: string; releaseRef: string; licenseKey?: string }) {
   const errors: FieldErrors = {};
 
+  // The install code is the only supported entitlement path (manual edition /
+  // airgap license entry is hidden), so it is required.
+  if (!payload.installCode?.trim()) errors.installCode = 'Enter the install code from your registration email.';
   if (!payload.tenantName.trim()) errors.tenantName = 'Enter the company name for the initial tenant.';
   if (!payload.adminFirstName.trim()) errors.adminFirstName = 'Enter the admin first name.';
   if (!payload.adminLastName.trim()) errors.adminLastName = 'Enter the admin last name.';
@@ -115,6 +125,7 @@ export default function SetupPage() {
   const [releaseRef, setReleaseRef] = useState('');
   const [editionChoice, setEditionChoice] = useState<'ee' | 'ce'>('ee');
   const [licenseKey, setLicenseKey] = useState('');
+  const [installCode, setInstallCode] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +168,7 @@ export default function SetupPage() {
       releaseRef: String(formData.get('releaseRef') || releaseRef),
       editionChoice,
       licenseKey: licenseKey.trim() || undefined,
+      installCode: installCode.trim() || undefined,
     };
     const validation = validateSetupForm(payload);
     setFieldErrors(validation);
@@ -239,43 +251,69 @@ export default function SetupPage() {
             <form id="appliance-setup-form" className={styles.form} onSubmit={submit} noValidate>
               <div className={styles.formGrid}>
                 <div className={styles.field}>
-                  <label>Edition</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
-                      <input type="radio" name="editionChoice" value="ee" checked={editionChoice === 'ee'} onChange={() => setEditionChoice('ee')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
-                      <span>
-                        <strong>Enterprise</strong> — 30-day free trial, then reverts to Essentials.
-                        <br /><small style={{ color: 'var(--muted, #6b7280)' }}>Includes all features. Enter a license key below to extend beyond the trial.</small>
-                      </span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
-                      <input type="radio" name="editionChoice" value="ce" checked={editionChoice === 'ce'} onChange={() => setEditionChoice('ce')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
-                      <span>
-                        <strong>Essentials</strong> — core open-source feature set, no trial required.
-                        <br /><small style={{ color: 'var(--muted, #6b7280)' }}>You can start an Enterprise trial later from the in-app License page.</small>
-                      </span>
-                    </label>
-                  </div>
+                  <label htmlFor="setup-install-code">Install code <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(from your registration email)</small></label>
+                  <input
+                    id="setup-install-code"
+                    name="installCode"
+                    value={installCode}
+                    onChange={(event) => { setInstallCode(event.target.value.toUpperCase()); clearFieldError('installCode'); }}
+                    placeholder="K7QPM2RX"
+                    disabled={disabled}
+                    required
+                    autoComplete="off"
+                    aria-invalid={Boolean(fieldErrors.installCode)}
+                    aria-describedby="setup-install-code-help setup-install-code-error"
+                    style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}
+                  />
+                  <span id="setup-install-code-help" className={styles.helpText}>Binds this appliance to your tenant and applies your edition automatically. Lost or already-used code? Re-issue a fresh one from the portal.</span>
+                  {fieldErrors.installCode ? <span id="setup-install-code-error" className={styles.fieldError}>{fieldErrors.installCode}</span> : null}
                 </div>
 
-                {editionChoice === 'ee' && (
-                  <div className={styles.field}>
-                    <label htmlFor="setup-license-key">License key <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(optional — enter if you already have one)</small></label>
-                    <textarea
-                      id="setup-license-key"
-                      name="licenseKey"
-                      value={licenseKey}
-                      onChange={(event) => { setLicenseKey(event.target.value); clearFieldError('licenseKey'); }}
-                      placeholder="eyJhbGci…"
-                      rows={3}
-                      disabled={disabled}
-                      aria-invalid={Boolean(fieldErrors.licenseKey)}
-                      aria-describedby="setup-license-key-help setup-license-key-error"
-                      style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
-                    />
-                    <span id="setup-license-key-help" className={styles.helpText}>Paste the signed key from Nine Minds. Leave blank to start the 30-day trial.</span>
-                    {fieldErrors.licenseKey ? <span id="setup-license-key-error" className={styles.fieldError}>{fieldErrors.licenseKey}</span> : null}
-                  </div>
+                {/* Hidden for now (SHOW_MANUAL_EDITION_AND_LICENSE) — manual edition
+                    selection + airgap license-key entry. The install code is the
+                    only supported path; kept guarded (not deleted) for easy revival. */}
+                {SHOW_MANUAL_EDITION_AND_LICENSE && (
+                  <>
+                    <div className={styles.field}>
+                      <label>Edition <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(used only if no install code is entered)</small></label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                          <input type="radio" name="editionChoice" value="ee" checked={editionChoice === 'ee'} onChange={() => setEditionChoice('ee')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
+                          <span>
+                            <strong>Enterprise</strong> — 30-day free trial, then reverts to Essentials.
+                            <br /><small style={{ color: 'var(--muted, #6b7280)' }}>Includes all features. Enter a license key below to extend beyond the trial.</small>
+                          </span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                          <input type="radio" name="editionChoice" value="ce" checked={editionChoice === 'ce'} onChange={() => setEditionChoice('ce')} disabled={disabled} style={{ marginTop: '0.2rem' }} />
+                          <span>
+                            <strong>Essentials</strong> — core open-source feature set, no trial required.
+                            <br /><small style={{ color: 'var(--muted, #6b7280)' }}>You can start an Enterprise trial later from the in-app License page.</small>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {editionChoice === 'ee' && (
+                      <div className={styles.field}>
+                        <label htmlFor="setup-license-key">License key <small style={{ fontWeight: 'normal', color: 'var(--muted, #6b7280)' }}>(optional — enter if you already have one)</small></label>
+                        <textarea
+                          id="setup-license-key"
+                          name="licenseKey"
+                          value={licenseKey}
+                          onChange={(event) => { setLicenseKey(event.target.value); clearFieldError('licenseKey'); }}
+                          placeholder="eyJhbGci…"
+                          rows={3}
+                          disabled={disabled}
+                          aria-invalid={Boolean(fieldErrors.licenseKey)}
+                          aria-describedby="setup-license-key-help setup-license-key-error"
+                          style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
+                        />
+                        <span id="setup-license-key-help" className={styles.helpText}>Paste the signed key from Nine Minds. Leave blank to start the 30-day trial.</span>
+                        {fieldErrors.licenseKey ? <span id="setup-license-key-error" className={styles.fieldError}>{fieldErrors.licenseKey}</span> : null}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className={styles.field}>

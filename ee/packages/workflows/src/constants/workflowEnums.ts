@@ -157,3 +157,43 @@ export const WORKFLOW_WAIT_TIMING_LABEL_DEFAULTS: Record<WorkflowWaitTiming, str
   fixed: 'Specific date & time',
   expression: 'Advanced expression',
 };
+
+export const WORKFLOW_ENTITY_TYPE_VALUES = [
+  'project_task',
+  'ticket',
+  'contact',
+  'client',
+  'project',
+  'appointment',
+  'quote',
+] as const;
+export type WorkflowEntityType = (typeof WORKFLOW_ENTITY_TYPE_VALUES)[number];
+
+export const WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS: Record<WorkflowEntityType, string> = {
+  project_task: 'Project task',
+  ticket: 'Ticket',
+  contact: 'Contact',
+  client: 'Client',
+  project: 'Project',
+  appointment: 'Appointment',
+  quote: 'Quote',
+};
+
+export const WORKFLOW_LINK_RELATION_VALUES = [
+  'related',
+  'mirrors',
+  'maps_to',
+  'blocks',
+  'duplicate_of',
+  'synced_with',
+] as const;
+export type WorkflowLinkRelation = (typeof WORKFLOW_LINK_RELATION_VALUES)[number];
+
+export const WORKFLOW_LINK_RELATION_LABEL_DEFAULTS: Record<WorkflowLinkRelation, string> = {
+  related: 'Related',
+  mirrors: 'Mirrors',
+  maps_to: 'Maps to',
+  blocks: 'Blocks',
+  duplicate_of: 'Duplicate of',
+  synced_with: 'Synced with',
+};

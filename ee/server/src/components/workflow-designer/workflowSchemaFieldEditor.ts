@@ -22,6 +22,7 @@ export type ResolvedWorkflowSchemaEditor = {
   picker?: {
     resource: string;
   };
+  softEnum?: WorkflowEditorJsonSchemaMetadata['softEnum'];
 };
 
 const WORKFLOW_EDITOR_KINDS = new Set<WorkflowEditorJsonSchemaMetadata['kind']>([
@@ -59,6 +60,10 @@ const normalizeWorkflowEditorMetadata = (
       ? { mode: metadata.dialog.mode }
       : undefined;
   const pickerResource = metadata.picker?.resource;
+  const softEnum =
+    metadata.softEnum?.component === 'soft-enum-combobox'
+      ? metadata.softEnum
+      : undefined;
 
   return {
     kind: metadata.kind,
@@ -77,6 +82,7 @@ const normalizeWorkflowEditorMetadata = (
             resource: pickerResource,
           }
         : undefined,
+    softEnum,
   };
 };
 

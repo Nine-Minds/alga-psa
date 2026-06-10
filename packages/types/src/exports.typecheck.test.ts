@@ -6,6 +6,9 @@ import type {
   IClientLocation,
   IContact,
   IInvoice,
+  IInteraction,
+  IOnlineMeeting,
+  IOnlineMeetingArtifact,
   IProject,
   IStatus,
   ITicket,
@@ -34,6 +37,9 @@ describe('@alga-psa/types exports', () => {
       status: IStatus;
       project: IProject;
       invoice: IInvoice;
+      interactionOnlineMeeting: IInteraction['online_meeting'];
+      onlineMeeting: IOnlineMeeting;
+      onlineMeetingArtifact: IOnlineMeetingArtifact;
       createClient: CreateClientInput;
       createContact: CreateContactInput;
       outboundEmail: OutboundEmailMessage;
@@ -43,4 +49,3 @@ describe('@alga-psa/types exports', () => {
     expect(smoke).toBeNull();
   });
 });
-

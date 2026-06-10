@@ -42,6 +42,10 @@ const {
   deleteTenantData,
   cancelTenantStripeSubscription,
   sendCancellationConfirmationEmail,
+  linkSubscriptionToExistingTenant,
+  stampReactivationSubscriptionMetadata,
+  triggerReactivationPasswordReset,
+  recordReactivationPaymentAlert,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: '10 minutes',
   retry: {
@@ -456,6 +460,67 @@ async function handleRollback(
   // Reactivate client and contacts in master tenant
   log.info('Reactivating client and contacts in master tenant');
   await reactivateMasterTenantClient(tenantId);
+
+  if (rollbackSignal.reactivation) {
+    log.info('Linking reactivation subscription to existing tenant', {
+      tenantId,
+      stripeSubscriptionId: rollbackSignal.reactivation.stripeSubscriptionId,
+    });
+
+    let linkResult;
+    try {
+      linkResult = await linkSubscriptionToExistingTenant({
+        tenantId,
+        ...rollbackSignal.reactivation,
+      });
+    } catch (linkError) {
+      // The subscription link failed after a captured payment: the tenant is
+      // reactivated but has no billing row. Flag for manual review and fail the
+      // rollback so the inconsistency is visible.
+      await recordReactivationPaymentAlert({
+        tenantId,
+        stripeCheckoutSessionId: rollbackSignal.reactivation.checkoutSessionId,
+        stripeSubscriptionExternalId: rollbackSignal.reactivation.stripeSubscriptionId,
+        reason: 'reactivated_unbilled',
+      });
+      throw linkError;
+    }
+
+    if (linkResult.duplicateActiveSubscription) {
+      await recordReactivationPaymentAlert({
+        tenantId,
+        stripeCheckoutSessionId: rollbackSignal.reactivation.checkoutSessionId,
+        stripeSubscriptionExternalId: rollbackSignal.reactivation.stripeSubscriptionId,
+        reason: 'duplicate_payment',
+      });
+    } else if (linkResult.linked) {
+      await stampReactivationSubscriptionMetadata({
+        tenantId,
+        stripeSubscriptionId: rollbackSignal.reactivation.stripeSubscriptionId,
+      });
+
+      if (rollbackSignal.reactivation.sendPasswordReset !== false) {
+        try {
+          await triggerReactivationPasswordReset({ tenantId });
+        } catch (passwordResetError) {
+          // Billing linked successfully but the set-password email could not be
+          // sent (even after retries). The tenant is correctly reactivated and
+          // billed — do NOT fail the rollback — but it has no login path, so
+          // alert ops to send the reset manually. This is not a refund case.
+          log.error('Reactivation password reset failed after linking subscription', {
+            tenantId,
+            error: passwordResetError instanceof Error ? passwordResetError.message : 'Unknown error',
+          });
+          await recordReactivationPaymentAlert({
+            tenantId,
+            stripeCheckoutSessionId: rollbackSignal.reactivation.checkoutSessionId,
+            stripeSubscriptionExternalId: rollbackSignal.reactivation.stripeSubscriptionId,
+            reason: 'reactivated_no_access',
+          });
+        }
+      }
+    }
+  }
 
   // Update database
   await updateDeletionStatus({

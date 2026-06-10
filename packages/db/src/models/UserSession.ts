@@ -128,6 +128,19 @@ export class UserSession {
     });
   }
 
+  // Slides the DB session expiry to match the rolling NextAuth JWT. Never touches a revoked row.
+  static async extendExpiry(tenant: string, sessionId: string, expiresAt: Date): Promise<void> {
+    const knex = await getConnection(tenant);
+
+    await knex('sessions')
+      .where({ tenant, session_id: sessionId })
+      .whereNull('revoked_at')
+      .update({
+        expires_at: expiresAt,
+        updated_at: knex.fn.now(),
+      });
+  }
+
   static async updateLocation(tenant: string, sessionId: string, locationData: LocationData): Promise<void> {
     const knex = await getConnection(tenant);
 

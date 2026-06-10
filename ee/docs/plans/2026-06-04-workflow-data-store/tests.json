@@ -1,0 +1,169 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: registering the data-store modules produces `store.get/set/delete/increment/list/list_namespaces` and `links.upsert/lookup/delete/list/list_namespaces` with expected labels, side-effect/idempotency metadata, and `workflow:read`/`workflow:manage` permission mapping",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F015"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: the workflow designer catalog groups the new actions under a \"Data Store\" group with correct field metadata (saveAs, expression inputs, soft-enum namespace/type/relation, direction/value_type selects)",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Model unit: KV get/set round-trip, revision bump on update, and `if_revision` compare-and-set succeeds on match and raises CONFLICT on mismatch",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Model unit: `store.increment` is atomic under concurrent increments and initializes from `initial` when the key is absent",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Model unit: TTL — an expired row is treated as not-found on read and is removed by `deleteExpired`",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F004",
+      "F014"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Model unit: `links.upsert` is idempotent on the typed edge; the same pair with a different `relation` creates a second row; a duplicate typed edge updates rather than duplicates",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Model unit: `links.lookup` forward/reverse/either returns the correct `matches[]`, and `relation`/`right_type` filters narrow results",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Model unit: `links.delete` by partial criteria (left only / right only / exact pair / with relation) returns correct counts and requires at least one of left/right",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F011"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: tenant isolation — KV and link reads never cross tenant and writes are scoped by `app.current_tenant`",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F012"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Action: oversize `value` and over-length namespace/key/id inputs are rejected with `ValidationError`",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F013"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Permission: each write action fails `PERMISSION_DENIED` when the workflow actor lacks `workflow:manage`, and reads fail without `workflow:read`",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Action idempotency: replaying a write (`store.set`/`store.increment`/`links.upsert`) with the same idempotency key does not double-write and returns the prior result",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007",
+      "F009",
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Citus: both tables are distributed and colocated with `workflow_runs` (same colocation group); on a non-Citus (CE/dev) database the migration creates plain tables and inserts route correctly",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F022"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Runtime smoke (same run): an `action.call` workflow calls `store.set`/`store.get` and `links.upsert`/`links.lookup`, saves output via `saveAs`, and references the saved value in a downstream expression",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F009",
+      "F010",
+      "F015"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration (cross-run): the link-setup workflow writes a mapping in one run; a separate mirror run looks it up forward and `forEach`-updates the linked task(s); reverse direction resolves the inverse",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F010",
+      "F020"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "i18n: `validate-translations.cjs` passes across 9 locales with the new keys; `xx` pseudo-locale shows no English bleed-through on Data Store nodes; type/relation labels resolve through the option hooks while the canonical token is stored",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Designer components: Data Store node fields render `@alga-psa/ui` components only (no native `<select>`/`<input>`); the soft-enum comboboxes show suggestions and accept custom free-text values",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  }
+]
