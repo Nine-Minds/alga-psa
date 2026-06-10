@@ -299,7 +299,7 @@ describe('Workflow run launcher', () => {
       expect.objectContaining({
         workflow_id: 'workflow-1',
         workflow_version: 5,
-        tenant_id: 'tenant-1',
+        tenant: 'tenant-1',
         status: 'FAILED',
         trigger_type: 'schedule',
         trigger_fire_key: 'workflow-schedule-fire:schedule-1:job-1',

@@ -329,7 +329,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   const workflowRunIdForTenant = hasWorkflowRunsTable
     ? (
       await knex('workflow_runs')
-        .where({ tenant_id: tenantId })
+        .where({ tenant: tenantId })
         .orderBy('updated_at', 'desc')
         .first('run_id')
     )?.run_id ?? null

@@ -290,7 +290,7 @@ describe('workflowStepQuotaService', () => {
     const workflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
-      tenant_id: tenant,
+      tenant,
       name: 'Quota Drift Workflow',
       payload_schema_ref: 'schema://none',
       draft_definition: {},
@@ -301,7 +301,7 @@ describe('workflowStepQuotaService', () => {
     const runId = uuidv4();
     await db('workflow_runs').insert({
       run_id: runId,
-      tenant_id: tenant,
+      tenant,
       workflow_id: workflowId,
       workflow_version: 1,
       status: 'RUNNING',

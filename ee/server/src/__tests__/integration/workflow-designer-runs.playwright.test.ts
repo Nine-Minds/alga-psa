@@ -111,7 +111,7 @@ async function createWorkflowDefinition(
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: tenantId,
+    tenant: tenantId,
     name,
     description: null,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -142,7 +142,7 @@ async function createWorkflowRun(db: Knex, run: RunSeed): Promise<void> {
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
-    tenant_id: run.tenantId,
+    tenant: run.tenantId,
     status: run.status,
     node_path: run.nodePath ?? null,
     input_json: run.inputJson ?? null,
@@ -297,7 +297,7 @@ async function createWorkflowRunLog(db: Knex, log: LogSeed): Promise<void> {
   await db('workflow_run_logs').insert({
     log_id: log.logId,
     run_id: log.runId,
-    tenant_id: log.tenantId,
+    tenant: log.tenantId,
     step_path: log.stepPath ?? null,
     level: log.level,
     message: log.message,
