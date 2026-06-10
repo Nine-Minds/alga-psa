@@ -21,7 +21,9 @@ export default defineConfig({
     maxConcurrency: 1,
     sequence: {
       concurrent: false,
-      shuffle: true
+      shuffle: true,
+      // CI sets VITEST_SEED so order-dependent failures reproduce across reruns.
+      seed: process.env.VITEST_SEED ? Number(process.env.VITEST_SEED) : undefined
     },
     pool: 'forks',
     poolOptions: {
@@ -36,7 +38,9 @@ export default defineConfig({
     testTimeout: 20000,
     hookTimeout: 120000,
     coverage: {
-      enabled: true,
+      // Opt-in via --coverage; always-on coverage made every local run pay the
+      // instrumentation cost. CI enables it where reports are collected.
+      enabled: false,
       provider: 'v8',
       include: [
         'src/**/*.{js,ts,jsx,tsx}',
