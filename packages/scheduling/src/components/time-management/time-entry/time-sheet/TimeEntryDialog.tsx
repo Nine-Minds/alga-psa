@@ -280,6 +280,18 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {workItem.type === 'ticket' && workItem.master_ticket_id && (
+        <div className="mb-3 rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-[rgb(var(--color-text-700))]">
+          {workItem.master_ticket_number
+            ? t('bundleNotice.withNumber', {
+                defaultValue: 'This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.',
+                number: workItem.master_ticket_number
+              })
+            : t('bundleNotice.withoutNumber', {
+                defaultValue: 'This ticket is part of a bundle. Bundle time is usually logged on the master ticket.'
+              })}
+        </div>
+      )}
       {isLoading ? (
         <TimeEntrySkeletons />
       ) : entries[0] ? (

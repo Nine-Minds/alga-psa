@@ -24,6 +24,8 @@ const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkIte
     name: context.workItemName,
     description: context.timeDescription || '',
     ticket_number: context.ticketNumber,
+    master_ticket_id: context.masterTicketId,
+    master_ticket_number: context.masterTicketNumber,
     interaction_type: context.interactionType,
     client_name: context.clientName ?? undefined,
     startTime: context.startTime,

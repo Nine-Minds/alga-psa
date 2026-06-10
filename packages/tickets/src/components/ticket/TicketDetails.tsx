@@ -1910,6 +1910,7 @@ const handleClose = () => {
                     clientName: client?.client_name ?? null,
                     elapsedTime,
                     timeDescription,
+                    masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
                     baseOnComplete();
@@ -1936,6 +1937,7 @@ const handleClose = () => {
                     clientName: client?.client_name ?? null,
                     elapsedTime: 0,
                     timeDescription: '',
+                    masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 existingEntryId: entry.entry_id,
                 onComplete: () => {
