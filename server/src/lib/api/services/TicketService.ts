@@ -12,6 +12,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
@@ -1137,6 +1138,12 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
+      // Close-rule override flags are request options, not ticket columns.
+      const overrideCloseRules = (cleanedData as any).override_close_rules === true;
+      const overrideCloseRulesReason = (cleanedData as any).override_close_rules_reason ?? null;
+      delete (cleanedData as any).override_close_rules;
+      delete (cleanedData as any).override_close_rules_reason;
+
       const isBoardChange =
         cleanedData.board_id !== undefined &&
         cleanedData.board_id !== currentTicket.board_id;
@@ -1168,6 +1175,55 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
       
+      // Pre-close validation gates: when this update flips the ticket from an
+      // open to a closed status, enforce the board's close rules before any
+      // writes. Surfaces as a 422 with structured failure details.
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
+        const nextStatus = await trx('statuses')
+          .where({ status_id: cleanedData.status_id, tenant: context.tenant })
+          .first();
+        const previousStatus = await trx('statuses')
+          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+          .first();
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          const merged = { ...currentTicket, ...cleanedData };
+          try {
+            await enforceTicketCloseRules(trx, context.tenant, {
+              ticket: {
+                ticket_id: id,
+                board_id: merged.board_id ?? null,
+                category_id: merged.category_id ?? null,
+                subcategory_id: merged.subcategory_id ?? null,
+                priority_id: merged.priority_id ?? null,
+                assigned_to: merged.assigned_to ?? null,
+              },
+              override: overrideCloseRules
+                ? {
+                    requested: true,
+                    reason: overrideCloseRulesReason,
+                    user: { user_id: context.userId, user_type: 'internal', tenant: context.tenant },
+                  }
+                : undefined,
+              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+              source: TICKET_ACTIVITY_SOURCE.API,
+            });
+          } catch (error) {
+            if (error instanceof TicketCloseValidationError) {
+              throw new ValidationError(
+                'Ticket close rules not satisfied',
+                error.failures.map((f) => ({
+                  path: ['status_id'],
+                  rule: f.rule,
+                  message: f.message,
+                  ...(f.meta ?? {}),
+                }))
+              );
+            }
+            throw error;
+          }
+        }
+      }
+
       const updateData = {
         ...cleanedData,
         updated_by: context.userId,

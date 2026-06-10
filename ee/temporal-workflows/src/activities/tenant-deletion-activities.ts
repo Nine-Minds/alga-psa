@@ -249,7 +249,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Client details (must come before clients)
   'client_tax_rates', 'client_tax_settings',
-  'client_inbound_email_domains',
+  'client_inbound_email_domains', 'client_name_aliases',
   'tenant_companies',
 
   // Entra integration (dependent rows first, then parents)
@@ -319,6 +319,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // External files and documents
   'external_files', 'documents', 'document_types',
+
+  // === Ticket close rules (2026-06-10) ===
+  // All seven tables FK to tickets / boards / statuses, so they must be deleted
+  // BEFORE those (tickets at LEVEL 5 below, boards at LEVEL 7, statuses at LEVEL 8).
+  // Internal order follows the FKs among them: ticket_auto_close_state →
+  // board_auto_close_rules, and checklist_template_items / _apply_rules →
+  // checklist_templates. ticket_checklist_items.template_id is a soft ref (no FK),
+  // and board_close_rules only FKs to boards.
+  'ticket_auto_close_state', 'board_auto_close_rules',
+  'ticket_checklist_items',
+  'checklist_template_apply_rules', 'checklist_template_items', 'checklist_templates',
+  'board_close_rules',
 
   // === LEVEL 5: Tickets and related ===
   // Ticket bundle settings and entity links must be deleted BEFORE tickets
@@ -458,6 +470,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Other tenant settings (tenant_telemetry_settings moved earlier, before users)
   'tenant_external_entity_mappings', 'telemetry_consent_log',
   'default_billing_settings', 'notification_settings',
+  // inbound_email_rules references inbound_ticket_defaults (fallback destination),
+  // so it must be deleted first.
+  'inbound_email_rules',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog',
 

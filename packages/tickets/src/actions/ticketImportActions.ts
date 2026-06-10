@@ -8,6 +8,17 @@ import { unparseCSV } from '@alga-psa/core';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+import {
+  closeRulesHaveEnabledGates,
+  getBoardCloseRulesRow,
+} from '@alga-psa/shared/lib/ticketCloseRules';
+import {
   MappableTicketField,
   ITicketImportReferenceData,
   ITicketImportResult,
@@ -515,7 +526,7 @@ export const importTickets = withAuth(async (
 
     // Collect post-creation updates to batch at the end
     const enteredAtUpdates: Array<{ ticket_id: string; entered_at: string }> = [];
-    const closedUpdates: Array<{ ticket_id: string; closed_at: string; closed_by: string }> = [];
+    const closedUpdates: Array<{ ticket_id: string; closed_at: string; closed_by: string; board_id: string | null }> = [];
 
     // Step 6: Pre-resolve all tickets (pure logic, no DB)
     interface ResolvedTicket {
@@ -652,6 +663,7 @@ export const importTickets = withAuth(async (
           ticket_id: result.ticket_id,
           closed_at: ticket.closed_at || new Date().toISOString(),
           closed_by: user.user_id,
+          board_id: ticket.board_id || null,
         });
       }
       if (ticket.entered_at && result.ticket_id) {
@@ -743,6 +755,31 @@ export const importTickets = withAuth(async (
         `UPDATE tickets t SET closed_at = v.closed_at, closed_by = v.closed_by FROM (VALUES ${values}) AS v(tid, closed_at, closed_by) WHERE t.ticket_id = v.tid AND t.tenant = ?`,
         [...params, tenant]
       );
+    }
+
+    // Imported-closed tickets never pass through the close-rule gates; record
+    // the bypass on boards that have gates enabled. Gate config is looked up
+    // once per board, not per ticket.
+    if (closedUpdates.length > 0) {
+      const closedBoardIds = [...new Set(closedUpdates.map((u) => u.board_id).filter((b): b is string => !!b))];
+      const gatedBoards = new Set<string>();
+      for (const boardId of closedBoardIds) {
+        const rules = await getBoardCloseRulesRow(trx, tenant, boardId);
+        if (rules && closeRulesHaveEnabledGates(rules)) gatedBoards.add(boardId);
+      }
+      for (const u of closedUpdates) {
+        if (u.board_id && gatedBoards.has(u.board_id)) {
+          await writeTicketActivity(trx, {
+            tenant,
+            ticketId: u.ticket_id,
+            eventType: TICKET_ACTIVITY_EVENT.CLOSE_RULES_BYPASSED,
+            entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+            actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+            source: TICKET_ACTIVITY_SOURCE.UI,
+            details: { bypass_source: 'import' },
+          });
+        }
+      }
     }
 
     return {

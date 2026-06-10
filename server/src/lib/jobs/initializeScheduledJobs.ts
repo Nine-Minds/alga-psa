@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -92,6 +92,23 @@ export async function initializeScheduledJobs(): Promise<void> {
        }
       } catch (error) {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule auto-close scan (every 15 minutes; closes stale tickets per board auto-close rules)
+      try {
+        const cron = '*/15 * * * *';
+        const autoCloseJobId = await scheduleAutoCloseTicketsJob(tenantId); // Default cron used internally
+        if (autoCloseJobId) {
+          logger.info(`Scheduled auto-close tickets job for tenant ${tenantId} with job ID ${autoCloseJobId}`);
+        } else {
+          logger.info('Auto-close tickets job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: autoCloseJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule auto-close tickets job for tenant ${tenantId}`, error);
       }
 
       // Schedule daily job to reconcile the app-wide search index (runs at 6:00 AM)

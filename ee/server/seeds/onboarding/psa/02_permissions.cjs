@@ -124,6 +124,7 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'ticket', action: 'read', msp: true, client: false, description: 'View tickets' },
         { resource: 'ticket', action: 'update', msp: true, client: false, description: 'Update tickets' },
         { resource: 'ticket', action: 'delete', msp: true, client: false, description: 'Delete tickets' },
+        { resource: 'ticket', action: 'close_override', msp: true, client: false, description: 'Override ticket close rules' },
         
         // Time entry permissions
         { resource: 'timeentry', action: 'create', msp: true, client: false, description: 'Create time entries' },

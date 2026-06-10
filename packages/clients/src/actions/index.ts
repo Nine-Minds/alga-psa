@@ -16,6 +16,7 @@ export * from './clientContractLineActions';
 export * from './clientContractActions';
 export * from './clientNoteActions';
 export * from './clientInboundEmailDomainActions';
+export * from './clientNameAliasActions';
 export * from './inboundTicketDestinationActions';
 export * from './countryActions';
 export * from './contact-actions';

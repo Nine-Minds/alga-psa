@@ -382,7 +382,8 @@
       "boards": "Boards",
       "statuses": "Statuses",
       "priorities": "Priorities",
-      "categories": "Categories"
+      "categories": "Categories",
+      "checklistTemplates": "Checklist Templates"
     },
     "numbering": {
       "title": "Number Format",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Failed to update board status",
           "updateDefaultFailed": "Failed to update default board"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Close rules",
+        "enabledHelp": "Require conditions to be met before tickets on this board can be closed.",
+        "requireResolutionCommentLabel": "Require a resolution comment",
+        "requireResolutionCommentHelp": "A resolution comment must exist before the ticket can close.",
+        "requireTimeEntryLabel": "Require a time entry",
+        "requireTimeEntryHelp": "At least one time entry must be logged before the ticket can close.",
+        "requireChecklistCompleteLabel": "Require checklist completion",
+        "requireChecklistCompleteHelp": "All required checklist items must be checked off before the ticket can close.",
+        "requireNoOpenChildrenLabel": "Require bundled tickets closed",
+        "requireNoOpenChildrenHelp": "A bundle master cannot close while bundled child tickets are still open.",
+        "requiredFieldsLabel": "Required fields at close",
+        "requiredFieldsHelp": "These ticket fields must be filled in before the ticket can close.",
+        "autoCloseLabel": "Auto-close rules",
+        "autoCloseHelp": "Automatically close tickets that sit in a status with no activity. An optional warning email goes to the contact before closing.",
+        "addAutoCloseRule": "Add rule",
+        "triggerStatusLabel": "When ticket is in status",
+        "triggerStatusPlaceholder": "Select status",
+        "targetStatusLabel": "Close to status",
+        "targetStatusPlaceholder": "Select closed status",
+        "inactivityDaysLabel": "Days of inactivity",
+        "warningDaysLabel": "Warn days before close",
+        "warningDaysPlaceholder": "No warning",
+        "ruleEnabledLabel": "Enabled",
+        "removeRule": "Remove",
+        "messages": {
+          "fetchFailed": "Failed to load close rules for this board",
+          "autoCloseStatusRequired": "Each auto-close rule needs a trigger status and a closed target status",
+          "autoCloseDaysInvalid": "Auto-close inactivity days must be a positive whole number",
+          "autoCloseWarningInvalid": "The warning lead time must be smaller than the inactivity days"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "this priority"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Checklist Templates",
+      "alert": "Checklist templates define reusable checklists for tickets. Template items are copied onto tickets when applied, so editing a template never changes checklists already on tickets.",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "items": "Items",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "addTemplate": "Add Template",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "close": "Close",
+        "create": "Create",
+        "update": "Update",
+        "up": "Up",
+        "down": "Down",
+        "remove": "Remove",
+        "addItem": "Add Item",
+        "addRule": "Add Rule"
+      },
+      "fields": {
+        "name": {
+          "label": "Template Name",
+          "placeholder": "Enter template name"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "Enter description"
+        },
+        "active": "Active",
+        "items": {
+          "label": "Checklist Items",
+          "help": "Items are added to tickets in this order when the template is applied.",
+          "itemName": "Item Name",
+          "required": "Required",
+          "newItemLabel": "New Item",
+          "newItemPlaceholder": "Enter item name"
+        },
+        "rules": {
+          "label": "Auto-Apply Rules",
+          "help": "The template is automatically applied to new tickets matching any of these rules. Leave a field as \"Any\" to match all values.",
+          "empty": "No auto-apply rules. This template can still be applied to tickets manually.",
+          "board": "Board",
+          "category": "Category",
+          "subcategory": "Subcategory",
+          "priority": "Priority",
+          "any": "Any"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Add Checklist Template",
+        "editTemplate": "Edit Checklist Template",
+        "createFirstHelp": "Create the template first, then add checklist items and auto-apply rules.",
+        "deleteTitle": "Delete Checklist Template",
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected."
+      },
+      "messages": {
+        "success": {
+          "created": "Checklist template created successfully",
+          "updated": "Checklist template updated successfully",
+          "deleted": "Checklist template deleted successfully"
+        },
+        "error": {
+          "fetchFailed": "Failed to fetch checklist templates",
+          "fetchRulesFailed": "Failed to fetch auto-apply rules",
+          "nameRequired": "Template name is required",
+          "saveFailed": "Failed to save checklist template",
+          "deleteFailed": "Failed to delete checklist template",
+          "updateStatusFailed": "Failed to update template status",
+          "itemSaveFailed": "Failed to save checklist item",
+          "ruleSaveFailed": "Failed to save auto-apply rule"
+        }
       }
     }
   },
