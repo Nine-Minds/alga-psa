@@ -68,15 +68,43 @@ export interface EnforceTicketCloseRulesOptions {
   source: TicketActivitySource | string;
 }
 
-const REQUIRED_FIELD_LABELS: Record<string, string> = {
+export const CLOSE_RULE_REQUIRED_FIELDS = [
+  'category_id',
+  'subcategory_id',
+  'priority_id',
+  'assigned_to',
+] as const;
+
+export type CloseRuleRequiredField = (typeof CLOSE_RULE_REQUIRED_FIELDS)[number];
+
+export const CLOSE_RULE_REQUIRED_FIELD_LABELS: Record<string, string> = {
   category_id: 'Category',
   subcategory_id: 'Subcategory',
   priority_id: 'Priority',
   assigned_to: 'Assignee',
 };
 
+const REQUIRED_FIELD_LABELS = CLOSE_RULE_REQUIRED_FIELD_LABELS;
+
+/**
+ * Evaluates the board's enabled gates against a ticket and returns the
+ * failures (empty = closable). Non-throwing variant used by the UI's
+ * pre-close check; enforceTicketCloseRules wraps it with override/bypass
+ * semantics for the write paths.
+ */
+export async function evaluateTicketCloseRules(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  ticket: EnforceTicketCloseRulesOptions['ticket']
+): Promise<CloseRuleFailure[]> {
+  if (!ticket.board_id) return [];
+  const rules = await getBoardCloseRulesRow(trx, tenant, ticket.board_id);
+  if (!rules || !closeRulesHaveEnabledGates(rules)) return [];
+  return evaluateGates(trx, tenant, ticket, rules);
+}
+
 async function evaluateGates(
-  trx: Knex.Transaction,
+  trx: Knex.Transaction | Knex,
   tenant: string,
   ticket: EnforceTicketCloseRulesOptions['ticket'],
   rules: BoardCloseRulesRow
@@ -199,12 +227,7 @@ export async function enforceTicketCloseRules(
     return { overridden: false, bypassed };
   }
 
-  const rules = await getBoardCloseRulesRow(trx, tenant, ticket.board_id);
-  if (!rules || !closeRulesHaveEnabledGates(rules)) {
-    return { overridden: false, bypassed: false };
-  }
-
-  const failures = await evaluateGates(trx, tenant, ticket, rules);
+  const failures = await evaluateTicketCloseRules(trx, tenant, ticket);
   if (failures.length === 0) {
     return { overridden: false, bypassed: false };
   }

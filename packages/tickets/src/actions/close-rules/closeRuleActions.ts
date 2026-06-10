@@ -3,20 +3,19 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import {
+  CLOSE_RULE_REQUIRED_FIELDS,
+  evaluateTicketCloseRules,
+  type CloseRuleFailure,
+  type CloseRuleRequiredField,
+} from '../../lib/validateTicketClosure';
 
 /**
  * Per-board close rule configuration (validation gates) and auto-close rules.
  * See docs/plans/2026-06-10-ticket-close-rules/PRD.md §5.1 / §5.3.
  */
 
-export const CLOSE_RULE_REQUIRED_FIELDS = [
-  'category_id',
-  'subcategory_id',
-  'priority_id',
-  'assigned_to',
-] as const;
-
-export type CloseRuleRequiredField = (typeof CLOSE_RULE_REQUIRED_FIELDS)[number];
+export type { CloseRuleRequiredField };
 
 export interface IBoardCloseRules {
   board_id: string;
@@ -288,5 +287,77 @@ export const deleteBoardAutoCloseRule = withAuth(
 
     const { knex: db } = await createTenantKnex();
     await db('board_auto_close_rules').where({ tenant, rule_id: ruleId }).del();
+  }
+);
+
+export interface TicketClosureCheckResult {
+  /** Whether the target status would actually close the ticket. */
+  wouldClose: boolean;
+  allowed: boolean;
+  failures: CloseRuleFailure[];
+  /** Whether the current user may use "Close anyway" (ticket:close_override). */
+  canOverride: boolean;
+}
+
+/**
+ * Non-throwing pre-close check used by the UI before submitting a status
+ * change to a closed status. The write paths still enforce the rules — this
+ * exists so the blocked-close dialog gets structured failures instead of a
+ * serialized error message.
+ */
+export const checkTicketClosure = withAuth(
+  async (user, { tenant }, ticketId: string, targetStatusId: string): Promise<TicketClosureCheckResult> => {
+    const { knex: db } = await createTenantKnex();
+
+    const ticket = await db('tickets').where({ tenant, ticket_id: ticketId }).first();
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+
+    const [targetStatus, currentStatus] = await Promise.all([
+      db('statuses').where({ tenant, status_id: targetStatusId }).first(),
+      ticket.status_id
+        ? db('statuses').where({ tenant, status_id: ticket.status_id }).first()
+        : Promise.resolve(null),
+    ]);
+
+    const wouldClose = !!targetStatus?.is_closed && !currentStatus?.is_closed;
+    if (!wouldClose) {
+      return { wouldClose, allowed: true, failures: [], canOverride: false };
+    }
+
+    const failures = await evaluateTicketCloseRules(db, tenant, {
+      ticket_id: ticketId,
+      board_id: ticket.board_id ?? null,
+      category_id: ticket.category_id ?? null,
+      subcategory_id: ticket.subcategory_id ?? null,
+      priority_id: ticket.priority_id ?? null,
+      assigned_to: ticket.assigned_to ?? null,
+    });
+
+    const canOverride =
+      failures.length > 0 ? await hasPermission(user, 'ticket', 'close_override', db) : false;
+
+    return { wouldClose, allowed: failures.length === 0, failures, canOverride };
+  }
+);
+
+export interface ITicketAutoCloseState {
+  scheduled_close_at: string;
+  warning_sent_at: string | null;
+}
+
+/** Pending auto-close info for the ticket banner; null when no close is scheduled. */
+export const getTicketAutoCloseState = withAuth(
+  async (_user, { tenant }, ticketId: string): Promise<ITicketAutoCloseState | null> => {
+    const { knex: db } = await createTenantKnex();
+    const row = await db('ticket_auto_close_state')
+      .where({ tenant, ticket_id: ticketId })
+      .first('scheduled_close_at', 'warning_sent_at');
+    if (!row) return null;
+    return {
+      scheduled_close_at: new Date(row.scheduled_close_at).toISOString(),
+      warning_sent_at: row.warning_sent_at ? new Date(row.warning_sent_at).toISOString() : null,
+    };
   }
 );

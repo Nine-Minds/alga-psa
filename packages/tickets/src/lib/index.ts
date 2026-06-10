@@ -64,12 +64,16 @@ export type { ResolvedTicketOrigin } from './ticketOrigin';
 export { isResponseStateTrackingEnabled } from './responseStateSettings';
 export {
   enforceTicketCloseRules,
+  evaluateTicketCloseRules,
   TicketCloseValidationError,
+  CLOSE_RULE_REQUIRED_FIELDS,
+  CLOSE_RULE_REQUIRED_FIELD_LABELS,
 } from './validateTicketClosure';
 export type {
   CloseRuleFailure,
   CloseRuleId,
   CloseRuleBypassSource,
+  CloseRuleRequiredField,
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './validateTicketClosure';
