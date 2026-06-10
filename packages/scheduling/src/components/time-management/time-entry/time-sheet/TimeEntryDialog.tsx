@@ -118,14 +118,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         toast.error(t('messages.invalidService'));
         return;
       }
-
-      const hasTaxableRate = selectedService.tax_rate_id != null &&
-        selectedService.tax_percentage != null &&
-        selectedService.tax_percentage > 0;
-      if (hasTaxableRate && !entry.tax_region) {
-        toast.error(t('messages.taxRegionRequired'));
-        return;
-      }
+      // Tax region is no longer collected at time entry. Billing derives it from
+      // the service's tax_rate_id (falling back to the client default), so there
+      // is nothing to validate here. See billingEngine.getTaxInfoFromService.
     }
 
     if (!validateTimeEntry(entry)) {
