@@ -42,16 +42,22 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   UIStateProvider: ({ children }: { children: unknown }) => children,
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: string | { defaultValue?: string }) => {
-      if (typeof options === 'string') {
-        return options;
-      }
-      return options?.defaultValue ?? _key;
-    },
-  }),
-}));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Stable identities: components hang fetch effects off `t` via useCallback,
+  // so a fresh function per render causes infinite reload loops.
+  const t = (_key: string, options?: string | ({ defaultValue?: string } & Record<string, unknown>)) => {
+    if (typeof options === 'string') {
+      return options;
+    }
+    const template = options?.defaultValue ?? _key;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, name) => {
+      const value = options?.[name];
+      return value === undefined || value === null ? match : String(value);
+    });
+  };
+  const translation = { t };
+  return { useTranslation: () => translation };
+});
 
 vi.mock('@alga-psa/auth', () => {
   const defaultUser = {

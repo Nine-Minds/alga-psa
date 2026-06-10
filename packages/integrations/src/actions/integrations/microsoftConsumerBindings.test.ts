@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ADD_ONS } from '@alga-psa/types';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -63,6 +64,12 @@ const hoisted = vi.hoisted(() => {
     is_active: boolean;
   };
 
+  type TenantAddonRecord = {
+    tenant: string;
+    addon_key: string;
+    expires_at: string | Date | null;
+  };
+
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
@@ -74,6 +81,7 @@ const hoisted = vi.hoisted(() => {
     emailProviders: [] as EmailProviderRecord[],
     calendarProviders: [] as CalendarProviderRecord[],
     mspSsoLoginDomains: [] as MspSsoLoginDomainRecord[],
+    tenantAddons: [] as TenantAddonRecord[],
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -102,15 +110,43 @@ const hoisted = vi.hoisted(() => {
       if (table === 'msp_sso_tenant_login_domains') {
         return state.mspSsoLoginDomains;
       }
+      if (table === 'tenant_addons') {
+        return state.tenantAddons;
+      }
 
       return [] as Array<Record<string, unknown>>;
     };
 
-    const filteredRows = () => getRows().filter((row) => filters.every((filter) => matchesWhere(row, filter)));
+    const predicates: Array<(row: Record<string, unknown>) => boolean> = [];
+    const filteredRows = () =>
+      getRows().filter(
+        (row) => filters.every((filter) => matchesWhere(row, filter)) && predicates.every((matches) => matches(row))
+      );
 
     return {
       where(conditions: Record<string, unknown>) {
         filters.push(conditions);
+        return this;
+      },
+      andWhere(condition: Record<string, unknown> | ((builder: unknown) => void)) {
+        if (typeof condition !== 'function') {
+          filters.push(condition);
+          return this;
+        }
+        // Grouped-OR callback form, e.g. whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now()).
+        const orPredicates: Array<(row: Record<string, unknown>) => boolean> = [];
+        const grouped = {
+          whereNull(column: string) {
+            orPredicates.push((row) => row[column] == null);
+            return grouped;
+          },
+          orWhere(column: string, _operator: string, _value: unknown) {
+            orPredicates.push((row) => row[column] != null && new Date(row[column] as string).getTime() > Date.now());
+            return grouped;
+          },
+        };
+        condition(grouped);
+        predicates.push((row) => orPredicates.some((matches) => matches(row)));
         return this;
       },
       async first() {
@@ -186,6 +222,7 @@ const {
   emailProviders,
   calendarProviders,
   mspSsoLoginDomains,
+  tenantAddons,
 } = hoisted.state;
 const {
   getTenantSecretMock,
@@ -241,6 +278,7 @@ describe('Microsoft consumer binding actions', () => {
     emailProviders.length = 0;
     calendarProviders.length = 0;
     mspSsoLoginDomains.length = 0;
+    tenantAddons.length = 0;
     hasPermissionMock.mockResolvedValue(true);
     getTenantSecretMock.mockClear();
     setTenantSecretMock.mockClear();
@@ -292,6 +330,7 @@ describe('Microsoft consumer binding actions', () => {
 
   it('returns all supported EE bindings and allows per-consumer reassignment in enterprise edition', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    tenantAddons.push({ tenant: 'tenant-1', addon_key: ADD_ONS.TEAMS, expires_at: null });
 
     const primary = await createMicrosoftProfile({
       displayName: 'Primary Profile',
@@ -661,6 +700,7 @@ describe('Microsoft consumer binding actions', () => {
 
   it('requires an explicit Teams binding instead of falling back to a default Microsoft profile', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    tenantAddons.push({ tenant: 'tenant-1', addon_key: ADD_ONS.TEAMS, expires_at: null });
 
     const created = await createMicrosoftProfile({
       displayName: 'Primary Profile',
