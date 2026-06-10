@@ -52,6 +52,14 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   INVITATION_NOT_FOUND: 'contactPortalTab.toast.errors.invitationNotFound',
   REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed'
 };
+
+// Catch-all codes whose localized message is generic ("Failed to send
+// invitation"). When the server attached a specific reason, show that instead
+// of masking it with the generic translation.
+const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
+  'INVITATION_FAILED',
+  'REVOKE_FAILED'
+]);
 import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -95,6 +103,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     defaultValue: string
   ): string => {
     if (result.errorCode) {
+      if (GENERIC_PORTAL_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
+        return result.error;
+      }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
         return t(key, { defaultValue: result.error ?? defaultValue });
