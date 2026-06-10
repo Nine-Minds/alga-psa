@@ -57,7 +57,6 @@
       "runNow": "Run now",
       "exportCsv": "Export CSV",
       "refresh": "Refresh",
-      "resumeSelected": "Resume selected ({{count}})",
       "cancelSelected": "Cancel selected ({{count}})",
       "clearSelection": "Clear selection",
       "details": "Details",
@@ -85,14 +84,10 @@
       "empty": "No workflow runs match the current filters."
     },
     "bulk": {
-      "resumeTitle": "Resume Selected Runs",
-      "resumeMessage": "Resume {{count}} selected run(s)?",
       "cancelTitle": "Cancel Selected Runs",
       "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
       "reasonLabel": "Reason",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "resumeConfirm": "Resume runs",
       "cancelConfirm": "Cancel runs"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Select runs to perform this action.",
       "bulkReasonTooShort": "Reason must be at least 3 characters.",
       "noEligibleRuns": "No selected runs are eligible for that action.",
-      "bulkResumeFailedCount": "Failed to resume {{count}} run(s).",
       "bulkCancelFailedCount": "Failed to cancel {{count}} run(s).",
-      "bulkResumeSuccessCount": "Resumed {{count}} run(s).",
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
@@ -143,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Resume",
       "cancel": "Cancel",
       "export": "Export",
-      "retry": "Retry",
       "replay": "Replay",
-      "requeueEvent": "Requeue Event",
       "close": "Close",
       "view": "View",
       "apply": "Apply",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Reason",
-      "resumeTitle": "Resume Workflow Run",
-      "resumeMessage": "Resume this workflow run now?",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
       "cancelTitle": "Cancel Workflow Run",
       "cancelMessage": "Cancel this workflow run? This cannot be undone.",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
       "cancelConfirm": "Cancel run",
-      "retryTitle": "Retry Workflow Run",
-      "retryMessage": "Retry this run from the last failed step?",
-      "retryReasonPlaceholder": "Provide a reason for retrying",
-      "retryConfirm": "Retry run",
       "replayTitle": "Replay Workflow Run",
       "replayMessage": "Replay this run with a new payload.",
       "replayReasonPlaceholder": "Provide a reason for replaying",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Replay run",
-      "requeueTitle": "Requeue Event Wait",
-      "requeueMessage": "Requeue the most recent event wait for this run?",
-      "requeueReasonPlaceholder": "Provide a reason for requeuing",
-      "requeueConfirm": "Requeue wait"
+      "replayConfirm": "Replay run"
     },
     "toasts": {
       "loadRunDetailsFailed": "Failed to load run details",
@@ -295,21 +274,19 @@
       "logExportReady": "Log export ready",
       "exportLogsFailed": "Failed to export logs",
       "reasonTooShort": "Reason must be at least 3 characters.",
-      "runResumed": "Run resumed",
-      "resumeRunFailed": "Failed to resume run",
       "runCanceled": "Run canceled",
       "cancelRunFailed": "Failed to cancel run",
       "runExportReady": "Run export ready",
       "exportRunFailed": "Failed to export run",
-      "runRetryStarted": "Run retry started",
-      "retryRunFailed": "Failed to retry run",
       "replayPayloadInvalid": "Replay payload must be valid JSON.",
       "runReplayStarted": "Run replay started",
       "replayRunFailed": "Failed to replay run",
-      "eventWaitRequeued": "Event wait requeued",
-      "requeueEventWaitFailed": "Failed to requeue event wait",
       "auditExportReady": "Audit export ready",
       "exportAuditLogsFailed": "Failed to export audit logs"
+    },
+    "queuedWarning": {
+      "title": "Na fila — aguardando um worker de fluxo de trabalho",
+      "description": "Esta execução começou há mais de um minuto, mas nenhuma etapa foi executada ainda. Verifique se o serviço de worker de fluxo de trabalho está em execução e conectado ao Temporal."
     }
   },
   "runDialog": {

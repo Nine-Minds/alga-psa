@@ -265,62 +265,6 @@ test.describe('Workflow Designer UI - E2E flows', () => {
     }
   });
 
-  test('admin resumes waiting run from run details and status updates in list', async ({ page }) => {
-    test.setTimeout(240000);
-
-    const db = createTestDbConnection();
-    const tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: { companyName: `Workflow E2E ${uuidv4().slice(0, 6)}` },
-      completeOnboarding: { completedAt: new Date() },
-      permissions: ADMIN_PERMISSIONS,
-    });
-    const tenantId = tenantData.tenant.tenantId;
-    const workflowName = `E2E Resume ${uuidv4().slice(0, 6)}`;
-
-    try {
-      const workflow = await createWorkflowDefinition(db, workflowName, [
-        {
-          id: 'wait-step',
-          type: 'event.wait',
-          name: 'wait-step',
-          config: {
-            eventName: 'WAIT_FOR_EVENT',
-            correlationKey: { $expr: 'payload.correlationKey' }
-          }
-        }
-      ]);
-      const runId = uuidv4();
-      await createWorkflowRun(db, {
-        runId,
-        workflowId: workflow.workflowId,
-        version: workflow.version,
-        status: 'WAITING',
-        startedAt: new Date('2025-02-05T10:00:00Z').toISOString(),
-        tenantId,
-        nodePath: 'root.steps[0]'
-      });
-      await createWaitKey(db, runId, `wait-${uuidv4().slice(0, 6)}`);
-
-      await openRunsTab(page);
-      await page.locator('#workflow-runs-search').fill(runId);
-      await page.locator('#workflow-runs-apply').click();
-      await page.locator(`#workflow-runs-view-${runId}`).click();
-      await page.locator('#workflow-run-resume').click();
-      await page.locator('#workflow-run-resume-reason').fill('Resume run');
-      await page.locator('#workflow-run-resume-confirm-confirm').click();
-      await expect(page.getByText('Run resumed')).toBeVisible();
-      await page.locator('#workflow-run-close').click();
-
-      await page.locator('#workflow-runs-refresh').click();
-      const row = findRunRow(page, runId);
-      await expect(row).toContainText(/SUCCEEDED|RUNNING|FAILED/);
-    } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
-      await rollbackTenant(db, tenantId).catch(() => undefined);
-      await db.destroy();
-    }
-  });
-
   test('admin cancels run from run details and status updates in list', async ({ page }) => {
     test.setTimeout(240000);
 
