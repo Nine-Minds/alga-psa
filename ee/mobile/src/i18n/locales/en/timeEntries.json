@@ -1,4 +1,35 @@
 {
   "title": "Time Entries",
-  "comingSoon": "Your time entries will show up here soon."
+  "header": {
+    "currentPeriod": "Current period",
+    "totalLogged": "{{duration}} logged",
+    "fallbackMonth": "No time period is configured, showing the current month.",
+    "truncated": "Showing the most recent {{count}} entries for this period."
+  },
+  "list": {
+    "loading": "Loading time entries…",
+    "unableToLoad": "Unable to load time entries",
+    "unableToLoadDescription": "Please check your connection and try again.",
+    "noAccess": "No access to time entries",
+    "noAccessDescription": "Your account does not have permission to view time entries.",
+    "noEntries": "No time entries this period",
+    "noEntriesDescription": "Time you log during this period will show up here.",
+    "noService": "No service",
+    "billable": "Billable",
+    "unknownDate": "Unknown date",
+    "entryAccessibility": "Time entry, {{duration}}"
+  },
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "approved": "Approved",
+    "changesRequested": "Changes Requested"
+  },
+  "workItemTypes": {
+    "ticket": "Ticket",
+    "projectTask": "Project task",
+    "nonBillable": "Non-billable",
+    "adHoc": "Ad hoc",
+    "interaction": "Interaction"
+  }
 }
