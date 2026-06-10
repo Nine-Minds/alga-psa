@@ -1142,6 +1142,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
     return 'success';
   } catch (error) {
     console.error(error);
+    // Close-rule failures carry the user-facing explanation of what's unmet —
+    // don't flatten them into the generic message.
+    if (error instanceof TicketCloseValidationError) {
+      throw error;
+    }
     throw new Error('Failed to update ticket');
   }
 });

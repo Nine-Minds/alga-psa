@@ -31,9 +31,18 @@
 - 422 pattern: throw `ValidationError('...', details)` → `ApiBaseController` serializes with HTTP 422.
 - Workflow action registry: `getActionRegistryV2().register` in `registerTicketActions()`; next free action ID is A09.
 
+- (2026-06-10) RLS is retired for new tables (see 20251111120000_disable_rls_on_survey_tables.cjs); the close-rules tables follow ticket_audit_logs: composite (tenant, id) PKs + Citus distribution + guarded raw FKs, no RLS.
+- (2026-06-10) `comments.author_type` DB enum has no 'system' value — TicketModel.createComment maps system→'internal'; auto-close comment provenance lives in `metadata.source = 'auto_close'`.
+- (2026-06-10) The blocked-close dialog uses a non-throwing `checkTicketClosure` server action instead of catching TicketCloseValidationError client-side: custom Error fields don't survive the Next server-action boundary.
+- (2026-06-10) Auto-apply hooks live at TicketModel.createTicket (all creation paths) and the two update paths; the apply helpers moved to shared/lib/ticketChecklists to avoid a packages/tickets→shared cycle. Bypass-audit helpers live in shared/lib/ticketCloseRules for the same reason (workflow runtime can't import packages/tickets).
+- (2026-06-10) updateTicketInTransaction gained `options.systemActor` for the auto-close engine: closed_by stays null, events publish with a SYSTEM actor (v2 ticketClosedEventPayloadSchema allows omitted closedByUserId), live updates are skipped, and the audit row is system-sourced.
+- (2026-06-10) `updateTicket`'s catch-all used to flatten every error into 'Failed to update ticket'; TicketCloseValidationError is now re-thrown so the fallback UI path surfaces the unmet conditions.
+
 ## Commands / Runbooks
 
-- Migrations: `cd server && npx knex migrate:latest --knexfile knexfile.cjs` (verify env first; see alga-env-manager skill for per-worktree DB creds).
+- Migrations (CE+EE combined): `cd server && DB_HOST=localhost DB_PORT=5472 DB_NAME_SERVER=server DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=$(cat ../secrets/postgres_password) node scripts/run-ee-migrations.js latest`.
+- Integration tests: `cd server && DB_HOST=localhost DB_PORT=5472 DB_PASSWORD_ADMIN=$(cat ../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../secrets/db_password_server) npx vitest run src/test/integration/ticketCloseRules.integration.test.ts src/test/integration/ticketChecklists.integration.test.ts src/test/integration/autoCloseTickets.integration.test.ts --coverage.enabled=false`. The explicit password env overrides are required: `.env.localtest` sets DB_PASSWORD_* to /run/secrets paths that don't exist on the host, and the secret provider then falls back to those literal strings.
+- Server type-check needs a big heap: `NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json` (default heap OOMs).
 - Dev stack for this worktree: alga-dev-env-manager / alga-env-manager skills.
 
 ## Links / References
@@ -41,8 +50,13 @@
 - Design doc: `docs/plans/2026-06-10-ticket-close-rules-design.md` (commit 1a64dccb0d)
 - Prior art for plan format: `docs/plans/2026-05-15-outbound-webhooks-for-projects/`
 
+## Known issues (not from this feature)
+
+- `commentActionsThreading.integration.test.ts` T078 fails on this branch AND on the pre-implementation commit (cade9ab5a5): its cleanup deletes users that ticket_audit_logs rows reference (ticket_audit_logs_actor_user_fkey). Pre-existing; not introduced by close rules.
+
 ## Open Questions
 
 - Required-fields allowed set frozen at category/subcategory/priority/assignee for v1 — revisit if customers ask for custom fields.
 - Mobile/REST checklist CRUD endpoints deferred (non-goal §3) — revisit when mobile wants checklists.
-- Email-created tickets: confirm during F017 which creation path inbound email uses so auto-apply hooks it exactly once.
+- Email-created tickets: auto-apply hooks TicketModel.createTicket, the single chokepoint all creation paths (UI, API, CSV, inbound email) funnel through — resolved.
+- The progress chip renders in the banner row above TicketInfo rather than literally beside the status dropdown (which lives deep in TicketInfo); revisit if the placement doesn't land.
