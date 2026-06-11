@@ -235,9 +235,11 @@ export default function AdminSessionManagement() {
           <div>
             <CardTitle>{t('security.sessions.title')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {sessions.length === 1 && totalUsers === 1
-                ? t('security.sessions.subtitle', { sessionCount: sessions.length, userCount: totalUsers })
-                : t('security.sessions.subtitle_plural', { sessionCount: sessions.length, userCount: totalUsers })}
+              {t('security.sessions.subtitle', {
+                count: sessions.length,
+                sessionCount: sessions.length,
+                userCount: totalUsers,
+              })}
             </p>
           </div>
         </div>

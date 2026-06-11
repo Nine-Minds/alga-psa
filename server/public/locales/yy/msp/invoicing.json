@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "55555 {{count}} 55555"
     },
     "reverseDialog": {
-      "title": "55555",
       "title_other": "55555",
       "message_one": "55555",
       "message_other": "55555 {{count}} 55555",
       "confirm": "55555",
-      "cancel": "55555"
+      "cancel": "55555",
+      "title_one": "55555"
     },
     "pendingTaxDialog": {
       "title": "55555",

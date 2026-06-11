@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "Impossibile finalizzare {{count}} fatture e sono state saltate."
     },
     "reverseDialog": {
-      "title": "Progetto di fattura inversa",
       "title_other": "Storno bozze di fatture",
       "message_one": "Lo storno di questa bozza di fattura la eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
       "message_other": "Lo storno delle bozze di fattura {{count}} le eliminerà e rilascerà eventuali voci di tempo o record di utilizzo collegati. Questa azione non può essere annullata.",
       "confirm": "Bozza inversa",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "title_one": "Progetto di fattura inversa"
     },
     "pendingTaxDialog": {
       "title": "Fattura in attesa dell'imposta esterna",

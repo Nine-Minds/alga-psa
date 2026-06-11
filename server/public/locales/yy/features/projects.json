@@ -64,11 +64,11 @@
     "deletePhase": "55555",
     "cancel": "55555",
     "save": "55555",
-    "taskCount": "55555 {{count}} 55555",
     "taskCount_other": "55555 {{count}} 55555",
     "startLabel": "55555",
     "dueLabel": "55555",
-    "notSet": "55555"
+    "notSet": "55555",
+    "taskCount_one": "55555 {{count}} 55555"
   },
   "projectList": {
     "addProject": "55555",
@@ -731,9 +731,9 @@
       "openFailed": "55555",
       "task": "55555",
       "tasks": "55555",
-      "badgeCount": "55555 {{count}} 55555",
       "badgeCount_other": "55555 {{count}} 55555",
-      "restrictedTooltip": "55555"
+      "restrictedTooltip": "55555",
+      "badgeCount_one": "55555 {{count}} 55555"
     },
     "bulkMoveTask": {
       "title": "55555",

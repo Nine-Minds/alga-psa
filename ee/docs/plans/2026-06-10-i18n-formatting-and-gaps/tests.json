@@ -394,7 +394,7 @@
   {
     "id": "T048",
     "description": "grep for '_plural' across server/public/locales returns zero matches after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
@@ -404,7 +404,7 @@
   {
     "id": "T049",
     "description": "t('teams.details.memberCount', {count: 1}) renders singular and {count: 5} renders plural under en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F042"
@@ -413,7 +413,7 @@
   {
     "id": "T050",
     "description": "Polish plural forms resolve correctly for counts 1 (_one), 2 (_few), 5 (_many) on migrated keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -421,7 +421,7 @@
   {
     "id": "T051",
     "description": "AdminSessionManagement renders correct subtitle for 1 session and 5 sessions via single t() call with both sessionCount and userCount interpolated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -429,7 +429,7 @@
   {
     "id": "T052",
     "description": "Interaction-types import toast renders correct singular/plural under en and pl",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -437,7 +437,7 @@
   {
     "id": "T053",
     "description": "validate-translations does not warn on pl _few/_many suffixes (CLDR-aware)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -445,7 +445,7 @@
   {
     "id": "T054",
     "description": "validate-translations errors when pl omits a required _many form for a key that has _one/_other in en (negative test with fixture)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -453,7 +453,7 @@
   {
     "id": "T055",
     "description": "validate-translations accepts en having only _one/_other (does not demand _few/_many from English)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -461,7 +461,7 @@
   {
     "id": "T056",
     "description": "Pseudo-locale generator output contains plural-suffixed keys with accents applied and variables intact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -469,7 +469,7 @@
   {
     "id": "T057",
     "description": "validate-translations full run: 0 errors, 0 warnings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]

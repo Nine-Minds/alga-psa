@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "{{count}} invoices could not be finalized and were skipped."
     },
     "reverseDialog": {
-      "title": "Reverse Draft Invoice",
       "title_other": "Reverse Draft Invoices",
       "message_one": "Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.",
       "message_other": "Reversing {{count}} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.",
       "confirm": "Reverse Draft",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "title_one": "Reverse Draft Invoice"
     },
     "pendingTaxDialog": {
       "title": "Invoice awaiting external tax",

@@ -535,9 +535,9 @@
       "reorder": "Importeren met andere volgorde:"
     },
     "toast": {
-      "importedCount": "Geïmporteerd servicetype {{count}}",
       "importedCount_other": "Geïmporteerde {{count}} servicetypen",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Geïmporteerd servicetype {{count}}"
     },
     "errors": {
       "fetch": "Kan servicetypen niet ophalen",

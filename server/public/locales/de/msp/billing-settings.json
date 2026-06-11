@@ -535,9 +535,9 @@
       "reorder": "Import mit anderer Reihenfolge:"
     },
     "toast": {
-      "importedCount": "Importierter Diensttyp {{count}}",
       "importedCount_other": "Importierte {{count}}-Diensttypen",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Importierter Diensttyp {{count}}"
     },
     "errors": {
       "fetch": "Diensttypen konnten nicht abgerufen werden",

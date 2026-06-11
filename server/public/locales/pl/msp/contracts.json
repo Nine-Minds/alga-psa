@@ -1433,7 +1433,11 @@
         "renewalTermMonths_one": "Liczba miesięcy: {{count}}",
         "renewalTermMonths_other": "Liczba miesięcy: {{count}}",
         "noticePeriodDays": "{{count}} dni",
-        "renewalTermMonths": "Liczba miesięcy: {{count}}"
+        "renewalTermMonths": "Liczba miesięcy: {{count}}",
+        "noticePeriodDays_few": "{{count}} dni",
+        "noticePeriodDays_many": "{{count}} dni",
+        "renewalTermMonths_few": "Liczba miesięcy: {{count}}",
+        "renewalTermMonths_many": "Liczba miesięcy: {{count}}"
       }
     },
     "template": {

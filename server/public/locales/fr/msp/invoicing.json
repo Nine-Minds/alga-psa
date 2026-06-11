@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "{{count}} factures n'ont pas pu être finalisées et ont été ignorées."
     },
     "reverseDialog": {
-      "title": "Contre-version de facture",
       "title_other": "Contrepasser les factures provisoires",
       "message_one": "L'annulation de ce brouillon de facture le supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "message_other": "L'annulation des factures provisoires {{count}} les supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "confirm": "Brouillon inversé",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "title_one": "Contre-version de facture"
     },
     "pendingTaxDialog": {
       "title": "Facture en attente de la taxe externe",

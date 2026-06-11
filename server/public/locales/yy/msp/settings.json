@@ -359,9 +359,9 @@
         "new": "55555",
         "lead": "55555"
       },
-      "memberCount": "55555 {{count}} 55555",
-      "memberCount_plural": "55555 {{count}} 55555",
-      "leadName": "55555 {{name}} 55555"
+      "leadName": "55555 {{name}} 55555",
+      "memberCount_one": "55555 {{count}} 55555",
+      "memberCount_other": "55555 {{count}} 55555"
     },
     "messages": {
       "error": {
@@ -916,8 +916,8 @@
       "messages": {
         "success": {
           "deleted": "55555",
-          "imported": "55555 {{count}} 55555",
-          "imported_plural": "55555 {{count}} 55555"
+          "imported_one": "55555 {{count}} 55555",
+          "imported_other": "55555 {{count}} 55555"
         },
         "error": {
           "fetchFailed": "55555",
@@ -1522,8 +1522,6 @@
     },
     "sessions": {
       "title": "55555",
-      "subtitle": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
-      "subtitle_plural": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
       "filters": {
         "search": "55555",
         "searchPlaceholder": "55555",
@@ -1566,7 +1564,9 @@
         "loading": "55555",
         "noMatch": "55555",
         "noSessions": "55555"
-      }
+      },
+      "subtitle_one": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "subtitle_other": "55555 {{sessionCount}} 55555 {{userCount}} 55555"
     }
   },
   "ssoBulk": {

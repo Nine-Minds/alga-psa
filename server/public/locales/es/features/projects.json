@@ -64,11 +64,11 @@
     "deletePhase": "Eliminar fase",
     "cancel": "Cancelar",
     "save": "Guardar",
-    "taskCount": "{{count}} tarea",
     "taskCount_other": "{{count}} tareas",
     "startLabel": "Inicio",
     "dueLabel": "Vencimiento",
-    "notSet": "No establecido"
+    "notSet": "No establecido",
+    "taskCount_one": "{{count}} tarea"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -732,8 +732,8 @@
       "openFailed": "Error al abrir la tarea",
       "task": "Tarea",
       "tasks": "Tareas",
-      "badgeCount": "{{count}} Tarea",
-      "badgeCount_other": "{{count}} Tareas"
+      "badgeCount_other": "{{count}} Tareas",
+      "badgeCount_one": "{{count}} Tarea"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",

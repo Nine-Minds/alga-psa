@@ -489,7 +489,17 @@
       "excludingCount": "bez {{count}}",
       "phases": "{{count}} faz",
       "projects": "{{count}} projektów",
-      "statuses": "{{count}} statusów"
+      "statuses": "{{count}} statusów",
+      "boards_few": "{{count}} tablice",
+      "boards_many": "{{count}} tablic",
+      "excludingCount_few": "bez {{count}}",
+      "excludingCount_many": "bez {{count}}",
+      "phases_few": "{{count}} fazy",
+      "phases_many": "{{count}} faz",
+      "projects_few": "{{count}} projekty",
+      "projects_many": "{{count}} projektów",
+      "statuses_few": "{{count}} statusy",
+      "statuses_many": "{{count}} statusów"
     }
   },
   "actions": {

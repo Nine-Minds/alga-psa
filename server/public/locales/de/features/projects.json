@@ -64,11 +64,11 @@
     "deletePhase": "Phase löschen",
     "cancel": "Abbrechen",
     "save": "Speichern",
-    "taskCount": "{{count}} Aufgabe",
     "taskCount_other": "{{count}} Aufgaben",
     "startLabel": "Start",
     "dueLabel": "Fällig",
-    "notSet": "Nicht festgelegt"
+    "notSet": "Nicht festgelegt",
+    "taskCount_one": "{{count}} Aufgabe"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -732,8 +732,8 @@
       "openFailed": "Aufgabe konnte nicht geöffnet werden",
       "task": "Aufgabe",
       "tasks": "Aufgaben",
-      "badgeCount": "{{count}} Aufgabe",
-      "badgeCount_other": "{{count}} Aufgaben"
+      "badgeCount_other": "{{count}} Aufgaben",
+      "badgeCount_one": "{{count}} Aufgabe"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",

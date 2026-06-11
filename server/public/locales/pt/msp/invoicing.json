@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "Não foi possível finalizar {{count}} faturas e elas foram ignoradas."
     },
     "reverseDialog": {
-      "title": "Rascunho de fatura reversa",
       "title_other": "Faturas de rascunho reverso",
       "message_one": "A reversão deste rascunho de fatura irá excluí-lo e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "message_other": "A reversão de faturas preliminares {{count}} irá excluí-las e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "confirm": "Rascunho reverso",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "title_one": "Rascunho de fatura reversa"
     },
     "pendingTaxDialog": {
       "title": "Fatura aguardando imposto externo",

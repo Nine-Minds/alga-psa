@@ -64,11 +64,11 @@
     "deletePhase": "Delete phase",
     "cancel": "Cancel",
     "save": "Save",
-    "taskCount": "{{count}} task",
     "taskCount_other": "{{count}} tasks",
     "startLabel": "Start",
     "dueLabel": "Due",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "taskCount_one": "{{count}} task"
   },
   "projectList": {
     "addProject": "Add Project",
@@ -732,8 +732,8 @@
       "openFailed": "Failed to open task",
       "task": "Task",
       "tasks": "Tasks",
-      "badgeCount": "{{count}} Task",
-      "badgeCount_other": "{{count}} Tasks"
+      "badgeCount_other": "{{count}} Tasks",
+      "badgeCount_one": "{{count}} Task"
     },
     "bulkMoveTask": {
       "title": "Move Tasks",

@@ -535,9 +535,9 @@
       "reorder": "Import with different order:"
     },
     "toast": {
-      "importedCount": "Imported {{count}} service type",
       "importedCount_other": "Imported {{count}} service types",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Imported {{count}} service type"
     },
     "errors": {
       "fetch": "Failed to fetch service types",

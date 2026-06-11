@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "{{count}} Rechnungen konnten nicht abgeschlossen werden und wurden übersprungen."
     },
     "reverseDialog": {
-      "title": "Rechnungsentwurf umkehren",
       "title_other": "Rechnungsentwürfe stornieren",
       "message_one": "Wenn Sie diesen Rechnungsentwurf stornieren, wird er gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
       "message_other": "Durch das Stornieren von {{count}}-Rechnungsentwürfen werden diese gelöscht und alle verknüpften Zeiteinträge oder Nutzungsdatensätze werden freigegeben. Diese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Umgekehrter Entwurf",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "title_one": "Rechnungsentwurf umkehren"
     },
     "pendingTaxDialog": {
       "title": "Rechnung wartet auf externe Steuer",

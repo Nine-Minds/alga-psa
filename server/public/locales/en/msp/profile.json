@@ -149,8 +149,6 @@
     },
     "sessions": {
       "title": "All User Sessions",
-      "subtitle": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_plural": "{{sessionCount}} active sessions across {{userCount}} users",
       "filters": {
         "search": "Search",
         "searchPlaceholder": "Search by name, email, device, or IP...",
@@ -195,7 +193,9 @@
         "loading": "Loading sessions...",
         "noMatch": "No sessions match your search",
         "noSessions": "No active sessions found"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
+      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
     },
     "webhooks": {
       "title": "Outbound Webhooks",

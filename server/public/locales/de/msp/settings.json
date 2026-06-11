@@ -359,9 +359,9 @@
         "new": "Neu",
         "lead": "Leiter"
       },
-      "memberCount": "{{count}} Mitglied",
-      "memberCount_plural": "{{count}} Mitglieder",
-      "leadName": "Leiter: {{name}}"
+      "leadName": "Leiter: {{name}}",
+      "memberCount_one": "{{count}} Mitglied",
+      "memberCount_other": "{{count}} Mitglieder"
     },
     "messages": {
       "error": {
@@ -916,8 +916,8 @@
       "messages": {
         "success": {
           "deleted": "Interaktionstyp gelöscht",
-          "imported": "{{count}} Interaktionstyp importiert",
-          "imported_plural": "{{count}} Interaktionstypen importiert"
+          "imported_one": "{{count}} Interaktionstyp importiert",
+          "imported_other": "{{count}} Interaktionstypen importiert"
         },
         "error": {
           "fetchFailed": "Interaktionstypen konnten nicht abgerufen werden",
@@ -1522,8 +1522,6 @@
     },
     "sessions": {
       "title": "Alle Benutzersitzungen",
-      "subtitle": "{{sessionCount}} aktive Sitzung bei {{userCount}} Benutzer",
-      "subtitle_plural": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern",
       "filters": {
         "search": "Suche",
         "searchPlaceholder": "Nach Name, E-Mail, Gerät oder IP suchen...",
@@ -1566,7 +1564,9 @@
         "loading": "Sitzungen werden geladen...",
         "noMatch": "Keine Sitzungen entsprechen Ihrer Suche",
         "noSessions": "Keine aktiven Sitzungen gefunden"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} aktive Sitzung bei {{userCount}} Benutzer",
+      "subtitle_other": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern"
     }
   },
   "ssoBulk": {

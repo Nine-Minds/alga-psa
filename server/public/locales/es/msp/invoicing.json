@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "No se pudieron finalizar {{count}} facturas y se omitieron."
     },
     "reverseDialog": {
-      "title": "Borrador de factura inversa",
       "title_other": "Invertir facturas en borrador",
       "message_one": "Revertir este borrador de factura lo eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "message_other": "Revertir los borradores de facturas {{count}} los eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "confirm": "Borrador inverso",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "title_one": "Borrador de factura inversa"
     },
     "pendingTaxDialog": {
       "title": "Factura en espera del impuesto externo",

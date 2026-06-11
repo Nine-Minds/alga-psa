@@ -65,7 +65,13 @@
     "suggestedDefaultsLoaded_other": "Wczytano wartości domyślne dla {{count}} typów encji",
     "suggestedDefaultsLoadFailed": "Nie udało się załadować sugerowanych wartości domyślnych",
     "entityTypesAllConfigured": "Wszystkie typy encji mają już skonfigurowane foldery domyślne",
-    "defaultFoldersLoadFailed": "Nie udało się załadować folderów domyślnych"
+    "defaultFoldersLoadFailed": "Nie udało się załadować folderów domyślnych",
+    "bulkDeleteSuccess_few": "{{count}} dokumenty usunięte pomyślnie",
+    "bulkDeleteSuccess_many": "{{count}} dokumentów usuniętych pomyślnie",
+    "moveDocumentsSuccess_few": "{{count}} dokumenty przeniesiono do {{destination}}",
+    "moveDocumentsSuccess_many": "{{count}} dokumentów przeniesiono do {{destination}}",
+    "suggestedDefaultsLoaded_few": "Wczytano wartości domyślne dla {{count}} typów encji",
+    "suggestedDefaultsLoaded_many": "Wczytano wartości domyślne dla {{count}} typów encji"
   },
   "validation": {
     "nameRequired": "Nazwa dokumentu jest wymagana"
@@ -75,11 +81,15 @@
     "selected_other": "Wybrano {{count}} dokumentów",
     "moveToFolder": "Przenieś do folderu",
     "deleteSelected": "Usuń zaznaczone",
-    "clearSelection": "Wyczyść zaznaczenie"
+    "clearSelection": "Wyczyść zaznaczenie",
+    "selected_few": "Wybrano {{count}} dokumenty",
+    "selected_many": "Wybrano {{count}} dokumentów"
   },
   "prompts": {
     "confirmBulkDelete_one": "Czy na pewno chcesz usunąć {{count}} dokument?",
-    "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
+    "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?",
+    "confirmBulkDelete_few": "Czy na pewno chcesz usunąć {{count}} dokumenty?",
+    "confirmBulkDelete_many": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
   },
   "pagination": {
     "perPage": "{{count}} na stronę"
@@ -108,7 +118,9 @@
     "namePlaceholder": "Wprowadź nazwę folderu",
     "loading": "Ładowanie folderów...",
     "rootOption": "Katalog główny (bez folderu)",
-    "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym."
+    "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym.",
+    "bulkMoveDescription_few": "Wybierz folder docelowy dla {{count}} dokumentów",
+    "bulkMoveDescription_many": "Wybierz folder docelowy dla {{count}} dokumentów"
   },
   "filters": {
     "searchLabel": "Szukaj dokumentów",

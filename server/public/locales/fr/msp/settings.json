@@ -359,9 +359,9 @@
         "new": "Nouveau",
         "lead": "Chef"
       },
-      "memberCount": "{{count}} membre",
-      "memberCount_plural": "{{count}} membres",
-      "leadName": "Chef : {{name}}"
+      "leadName": "Chef : {{name}}",
+      "memberCount_one": "{{count}} membre",
+      "memberCount_other": "{{count}} membres"
     },
     "messages": {
       "error": {
@@ -916,8 +916,8 @@
       "messages": {
         "success": {
           "deleted": "Type d'interaction supprimé",
-          "imported": "{{count}} type d'interaction importé",
-          "imported_plural": "{{count}} types d'interaction importés"
+          "imported_one": "{{count}} type d'interaction importé",
+          "imported_other": "{{count}} types d'interaction importés"
         },
         "error": {
           "fetchFailed": "Échec de la récupération des types d'interaction",
@@ -1522,8 +1522,6 @@
     },
     "sessions": {
       "title": "Toutes les sessions utilisateur",
-      "subtitle": "{{sessionCount}} session active pour {{userCount}} utilisateur",
-      "subtitle_plural": "{{sessionCount}} sessions actives pour {{userCount}} utilisateurs",
       "filters": {
         "search": "Rechercher",
         "searchPlaceholder": "Rechercher par nom, courriel, appareil ou IP...",
@@ -1566,7 +1564,9 @@
         "loading": "Chargement des sessions...",
         "noMatch": "Aucune session ne correspond à votre recherche",
         "noSessions": "Aucune session active trouvée"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} session active pour {{userCount}} utilisateur",
+      "subtitle_other": "{{sessionCount}} sessions actives pour {{userCount}} utilisateurs"
     }
   },
   "ssoBulk": {

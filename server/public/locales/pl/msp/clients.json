@@ -163,7 +163,9 @@
     "shareTooltip": "Drukuj, importuj i eksportuj",
     "defaultClientDeleteError": "Nie można usunąć domyślnego klienta. Najpierw ustaw innego klienta jako domyślnego w Ustawieniach ogólnych.",
     "clientNotFound": "Nie znaleziono klienta.",
-    "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów."
+    "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów.",
+    "singleInactiveWithContactsSuccess_few": "{{name}} i {{count}} kontakty zostały pomyślnie dezaktywowane.",
+    "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
   },
   "clientDetails": {
     "title": "Dane Klienta",

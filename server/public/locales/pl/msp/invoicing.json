@@ -22,7 +22,9 @@
         "unapprovedEntries_other": "Niezatwierdzone wpisy {{count}}",
         "actions": {
           "reviewApprovals": "Przejrzyj zatwierdzenia"
-        }
+        },
+        "unapprovedEntries_few": "{{count}} niezatwierdzone wpisy",
+        "unapprovedEntries_many": "{{count}} niezatwierdzonych wpisów"
       },
       "columns": {
         "group": "Grupa",
@@ -58,7 +60,19 @@
       "canCombine": "Możliwość połączenia w 1 fakturę",
       "separate": "Należy wystawić osobną fakturę",
       "blocked": "Zawiera zablokowane elementy",
-      "notReady": "Brak gotowości do wystawienia faktury"
+      "notReady": "Brak gotowości do wystawienia faktury",
+      "attributionMetadataMissing_few": "Brak metadanych przypisania przypisania ({{count}} obowiązki)",
+      "attributionMetadataMissing_many": "Brak metadanych przypisania przypisania ({{count}} obowiązków)",
+      "contract_few": "{{count}} kontrakty",
+      "contract_many": "{{count}} kontraktów",
+      "includedCount_few": "Uwzględniono {{count}} elementy",
+      "includedCount_many": "Uwzględniono {{count}} elementów",
+      "item_few": "{{count}} elementy",
+      "item_many": "{{count}} elementów",
+      "line_few": "{{count}} linie",
+      "line_many": "{{count}} linii",
+      "obligationCount_few": "{{count}} obowiązki",
+      "obligationCount_many": "{{count}} obowiązków"
     },
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "Okno faktury jest inne",
@@ -85,7 +99,9 @@
         "assignedContractLine": "Przypisana linia kontraktu",
         "assignedWorkItem": "Przypisany element pracy",
         "unresolvedWork": "Nierozwiązana praca"
-      }
+      },
+      "blockedUntilApproval_few": "Zablokowane do czasu zatwierdzenia: {{count}} niezatwierdzone wpisy.",
+      "blockedUntilApproval_many": "Zablokowane do czasu zatwierdzenia: {{count}} niezatwierdzonych wpisów."
     },
     "actions": {
       "previewSelected": "Wybrano podgląd",
@@ -95,7 +111,9 @@
       "reverseInvoice": "Odwrotna faktura",
       "deleteInvoice": "Usuń fakturę",
       "closePreview": "Zamknij podgląd",
-      "generateInvoice": "Wygeneruj fakturę"
+      "generateInvoice": "Wygeneruj fakturę",
+      "generateSelected_few": "Generuj faktury za wybrane okresy ({{count}})",
+      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})"
     },
     "dialogs": {
       "reverse": {
@@ -158,7 +176,9 @@
           "total": "Razem"
         },
         "generating": "Generowanie...",
-        "generateError": "Nie udało się wygenerować faktury z podglądu"
+        "generateError": "Nie udało się wygenerować faktury z podglądu",
+        "summary_few": "Wybrano {{count}} faktury",
+        "summary_many": "Wybrano {{count}} faktur"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -312,22 +332,32 @@
       "bulkFinalizePendingTax_one": "Pominięto {{count}} fakturę, ponieważ oczekuje na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz ją na podatek wewnętrzny, a następnie sfinalizuj ją pojedynczo.",
       "bulkFinalizePendingTax_other": "Pominięto {{count}} faktur(y), ponieważ oczekują na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz je na podatek wewnętrzny, a następnie sfinalizuj je pojedynczo.",
       "bulkFinalizeSkipped_one": "Nie udało się sfinalizować {{count}} faktury i została pominięta.",
-      "bulkFinalizeSkipped_other": "Nie udało się sfinalizować {{count}} faktur(y) i zostały pominięte."
+      "bulkFinalizeSkipped_other": "Nie udało się sfinalizować {{count}} faktur(y) i zostały pominięte.",
+      "bulkFinalizePendingTax_few": "Pominięto {{count}} faktury, ponieważ oczekują na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz je na podatek wewnętrzny, a następnie sfinalizuj je pojedynczo.",
+      "bulkFinalizePendingTax_many": "Pominięto {{count}} faktur, ponieważ oczekują na import podatku zewnętrznego. Zaimportuj podatek ze swojego systemu księgowego lub przełącz je na podatek wewnętrzny, a następnie sfinalizuj je pojedynczo.",
+      "bulkFinalizeSkipped_few": "Nie udało się sfinalizować {{count}} faktur i zostały pominięte.",
+      "bulkFinalizeSkipped_many": "Nie udało się sfinalizować {{count}} faktur i zostały pominięte."
     },
     "reverseDialog": {
-      "title": "Odwrotna wersja faktury",
       "title_other": "Odwrotne wystawianie faktur",
       "message_one": "Wycofanie tej wersji roboczej faktury spowoduje jej usunięcie i zwolnienie wszelkich powiązanych zapisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
       "message_other": "Wycofanie wersji roboczych faktur {{count}} spowoduje ich usunięcie i zwolnienie wszelkich powiązanych wpisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
       "confirm": "Odwrotny projekt",
-      "cancel": "Anuluj"
+      "cancel": "Anuluj",
+      "title_one": "Odwrotna wersja faktury",
+      "message_few": "Wycofanie {{count}} wersji roboczych faktur spowoduje ich usunięcie i zwolnienie wszelkich powiązanych wpisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
+      "message_many": "Wycofanie {{count}} wersji roboczych faktur spowoduje ich usunięcie i zwolnienie wszelkich powiązanych wpisów czasu lub zapisów użytkowania. Tej akcji nie można cofnąć.",
+      "title_few": "Wycofaj wersje robocze faktur",
+      "title_many": "Wycofaj wersje robocze faktur"
     },
     "pendingTaxDialog": {
       "title": "Faktura oczekuje na podatek zewnętrzny",
       "message": "Ta faktura jest ustawiona tak, aby używać podatku obliczanego przez zewnętrzny system księgowy, ale nie zaimportowano jeszcze żadnego podatku, więc nie można jej sfinalizować. Wyeksportuj ją do swojego systemu księgowego (QuickBooks, Xero) i zaimportuj podatek z powrotem, aby sfinalizować ją z podatkiem zewnętrznym — albo przełącz teraz tę fakturę na podatek wewnętrzny, aby Alga obliczyła podatek, i sfinalizuj ją.",
       "confirm": "Przełącz na podatek wewnętrzny i sfinalizuj",
       "cancel": "Anuluj"
-    }
+    },
+    "bulkActions_few": "Działania ({{count}})",
+    "bulkActions_many": "Działania ({{count}})"
   },
   "finalizedTab": {
     "title": "Sfinalizowane faktury",
@@ -365,7 +395,9 @@
       "bulkPdfFailed": "Nie udało się wygenerować plików PDF. Spróbuj ponownie.",
       "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury. Spróbuj ponownie.",
       "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie."
-    }
+    },
+    "bulkActions_few": "Działania ({{count}})",
+    "bulkActions_many": "Działania ({{count}})"
   },
   "recurringServicePeriods": {
     "title": "Powtarzające się okresy świadczenia usług",
@@ -692,7 +724,13 @@
       "successful_one": "{{count}} powiódł się",
       "successful_other": "{{count}} powiódł się",
       "failed_one": "Niepowodzenie {{count}}",
-      "failed_other": "Niepowodzenie {{count}}"
+      "failed_other": "Niepowodzenie {{count}}",
+      "failed_few": "Niepowodzenie {{count}}",
+      "failed_many": "Niepowodzenie {{count}}",
+      "pending_few": "{{count}} faktury oczekujące na import podatku",
+      "pending_many": "{{count}} faktur oczekujących na import podatku",
+      "successful_few": "{{count}} powiodły się",
+      "successful_many": "{{count}} powiodło się"
     },
     "progress": {
       "importing": "Import podatków...",
@@ -773,7 +811,11 @@
       "batchImportedFailed_other": "Nie udało się zaimportować podatku dla faktur {{count}}",
       "taxImportedSuccessfully": "Podatek został pomyślnie zaimportowany",
       "taxImportedFromAdapter": "Podatek został pomyślnie zaimportowany z {{adapter}}",
-      "taxImportFailed": "Nie udało się zaimportować podatku"
+      "taxImportFailed": "Nie udało się zaimportować podatku",
+      "batchImportedFailed_few": "Nie udało się zaimportować podatku dla {{count}} faktur",
+      "batchImportedFailed_many": "Nie udało się zaimportować podatku dla {{count}} faktur",
+      "batchImportedSuccess_few": "Pomyślnie zaimportowano podatek dla {{count}} faktur",
+      "batchImportedSuccess_many": "Pomyślnie zaimportowano podatek dla {{count}} faktur"
     },
     "errors": {
       "loadPendingInvoices": "Nie udało się załadować oczekujących faktur",
@@ -796,7 +838,13 @@
       "readyToSend_one": "{{count}} gotowy do wysłania",
       "readyToSend_other": "{{count}} gotowy do wysłania",
       "missingEmail_one": "Brakujący e-mail {{count}}",
-      "missingEmail_other": "Brakujący e-mail {{count}}"
+      "missingEmail_other": "Brakujący e-mail {{count}}",
+      "invoices_few": "{{count}} Faktury",
+      "invoices_many": "{{count}} Faktur",
+      "missingEmail_few": "Brakujący e-mail {{count}}",
+      "missingEmail_many": "Brakujący e-mail {{count}}",
+      "readyToSend_few": "{{count}} gotowe do wysłania",
+      "readyToSend_many": "{{count}} gotowych do wysłania"
     },
     "recipients": {
       "title": "Odbiorcy",
@@ -822,7 +870,11 @@
       "send_one": "Wyślij e-mail {{count}}",
       "send_other": "Wysyłaj e-maile {{count}}",
       "sending_one": "Wysyłam fakturę {{count}}...",
-      "sending_other": "Wysyłanie faktur {{count}}..."
+      "sending_other": "Wysyłanie faktur {{count}}...",
+      "send_few": "Wyślij {{count}} e-maile",
+      "send_many": "Wyślij {{count}} e-maili",
+      "sending_few": "Wysyłanie {{count}} faktur...",
+      "sending_many": "Wysyłanie {{count}} faktur..."
     },
     "toasts": {
       "noValidRecipients": "Nie znaleziono prawidłowych odbiorców",
@@ -830,7 +882,11 @@
       "sentSuccess_other": "Faktury {{count}} zostały wysłane pomyślnie",
       "sentFailure_one": "Nie udało się wysłać faktury {{count}}",
       "sentFailure_other": "Nie udało się wysłać faktur {{count}}",
-      "sentPartial": "{{successCount}} wysłany, {{failureCount}} nie powiódł się"
+      "sentPartial": "{{successCount}} wysłany, {{failureCount}} nie powiódł się",
+      "sentFailure_few": "Nie udało się wysłać {{count}} faktur",
+      "sentFailure_many": "Nie udało się wysłać {{count}} faktur",
+      "sentSuccess_few": "{{count}} faktury zostały wysłane pomyślnie",
+      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie"
     },
     "errors": {
       "loadRecipients": "Nie udało się załadować informacji o odbiorcy",

@@ -64,11 +64,11 @@
     "deletePhase": "Fase verwijderen",
     "cancel": "Annuleren",
     "save": "Opslaan",
-    "taskCount": "{{count}} taak",
     "taskCount_other": "{{count}} taken",
     "startLabel": "Start",
     "dueLabel": "Vervaldatum",
-    "notSet": "Niet ingesteld"
+    "notSet": "Niet ingesteld",
+    "taskCount_one": "{{count}} taak"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -732,8 +732,8 @@
       "openFailed": "Kan taak niet openen",
       "task": "Taak",
       "tasks": "Taken",
-      "badgeCount": "{{count}} Taak",
-      "badgeCount_other": "{{count}} Taken"
+      "badgeCount_other": "{{count}} Taken",
+      "badgeCount_one": "{{count}} Taak"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",

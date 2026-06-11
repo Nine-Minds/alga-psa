@@ -359,9 +359,9 @@
         "new": "Nieuw",
         "lead": "Leider"
       },
-      "memberCount": "{{count}} lid",
-      "memberCount_plural": "{{count}} leden",
-      "leadName": "Leider: {{name}}"
+      "leadName": "Leider: {{name}}",
+      "memberCount_one": "{{count}} lid",
+      "memberCount_other": "{{count}} leden"
     },
     "messages": {
       "error": {
@@ -916,8 +916,8 @@
       "messages": {
         "success": {
           "deleted": "Interactietype verwijderd",
-          "imported": "{{count}} interactietype geïmporteerd",
-          "imported_plural": "{{count}} interactietypen geïmporteerd"
+          "imported_one": "{{count}} interactietype geïmporteerd",
+          "imported_other": "{{count}} interactietypen geïmporteerd"
         },
         "error": {
           "fetchFailed": "Kan interactietypen niet ophalen",
@@ -1522,8 +1522,6 @@
     },
     "sessions": {
       "title": "Alle gebruikerssessies",
-      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
       "filters": {
         "search": "Zoeken",
         "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
@@ -1566,7 +1564,9 @@
         "loading": "Sessies laden...",
         "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
         "noSessions": "Geen actieve sessies gevonden"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     }
   },
   "ssoBulk": {

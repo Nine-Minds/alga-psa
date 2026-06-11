@@ -315,12 +315,12 @@
       "bulkFinalizeSkipped_other": "{{count}} facturen konden niet worden gefinaliseerd en zijn overgeslagen."
     },
     "reverseDialog": {
-      "title": "Omgekeerde conceptfactuur",
       "title_other": "Conceptfacturen omkeren",
       "message_one": "Als u deze conceptfactuur terugboekt, wordt deze verwijderd en worden eventuele gekoppelde tijdsvermeldingen of gebruiksregistraties vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "message_other": "Als u {{count}}-conceptfacturen terugdraait, worden deze verwijderd en worden eventuele gekoppelde tijdsinvoer- of gebruiksgegevens vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "confirm": "Omgekeerde diepgang",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "title_one": "Omgekeerde conceptfactuur"
     },
     "pendingTaxDialog": {
       "title": "Factuur wacht op externe belasting",

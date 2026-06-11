@@ -64,11 +64,11 @@
     "deletePhase": "Elimina fase",
     "cancel": "Annulla",
     "save": "Salva",
-    "taskCount": "{{count}} attività",
     "taskCount_other": "{{count}} attività",
     "startLabel": "Inizio",
     "dueLabel": "Scadenza",
-    "notSet": "Non impostato"
+    "notSet": "Non impostato",
+    "taskCount_one": "{{count}} attività"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -732,8 +732,8 @@
       "openFailed": "Impossibile aprire l'attività",
       "task": "Attività",
       "tasks": "Attività",
-      "badgeCount": "{{count}} Attività",
-      "badgeCount_other": "{{count}} Attività"
+      "badgeCount_other": "{{count}} Attività",
+      "badgeCount_one": "{{count}} Attività"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",

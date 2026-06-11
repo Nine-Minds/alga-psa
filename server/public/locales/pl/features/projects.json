@@ -64,11 +64,13 @@
     "deletePhase": "Usuń fazę",
     "cancel": "Anuluj",
     "save": "Zapisz",
-    "taskCount": "{{count}} zadanie",
     "taskCount_other": "{{count}} zadań",
     "startLabel": "Początek",
     "dueLabel": "Termin",
-    "notSet": "Nie ustawiono"
+    "notSet": "Nie ustawiono",
+    "taskCount_one": "{{count}} zadanie",
+    "taskCount_few": "{{count}} zadania",
+    "taskCount_many": "{{count}} zadań"
   },
   "projectList": {
     "addProject": "Dodaj projekt",
@@ -261,7 +263,9 @@
     "bulkTagsSuccess_one": "Dodano tagi do {{count}} zadania",
     "bulkTagsSuccess_other": "Dodano tagi do {{count}} zadań",
     "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
-    "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań"
+    "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
+    "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
+    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -732,8 +736,10 @@
       "openFailed": "Nie udało się otworzyć zadania",
       "task": "Zadanie",
       "tasks": "Zadania",
-      "badgeCount": "{{count}} Zadanie",
-      "badgeCount_other": "{{count}} Zadania"
+      "badgeCount_other": "{{count}} Zadania",
+      "badgeCount_one": "{{count}} Zadanie",
+      "badgeCount_few": "{{count}} Zadania",
+      "badgeCount_many": "{{count}} Zadań"
     },
     "bulkMoveTask": {
       "title": "Przenieś zadania",
@@ -1075,7 +1081,9 @@
       "taskCount_other": "{{count}} zadań",
       "unknownUser": "Nieznane",
       "unknownTask": "Nieznane zadanie",
-      "checklistCountTitle": "{{count}} element listy kontrolnej"
+      "checklistCountTitle": "{{count}} element listy kontrolnej",
+      "taskCount_few": "{{count}} zadania",
+      "taskCount_many": "{{count}} zadań"
     },
     "taskForm": {
       "addTitle": "Dodaj zadanie",
@@ -1472,7 +1480,9 @@
       "submitting": "Dodawanie tagów...",
       "confirm_one": "Dodaj tagi do {{count}} zadania",
       "confirm_other": "Dodaj tagi do {{count}} zadań",
-      "failedHeading": "Nie udało się dodać tagów do następujących zadań:"
+      "failedHeading": "Nie udało się dodać tagów do następujących zadań:",
+      "confirm_few": "Dodaj tagi do {{count}} zadań",
+      "confirm_many": "Dodaj tagi do {{count}} zadań"
     }
   },
   "common:actions": {

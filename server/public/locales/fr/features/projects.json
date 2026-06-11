@@ -64,11 +64,11 @@
     "deletePhase": "Supprimer la phase",
     "cancel": "Annuler",
     "save": "Enregistrer",
-    "taskCount": "{{count}} tâche",
     "taskCount_other": "{{count}} tâches",
     "startLabel": "Début",
     "dueLabel": "Échéance",
-    "notSet": "Non défini"
+    "notSet": "Non défini",
+    "taskCount_one": "{{count}} tâche"
   },
   "projectList": {
     "addProject": "Ajouter un projet",
@@ -732,8 +732,8 @@
       "openFailed": "Impossible d'ouvrir la tâche",
       "task": "Tâche",
       "tasks": "Tâches",
-      "badgeCount": "{{count}} Tâche",
-      "badgeCount_other": "{{count}} Tâches"
+      "badgeCount_other": "{{count}} Tâches",
+      "badgeCount_one": "{{count}} Tâche"
     },
     "bulkMoveTask": {
       "title": "Déplacer les tâches",
