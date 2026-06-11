@@ -437,6 +437,9 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
   // creates the extension; create it when the server ships pgvector (CI's
   // ankane/pgvector does), otherwise let the migration fail with its own error.
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "vector"').catch(() => undefined);
+  // Stand-in Citus catalog so migration distribution probes succeed quietly
+  // on plain Postgres (see test-utils/dbConfig.ts).
+  await connection.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
 
   // Derive paths from this file's location: cwd differs between running
   // vitest from the repo root and from server/ (the npm workspace scripts).

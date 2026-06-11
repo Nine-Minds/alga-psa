@@ -29,7 +29,60 @@ async function distributeIfCitus(knex, tableName) {
   }
 }
 
+// On fresh Citus chains the documents subsystem was never converted:
+// document_share_links FKs documents, so documents and its FK parents must
+// be distributed first. shared_document_types (tenant-less catalog) must be
+// a reference table, but converting it would drag local documents — which
+// FKs distributed users — into the conversion, so the cross-FK is dropped
+// and re-added around the conversions (distributed -> reference is allowed).
+// No-op on plain Postgres and on clusters already converted.
+async function ensureDocumentsDistributed(knex) {
+  const citusFn = await knex.raw(
+    "SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table') AS exists"
+  );
+  if (!citusFn.rows?.[0]?.exists) return;
+
+  const isReference = async (table) => {
+    const { rows } = await knex.raw(
+      "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass AND partmethod = 'n' AND repmodel = 't'",
+      [table]
+    );
+    return rows.length > 0;
+  };
+
+  const sharedTypesPending = !(await isReference('shared_document_types'));
+  const documentsPending = await knex.raw(
+    "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'documents'::regclass AND partmethod = 'h'"
+  ).then(({ rows }) => rows.length === 0);
+
+  for (const t of ['storage_providers', 'storage_configurations', 'document_types', 'external_files']) {
+    await distributeIfCitus(knex, t);
+  }
+
+  if (sharedTypesPending || documentsPending) {
+    const { rows: crossFks } = await knex.raw(`
+      SELECT conrelid::regclass::text AS tbl, conname, pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE contype = 'f'
+        AND conrelid = 'documents'::regclass
+        AND confrelid = 'shared_document_types'::regclass
+    `);
+    for (const fk of crossFks) {
+      await knex.raw(`ALTER TABLE ${fk.tbl} DROP CONSTRAINT "${fk.conname}"`);
+    }
+    if (sharedTypesPending) {
+      await knex.raw("SELECT create_reference_table('shared_document_types')");
+    }
+    await distributeIfCitus(knex, 'documents');
+    for (const fk of crossFks) {
+      await knex.raw(`ALTER TABLE ${fk.tbl} ADD CONSTRAINT "${fk.conname}" ${fk.def}`);
+    }
+  }
+}
+
 exports.up = async function up(knex) {
+  await ensureDocumentsDistributed(knex);
+
   // --- Step 1: Create document_share_links ---
   if (!(await knex.schema.hasTable('document_share_links'))) {
     await knex.schema.createTable('document_share_links', (table) => {

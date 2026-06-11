@@ -12,7 +12,23 @@
  * - Service deletion handling is done in application code
  */
 
-exports.up = function(knex) {
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  const { rows: citus } = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  if (citus.length === 0) return;
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  if (rows.length > 0) return;
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+};
+
+exports.up = async function(knex) {
+  // project_template_tasks is distributed; the new FK requires its target to
+  // be distributed too (no-op on plain Postgres and on prod, which already
+  // has service_catalog distributed).
+  await ensureDistributed(knex, 'service_catalog', 'tenant');
+
   return knex.schema.alterTable('project_template_tasks', function(table) {
     // Add nullable column - existing rows will have NULL (no backfill needed)
     table.uuid('service_id').nullable().defaultTo(null);

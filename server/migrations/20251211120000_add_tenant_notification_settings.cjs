@@ -3,6 +3,8 @@
  * This migration moves notification category/subtype settings from global to per-tenant
  */
 
+// Citus reference-table conversion cannot share a transaction with parallel
+// distributed operations from earlier migrations in the same knex batch.
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -16,6 +18,74 @@ exports.up = async function(knex) {
     ) AS exists;
   `);
   const isCitus = citusFn.rows?.[0]?.exists;
+
+  // The notification catalogs (categories/subtypes/system_email_templates)
+  // are reference tables on production Citus, and the tenant-scoped tables
+  // that FK into them (notification_logs, user_notification_preferences,
+  // tenant_email_templates) are distributed. A fresh Citus chain reaches this
+  // point with all six still local, holding FKs out to already-distributed
+  // users/tenants — so neither group can be converted while the cross-FKs tie
+  // them into one local graph. Drop the cross-FKs, convert each group to its
+  // production shape, then re-add them (distributed -> reference FKs are
+  // supported). No-op on prod, where everything is already converted.
+  if (isCitus) {
+    await knex.raw("SET citus.multi_shard_modify_mode TO 'sequential'");
+
+    const isReference = async (table) => {
+      const { rows } = await knex.raw(
+        "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass AND partmethod = 'n' AND repmodel = 't'",
+        [table]
+      );
+      return rows.length > 0;
+    };
+    const isDistributed = async (table) => {
+      const { rows } = await knex.raw(
+        "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass AND partmethod = 'h'",
+        [table]
+      );
+      return rows.length > 0;
+    };
+
+    const referenceTables = ['notification_categories', 'notification_subtypes', 'system_email_templates'];
+    const distributedTables = ['notification_logs', 'user_notification_preferences', 'tenant_email_templates'];
+
+    const pendingReference = [];
+    for (const t of referenceTables) {
+      if (!(await isReference(t))) pendingReference.push(t);
+    }
+    const pendingDistributed = [];
+    for (const t of distributedTables) {
+      if (!(await isDistributed(t))) pendingDistributed.push(t);
+    }
+
+    if (pendingReference.length > 0 || pendingDistributed.length > 0) {
+      const { rows: crossFks } = await knex.raw(`
+        SELECT conrelid::regclass::text AS tbl, conname, pg_get_constraintdef(oid) AS def
+        FROM pg_constraint
+        WHERE contype = 'f'
+          AND conrelid::regclass::text = ANY(ARRAY['notification_logs', 'user_notification_preferences', 'tenant_email_templates'])
+          AND confrelid::regclass::text = ANY(ARRAY['notification_categories', 'notification_subtypes', 'system_email_templates'])
+      `);
+
+      for (const fk of crossFks) {
+        await knex.raw(`ALTER TABLE ${fk.tbl} DROP CONSTRAINT "${fk.conname}"`);
+      }
+      // create_reference_table also accepts the citus-local tables that the
+      // first conversion auto-creates from the rest of the catalog FK graph.
+      for (const t of pendingReference) {
+        await knex.raw('SELECT create_reference_table(?)', [t]);
+      }
+      for (const t of pendingDistributed) {
+        await knex.raw("SELECT create_distributed_table(?, 'tenant')", [t]);
+      }
+      for (const fk of crossFks) {
+        await knex.raw(`ALTER TABLE ${fk.tbl} ADD CONSTRAINT "${fk.conname}" ${fk.def}`);
+      }
+      for (const t of [...pendingReference, ...pendingDistributed]) {
+        await knex.raw('SELECT truncate_local_data_after_distributing_table(?::regclass)', [t]);
+      }
+    }
+  }
 
   // Helper function to check if table exists
   const tableExists = async (tableName) => {

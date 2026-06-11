@@ -68,6 +68,12 @@ export async function createTestDbConnection(
     },
   });
 
+  // Citus-distribution probes (SELECT ... FROM pg_dist_partition) run inside
+  // dozens of migrations; on plain Postgres each one ERRORs server-side before
+  // its try/catch concludes "not Citus". An empty stand-in catalog makes every
+  // probe succeed with is_distributed=false — same behavior, silent logs.
+  await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+
   await adminKnex.migrate.latest();
   if (runSeeds) {
     await adminKnex.seed.run();
