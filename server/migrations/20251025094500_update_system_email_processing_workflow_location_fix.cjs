@@ -53,9 +53,14 @@ exports.up = async function up(knex) {
   try {
     const { spawnSync } = require('child_process');
     const scriptPath = path.join(__dirname, '../../scripts/generate-system-email-workflow.cjs');
-    const result = spawnSync(process.execPath, [scriptPath], { stdio: 'inherit' });
-    if (result.status !== 0) {
-      console.warn('[workflow-migration:location-fix] Generator exited non-zero; using fallback extractor');
+    // The generator script is not part of the repo; skip quietly instead of
+    // spawning a missing file on every fresh bootstrap (the fallback below
+    // handles it either way).
+    if (require('fs').existsSync(scriptPath)) {
+      const result = spawnSync(process.execPath, [scriptPath], { stdio: 'inherit' });
+      if (result.status !== 0) {
+        console.warn('[workflow-migration:location-fix] Generator exited non-zero; using fallback extractor');
+      }
     }
   } catch (error) {
     console.warn('[workflow-migration:location-fix] Failed to run generator script; using fallback extractor.', error && error.message ? error.message : error);

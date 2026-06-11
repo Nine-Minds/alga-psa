@@ -22,6 +22,21 @@ const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
   return importer<TModule>(specifier);
 };
 
+// Some sandboxed runtimes (e.g. vitest's VM-evaluated forks) provide no
+// dynamic-import callback, so this provider can never load fs there. Treat it
+// as "provider unavailable" once instead of erroring on every secret lookup.
+let warnedDynamicImportUnavailable = false;
+function handleModulesUnavailable(error: unknown): boolean {
+  if ((error as NodeJS.ErrnoException | undefined)?.code !== 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') {
+    return false;
+  }
+  if (!warnedDynamicImportUnavailable) {
+    warnedDynamicImportUnavailable = true;
+    console.warn('FileSystemSecretProvider unavailable in this runtime (no dynamic import); falling back to other providers.');
+  }
+  return true;
+}
+
 async function loadNodeFileSystemModules(): Promise<{
   fs: NodeFsPromisesModule;
   path: NodePathModule;
@@ -109,7 +124,13 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async getAppSecret(name: string): Promise<string | undefined> {
-    const { path } = await this.getModules();
+    let path: NodePathModule;
+    try {
+      ({ path } = await this.getModules());
+    } catch (error) {
+      if (handleModulesUnavailable(error)) return undefined;
+      throw error;
+    }
     const safeName = path.basename(name);
 
     if (safeName !== name) {
@@ -121,7 +142,13 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async getTenantSecret(tenantId: string, name: string): Promise<string | undefined> {
-    const { path } = await this.getModules();
+    let path: NodePathModule;
+    try {
+      ({ path } = await this.getModules());
+    } catch (error) {
+      if (handleModulesUnavailable(error)) return undefined;
+      throw error;
+    }
     const safeTenantId = path.basename(tenantId);
     const safeName = path.basename(name);
 

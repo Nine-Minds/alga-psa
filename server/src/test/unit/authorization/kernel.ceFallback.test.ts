@@ -8,6 +8,22 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+// The kernel's default rbacEvaluator resolves roles via User.getUserRolesWithPermissions.
+vi.mock('@alga-psa/db/models/user', () => ({
+  default: {
+    getUserRolesWithPermissions: vi.fn(async () => [
+      {
+        role_id: 'role-admin',
+        role_name: 'Admin',
+        description: '',
+        msp: true,
+        client: true,
+        permissions: [{ permission_id: 'ticket-read', resource: 'ticket', action: 'read', msp: true, client: true }],
+      },
+    ]),
+  },
+}));
+
 vi.mock('server/src/lib/authorization/kernel/enterpriseEntry', () => ({
   loadEnterpriseAuthorizationKernelFactory: (...args: unknown[]) =>
     loadEnterpriseAuthorizationKernelFactoryMock(...args),

@@ -39,10 +39,11 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children, title }: any) =>
+  Dialog: ({ isOpen, children, title, footer }: any) =>
     isOpen ? (
       <div role="dialog" aria-label={title}>
         {children}
+        {footer}
       </div>
     ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,

@@ -1995,9 +1995,22 @@ export class BillingEngine {
         const baseRateInCents = hasCustomRateOverride
           ? Math.round(Number(effectiveCustomRate))
           : planLevelBaseRateCents;
+        // config_id lives on contract_line_service_configuration, not on
+        // contract_line_services; selecting it from cls_fallback raised
+        // "column cls_fallback.config_id does not exist" and aborted billing
+        // for any fixed line whose catalog items are all products/licenses.
         const fallbackService = await this.knex(
           "contract_line_services as cls_fallback",
         )
+          .join("contract_line_service_configuration as clsc_fallback", function () {
+            this.on(
+              "clsc_fallback.contract_line_id",
+              "=",
+              "cls_fallback.contract_line_id",
+            )
+              .andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id")
+              .andOn("clsc_fallback.tenant", "=", "cls_fallback.tenant");
+          })
           .join("service_catalog as sc", function () {
             this.on("sc.service_id", "=", "cls_fallback.service_id").andOn(
               "sc.tenant",
@@ -2016,7 +2029,7 @@ export class BillingEngine {
             "sc.service_id",
             "sc.service_name",
             "sc.tax_rate_id",
-            "cls_fallback.config_id",
+            "clsc_fallback.config_id",
           );
 
         if (!fallbackService?.service_id || !fallbackService?.config_id) {

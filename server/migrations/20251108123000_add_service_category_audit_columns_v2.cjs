@@ -158,6 +158,35 @@ exports.up = async function up(knex) {
   }
 
   if (await hasColumn(knex, 'service_categories', 'tenant')) {
+    // The audit columns FK into users; Citus requires the referenced table
+    // to be distributed first (no-op on prod where users already is).
+    await ensureDistributed(knex, 'clients', 'tenant');
+    await ensureDistributed(knex, 'contacts', 'tenant');
+    // Citus refuses to convert FKs that use ON DELETE SET NULL/DEFAULT when
+    // the distribution key is part of the FK — including the PG15
+    // column-targeted form SET NULL (col), which it rejects without checking
+    // the target list. A bare SET NULL on a composite (tenant, …) FK is a
+    // tenancy-nulling hazard anyway (see 20260611150000). Strip the action
+    // from every such FK before distributing; app-level deletion guards
+    // front these deletes.
+    if (await isCitusEnabled(knex)) {
+      const dangerous = await knex.raw(`
+        SELECT conrelid::regclass::text AS tbl, conname, pg_get_constraintdef(oid) AS def
+        FROM pg_constraint c
+        WHERE contype = 'f' AND confdeltype IN ('n', 'd')
+          AND EXISTS (
+            SELECT 1 FROM unnest(conkey) k
+            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k
+            WHERE a.attname = 'tenant'
+          )
+      `);
+      for (const row of dangerous.rows) {
+        const def = row.def.replace(/ ON DELETE SET (NULL|DEFAULT)( \([^)]*\))?/, '');
+        await knex.raw(`ALTER TABLE ${row.tbl} DROP CONSTRAINT "${row.conname}"`);
+        await knex.raw(`ALTER TABLE ${row.tbl} ADD CONSTRAINT "${row.conname}" ${def}`);
+      }
+    }
+    await ensureDistributed(knex, 'users', 'tenant');
     await ensureDistributed(knex, 'service_categories', 'tenant');
   }
 };

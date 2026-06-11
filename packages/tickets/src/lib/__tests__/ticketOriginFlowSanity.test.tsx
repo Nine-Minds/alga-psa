@@ -39,7 +39,9 @@ describe('ticket origin API flow sanity', () => {
   });
 
   it('T081: end-to-end API-created ticket displays Created via API badge in client portal ticket details', () => {
-    const labels = readJson('server/public/locales/en/clientPortal.json').tickets.origin;
+    // Client-portal ticket origin labels moved from clientPortal.json to the
+    // shared tickets feature namespace (top-level `origin`).
+    const labels = readJson('server/public/locales/en/features/tickets.json').origin;
     const origin = getTicketOrigin({
       ticket_origin: 'api',
       source: 'api',

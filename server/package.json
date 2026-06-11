@@ -27,10 +27,12 @@
     "start:express": "tsx index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest",
+    "test": "vitest run src/test/unit src/test/infrastructure --coverage.enabled=false",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",
     "test:integration": "vitest src/test/integration",
+    "test:integration:ci": "vitest run src/test/integration --coverage.enabled=false",
+    "test:integration:tier1": "vitest run src/test/integration/billing src/test/integration/accounting src/test/integration/authorization src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled=false",
     "test:infrastructure": "vitest src/test/infrastructure",
     "test:e2e": "vitest src/test/e2e",
     "test:e2e:email": "vitest src/test/e2e/email-processing.test.ts",
@@ -257,7 +259,7 @@
     "null-loader": "^4.0.1",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
-    "vitest": "^4.0.18"
+    "vitest": "^3.2.4"
   },
   "optionalDependencies": {
     "ngrok": "^4.3.3"

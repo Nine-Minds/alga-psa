@@ -1,0 +1,80 @@
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+export default defineConfig({
+  plugins: [
+    tsconfigPaths({
+      projects: [path.resolve(__dirname, '../../tsconfig.base.json')],
+    }),
+  ],
+  test: {
+    globals: true,
+    environment: 'node',
+    env: {
+      NODE_ENV: 'test',
+    },
+    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
+    include: ['src/**/*.test.{ts,tsx}'],
+    sequence: { concurrent: false, shuffle: false },
+    coverage: { enabled: false },
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
+  },
+  resolve: {
+    alias: [
+      { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
+      { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
+      { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
+      { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
+      { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
+      { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../event-schemas/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
+      { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
+      { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
+      { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },
+      { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
+      { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/context/$1') },
+      { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../auth/src/index.ts') },
+      { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx') },
+      { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../auth/src/$1') },
+      { find: /^@alga-psa\/clients$/, replacement: path.resolve(__dirname, '../clients/src/index.ts') },
+      { find: /^@alga-psa\/clients\/(.*)$/, replacement: path.resolve(__dirname, '../clients/src/$1') },
+      { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../event-bus/src/index.ts') },
+      { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: path.resolve(__dirname, '../event-bus/src/$1') },
+      { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../email/src/index.ts') },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../email/src/$1') },
+      { find: /^@alga-psa\/analytics$/, replacement: path.resolve(__dirname, '../analytics/src/index.ts') },
+      { find: /^@alga-psa\/analytics\/(.*)$/, replacement: path.resolve(__dirname, '../analytics/src/$1') },
+      { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../validation/src/index.ts') },
+      { find: /^@alga-psa\/validation\/(.*)$/, replacement: path.resolve(__dirname, '../validation/src/$1') },
+      { find: /^@alga-psa\/reference-data$/, replacement: path.resolve(__dirname, '../reference-data/src/index.ts') },
+      { find: /^@alga-psa\/reference-data\/(.*)$/, replacement: path.resolve(__dirname, '../reference-data/src/$1') },
+      { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
+      { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/$1') },
+      { find: /^@alga-psa\/user-composition$/, replacement: path.resolve(__dirname, '../user-composition/src/index.ts') },
+      { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: path.resolve(__dirname, '../user-composition/src/$1') },
+      { find: /^@alga-psa\/integrations$/, replacement: path.resolve(__dirname, './src/index.ts') },
+      { find: /^@alga-psa\/integrations\/actions$/, replacement: path.resolve(__dirname, './src/actions/index.ts') },
+      { find: /^@alga-psa\/integrations\/components$/, replacement: path.resolve(__dirname, './src/components/index.ts') },
+      { find: /^@alga-psa\/integrations\/email$/, replacement: path.resolve(__dirname, './src/email/index.ts') },
+      { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, './src/$1') },
+      { find: /^@alga-psa\/ee-microsoft-teams$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/index.ts') },
+      { find: /^@alga-psa\/ee-microsoft-teams\/(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/$1') },
+      { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@shared$/, replacement: path.resolve(__dirname, '../../shared') },
+      { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      // Generic catch-all for any remaining @alga-psa/* workspace packages.
+      { find: /^@alga-psa\/([^/]+)\/(.*)$/, replacement: `${path.resolve(__dirname, '..')}/$1/src/$2` },
+      { find: /^@alga-psa\/([^/]+)$/, replacement: `${path.resolve(__dirname, '..')}/$1/src` },
+    ],
+  },
+});

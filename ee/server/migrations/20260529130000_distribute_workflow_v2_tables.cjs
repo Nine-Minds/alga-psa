@@ -162,12 +162,56 @@ const recreateTenantPrimaryKey = async (knex, table) => {
   await knex.raw('ALTER TABLE ?? ADD PRIMARY KEY (tenant, ??)', [table, PK_ID[table]]);
 };
 
+// Fresh Citus chains never distributed the v1 workflow tables this migration
+// colocates with. The system catalogs (tenant-less) become reference tables,
+// but converting them would drag workflow_tasks — which FKs distributed
+// users — into the conversion, so its FKs are dropped and re-added around
+// it. isReference (not just pg_dist_partition presence) matters: the first
+// conversion auto-adds connected locals as citus-local tables, which also
+// appear in pg_dist_partition. No-op on prod, where workflow_tasks is
+// already distributed.
+const ensureColocationTargetDistributed = async (knex) => {
+  if (await isDistributed(knex, COLOCATE_WITH)) return;
+
+  const isReference = async (table) => {
+    const r = await knex.raw(
+      `SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass AND partmethod = 'n' AND repmodel = 't'`,
+      [table]
+    );
+    return r.rows.length > 0;
+  };
+
+  const { rows: wtFks } = await knex.raw(
+    `SELECT conname, pg_get_constraintdef(oid) AS def
+       FROM pg_constraint
+      WHERE conrelid = 'workflow_tasks'::regclass AND contype = 'f'
+        AND confrelid IN ('system_workflow_task_definitions'::regclass,
+                          'workflow_task_definitions'::regclass)`
+  );
+  for (const fk of wtFks) {
+    await knex.raw('ALTER TABLE workflow_tasks DROP CONSTRAINT IF EXISTS ??', [fk.conname]);
+  }
+  for (const ref of ['system_workflow_form_definitions', 'system_workflow_task_definitions']) {
+    if (!(await isReference(ref))) {
+      await knex.raw('SELECT create_reference_table(?::regclass)', [ref]);
+    }
+  }
+  if (!(await isDistributed(knex, 'workflow_task_definitions'))) {
+    await knex.raw(`SELECT create_distributed_table('workflow_task_definitions', 'tenant')`);
+  }
+  await knex.raw(`SELECT create_distributed_table('workflow_tasks', 'tenant')`);
+  for (const fk of wtFks) {
+    await knex.raw(`ALTER TABLE workflow_tasks ADD CONSTRAINT "${fk.conname}" ${fk.def}`);
+  }
+};
+
 exports.up = async function up(knex) {
   if (!(await isCitusEnabled(knex))) {
     console.log('Citus not enabled, skipping workflow v2 distribution');
     return;
   }
   await ensureSequentialMode(knex);
+  await ensureColocationTargetDistributed(knex);
 
   const present = [];
   for (const table of DISTRIBUTE_ORDER) {

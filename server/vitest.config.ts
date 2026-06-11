@@ -19,9 +19,16 @@ export default defineConfig({
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
     maxConcurrency: 1,
+    // Integration suites share one test_database and drop/recreate it in
+    // beforeAll; parallel files corrupt each other's bootstrap. Vitest 4
+    // removed singleFork/singleThread, so state serialization explicitly —
+    // fileParallelism is honored by both v3 and v4.
+    fileParallelism: false,
     sequence: {
       concurrent: false,
-      shuffle: true
+      shuffle: true,
+      // CI sets VITEST_SEED so order-dependent failures reproduce across reruns.
+      seed: process.env.VITEST_SEED ? Number(process.env.VITEST_SEED) : undefined
     },
     pool: 'forks',
     poolOptions: {
@@ -36,13 +43,28 @@ export default defineConfig({
     testTimeout: 20000,
     hookTimeout: 120000,
     coverage: {
-      enabled: true,
+      // Opt-in via --coverage; always-on coverage made every local run pay the
+      // instrumentation cost. CI enables it where reports are collected.
+      enabled: false,
       provider: 'v8',
       include: [
         'src/**/*.{js,ts,jsx,tsx}',
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
+    },
+    // Must live under test.server (a top-level `server` key is Vite dev-server
+    // config and is silently ignored). Inlining next-auth/next is what lets the
+    // next/server stub alias below apply to next-auth's internals.
+    server: {
+      deps: {
+        inline: [
+          'next-auth',
+          '@auth/core',
+          'next',
+          '@tiptap/react',
+        ],
+      },
     },
   },
   resolve: {
@@ -115,6 +137,9 @@ export default defineConfig({
       { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../packages/authorization/src/$1') },
       { find: /^@alga-psa\/reference-data$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/index.ts') },
       { find: /^@alga-psa\/reference-data\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/$1') },
+      { find: /^@alga-psa\/reporting$/, replacement: path.resolve(__dirname, '../packages/reporting/src/index.ts') },
+      { find: /^@alga-psa\/reporting\/actions$/, replacement: path.resolve(__dirname, '../packages/reporting/src/actions/index.ts') },
+      { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reporting/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
@@ -197,14 +222,6 @@ export default defineConfig({
     ],
   },
   server: {
-    deps: {
-      inline: [
-        'next-auth',
-        '@auth/core',
-        'next',
-        '@tiptap/react',
-      ],
-    },
     fs: {
       allow: [path.resolve(__dirname, '..')],
     },

@@ -14,6 +14,7 @@ describe('category picker add-new passthrough contract', () => {
 
     expect(source).toContain('onAddNew?: () => void;');
     expect(source).toContain('onAddNew={onAddNew}');
-    expect(source).toContain('addNewLabel="+ Add new category"');
+    // Label is now i18n-backed; TreeSelect renders the leading "+" as a <Plus/> icon.
+    expect(source).toContain("addNewLabel={t('categoryPicker.addNew', 'Add new category')}");
   });
 });

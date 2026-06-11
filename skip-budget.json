@@ -1,0 +1,4 @@
+{
+  "$comment": "Maximum allowed skipped-test markers (it.skip/test.skip/describe.skip/xit/xdescribe) across the repo. Checked by scripts/check-skip-budget.mjs in the unit-tests workflow. Lower freely; raising requires justification in the PR.",
+  "maxSkips": 50
+}

@@ -2,3 +2,7 @@
 
 # Transient merged CE+EE migrations workspace (run-ee-migrations.js)
 .ee-combined-migrations-*/
+
+# Transient merged CE+EE migrations workspace (citus-migration-smoke.yml)
+combined-migrations/
+knexfile-combined.cjs

@@ -38,6 +38,8 @@ let liveTicketContext = {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPushMock, refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/msp/tickets/ticket-1',
 }));
 
 vi.mock('next-auth/react', () => ({
@@ -150,7 +152,13 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string | Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    },
   }),
 }));
 

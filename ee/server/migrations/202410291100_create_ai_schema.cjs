@@ -1,4 +1,17 @@
 exports.up = async function(knex) {
+    // The vectors table needs the pgvector extension. Environments without it
+    // (e.g. the Citus migration smoke job) skip the vector pieces; chats,
+    // messages, and the full-text columns below are independent and always run.
+    const vectorCheck = await knex.raw(
+        "SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector') AS available"
+    );
+    const vectorAvailable = Boolean(vectorCheck.rows?.[0]?.available);
+    if (vectorAvailable) {
+        await knex.raw('CREATE EXTENSION IF NOT EXISTS vector');
+    } else {
+        console.log('[ai-schema] pgvector not available; skipping vectors table');
+    }
+
     // Create process_large_lexemes function for text processing 
     await knex.raw(`CREATE OR REPLACE FUNCTION process_large_lexemes(text_input TEXT) RETURNS tsvector AS $$
         BEGIN
@@ -7,7 +20,7 @@ exports.up = async function(knex) {
         $$ LANGUAGE plpgsql IMMUTABLE;`);
 
     // Create vectors table
-    await knex.schema.createTableIfNotExists('vectors', (table) => {
+    if (vectorAvailable) await knex.schema.createTableIfNotExists('vectors', (table) => {
         table.uuid('tenant').notNullable();
         table.uuid('vector_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('item_type');
@@ -21,7 +34,7 @@ exports.up = async function(knex) {
     });
 
     // Add foreign keys if they don't exist
-    await knex.raw(`
+    if (vectorAvailable) await knex.raw(`
         DO $$ BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM information_schema.table_constraints 
@@ -149,10 +162,8 @@ exports.up = async function(knex) {
     await knex.raw('CREATE INDEX IF NOT EXISTS documents_index_idx ON documents USING GIN (content_index)');
 
     // Enable RLS and create policies for AI-related tables
-    await knex.raw(`
+    if (vectorAvailable) await knex.raw(`
         ALTER TABLE vectors ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
         DO $$ BEGIN
             IF NOT EXISTS (
@@ -162,7 +173,13 @@ exports.up = async function(knex) {
                 CREATE POLICY tenant_isolation_policy ON vectors
                 USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
             END IF;
+        END $$;
+    `);
+    await knex.raw(`
+        ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
+        DO $$ BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM pg_policies
                 WHERE tablename = 'chats' AND policyname = 'tenant_isolation_policy'
@@ -183,9 +200,11 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-    // Drop RLS policies
+    // Drop RLS policies (vectors may not exist when pgvector was unavailable)
+    if (await knex.schema.hasTable('vectors')) {
+        await knex.raw('DROP POLICY IF EXISTS tenant_isolation_policy ON vectors');
+    }
     await knex.raw(`
-        DROP POLICY IF EXISTS tenant_isolation_policy ON vectors;
         DROP POLICY IF EXISTS tenant_isolation_policy ON chats;
         DROP POLICY IF EXISTS tenant_isolation_policy ON messages;
     `);

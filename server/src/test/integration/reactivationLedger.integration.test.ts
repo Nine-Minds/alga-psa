@@ -11,13 +11,14 @@
  * Every row it creates is namespaced to a throwaway tenant and removed in
  * afterAll.
  */
-import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import knexLib, { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { describeWithDb } from '../../../test-utils/requireDb';
 
 import {
   createTenantReactivationToken,
@@ -37,18 +38,7 @@ process.env.ALGA_WEBHOOK_SECRET ||= 'localtest-reactivation-secret';
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = Number(process.env.DB_PORT || 5432);
 
-const dbReachable: boolean = await new Promise((resolve) => {
-  const socket = net.createConnection({ host: DB_HOST, port: DB_PORT });
-  const done = (value: boolean) => {
-    socket.removeAllListeners();
-    socket.destroy();
-    resolve(value);
-  };
-  socket.on('connect', () => done(true));
-  socket.on('error', () => done(false));
-  socket.setTimeout(500, () => done(false));
-});
-const describeDb = dbReachable ? describe : describe.skip;
+const describeDb = await describeWithDb();
 
 function readSecret(name: string, fallbackEnv: string): string {
   try {

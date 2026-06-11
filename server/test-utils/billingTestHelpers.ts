@@ -342,13 +342,27 @@ async function ensureServiceType(
 
   const columns = await context.db('service_types').columnInfo();
   const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
+  // Newer schemas dropped billing_method from service_types; key off the
+  // generated name instead so the helper works on both shapes.
+  const hasBillingMethodColumn = 'billing_method' in columns;
 
   if (!tenantColumn) {
     throw new Error('Unable to determine tenant column for service_types table');
   }
 
+  const typeName =
+    billingMethod === 'fixed'
+      ? 'Fixed Service Type'
+      : billingMethod === 'hourly'
+        ? 'Hourly Service Type'
+        : 'Usage Service Type';
+
   const existingType = await context.db('service_types')
-    .where({ [tenantColumn]: context.tenantId, billing_method: billingMethod })
+    .where(
+      hasBillingMethodColumn
+        ? { [tenantColumn]: context.tenantId, billing_method: billingMethod }
+        : { [tenantColumn]: context.tenantId, name: typeName }
+    )
     .first('id');
 
   if (existingType?.id) {
@@ -359,17 +373,15 @@ async function ensureServiceType(
   const typeId = uuidv4();
   const typeData: Record<string, unknown> = {
     id: typeId,
-    name:
-      billingMethod === 'fixed'
-        ? 'Fixed Service Type'
-        : billingMethod === 'hourly'
-          ? 'Hourly Service Type'
-          : 'Usage Service Type',
-    billing_method: billingMethod,
+    name: typeName,
     is_active: true,
     description: 'Auto-generated service type for invoice tests',
     [tenantColumn]: context.tenantId
   };
+
+  if (hasBillingMethodColumn) {
+    typeData.billing_method = billingMethod;
+  }
 
   // Leave order_number null to avoid collisions with unique constraints in legacy schemas.
 
@@ -394,8 +406,11 @@ async function getStandardServiceTypeId(
   try {
     const columns = await context.db('standard_service_types').columnInfo();
     const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
+    const hasBillingMethodColumn = 'billing_method' in columns;
 
-    let query = context.db('standard_service_types').where({ billing_method: billingMethod });
+    let query = hasBillingMethodColumn
+      ? context.db('standard_service_types').where({ billing_method: billingMethod })
+      : context.db('standard_service_types');
     if (tenantColumn) {
       query = query.andWhere(tenantColumn, context.tenantId);
     }

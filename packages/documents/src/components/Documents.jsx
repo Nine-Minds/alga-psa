@@ -1057,4 +1057,3 @@ const Documents = ({ id = 'documents', documents: initialDocuments, gridColumns,
     </ReflectionContainer>);
 };
 export default Documents;
-//# sourceMappingURL=Documents.jsx.map

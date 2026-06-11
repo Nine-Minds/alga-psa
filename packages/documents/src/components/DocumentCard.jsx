@@ -65,4 +65,3 @@ const DocumentCard = ({ id = 'document-card', document, onDelete, onDisassociate
     </ReflectionContainer>);
 };
 export default DocumentCard;
-//# sourceMappingURL=DocumentCard.jsx.map
