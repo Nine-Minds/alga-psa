@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const qboClientCreateMock = vi.hoisted(() => vi.fn());
+const getDefaultQboRealmIdMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  QboClientService: { create: qboClientCreateMock },
+  getDefaultQboRealmId: getDefaultQboRealmIdMock
+}));
+
 import { QuickBooksOnlineAdapter } from '../../../../../packages/billing/src/adapters/accounting/quickBooksOnlineAdapter';
 import type { AccountingExportAdapterContext } from '@alga-psa/types';
 import { AccountingMappingResolver } from '../../../../../packages/billing/src/services/accountingMappingResolver';
@@ -597,5 +605,57 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
     await expect(adapter.transform(context)).rejects.toMatchObject({
       code: 'QBO_CHARGE_MISSING_NET_AMOUNT'
     });
+  });
+});
+
+describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
+  beforeEach(() => {
+    qboClientCreateMock.mockReset();
+    getDefaultQboRealmIdMock.mockReset();
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('falls back to the default stored realm when batch.target_realm is null', async () => {
+    getDefaultQboRealmIdMock.mockResolvedValue('realm-default-1');
+    qboClientCreateMock.mockResolvedValue({} as any);
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+
+    const result = await adapter.deliver({ documents: [] } as any, context);
+
+    expect(getDefaultQboRealmIdMock).toHaveBeenCalledWith(TENANT_ID);
+    expect(qboClientCreateMock).toHaveBeenCalledWith(TENANT_ID, 'realm-default-1');
+    expect(result.deliveredLines).toEqual([]);
+  });
+
+  it('keeps using the batch target realm when one is stamped', async () => {
+    qboClientCreateMock.mockResolvedValue({} as any);
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([]);
+
+    await adapter.deliver({ documents: [] } as any, context);
+
+    expect(getDefaultQboRealmIdMock).not.toHaveBeenCalled();
+    expect(qboClientCreateMock).toHaveBeenCalledWith(TENANT_ID, 'realm-qbo-demo');
+  });
+
+  it('throws a clear error when no realm is stamped and none is connected', async () => {
+    getDefaultQboRealmIdMock.mockResolvedValue(null);
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+
+    await expect(adapter.deliver({ documents: [] } as any, context)).rejects.toThrow(
+      /connected QuickBooks Online company/
+    );
+    expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
 });

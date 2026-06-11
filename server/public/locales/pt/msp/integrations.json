@@ -900,15 +900,82 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "Processo de conexão concluído.",
-        "errorDetail": "Erro: {{error}}",
-        "errored": "O processo de conexão resultou em erro.",
-        "failed": "Falha ao conectar ao QuickBooks Online.",
-        "realmId": "ID do Realm: {{realmId}}",
-        "returnButton": "Voltar às configurações do QuickBooks",
-        "success": "Conectado com sucesso ao QuickBooks Online!",
-        "title": "Status da conexão com o QuickBooks"
+      "live": {
+        "defaultCompany": "Empresa QuickBooks conectada"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Conectar QuickBooks",
+          "disconnect": "Desconectar QuickBooks",
+          "disconnecting": "Desconectando…",
+          "reconnect": "Reconectar QuickBooks",
+          "refresh": "Atualizar",
+          "saveCredentials": "Salvar credenciais QuickBooks",
+          "saving": "Salvando…"
+        },
+        "badges": {
+          "connectionExpired": "Conexão requer atenção",
+          "credentialsReady": "Credenciais prontas",
+          "credentialsRequired": "Credenciais obrigatórias",
+          "defaultConnected": "Empresa conectada",
+          "noCompany": "Nenhuma empresa conectada"
+        },
+        "callback": {
+          "accessDenied": "O acesso ao QuickBooks foi negado antes da conclusão da conexão.",
+          "configMissing": "Não foi possível iniciar o QuickBooks OAuth porque o client ID e o client secret não estavam totalmente configurados.",
+          "generic": "O QuickBooks retornou um erro OAuth: {{code}}",
+          "invalidState": "O estado OAuth do QuickBooks era inválido ou expirou. Inicie o fluxo de conexão novamente.",
+          "missingParams": "Parâmetros obrigatórios estavam ausentes no callback do QuickBooks. Inicie o fluxo de conexão novamente.",
+          "oauthFailed": "O callback OAuth do QuickBooks falhou. Tente se conectar novamente. Se o problema persistir, revise seu redirect URI e escopos.",
+          "tokenExchangeFailed": "O Intuit não retornou os tokens esperados. Tente se conectar novamente."
+        },
+        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdPlaceholder": "Cole o client ID do seu aplicativo Intuit",
+        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretPlaceholder": "Cole o client secret do seu aplicativo Intuit",
+        "connectSuccess": "QuickBooks conectado com sucesso. A empresa conectada agora é o contexto padrão do QuickBooks ao vivo.",
+        "connection": {
+          "defaultCompany": "Empresa conectada",
+          "description": "Inicie o OAuth somente após configurar as credenciais do aplicativo QuickBooks. Desconectar remove os tokens de acesso QuickBooks armazenados, mas mantém as credenciais do aplicativo de propriedade do tenant.",
+          "notConnected": "Nenhuma empresa QuickBooks está conectada ainda. Salve as credenciais e clique em Conectar QuickBooks.",
+          "realmId": "Realm ID: {{id}}",
+          "title": "Conexão QuickBooks ao vivo",
+          "unknown": "desconhecido"
+        },
+        "credentialsSaved": "Credenciais QuickBooks salvas. Agora você pode iniciar o fluxo OAuth do QuickBooks.",
+        "csvAvailableMiddle": "nesta mesma seção Contabilidade e gerencie exportações em",
+        "csvAvailablePrefix": "Se você prefere um fluxo manual, continue usando",
+        "csvAvailableTitle": "QuickBooks CSV permanece disponível",
+        "description": "Configure credenciais OAuth QuickBooks, conecte sua empresa QuickBooks e mantenha o QuickBooks ao vivo ao lado do fluxo manual QuickBooks CSV.",
+        "disconnectSuccess": "A conexão QuickBooks armazenada foi removida. As credenciais do aplicativo QuickBooks de propriedade do tenant foram preservadas.",
+        "environment": "Ambiente Intuit",
+        "environmentProduction": "Produção",
+        "environmentSandbox": "Sandbox",
+        "errors": {
+          "disconnect": "Falha ao desconectar o QuickBooks.",
+          "load": "Falha ao carregar as configurações do QuickBooks.",
+          "saveCredentials": "Falha ao salvar as credenciais do QuickBooks."
+        },
+        "howItWorksDescription": "Salve aqui as credenciais do aplicativo QuickBooks, conclua o fluxo OAuth do Intuit, e o Alga PSA usará a empresa QuickBooks conectada como contexto padrão ao vivo para exportações e mapeamentos.",
+        "howItWorksTitle": "Como o QuickBooks ao vivo funciona nesta versão",
+        "loading": "Carregando configurações do QuickBooks…",
+        "mapping": {
+          "alert": "Itens, códigos fiscais e condições do QuickBooks são carregados da empresa conectada para que exportações ao vivo possam continuar usando a primeira conexão QuickBooks armazenada na v1.",
+          "descriptionPrefix": "Configure os mapeamentos QuickBooks ao vivo para a empresa conectada. Estes mapeamentos estão limitados a",
+          "placeholderAlert": "O gerenciador de mapeamentos fica disponível após a primeira empresa QuickBooks ser conectada e definida como contexto padrão do QuickBooks ao vivo.",
+          "placeholderDescription": "Conecte uma empresa QuickBooks antes de configurar os mapeamentos de itens e impostos do QuickBooks ao vivo.",
+          "title": "Mapeamento e configuração do QuickBooks ao vivo"
+        },
+        "noClientId": "Nenhum client ID está armazenado para este tenant ainda.",
+        "noClientSecret": "Nenhum client secret está armazenado para este tenant ainda.",
+        "quickbooksCsv": "QuickBooks CSV",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Escopos obrigatórios",
+        "storedClientId": "Client ID armazenado: {{value}}",
+        "storedClientSecret": "Client secret armazenado: {{value}}",
+        "tenantOauthDescription": "Cole as credenciais do aplicativo Intuit registradas para este tenant ou deixe em branco para usar o aplicativo QuickBooks no nível do aplicativo, se configurado. Valores de secret nunca são retornados ao navegador após serem salvos.",
+        "tenantOauthTitle": "Aplicativo OAuth de propriedade do tenant",
+        "title": "QuickBooks Online"
       }
     },
     "rmm": {

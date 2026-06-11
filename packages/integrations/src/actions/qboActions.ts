@@ -1,14 +1,26 @@
 /* eslint-env node */
 'use server';
 
+import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { QboClientService } from '../lib/qbo/qboClientService';
+import {
+  QboClientService,
+  QBO_CLIENT_ID_SECRET_NAME,
+  QBO_CLIENT_SECRET_SECRET_NAME,
+  getQboEnvironment,
+  getQboOAuthScopes,
+  getQboRedirectUri,
+  resolveQboOAuthCredentials,
+  type QboEnvironment
+} from '../lib/qbo/qboClientService';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+const QBO_TOKEN_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -28,11 +40,43 @@ export interface QboConnectionSummary {
   error?: string | null;
 }
 
+export interface QboCredentialStatus {
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  ready: boolean;
+  clientIdMasked?: string;
+  clientSecretMasked?: string;
+}
+
 export interface QboConnectionStatus {
   connected: boolean;
   connections: QboConnectionSummary[];
   defaultRealmId?: string | null;
+  defaultConnection?: QboConnectionSummary;
+  redirectUri: string;
+  scopes: string[];
+  environment: QboEnvironment;
+  credentials: QboCredentialStatus;
   error?: string;
+}
+
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
+
+function assertEnterpriseEdition(): void {
+  if (!isEnterpriseEdition()) {
+    throw new Error('QuickBooks Online integration is only available in Enterprise Edition.');
+  }
+}
+
+function maskSecret(value: string): string {
+  if (!value) return '';
+  if (value.length <= 4) return '•'.repeat(value.length);
+  return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
 }
 
 // --- Helper Functions using ISecretProvider ---
@@ -255,10 +299,42 @@ export async function getTenantQboCredentials(
 }
 
 async function deleteTenantQboCredentials(secretProvider: ISecretProvider, tenantId: string): Promise<void> {
-  // Assuming setTenantSecret with null value effectively deletes/invalidates the secret
-  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, null);
-  logger.info('QBO credentials secret invalidated', { tenantId });
+  await secretProvider.deleteTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+  logger.info('QBO credentials secret deleted', { tenantId });
   clearAllCatalogCachesForTenant(tenantId);
+}
+
+async function revokeQboTokens(tenantId: string, credentialMap: QboCredentialsMap): Promise<void> {
+  const resolved = await resolveQboOAuthCredentials(tenantId).catch(() => null);
+  if (!resolved) {
+    logger.warn('Skipping QuickBooks token revocation: no usable client credentials', { tenantId });
+    return;
+  }
+
+  const authHeader = `Basic ${Buffer.from(`${resolved.clientId}:${resolved.clientSecret}`).toString('base64')}`;
+  for (const [realmId, credentials] of Object.entries(credentialMap)) {
+    try {
+      await axios.post(
+        QBO_TOKEN_REVOKE_URL,
+        { token: credentials.refreshToken },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: authHeader
+          },
+          timeout: 10000
+        }
+      );
+      logger.info('Revoked QuickBooks tokens with Intuit', { tenantId, realmId });
+    } catch (error) {
+      logger.warn('Best-effort QuickBooks token revocation failed', {
+        tenantId,
+        realmId,
+        error: error instanceof Error ? error.message : error
+      });
+    }
+  }
 }
 
 // --- QBO API Call Helper ---
@@ -292,6 +368,7 @@ export const getQboItems = withAuth(async (
   { tenant },
   options: { realmId?: string | null } = {}
 ): Promise<QboItem[]> => {
+  assertEnterpriseEdition();
   await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'items');
@@ -335,7 +412,31 @@ export const getQboConnectionStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<QboConnectionStatus> => {
+  assertEnterpriseEdition();
   await checkBillingReadAccess(user);
+
+  const secretProvider = await getSecretProviderInstance();
+  const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, QBO_CLIENT_ID_SECRET_NAME),
+    secretProvider.getTenantSecret(tenant, QBO_CLIENT_SECRET_SECRET_NAME),
+    getQboRedirectUri(secretProvider),
+    resolveQboOAuthCredentials(tenant, secretProvider).catch(() => null)
+  ]);
+  const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
+  const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
+  const credentialStatus: QboCredentialStatus = {
+    clientIdConfigured: Boolean(clientId),
+    clientSecretConfigured: Boolean(clientSecret),
+    ready: Boolean(resolvedCredentials),
+    clientIdMasked: clientId ? maskSecret(clientId) : undefined,
+    clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
+  };
+  const baseStatus = {
+    redirectUri,
+    scopes: getQboOAuthScopes(),
+    environment: getQboEnvironment(),
+    credentials: credentialStatus
+  };
 
   try {
     const credentialMap = await getTenantCredentialMap(tenant);
@@ -344,9 +445,12 @@ export const getQboConnectionStatus = withAuth(async (
     if (entries.length === 0) {
       logger.warn('No QuickBooks credentials stored for tenant', { tenantId: tenant });
       return {
+        ...baseStatus,
         connected: false,
         connections: [],
-        error: 'No QuickBooks connections configured.'
+        error: credentialStatus.ready
+          ? 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.'
+          : 'Add a QuickBooks client ID and client secret before connecting QuickBooks Online.'
       };
     }
 
@@ -418,10 +522,14 @@ export const getQboConnectionStatus = withAuth(async (
       defaultRealmId = summaries[0]?.realmId ?? null;
     }
 
+    const defaultConnection = summaries.find((summary) => summary.realmId === defaultRealmId);
+
     return {
+      ...baseStatus,
       connected: hasActiveConnection,
       connections: summaries,
       defaultRealmId,
+      defaultConnection,
       error: hasActiveConnection
         ? undefined
         : aggregatedError ?? 'QuickBooks connections require attention. Please reconnect.'
@@ -433,10 +541,58 @@ export const getQboConnectionStatus = withAuth(async (
         : 'An unexpected error occurred while checking the QuickBooks connection status.';
     logger.error('QuickBooks connection status check failed', { tenantId: tenant, error });
     return {
+      ...baseStatus,
       connected: false,
       connections: [],
       error: message
     };
+  }
+});
+
+/**
+ * Saves tenant-owned QuickBooks OAuth client credentials. Tenant-owned credentials
+ * take precedence over the application-level fallback when starting the OAuth flow
+ * and when refreshing tokens.
+ */
+export const saveQboCredentials = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string; clientSecret: string }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    assertEnterpriseEdition();
+    await checkBillingUpdateAccess(user);
+
+    const clientId = input.clientId?.trim();
+    if (!clientId) {
+      return { success: false, error: 'QuickBooks client ID is required.' };
+    }
+
+    const clientSecret = input.clientSecret?.trim();
+    if (!clientSecret) {
+      return { success: false, error: 'QuickBooks client secret is required.' };
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenant, QBO_CLIENT_ID_SECRET_NAME, clientId);
+    await secretProvider.setTenantSecret(tenant, QBO_CLIENT_SECRET_SECRET_NAME, clientSecret);
+
+    logger.info('Saved tenant-owned QuickBooks OAuth credentials', {
+      tenantId: tenant,
+      clientIdConfigured: true,
+      clientSecretConfigured: true
+    });
+
+    revalidatePath('/msp/settings');
+    return { success: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'An unexpected error occurred while saving QuickBooks credentials.';
+    logger.error('Failed to save tenant-owned QuickBooks OAuth credentials', {
+      tenantId: tenant,
+      error
+    });
+    return { success: false, error: message };
   }
 });
 
@@ -452,22 +608,21 @@ export const disconnectQbo = withAuth(async (
   const secretProvider = await getSecretProviderInstance();
 
   try {
+    assertEnterpriseEdition();
     await checkBillingUpdateAccess(user);
 
     logger.info('Disconnecting QuickBooks integration', { tenantId: tenant });
 
-    const rawSecretContent = await secretProvider.getTenantSecret(tenant, QBO_CREDENTIALS_SECRET_NAME);
-    const credentialsExist = Boolean(rawSecretContent);
+    const credentialMap = await getTenantCredentialMap(tenant);
 
     await deleteTenantQboCredentials(secretProvider, tenant);
     logger.info('Deleted stored QuickBooks credentials', { tenantId: tenant });
 
-    if (credentialsExist) {
-      logger.debug('QuickBooks credential revocation pending implementation', { tenantId: tenant });
+    if (Object.keys(credentialMap).length > 0) {
+      await revokeQboTokens(tenant, credentialMap);
     }
 
-    revalidatePath('/settings/integrations/quickbooks');
-    logger.debug('Revalidated QuickBooks integration settings path', { tenantId: tenant });
+    revalidatePath('/msp/settings');
 
     return { success: true };
   } catch (error: unknown) {
@@ -490,6 +645,7 @@ export const getQboTaxCodes = withAuth(async (
   { tenant },
   options: { realmId?: string | null } = {}
 ): Promise<QboTaxCode[]> => {
+  assertEnterpriseEdition();
   await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'tax-codes');
@@ -533,6 +689,7 @@ export const getQboTerms = withAuth(async (
   { tenant },
   options: { realmId?: string | null } = {}
 ): Promise<QboTerm[]> => {
+  assertEnterpriseEdition();
   await checkBillingReadAccess(user);
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'terms');

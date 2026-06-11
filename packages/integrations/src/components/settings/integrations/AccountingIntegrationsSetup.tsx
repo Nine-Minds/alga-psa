@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
+import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
@@ -76,20 +77,20 @@ export default function AccountingIntegrationsSetup() {
 
   const options = useMemo<AccountingIntegrationOption[]>(
     () => {
-      const next: AccountingIntegrationOption[] = [
-        {
+      const next: AccountingIntegrationOption[] = [];
+
+      if (isEEAvailable) {
+        next.push({
           id: 'quickbooks_online',
           title: 'QuickBooks Online',
           description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Connect your realm to sync invoices and manage mappings.' }),
-          disabled: true,
+          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
           highlights: [
             { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
-            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.instant', { defaultValue: 'Instant' }) }
+            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }
           ]
-        }
-      ];
+        });
 
-      if (isEEAvailable) {
         next.push({
           id: 'xero',
           title: 'Xero',
@@ -129,29 +130,44 @@ export default function AccountingIntegrationsSetup() {
   );
 
   const requestedIntegration = searchParams?.get('accounting_integration');
-  const oauthStatus = searchParams?.get('xero_status');
-  const [selected, setSelected] = useState<AccountingIntegrationId>(() => {
-    if ((requestedIntegration === 'xero' || oauthStatus) && isEEAvailable) {
+  const xeroOauthStatus = searchParams?.get('xero_status');
+  const qboOauthStatus = searchParams?.get('qbo_status');
+
+  // An explicit accounting_integration request wins over OAuth status params so
+  // the Xero and QBO callbacks cannot clobber each other's selection.
+  const resolveRequestedSelection = (): AccountingIntegrationId | null => {
+    if (requestedIntegration === 'quickbooks_online' || requestedIntegration === 'qbo') {
+      return isEEAvailable ? 'quickbooks_online' : null;
+    }
+    if (requestedIntegration === 'xero') {
+      return isEEAvailable ? 'xero' : null;
+    }
+    if (requestedIntegration === 'xero_csv') {
+      return 'xero_csv';
+    }
+    if (requestedIntegration === 'quickbooks_csv') {
+      return 'quickbooks_csv';
+    }
+    if (qboOauthStatus && isEEAvailable) {
+      return 'quickbooks_online';
+    }
+    if (xeroOauthStatus && isEEAvailable) {
       return 'xero';
     }
-    return 'quickbooks_csv';
-  });
+    return null;
+  };
+
+  const [selected, setSelected] = useState<AccountingIntegrationId>(
+    () => resolveRequestedSelection() ?? 'quickbooks_csv'
+  );
 
   useEffect(() => {
-    if ((requestedIntegration === 'xero' || oauthStatus) && isEEAvailable) {
-      setSelected('xero');
-      return;
+    const requested = resolveRequestedSelection();
+    if (requested) {
+      setSelected(requested);
     }
-
-    if (requestedIntegration === 'xero_csv') {
-      setSelected('xero_csv');
-      return;
-    }
-
-    if (requestedIntegration === 'quickbooks_csv') {
-      setSelected('quickbooks_csv');
-    }
-  }, [isEEAvailable, oauthStatus, requestedIntegration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEEAvailable, qboOauthStatus, xeroOauthStatus, requestedIntegration]);
 
   useEffect(() => {
     if (options.some((option) => option.id === selected)) {
@@ -243,6 +259,8 @@ export default function AccountingIntegrationsSetup() {
 
         {selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
+        ) : selected === 'quickbooks_online' ? (
+          <QboIntegrationSettings />
         ) : selected === 'xero' ? (
           <XeroIntegrationSettings />
         ) : selected === 'xero_csv' ? (

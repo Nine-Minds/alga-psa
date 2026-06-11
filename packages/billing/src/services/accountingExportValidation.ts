@@ -332,7 +332,7 @@ export class AccountingExportValidation {
           batch_id: batchId,
           line_id: firstLine.line_id,
           code: 'missing_target_realm',
-          message: 'QuickBooks exports require a target realm.',
+          message: 'Connect QuickBooks Online before exporting.',
           metadata: mergeErrorMetadata(firstLine)
         });
       }

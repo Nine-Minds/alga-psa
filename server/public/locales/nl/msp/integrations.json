@@ -900,15 +900,82 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "Verbindingsproces voltooid.",
-        "errorDetail": "Fout: {{error}}",
-        "errored": "Het verbindingsproces heeft een fout opgeleverd.",
-        "failed": "Verbinding met QuickBooks Online mislukt.",
-        "realmId": "Realm-ID: {{realmId}}",
-        "returnButton": "Terug naar QuickBooks-instellingen",
-        "success": "Succesvol verbonden met QuickBooks Online!",
-        "title": "Status QuickBooks-verbinding"
+      "live": {
+        "defaultCompany": "Verbonden QuickBooks-bedrijf"
+      },
+      "settings": {
+        "actions": {
+          "connect": "QuickBooks verbinden",
+          "disconnect": "QuickBooks ontkoppelen",
+          "disconnecting": "Ontkoppelen…",
+          "reconnect": "QuickBooks opnieuw verbinden",
+          "refresh": "Vernieuwen",
+          "saveCredentials": "QuickBooks-inloggegevens opslaan",
+          "saving": "Opslaan…"
+        },
+        "badges": {
+          "connectionExpired": "Verbinding vereist aandacht",
+          "credentialsReady": "Inloggegevens gereed",
+          "credentialsRequired": "Inloggegevens vereist",
+          "defaultConnected": "Bedrijf verbonden",
+          "noCompany": "Geen bedrijf verbonden"
+        },
+        "callback": {
+          "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
+          "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
+          "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
+          "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
+          "oauthFailed": "De QuickBooks OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
+          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken."
+        },
+        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdPlaceholder": "Plak uw Intuit app-client ID",
+        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretPlaceholder": "Plak uw Intuit app-client secret",
+        "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
+        "connection": {
+          "defaultCompany": "Verbonden bedrijf",
+          "description": "Start OAuth pas nadat de QuickBooks app-inloggegevens zijn geconfigureerd. Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
+          "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Sla de inloggegevens op en klik vervolgens op QuickBooks verbinden.",
+          "realmId": "Realm ID: {{id}}",
+          "title": "Live QuickBooks-verbinding",
+          "unknown": "onbekend"
+        },
+        "credentialsSaved": "QuickBooks-inloggegevens opgeslagen. U kunt nu de QuickBooks OAuth-flow starten.",
+        "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
+        "csvAvailablePrefix": "Als u de voorkeur geeft aan een handmatige workflow, blijf dan gebruiken",
+        "csvAvailableTitle": "QuickBooks CSV blijft beschikbaar",
+        "description": "Configureer QuickBooks OAuth-inloggegevens, verbind uw QuickBooks-bedrijf en behoud live QuickBooks naast de handmatige QuickBooks CSV-workflow.",
+        "disconnectSuccess": "De opgeslagen QuickBooks-verbinding is verwijderd. Tenant-eigen QuickBooks app-inloggegevens zijn behouden.",
+        "environment": "Intuit-omgeving",
+        "environmentProduction": "Productie",
+        "environmentSandbox": "Sandbox",
+        "errors": {
+          "disconnect": "QuickBooks ontkoppelen mislukt.",
+          "load": "QuickBooks-instellingen laden mislukt.",
+          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
+        },
+        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en Alga PSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
+        "loading": "QuickBooks-instellingen worden geladen…",
+        "mapping": {
+          "alert": "QuickBooks-artikelen, belastingcodes en voorwaarden worden geladen uit het verbonden bedrijf, zodat live exports in v1 de eerste opgeslagen QuickBooks-verbinding kunnen blijven gebruiken.",
+          "descriptionPrefix": "Configureer live QuickBooks-toewijzingen voor het verbonden bedrijf. Deze toewijzingen zijn beperkt tot",
+          "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat het eerste QuickBooks-bedrijf is verbonden en ingesteld als standaard live QuickBooks-context.",
+          "placeholderDescription": "Verbind een QuickBooks-bedrijf voordat u live QuickBooks-artikel- en belastingtoewijzingen configureert.",
+          "title": "Live QuickBooks-toewijzing en -configuratie"
+        },
+        "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
+        "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
+        "quickbooksCsv": "QuickBooks CSV",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Vereiste scopes",
+        "storedClientId": "Opgeslagen client ID: {{value}}",
+        "storedClientSecret": "Opgeslagen client secret: {{value}}",
+        "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
+        "tenantOauthTitle": "Tenant-eigen OAuth-app",
+        "title": "QuickBooks Online"
       }
     },
     "rmm": {

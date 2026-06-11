@@ -128,7 +128,6 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/settings/page.tsx', 'Settings'],
       ['server/src/app/msp/settings/extensions/layout.tsx', 'Extension Settings'],
       ['server/src/app/msp/settings/extensions/install/layout.tsx', 'Install Extension'],
-      ['server/src/app/msp/settings/integrations/qbo/callback/page.tsx', 'QuickBooks Integration'],
       ['server/src/app/msp/settings/notifications/layout.tsx', 'Notification Settings'],
       ['server/src/app/msp/settings/sla/layout.tsx', 'SLA Settings'],
       ['server/src/app/msp/security-settings/page.tsx', 'Security Settings'],

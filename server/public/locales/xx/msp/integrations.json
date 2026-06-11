@@ -900,14 +900,81 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "11111",
-        "errorDetail": "11111 {{error}} 11111",
-        "errored": "11111",
-        "failed": "11111",
-        "realmId": "11111 {{realmId}} 11111",
-        "returnButton": "11111",
-        "success": "11111",
+      "live": {
+        "defaultCompany": "11111"
+      },
+      "settings": {
+        "actions": {
+          "connect": "11111",
+          "disconnect": "11111",
+          "disconnecting": "11111",
+          "reconnect": "11111",
+          "refresh": "11111",
+          "saveCredentials": "11111",
+          "saving": "11111"
+        },
+        "badges": {
+          "connectionExpired": "11111",
+          "credentialsReady": "11111",
+          "credentialsRequired": "11111",
+          "defaultConnected": "11111",
+          "noCompany": "11111"
+        },
+        "callback": {
+          "accessDenied": "11111",
+          "configMissing": "11111",
+          "generic": "11111 {{code}} 11111",
+          "invalidState": "11111",
+          "missingParams": "11111",
+          "oauthFailed": "11111",
+          "tokenExchangeFailed": "11111"
+        },
+        "clientIdLabel": "11111",
+        "clientIdPlaceholder": "11111",
+        "clientSecretLabel": "11111",
+        "clientSecretPlaceholder": "11111",
+        "connectSuccess": "11111",
+        "connection": {
+          "defaultCompany": "11111",
+          "description": "11111",
+          "notConnected": "11111",
+          "realmId": "11111 {{id}} 11111",
+          "title": "11111",
+          "unknown": "11111"
+        },
+        "credentialsSaved": "11111",
+        "csvAvailableMiddle": "11111",
+        "csvAvailablePrefix": "11111",
+        "csvAvailableTitle": "11111",
+        "description": "11111",
+        "disconnectSuccess": "11111",
+        "environment": "11111",
+        "environmentProduction": "11111",
+        "environmentSandbox": "11111",
+        "errors": {
+          "disconnect": "11111",
+          "load": "11111",
+          "saveCredentials": "11111"
+        },
+        "howItWorksDescription": "11111",
+        "howItWorksTitle": "11111",
+        "loading": "11111",
+        "mapping": {
+          "alert": "11111",
+          "descriptionPrefix": "11111",
+          "placeholderAlert": "11111",
+          "placeholderDescription": "11111",
+          "title": "11111"
+        },
+        "noClientId": "11111",
+        "noClientSecret": "11111",
+        "quickbooksCsv": "11111",
+        "redirectUri": "11111",
+        "requiredScopes": "11111",
+        "storedClientId": "11111 {{value}} 11111",
+        "storedClientSecret": "11111 {{value}} 11111",
+        "tenantOauthDescription": "11111",
+        "tenantOauthTitle": "11111",
         "title": "11111"
       }
     },
@@ -1468,63 +1535,63 @@
         },
         "title": "11111",
         "diagnostics": {
-          "title": "Diagnostics & Test Message",
-          "description": "Verify the Teams setup and send a proactive test message to your Teams bot conversation.",
-          "run": "Run diagnostics",
-          "running": "Running...",
-          "sendTest": "Send test message",
-          "sending": "Sending...",
-          "disabled": "Diagnostics and test messages are available after the Teams integration is active.",
-          "completedAt": "Completed {{time}}",
-          "lastSuccess": "Last success",
-          "lastFailure": "Last failure",
-          "noneRecorded": "None recorded",
-          "recommendations": "Recommendations",
+          "title": "11111",
+          "description": "11111",
+          "run": "11111",
+          "running": "11111",
+          "sendTest": "11111",
+          "sending": "11111",
+          "disabled": "11111",
+          "completedAt": "11111 {{time}} 11111",
+          "lastSuccess": "11111",
+          "lastFailure": "11111",
+          "noneRecorded": "11111",
+          "recommendations": "11111",
           "status": {
-            "pass": "Pass",
-            "warn": "Warn",
-            "fail": "Fail",
-            "skip": "Skip"
+            "pass": "11111",
+            "warn": "11111",
+            "fail": "11111",
+            "skip": "11111"
           },
           "errors": {
-            "run": "Failed to run Teams diagnostics",
-            "testMessage": "Failed to send Teams test message"
+            "run": "11111",
+            "testMessage": "11111"
           },
           "test": {
-            "sent": "Teams test message sent.",
-            "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
-            "integrationInactive": "Activate the Teams integration before sending a test message.",
-            "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
-            "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
-            "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
-            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "skipped": "Teams test message was skipped."
+            "sent": "11111",
+            "failed": "11111",
+            "addonInactive": "11111",
+            "integrationInactive": "11111",
+            "capabilityDisabled": "11111",
+            "botNotConfigured": "11111",
+            "missingUserLinkage": "11111",
+            "missingConversationReference": "11111",
+            "skipped": "11111"
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
-            "integrationStatus": "Teams integration status",
-            "capabilities": "Teams capabilities",
-            "microsoftProfile": "Microsoft profile readiness",
-            "packageMetadata": "Teams package metadata",
-            "botConnector": "Bot connector credentials",
-            "userLinkage": "Admin Microsoft account linkage",
-            "conversationReference": "Admin Teams conversation reference",
-            "recentDeliveryHealth": "Recent Teams delivery health"
+            "addonEntitlement": "11111",
+            "integrationStatus": "11111",
+            "capabilities": "11111",
+            "microsoftProfile": "11111",
+            "packageMetadata": "11111",
+            "botConnector": "11111",
+            "userLinkage": "11111",
+            "conversationReference": "11111",
+            "recentDeliveryHealth": "11111"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
-            "activate": "Activate the Teams integration in settings.",
-            "capabilities": "Enable personal bot and activity notifications for Teams.",
-            "profile": "Select a ready Microsoft profile for Teams.",
-            "activeProfile": "Select an active Microsoft profile for Teams.",
-            "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
-            "package": "Generate the Teams app package before running end-to-end validation.",
-            "baseUrl": "Regenerate the Teams package with a reachable base URL.",
-            "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Link your Microsoft account in your profile settings.",
-            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+            "addon": "11111",
+            "activate": "11111",
+            "capabilities": "11111",
+            "profile": "11111",
+            "activeProfile": "11111",
+            "profileCredentials": "11111",
+            "package": "11111",
+            "baseUrl": "11111",
+            "botEnv": "11111",
+            "userLinkage": "11111",
+            "conversationReference": "11111",
+            "deliveryFailure": "11111"
           }
         }
       }

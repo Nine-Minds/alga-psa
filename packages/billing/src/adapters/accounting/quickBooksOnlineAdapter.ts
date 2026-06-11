@@ -22,7 +22,7 @@ import { KnexCompanyMappingRepository } from '../../services/companySync/company
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 
 type DbInvoice = {
@@ -404,15 +404,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     transformResult: AccountingExportTransformResult,
     context: AccountingExportAdapterContext
   ): Promise<AccountingExportDeliveryResult> {
-    const realmId = context.batch.target_realm;
-    if (!realmId) {
-      throw new Error('QuickBooks adapter requires batch.target_realm to deliver invoices');
-    }
-
     const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
+    }
+
+    const realmId = context.batch.target_realm ?? await getDefaultQboRealmId(tenantId);
+    if (!realmId) {
+      throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);

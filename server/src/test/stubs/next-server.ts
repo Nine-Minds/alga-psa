@@ -8,9 +8,47 @@ const GlobalHeaders = globalThis.Headers;
  * standard Fetch API classes available in the test environment.
  */
 
+type StubCookieOptions = {
+  name: string;
+  value: string;
+  path?: string;
+  maxAge?: number;
+  httpOnly?: boolean;
+  sameSite?: 'lax' | 'strict' | 'none';
+  secure?: boolean;
+};
+
+class StubResponseCookies {
+  constructor(private readonly headers: Headers) {}
+
+  set(
+    nameOrOptions: string | StubCookieOptions,
+    value?: string,
+    options?: Omit<StubCookieOptions, 'name' | 'value'>
+  ): this {
+    const opts: StubCookieOptions =
+      typeof nameOrOptions === 'string'
+        ? { name: nameOrOptions, value: value ?? '', ...(options ?? {}) }
+        : nameOrOptions;
+
+    const parts = [`${opts.name}=${encodeURIComponent(opts.value)}`];
+    if (opts.path) parts.push(`Path=${opts.path}`);
+    if (opts.maxAge !== undefined) parts.push(`Max-Age=${opts.maxAge}`);
+    if (opts.httpOnly) parts.push('HttpOnly');
+    if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
+    if (opts.secure) parts.push('Secure');
+    this.headers.append('set-cookie', parts.join('; '));
+    return this;
+  }
+}
+
 class StubNextResponse extends GlobalResponse {
   constructor(body?: BodyInit | null, init?: ResponseInit) {
     super(body ?? null, init);
+  }
+
+  get cookies(): StubResponseCookies {
+    return new StubResponseCookies(this.headers);
   }
 
   static redirect(url: string | URL, init?: number | ResponseInit): StubNextResponse {

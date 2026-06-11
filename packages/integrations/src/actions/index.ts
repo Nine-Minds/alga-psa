@@ -5,6 +5,7 @@
 export {
   getQboItems,
   getQboConnectionStatus,
+  saveQboCredentials,
   disconnectQbo,
   getQboTaxCodes,
   getQboTerms,
@@ -12,6 +13,7 @@ export {
   getTenantQboCredentials,
   type QboConnectionSummary,
   type QboConnectionStatus,
+  type QboCredentialStatus,
   type QboItem,
   type QboTaxCode,
   type QboTerm
