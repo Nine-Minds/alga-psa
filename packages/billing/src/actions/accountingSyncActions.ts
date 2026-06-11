@@ -5,7 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import {
   getAccountingSyncSettings,
   updateAccountingSyncSettings,
@@ -304,6 +304,13 @@ export interface AccountingSyncHealth {
   refreshTokenExpiresAt: string | null;
   /** All connected realms. Length > 1 means the multi-realm UX should be shown. */
   realms: AccountingSyncRealmInfo[];
+  /**
+   * QBO company setting 'Automatically apply credits' (Preferences →
+   * SalesFormsPrefs.AutoApplyCredit). When true, QBO races Alga-driven credit
+   * application by grabbing exported CreditMemos for its oldest open invoices.
+   * null = could not be read (disconnected, API error).
+   */
+  autoApplyCreditsEnabled: boolean | null;
 }
 
 /** Health panel data for the integration settings page. */
@@ -339,16 +346,18 @@ export const getAccountingSyncHealth = withAuth(async (
       driftCount: 0,
       openExceptions: 0,
       refreshTokenExpiresAt: null,
-      realms
+      realms,
+      autoApplyCreditsEnabled: null
     };
   }
 
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
-  const [lastCycle, opCounts, statusCounts, openExceptions] = await Promise.all([
+  const [lastCycle, opCounts, statusCounts, openExceptions, autoApplyCreditsEnabled] = await Promise.all([
     new SyncCycleRepository(knex).getLatestCycle(tenant, SYNC_ADAPTER_TYPE, realm),
     new SyncOperationsRepository(knex).countByStatus(tenant, SYNC_ADAPTER_TYPE),
     ledger.countByStatus(),
-    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen()
+    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
+    readAutoApplyCreditsPreference(tenant, realm)
   ]);
 
   return {
@@ -361,9 +370,25 @@ export const getAccountingSyncHealth = withAuth(async (
       (statusCounts[MAPPING_SYNC_STATUS.drift] ?? 0) + (statusCounts[MAPPING_SYNC_STATUS.externalVoided] ?? 0),
     openExceptions,
     refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
-    realms
+    realms,
+    autoApplyCreditsEnabled
   };
 });
+
+/** Best-effort read of QBO 'Automatically apply credits'; null when unreadable. */
+async function readAutoApplyCreditsPreference(tenant: string, realm: string): Promise<boolean | null> {
+  try {
+    const qboClient = await QboClientService.create(tenant, realm);
+    const prefs = await qboClient.getPreferences<any>();
+    const value = prefs?.SalesFormsPrefs?.AutoApplyCredit;
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Set the default QBO realm for this tenant.
