@@ -121,7 +121,10 @@
       "minimumDuration": "Minimalny czas trwania to 1 minuta",
       "serviceRequired": "Do wpisów czasu wymagana jest obsługa",
       "timePeriodRange": "Data musi mieścić się w bieżącym okresie ({{periodRange}})",
-      "endAfterStartPicker": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia"
+      "endAfterStartPicker": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia",
+      "durationSameDay": "Czas trwania musi kończyć się tego samego dnia",
+      "endSameDay": "Godzina zakończenia musi przypadać tego samego dnia co godzina rozpoczęcia",
+      "invalidTimeRange": "Wprowadź prawidłowy zakres czasu"
     }
   },
   "workItemPicker": {

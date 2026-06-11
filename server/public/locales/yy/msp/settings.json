@@ -1049,7 +1049,22 @@
       "milestoneCompleted": "55555",
       "dayAgo": "55555",
       "createTicket": "55555",
-      "viewProjects": "55555"
+      "viewProjects": "55555",
+      "activeDevices": "55555",
+      "basicSupport": "55555",
+      "dashboardTitle": "55555",
+      "greeting": "55555",
+      "navAppointments": "55555",
+      "navDashboard": "55555",
+      "navDevices": "55555",
+      "navProjects": "55555",
+      "navServiceRequests": "55555",
+      "navTickets": "55555",
+      "serviceRequests": "55555",
+      "upcomingShort": "55555",
+      "upcomingVisits": "55555",
+      "welcomeBack": "55555",
+      "workspaceSection": "55555"
     },
     "signInPreview": {
       "portalTitle": "55555",

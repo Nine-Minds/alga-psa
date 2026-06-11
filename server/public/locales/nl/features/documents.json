@@ -273,5 +273,10 @@
   "uploadHint": "Upload bestanden om met deze taak te delen",
   "file": "bestand",
   "files": "bestanden",
-  "view": "Bekijken"
+  "view": "Bekijken",
+  "common:pagination": {
+    "next": "Volgende",
+    "pageOf": "Pagina {{current}} van {{total}}",
+    "previous": "Vorige"
+  }
 }

@@ -1474,5 +1474,13 @@
       "confirm_other": "Add Tags to {{count}} Tasks",
       "failedHeading": "Tags could not be added to the following tasks:"
     }
+  },
+  "common:actions": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "done": "Done",
+    "edit": "Edit",
+    "save": "Save"
   }
 }

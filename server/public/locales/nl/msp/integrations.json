@@ -1028,7 +1028,16 @@
         "comingSoon": "RMM-integratie binnenkort beschikbaar",
         "configure": "Integratie configureren",
         "selected": "{{title}} geselecteerd",
-        "title": "RMM-integraties"
+        "title": "RMM-integraties",
+        "backToList": "Alle RMM-integraties",
+        "loadingProvider": "Integratie-instellingen voor {{title}} laden...",
+        "status": {
+          "connected": "Verbonden",
+          "connectedOneDevice": "Verbonden · 1 apparaat",
+          "connectedWithDevices": "Verbonden · {{count}} apparaten",
+          "notConnected": "Niet verbonden",
+          "syncError": "Synchronisatiefout"
+        }
       },
       "tactical": {
         "actions": {
@@ -1235,6 +1244,86 @@
         "sync": {
           "description": "Ontdek scopes vanuit Tanium-computergroepen, wijs ze toe aan klanten en voer vervolgens inventarissynchronisatie uit.",
           "title": "Tanium-synchronisatie"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "Waarschuwingen backfillen",
+          "disconnect": "Verbinding verbreken",
+          "discoverGroups": "Groepen detecteren",
+          "runDeviceSync": "Apparaatsynchronisatie uitvoeren",
+          "saveConfiguration": "Configuratie opslaan",
+          "testConnection": "Verbinding testen"
+        },
+        "connection": {
+          "connectedAt": "Verbonden: {{time}}",
+          "description": "Maak verbinding met Level (level.io) met een API-sleutel. Sleutels worden in Level aangemaakt onder Settings > API.",
+          "never": "nooit",
+          "syncLabel": "Synchronisatie: {{status}}",
+          "syncLabelWithError": "Synchronisatie: {{status}} ({{error}})",
+          "title": "Level-verbinding"
+        },
+        "errors": {
+          "alertBackfillFailed": "Backfill van waarschuwingen mislukt",
+          "deviceSyncFailed": "Apparaatsynchronisatie mislukt",
+          "disconnectFailed": "Kan verbinding met Level-integratie niet verbreken",
+          "groupSyncFailed": "Groepsdetectie mislukt",
+          "loadMappings": "Kan Level-groepstoewijzingen niet laden",
+          "loadSettings": "Kan Level-instellingen niet laden",
+          "loadState": "Kan status van Level-integratie niet laden",
+          "loadSummary": "Kan Level-verbindingsoverzicht niet laden",
+          "loadWebhook": "Kan Level-webhookdetails niet laden",
+          "saveConfiguration": "Kan Level-configuratie niet opslaan",
+          "testConnectionFailed": "Verbindingstest mislukt",
+          "updateMappingFailed": "Kan toewijzing niet bijwerken"
+        },
+        "fields": {
+          "apiKey": "API-sleutel ({{state}})",
+          "apiKeyPlaceholderExisting": "Voer een nieuwe sleutel in om de opgeslagen sleutel te vervangen",
+          "apiKeyPlaceholderNew": "Plak je Level-API-sleutel",
+          "apiKeyStateRequired": "vereist",
+          "apiKeyStateSaved": "opgeslagen"
+        },
+        "mappings": {
+          "autoSync": "Automatisch synchroniseren",
+          "autoSyncDisabled": "Uitgeschakeld",
+          "autoSyncEnabled": "Ingeschakeld",
+          "group": "Level-groep",
+          "groupIdLabel": "ID: {{id}}",
+          "loading": "Laden…",
+          "mappedClient": "Toegewezen klant",
+          "noGroups": "Nog geen groepen gedetecteerd. Voer eerst Groepen detecteren uit.",
+          "unmapped": "Niet toegewezen"
+        },
+        "status": {
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "label": "Status: "
+        },
+        "success": {
+          "alertBackfillCompleted": "Backfill van waarschuwingen voltooid: {{processed}} waarschuwingen verwerkt",
+          "configurationSaved": "Level-configuratie opgeslagen",
+          "connectionTestSucceeded": "Verbinding met Level geslaagd",
+          "deviceSyncCompleted": "Apparaatsynchronisatie voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "disconnected": "Level-integratie losgekoppeld",
+          "groupSyncCompleted": "Groepsdetectie voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt"
+        },
+        "sync": {
+          "description": "Detecteer Level-groepen, wijs ze toe aan klanten en synchroniseer apparaten. Apparaten in niet-toegewezen groepen worden overgeslagen; subgroepen erven de dichtstbijzijnde toegewezen bovenliggende groep.",
+          "summary": "{{mappedGroups}} toegewezen groepen · {{devices}} apparaten · {{activeAlerts}} actieve waarschuwingen",
+          "title": "Synchronisatie & groepstoewijzingen"
+        },
+        "webhook": {
+          "copied": "Gekopieerd",
+          "copy": "Kopiëren",
+          "description": "Level kan geen webhooks registreren via zijn API. Maak in Level een automatisering met een HTTP POST-actie met de onderstaande URL, header en payload om waarschuwingen in realtime naar Alga te pushen.",
+          "header": "Header: {{name}}",
+          "hideSecret": "Geheim verbergen",
+          "loading": "Webhookdetails worden geladen nadat de integratie is geconfigureerd.",
+          "payload": "Payloadsjabloon",
+          "showSecret": "Geheim tonen",
+          "title": "Waarschuwingswebhook",
+          "url": "Webhook-URL"
         }
       }
     },

@@ -33,7 +33,8 @@
       "resources": "Bronnen",
       "more": "Meer",
       "apps": "Apps"
-    }
+    },
+    "licenses": "Licenties"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -131,7 +132,8 @@
           "declined": "Afspraak afgewezen: {{name}}",
           "cancelled": "Afspraak geannuleerd: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Wanneer tickets worden bijgewerkt, zie je ze hier."
     },
     "devices": {
       "title": "Je apparaten",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres.",
         "registrationFailed": "De registratie kon niet worden voltooid. Probeer het opnieuw."
       }
-    }
+    },
+    "captchaRequired": "Voltooi de onderstaande verificatie en meld je daarna opnieuw aan.",
+    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat je het opnieuw probeert."
   },
   "account": {
     "title": "Account",

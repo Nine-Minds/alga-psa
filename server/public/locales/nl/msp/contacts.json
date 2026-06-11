@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
       "tags": "Labels",
       "notes": "Notities",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefoon"
     },
     "status": {
       "label": "Status",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notities opgeslagen",
       "saveFailed": "Notities opslaan is mislukt"
     }
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties"
   }
 }

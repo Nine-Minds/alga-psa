@@ -1525,6 +1525,12 @@
         "label": "Tenant Address",
         "description": "Your company address."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Template Boundary"
+    },
+    "dragOverlay": {
+      "component": "Component"
     }
   }
 }

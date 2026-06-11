@@ -1525,6 +1525,12 @@
         "label": "Dirección del tenant",
         "description": "La dirección de su empresa."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Límite de la plantilla"
+    },
+    "dragOverlay": {
+      "component": "Componente"
     }
   }
 }

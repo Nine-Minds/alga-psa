@@ -24,7 +24,10 @@
   "actions": {
     "create": "Create workflow",
     "open": "Open",
-    "close": "Close"
+    "close": "Close",
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão",
+    "printSelected": "Imprimir selecionados ({{count}})"
   },
   "runList": {
     "shareTooltip": "Imprimir e exportar",
@@ -60,7 +63,8 @@
       "cancelSelected": "Cancel selected ({{count}})",
       "clearSelection": "Clear selection",
       "details": "Details",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "preview": "Pré-visualizar"
     },
     "table": {
       "runId": "Run ID",
@@ -124,6 +128,15 @@
         "title": "Opções de impressão",
         "description": "Escolha quais colunas incluir ao imprimir as execuções de workflow."
       }
+    },
+    "preview": {
+      "close": "Fechar",
+      "next": "Próximo",
+      "openFullPage": "Abrir página completa",
+      "position": "{{current}} de {{total}} execuções carregadas",
+      "previous": "Anterior",
+      "selectedRun": "Execução selecionada",
+      "title": "Pré-visualização da execução"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Mapped",
       "identity": "Identity",
       "runErrorFallback": "Run error",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Detalhe técnico:"
     },
     "stepTimeline": {
       "title": "Step Timeline",
@@ -179,7 +193,8 @@
         "duration": "Duration",
         "nextRetry": "Next Retry",
         "started": "Started",
-        "error": "Error"
+        "error": "Error",
+        "action": "Ação"
       },
       "empty": "No step history yet."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Next Retry",
       "errorTitle": "Error",
       "stepErrorFallback": "Step error",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Detalhe técnico:"
     },
     "waitHistory": {
       "title": "Wait History",
@@ -241,7 +257,8 @@
         "step": "Step",
         "event": "Event",
         "correlation": "Correlation"
-      }
+      },
+      "loading": "Carregando logs..."
     },
     "audit": {
       "title": "Audit Trail",
@@ -253,7 +270,9 @@
         "operation": "Operation",
         "user": "User",
         "details": "Details"
-      }
+      },
+      "loading": "Carregando trilha de auditoria...",
+      "unknownUser": "Usuário desconhecido"
     },
     "dialogs": {
       "reasonLabel": "Reason",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "Export CSV",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "refresh": "Atualizar"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Select a workflow to view audit history.",
-      "empty": "No audit entries yet."
+      "empty": "No audit entries yet.",
+      "loading": "Carregando entradas de auditoria..."
     },
     "values": {
       "system": "system"
@@ -577,6 +598,19 @@
         "events": "Events",
         "eventCatalog": "Event Catalog",
         "deadLetter": "Dead Letter"
+      },
+      "quota": {
+        "consumedLabel": "Consumido",
+        "consumedUnit": "consumidas",
+        "loading": "Carregando...",
+        "planLimit": "Limite de {{limit}}",
+        "remainingLabel": "Restante",
+        "remainingUnit": "restantes",
+        "resetsOn": "Redefine em {{date}}",
+        "title": "Ações de workflow",
+        "unavailable": "Indisponível",
+        "unlimitedPlan": "Plano ilimitado",
+        "unlimitedRemaining": "Ilimitado"
       }
     },
     "toolbar": {
@@ -808,6 +842,60 @@
       "links.list_namespaces": {
         "label": "Listar espaços de nomes de vínculos",
         "description": "Listar os espaços de nomes de vínculos de entidade de workflow usados por este tenant."
+      },
+      "ai": {
+        "infer": {
+          "label": "Inferir saída estruturada",
+          "description": "Gerar dados estruturados de workflow a partir de um prompt usando o provedor de IA configurado."
+        }
+      },
+      "store": {
+        "get": {
+          "label": "Obter valor armazenado",
+          "description": "Ler uma entrada chave/valor de workflow persistida."
+        },
+        "set": {
+          "label": "Definir valor armazenado",
+          "description": "Persistir uma entrada chave/valor de workflow."
+        },
+        "delete": {
+          "label": "Excluir valor armazenado",
+          "description": "Excluir uma entrada chave/valor de workflow persistida."
+        },
+        "increment": {
+          "label": "Incrementar número armazenado",
+          "description": "Incrementar atomicamente um número de workflow persistido."
+        },
+        "list": {
+          "label": "Listar valores armazenados",
+          "description": "Listar as entradas chave/valor de workflow persistidas em um espaço de nomes."
+        },
+        "list_namespaces": {
+          "label": "Listar espaços de nomes do armazenamento",
+          "description": "Listar os espaços de nomes do armazenamento de dados de workflow usados por este tenant."
+        }
+      },
+      "links": {
+        "upsert": {
+          "label": "Criar ou atualizar vínculo de entidade",
+          "description": "Criar ou atualizar um vínculo persistido entre duas entidades de workflow."
+        },
+        "lookup": {
+          "label": "Pesquisar vínculos de entidade",
+          "description": "Encontrar vínculos de entidade persistidos por entidade de origem e direção."
+        },
+        "delete": {
+          "label": "Excluir vínculos de entidade",
+          "description": "Excluir vínculos de entidade persistidos por lado e relação opcional."
+        },
+        "list": {
+          "label": "Listar vínculos de entidade",
+          "description": "Listar os vínculos de entidade persistidos em um espaço de nomes."
+        },
+        "list_namespaces": {
+          "label": "Listar espaços de nomes de vínculos",
+          "description": "Listar os espaços de nomes de vínculos de entidade de workflow usados por este tenant."
+        }
       }
     },
     "validation": {
@@ -876,6 +964,28 @@
         "control.return": {
           "label": "Return",
           "description": "Stop execution"
+        },
+        "control": {
+          "if": {
+            "label": "Se",
+            "description": "Ramificação condicional"
+          },
+          "forEach": {
+            "label": "Para cada",
+            "description": "Iterar sobre itens"
+          },
+          "tryCatch": {
+            "label": "Try/Catch",
+            "description": "Tratar erros"
+          },
+          "callWorkflow": {
+            "label": "Chamar workflow",
+            "description": "Invocar outro workflow"
+          },
+          "return": {
+            "label": "Retornar",
+            "description": "Parar a execução"
+          }
         }
       },
       "nodes": {
@@ -910,6 +1020,52 @@
         "human.task": {
           "label": "Human Task",
           "description": "Pause for human task completion"
+        },
+        "state": {
+          "set": {
+            "label": "Definir estado",
+            "description": "Atualizar o estado do workflow"
+          }
+        },
+        "event": {
+          "wait": {
+            "label": "Aguardar evento",
+            "description": "Aguardar um evento externo"
+          }
+        },
+        "time": {
+          "wait": {
+            "label": "Aguardar tempo",
+            "description": "Aguardar uma duração ou até uma data/hora"
+          }
+        },
+        "transform": {
+          "assign": {
+            "label": "Atribuir",
+            "description": "Atribuir valores ao payload ou às variáveis"
+          }
+        },
+        "action": {
+          "call": {
+            "label": "Chamar ação",
+            "description": "Invocar uma ação registrada"
+          }
+        },
+        "email": {
+          "parseBody": {
+            "label": "Analisar corpo do e-mail",
+            "description": "Analisar e sanitizar o corpo da resposta de e-mail"
+          },
+          "renderCommentBlocks": {
+            "label": "Renderizar blocos de comentário",
+            "description": "Renderizar blocos de comentário a partir do conteúdo do e-mail"
+          }
+        },
+        "human": {
+          "task": {
+            "label": "Tarefa humana",
+            "description": "Pausar até a conclusão da tarefa humana"
+          }
         }
       },
       "groups": {
@@ -1437,7 +1593,10 @@
     "softEnumPlaceholder": "Selecionar ou inserir um valor",
     "softEnumSearchPlaceholder": "Pesquisar ou inserir um valor personalizado",
     "softEnumNoResults": "Sem sugestões",
-    "softEnumUseCustom": "Usar \"{{value}}\""
+    "softEnumUseCustom": "Usar \"{{value}}\"",
+    "expression": {
+      "placeholder": "ex.: payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
@@ -1542,7 +1701,8 @@
     },
     "actions": {
       "replay": "Replay",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "refresh": "Atualizar"
     },
     "status": {
       "running": "Running",
@@ -1550,7 +1710,8 @@
       "retrying": "Retrying",
       "failed": "Failed",
       "pending": "Pending",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "loading": "Carregando"
     },
     "failure": {
       "title": "Run failed",
@@ -1567,7 +1728,9 @@
         "loadingDefinition": "Loading workflow definition…",
         "loadingDefinitionPlain": "Loading workflow definition...",
         "noSteps": "No steps to display."
-      }
+      },
+      "selectPrompt": "Selecione uma etapa para destacá-la.",
+      "selectedStep": "Selecionada: {{label}}"
     },
     "details": {
       "title": "Run Details",
@@ -1697,8 +1860,14 @@
       "reasonRequired": "Reason is required (min 3 characters).",
       "canceled": "Run canceled.",
       "replayStarted": "Run replay started.",
-      "actionFailed": "Failed to perform action."
-    }
+      "actionFailed": "Failed to perform action.",
+      "loadFailed": "Falha ao carregar o estúdio de execução"
+    },
+    "lastRefreshed": "Última atualização {{time}}",
+    "navigation": {
+      "backToRuns": "← Voltar para execuções de workflow"
+    },
+    "title": "Estúdio de execução de workflow"
   },
   "schedules": {
     "common": {

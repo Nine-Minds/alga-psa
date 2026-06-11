@@ -48,7 +48,8 @@
     "resetPrintOptions": "Resetuj opcje drukowania",
     "share": "Udostępnij",
     "done": "Gotowe",
-    "continue": "Kontynuuj"
+    "continue": "Kontynuuj",
+    "printSelected": "Drukuj zaznaczone ({{count}})"
   },
   "status": {
     "loading": "Ładowanie...",
@@ -506,7 +507,10 @@
         "visible": "Widoczne dla klienta",
         "hidden": "Tylko wewnętrzne"
       },
-      "clientVisibilityLabel": "Widoczność dla klienta"
+      "clientVisibilityLabel": "Widoczność dla klienta",
+      "entityOptions": {
+        "all": "Wszystkie obiekty"
+      }
     },
     "selector": {
       "title": "Wybierz dokumenty",
@@ -534,7 +538,10 @@
       "uploadingProgress": "Przesyłanie {{current}} z {{total}}",
       "pending": "Oczekujące",
       "error": "Nie udało się przesłać dokumentu",
-      "fileError": "Nie udało się przesłać pliku"
+      "fileError": "Nie udało się przesłać pliku",
+      "associatedEntityTypeLabel": "Powiąż z",
+      "noAssociation": "Brak powiązania",
+      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt."
     },
     "folders": {
       "root": "Główny",
@@ -593,7 +600,20 @@
     "downloadVideo": "Pobierz wideo",
     "downloadAsPdf": "Pobierz jako PDF",
     "downloadAsMarkdown": "Pobierz jako Markdown",
-    "move": "Przenieś"
+    "move": "Przenieś",
+    "associatedEntityPicker": {
+      "allEntities": "Wszystkie obiekty",
+      "loadingClients": "Ładowanie klientów...",
+      "loadingContacts": "Ładowanie kontaktów...",
+      "noEntityTypes": "Nie znaleziono typów obiektów",
+      "typeLabel": "Typ powiązanego obiektu",
+      "typePlaceholder": "Wybierz typ obiektu",
+      "typeSearchPlaceholder": "Szukaj typów obiektów...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Wybierz: {{entityType}}",
+      "entitySearchPlaceholder": "Szukaj: {{entityType}}...",
+      "noEntities": "Nie znaleziono: {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -934,7 +954,10 @@
     "deleteCommentAriaLabel": "Usuń komentarz",
     "deleteComment": "Usuń komentarz",
     "deleteCommentConfirmation": "Czy na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.",
-    "update": "Zaktualizuj"
+    "update": "Zaktualizuj",
+    "create": "Utwórz",
+    "replyComment": "Odpowiedz na komentarz",
+    "saving": "Zapisywanie..."
   },
   "sessionManagement": {
     "title": "Aktywne sesje",
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca.",
     "showAll": "Pokaż wszystko",
     "showingAllColumns": "Wyświetlane są wszystkie kolumny; przewiń w poziomie, aby je zobaczyć.",
-    "showLess": "Pokaż mniej"
+    "showLess": "Pokaż mniej",
+    "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni."
   }
 }

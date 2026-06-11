@@ -28,7 +28,12 @@
       "inactive": "11111",
       "loading": "11111",
       "na": "11111",
-      "none": "11111"
+      "none": "11111",
+      "archived": "11111",
+      "draft": "11111",
+      "expired": "11111",
+      "published": "11111",
+      "terminated": "11111"
     },
     "no": "11111",
     "yes": "11111"
@@ -249,7 +254,13 @@
       "status": "11111"
     },
     "deactivateClientDescription": "11111",
-    "deactivateClientOnlyDescription": "11111"
+    "deactivateClientOnlyDescription": "11111",
+    "nameAliasAddFailed": "11111",
+    "nameAliasAdded": "11111",
+    "nameAliasRemoveFailed": "11111",
+    "nameAliasRemoved": "11111",
+    "nameAliases": "11111",
+    "noNameAliases": "11111"
   },
   "quickAddClient": {
     "title": "11111",
@@ -416,7 +427,8 @@
     "invalidDate": "11111",
     "formattingError": "11111",
     "removeAssignmentTitle": "11111",
-    "removeAssignmentMessage": "11111"
+    "removeAssignmentMessage": "11111",
+    "contracts": "11111"
   },
   "clientBillingSchedule": {
     "title": "11111",
@@ -520,7 +532,9 @@
     "manualDue": "11111 {{date}} 11111",
     "addError": "11111",
     "deactivateError": "11111",
-    "updateError": "11111"
+    "updateError": "11111",
+    "createContract": "11111",
+    "quickAdd": "11111"
   },
   "clientContractDialog": {
     "assignTitle": "11111",
@@ -1015,7 +1029,10 @@
   },
   "actions": {
     "cancel": "11111",
-    "delete": "11111"
+    "delete": "11111",
+    "print": "11111",
+    "printOptions": "11111",
+    "printSelected": "11111 {{count}} 11111"
   },
   "clients": {
     "locations": {
@@ -1127,6 +1144,52 @@
     "messages": {
       "saveSuccess": "11111",
       "saveFailed": "11111"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "11111",
+      "join": "11111",
+      "noArtifacts": "11111",
+      "recordingArtifact": "11111",
+      "refreshFailed": "11111",
+      "refreshRecordings": "11111",
+      "sectionTitle": "11111",
+      "transcriptArtifact": "11111",
+      "viewTranscript": "11111"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "11111",
+          "addContact": "11111",
+          "addUser": "11111",
+          "badge": {
+            "clientLocation": "11111",
+            "contact": "11111",
+            "email": "11111",
+            "internal": "11111"
+          },
+          "duplicateEmail": "11111",
+          "emailPlaceholder": "11111",
+          "empty": "11111",
+          "helper": "11111",
+          "invalidEmail": "11111",
+          "label": "11111",
+          "remove": "11111 {{name}} 11111",
+          "tabs": {
+            "contacts": "11111",
+            "email": "11111",
+            "users": "11111"
+          }
+        },
+        "checkingCapability": "11111",
+        "createFailed": "11111",
+        "createToggle": "11111",
+        "endRequired": "11111",
+        "startRequired": "11111",
+        "unavailable": "11111"
+      }
     }
   }
 }

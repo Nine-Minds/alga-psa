@@ -273,5 +273,10 @@
   "uploadHint": "Upload files to share with this task",
   "file": "file",
   "files": "files",
-  "view": "View"
+  "view": "View",
+  "common:pagination": {
+    "next": "Next",
+    "pageOf": "Page {{current}} of {{total}}",
+    "previous": "Previous"
+  }
 }

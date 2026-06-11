@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Dostawcy",
-      "defaults": "Domyślne"
+      "defaults": "Domyślne",
+      "inboundRules": "Reguły przychodzące"
     },
     "setup": {
       "title": "Instrukcje konfiguracji",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Nie udało się zainicjować protokołu OAuth",
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem. Spróbuj ponownie.",
-        "authorizationFailed": "Autoryzacja nie powiodła się"
+        "authorizationFailed": "Autoryzacja nie powiodła się",
+        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza"
       },
       "requiredFields": {
         "providerName": "Nazwa konfiguracji",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Wymagana jest prawidłowa skrzynka pocztowa (np. użytkownik@domena.com, użytkownik@localhost, użytkownik@serwer testowy lub użytkownik)",
         "hostRequired": "Wymagany jest host IMAP",
         "usernameRequired": "Wymagana jest nazwa użytkownika IMAP",
-        "oauthInitiateFailed": "Nie udało się zainicjować IMAP OAuth"
+        "oauthInitiateFailed": "Nie udało się zainicjować IMAP OAuth",
+        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza"
       },
       "basic": {
         "title": "Ustawienia podstawowe",
@@ -835,6 +838,146 @@
       "mismatchHelp": "Rekord DNS istnieje, ale wartość nie pasuje do tego, czego oczekuje Resend.",
       "matchedHelp": "Wykryta wartość pasuje do oczekiwanej.",
       "unknownHelp": "Nie sprawdziliśmy jeszcze DNS. Sprawdź DNS ponownie, aby uruchomić weryfikację."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Dodaj regułę",
+      "aiClassify": "Klasyfikuj za pomocą AI",
+      "aiClassifyUpsell": "Wymaga dodatku Asystent AI",
+      "extractAssign": "Przypisz klienta na podstawie wyodrębnionego tekstu",
+      "setDestination": "Przekieruj do miejsca docelowego",
+      "skip": "Pomiń e-mail (bez zgłoszenia)"
+    },
+    "badges": {
+      "allMailboxes": "Wszystkie skrzynki pocztowe"
+    },
+    "empty": {
+      "description": "Utwórz regułę, aby pomijać e-maile z aktualizacjami statusu lub przypisywać zgłoszenia do klientów wymienionych w temacie.",
+      "title": "Nie skonfigurowano reguł przychodzących"
+    },
+    "errors": {
+      "aliasAdd": "Nie udało się dodać aliasu",
+      "delete": "Nie udało się usunąć reguły",
+      "load": "Nie udało się załadować reguł przychodzących",
+      "reorder": "Nie udało się zmienić kolejności reguł",
+      "save": "Nie udało się zapisać reguły",
+      "test": "Nie udało się przetestować reguły",
+      "update": "Nie udało się zaktualizować reguły"
+    },
+    "extraction": {
+      "after": "Tekst po znaczniku",
+      "before": "Tekst przed znacznikiem",
+      "between": "Tekst między ogranicznikami",
+      "regex": "Wyrażenie regularne (zaawansowane)"
+    },
+    "fields": {
+      "bodyText": "Treść wiadomości",
+      "fromAddress": "Adres nadawcy",
+      "fromDomain": "Domena nadawcy",
+      "subject": "Temat",
+      "toAddress": "Adres Do/DW"
+    },
+    "form": {
+      "action": "Akcja",
+      "active": "Aktywna",
+      "addCondition": "Dodaj warunek",
+      "aiAllowAssign": "Może przypisywać klientów",
+      "aiAllowSkip": "Może pomijać e-maile",
+      "aiInstruction": "Instrukcja",
+      "aiInstructionPlaceholder": "np. Ustal, którego klienta dotyczy ten alert monitoringu.",
+      "aiUpsell": "Klasyfikacja za pomocą AI jest dostępna z dodatkiem Enterprise Asystent AI — e-maile są klasyfikowane według intencji, bez wzorców do utrzymywania.",
+      "cancel": "Anuluj",
+      "conditions": "Warunki (wszystkie muszą być spełnione)",
+      "create": "Utwórz regułę",
+      "createTitle": "Utwórz regułę przychodzącą",
+      "description": "Określ, kiedy reguła pasuje i co dzieje się z e-mailem. Użyj poniższego testera, aby zweryfikować ją na próbce przed zapisaniem.",
+      "destination": "Miejsce docelowe (domyślne ustawienia zgłoszenia)",
+      "destinationPlaceholder": "Wybierz zestaw ustawień domyślnych",
+      "editTitle": "Edytuj regułę przychodzącą",
+      "endDelimiter": "Ogranicznik końcowy",
+      "extractFrom": "Wyodrębnij z",
+      "extractionTemplate": "Wyodrębnianie",
+      "fallbackDestination": "Awaryjne miejsce docelowe",
+      "first": "Pierwsze",
+      "last": "Ostatnie",
+      "mailboxes": "Zastosuj do skrzynek pocztowych",
+      "mailboxesHint": "Pozostaw wszystkie odznaczone, aby zastosować tę regułę do każdej skrzynki pocztowej.",
+      "marker": "Tekst znacznika",
+      "markerPlaceholder": "np. Klient:",
+      "matchHint": "Wyodrębniony tekst jest dopasowywany do nazw klientów i ich aliasów (bez rozróżniania wielkości liter).",
+      "name": "Nazwa reguły",
+      "namePlaceholder": "np. Kierowanie klientów Huntress",
+      "noMailboxes": "Nie skonfigurowano jeszcze skrzynek pocztowych.",
+      "noMatchFallback": "Przekieruj do awaryjnego miejsca docelowego",
+      "noMatchProceed": "Kontynuuj z kolejnymi regułami / normalnym przetwarzaniem",
+      "noMatchSkip": "Pomiń e-mail",
+      "occurrence": "Wystąpienie",
+      "onNoMatch": "Jeśli żaden klient nie pasuje",
+      "pattern": "Wzorzec (grupa przechwytująca 1 to nazwa klienta)",
+      "regexPlaceholder": "Wyrażenie regularne",
+      "saving": "Zapisywanie…",
+      "startDelimiter": "Ogranicznik początkowy",
+      "update": "Zaktualizuj regułę",
+      "valuePlaceholder": "Wartość"
+    },
+    "header": {
+      "description": "Dopasowuj przychodzące e-maile według nadawcy lub tematu, aby pomijać szum, przypisywać właściwego klienta lub kierować do miejsca docelowego. Reguły działają w kolejności; wygrywa pierwsze dopasowanie.",
+      "title": "Reguły poczty przychodzącej"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Wyodrębnione nazwy są dopasowywane do nazw i aliasów klientów. Zarządzaj aliasami w rekordzie klienta lub dodawaj je z testera reguł.",
+        "audit": "• Pominięte e-maile pozostają dostępne do audytu w diagnostyce przetwarzania poczty, oznaczone regułą, która je pominęła.",
+        "order": "• Reguły działają od góry do dołu dla nowych przychodzących e-maili; stosowana jest pierwsza pasująca reguła.",
+        "replies": "• Odpowiedzi na istniejące zgłoszenia zawsze stają się komentarzami — reguły nigdy ich nie dotyczą."
+      },
+      "title": "Jak to działa"
+    },
+    "loading": "Ładowanie reguł przychodzących...",
+    "menu": {
+      "delete": "Usuń",
+      "deleting": "Usuwanie…",
+      "edit": "Edytuj"
+    },
+    "operators": {
+      "contains": "zawiera",
+      "endsWith": "kończy się na",
+      "equals": "równa się",
+      "matchesRegex": "pasuje do wyrażenia regularnego",
+      "startsWith": "zaczyna się od"
+    },
+    "summary": {
+      "aiClassify": "Klasyfikuj za pomocą AI",
+      "extractAssign": "Przypisz klienta z: {{source}}",
+      "setDestination": "Przekieruj do miejsca docelowego",
+      "skip": "Pomiń e-mail (bez zgłoszenia)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Dodaj alias",
+      "aliasAdded": "Dodano alias. Uruchom test ponownie, aby zobaczyć dopasowanie.",
+      "aliasAdding": "Dodawanie…",
+      "aliasClientPlaceholder": "Wybierz klienta",
+      "aliasLabel": "Dodaj „{{value}}” jako alias dla",
+      "body": "Treść wiadomości",
+      "clientMatched": "Dopasowano klienta przez: {{source}}",
+      "clientName": "nazwa klienta",
+      "extracted": "Wyodrębniona wartość:",
+      "from": "Od",
+      "noClient": "Nie dopasowano klienta",
+      "outcome": {
+        "assignClient": "Zgłoszenie przypisane do klienta „{{client}}”",
+        "fallback": "Nie dopasowano klienta — zgłoszenie przekierowano do awaryjnego miejsca docelowego",
+        "none": "Reguła nie rozstrzygnęła — kontynuowane jest normalne przetwarzanie",
+        "setDestination": "Zgłoszenie przekierowano do wybranego miejsca docelowego",
+        "skip": "E-mail pominięty — nie utworzono zgłoszenia"
+      },
+      "run": "Uruchom test",
+      "running": "Testowanie…",
+      "subject": "Temat",
+      "title": "Przetestuj tę regułę",
+      "to": "Do"
     }
   }
 }

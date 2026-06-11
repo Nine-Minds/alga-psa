@@ -155,7 +155,11 @@
       "failedLast24h": "Błędy z ostatnich 24 h",
       "openJobCenter": "Otwórz centrum zadań"
     },
-    "breadcrumb": "Ścieżka nawigacji",
+    "breadcrumb": {
+      "label": "Ścieżka nawigacji",
+      "dashboard": "Panel",
+      "home": "Strona główna"
+    },
     "tenantBadge": {
       "ariaLabel": "Aktywny tenant {{tenant}}"
     },

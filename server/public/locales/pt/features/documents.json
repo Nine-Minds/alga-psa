@@ -273,5 +273,10 @@
   "uploadHint": "Envie ficheiros para partilhar com esta tarefa",
   "file": "ficheiro",
   "files": "ficheiros",
-  "view": "Ver"
+  "view": "Ver",
+  "common:pagination": {
+    "next": "Próximo",
+    "pageOf": "Página {{current}} de {{total}}",
+    "previous": "Anterior"
+  }
 }

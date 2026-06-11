@@ -1525,6 +1525,12 @@
         "label": "Mandantenadresse",
         "description": "Die Adresse Ihres Unternehmens."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Vorlagenbegrenzung"
+    },
+    "dragOverlay": {
+      "component": "Komponente"
     }
   }
 }

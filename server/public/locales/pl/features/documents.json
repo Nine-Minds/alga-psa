@@ -273,5 +273,10 @@
   "uploadHint": "Prześlij pliki, aby udostępnić je w tym zadaniu",
   "file": "plik",
   "files": "pliki",
-  "view": "Wyświetl"
+  "view": "Wyświetl",
+  "common:pagination": {
+    "next": "Następna",
+    "pageOf": "Strona {{current}} z {{total}}",
+    "previous": "Poprzednia"
+  }
 }

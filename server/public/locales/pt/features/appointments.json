@@ -121,7 +121,9 @@
     "approved": "Approved",
     "cancelButton": "Cancel Appointment",
     "teamsMeeting": "Reunião do Teams",
-    "joinTeamsMeeting": "Participar na reunião do Teams"
+    "joinTeamsMeeting": "Participar na reunião do Teams",
+    "downloadRecording": "Baixar gravação",
+    "viewTranscript": "Ver transcrição"
   },
   "cancel": {
     "title": "Cancel Appointment",

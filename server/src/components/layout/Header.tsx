@@ -466,7 +466,7 @@ export default function Header({
   return (
     <header className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3 shadow-sm">
       <div className="flex items-center gap-3">
-        <nav aria-label={t('header.breadcrumb')}>
+        <nav aria-label={t('header.breadcrumb.label', { defaultValue: 'Breadcrumb' })}>
           <ol className="flex items-center space-x-2">
             {breadcrumbItems.map((item, index) => (
               <li key={`${item.href}-${index}`} className="flex items-center">

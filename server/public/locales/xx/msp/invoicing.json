@@ -1525,6 +1525,12 @@
         "label": "11111",
         "description": "11111"
       }
+    },
+    "canvas": {
+      "templateBoundary": "11111"
+    },
+    "dragOverlay": {
+      "component": "11111"
     }
   }
 }

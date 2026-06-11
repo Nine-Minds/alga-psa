@@ -1474,5 +1474,13 @@
       "confirm_other": "Labels toevoegen aan {{count}} taken",
       "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
     }
+  },
+  "common:actions": {
+    "back": "Terug",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "done": "Klaar",
+    "edit": "Bewerken",
+    "save": "Opslaan"
   }
 }

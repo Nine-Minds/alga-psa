@@ -91,7 +91,8 @@
         "single": "Tylko to wydarzenie",
         "future": "To i przyszłe wydarzenia",
         "all": "Wszystkie wydarzenia"
-      }
+      },
+      "messageWithTeamsWarning": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej operacji nie można cofnąć. Spowoduje to również usunięcie spotkania Microsoft Teams."
     },
     "print": {
       "title": "Agenda harmonogramu",
@@ -546,7 +547,9 @@
         "title": "Zatwierdzone spotkanie",
         "descriptionWithDate": "To spotkanie powstało na prośbę klienta i zostało zatwierdzone {{date}}.",
         "description": "Spotkanie to powstało na prośbę klienta.",
-        "joinTeamsMeeting": "Dołącz do spotkania Teams"
+        "joinTeamsMeeting": "Dołącz do spotkania Teams",
+        "downloadRecording": "Pobierz nagranie",
+        "viewTranscript": "Zobacz transkrypcję"
       },
       "pending": {
         "title": "Oczekujące żądanie spotkania",
@@ -630,5 +633,9 @@
       "future": "To i przyszłe wydarzenia",
       "all": "Wszystkie wydarzenia"
     }
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania"
   }
 }

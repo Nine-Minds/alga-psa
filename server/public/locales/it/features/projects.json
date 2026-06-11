@@ -1474,5 +1474,13 @@
       "confirm_other": "Aggiungi tag a {{count}} attività",
       "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
     }
+  },
+  "common:actions": {
+    "back": "Indietro",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "done": "Fatto",
+    "edit": "Modifica",
+    "save": "Salva"
   }
 }

@@ -1525,6 +1525,12 @@
         "label": "Adres dzierżawcy",
         "description": "Adres Twojej firmy."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Granica szablonu"
+    },
+    "dragOverlay": {
+      "component": "Komponent"
     }
   }
 }

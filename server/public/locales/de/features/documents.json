@@ -273,5 +273,10 @@
   "uploadHint": "Dateien hochladen, um sie mit dieser Aufgabe zu teilen",
   "file": "Datei",
   "files": "Dateien",
-  "view": "Anzeigen"
+  "view": "Anzeigen",
+  "common:pagination": {
+    "next": "Weiter",
+    "pageOf": "Seite {{current}} von {{total}}",
+    "previous": "Zurück"
+  }
 }

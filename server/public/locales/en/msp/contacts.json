@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
       "tags": "Tags",
       "notes": "Notes",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Phone"
     },
     "status": {
       "label": "Status",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notes saved",
       "saveFailed": "Failed to save notes"
     }
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options"
   }
 }

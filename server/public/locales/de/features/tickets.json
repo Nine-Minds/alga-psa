@@ -164,7 +164,8 @@
     "proceed": "Fortfahren",
     "export": "Exportieren",
     "reset": "Zurücksetzen",
-    "importSelected": "Ausgewählte importieren"
+    "importSelected": "Ausgewählte importieren",
+    "printOptions": "Druckoptionen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "Hauptticket konnte nicht befördert werden",
     "updateBundleSettingsFailed": "Bündeleinstellungen konnten nicht aktualisiert werden",
     "assetLoadFailed": "Fehler beim Laden der Asset-Details",
-    "assetNotFound": "Asset nicht gefunden"
+    "assetNotFound": "Asset nicht gefunden",
+    "addCommentFailed": "Kommentar konnte nicht hinzugefügt werden",
+    "deleteTimeEntryFailed": "Zeiteintrag konnte nicht gelöscht werden",
+    "timeEntryDeleted": "Zeiteintrag gelöscht"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "Eingehende Antworten auf untergeordnete Tickets (schreibgeschützt)",
     "childTicket": "Untergeordnetes Ticket",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "Dieser Entwurf enthält eingefügte Bilder, die bereits als Ticket-Dokumente hochgeladen wurden. Beibehalten oder dauerhaft löschen?"
+    "clipboardDraftCancelMessage": "Dieser Entwurf enthält eingefügte Bilder, die bereits als Ticket-Dokumente hochgeladen wurden. Beibehalten oder dauerhaft löschen?",
+    "replyCommentAriaLabel": "Auf Kommentar antworten"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -427,7 +432,10 @@
         "title": "Druckoptionen",
         "selectedTitle": "Druckoptionen ({{count}} ausgewählt)",
         "description": "Wählen Sie die beim Drucken von Tickets enthaltenen Spalten."
-      }
+      },
+      "selectedAction": "Ausgewählte drucken ({{count}})",
+      "selectedTitle": "Ausgewählte Tickets ({{count}})",
+      "subtitle": "{{count}} Tickets"
     },
     "exportSelectedAction": "Auswahl exportieren ({{count}})",
     "exportAction": "CSV exportieren",
@@ -495,7 +503,9 @@
       "success_one": "{{count}} Ticket verschoben",
       "success_other": "{{count}} Tickets verschoben",
       "partialFailure": "Einige Tickets konnten nicht verschoben werden",
-      "failure": "Ausgewählte Tickets konnten nicht verschoben werden"
+      "failure": "Ausgewählte Tickets konnten nicht verschoben werden",
+      "confirm": "{{count}} Tickets verschieben",
+      "success": "{{count}} Tickets verschoben"
     },
     "delete": {
       "dialogTitle": "Ausgewählte Tickets löschen",
@@ -510,7 +520,9 @@
       "success_one": "{{count}} Ticket gelöscht",
       "success_other": "{{count}} Tickets gelöscht",
       "partialFailure": "Einige Tickets konnten nicht gelöscht werden",
-      "failure": "Ausgewählte Tickets konnten nicht gelöscht werden"
+      "failure": "Ausgewählte Tickets konnten nicht gelöscht werden",
+      "confirm": "Möchtest du diese {{count}} Tickets wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "success": "{{count}} Tickets gelöscht"
     },
     "bundle": {
       "dialogTitle": "Tickets bündeln",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "E-Mail-Benachrichtigungsprotokolle anzeigen",
     "clipboardDraftMessage": "Diese Beschreibung enthält eingefügte Bilder, die bereits als Ticketdokumente hochgeladen wurden. Möchtest du sie behalten oder dauerhaft löschen?",
     "clearDueDate": "Fälligkeitsdatum löschen",
-    "paused": "Pausiert"
+    "paused": "Pausiert",
+    "openActivityLog": "Aktivitätsprotokoll anzeigen",
+    "resolveLiveConflict": "Löse Konflikte durch Live-Aktualisierungen, bevor du deine Änderungen speicherst."
   },
   "properties": {
     "timeEntry": "Zeiteintrag",
@@ -997,7 +1011,11 @@
       "responseState": "Antwortstatus",
       "ticketOrigin": "Ticketursprung",
       "tags": "Tags"
-    }
+    },
+    "appliedFiltersSummary": "(von {{count}} Ticket, das den angewendeten Filtern entspricht)",
+    "completeMessage": "{{count}} Ticket erfolgreich als CSV exportiert.",
+    "confirm": "{{count}} Ticket exportieren",
+    "selectedTicketsSummary": "{{count}} ausgewähltes Ticket wird exportiert"
   },
   "materials": {
     "title": "Materialien",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "{{count}} Kategorien",
     "excludingCount_one": "ohne {{count}} Kategorie",
     "excludingCount_other": "ohne {{count}} Kategorien",
-    "excludingPrefix": "ohne {{name}}"
+    "excludingPrefix": "ohne {{name}}",
+    "excludingCount": "ohne {{count}} Kategorie",
+    "selectedCount": "{{count}} Kategorien"
   },
   "navigation": {
     "previousTicket": "Vorheriges Ticket",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "Bearbeitung fortsetzen"
+    "continueEditing": "Bearbeitung fortsetzen",
+    "cancel": "Abbrechen"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "ohne {{count}} Boards",
     "placeholder": "Nach Board filtern",
     "title": "Board-Auswahl",
-    "searchPlaceholder": "Boards suchen..."
+    "searchPlaceholder": "Boards suchen...",
+    "excludingCount": "ohne {{count}} Boards",
+    "selectedCount": "{{count}} Boards",
+    "statusActive": "Aktiv",
+    "statusAll": "Alle",
+    "statusInactive": "Inaktiv"
+  },
+  "checklist": {
+    "addFailed": "Checklistenpunkt konnte nicht hinzugefügt werden",
+    "addItem": "Hinzufügen",
+    "addItemPlaceholder": "Checklistenpunkt hinzufügen",
+    "applyTemplate": "Vorlage anwenden",
+    "applyTemplateFailed": "Checklistenvorlage konnte nicht angewendet werden",
+    "clickToRename": "Zum Umbenennen klicken",
+    "deleteFailed": "Checklistenpunkt konnte nicht gelöscht werden",
+    "deleteItem": "Punkt löschen",
+    "empty": "Noch keine Checklistenpunkte.",
+    "itemMenu": "Menü für Checklistenpunkt",
+    "loadTemplatesFailed": "Checklistenvorlagen konnten nicht geladen werden",
+    "loading": "Checkliste wird geladen...",
+    "markOptional": "Als optional markieren",
+    "markRequired": "Als erforderlich markieren",
+    "moveDown": "Nach unten verschieben",
+    "moveUp": "Nach oben verschieben",
+    "noTemplates": "Keine Vorlagen verfügbar.",
+    "progress": "{{done}} von {{total}} erledigt",
+    "renameFailed": "Checklistenpunkt konnte nicht umbenannt werden",
+    "reorderFailed": "Checklistenpunkte konnten nicht neu sortiert werden",
+    "requiredBadge": "Erforderlich",
+    "templateAlreadyApplied": "Diese Vorlage wurde bereits auf dieses Ticket angewendet.",
+    "templateApplied": "Checklistenvorlage angewendet.",
+    "templatesLoading": "Vorlagen werden geladen...",
+    "title": "Checkliste",
+    "toggleFailed": "Checklistenpunkt konnte nicht aktualisiert werden",
+    "updateFailed": "Checklistenpunkt konnte nicht aktualisiert werden"
   }
 }

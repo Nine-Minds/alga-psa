@@ -91,7 +91,8 @@
         "single": "55555",
         "future": "55555",
         "all": "55555"
-      }
+      },
+      "messageWithTeamsWarning": "55555"
     },
     "print": {
       "title": "55555",
@@ -546,7 +547,9 @@
         "title": "55555",
         "descriptionWithDate": "55555 {{date}} 55555",
         "description": "55555",
-        "joinTeamsMeeting": "55555"
+        "joinTeamsMeeting": "55555",
+        "downloadRecording": "55555",
+        "viewTranscript": "55555"
       },
       "pending": {
         "title": "55555",
@@ -630,5 +633,9 @@
       "future": "55555",
       "all": "55555"
     }
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555"
   }
 }

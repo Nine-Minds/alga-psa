@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Si défini, cela remplace la destination du client pour ce contact expéditeur exact. Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
       "tags": "Étiquettes",
       "notes": "Notes",
-      "status": "Statut"
+      "status": "Statut",
+      "phone": "Téléphone"
     },
     "status": {
       "label": "Statut",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notes enregistrées",
       "saveFailed": "Échec de l'enregistrement des notes"
     }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
   }
 }

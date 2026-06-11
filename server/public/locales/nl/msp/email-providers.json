@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Aanbieders",
-      "defaults": "Standaardinstellingen"
+      "defaults": "Standaardinstellingen",
+      "inboundRules": "Inkomende regels"
     },
     "setup": {
       "title": "Installatie-instructies",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Kan OAuth niet starten",
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Autorisatievenster gesloten vóór voltooiing. Probeer het opnieuw.",
-        "authorizationFailed": "Autorisatie mislukt"
+        "authorizationFailed": "Autorisatie mislukt",
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
       },
       "requiredFields": {
         "providerName": "Configuratienaam",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Een geldig postvak is vereist (bijvoorbeeld gebruiker@domein.com, gebruiker@localhost, gebruiker@testserver of gebruiker)",
         "hostRequired": "IMAP-host is vereist",
         "usernameRequired": "IMAP-gebruikersnaam is vereist",
-        "oauthInitiateFailed": "Kan IMAP OAuth niet starten"
+        "oauthInitiateFailed": "Kan IMAP OAuth niet starten",
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
       },
       "basic": {
         "title": "Basisinstellingen",
@@ -835,6 +838,146 @@
       "mismatchHelp": "Het DNS-record bestaat, maar de waarde komt niet overeen met wat Resend verwacht.",
       "matchedHelp": "De gedetecteerde waarde komt overeen met de verwachte waarde.",
       "unknownHelp": "We hebben het DNS nog niet gecontroleerd. Controleer DNS opnieuw om verificatie uit te voeren."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Regel toevoegen",
+      "aiClassify": "Classificeren met AI",
+      "aiClassifyUpsell": "Vereist de AI-assistent-add-on",
+      "extractAssign": "Klant toewijzen op basis van geëxtraheerde tekst",
+      "setDestination": "Naar bestemming routeren",
+      "skip": "E-mail overslaan (geen ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Alle mailboxen"
+    },
+    "empty": {
+      "description": "Maak een regel om statusupdate-e-mails over te slaan of tickets toe te wijzen aan klanten die in de onderwerpregel worden genoemd.",
+      "title": "Geen inkomende regels geconfigureerd"
+    },
+    "errors": {
+      "aliasAdd": "Kan alias niet toevoegen",
+      "delete": "Kan regel niet verwijderen",
+      "load": "Kan inkomende regels niet laden",
+      "reorder": "Kan volgorde van regels niet wijzigen",
+      "save": "Kan regel niet opslaan",
+      "test": "Kan regel niet testen",
+      "update": "Kan regel niet bijwerken"
+    },
+    "extraction": {
+      "after": "Tekst na markering",
+      "before": "Tekst vóór markering",
+      "between": "Tekst tussen scheidingstekens",
+      "regex": "Reguliere expressie (geavanceerd)"
+    },
+    "fields": {
+      "bodyText": "Berichttekst",
+      "fromAddress": "Afzenderadres",
+      "fromDomain": "Afzenderdomein",
+      "subject": "Onderwerp",
+      "toAddress": "Aan/CC-adres"
+    },
+    "form": {
+      "action": "Actie",
+      "active": "Actief",
+      "addCondition": "Voorwaarde toevoegen",
+      "aiAllowAssign": "Mag klanten toewijzen",
+      "aiAllowSkip": "Mag e-mails overslaan",
+      "aiInstruction": "Instructie",
+      "aiInstructionPlaceholder": "bv. Bepaal over welke klant deze monitoringwaarschuwing gaat.",
+      "aiUpsell": "Classificeren met AI is beschikbaar met de Enterprise AI-assistent-add-on — e-mails worden op intentie geclassificeerd, zonder patronen om te onderhouden.",
+      "cancel": "Annuleren",
+      "conditions": "Voorwaarden (alle moeten overeenkomen)",
+      "create": "Regel aanmaken",
+      "createTitle": "Inkomende regel aanmaken",
+      "description": "Bepaal wanneer de regel van toepassing is en wat er met de e-mail gebeurt. Gebruik de tester hieronder om dit met een voorbeeld te controleren voordat je opslaat.",
+      "destination": "Bestemming (standaardwaarden voor tickets)",
+      "destinationPlaceholder": "Selecteer een set standaardwaarden",
+      "editTitle": "Inkomende regel bewerken",
+      "endDelimiter": "Eindscheidingsteken",
+      "extractFrom": "Extraheren uit",
+      "extractionTemplate": "Extractie",
+      "fallbackDestination": "Terugvalbestemming",
+      "first": "Eerste",
+      "last": "Laatste",
+      "mailboxes": "Toepassen op mailboxen",
+      "mailboxesHint": "Laat alles uitgevinkt om deze regel op elke mailbox toe te passen.",
+      "marker": "Markeringstekst",
+      "markerPlaceholder": "bv. Klant:",
+      "matchHint": "De geëxtraheerde tekst wordt vergeleken met klantnamen en klantaliassen (niet hoofdlettergevoelig).",
+      "name": "Regelnaam",
+      "namePlaceholder": "bv. Huntress-klantroutering",
+      "noMailboxes": "Nog geen mailboxen geconfigureerd.",
+      "noMatchFallback": "Naar een terugvalbestemming routeren",
+      "noMatchProceed": "Doorgaan met volgende regels / normale verwerking",
+      "noMatchSkip": "De e-mail overslaan",
+      "occurrence": "Voorkomen",
+      "onNoMatch": "Als geen klant overeenkomt",
+      "pattern": "Patroon (capturegroep 1 is de klantnaam)",
+      "regexPlaceholder": "Reguliere expressie",
+      "saving": "Opslaan…",
+      "startDelimiter": "Beginscheidingsteken",
+      "update": "Regel bijwerken",
+      "valuePlaceholder": "Waarde"
+    },
+    "header": {
+      "description": "Match inkomende e-mail op afzender of onderwerp om ruis over te slaan, de juiste klant toe te wijzen of naar een bestemming te routeren. Regels worden op volgorde uitgevoerd; de eerste match wint.",
+      "title": "Regels voor inkomende e-mail"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Geëxtraheerde namen worden vergeleken met klantnamen en aliassen. Beheer aliassen op het klantrecord, of voeg ze toe vanuit de regeltester.",
+        "audit": "• Overgeslagen e-mails blijven controleerbaar in de diagnostiek van e-mailverwerking, gelabeld met de regel die ze heeft overgeslagen.",
+        "order": "• Regels worden van boven naar beneden uitgevoerd op nieuwe inkomende e-mail; de eerste overeenkomende regel is van toepassing.",
+        "replies": "• Antwoorden op bestaande tickets worden altijd opmerkingen — regels raken ze nooit aan."
+      },
+      "title": "Hoe het werkt"
+    },
+    "loading": "Inkomende regels laden...",
+    "menu": {
+      "delete": "Verwijderen",
+      "deleting": "Verwijderen…",
+      "edit": "Bewerken"
+    },
+    "operators": {
+      "contains": "bevat",
+      "endsWith": "eindigt op",
+      "equals": "is gelijk aan",
+      "matchesRegex": "komt overeen met regex",
+      "startsWith": "begint met"
+    },
+    "summary": {
+      "aiClassify": "Classificeren met AI",
+      "extractAssign": "Klant toewijzen op basis van {{source}}",
+      "setDestination": "Naar bestemming routeren",
+      "skip": "E-mail overslaan (geen ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Alias toevoegen",
+      "aliasAdded": "Alias toegevoegd. Voer de test opnieuw uit om de match te zien.",
+      "aliasAdding": "Toevoegen…",
+      "aliasClientPlaceholder": "Selecteer een klant",
+      "aliasLabel": "\"{{value}}\" toevoegen als alias van",
+      "body": "Berichttekst",
+      "clientMatched": "Klant gematcht via {{source}}",
+      "clientName": "klantnaam",
+      "extracted": "Geëxtraheerde waarde:",
+      "from": "Van",
+      "noClient": "Geen klant gematcht",
+      "outcome": {
+        "assignClient": "Ticket toegewezen aan klant \"{{client}}\"",
+        "fallback": "Geen klant gematcht — ticket gerouteerd naar de terugvalbestemming",
+        "none": "Regel gaf geen resultaat — normale verwerking gaat door",
+        "setDestination": "Ticket gerouteerd naar de geselecteerde bestemming",
+        "skip": "E-mail overgeslagen — geen ticket aangemaakt"
+      },
+      "run": "Test uitvoeren",
+      "running": "Testen…",
+      "subject": "Onderwerp",
+      "title": "Deze regel testen",
+      "to": "Aan"
     }
   }
 }

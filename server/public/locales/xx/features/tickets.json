@@ -164,7 +164,8 @@
     "proceed": "11111",
     "export": "11111",
     "reset": "11111",
-    "importSelected": "11111"
+    "importSelected": "11111",
+    "printOptions": "11111"
   },
   "messages": {
     "noTickets": "11111",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "11111",
     "updateBundleSettingsFailed": "11111",
     "assetLoadFailed": "11111",
-    "assetNotFound": "11111"
+    "assetNotFound": "11111",
+    "addCommentFailed": "11111",
+    "deleteTimeEntryFailed": "11111",
+    "timeEntryDeleted": "11111"
   },
   "conversation": {
     "comments": "11111",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "11111",
     "childTicket": "11111",
     "ticketPrefix": "11111 {{number}} 11111",
-    "clipboardDraftCancelMessage": "11111"
+    "clipboardDraftCancelMessage": "11111",
+    "replyCommentAriaLabel": "11111"
   },
   "responseState": {
     "awaitingYourResponse": "11111",
@@ -427,7 +432,10 @@
         "title": "11111",
         "selectedTitle": "11111 {{count}} 11111",
         "description": "11111"
-      }
+      },
+      "selectedAction": "11111 {{count}} 11111",
+      "selectedTitle": "11111 {{count}} 11111",
+      "subtitle": "11111 {{count}} 11111"
     },
     "exportSelectedAction": "11111 {{count}} 11111",
     "exportAction": "11111",
@@ -512,7 +520,9 @@
       "success_one": "11111 {{count}} 11111",
       "success_other": "11111 {{count}} 11111",
       "partialFailure": "11111",
-      "failure": "11111"
+      "failure": "11111",
+      "confirm": "11111 {{count}} 11111",
+      "success": "11111 {{count}} 11111"
     },
     "delete": {
       "dialogTitle": "11111",
@@ -527,7 +537,9 @@
       "success_one": "11111 {{count}} 11111",
       "success_other": "11111 {{count}} 11111",
       "partialFailure": "11111",
-      "failure": "11111"
+      "failure": "11111",
+      "confirm": "11111 {{count}} 11111",
+      "success": "11111 {{count}} 11111"
     },
     "bundle": {
       "dialogTitle": "11111",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "11111",
     "clipboardDraftMessage": "11111",
     "clearDueDate": "11111",
-    "paused": "11111"
+    "paused": "11111",
+    "openActivityLog": "11111",
+    "resolveLiveConflict": "11111"
   },
   "properties": {
     "timeEntry": "11111",
@@ -997,7 +1011,11 @@
       "responseState": "11111",
       "ticketOrigin": "11111",
       "tags": "11111"
-    }
+    },
+    "appliedFiltersSummary": "11111 {{count}} 11111",
+    "completeMessage": "11111 {{count}} 11111",
+    "confirm": "11111 {{count}} 11111",
+    "selectedTicketsSummary": "11111 {{count}} 11111"
   },
   "materials": {
     "title": "11111",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "11111 {{count}} 11111",
     "excludingCount_one": "11111 {{count}} 11111",
     "excludingCount_other": "11111 {{count}} 11111",
-    "excludingPrefix": "11111 {{name}} 11111"
+    "excludingPrefix": "11111 {{name}} 11111",
+    "excludingCount": "11111 {{count}} 11111",
+    "selectedCount": "11111 {{count}} 11111"
   },
   "navigation": {
     "previousTicket": "11111",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "11111"
+    "continueEditing": "11111",
+    "cancel": "11111"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "11111 {{count}} 11111",
     "placeholder": "11111",
     "title": "11111",
-    "searchPlaceholder": "11111"
+    "searchPlaceholder": "11111",
+    "excludingCount": "11111 {{count}} 11111",
+    "selectedCount": "11111 {{count}} 11111",
+    "statusActive": "11111",
+    "statusAll": "11111",
+    "statusInactive": "11111"
+  },
+  "checklist": {
+    "addFailed": "11111",
+    "addItem": "11111",
+    "addItemPlaceholder": "11111",
+    "applyTemplate": "11111",
+    "applyTemplateFailed": "11111",
+    "clickToRename": "11111",
+    "deleteFailed": "11111",
+    "deleteItem": "11111",
+    "empty": "11111",
+    "itemMenu": "11111",
+    "loadTemplatesFailed": "11111",
+    "loading": "11111",
+    "markOptional": "11111",
+    "markRequired": "11111",
+    "moveDown": "11111",
+    "moveUp": "11111",
+    "noTemplates": "11111",
+    "progress": "11111 {{done}} 11111 {{total}} 11111",
+    "renameFailed": "11111",
+    "reorderFailed": "11111",
+    "requiredBadge": "11111",
+    "templateAlreadyApplied": "11111",
+    "templateApplied": "11111",
+    "templatesLoading": "11111",
+    "title": "11111",
+    "toggleFailed": "11111",
+    "updateFailed": "11111"
   }
 }

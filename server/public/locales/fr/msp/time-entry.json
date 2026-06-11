@@ -121,7 +121,10 @@
       "minimumDuration": "La durée minimale est de 1 minute",
       "serviceRequired": "Un service est requis pour les entrées de temps",
       "timePeriodRange": "La date doit être comprise dans la période actuelle ({{periodRange}})",
-      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début"
+      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début",
+      "durationSameDay": "La durée doit se terminer le même jour",
+      "endSameDay": "L'heure de fin doit être le même jour que l'heure de début",
+      "invalidTimeRange": "Saisissez une plage horaire valide"
     }
   },
   "workItemPicker": {

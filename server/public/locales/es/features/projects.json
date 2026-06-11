@@ -1474,5 +1474,13 @@
       "confirm_other": "Añadir etiquetas a {{count}} tareas",
       "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
     }
+  },
+  "common:actions": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "done": "Listo",
+    "edit": "Editar",
+    "save": "Guardar"
   }
 }

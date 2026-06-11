@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Si se establece, esto sobrescribe el destino del cliente para este contacto remitente exacto. Prioridad: sobrescritura del contacto -> destino del cliente -> valor predeterminado del proveedor.",
       "tags": "Etiquetas",
       "notes": "Notas",
-      "status": "Estado"
+      "status": "Estado",
+      "phone": "Teléfono"
     },
     "status": {
       "label": "Estado",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notas guardadas",
       "saveFailed": "No se pudieron guardar las notas"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión"
   }
 }

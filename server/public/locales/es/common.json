@@ -48,7 +48,8 @@
     "resetPrintOptions": "Restablecer opciones de impresión",
     "share": "Compartir",
     "done": "Listo",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "printSelected": "Imprimir seleccionados ({{count}})"
   },
   "status": {
     "loading": "Cargando...",
@@ -506,7 +507,10 @@
         "visible": "Visible para el cliente",
         "hidden": "Solo interno"
       },
-      "clientVisibilityLabel": "Visibilidad para el cliente"
+      "clientVisibilityLabel": "Visibilidad para el cliente",
+      "entityOptions": {
+        "all": "Todas las entidades"
+      }
     },
     "selector": {
       "title": "Seleccionar documentos",
@@ -534,7 +538,10 @@
       "uploadingProgress": "Subiendo {{current}} de {{total}}",
       "pending": "Pendiente",
       "error": "No se pudo subir el documento",
-      "fileError": "No se pudo subir el archivo"
+      "fileError": "No se pudo subir el archivo",
+      "associatedEntityTypeLabel": "Asociar con",
+      "noAssociation": "Sin asociación",
+      "selectAssociatedEntityError": "Selecciona una entidad asociada antes de subir."
     },
     "folders": {
       "root": "Raíz",
@@ -593,7 +600,20 @@
     "downloadVideo": "Descargar video",
     "downloadAsPdf": "Descargar como PDF",
     "downloadAsMarkdown": "Descargar como Markdown",
-    "move": "Mover"
+    "move": "Mover",
+    "associatedEntityPicker": {
+      "allEntities": "Todas las entidades",
+      "loadingClients": "Cargando clientes...",
+      "loadingContacts": "Cargando contactos...",
+      "noEntityTypes": "No se encontraron tipos de entidad",
+      "typeLabel": "Tipo de entidad asociada",
+      "typePlaceholder": "Seleccionar tipo de entidad",
+      "typeSearchPlaceholder": "Buscar tipos de entidad...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Seleccionar {{entityType}}",
+      "entitySearchPlaceholder": "Buscar {{entityType}}...",
+      "noEntities": "No se encontraron {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -1009,7 +1029,10 @@
     "deleteCommentAriaLabel": "Eliminar comentario",
     "deleteComment": "Eliminar comentario",
     "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer.",
-    "update": "Actualizar"
+    "update": "Actualizar",
+    "create": "Crear",
+    "replyComment": "Responder al comentario",
+    "saving": "Guardando..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} columnas ocultas por falta de espacio.",
     "showAll": "Mostrar todo",
     "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "columnsHidden": "{{count}} columnas ocultas por espacio limitado."
   }
 }

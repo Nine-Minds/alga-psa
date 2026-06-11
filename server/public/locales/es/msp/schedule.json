@@ -91,7 +91,8 @@
         "single": "Sólo este evento",
         "future": "Este y futuros eventos.",
         "all": "Todos los eventos"
-      }
+      },
+      "messageWithTeamsWarning": "¿Está seguro de que desea eliminar esta entrada del programa? Esta acción no se puede deshacer. Esto también eliminará la reunión de Microsoft Teams."
     },
     "print": {
       "title": "Agenda del calendario",
@@ -546,7 +547,9 @@
         "title": "Cita aprobada",
         "descriptionWithDate": "Esta cita se originó a partir de una solicitud de un cliente y fue aprobada el {{date}}.",
         "description": "Esta cita se originó a partir de una solicitud de un cliente.",
-        "joinTeamsMeeting": "Unirse a la reunión de Teams"
+        "joinTeamsMeeting": "Unirse a la reunión de Teams",
+        "downloadRecording": "Descargar grabación",
+        "viewTranscript": "Ver transcripción"
       },
       "pending": {
         "title": "Solicitud de cita pendiente",
@@ -630,5 +633,9 @@
       "future": "Este y futuros eventos.",
       "all": "Todos los eventos"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión"
   }
 }

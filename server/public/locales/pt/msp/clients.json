@@ -28,7 +28,12 @@
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
-      "none": "None"
+      "none": "None",
+      "archived": "Arquivado",
+      "draft": "Rascunho",
+      "expired": "Expirado",
+      "published": "Publicado",
+      "terminated": "Rescindido"
     },
     "no": "No",
     "yes": "Yes"
@@ -155,8 +160,7 @@
         "description": "Escolha quais colunas incluir ao imprimir os clientes."
       }
     },
-    "shareTooltip": "Imprimir, importar e exportar"
-    ,
+    "shareTooltip": "Imprimir, importar e exportar",
     "defaultClientDeleteError": "Não é possível excluir o cliente padrão. Primeiro defina outro cliente como padrão em Configurações gerais.",
     "clientNotFound": "Cliente não encontrado.",
     "deletePermissionDenied": "Permissão negada: não é possível excluir clientes."
@@ -248,10 +252,15 @@
       "accountManager": "Gerente de conta",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Desativa o registro sem excluir seus dados.",
-    "deactivateClientOnlyDescription": "Desative o cliente, mas mantenha seus contatos ativos."
+    "deactivateClientOnlyDescription": "Desative o cliente, mas mantenha seus contatos ativos.",
+    "nameAliasAddFailed": "Falha ao adicionar o alias",
+    "nameAliasAdded": "Alias adicionado",
+    "nameAliasRemoveFailed": "Falha ao remover o alias",
+    "nameAliasRemoved": "Alias removido",
+    "nameAliases": "Aliases de correspondência",
+    "noNameAliases": "Nenhum alias configurado. O próprio nome do cliente sempre corresponde."
   },
   "quickAddClient": {
     "title": "Add New Client",
@@ -418,7 +427,8 @@
     "invalidDate": "Invalid Date",
     "formattingError": "Formatting Error",
     "removeAssignmentTitle": "Remove Contract Line Assignment",
-    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted."
+    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted.",
+    "contracts": "Contratos"
   },
   "clientBillingSchedule": {
     "title": "Billing Schedule",
@@ -522,7 +532,9 @@
     "manualDue": "Manual (due {{date}})",
     "addError": "Failed to add contract to client",
     "deactivateError": "Failed to deactivate contract",
-    "updateError": "Failed to update contract"
+    "updateError": "Failed to update contract",
+    "createContract": "Criar contrato",
+    "quickAdd": "Adição rápida"
   },
   "clientContractDialog": {
     "assignTitle": "Assign Contract to Client",
@@ -1017,7 +1029,10 @@
   },
   "actions": {
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão",
+    "printSelected": "Imprimir selecionados ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1144,52 @@
     "messages": {
       "saveSuccess": "Notas guardadas",
       "saveFailed": "Falha ao guardar as notas"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Baixar gravação",
+      "join": "Participar",
+      "noArtifacts": "Ainda não há gravações ou transcrições disponíveis.",
+      "recordingArtifact": "Gravação",
+      "refreshFailed": "Falha ao atualizar as gravações. Tente novamente.",
+      "refreshRecordings": "Atualizar gravações",
+      "sectionTitle": "Reunião online",
+      "transcriptArtifact": "Transcrição",
+      "viewTranscript": "Ver transcrição"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Adicionar",
+          "addContact": "Selecionar contatos...",
+          "addUser": "Selecionar usuários internos...",
+          "badge": {
+            "clientLocation": "Localização do cliente",
+            "contact": "Contato",
+            "email": "E-mail",
+            "internal": "Interno"
+          },
+          "duplicateEmail": "Esse e-mail já está na lista de participantes.",
+          "emailPlaceholder": "nome@exemplo.com",
+          "empty": "Ainda não há participantes adicionados.",
+          "helper": "Os participantes recebem um convite de calendário do Teams do organizador da reunião.",
+          "invalidEmail": "Insira um endereço de e-mail válido.",
+          "label": "Participantes",
+          "remove": "Remover {{name}}",
+          "tabs": {
+            "contacts": "Contatos",
+            "email": "E-mail",
+            "users": "Usuários"
+          }
+        },
+        "checkingCapability": "Verificando a disponibilidade de reuniões do Teams...",
+        "createFailed": "Falha ao criar a reunião do Teams",
+        "createToggle": "Criar reunião do Teams",
+        "endRequired": "A hora de término é obrigatória para criar uma reunião do Teams",
+        "startRequired": "A hora de início é obrigatória para criar uma reunião do Teams",
+        "unavailable": "A criação de reuniões do Teams não está disponível para este tenant."
+      }
     }
   }
 }

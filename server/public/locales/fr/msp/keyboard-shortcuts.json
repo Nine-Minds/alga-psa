@@ -16,14 +16,19 @@
       "resetAll": "Tout réinitialiser",
       "replace": "Remplacer",
       "copyCheatsheet": "Copier l'aide-mémoire",
-      "printCheatsheet": "Imprimer"
+      "printCheatsheet": "Imprimer",
+      "reassign": "Réaffecter",
+      "rebind": "Réassigner",
+      "reset": "Réinitialiser",
+      "resetAllTo": "Tout réinitialiser sur {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Raccourci clavier mis à jour",
       "enabledUpdated": "Raccourci clavier mis à jour",
       "resetOne": "Raccourci clavier réinitialisé",
       "resetAll": "Raccourcis clavier réinitialisés",
-      "cheatsheetCopied": "Aide-mémoire copié dans le presse-papiers"
+      "cheatsheetCopied": "Aide-mémoire copié dans le presse-papiers",
+      "profileChanged": "Profil modifié"
     },
     "errors": {
       "saveFailed": "Échec de l’enregistrement des préférences de raccourcis clavier",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Remplacer le raccourci existant ?",
-      "message": "{{binding}} est déjà attribué à {{action}}."
+      "message": "{{binding}} est déjà attribué à {{action}}.",
+      "indicator": "En conflit avec une autre action"
     },
     "advisory": {
       "hostileCombo": "{{binding}} peut entrer en conflit avec les raccourcis du navigateur ou du système pour {{action}}."
-    }
+    },
+    "boundTo": "Associé à",
+    "chords": {
+      "empty": "Aucune séquence ne correspond.",
+      "search": "Rechercher…",
+      "title": "Raccourcis en séquence"
+    },
+    "hint": "Survolez une touche pour un aperçu, cliquez pour réassigner. Activez les couches de modificateurs ci-dessus pour voir les raccourcis préfixés.",
+    "modified": "Modifié",
+    "notSet": "Non défini",
+    "modHint": "mod correspond à {{modKey}} sur cet appareil"
   },
   "help": {
     "title": "Raccourcis clavier",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinaisons",
+    "thenPress": "puis…"
   }
 }

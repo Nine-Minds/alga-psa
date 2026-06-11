@@ -1028,7 +1028,16 @@
         "comingSoon": "RMM-Integration demnächst verfügbar",
         "configure": "Integration konfigurieren",
         "selected": "{{title}} ausgewählt",
-        "title": "RMM-Integrationen"
+        "title": "RMM-Integrationen",
+        "backToList": "Alle RMM-Integrationen",
+        "loadingProvider": "{{title}}-Integrationseinstellungen werden geladen...",
+        "status": {
+          "connected": "Verbunden",
+          "connectedOneDevice": "Verbunden · 1 Gerät",
+          "connectedWithDevices": "Verbunden · {{count}} Geräte",
+          "notConnected": "Nicht verbunden",
+          "syncError": "Synchronisierungsfehler"
+        }
       },
       "tactical": {
         "actions": {
@@ -1235,6 +1244,86 @@
         "sync": {
           "description": "Erkennen Sie Scopes aus Tanium-Computergruppen, ordnen Sie sie Kunden zu und führen Sie dann die Inventarsynchronisation aus.",
           "title": "Tanium-Synchronisation"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "Warnungen nacherfassen",
+          "disconnect": "Trennen",
+          "discoverGroups": "Gruppen ermitteln",
+          "runDeviceSync": "Gerätesynchronisierung ausführen",
+          "saveConfiguration": "Konfiguration speichern",
+          "testConnection": "Verbindung testen"
+        },
+        "connection": {
+          "connectedAt": "Verbunden: {{time}}",
+          "description": "Stellen Sie mit einem API-Schlüssel eine Verbindung zu Level (level.io) her. Schlüssel werden in Level unter Settings > API erstellt.",
+          "never": "nie",
+          "syncLabel": "Synchronisierung: {{status}}",
+          "syncLabelWithError": "Synchronisierung: {{status}} ({{error}})",
+          "title": "Level-Verbindung"
+        },
+        "errors": {
+          "alertBackfillFailed": "Nacherfassung der Warnungen fehlgeschlagen",
+          "deviceSyncFailed": "Gerätesynchronisierung fehlgeschlagen",
+          "disconnectFailed": "Level-Integration konnte nicht getrennt werden",
+          "groupSyncFailed": "Gruppenermittlung fehlgeschlagen",
+          "loadMappings": "Level-Gruppenzuordnungen konnten nicht geladen werden",
+          "loadSettings": "Level-Einstellungen konnten nicht geladen werden",
+          "loadState": "Status der Level-Integration konnte nicht geladen werden",
+          "loadSummary": "Level-Verbindungsübersicht konnte nicht geladen werden",
+          "loadWebhook": "Level-Webhook-Details konnten nicht geladen werden",
+          "saveConfiguration": "Level-Konfiguration konnte nicht gespeichert werden",
+          "testConnectionFailed": "Verbindungstest fehlgeschlagen",
+          "updateMappingFailed": "Zuordnung konnte nicht aktualisiert werden"
+        },
+        "fields": {
+          "apiKey": "API-Schlüssel ({{state}})",
+          "apiKeyPlaceholderExisting": "Geben Sie einen neuen Schlüssel ein, um den gespeicherten zu ersetzen",
+          "apiKeyPlaceholderNew": "Fügen Sie Ihren Level-API-Schlüssel ein",
+          "apiKeyStateRequired": "erforderlich",
+          "apiKeyStateSaved": "gespeichert"
+        },
+        "mappings": {
+          "autoSync": "Automatische Synchronisierung",
+          "autoSyncDisabled": "Deaktiviert",
+          "autoSyncEnabled": "Aktiviert",
+          "group": "Level-Gruppe",
+          "groupIdLabel": "ID: {{id}}",
+          "loading": "Wird geladen…",
+          "mappedClient": "Zugeordneter Kunde",
+          "noGroups": "Noch keine Gruppen ermittelt. Führen Sie zuerst \"Gruppen ermitteln\" aus.",
+          "unmapped": "Nicht zugeordnet"
+        },
+        "status": {
+          "connected": "Verbunden",
+          "disconnected": "Nicht verbunden",
+          "label": "Status: "
+        },
+        "success": {
+          "alertBackfillCompleted": "Nacherfassung der Warnungen abgeschlossen: {{processed}} Warnungen verarbeitet",
+          "configurationSaved": "Level-Konfiguration gespeichert",
+          "connectionTestSucceeded": "Verbindung zu Level erfolgreich",
+          "deviceSyncCompleted": "Gerätesynchronisierung abgeschlossen: {{processed}} verarbeitet, {{created}} erstellt, {{updated}} aktualisiert",
+          "disconnected": "Level-Integration getrennt",
+          "groupSyncCompleted": "Gruppenermittlung abgeschlossen: {{processed}} verarbeitet, {{created}} erstellt, {{updated}} aktualisiert"
+        },
+        "sync": {
+          "description": "Ermitteln Sie Level-Gruppen, ordnen Sie sie Kunden zu und synchronisieren Sie Geräte. Geräte in nicht zugeordneten Gruppen werden übersprungen; Untergruppen erben die nächstgelegene zugeordnete übergeordnete Gruppe.",
+          "summary": "{{mappedGroups}} zugeordnete Gruppen · {{devices}} Geräte · {{activeAlerts}} aktive Warnungen",
+          "title": "Synchronisierung & Gruppenzuordnungen"
+        },
+        "webhook": {
+          "copied": "Kopiert",
+          "copy": "Kopieren",
+          "description": "Level kann Webhooks nicht über seine API registrieren. Erstellen Sie in Level eine Automatisierung mit einer HTTP-POST-Aktion und verwenden Sie die folgende URL, den Header und die Payload, um Warnungen in Echtzeit an Alga zu senden.",
+          "header": "Header: {{name}}",
+          "hideSecret": "Secret ausblenden",
+          "loading": "Webhook-Details werden geladen, nachdem die Integration konfiguriert wurde.",
+          "payload": "Payload-Vorlage",
+          "showSecret": "Secret anzeigen",
+          "title": "Warnungs-Webhook",
+          "url": "Webhook-URL"
         }
       }
     },

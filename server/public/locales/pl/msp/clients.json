@@ -28,7 +28,12 @@
       "inactive": "Nieaktywny",
       "loading": "Ładowanie...",
       "na": "N/D",
-      "none": "Brak"
+      "none": "Brak",
+      "archived": "Zarchiwizowany",
+      "draft": "Wersja robocza",
+      "expired": "Wygasły",
+      "published": "Opublikowany",
+      "terminated": "Zakończony"
     },
     "no": "Nie",
     "yes": "Tak"
@@ -155,8 +160,7 @@
         "description": "Wybierz, które kolumny dołączyć podczas drukowania klientów."
       }
     },
-    "shareTooltip": "Drukuj, importuj i eksportuj"
-    ,
+    "shareTooltip": "Drukuj, importuj i eksportuj",
     "defaultClientDeleteError": "Nie można usunąć domyślnego klienta. Najpierw ustaw innego klienta jako domyślnego w Ustawieniach ogólnych.",
     "clientNotFound": "Nie znaleziono klienta.",
     "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów."
@@ -248,10 +252,15 @@
       "accountManager": "Opiekun klienta",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Dezaktywuje rekord bez usuwania jego danych.",
-    "deactivateClientOnlyDescription": "Dezaktywuj klienta, ale pozostaw jego kontakty aktywne."
+    "deactivateClientOnlyDescription": "Dezaktywuj klienta, ale pozostaw jego kontakty aktywne.",
+    "nameAliasAddFailed": "Nie udało się dodać aliasu",
+    "nameAliasAdded": "Dodano alias",
+    "nameAliasRemoveFailed": "Nie udało się usunąć aliasu",
+    "nameAliasRemoved": "Usunięto alias",
+    "nameAliases": "Aliasy dopasowania",
+    "noNameAliases": "Nie skonfigurowano aliasów. Nazwa klienta zawsze jest dopasowywana."
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
@@ -418,7 +427,8 @@
     "invalidDate": "Nieprawidłowa data",
     "formattingError": "Błąd formatowania",
     "removeAssignmentTitle": "Usuń przypisanie linii kontraktu",
-    "removeAssignmentMessage": "Czy na pewno chcesz usunąć to przypisanie linii kontraktu z klienta? Sama pozycja umowy nie zostanie usunięta."
+    "removeAssignmentMessage": "Czy na pewno chcesz usunąć to przypisanie linii kontraktu z klienta? Sama pozycja umowy nie zostanie usunięta.",
+    "contracts": "Umowy"
   },
   "clientBillingSchedule": {
     "title": "Harmonogram rozliczeń",
@@ -522,7 +532,9 @@
     "manualDue": "Ręczny (termin {{date}})",
     "addError": "Nie udało się dodać umowy do klienta",
     "deactivateError": "Nie udało się dezaktywować umowy",
-    "updateError": "Nie udało się zaktualizować umowy"
+    "updateError": "Nie udało się zaktualizować umowy",
+    "createContract": "Utwórz umowę",
+    "quickAdd": "Szybkie dodawanie"
   },
   "clientContractDialog": {
     "assignTitle": "Przypisz umowę do klienta",
@@ -1017,7 +1029,10 @@
   },
   "actions": {
     "cancel": "Anuluj",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania",
+    "printSelected": "Drukuj zaznaczone ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1144,52 @@
     "messages": {
       "saveSuccess": "Notatki zapisane",
       "saveFailed": "Nie udało się zapisać notatek"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Pobierz nagranie",
+      "join": "Dołącz",
+      "noArtifacts": "Brak dostępnych nagrań lub transkrypcji.",
+      "recordingArtifact": "Nagranie",
+      "refreshFailed": "Nie udało się odświeżyć nagrań. Spróbuj ponownie.",
+      "refreshRecordings": "Odśwież nagrania",
+      "sectionTitle": "Spotkanie online",
+      "transcriptArtifact": "Transkrypcja",
+      "viewTranscript": "Zobacz transkrypcję"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Dodaj",
+          "addContact": "Wybierz kontakty...",
+          "addUser": "Wybierz użytkowników wewnętrznych...",
+          "badge": {
+            "clientLocation": "Lokalizacja klienta",
+            "contact": "Kontakt",
+            "email": "E-mail",
+            "internal": "Wewnętrzny"
+          },
+          "duplicateEmail": "Ten adres e-mail znajduje się już na liście uczestników.",
+          "emailPlaceholder": "name@example.com",
+          "empty": "Nie dodano jeszcze uczestników.",
+          "helper": "Uczestnicy otrzymują zaproszenie do kalendarza Teams od organizatora spotkania.",
+          "invalidEmail": "Wprowadź prawidłowy adres e-mail.",
+          "label": "Uczestnicy",
+          "remove": "Usuń {{name}}",
+          "tabs": {
+            "contacts": "Kontakty",
+            "email": "E-mail",
+            "users": "Użytkownicy"
+          }
+        },
+        "checkingCapability": "Sprawdzanie dostępności spotkań Teams...",
+        "createFailed": "Nie udało się utworzyć spotkania Teams",
+        "createToggle": "Utwórz spotkanie Teams",
+        "endRequired": "Godzina zakończenia jest wymagana do utworzenia spotkania Teams",
+        "startRequired": "Godzina rozpoczęcia jest wymagana do utworzenia spotkania Teams",
+        "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
+      }
     }
   }
 }

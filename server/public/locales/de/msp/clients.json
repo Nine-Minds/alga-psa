@@ -28,7 +28,12 @@
       "inactive": "Inaktiv",
       "loading": "Laden...",
       "na": "n. z.",
-      "none": "Keine"
+      "none": "Keine",
+      "archived": "Archiviert",
+      "draft": "Entwurf",
+      "expired": "Abgelaufen",
+      "published": "Veröffentlicht",
+      "terminated": "Gekündigt"
     },
     "no": "Nein",
     "yes": "Ja"
@@ -155,8 +160,7 @@
         "description": "Wählen Sie die beim Drucken von Kunden enthaltenen Spalten."
       }
     },
-    "shareTooltip": "Drucken, importieren und exportieren"
-    ,
+    "shareTooltip": "Drucken, importieren und exportieren",
     "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
     "clientNotFound": "Kunde nicht gefunden.",
     "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
@@ -248,10 +252,15 @@
       "accountManager": "Kundenbetreuer",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deaktiviert den Datensatz, ohne seine Daten zu löschen.",
-    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv."
+    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv.",
+    "nameAliasAddFailed": "Alias konnte nicht hinzugefügt werden",
+    "nameAliasAdded": "Alias hinzugefügt",
+    "nameAliasRemoveFailed": "Alias konnte nicht entfernt werden",
+    "nameAliasRemoved": "Alias entfernt",
+    "nameAliases": "Aliasse für den Abgleich",
+    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen."
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",
@@ -418,7 +427,8 @@
     "invalidDate": "Ungültiges Datum",
     "formattingError": "Formatierungsfehler",
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
-    "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht."
+    "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
+    "contracts": "Verträge"
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -522,7 +532,9 @@
     "manualDue": "Manuell (fällig {{date}})",
     "addError": "Der Vertrag konnte nicht zum Kunden hinzugefügt werden",
     "deactivateError": "Der Vertrag konnte nicht deaktiviert werden",
-    "updateError": "Der Vertrag konnte nicht aktualisiert werden"
+    "updateError": "Der Vertrag konnte nicht aktualisiert werden",
+    "createContract": "Vertrag erstellen",
+    "quickAdd": "Schnell hinzufügen"
   },
   "clientContractDialog": {
     "assignTitle": "Vertrag dem Kunden zuordnen",
@@ -1017,7 +1029,10 @@
   },
   "actions": {
     "cancel": "Abbrechen",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "print": "Drucken",
+    "printOptions": "Druckoptionen",
+    "printSelected": "Ausgewählte drucken ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1144,52 @@
     "messages": {
       "saveSuccess": "Notizen gespeichert",
       "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Aufzeichnung herunterladen",
+      "join": "Teilnehmen",
+      "noArtifacts": "Es sind noch keine Aufzeichnungen oder Transkripte verfügbar.",
+      "recordingArtifact": "Aufzeichnung",
+      "refreshFailed": "Aufzeichnungen konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "refreshRecordings": "Aufzeichnungen aktualisieren",
+      "sectionTitle": "Online-Besprechung",
+      "transcriptArtifact": "Transkript",
+      "viewTranscript": "Transkript anzeigen"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Hinzufügen",
+          "addContact": "Kontakte auswählen...",
+          "addUser": "Interne Benutzer auswählen...",
+          "badge": {
+            "clientLocation": "Kundenstandort",
+            "contact": "Kontakt",
+            "email": "E-Mail",
+            "internal": "Intern"
+          },
+          "duplicateEmail": "Diese E-Mail-Adresse steht bereits auf der Teilnehmerliste.",
+          "emailPlaceholder": "name@example.com",
+          "empty": "Noch keine Teilnehmer hinzugefügt.",
+          "helper": "Teilnehmer erhalten eine Teams-Kalendereinladung vom Besprechungsorganisator.",
+          "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
+          "label": "Teilnehmer",
+          "remove": "{{name}} entfernen",
+          "tabs": {
+            "contacts": "Kontakte",
+            "email": "E-Mail",
+            "users": "Benutzer"
+          }
+        },
+        "checkingCapability": "Verfügbarkeit von Teams-Besprechungen wird geprüft...",
+        "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
+        "createToggle": "Teams-Besprechung erstellen",
+        "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
+        "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
+        "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
+      }
     }
   }
 }

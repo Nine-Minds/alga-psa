@@ -48,7 +48,8 @@
     "resetPrintOptions": "Reset print options",
     "share": "Share",
     "done": "Done",
-    "continue": "Continue"
+    "continue": "Continue",
+    "printSelected": "Print selected ({{count}})"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -524,7 +525,10 @@
         "visible": "Client Visible",
         "hidden": "Internal Only"
       },
-      "clientVisibilityLabel": "Client Visibility"
+      "clientVisibilityLabel": "Client Visibility",
+      "entityOptions": {
+        "all": "All Entities"
+      }
     },
     "selector": {
       "title": "Select Documents",
@@ -552,7 +556,10 @@
       "uploadingProgress": "Uploading {{current}} of {{total}}",
       "pending": "Pending",
       "error": "Failed to upload document",
-      "fileError": "Failed to upload file"
+      "fileError": "Failed to upload file",
+      "associatedEntityTypeLabel": "Associate With",
+      "noAssociation": "No association",
+      "selectAssociatedEntityError": "Select an associated entity before uploading."
     },
     "folders": {
       "root": "Root",
@@ -611,7 +618,20 @@
     "downloadVideo": "Download Video",
     "downloadAsPdf": "Download as PDF",
     "downloadAsMarkdown": "Download as Markdown",
-    "move": "Move"
+    "move": "Move",
+    "associatedEntityPicker": {
+      "allEntities": "All Entities",
+      "loadingClients": "Loading clients...",
+      "loadingContacts": "Loading contacts...",
+      "noEntityTypes": "No entity types found",
+      "typeLabel": "Associated Entity Type",
+      "typePlaceholder": "Select entity type",
+      "typeSearchPlaceholder": "Search entity types...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Select {{entityType}}",
+      "entitySearchPlaceholder": "Search {{entityType}}...",
+      "noEntities": "No {{entityType}} found"
+    }
   },
   "surveys": {
     "common": {
@@ -952,7 +972,10 @@
     "deleteCommentAriaLabel": "Delete comment",
     "deleteComment": "Delete Comment",
     "deleteCommentConfirmation": "Are you sure you want to delete this comment? This action cannot be undone.",
-    "update": "Update"
+    "update": "Update",
+    "create": "Create",
+    "replyComment": "Reply to comment",
+    "saving": "Saving..."
   },
   "sessionManagement": {
     "title": "Active Sessions",
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} columns hidden due to limited space.",
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "columnsHidden": "{{count}} columns hidden due to limited space."
   }
 }

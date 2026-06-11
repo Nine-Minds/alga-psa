@@ -1525,6 +1525,12 @@
         "label": "Tenant-adres",
         "description": "Het adres van uw bedrijf."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Sjabloongrens"
+    },
+    "dragOverlay": {
+      "component": "Component"
     }
   }
 }

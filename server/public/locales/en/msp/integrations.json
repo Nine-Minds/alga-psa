@@ -1028,7 +1028,16 @@
         "comingSoon": "RMM integration coming soon",
         "configure": "Configure Integration",
         "selected": "{{title}} selected",
-        "title": "RMM Integrations"
+        "title": "RMM Integrations",
+        "backToList": "All RMM integrations",
+        "loadingProvider": "Loading {{title}} integration settings...",
+        "status": {
+          "connected": "Connected",
+          "connectedOneDevice": "Connected · 1 device",
+          "connectedWithDevices": "Connected · {{count}} devices",
+          "notConnected": "Not connected",
+          "syncError": "Sync error"
+        }
       },
       "tactical": {
         "actions": {
@@ -1235,6 +1244,86 @@
         "sync": {
           "description": "Discover scopes from Tanium computer groups, map them to clients, then run inventory sync.",
           "title": "Tanium Sync"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "Backfill Alerts",
+          "disconnect": "Disconnect",
+          "discoverGroups": "Discover Groups",
+          "runDeviceSync": "Run Device Sync",
+          "saveConfiguration": "Save Configuration",
+          "testConnection": "Test Connection"
+        },
+        "connection": {
+          "connectedAt": "Connected: {{time}}",
+          "description": "Connect to Level (level.io) with an API key. Keys are created in Level under Settings > API.",
+          "never": "never",
+          "syncLabel": "Sync: {{status}}",
+          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "title": "Level Connection"
+        },
+        "errors": {
+          "alertBackfillFailed": "Alert backfill failed",
+          "deviceSyncFailed": "Device sync failed",
+          "disconnectFailed": "Failed to disconnect Level integration",
+          "groupSyncFailed": "Group discovery failed",
+          "loadMappings": "Failed to load Level group mappings",
+          "loadSettings": "Failed to load Level settings",
+          "loadState": "Failed to load Level integration state",
+          "loadSummary": "Failed to load Level connection summary",
+          "loadWebhook": "Failed to load Level webhook details",
+          "saveConfiguration": "Failed to save Level configuration",
+          "testConnectionFailed": "Connection test failed",
+          "updateMappingFailed": "Failed to update mapping"
+        },
+        "fields": {
+          "apiKey": "API key ({{state}})",
+          "apiKeyPlaceholderExisting": "Enter a new key to replace the saved one",
+          "apiKeyPlaceholderNew": "Paste your Level API key",
+          "apiKeyStateRequired": "required",
+          "apiKeyStateSaved": "saved"
+        },
+        "mappings": {
+          "autoSync": "Auto Sync",
+          "autoSyncDisabled": "Disabled",
+          "autoSyncEnabled": "Enabled",
+          "group": "Level Group",
+          "groupIdLabel": "ID: {{id}}",
+          "loading": "Loading…",
+          "mappedClient": "Mapped Client",
+          "noGroups": "No groups discovered yet. Run Discover Groups first.",
+          "unmapped": "Not mapped"
+        },
+        "status": {
+          "connected": "Connected",
+          "disconnected": "Not connected",
+          "label": "Status: "
+        },
+        "success": {
+          "alertBackfillCompleted": "Alert backfill completed: {{processed}} alerts processed",
+          "configurationSaved": "Level configuration saved",
+          "connectionTestSucceeded": "Connection to Level succeeded",
+          "deviceSyncCompleted": "Device sync completed: {{processed}} processed, {{created}} created, {{updated}} updated",
+          "disconnected": "Level integration disconnected",
+          "groupSyncCompleted": "Group discovery completed: {{processed}} processed, {{created}} created, {{updated}} updated"
+        },
+        "sync": {
+          "description": "Discover Level groups, map them to clients, and sync devices. Devices in unmapped groups are skipped; subgroups inherit the nearest mapped ancestor.",
+          "summary": "{{mappedGroups}} mapped groups · {{devices}} devices · {{activeAlerts}} active alerts",
+          "title": "Sync & Group Mappings"
+        },
+        "webhook": {
+          "copied": "Copied",
+          "copy": "Copy",
+          "description": "Level cannot register webhooks via its API. In Level, create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga in real time.",
+          "header": "Header: {{name}}",
+          "hideSecret": "Hide secret",
+          "loading": "Webhook details load after the integration is configured.",
+          "payload": "Payload template",
+          "showSecret": "Show secret",
+          "title": "Alert Webhook",
+          "url": "Webhook URL"
         }
       }
     },

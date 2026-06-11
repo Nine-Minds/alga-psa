@@ -216,6 +216,49 @@
         "title": "Druckoptionen",
         "description": "Wählen Sie die beim Drucken von Assets enthaltenen Spalten."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Auswahl aufheben",
+        "delete": "Löschen",
+        "selectedCount": "{{count}} ausgewählt",
+        "setLocation": "Standort festlegen",
+        "setStatus": "Status festlegen"
+      },
+      "actions": {
+        "apply": "Anwenden",
+        "applying": "Wird angewendet...",
+        "deleteAssets": "Löschen",
+        "deleting": "Wird gelöscht...",
+        "updateLocation": "Standortaktualisierung",
+        "updateStatus": "Statusaktualisierung"
+      },
+      "deleteDialog": {
+        "description": "{{count}} ausgewählte(s) Asset(s) löschen. Assets mit Abhängigkeiten werden möglicherweise übersprungen.",
+        "title": "Ausgewählte Assets löschen"
+      },
+      "errors": {
+        "deleteFailed": "Die ausgewählten Assets konnten nicht gelöscht werden.",
+        "updateLocationFailed": "Die Standorte der ausgewählten Assets konnten nicht aktualisiert werden.",
+        "updateStatusFailed": "Die ausgewählten Assets konnten nicht aktualisiert werden."
+      },
+      "locationDialog": {
+        "clearLocation": "Standort entfernen",
+        "customLocation": "Benutzerdefinierter Standort",
+        "customPlaceholder": "Benutzerdefinierten Standort oder Bereich eingeben",
+        "description": "{{count}} ausgewählte(s) Asset(s) aktualisieren.",
+        "loadingLocations": "Standorte werden geladen...",
+        "savedDisabled": "Gespeicherte Kundenstandorte sind nur verfügbar, wenn alle ausgewählten Assets sichtbar sind und zu einem Kunden gehören.",
+        "savedLocation": "Gespeicherter Kundenstandort",
+        "selectLocation": "Standort auswählen",
+        "title": "Asset-Standort festlegen"
+      },
+      "partialFailure": "{{action}} für {{succeeded}} Asset(s) abgeschlossen; {{failed}} fehlgeschlagen.",
+      "statusDialog": {
+        "description": "{{count}} ausgewählte(s) Asset(s) aktualisieren.",
+        "title": "Asset-Status festlegen"
+      },
+      "success": "{{action}} für {{count}} Asset(s) abgeschlossen."
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "Asset-Details konnten nicht geladen werden",
       "clientsLoadFailed": "Clients können nicht geladen werden",
       "locationsLoadFailed": "Standorte für diesen Client können nicht geladen werden",
-      "updateFailed": "Das Asset konnte nicht aktualisiert werden"
+      "updateFailed": "Das Asset konnte nicht aktualisiert werden",
+      "validation": "Bitte korrigieren Sie die markierten Felder, bevor Sie speichern."
     },
     "actions": {
       "viewClient": "Kunden ansehen",
@@ -853,7 +897,9 @@
       "assetTagRequired": "Asset-Tag *",
       "typeRequired": "Typ *",
       "status": "Status",
-      "serialNumber": "Seriennummer"
+      "serialNumber": "Seriennummer",
+      "customLocationOption": "Benutzerdefinierter Standort",
+      "location": "Standort"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -869,7 +915,11 @@
       "assetTag": "Geben Sie das Asset-Tag ein",
       "selectType": "Typ auswählen",
       "selectStatus": "Status auswählen",
-      "serialNumber": "Geben Sie die Seriennummer ein"
+      "serialNumber": "Geben Sie die Seriennummer ein",
+      "customLocation": "Benutzerdefinierten Standort oder Bereich eingeben",
+      "loadingLocations": "Standorte werden geladen...",
+      "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
+      "selectLocation": "Standort auswählen"
     },
     "sections": {
       "typeSpecificDetails": "Typspezifische Details"
@@ -979,7 +1029,8 @@
       "uptime": "Betriebszeit",
       "lastSync": "Letzte RMM Synchronisierung",
       "network": "Netzwerk",
-      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}",
+      "taniumCriticality": "Tanium-Kritikalität"
     },
     "values": {
       "never": "Nie"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "Aktive Warnungen",
     "acknowledge": "Bestätigen",
     "createTicket": "Ticket erstellen"
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen",
+    "printSelected": "Ausgewählte drucken ({{count}})"
   }
 }

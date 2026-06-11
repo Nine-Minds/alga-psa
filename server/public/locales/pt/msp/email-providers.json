@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Provedores",
-      "defaults": "Padrões"
+      "defaults": "Padrões",
+      "inboundRules": "Regras de entrada"
     },
     "setup": {
       "title": "Instruções de configuração",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Falha ao iniciar o OAuth",
         "popupBlocked": "Falha ao abrir o popup OAuth. Permita popups para este site.",
         "closedEarly": "A janela de autorização foi fechada antes da conclusão. Tente novamente.",
-        "authorizationFailed": "Falha na autorização"
+        "authorizationFailed": "Falha na autorização",
+        "senderDisplayNameInvalid": "O nome de exibição não pode conter aspas, parênteses angulares ou quebras de linha"
       },
       "requiredFields": {
         "providerName": "Nome da configuração",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "É obrigatória uma caixa de correio válida (ex. user@domain.com, user@localhost, user@test-server, ou user)",
         "hostRequired": "O host IMAP é obrigatório",
         "usernameRequired": "O nome de usuário IMAP é obrigatório",
-        "oauthInitiateFailed": "Falha ao iniciar o OAuth IMAP"
+        "oauthInitiateFailed": "Falha ao iniciar o OAuth IMAP",
+        "senderDisplayNameInvalid": "O nome de exibição não pode conter aspas, parênteses angulares ou quebras de linha"
       },
       "basic": {
         "title": "Configurações básicas",
@@ -835,6 +838,146 @@
       "mismatchHelp": "O registro DNS existe, mas o valor não corresponde ao que o Resend espera.",
       "matchedHelp": "O valor detectado corresponde ao esperado.",
       "unknownHelp": "Ainda não verificamos o DNS. Verifique o DNS novamente para executar a verificação."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Adicionar regra",
+      "aiClassify": "Classificar com IA",
+      "aiClassifyUpsell": "Requer o complemento Assistente de IA",
+      "extractAssign": "Atribuir cliente a partir do texto extraído",
+      "setDestination": "Encaminhar para destino",
+      "skip": "Ignorar e-mail (sem ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Todas as caixas de correio"
+    },
+    "empty": {
+      "description": "Crie uma regra para ignorar e-mails de atualização de status ou atribuir tickets a clientes mencionados na linha de assunto.",
+      "title": "Nenhuma regra de entrada configurada"
+    },
+    "errors": {
+      "aliasAdd": "Falha ao adicionar o alias",
+      "delete": "Falha ao excluir a regra",
+      "load": "Falha ao carregar as regras de entrada",
+      "reorder": "Falha ao reordenar as regras",
+      "save": "Falha ao salvar a regra",
+      "test": "Falha ao testar a regra",
+      "update": "Falha ao atualizar a regra"
+    },
+    "extraction": {
+      "after": "Texto após o marcador",
+      "before": "Texto antes do marcador",
+      "between": "Texto entre delimitadores",
+      "regex": "Expressão regular (avançado)"
+    },
+    "fields": {
+      "bodyText": "Texto do corpo",
+      "fromAddress": "Endereço do remetente",
+      "fromDomain": "Domínio do remetente",
+      "subject": "Assunto",
+      "toAddress": "Endereço Para/CC"
+    },
+    "form": {
+      "action": "Ação",
+      "active": "Ativa",
+      "addCondition": "Adicionar condição",
+      "aiAllowAssign": "Pode atribuir clientes",
+      "aiAllowSkip": "Pode ignorar e-mails",
+      "aiInstruction": "Instrução",
+      "aiInstructionPlaceholder": "ex.: Determinar a qual cliente este alerta de monitoramento se refere.",
+      "aiUpsell": "Classificar com IA está disponível com o complemento Assistente de IA Enterprise — os e-mails são classificados por intenção, sem padrões de correspondência a manter.",
+      "cancel": "Cancelar",
+      "conditions": "Condições (todas devem corresponder)",
+      "create": "Criar regra",
+      "createTitle": "Criar regra de entrada",
+      "description": "Defina quando a regra corresponde e o que acontece com o e-mail. Use o testador abaixo para verificar com um exemplo antes de salvar.",
+      "destination": "Destino (padrões de ticket)",
+      "destinationPlaceholder": "Selecione um conjunto de padrões",
+      "editTitle": "Editar regra de entrada",
+      "endDelimiter": "Delimitador final",
+      "extractFrom": "Extrair de",
+      "extractionTemplate": "Extração",
+      "fallbackDestination": "Destino de fallback",
+      "first": "Primeira",
+      "last": "Última",
+      "mailboxes": "Aplicar às caixas de correio",
+      "mailboxesHint": "Deixe todas desmarcadas para aplicar esta regra a todas as caixas de correio.",
+      "marker": "Texto do marcador",
+      "markerPlaceholder": "ex.: Cliente:",
+      "matchHint": "O texto extraído é comparado com os nomes e aliases dos clientes (sem diferenciar maiúsculas de minúsculas).",
+      "name": "Nome da regra",
+      "namePlaceholder": "ex.: Encaminhamento de clientes Huntress",
+      "noMailboxes": "Ainda não há caixas de correio configuradas.",
+      "noMatchFallback": "Encaminhar para um destino de fallback",
+      "noMatchProceed": "Continuar com as regras seguintes / processamento normal",
+      "noMatchSkip": "Ignorar o e-mail",
+      "occurrence": "Ocorrência",
+      "onNoMatch": "Se nenhum cliente corresponder",
+      "pattern": "Padrão (o grupo de captura 1 é o nome do cliente)",
+      "regexPlaceholder": "Expressão regular",
+      "saving": "Salvando…",
+      "startDelimiter": "Delimitador inicial",
+      "update": "Atualizar regra",
+      "valuePlaceholder": "Valor"
+    },
+    "header": {
+      "description": "Faça a correspondência de e-mails de entrada por remetente ou assunto para ignorar ruído, atribuir o cliente certo ou encaminhar para um destino. As regras são executadas em ordem; a primeira correspondência vence.",
+      "title": "Regras de e-mail de entrada"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Os nomes extraídos correspondem a nomes e aliases de clientes. Gerencie os aliases no registro do cliente ou adicione-os no testador de regras.",
+        "audit": "• Os e-mails ignorados permanecem auditáveis no diagnóstico de processamento de e-mail, marcados com a regra que os ignorou.",
+        "order": "• As regras são executadas de cima para baixo nos novos e-mails de entrada; a primeira regra correspondente é aplicada.",
+        "replies": "• As respostas a tickets existentes sempre se tornam comentários — as regras nunca as afetam."
+      },
+      "title": "Como funciona"
+    },
+    "loading": "Carregando regras de entrada...",
+    "menu": {
+      "delete": "Excluir",
+      "deleting": "Excluindo…",
+      "edit": "Editar"
+    },
+    "operators": {
+      "contains": "contém",
+      "endsWith": "termina com",
+      "equals": "é igual a",
+      "matchesRegex": "corresponde à regex",
+      "startsWith": "começa com"
+    },
+    "summary": {
+      "aiClassify": "Classificar com IA",
+      "extractAssign": "Atribuir cliente a partir de {{source}}",
+      "setDestination": "Encaminhar para destino",
+      "skip": "Ignorar e-mail (sem ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Adicionar alias",
+      "aliasAdded": "Alias adicionado. Execute o teste novamente para vê-lo corresponder.",
+      "aliasAdding": "Adicionando…",
+      "aliasClientPlaceholder": "Selecione um cliente",
+      "aliasLabel": "Adicionar \"{{value}}\" como alias de",
+      "body": "Texto do corpo",
+      "clientMatched": "Cliente correspondido via {{source}}",
+      "clientName": "nome do cliente",
+      "extracted": "Valor extraído:",
+      "from": "De",
+      "noClient": "Nenhum cliente correspondido",
+      "outcome": {
+        "assignClient": "Ticket atribuído ao cliente \"{{client}}\"",
+        "fallback": "Nenhum cliente correspondido — ticket encaminhado para o destino de fallback",
+        "none": "A regra não foi resolvida — o processamento normal continua",
+        "setDestination": "Ticket encaminhado para o destino selecionado",
+        "skip": "E-mail ignorado — nenhum ticket criado"
+      },
+      "run": "Executar teste",
+      "running": "Testando…",
+      "subject": "Assunto",
+      "title": "Testar esta regra",
+      "to": "Para"
     }
   }
 }

@@ -28,7 +28,12 @@
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "N.v.t.",
-      "none": "Geen"
+      "none": "Geen",
+      "archived": "Gearchiveerd",
+      "draft": "Concept",
+      "expired": "Verlopen",
+      "published": "Gepubliceerd",
+      "terminated": "Beëindigd"
     },
     "no": "Nee",
     "yes": "Ja"
@@ -155,8 +160,7 @@
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van klanten."
       }
     },
-    "shareTooltip": "Afdrukken, importeren en exporteren"
-    ,
+    "shareTooltip": "Afdrukken, importeren en exporteren",
     "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
     "clientNotFound": "Klant niet gevonden.",
     "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
@@ -248,10 +252,15 @@
       "accountManager": "Accountmanager",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deactiveert de record zonder de gegevens te verwijderen.",
-    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief."
+    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief.",
+    "nameAliasAddFailed": "Kan alias niet toevoegen",
+    "nameAliasAdded": "Alias toegevoegd",
+    "nameAliasRemoveFailed": "Kan alias niet verwijderen",
+    "nameAliasRemoved": "Alias verwijderd",
+    "nameAliases": "Overeenkomende aliassen",
+    "noNameAliases": "Geen aliassen geconfigureerd. De klantnaam zelf komt altijd overeen."
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",
@@ -418,7 +427,8 @@
     "invalidDate": "Ongeldige datum",
     "formattingError": "Formatteringsfout",
     "removeAssignmentTitle": "Contractregeltoewijzing verwijderen",
-    "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd."
+    "removeAssignmentMessage": "Weet u zeker dat u deze contractregeltoewijzing van de klant wilt verwijderen? De contractregel zelf wordt niet verwijderd.",
+    "contracts": "Contracten"
   },
   "clientBillingSchedule": {
     "title": "Factureringsschema",
@@ -522,7 +532,9 @@
     "manualDue": "Handmatig (vervaldatum {{date}})",
     "addError": "Kan contract niet toevoegen aan klant",
     "deactivateError": "Kan het contract niet deactiveren",
-    "updateError": "Kan contract niet updaten"
+    "updateError": "Kan contract niet updaten",
+    "createContract": "Contract aanmaken",
+    "quickAdd": "Snel toevoegen"
   },
   "clientContractDialog": {
     "assignTitle": "Wijs contract toe aan klant",
@@ -1017,7 +1029,10 @@
   },
   "actions": {
     "cancel": "Annuleren",
-    "delete": "Verwijderen"
+    "delete": "Verwijderen",
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1144,52 @@
     "messages": {
       "saveSuccess": "Notities opgeslagen",
       "saveFailed": "Notities opslaan is mislukt"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Opname downloaden",
+      "join": "Deelnemen",
+      "noArtifacts": "Er zijn nog geen opnamen of transcripties beschikbaar.",
+      "recordingArtifact": "Opname",
+      "refreshFailed": "Kan opnamen niet vernieuwen. Probeer het opnieuw.",
+      "refreshRecordings": "Opnamen vernieuwen",
+      "sectionTitle": "Onlinevergadering",
+      "transcriptArtifact": "Transcriptie",
+      "viewTranscript": "Transcriptie bekijken"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Toevoegen",
+          "addContact": "Selecteer contactpersonen...",
+          "addUser": "Selecteer interne gebruikers...",
+          "badge": {
+            "clientLocation": "Klantlocatie",
+            "contact": "Contact",
+            "email": "E-mail",
+            "internal": "Intern"
+          },
+          "duplicateEmail": "Dat e-mailadres staat al op de deelnemerslijst.",
+          "emailPlaceholder": "naam@voorbeeld.com",
+          "empty": "Nog geen deelnemers toegevoegd.",
+          "helper": "Deelnemers ontvangen een Teams-agenda-uitnodiging van de organisator van de vergadering.",
+          "invalidEmail": "Voer een geldig e-mailadres in.",
+          "label": "Deelnemers",
+          "remove": "{{name}} verwijderen",
+          "tabs": {
+            "contacts": "Contactpersonen",
+            "email": "E-mail",
+            "users": "Gebruikers"
+          }
+        },
+        "checkingCapability": "Beschikbaarheid van Teams-vergaderingen controleren...",
+        "createFailed": "Kan Teams-vergadering niet aanmaken",
+        "createToggle": "Teams-vergadering aanmaken",
+        "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
+        "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
+        "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
+      }
     }
   }
 }

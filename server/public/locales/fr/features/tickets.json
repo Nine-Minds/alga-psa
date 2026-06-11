@@ -164,7 +164,8 @@
     "proceed": "Continuer",
     "export": "Exportation",
     "reset": "Réinitialiser",
-    "importSelected": "Importer la sélection"
+    "importSelected": "Importer la sélection",
+    "printOptions": "Options d'impression"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "Échec de la promotion du principal",
     "updateBundleSettingsFailed": "Échec de la mise à jour des paramètres du groupe",
     "assetLoadFailed": "Échec du chargement des détails de l'actif",
-    "assetNotFound": "Actif introuvable"
+    "assetNotFound": "Actif introuvable",
+    "addCommentFailed": "Échec de l'ajout du commentaire",
+    "deleteTimeEntryFailed": "Échec de la suppression de l'entrée de temps",
+    "timeEntryDeleted": "Entrée de temps supprimée"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "Réponses entrantes sur les tickets enfants (lecture seule)",
     "childTicket": "Ticket enfant",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "Ce brouillon inclut des images collées qui ont déjà été téléchargées comme documents de ticket. Les conserver ou les supprimer définitivement ?"
+    "clipboardDraftCancelMessage": "Ce brouillon inclut des images collées qui ont déjà été téléchargées comme documents de ticket. Les conserver ou les supprimer définitivement ?",
+    "replyCommentAriaLabel": "Répondre au commentaire"
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -427,7 +432,10 @@
         "title": "Options d'impression",
         "selectedTitle": "Options d'impression ({{count}} sélectionnés)",
         "description": "Choisissez les colonnes à inclure lors de l'impression des tickets."
-      }
+      },
+      "selectedAction": "Imprimer la sélection ({{count}})",
+      "selectedTitle": "Tickets sélectionnés ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Exporter la sélection ({{count}})",
     "exportAction": "Exporter CSV",
@@ -495,7 +503,9 @@
       "success_one": "{{count}} ticket déplacé",
       "success_other": "{{count}} tickets déplacés",
       "partialFailure": "Certains tickets n'ont pas pu être déplacés",
-      "failure": "Échec du déplacement des tickets sélectionnés"
+      "failure": "Échec du déplacement des tickets sélectionnés",
+      "confirm": "Déplacer {{count}} tickets",
+      "success": "{{count}} tickets déplacés"
     },
     "delete": {
       "dialogTitle": "Supprimer les tickets sélectionnés",
@@ -510,7 +520,9 @@
       "success_one": "{{count}} ticket supprimé",
       "success_other": "{{count}} tickets supprimés",
       "partialFailure": "Certains tickets n'ont pas pu être supprimés",
-      "failure": "Échec de la suppression des tickets sélectionnés"
+      "failure": "Échec de la suppression des tickets sélectionnés",
+      "confirm": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+      "success": "{{count}} tickets supprimés"
     },
     "bundle": {
       "dialogTitle": "Regrouper les tickets",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "Afficher les journaux de notifications par e-mail",
     "clipboardDraftMessage": "Cette description comprend des images collées qui ont déjà été téléversées comme documents du ticket. Voulez-vous les conserver ou les supprimer définitivement ?",
     "clearDueDate": "Effacer la date d'échéance",
-    "paused": "En pause"
+    "paused": "En pause",
+    "openActivityLog": "Voir le journal d'activité",
+    "resolveLiveConflict": "Résolvez les conflits de mise à jour en direct avant d'enregistrer vos modifications."
   },
   "properties": {
     "timeEntry": "Entrée de temps",
@@ -997,7 +1011,11 @@
       "responseState": "État de réponse",
       "ticketOrigin": "Origine du ticket",
       "tags": "Balises"
-    }
+    },
+    "appliedFiltersSummary": "(sur {{count}} ticket correspondant aux filtres appliqués)",
+    "completeMessage": "{{count}} ticket exporté avec succès au format CSV.",
+    "confirm": "Exporter {{count}} ticket",
+    "selectedTicketsSummary": "Exportation de {{count}} ticket sélectionné"
   },
   "materials": {
     "title": "Matériaux",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "{{count}} catégories",
     "excludingCount_one": "à l'exclusion de {{count}} catégorie",
     "excludingCount_other": "à l'exclusion de {{count}} catégories",
-    "excludingPrefix": "à l'exclusion de {{name}}"
+    "excludingPrefix": "à l'exclusion de {{name}}",
+    "excludingCount": "en excluant {{count}} catégorie",
+    "selectedCount": "{{count}} catégories"
   },
   "navigation": {
     "previousTicket": "Ticket précédent",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "Continuer l'édition"
+    "continueEditing": "Continuer l'édition",
+    "cancel": "Annuler"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "hors {{count}} tableaux",
     "placeholder": "Filtrer par tableau",
     "title": "Sélecteur de tableau",
-    "searchPlaceholder": "Rechercher des tableaux..."
+    "searchPlaceholder": "Rechercher des tableaux...",
+    "excludingCount": "en excluant {{count}} tableaux",
+    "selectedCount": "{{count}} tableaux",
+    "statusActive": "Actifs",
+    "statusAll": "Tous",
+    "statusInactive": "Inactifs"
+  },
+  "checklist": {
+    "addFailed": "Échec de l'ajout de l'élément de la liste de contrôle",
+    "addItem": "Ajouter",
+    "addItemPlaceholder": "Ajouter un élément à la liste de contrôle",
+    "applyTemplate": "Appliquer un modèle",
+    "applyTemplateFailed": "Échec de l'application du modèle de liste de contrôle",
+    "clickToRename": "Cliquer pour renommer",
+    "deleteFailed": "Échec de la suppression de l'élément de la liste de contrôle",
+    "deleteItem": "Supprimer l'élément",
+    "empty": "Aucun élément dans la liste de contrôle pour le moment.",
+    "itemMenu": "Menu de l'élément de la liste de contrôle",
+    "loadTemplatesFailed": "Échec du chargement des modèles de liste de contrôle",
+    "loading": "Chargement de la liste de contrôle...",
+    "markOptional": "Marquer comme facultatif",
+    "markRequired": "Marquer comme obligatoire",
+    "moveDown": "Déplacer vers le bas",
+    "moveUp": "Déplacer vers le haut",
+    "noTemplates": "Aucun modèle disponible.",
+    "progress": "{{done}} sur {{total}} terminés",
+    "renameFailed": "Échec du renommage de l'élément de la liste de contrôle",
+    "reorderFailed": "Échec de la réorganisation des éléments de la liste de contrôle",
+    "requiredBadge": "Obligatoire",
+    "templateAlreadyApplied": "Ce modèle a déjà été appliqué à ce ticket.",
+    "templateApplied": "Modèle de liste de contrôle appliqué.",
+    "templatesLoading": "Chargement des modèles...",
+    "title": "Liste de contrôle",
+    "toggleFailed": "Échec de la mise à jour de l'élément de la liste de contrôle",
+    "updateFailed": "Échec de la mise à jour de l'élément de la liste de contrôle"
   }
 }

@@ -48,7 +48,8 @@
     "resetPrintOptions": "Réinitialiser les options d’impression",
     "share": "Partager",
     "done": "Terminé",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "printSelected": "Imprimer la sélection ({{count}})"
   },
   "status": {
     "loading": "Chargement...",
@@ -462,7 +463,10 @@
         "visible": "Visible pour le client",
         "hidden": "Interne uniquement"
       },
-      "clientVisibilityLabel": "Visibilité pour le client"
+      "clientVisibilityLabel": "Visibilité pour le client",
+      "entityOptions": {
+        "all": "Toutes les entités"
+      }
     },
     "selector": {
       "title": "Sélectionner des documents",
@@ -490,7 +494,10 @@
       "uploadingProgress": "Téléversement de {{current}} sur {{total}}",
       "pending": "En attente",
       "error": "Impossible de téléverser le document",
-      "fileError": "Impossible de téléverser le fichier"
+      "fileError": "Impossible de téléverser le fichier",
+      "associatedEntityTypeLabel": "Associer à",
+      "noAssociation": "Aucune association",
+      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser."
     },
     "folders": {
       "root": "Racine",
@@ -549,7 +556,20 @@
     "downloadVideo": "Télécharger la vidéo",
     "downloadAsPdf": "Télécharger en PDF",
     "downloadAsMarkdown": "Télécharger en Markdown",
-    "move": "Déplacer"
+    "move": "Déplacer",
+    "associatedEntityPicker": {
+      "allEntities": "Toutes les entités",
+      "loadingClients": "Chargement des clients...",
+      "loadingContacts": "Chargement des contacts...",
+      "noEntityTypes": "Aucun type d'entité trouvé",
+      "typeLabel": "Type d'entité associé",
+      "typePlaceholder": "Sélectionner un type d'entité",
+      "typeSearchPlaceholder": "Rechercher des types d'entité...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Sélectionner {{entityType}}",
+      "entitySearchPlaceholder": "Rechercher {{entityType}}...",
+      "noEntities": "Aucun {{entityType}} trouvé"
+    }
   },
   "fields": {
     "notes": "Notes"
@@ -1009,7 +1029,10 @@
     "deleteCommentAriaLabel": "Supprimer le commentaire",
     "deleteComment": "Supprimer le commentaire",
     "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.",
-    "update": "Mettre à jour"
+    "update": "Mettre à jour",
+    "create": "Créer",
+    "replyComment": "Répondre au commentaire",
+    "saving": "Enregistrement..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} colonnes masquées faute de place.",
     "showAll": "Tout afficher",
     "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
-    "showLess": "Afficher moins"
+    "showLess": "Afficher moins",
+    "columnsHidden": "{{count}} colonnes masquées en raison de l'espace limité."
   }
 }

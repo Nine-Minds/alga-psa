@@ -33,7 +33,8 @@
       "resources": "Resources",
       "more": "More",
       "apps": "Apps"
-    }
+    },
+    "licenses": "Licenses"
   },
   "sidebar": {
     "goToDashboard": "Go to dashboard",
@@ -160,7 +161,8 @@
           "declined": "Appointment declined: {{name}}",
           "cancelled": "Appointment cancelled: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "When tickets are updated, you will see them here."
     },
     "devices": {
       "title": "Your devices",
@@ -327,7 +329,9 @@
         "emailAlreadyExists": "A user with this email address already exists.",
         "registrationFailed": "We couldn't complete the registration. Please try again."
       }
-    }
+    },
+    "captchaRequired": "Please complete the verification below, then sign in again.",
+    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again."
   },
   "account": {
     "title": "Account",

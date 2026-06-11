@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} dni",
         "ongoing": "Ciągła",
         "renewalTermMonths_one": "Liczba miesięcy: {{count}}",
-        "renewalTermMonths_other": "Liczba miesięcy: {{count}}"
+        "renewalTermMonths_other": "Liczba miesięcy: {{count}}",
+        "noticePeriodDays": "{{count}} dni",
+        "renewalTermMonths": "Liczba miesięcy: {{count}}"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Produkt {{index}}",
       "products": "Produkty",
       "quantity": "Ilość",
-      "selectProductPlaceholder": "Wybierz produkt"
+      "selectProductPlaceholder": "Wybierz produkt",
+      "catalogPriceInCurrency": "Cena katalogowa w {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Nie ustawiono ceny domyślnej. Wprowadź cenę jednostkową.",
-      "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej."
+      "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej.",
+      "noCurrencyPriceEnterUnitPrice": "Brak ceny w {{currency}} w katalogu. Wprowadź cenę jednostkową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź cenę jednostkową w {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Usługi godzinowe",
       "selectServicePlaceholder": "Wybierz usługę",
       "serviceItem": "Usługa {{index}}",
-      "setBucketOfHours": "Ustaw pakiet godzin"
+      "setBucketOfHours": "Ustaw pakiet godzin",
+      "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę godzinową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "np. 15 minut — dowolny wpis czasu krótszy od tego zostanie zaokrąglony w górę",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Ustaw alokację pakietu",
       "unitOfMeasure": "Jednostka miary",
       "unitOfMeasureHint": "Wybierz jednostkę, według której rozliczana jest ta usługa.",
-      "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik"
+      "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik",
+      "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę jednostkową.",
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}."
     },
     "summary": {
       "labels": {

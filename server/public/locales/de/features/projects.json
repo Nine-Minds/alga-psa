@@ -1474,5 +1474,13 @@
       "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
       "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
     }
+  },
+  "common:actions": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "done": "Fertig",
+    "edit": "Bearbeiten",
+    "save": "Speichern"
   }
 }

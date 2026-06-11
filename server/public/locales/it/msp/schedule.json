@@ -91,7 +91,8 @@
         "single": "Solo questo evento",
         "future": "Questo e gli eventi futuri",
         "all": "Tutti gli eventi"
-      }
+      },
+      "messageWithTeamsWarning": "Sei sicuro di voler eliminare questa voce di pianificazione? Questa azione non può essere annullata. Verrà eliminata anche la riunione Microsoft Teams."
     },
     "print": {
       "title": "Agenda pianificata",
@@ -546,7 +547,9 @@
         "title": "Appuntamento approvato",
         "descriptionWithDate": "Questo appuntamento ha avuto origine da una richiesta del cliente ed è stato approvato il {{date}}.",
         "description": "Questo appuntamento è nato da una richiesta del cliente.",
-        "joinTeamsMeeting": "Partecipa alla riunione Teams"
+        "joinTeamsMeeting": "Partecipa alla riunione Teams",
+        "downloadRecording": "Scarica registrazione",
+        "viewTranscript": "Visualizza trascrizione"
       },
       "pending": {
         "title": "Richiesta di appuntamento in sospeso",
@@ -630,5 +633,9 @@
       "future": "Questo e gli eventi futuri",
       "all": "Tutti gli eventi"
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
   }
 }

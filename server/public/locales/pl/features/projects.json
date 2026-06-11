@@ -1474,5 +1474,13 @@
       "confirm_other": "Dodaj tagi do {{count}} zadań",
       "failedHeading": "Nie udało się dodać tagów do następujących zadań:"
     }
+  },
+  "common:actions": {
+    "back": "Wstecz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "done": "Gotowe",
+    "edit": "Edytuj",
+    "save": "Zapisz"
   }
 }

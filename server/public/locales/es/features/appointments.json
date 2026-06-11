@@ -121,7 +121,9 @@
     "approved": "Aprobada",
     "cancelButton": "Cancelar cita",
     "teamsMeeting": "Reunión de Teams",
-    "joinTeamsMeeting": "Unirse a la reunión de Teams"
+    "joinTeamsMeeting": "Unirse a la reunión de Teams",
+    "downloadRecording": "Descargar grabación",
+    "viewTranscript": "Ver transcripción"
   },
   "cancel": {
     "title": "Cancelar cita",

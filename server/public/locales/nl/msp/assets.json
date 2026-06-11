@@ -216,6 +216,49 @@
         "title": "Afdrukopties",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van assets."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Wissen",
+        "delete": "Verwijderen",
+        "selectedCount": "{{count}} geselecteerd",
+        "setLocation": "Locatie instellen",
+        "setStatus": "Status instellen"
+      },
+      "actions": {
+        "apply": "Toepassen",
+        "applying": "Toepassen...",
+        "deleteAssets": "Verwijderen",
+        "deleting": "Verwijderen...",
+        "updateLocation": "Locatie-update",
+        "updateStatus": "Statusupdate"
+      },
+      "deleteDialog": {
+        "description": "Verwijder {{count}} geselecteerde asset(s). Assets met afhankelijkheden worden mogelijk overgeslagen.",
+        "title": "Geselecteerde assets verwijderen"
+      },
+      "errors": {
+        "deleteFailed": "Kan geselecteerde assets niet verwijderen.",
+        "updateLocationFailed": "Kan locaties van geselecteerde assets niet bijwerken.",
+        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken."
+      },
+      "locationDialog": {
+        "clearLocation": "Locatie wissen",
+        "customLocation": "Aangepaste locatie",
+        "customPlaceholder": "Voer een aangepaste locatie of ruimte in",
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "loadingLocations": "Locaties laden...",
+        "savedDisabled": "Opgeslagen klantlocaties zijn alleen beschikbaar wanneer alle geselecteerde assets zichtbaar zijn en bij één klant horen.",
+        "savedLocation": "Opgeslagen klantlocatie",
+        "selectLocation": "Selecteer locatie",
+        "title": "Assetlocatie instellen"
+      },
+      "partialFailure": "{{action}} voltooid voor {{succeeded}} asset(s); {{failed}} mislukt.",
+      "statusDialog": {
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "title": "Assetstatus instellen"
+      },
+      "success": "{{action}} voltooid voor {{count}} asset(s)."
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "Kan itemdetails niet laden",
       "clientsLoadFailed": "Kan klanten niet laden",
       "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
-      "updateFailed": "Kan item niet updaten"
+      "updateFailed": "Kan item niet updaten",
+      "validation": "Corrigeer de gemarkeerde velden voordat je opslaat."
     },
     "actions": {
       "viewClient": "Klant bekijken",
@@ -853,7 +897,9 @@
       "assetTagRequired": "Itemtag *",
       "typeRequired": "Type *",
       "status": "Status",
-      "serialNumber": "Serienummer"
+      "serialNumber": "Serienummer",
+      "customLocationOption": "Aangepaste locatie",
+      "location": "Locatie"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -869,7 +915,11 @@
       "assetTag": "Voer de itemtag in",
       "selectType": "Selecteer type",
       "selectStatus": "Selecteer status",
-      "serialNumber": "Voer het serienummer in"
+      "serialNumber": "Voer het serienummer in",
+      "customLocation": "Voer een aangepaste locatie of ruimte in",
+      "loadingLocations": "Locaties laden...",
+      "selectClientFirst": "Selecteer eerst een klant",
+      "selectLocation": "Selecteer locatie"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -979,7 +1029,8 @@
       "uptime": "Uptime",
       "lastSync": "Laatste RMM-synchronisatie",
       "network": "Netwerk",
-      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}",
+      "taniumCriticality": "Tanium-kritikaliteit"
     },
     "values": {
       "never": "Nooit"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "Actieve waarschuwingen",
     "acknowledge": "Bevestigen",
     "createTicket": "Ticket aanmaken"
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   }
 }

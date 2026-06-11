@@ -24,7 +24,10 @@
   "actions": {
     "create": "Utwórz przepływ pracy",
     "open": "Otwórz",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania",
+    "printSelected": "Drukuj zaznaczone ({{count}})"
   },
   "runList": {
     "shareTooltip": "Drukuj i eksportuj",
@@ -60,7 +63,8 @@
       "cancelSelected": "Anuluj zaznaczone ({{count}})",
       "clearSelection": "Wyczyść zaznaczenie",
       "details": "Szczegóły",
-      "loadMore": "Załaduj więcej"
+      "loadMore": "Załaduj więcej",
+      "preview": "Podgląd"
     },
     "table": {
       "runId": "ID uruchomienia",
@@ -124,6 +128,15 @@
         "title": "Opcje drukowania",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania uruchomień workflow."
       }
+    },
+    "preview": {
+      "close": "Zamknij",
+      "next": "Następne",
+      "openFullPage": "Otwórz pełną stronę",
+      "position": "{{current}} z {{total}} załadowanych uruchomień",
+      "previous": "Poprzednie",
+      "selectedRun": "Wybrane uruchomienie",
+      "title": "Podgląd uruchomienia"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Zmapowane",
       "identity": "Tożsamość",
       "runErrorFallback": "Błąd uruchomienia",
-      "errorCategoryFallback": "Błąd"
+      "errorCategoryFallback": "Błąd",
+      "technicalDetailLabel": "Szczegóły techniczne:"
     },
     "stepTimeline": {
       "title": "Oś czasu kroku",
@@ -179,7 +193,8 @@
         "duration": "Czas trwania",
         "nextRetry": "Następna ponowna próba",
         "started": "Rozpoczęto",
-        "error": "Błąd"
+        "error": "Błąd",
+        "action": "Akcja"
       },
       "empty": "Brak historii kroków."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Następna ponowna próba",
       "errorTitle": "Błąd",
       "stepErrorFallback": "Błąd kroku",
-      "errorCategoryFallback": "Błąd"
+      "errorCategoryFallback": "Błąd",
+      "technicalDetailLabel": "Szczegóły techniczne:"
     },
     "waitHistory": {
       "title": "Historia oczekiwań",
@@ -241,7 +257,8 @@
         "step": "Krok",
         "event": "Zdarzenie",
         "correlation": "Korelacja"
-      }
+      },
+      "loading": "Ładowanie dzienników..."
     },
     "audit": {
       "title": "Ścieżka audytu",
@@ -253,7 +270,9 @@
         "operation": "Operacja",
         "user": "Użytkownik",
         "details": "Szczegóły"
-      }
+      },
+      "loading": "Ładowanie ścieżki audytu...",
+      "unknownUser": "Nieznany użytkownik"
     },
     "dialogs": {
       "reasonLabel": "Powód",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "Eksportuj CSV",
-      "loadMore": "Załaduj więcej"
+      "loadMore": "Załaduj więcej",
+      "refresh": "Odśwież"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Proszę wybrać przepływ pracy, aby zobaczyć historię audytu.",
-      "empty": "Brak wpisów audytu."
+      "empty": "Brak wpisów audytu.",
+      "loading": "Ładowanie wpisów audytu..."
     },
     "values": {
       "system": "systemowy"
@@ -577,6 +598,19 @@
         "events": "Zdarzenia",
         "eventCatalog": "Katalog zdarzeń",
         "deadLetter": "Kolejka błędów"
+      },
+      "quota": {
+        "consumedLabel": "Zużyto",
+        "consumedUnit": "zużyto",
+        "loading": "Ładowanie...",
+        "planLimit": "Limit: {{limit}}",
+        "remainingLabel": "Pozostało",
+        "remainingUnit": "pozostało",
+        "resetsOn": "Resetuje się {{date}}",
+        "title": "Akcje przepływu pracy",
+        "unavailable": "Niedostępne",
+        "unlimitedPlan": "Plan bez limitu",
+        "unlimitedRemaining": "Bez limitu"
       }
     },
     "toolbar": {
@@ -808,6 +842,60 @@
       "links.list_namespaces": {
         "label": "Wyświetl przestrzenie nazw powiązań",
         "description": "Wyświetl przestrzenie nazw powiązań encji przepływu pracy używane przez tego dzierżawcę."
+      },
+      "ai": {
+        "infer": {
+          "label": "Wnioskuj ustrukturyzowane dane wyjściowe",
+          "description": "Generuj ustrukturyzowane dane przepływu pracy na podstawie promptu, korzystając ze skonfigurowanego dostawcy AI."
+        }
+      },
+      "store": {
+        "get": {
+          "label": "Pobierz zapisaną wartość",
+          "description": "Odczytaj utrwalony wpis klucz/wartość przepływu pracy."
+        },
+        "set": {
+          "label": "Ustaw zapisaną wartość",
+          "description": "Utrwal wpis klucz/wartość przepływu pracy."
+        },
+        "delete": {
+          "label": "Usuń zapisaną wartość",
+          "description": "Usuń utrwalony wpis klucz/wartość przepływu pracy."
+        },
+        "increment": {
+          "label": "Zwiększ zapisaną liczbę",
+          "description": "Atomowo zwiększ utrwaloną liczbę przepływu pracy."
+        },
+        "list": {
+          "label": "Wyświetl zapisane wartości",
+          "description": "Wyświetl utrwalone wpisy klucz/wartość przepływu pracy w przestrzeni nazw."
+        },
+        "list_namespaces": {
+          "label": "Wyświetl przestrzenie nazw magazynu",
+          "description": "Wyświetl przestrzenie nazw magazynu danych przepływów pracy używane przez tego tenanta."
+        }
+      },
+      "links": {
+        "upsert": {
+          "label": "Utwórz lub zaktualizuj powiązanie encji",
+          "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami przepływu pracy."
+        },
+        "lookup": {
+          "label": "Wyszukaj powiązania encji",
+          "description": "Znajdź utrwalone powiązania encji według encji źródłowej i kierunku."
+        },
+        "delete": {
+          "label": "Usuń powiązania encji",
+          "description": "Usuń utrwalone powiązania encji według strony i opcjonalnej relacji."
+        },
+        "list": {
+          "label": "Wyświetl powiązania encji",
+          "description": "Wyświetl utrwalone powiązania encji w przestrzeni nazw."
+        },
+        "list_namespaces": {
+          "label": "Wyświetl przestrzenie nazw powiązań",
+          "description": "Wyświetl przestrzenie nazw powiązań encji przepływów pracy używane przez tego tenanta."
+        }
       }
     },
     "validation": {
@@ -876,6 +964,28 @@
         "control.return": {
           "label": "Zwróć",
           "description": "Zatrzymaj wykonanie"
+        },
+        "control": {
+          "if": {
+            "label": "Jeżeli",
+            "description": "Rozgałęzienie warunkowe"
+          },
+          "forEach": {
+            "label": "Dla każdego",
+            "description": "Iteruj po elementach"
+          },
+          "tryCatch": {
+            "label": "Try/Catch",
+            "description": "Obsługa błędów"
+          },
+          "callWorkflow": {
+            "label": "Wywołaj przepływ pracy",
+            "description": "Wywołaj inny przepływ pracy"
+          },
+          "return": {
+            "label": "Zwróć",
+            "description": "Zatrzymaj wykonywanie"
+          }
         }
       },
       "nodes": {
@@ -910,6 +1020,52 @@
         "human.task": {
           "label": "Zadanie dla człowieka",
           "description": "Wstrzymaj do ukończenia zadania przez człowieka"
+        },
+        "state": {
+          "set": {
+            "label": "Ustaw stan",
+            "description": "Zaktualizuj stan przepływu pracy"
+          }
+        },
+        "event": {
+          "wait": {
+            "label": "Czekaj na zdarzenie",
+            "description": "Czekaj na zdarzenie zewnętrzne"
+          }
+        },
+        "time": {
+          "wait": {
+            "label": "Odczekaj",
+            "description": "Czekaj przez określony czas lub do określonej daty/godziny"
+          }
+        },
+        "transform": {
+          "assign": {
+            "label": "Przypisz",
+            "description": "Przypisz wartości do ładunku lub zmiennych"
+          }
+        },
+        "action": {
+          "call": {
+            "label": "Wywołaj akcję",
+            "description": "Wywołaj zarejestrowaną akcję"
+          }
+        },
+        "email": {
+          "parseBody": {
+            "label": "Parsuj treść e-maila",
+            "description": "Parsuj i oczyść treść odpowiedzi e-mail"
+          },
+          "renderCommentBlocks": {
+            "label": "Renderuj bloki komentarzy",
+            "description": "Renderuj bloki komentarzy z treści e-maila"
+          }
+        },
+        "human": {
+          "task": {
+            "label": "Zadanie dla człowieka",
+            "description": "Wstrzymaj do ukończenia zadania przez człowieka"
+          }
         }
       },
       "groups": {
@@ -1437,7 +1593,10 @@
     "softEnumPlaceholder": "Wybierz lub wprowadź wartość",
     "softEnumSearchPlaceholder": "Wyszukaj lub wprowadź wartość niestandardową",
     "softEnumNoResults": "Brak sugestii",
-    "softEnumUseCustom": "Użyj „{{value}}”"
+    "softEnumUseCustom": "Użyj „{{value}}”",
+    "expression": {
+      "placeholder": "np. payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Proszę wybrać akcję, aby zobaczyć jej schemat wejścia/wyjścia",
@@ -1542,7 +1701,8 @@
     },
     "actions": {
       "replay": "Powtórz",
-      "cancel": "Anuluj"
+      "cancel": "Anuluj",
+      "refresh": "Odśwież"
     },
     "status": {
       "running": "Trwa",
@@ -1550,7 +1710,8 @@
       "retrying": "Ponawianie",
       "failed": "Nieudany",
       "pending": "Oczekujący",
-      "canceled": "Anulowany"
+      "canceled": "Anulowany",
+      "loading": "Ładowanie"
     },
     "failure": {
       "title": "Uruchomienie nie powiodło się",
@@ -1567,7 +1728,9 @@
         "loadingDefinition": "Wczytywanie definicji przepływu pracy…",
         "loadingDefinitionPlain": "Wczytywanie definicji przepływu pracy...",
         "noSteps": "Brak kroków do wyświetlenia."
-      }
+      },
+      "selectPrompt": "Wybierz krok, aby go wyróżnić.",
+      "selectedStep": "Wybrano: {{label}}"
     },
     "details": {
       "title": "Szczegóły uruchomienia",
@@ -1697,8 +1860,14 @@
       "reasonRequired": "Powód jest wymagany (min. 3 znaki).",
       "canceled": "Uruchomienie anulowane.",
       "replayStarted": "Rozpoczęto powtórzenie uruchomienia.",
-      "actionFailed": "Nie udało się wykonać akcji."
-    }
+      "actionFailed": "Nie udało się wykonać akcji.",
+      "loadFailed": "Nie udało się załadować studia uruchamiania"
+    },
+    "lastRefreshed": "Ostatnio odświeżono {{time}}",
+    "navigation": {
+      "backToRuns": "← Powrót do uruchomień przepływów pracy"
+    },
+    "title": "Studio uruchamiania przepływów pracy"
   },
   "schedules": {
     "common": {

@@ -123,7 +123,27 @@
       "goToPage": "11111",
       "dismissError": "11111 {{message}} 11111"
     },
-    "retryLater": "11111"
+    "retryLater": "11111",
+    "adHoc": {
+      "endBeforeStart": "11111",
+      "fields": {
+        "end": "11111",
+        "noTime": "11111",
+        "notes": "11111",
+        "notesPlaceholder": "11111",
+        "start": "11111",
+        "title": "11111",
+        "titlePlaceholder": "11111"
+      },
+      "loadError": "11111",
+      "saveError": "11111",
+      "saveSuccess": "11111",
+      "statusDone": "11111",
+      "statusOpen": "11111",
+      "title": "11111",
+      "toggleDoneError": "11111"
+    },
+    "enterpriseOnly": "11111"
   },
   "groupedView": {
     "addGroup": "11111",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "11111",
-        "refreshFailed": "11111"
+        "refreshFailed": "11111",
+        "addAdHocFailed": "11111"
       },
       "filterDialog": {
         "title": "11111",
@@ -417,7 +438,13 @@
       "priority": "11111",
       "search": "11111",
       "dueDate": "11111",
-      "showClosed": "11111"
+      "showClosed": "11111",
+      "client": "11111",
+      "dueDateShort": "11111",
+      "tags": "11111",
+      "tagsSelected": "11111 {{count}} 11111",
+      "tasksCompact": "11111",
+      "ticketsCompact": "11111"
     },
     "activityTypeOptions": {
       "schedule": "11111",
@@ -434,10 +461,16 @@
       "search": "11111",
       "searchBoards": "11111",
       "searchStatuses": "11111",
-      "searchProjects": "11111"
+      "searchProjects": "11111",
+      "allClients": "11111",
+      "fromDateShort": "11111",
+      "projectTaskTags": "11111",
+      "ticketTags": "11111",
+      "toDateShort": "11111"
     },
     "actions": {
-      "reset": "11111"
+      "reset": "11111",
+      "clearClient": "11111"
     },
     "statusClosedSuffix": "11111",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "11111 {{count}} 11111",
       "excludingName": "11111 {{name}} 11111",
       "excludingCount_one": "11111 {{count}} 11111",
-      "excludingCount_other": "11111 {{count}} 11111"
+      "excludingCount_other": "11111 {{count}} 11111",
+      "boards": "11111 {{count}} 11111",
+      "excludingCount": "11111 {{count}} 11111",
+      "phases": "11111 {{count}} 11111",
+      "projects": "11111 {{count}} 11111",
+      "statuses": "11111 {{count}} 11111"
     }
+  },
+  "actions": {
+    "print": "11111",
+    "printOptions": "11111"
   }
 }

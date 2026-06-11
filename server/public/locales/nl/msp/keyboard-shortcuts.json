@@ -16,14 +16,19 @@
       "resetAll": "Alles resetten",
       "replace": "Vervangen",
       "copyCheatsheet": "Spiekbriefje kopiëren",
-      "printCheatsheet": "Afdrukken"
+      "printCheatsheet": "Afdrukken",
+      "reassign": "Opnieuw toewijzen",
+      "rebind": "Opnieuw instellen",
+      "reset": "Resetten",
+      "resetAllTo": "Alles resetten naar {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Sneltoets bijgewerkt",
       "enabledUpdated": "Sneltoets bijgewerkt",
       "resetOne": "Sneltoets gereset",
       "resetAll": "Sneltoetsen gereset",
-      "cheatsheetCopied": "Spiekbriefje gekopieerd naar klembord"
+      "cheatsheetCopied": "Spiekbriefje gekopieerd naar klembord",
+      "profileChanged": "Profiel gewijzigd"
     },
     "errors": {
       "saveFailed": "Opslaan van sneltoetsvoorkeuren mislukt",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Bestaande sneltoets vervangen?",
-      "message": "{{binding}} is al toegewezen aan {{action}}."
+      "message": "{{binding}} is al toegewezen aan {{action}}.",
+      "indicator": "Conflicteert met een andere actie"
     },
     "advisory": {
       "hostileCombo": "{{binding}} kan conflicteren met browser- of systeemsneltoetsen voor {{action}}."
-    }
+    },
+    "boundTo": "Toegewezen aan",
+    "chords": {
+      "empty": "Geen overeenkomende chords.",
+      "search": "Zoeken…",
+      "title": "Chord-sneltoetsen"
+    },
+    "hint": "Beweeg over een toets voor een voorbeeld en klik om opnieuw in te stellen. Schakel hierboven modificatielagen in om sneltoetsen met voorvoegsel te zien.",
+    "modified": "Aangepast",
+    "notSet": "Niet ingesteld",
+    "modHint": "mod komt op dit apparaat overeen met {{modKey}}"
   },
   "help": {
     "title": "Sneltoetsen",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinaties",
+    "thenPress": "dan…"
   }
 }

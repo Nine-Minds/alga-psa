@@ -362,7 +362,8 @@
         "assignments": "Asignaciones",
         "simulator": "Simulador",
         "clone": "Clonar",
-        "archive": "Archivar"
+        "archive": "Archivar",
+        "openMenu": "Abrir menú"
       }
     },
     "workspace": {

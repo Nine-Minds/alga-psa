@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Proveedores",
-      "defaults": "Valores predeterminados"
+      "defaults": "Valores predeterminados",
+      "inboundRules": "Reglas de entrada"
     },
     "setup": {
       "title": "Instrucciones de configuración",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "No se pudo iniciar OAuth",
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
         "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtalo de nuevo.",
-        "authorizationFailed": "Autorización fallida"
+        "authorizationFailed": "Autorización fallida",
+        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
       },
       "requiredFields": {
         "providerName": "Nombre de configuración",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Se requiere un buzón de correo válido (por ejemplo, usuario@dominio.com, usuario@localhost, usuario@servidor de prueba o usuario)",
         "hostRequired": "Se requiere un servidor IMAP",
         "usernameRequired": "Se requiere nombre de usuario IMAP",
-        "oauthInitiateFailed": "No se pudo iniciar IMAP OAuth"
+        "oauthInitiateFailed": "No se pudo iniciar IMAP OAuth",
+        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
       },
       "basic": {
         "title": "Configuraciones básicas",
@@ -835,6 +838,146 @@
       "mismatchHelp": "El registro DNS existe, pero el valor no coincide con lo que espera Resend.",
       "matchedHelp": "El valor detectado coincide con el esperado.",
       "unknownHelp": "Aún no hemos verificado el DNS. Vuelva a verificar DNS para ejecutar la verificación."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Agregar regla",
+      "aiClassify": "Clasificar con IA",
+      "aiClassifyUpsell": "Requiere el complemento Asistente de IA",
+      "extractAssign": "Asignar cliente a partir del texto extraído",
+      "setDestination": "Enrutar a un destino",
+      "skip": "Omitir correo (sin ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Todos los buzones"
+    },
+    "empty": {
+      "description": "Cree una regla para omitir correos de actualización de estado o asignar tickets a los clientes mencionados en el asunto.",
+      "title": "No hay reglas de entrada configuradas"
+    },
+    "errors": {
+      "aliasAdd": "Error al agregar el alias",
+      "delete": "Error al eliminar la regla",
+      "load": "Error al cargar las reglas de entrada",
+      "reorder": "Error al reordenar las reglas",
+      "save": "Error al guardar la regla",
+      "test": "Error al probar la regla",
+      "update": "Error al actualizar la regla"
+    },
+    "extraction": {
+      "after": "Texto después del marcador",
+      "before": "Texto antes del marcador",
+      "between": "Texto entre delimitadores",
+      "regex": "Expresión regular (avanzado)"
+    },
+    "fields": {
+      "bodyText": "Texto del cuerpo",
+      "fromAddress": "Dirección del remitente",
+      "fromDomain": "Dominio del remitente",
+      "subject": "Asunto",
+      "toAddress": "Dirección Para/CC"
+    },
+    "form": {
+      "action": "Acción",
+      "active": "Activa",
+      "addCondition": "Agregar condición",
+      "aiAllowAssign": "Puede asignar clientes",
+      "aiAllowSkip": "Puede omitir correos",
+      "aiInstruction": "Instrucción",
+      "aiInstructionPlaceholder": "p. ej. Determinar a qué cliente corresponde esta alerta de monitoreo.",
+      "aiUpsell": "Clasificar con IA está disponible con el complemento Asistente de IA de Enterprise: los correos se clasifican por intención sin patrones que mantener.",
+      "cancel": "Cancelar",
+      "conditions": "Condiciones (todas deben coincidir)",
+      "create": "Crear regla",
+      "createTitle": "Crear regla de entrada",
+      "description": "Defina cuándo coincide la regla y qué sucede con el correo. Use el probador a continuación para verificar con una muestra antes de guardar.",
+      "destination": "Destino (valores predeterminados del ticket)",
+      "destinationPlaceholder": "Seleccione un conjunto de valores predeterminados",
+      "editTitle": "Editar regla de entrada",
+      "endDelimiter": "Delimitador final",
+      "extractFrom": "Extraer de",
+      "extractionTemplate": "Extracción",
+      "fallbackDestination": "Destino alternativo",
+      "first": "Primera",
+      "last": "Última",
+      "mailboxes": "Aplicar a buzones",
+      "mailboxesHint": "Deje todo sin marcar para aplicar esta regla a todos los buzones.",
+      "marker": "Texto del marcador",
+      "markerPlaceholder": "p. ej. Cliente:",
+      "matchHint": "El texto extraído se compara con los nombres y alias de los clientes (sin distinguir mayúsculas de minúsculas).",
+      "name": "Nombre de la regla",
+      "namePlaceholder": "p. ej. Enrutamiento de clientes de Huntress",
+      "noMailboxes": "Aún no hay buzones configurados.",
+      "noMatchFallback": "Enrutar a un destino alternativo",
+      "noMatchProceed": "Continuar con las reglas siguientes / procesamiento normal",
+      "noMatchSkip": "Omitir el correo",
+      "occurrence": "Ocurrencia",
+      "onNoMatch": "Si ningún cliente coincide",
+      "pattern": "Patrón (el grupo de captura 1 es el nombre del cliente)",
+      "regexPlaceholder": "Expresión regular",
+      "saving": "Guardando…",
+      "startDelimiter": "Delimitador inicial",
+      "update": "Actualizar regla",
+      "valuePlaceholder": "Valor"
+    },
+    "header": {
+      "description": "Haga coincidir el correo entrante por remitente o asunto para omitir ruido, asignar el cliente correcto o enrutar a un destino. Las reglas se ejecutan en orden; la primera coincidencia gana.",
+      "title": "Reglas de correo entrante"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Los nombres extraídos coinciden con los nombres y alias de los clientes. Gestione los alias en la ficha del cliente o agréguelos desde el probador de reglas.",
+        "audit": "• Los correos omitidos siguen siendo auditables en los diagnósticos de procesamiento de correo, etiquetados con la regla que los omitió.",
+        "order": "• Las reglas se ejecutan de arriba hacia abajo en el correo entrante nuevo; se aplica la primera regla que coincida.",
+        "replies": "• Las respuestas a tickets existentes siempre se convierten en comentarios: las reglas nunca las afectan."
+      },
+      "title": "Cómo funciona"
+    },
+    "loading": "Cargando reglas de entrada...",
+    "menu": {
+      "delete": "Eliminar",
+      "deleting": "Eliminando…",
+      "edit": "Editar"
+    },
+    "operators": {
+      "contains": "contiene",
+      "endsWith": "termina con",
+      "equals": "es igual a",
+      "matchesRegex": "coincide con regex",
+      "startsWith": "comienza con"
+    },
+    "summary": {
+      "aiClassify": "Clasificar con IA",
+      "extractAssign": "Asignar cliente desde {{source}}",
+      "setDestination": "Enrutar a un destino",
+      "skip": "Omitir correo (sin ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Agregar alias",
+      "aliasAdded": "Alias agregado. Ejecute la prueba de nuevo para verlo coincidir.",
+      "aliasAdding": "Agregando…",
+      "aliasClientPlaceholder": "Seleccione un cliente",
+      "aliasLabel": "Agregar \"{{value}}\" como alias de",
+      "body": "Texto del cuerpo",
+      "clientMatched": "Cliente coincidente mediante {{source}}",
+      "clientName": "nombre del cliente",
+      "extracted": "Valor extraído:",
+      "from": "De",
+      "noClient": "Ningún cliente coincidió",
+      "outcome": {
+        "assignClient": "Ticket asignado al cliente \"{{client}}\"",
+        "fallback": "Ningún cliente coincidió: el ticket se enrutó al destino alternativo",
+        "none": "La regla no se resolvió: continúa el procesamiento normal",
+        "setDestination": "Ticket enrutado al destino seleccionado",
+        "skip": "Correo omitido: no se creó ningún ticket"
+      },
+      "run": "Ejecutar prueba",
+      "running": "Probando…",
+      "subject": "Asunto",
+      "title": "Probar esta regla",
+      "to": "Para"
     }
   }
 }

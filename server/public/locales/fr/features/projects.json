@@ -1474,5 +1474,13 @@
       "confirm_other": "Ajouter des étiquettes à {{count}} tâches",
       "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :"
     }
+  },
+  "common:actions": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "done": "Terminé",
+    "edit": "Modifier",
+    "save": "Enregistrer"
   }
 }

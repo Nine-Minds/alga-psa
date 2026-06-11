@@ -123,7 +123,27 @@
       "goToPage": "Aller à la page",
       "dismissError": "Échec du rejet de la tâche : {{message}}"
     },
-    "retryLater": "Veuillez réessayer plus tard."
+    "retryLater": "Veuillez réessayer plus tard.",
+    "adHoc": {
+      "endBeforeStart": "L'heure de fin doit être postérieure à l'heure de début.",
+      "fields": {
+        "end": "Fin (facultatif)",
+        "noTime": "Sans horaire",
+        "notes": "Notes",
+        "notesPlaceholder": "Ajouter des notes…",
+        "start": "Début (facultatif)",
+        "title": "Titre",
+        "titlePlaceholder": "Titre"
+      },
+      "loadError": "Échec du chargement de cet élément. Veuillez réessayer plus tard.",
+      "saveError": "Échec de l'enregistrement de l'élément.",
+      "saveSuccess": "Élément enregistré",
+      "statusDone": "Terminé",
+      "statusOpen": "Ouvert",
+      "title": "Élément ponctuel",
+      "toggleDoneError": "Échec de la mise à jour de l'élément."
+    },
+    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise."
   },
   "groupedView": {
     "addGroup": "Ajouter un groupe",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Échec du chargement des activités de calendrier. Veuillez réessayer plus tard.",
-        "refreshFailed": "Échec de l'actualisation des activités de calendrier. Veuillez réessayer plus tard."
+        "refreshFailed": "Échec de l'actualisation des activités de calendrier. Veuillez réessayer plus tard.",
+        "addAdHocFailed": "Échec de l'ajout de l'activité. Veuillez réessayer."
       },
       "filterDialog": {
         "title": "Filtrer les entrées du calendrier",
@@ -417,7 +438,13 @@
       "priority": "Priorité",
       "dueDate": "Date d'échéance",
       "showClosed": "Afficher les fermées",
-      "search": "Rechercher"
+      "search": "Rechercher",
+      "client": "Client",
+      "dueDateShort": "Échéance",
+      "tags": "Étiquettes",
+      "tagsSelected": "{{count}} étiquettes",
+      "tasksCompact": "Tâches",
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Calendrier",
@@ -434,10 +461,16 @@
       "search": "Rechercher des activités...",
       "searchBoards": "Rechercher des tableaux...",
       "searchStatuses": "Rechercher des statuts...",
-      "searchProjects": "Rechercher des projets..."
+      "searchProjects": "Rechercher des projets...",
+      "allClients": "Tous les clients",
+      "fromDateShort": "Du",
+      "projectTaskTags": "Filtrer les étiquettes de tâches...",
+      "ticketTags": "Filtrer les étiquettes de tickets...",
+      "toDateShort": "Au"
     },
     "actions": {
-      "reset": "Réinitialiser"
+      "reset": "Réinitialiser",
+      "clearClient": "Effacer le filtre client"
     },
     "statusClosedSuffix": " (fermé)",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "{{count}} phases",
       "excludingName": "hors {{name}}",
       "excludingCount_one": "hors {{count}}",
-      "excludingCount_other": "hors {{count}}"
+      "excludingCount_other": "hors {{count}}",
+      "boards": "{{count}} tableaux",
+      "excludingCount": "excl. {{count}}",
+      "phases": "{{count}} phases",
+      "projects": "{{count}} projets",
+      "statuses": "{{count}} statuts"
     }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
   }
 }

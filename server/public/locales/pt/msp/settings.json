@@ -1049,7 +1049,22 @@
       "milestoneCompleted": "Project milestone completed",
       "dayAgo": "1 day ago",
       "createTicket": "Create Ticket",
-      "viewProjects": "View Projects"
+      "viewProjects": "View Projects",
+      "activeDevices": "Dispositivos ativos",
+      "basicSupport": "Suporte básico",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Bom dia, Alex 👋",
+      "navAppointments": "Agendamentos",
+      "navDashboard": "Dashboard",
+      "navDevices": "Meus dispositivos",
+      "navProjects": "Projetos",
+      "navServiceRequests": "Pedidos de serviço",
+      "navTickets": "Tickets",
+      "serviceRequests": "Pedidos de serviço",
+      "upcomingShort": "Próximos",
+      "upcomingVisits": "Próximas visitas",
+      "welcomeBack": "Bem-vindo de volta",
+      "workspaceSection": "Área de trabalho"
     },
     "signInPreview": {
       "portalTitle": "Client Portal",

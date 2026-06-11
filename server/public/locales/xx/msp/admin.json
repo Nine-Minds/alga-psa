@@ -362,7 +362,8 @@
         "assignments": "11111",
         "simulator": "11111",
         "clone": "11111",
-        "archive": "11111"
+        "archive": "11111",
+        "openMenu": "11111"
       }
     },
     "workspace": {

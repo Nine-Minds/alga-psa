@@ -48,7 +48,8 @@
     "resetPrintOptions": "55555",
     "share": "55555",
     "done": "55555",
-    "continue": "55555"
+    "continue": "55555",
+    "printSelected": "55555 {{count}} 55555"
   },
   "form": {
     "selectPlaceholder": "55555",
@@ -524,7 +525,10 @@
         "visible": "55555",
         "hidden": "55555"
       },
-      "clientVisibilityLabel": "55555"
+      "clientVisibilityLabel": "55555",
+      "entityOptions": {
+        "all": "55555"
+      }
     },
     "selector": {
       "title": "55555",
@@ -552,7 +556,10 @@
       "uploadingProgress": "55555 {{current}} 55555 {{total}} 55555",
       "pending": "55555",
       "error": "55555",
-      "fileError": "55555"
+      "fileError": "55555",
+      "associatedEntityTypeLabel": "55555",
+      "noAssociation": "55555",
+      "selectAssociatedEntityError": "55555"
     },
     "folders": {
       "root": "55555",
@@ -611,7 +618,20 @@
     "downloadVideo": "55555",
     "downloadAsPdf": "55555",
     "downloadAsMarkdown": "55555",
-    "move": "55555"
+    "move": "55555",
+    "associatedEntityPicker": {
+      "allEntities": "55555",
+      "loadingClients": "55555",
+      "loadingContacts": "55555",
+      "noEntityTypes": "55555",
+      "typeLabel": "55555",
+      "typePlaceholder": "55555",
+      "typeSearchPlaceholder": "55555",
+      "entityLabel": "55555 {{entityType}} 55555",
+      "entityPlaceholder": "55555 {{entityType}} 55555",
+      "entitySearchPlaceholder": "55555 {{entityType}} 55555",
+      "noEntities": "55555 {{entityType}} 55555"
+    }
   },
   "surveys": {
     "common": {
@@ -952,7 +972,10 @@
     "deleteCommentAriaLabel": "55555",
     "deleteComment": "55555",
     "deleteCommentConfirmation": "55555",
-    "update": "55555"
+    "update": "55555",
+    "create": "55555",
+    "replyComment": "55555",
+    "saving": "55555"
   },
   "sessionManagement": {
     "title": "55555",
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "55555 {{count}} 55555",
     "showAll": "55555",
     "showingAllColumns": "55555",
-    "showLess": "55555"
+    "showLess": "55555",
+    "columnsHidden": "55555 {{count}} 55555"
   }
 }

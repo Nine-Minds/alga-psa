@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "11111",
       "tags": "11111",
       "notes": "11111",
-      "status": "11111"
+      "status": "11111",
+      "phone": "11111"
     },
     "status": {
       "label": "11111",
@@ -615,5 +616,9 @@
       "saveSuccess": "11111",
       "saveFailed": "11111"
     }
+  },
+  "actions": {
+    "print": "11111",
+    "printOptions": "11111"
   }
 }

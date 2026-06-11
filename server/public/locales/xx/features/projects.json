@@ -1474,5 +1474,13 @@
       "confirm_other": "11111 {{count}} 11111",
       "failedHeading": "11111"
     }
+  },
+  "common:actions": {
+    "back": "11111",
+    "cancel": "11111",
+    "delete": "11111",
+    "done": "11111",
+    "edit": "11111",
+    "save": "11111"
   }
 }

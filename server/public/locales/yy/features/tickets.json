@@ -164,7 +164,8 @@
     "proceed": "55555",
     "export": "55555",
     "reset": "55555",
-    "importSelected": "55555"
+    "importSelected": "55555",
+    "printOptions": "55555"
   },
   "messages": {
     "noTickets": "55555",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "55555",
     "updateBundleSettingsFailed": "55555",
     "assetLoadFailed": "55555",
-    "assetNotFound": "55555"
+    "assetNotFound": "55555",
+    "addCommentFailed": "55555",
+    "deleteTimeEntryFailed": "55555",
+    "timeEntryDeleted": "55555"
   },
   "conversation": {
     "comments": "55555",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "55555",
     "childTicket": "55555",
     "ticketPrefix": "55555 {{number}} 55555",
-    "clipboardDraftCancelMessage": "55555"
+    "clipboardDraftCancelMessage": "55555",
+    "replyCommentAriaLabel": "55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",
@@ -427,7 +432,10 @@
         "title": "55555",
         "selectedTitle": "55555 {{count}} 55555",
         "description": "55555"
-      }
+      },
+      "selectedAction": "55555 {{count}} 55555",
+      "selectedTitle": "55555 {{count}} 55555",
+      "subtitle": "55555 {{count}} 55555"
     },
     "exportSelectedAction": "55555 {{count}} 55555",
     "exportAction": "55555",
@@ -512,7 +520,9 @@
       "success_one": "55555 {{count}} 55555",
       "success_other": "55555 {{count}} 55555",
       "partialFailure": "55555",
-      "failure": "55555"
+      "failure": "55555",
+      "confirm": "55555 {{count}} 55555",
+      "success": "55555 {{count}} 55555"
     },
     "delete": {
       "dialogTitle": "55555",
@@ -527,7 +537,9 @@
       "success_one": "55555 {{count}} 55555",
       "success_other": "55555 {{count}} 55555",
       "partialFailure": "55555",
-      "failure": "55555"
+      "failure": "55555",
+      "confirm": "55555 {{count}} 55555",
+      "success": "55555 {{count}} 55555"
     },
     "bundle": {
       "dialogTitle": "55555",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "55555",
     "clipboardDraftMessage": "55555",
     "clearDueDate": "55555",
-    "paused": "55555"
+    "paused": "55555",
+    "openActivityLog": "55555",
+    "resolveLiveConflict": "55555"
   },
   "properties": {
     "timeEntry": "55555",
@@ -997,7 +1011,11 @@
       "responseState": "55555",
       "ticketOrigin": "55555",
       "tags": "55555"
-    }
+    },
+    "appliedFiltersSummary": "55555 {{count}} 55555",
+    "completeMessage": "55555 {{count}} 55555",
+    "confirm": "55555 {{count}} 55555",
+    "selectedTicketsSummary": "55555 {{count}} 55555"
   },
   "materials": {
     "title": "55555",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "55555 {{count}} 55555",
     "excludingCount_one": "55555 {{count}} 55555",
     "excludingCount_other": "55555 {{count}} 55555",
-    "excludingPrefix": "55555 {{name}} 55555"
+    "excludingPrefix": "55555 {{name}} 55555",
+    "excludingCount": "55555 {{count}} 55555",
+    "selectedCount": "55555 {{count}} 55555"
   },
   "navigation": {
     "previousTicket": "55555",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "55555"
+    "continueEditing": "55555",
+    "cancel": "55555"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "55555 {{count}} 55555",
     "placeholder": "55555",
     "title": "55555",
-    "searchPlaceholder": "55555"
+    "searchPlaceholder": "55555",
+    "excludingCount": "55555 {{count}} 55555",
+    "selectedCount": "55555 {{count}} 55555",
+    "statusActive": "55555",
+    "statusAll": "55555",
+    "statusInactive": "55555"
+  },
+  "checklist": {
+    "addFailed": "55555",
+    "addItem": "55555",
+    "addItemPlaceholder": "55555",
+    "applyTemplate": "55555",
+    "applyTemplateFailed": "55555",
+    "clickToRename": "55555",
+    "deleteFailed": "55555",
+    "deleteItem": "55555",
+    "empty": "55555",
+    "itemMenu": "55555",
+    "loadTemplatesFailed": "55555",
+    "loading": "55555",
+    "markOptional": "55555",
+    "markRequired": "55555",
+    "moveDown": "55555",
+    "moveUp": "55555",
+    "noTemplates": "55555",
+    "progress": "55555 {{done}} 55555 {{total}} 55555",
+    "renameFailed": "55555",
+    "reorderFailed": "55555",
+    "requiredBadge": "55555",
+    "templateAlreadyApplied": "55555",
+    "templateApplied": "55555",
+    "templatesLoading": "55555",
+    "title": "55555",
+    "toggleFailed": "55555",
+    "updateFailed": "55555"
   }
 }

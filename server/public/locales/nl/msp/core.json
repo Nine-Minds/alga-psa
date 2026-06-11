@@ -155,7 +155,11 @@
       "failedLast24h": "Mislukt in afgelopen 24 uur",
       "openJobCenter": "Jobcentrum openen"
     },
-    "breadcrumb": "Broodkruimel",
+    "breadcrumb": {
+      "label": "Broodkruimel",
+      "dashboard": "Dashboard",
+      "home": "Start"
+    },
     "tenantBadge": {
       "ariaLabel": "Actieve tenant {{tenant}}"
     },

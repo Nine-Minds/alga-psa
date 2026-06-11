@@ -1525,6 +1525,12 @@
         "label": "Adresse du locataire",
         "description": "L'adresse de votre entreprise."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Limite du modèle"
+    },
+    "dragOverlay": {
+      "component": "Composant"
     }
   }
 }

@@ -16,14 +16,19 @@
       "resetAll": "Resetuj wszystko",
       "replace": "Zastąp",
       "copyCheatsheet": "Kopiuj ściągę",
-      "printCheatsheet": "Drukuj"
+      "printCheatsheet": "Drukuj",
+      "reassign": "Przypisz ponownie",
+      "rebind": "Zmień przypisanie",
+      "reset": "Resetuj",
+      "resetAllTo": "Resetuj wszystko do {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Skrót klawiaturowy zaktualizowany",
       "enabledUpdated": "Skrót klawiaturowy zaktualizowany",
       "resetOne": "Skrót klawiaturowy zresetowany",
       "resetAll": "Skróty klawiaturowe zresetowane",
-      "cheatsheetCopied": "Ściąga skopiowana do schowka"
+      "cheatsheetCopied": "Ściąga skopiowana do schowka",
+      "profileChanged": "Zmieniono profil"
     },
     "errors": {
       "saveFailed": "Nie udało się zapisać preferencji skrótów klawiaturowych",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Zastąpić istniejący skrót?",
-      "message": "{{binding}} jest już przypisany do {{action}}."
+      "message": "{{binding}} jest już przypisany do {{action}}.",
+      "indicator": "Konflikt z inną akcją"
     },
     "advisory": {
       "hostileCombo": "{{binding}} może kolidować ze skrótami przeglądarki lub systemu dla {{action}}."
-    }
+    },
+    "boundTo": "Przypisane do",
+    "chords": {
+      "empty": "Brak pasujących sekwencji.",
+      "search": "Szukaj…",
+      "title": "Skróty sekwencyjne"
+    },
+    "hint": "Najedź na klawisz, aby zobaczyć podgląd; kliknij, aby zmienić przypisanie. Przełącz warstwy modyfikatorów powyżej, aby zobaczyć skróty z prefiksem.",
+    "modified": "Zmodyfikowano",
+    "notSet": "Nie ustawiono",
+    "modHint": "mod odpowiada {{modKey}} na tym urządzeniu"
   },
   "help": {
     "title": "Skróty klawiaturowe",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "kombinacje",
+    "thenPress": "następnie…"
   }
 }

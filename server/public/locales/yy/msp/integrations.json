@@ -1028,7 +1028,16 @@
         "comingSoon": "55555",
         "configure": "55555",
         "selected": "55555 {{title}} 55555",
-        "title": "55555"
+        "title": "55555",
+        "backToList": "55555",
+        "loadingProvider": "55555 {{title}} 55555",
+        "status": {
+          "connected": "55555",
+          "connectedOneDevice": "55555",
+          "connectedWithDevices": "55555 {{count}} 55555",
+          "notConnected": "55555",
+          "syncError": "55555"
+        }
       },
       "tactical": {
         "actions": {
@@ -1235,6 +1244,86 @@
         "sync": {
           "description": "55555",
           "title": "55555"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "55555",
+          "disconnect": "55555",
+          "discoverGroups": "55555",
+          "runDeviceSync": "55555",
+          "saveConfiguration": "55555",
+          "testConnection": "55555"
+        },
+        "connection": {
+          "connectedAt": "55555 {{time}} 55555",
+          "description": "55555",
+          "never": "55555",
+          "syncLabel": "55555 {{status}} 55555",
+          "syncLabelWithError": "55555 {{status}} 55555 {{error}} 55555",
+          "title": "55555"
+        },
+        "errors": {
+          "alertBackfillFailed": "55555",
+          "deviceSyncFailed": "55555",
+          "disconnectFailed": "55555",
+          "groupSyncFailed": "55555",
+          "loadMappings": "55555",
+          "loadSettings": "55555",
+          "loadState": "55555",
+          "loadSummary": "55555",
+          "loadWebhook": "55555",
+          "saveConfiguration": "55555",
+          "testConnectionFailed": "55555",
+          "updateMappingFailed": "55555"
+        },
+        "fields": {
+          "apiKey": "55555 {{state}} 55555",
+          "apiKeyPlaceholderExisting": "55555",
+          "apiKeyPlaceholderNew": "55555",
+          "apiKeyStateRequired": "55555",
+          "apiKeyStateSaved": "55555"
+        },
+        "mappings": {
+          "autoSync": "55555",
+          "autoSyncDisabled": "55555",
+          "autoSyncEnabled": "55555",
+          "group": "55555",
+          "groupIdLabel": "55555 {{id}} 55555",
+          "loading": "55555",
+          "mappedClient": "55555",
+          "noGroups": "55555",
+          "unmapped": "55555"
+        },
+        "status": {
+          "connected": "55555",
+          "disconnected": "55555",
+          "label": "55555"
+        },
+        "success": {
+          "alertBackfillCompleted": "55555 {{processed}} 55555",
+          "configurationSaved": "55555",
+          "connectionTestSucceeded": "55555",
+          "deviceSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555",
+          "disconnected": "55555",
+          "groupSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555"
+        },
+        "sync": {
+          "description": "55555",
+          "summary": "55555 {{mappedGroups}} 55555 {{devices}} 55555 {{activeAlerts}} 55555",
+          "title": "55555"
+        },
+        "webhook": {
+          "copied": "55555",
+          "copy": "55555",
+          "description": "55555",
+          "header": "55555 {{name}} 55555",
+          "hideSecret": "55555",
+          "loading": "55555",
+          "payload": "55555",
+          "showSecret": "55555",
+          "title": "55555",
+          "url": "55555"
         }
       }
     },

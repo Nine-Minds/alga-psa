@@ -216,6 +216,49 @@
         "title": "Opções de impressão",
         "description": "Escolha quais colunas incluir ao imprimir os ativos."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Limpar",
+        "delete": "Excluir",
+        "selectedCount": "{{count}} selecionados",
+        "setLocation": "Definir localização",
+        "setStatus": "Definir status"
+      },
+      "actions": {
+        "apply": "Aplicar",
+        "applying": "Aplicando...",
+        "deleteAssets": "Excluir",
+        "deleting": "Excluindo...",
+        "updateLocation": "Atualização de localização",
+        "updateStatus": "Atualização de status"
+      },
+      "deleteDialog": {
+        "description": "Excluir {{count}} ativo(s) selecionado(s). Ativos com dependências podem ser ignorados.",
+        "title": "Excluir ativos selecionados"
+      },
+      "errors": {
+        "deleteFailed": "Não foi possível excluir os ativos selecionados.",
+        "updateLocationFailed": "Não foi possível atualizar as localizações dos ativos selecionados.",
+        "updateStatusFailed": "Não foi possível atualizar os ativos selecionados."
+      },
+      "locationDialog": {
+        "clearLocation": "Limpar localização",
+        "customLocation": "Localização personalizada",
+        "customPlaceholder": "Insira uma localização ou área personalizada",
+        "description": "Atualizar {{count}} ativo(s) selecionado(s).",
+        "loadingLocations": "Carregando localizações...",
+        "savedDisabled": "As localizações salvas do cliente só estão disponíveis quando todos os ativos selecionados estão visíveis e pertencem a um único cliente.",
+        "savedLocation": "Localização salva do cliente",
+        "selectLocation": "Selecionar localização",
+        "title": "Definir localização do ativo"
+      },
+      "partialFailure": "{{action}} concluída para {{succeeded}} ativo(s); {{failed}} falharam.",
+      "statusDialog": {
+        "description": "Atualizar {{count}} ativo(s) selecionado(s).",
+        "title": "Definir status do ativo"
+      },
+      "success": "{{action}} concluída para {{count}} ativo(s)."
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "Failed to load asset details",
       "clientsLoadFailed": "Unable to load clients",
       "locationsLoadFailed": "Unable to load locations for this client",
-      "updateFailed": "Failed to update asset"
+      "updateFailed": "Failed to update asset",
+      "validation": "Corrija os campos destacados antes de salvar."
     },
     "actions": {
       "viewClient": "View client",
@@ -853,7 +897,9 @@
       "assetTagRequired": "Asset Tag *",
       "typeRequired": "Type *",
       "status": "Status",
-      "serialNumber": "Serial Number"
+      "serialNumber": "Serial Number",
+      "customLocationOption": "Localização personalizada",
+      "location": "Localização"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -869,7 +915,11 @@
       "assetTag": "Enter asset tag",
       "selectType": "Select type",
       "selectStatus": "Select status",
-      "serialNumber": "Enter serial number"
+      "serialNumber": "Enter serial number",
+      "customLocation": "Insira uma localização ou área personalizada",
+      "loadingLocations": "Carregando localizações...",
+      "selectClientFirst": "Selecione um cliente primeiro",
+      "selectLocation": "Selecionar localização"
     },
     "sections": {
       "typeSpecificDetails": "Type-specific Details"
@@ -979,7 +1029,8 @@
       "uptime": "Uptime",
       "lastSync": "Last RMM Sync",
       "network": "Network",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}",
+      "taniumCriticality": "Criticidade Tanium"
     },
     "values": {
       "never": "Never"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "Alertas ativos",
     "acknowledge": "Confirmar",
     "createTicket": "Criar ticket"
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão",
+    "printSelected": "Imprimir selecionados ({{count}})"
   }
 }

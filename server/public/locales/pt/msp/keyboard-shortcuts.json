@@ -16,14 +16,19 @@
       "resetAll": "Redefinir tudo",
       "replace": "Substituir",
       "copyCheatsheet": "Copiar resumo",
-      "printCheatsheet": "Imprimir"
+      "printCheatsheet": "Imprimir",
+      "reassign": "Reatribuir",
+      "rebind": "Remapear",
+      "reset": "Redefinir",
+      "resetAllTo": "Redefinir tudo para {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Atalho de teclado atualizado",
       "enabledUpdated": "Atalho de teclado atualizado",
       "resetOne": "Atalho de teclado redefinido",
       "resetAll": "Atalhos de teclado redefinidos",
-      "cheatsheetCopied": "Resumo copiado para a área de transferência"
+      "cheatsheetCopied": "Resumo copiado para a área de transferência",
+      "profileChanged": "Perfil alterado"
     },
     "errors": {
       "saveFailed": "Falha ao salvar preferências de atalhos de teclado",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Substituir atalho existente?",
-      "message": "{{binding}} já está atribuído a {{action}}."
+      "message": "{{binding}} já está atribuído a {{action}}.",
+      "indicator": "Conflita com outra ação"
     },
     "advisory": {
       "hostileCombo": "{{binding}} pode entrar em conflito com atalhos do navegador ou do sistema para {{action}}."
-    }
+    },
+    "boundTo": "Associado a",
+    "chords": {
+      "empty": "Nenhum atalho encadeado corresponde.",
+      "search": "Pesquisar…",
+      "title": "Atalhos encadeados"
+    },
+    "hint": "Passe o cursor sobre uma tecla para pré-visualizar, clique para remapear. Alterne as camadas de modificadores acima para ver os atalhos com prefixo.",
+    "modified": "Modificado",
+    "notSet": "Não definido",
+    "modHint": "mod corresponde a {{modKey}} neste dispositivo"
   },
   "help": {
     "title": "Atalhos de teclado",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinações",
+    "thenPress": "depois…"
   }
 }

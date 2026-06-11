@@ -24,7 +24,10 @@
   "actions": {
     "create": "Créer un workflow",
     "open": "Ouvrir",
-    "close": "Fermer"
+    "close": "Fermer",
+    "print": "Imprimer",
+    "printOptions": "Options d'impression",
+    "printSelected": "Imprimer la sélection ({{count}})"
   },
   "runList": {
     "shareTooltip": "Imprimer et exporter",
@@ -60,7 +63,8 @@
       "cancelSelected": "Annuler la sélection ({{count}})",
       "clearSelection": "Effacer la sélection",
       "details": "Détails",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "preview": "Aperçu"
     },
     "table": {
       "runId": "ID d’exécution",
@@ -124,6 +128,15 @@
         "title": "Options d'impression",
         "description": "Choisissez les colonnes à inclure lors de l'impression des exécutions de workflow."
       }
+    },
+    "preview": {
+      "close": "Fermer",
+      "next": "Suivant",
+      "openFullPage": "Ouvrir en pleine page",
+      "position": "{{current}} sur {{total}} exécutions chargées",
+      "previous": "Précédent",
+      "selectedRun": "Exécution sélectionnée",
+      "title": "Aperçu de l'exécution"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Mappé",
       "identity": "Identité",
       "runErrorFallback": "Erreur d’exécution",
-      "errorCategoryFallback": "Erreur"
+      "errorCategoryFallback": "Erreur",
+      "technicalDetailLabel": "Détail technique :"
     },
     "stepTimeline": {
       "title": "Chronologie des étapes",
@@ -179,7 +193,8 @@
         "duration": "Durée",
         "nextRetry": "Nouvelle tentative",
         "started": "Démarré",
-        "error": "Erreur"
+        "error": "Erreur",
+        "action": "Action"
       },
       "empty": "Aucun historique d’étape pour l’instant."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Nouvelle tentative",
       "errorTitle": "Erreur",
       "stepErrorFallback": "Erreur d’étape",
-      "errorCategoryFallback": "Erreur"
+      "errorCategoryFallback": "Erreur",
+      "technicalDetailLabel": "Détail technique :"
     },
     "waitHistory": {
       "title": "Historique des attentes",
@@ -241,7 +257,8 @@
         "step": "Étape",
         "event": "Événement",
         "correlation": "Corrélation"
-      }
+      },
+      "loading": "Chargement des journaux..."
     },
     "audit": {
       "title": "Journal d’audit",
@@ -253,7 +270,9 @@
         "operation": "Opération",
         "user": "Utilisateur",
         "details": "Détails"
-      }
+      },
+      "loading": "Chargement de la piste d'audit...",
+      "unknownUser": "Utilisateur inconnu"
     },
     "dialogs": {
       "reasonLabel": "Motif",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "Exporter en CSV",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "refresh": "Actualiser"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Sélectionnez un workflow pour voir l’historique.",
-      "empty": "Aucune entrée d’audit pour l’instant."
+      "empty": "Aucune entrée d’audit pour l’instant.",
+      "loading": "Chargement des entrées d'audit..."
     },
     "values": {
       "system": "système"
@@ -577,6 +598,19 @@
         "events": "Événements",
         "eventCatalog": "Catalogue d’événements",
         "deadLetter": "Lettre morte"
+      },
+      "quota": {
+        "consumedLabel": "Consommé",
+        "consumedUnit": "consommées",
+        "loading": "Chargement...",
+        "planLimit": "Limite : {{limit}}",
+        "remainingLabel": "Restant",
+        "remainingUnit": "restantes",
+        "resetsOn": "Réinitialisation le {{date}}",
+        "title": "Actions de workflow",
+        "unavailable": "Indisponible",
+        "unlimitedPlan": "Forfait illimité",
+        "unlimitedRemaining": "Illimité"
       }
     },
     "toolbar": {
@@ -808,6 +842,60 @@
       "links.list_namespaces": {
         "label": "Lister les espaces de noms de liens",
         "description": "Lister les espaces de noms de liens d'entité de workflow utilisés par ce locataire."
+      },
+      "ai": {
+        "infer": {
+          "label": "Inférer une sortie structurée",
+          "description": "Générer des données de workflow structurées à partir d'un prompt en utilisant le fournisseur d'IA configuré."
+        }
+      },
+      "store": {
+        "get": {
+          "label": "Obtenir une valeur stockée",
+          "description": "Lire une entrée clé/valeur de workflow persistée."
+        },
+        "set": {
+          "label": "Définir une valeur stockée",
+          "description": "Persister une entrée clé/valeur de workflow."
+        },
+        "delete": {
+          "label": "Supprimer une valeur stockée",
+          "description": "Supprimer une entrée clé/valeur de workflow persistée."
+        },
+        "increment": {
+          "label": "Incrémenter un nombre stocké",
+          "description": "Incrémenter de façon atomique un nombre de workflow persisté."
+        },
+        "list": {
+          "label": "Lister les valeurs stockées",
+          "description": "Lister les entrées clé/valeur de workflow persistées dans un espace de noms."
+        },
+        "list_namespaces": {
+          "label": "Lister les espaces de noms du magasin",
+          "description": "Lister les espaces de noms du magasin de données de workflow utilisés par ce locataire."
+        }
+      },
+      "links": {
+        "upsert": {
+          "label": "Créer ou mettre à jour un lien d'entité",
+          "description": "Créer ou mettre à jour un lien persisté entre deux entités de workflow."
+        },
+        "lookup": {
+          "label": "Rechercher des liens d'entité",
+          "description": "Trouver des liens d'entité persistés par entité source et direction."
+        },
+        "delete": {
+          "label": "Supprimer des liens d'entité",
+          "description": "Supprimer des liens d'entité persistés par côté et relation facultative."
+        },
+        "list": {
+          "label": "Lister les liens d'entité",
+          "description": "Lister les liens d'entité persistés dans un espace de noms."
+        },
+        "list_namespaces": {
+          "label": "Lister les espaces de noms de liens",
+          "description": "Lister les espaces de noms de liens d'entité utilisés par ce locataire."
+        }
       }
     },
     "validation": {
@@ -876,6 +964,28 @@
         "control.return": {
           "label": "Retour",
           "description": "Arrêter l’exécution"
+        },
+        "control": {
+          "if": {
+            "label": "Si",
+            "description": "Branchement conditionnel"
+          },
+          "forEach": {
+            "label": "Pour chaque",
+            "description": "Itérer sur les éléments"
+          },
+          "tryCatch": {
+            "label": "Tenter/Capturer",
+            "description": "Gérer les erreurs"
+          },
+          "callWorkflow": {
+            "label": "Appeler un workflow",
+            "description": "Invoquer un autre workflow"
+          },
+          "return": {
+            "label": "Retour",
+            "description": "Arrêter l’exécution"
+          }
         }
       },
       "nodes": {
@@ -910,6 +1020,52 @@
         "human.task": {
           "label": "Tâche utilisateur",
           "description": "Suspendre jusqu’à l’achèvement d’une tâche utilisateur"
+        },
+        "state": {
+          "set": {
+            "label": "Définir l’état",
+            "description": "Mettre à jour l’état du workflow"
+          }
+        },
+        "event": {
+          "wait": {
+            "label": "Attendre un événement",
+            "description": "Attendre un événement externe"
+          }
+        },
+        "time": {
+          "wait": {
+            "label": "Attendre un délai",
+            "description": "Attendre une durée ou jusqu’à une date/heure"
+          }
+        },
+        "transform": {
+          "assign": {
+            "label": "Assigner",
+            "description": "Assigner des valeurs à la charge utile ou aux variables"
+          }
+        },
+        "action": {
+          "call": {
+            "label": "Appeler une action",
+            "description": "Invoquer une action enregistrée"
+          }
+        },
+        "email": {
+          "parseBody": {
+            "label": "Analyser le corps de l’e-mail",
+            "description": "Analyser et nettoyer le corps de la réponse par e-mail"
+          },
+          "renderCommentBlocks": {
+            "label": "Restituer les blocs de commentaire",
+            "description": "Restituer les blocs de commentaire depuis le contenu de l’e-mail"
+          }
+        },
+        "human": {
+          "task": {
+            "label": "Tâche utilisateur",
+            "description": "Suspendre jusqu’à l’achèvement d’une tâche utilisateur"
+          }
         }
       },
       "groups": {
@@ -1437,7 +1593,10 @@
     "softEnumPlaceholder": "Sélectionner ou saisir une valeur",
     "softEnumSearchPlaceholder": "Rechercher ou saisir une valeur personnalisée",
     "softEnumNoResults": "Aucune suggestion",
-    "softEnumUseCustom": "Utiliser « {{value}} »"
+    "softEnumUseCustom": "Utiliser « {{value}} »",
+    "expression": {
+      "placeholder": "ex. : payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Sélectionnez une action pour voir son schéma d’entrée/sortie",
@@ -1542,7 +1701,8 @@
     },
     "actions": {
       "replay": "Rejouer",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "refresh": "Actualiser"
     },
     "status": {
       "running": "En cours",
@@ -1550,7 +1710,8 @@
       "retrying": "Nouvelle tentative",
       "failed": "Échec",
       "pending": "En attente",
-      "canceled": "Annulé"
+      "canceled": "Annulé",
+      "loading": "Chargement"
     },
     "failure": {
       "title": "Échec de l’exécution",
@@ -1567,7 +1728,9 @@
         "loadingDefinition": "Chargement de la définition du workflow…",
         "loadingDefinitionPlain": "Chargement de la définition du workflow...",
         "noSteps": "Aucune étape à afficher."
-      }
+      },
+      "selectPrompt": "Sélectionnez une étape pour la mettre en surbrillance.",
+      "selectedStep": "Sélection : {{label}}"
     },
     "details": {
       "title": "Détails de l’exécution",
@@ -1697,8 +1860,14 @@
       "reasonRequired": "Le motif est requis (min. 3 caractères).",
       "canceled": "Exécution annulée.",
       "replayStarted": "Relecture de l’exécution démarrée.",
-      "actionFailed": "Échec de l’action."
-    }
+      "actionFailed": "Échec de l’action.",
+      "loadFailed": "Échec du chargement du studio d'exécution"
+    },
+    "lastRefreshed": "Dernière actualisation {{time}}",
+    "navigation": {
+      "backToRuns": "← Retour aux exécutions de workflow"
+    },
+    "title": "Studio d'exécution de workflow"
   },
   "schedules": {
     "common": {

@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "Konfiguracja zachowania formularza musi być obiektem JSON",
       "formBehaviorInvalid": "Nieprawidłowy JSON zachowania formularza",
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
-      "visibilityInvalid": "Nieprawidłowy JSON widoczności"
+      "visibilityInvalid": "Nieprawidłowy JSON widoczności",
+      "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}"
     }
   }
 }

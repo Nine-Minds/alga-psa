@@ -216,6 +216,49 @@
         "title": "Opzioni di stampa",
         "description": "Scegli quali colonne includere durante la stampa degli asset."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Cancella",
+        "delete": "Elimina",
+        "selectedCount": "{{count}} selezionate",
+        "setLocation": "Imposta posizione",
+        "setStatus": "Imposta stato"
+      },
+      "actions": {
+        "apply": "Applica",
+        "applying": "Applicazione...",
+        "deleteAssets": "Elimina",
+        "deleting": "Eliminazione...",
+        "updateLocation": "Aggiornamento posizione",
+        "updateStatus": "Aggiornamento stato"
+      },
+      "deleteDialog": {
+        "description": "Elimina {{count}} risorsa/e selezionata/e. Le risorse con dipendenze potrebbero essere ignorate.",
+        "title": "Elimina risorse selezionate"
+      },
+      "errors": {
+        "deleteFailed": "Impossibile eliminare le risorse selezionate.",
+        "updateLocationFailed": "Impossibile aggiornare le posizioni delle risorse selezionate.",
+        "updateStatusFailed": "Impossibile aggiornare le risorse selezionate."
+      },
+      "locationDialog": {
+        "clearLocation": "Rimuovi posizione",
+        "customLocation": "Posizione personalizzata",
+        "customPlaceholder": "Inserisci una posizione o un'area personalizzata",
+        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
+        "loadingLocations": "Caricamento posizioni...",
+        "savedDisabled": "Le posizioni salvate del cliente sono disponibili solo quando tutte le risorse selezionate sono visibili e appartengono a un unico cliente.",
+        "savedLocation": "Posizione salvata del cliente",
+        "selectLocation": "Seleziona posizione",
+        "title": "Imposta posizione delle risorse"
+      },
+      "partialFailure": "{{action}} completato per {{succeeded}} risorsa/e; {{failed}} non riuscite.",
+      "statusDialog": {
+        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
+        "title": "Imposta stato delle risorse"
+      },
+      "success": "{{action}} completato per {{count}} risorsa/e."
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "Impossibile caricare i dettagli della risorsa",
       "clientsLoadFailed": "Impossibile caricare i client",
       "locationsLoadFailed": "Impossibile caricare posizioni per questo client",
-      "updateFailed": "Impossibile aggiornare la risorsa"
+      "updateFailed": "Impossibile aggiornare la risorsa",
+      "validation": "Correggi i campi evidenziati prima di salvare."
     },
     "actions": {
       "viewClient": "Visualizza cliente",
@@ -853,7 +897,9 @@
       "assetTagRequired": "Etichetta risorsa *",
       "typeRequired": "Tipo *",
       "status": "Stato",
-      "serialNumber": "Numero di serie"
+      "serialNumber": "Numero di serie",
+      "customLocationOption": "Posizione personalizzata",
+      "location": "Posizione"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -869,7 +915,11 @@
       "assetTag": "Inserisci il tag risorsa",
       "selectType": "Seleziona il tipo",
       "selectStatus": "Seleziona lo stato",
-      "serialNumber": "Inserisci il numero di serie"
+      "serialNumber": "Inserisci il numero di serie",
+      "customLocation": "Inserisci una posizione o un'area personalizzata",
+      "loadingLocations": "Caricamento posizioni...",
+      "selectClientFirst": "Seleziona prima un cliente",
+      "selectLocation": "Seleziona posizione"
     },
     "sections": {
       "typeSpecificDetails": "Dettagli specifici del tipo"
@@ -979,7 +1029,8 @@
       "uptime": "Tempo di attività",
       "lastSync": "Ultima sincronizzazione RMM",
       "network": "Rete",
-      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}",
+      "taniumCriticality": "Criticità Tanium"
     },
     "values": {
       "never": "Mai"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "Avvisi attivi",
     "acknowledge": "Conferma",
     "createTicket": "Crea ticket"
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa",
+    "printSelected": "Stampa selezionati ({{count}})"
   }
 }

@@ -273,5 +273,10 @@
   "uploadHint": "55555",
   "file": "55555",
   "files": "55555",
-  "view": "55555"
+  "view": "55555",
+  "common:pagination": {
+    "next": "55555",
+    "pageOf": "55555 {{current}} 55555 {{total}} 55555",
+    "previous": "55555"
+  }
 }

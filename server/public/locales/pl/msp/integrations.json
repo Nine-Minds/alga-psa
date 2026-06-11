@@ -1028,7 +1028,16 @@
         "comingSoon": "Integracja RMM wkrótce dostępna",
         "configure": "Konfiguruj integrację",
         "selected": "Wybrano {{title}}",
-        "title": "Integracje RMM"
+        "title": "Integracje RMM",
+        "backToList": "Wszystkie integracje RMM",
+        "loadingProvider": "Ładowanie ustawień integracji {{title}}...",
+        "status": {
+          "connected": "Połączono",
+          "connectedOneDevice": "Połączono · 1 urządzenie",
+          "connectedWithDevices": "Połączono · {{count}} urządzeń",
+          "notConnected": "Nie połączono",
+          "syncError": "Błąd synchronizacji"
+        }
       },
       "tactical": {
         "actions": {
@@ -1235,6 +1244,86 @@
         "sync": {
           "description": "Wykryj zakresy z grup komputerów Tanium, zmapuj je do klientów, a następnie uruchom synchronizację inwentarza.",
           "title": "Synchronizacja Tanium"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "Uzupełnij alerty",
+          "disconnect": "Rozłącz",
+          "discoverGroups": "Wykryj grupy",
+          "runDeviceSync": "Uruchom synchronizację urządzeń",
+          "saveConfiguration": "Zapisz konfigurację",
+          "testConnection": "Testuj połączenie"
+        },
+        "connection": {
+          "connectedAt": "Połączono: {{time}}",
+          "description": "Połącz się z Level (level.io) za pomocą klucza API. Klucze tworzy się w Level w sekcji Settings > API.",
+          "never": "nigdy",
+          "syncLabel": "Synchronizacja: {{status}}",
+          "syncLabelWithError": "Synchronizacja: {{status}} ({{error}})",
+          "title": "Połączenie z Level"
+        },
+        "errors": {
+          "alertBackfillFailed": "Uzupełnianie alertów nie powiodło się",
+          "deviceSyncFailed": "Synchronizacja urządzeń nie powiodła się",
+          "disconnectFailed": "Nie udało się rozłączyć integracji Level",
+          "groupSyncFailed": "Wykrywanie grup nie powiodło się",
+          "loadMappings": "Nie udało się załadować mapowań grup Level",
+          "loadSettings": "Nie udało się załadować ustawień Level",
+          "loadState": "Nie udało się załadować stanu integracji Level",
+          "loadSummary": "Nie udało się załadować podsumowania połączenia Level",
+          "loadWebhook": "Nie udało się załadować szczegółów webhooka Level",
+          "saveConfiguration": "Nie udało się zapisać konfiguracji Level",
+          "testConnectionFailed": "Test połączenia nie powiódł się",
+          "updateMappingFailed": "Nie udało się zaktualizować mapowania"
+        },
+        "fields": {
+          "apiKey": "Klucz API ({{state}})",
+          "apiKeyPlaceholderExisting": "Wprowadź nowy klucz, aby zastąpić zapisany",
+          "apiKeyPlaceholderNew": "Wklej swój klucz API Level",
+          "apiKeyStateRequired": "wymagany",
+          "apiKeyStateSaved": "zapisany"
+        },
+        "mappings": {
+          "autoSync": "Automatyczna synchronizacja",
+          "autoSyncDisabled": "Wyłączona",
+          "autoSyncEnabled": "Włączona",
+          "group": "Grupa Level",
+          "groupIdLabel": "ID: {{id}}",
+          "loading": "Ładowanie…",
+          "mappedClient": "Zmapowany klient",
+          "noGroups": "Nie wykryto jeszcze grup. Najpierw uruchom Wykryj grupy.",
+          "unmapped": "Niezmapowana"
+        },
+        "status": {
+          "connected": "Połączono",
+          "disconnected": "Nie połączono",
+          "label": "Status: "
+        },
+        "success": {
+          "alertBackfillCompleted": "Uzupełnianie alertów zakończone: przetworzono {{processed}} alertów",
+          "configurationSaved": "Zapisano konfigurację Level",
+          "connectionTestSucceeded": "Połączenie z Level powiodło się",
+          "deviceSyncCompleted": "Synchronizacja urządzeń zakończona: przetworzono {{processed}}, utworzono {{created}}, zaktualizowano {{updated}}",
+          "disconnected": "Integracja Level została rozłączona",
+          "groupSyncCompleted": "Wykrywanie grup zakończone: przetworzono {{processed}}, utworzono {{created}}, zaktualizowano {{updated}}"
+        },
+        "sync": {
+          "description": "Wykrywaj grupy Level, mapuj je na klientów i synchronizuj urządzenia. Urządzenia w niezmapowanych grupach są pomijane; podgrupy dziedziczą najbliższego zmapowanego przodka.",
+          "summary": "{{mappedGroups}} zmapowanych grup · {{devices}} urządzeń · {{activeAlerts}} aktywnych alertów",
+          "title": "Synchronizacja i mapowania grup"
+        },
+        "webhook": {
+          "copied": "Skopiowano",
+          "copy": "Kopiuj",
+          "description": "Level nie umożliwia rejestrowania webhooków przez swoje API. W Level utwórz automatyzację z akcją HTTP POST, używając poniższego adresu URL, nagłówka i ładunku, aby przesyłać alerty do Alga w czasie rzeczywistym.",
+          "header": "Nagłówek: {{name}}",
+          "hideSecret": "Ukryj sekret",
+          "loading": "Szczegóły webhooka załadują się po skonfigurowaniu integracji.",
+          "payload": "Szablon ładunku",
+          "showSecret": "Pokaż sekret",
+          "title": "Webhook alertów",
+          "url": "Adres URL webhooka"
         }
       }
     },

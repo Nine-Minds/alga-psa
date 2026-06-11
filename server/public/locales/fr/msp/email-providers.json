@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Fournisseurs",
-      "defaults": "Valeurs par défaut"
+      "defaults": "Valeurs par défaut",
+      "inboundRules": "Règles entrantes"
     },
     "setup": {
       "title": "Instructions de configuration",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Échec du lancement d'OAuth",
         "popupBlocked": "Échec de l'ouverture de la fenêtre contextuelle OAuth. Veuillez autoriser les popups pour ce site.",
         "closedEarly": "Fenêtre d'autorisation fermée avant de terminer. Veuillez réessayer.",
-        "authorizationFailed": "L'autorisation a échoué"
+        "authorizationFailed": "L'autorisation a échoué",
+        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne"
       },
       "requiredFields": {
         "providerName": "Nom de configuration",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Une boîte aux lettres valide est requise (par exemple user@domain.com, user@localhost, user@test-server ou user)",
         "hostRequired": "Un hôte IMAP est requis",
         "usernameRequired": "Le nom d'utilisateur IMAP est requis",
-        "oauthInitiateFailed": "Échec du lancement d'IMAP OAuth"
+        "oauthInitiateFailed": "Échec du lancement d'IMAP OAuth",
+        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne"
       },
       "basic": {
         "title": "Paramètres de base",
@@ -835,6 +838,146 @@
       "mismatchHelp": "L'enregistrement DNS existe, mais la valeur ne correspond pas à celle attendue par Resend.",
       "matchedHelp": "La valeur détectée correspond à celle attendue.",
       "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Ajouter une règle",
+      "aiClassify": "Classer avec l'IA",
+      "aiClassifyUpsell": "Nécessite le module complémentaire Assistant IA",
+      "extractAssign": "Attribuer le client à partir du texte extrait",
+      "setDestination": "Acheminer vers une destination",
+      "skip": "Ignorer l'e-mail (aucun ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Toutes les boîtes aux lettres"
+    },
+    "empty": {
+      "description": "Créez une règle pour ignorer les e-mails de mise à jour de statut ou attribuer les tickets aux clients nommés dans l'objet.",
+      "title": "Aucune règle entrante configurée"
+    },
+    "errors": {
+      "aliasAdd": "Échec de l'ajout de l'alias",
+      "delete": "Échec de la suppression de la règle",
+      "load": "Échec du chargement des règles entrantes",
+      "reorder": "Échec de la réorganisation des règles",
+      "save": "Échec de l'enregistrement de la règle",
+      "test": "Échec du test de la règle",
+      "update": "Échec de la mise à jour de la règle"
+    },
+    "extraction": {
+      "after": "Texte après le marqueur",
+      "before": "Texte avant le marqueur",
+      "between": "Texte entre les délimiteurs",
+      "regex": "Expression régulière (avancé)"
+    },
+    "fields": {
+      "bodyText": "Texte du corps",
+      "fromAddress": "Adresse de l'expéditeur",
+      "fromDomain": "Domaine de l'expéditeur",
+      "subject": "Objet",
+      "toAddress": "Adresse À/CC"
+    },
+    "form": {
+      "action": "Action",
+      "active": "Active",
+      "addCondition": "Ajouter une condition",
+      "aiAllowAssign": "Peut attribuer des clients",
+      "aiAllowSkip": "Peut ignorer des e-mails",
+      "aiInstruction": "Instruction",
+      "aiInstructionPlaceholder": "ex. : Déterminer quel client est concerné par cette alerte de supervision.",
+      "aiUpsell": "La classification avec l'IA est disponible avec le module complémentaire Assistant IA Enterprise — les e-mails sont classés par intention, sans motifs à maintenir.",
+      "cancel": "Annuler",
+      "conditions": "Conditions (toutes doivent correspondre)",
+      "create": "Créer la règle",
+      "createTitle": "Créer une règle entrante",
+      "description": "Définissez quand la règle correspond et ce qu'il advient de l'e-mail. Utilisez le testeur ci-dessous pour vérifier sur un exemple avant d'enregistrer.",
+      "destination": "Destination (valeurs par défaut du ticket)",
+      "destinationPlaceholder": "Sélectionner un ensemble de valeurs par défaut",
+      "editTitle": "Modifier la règle entrante",
+      "endDelimiter": "Délimiteur de fin",
+      "extractFrom": "Extraire depuis",
+      "extractionTemplate": "Extraction",
+      "fallbackDestination": "Destination de repli",
+      "first": "Première",
+      "last": "Dernière",
+      "mailboxes": "Appliquer aux boîtes aux lettres",
+      "mailboxesHint": "Laissez tout décoché pour appliquer cette règle à toutes les boîtes aux lettres.",
+      "marker": "Texte du marqueur",
+      "markerPlaceholder": "ex. : Client :",
+      "matchHint": "Le texte extrait est comparé aux noms de clients et aux alias de clients (sans distinction de casse).",
+      "name": "Nom de la règle",
+      "namePlaceholder": "ex. : Routage des clients Huntress",
+      "noMailboxes": "Aucune boîte aux lettres configurée pour le moment.",
+      "noMatchFallback": "Acheminer vers une destination de repli",
+      "noMatchProceed": "Continuer avec les règles suivantes / le traitement normal",
+      "noMatchSkip": "Ignorer l'e-mail",
+      "occurrence": "Occurrence",
+      "onNoMatch": "Si aucun client ne correspond",
+      "pattern": "Motif (le groupe de capture 1 est le nom du client)",
+      "regexPlaceholder": "Expression régulière",
+      "saving": "Enregistrement…",
+      "startDelimiter": "Délimiteur de début",
+      "update": "Mettre à jour la règle",
+      "valuePlaceholder": "Valeur"
+    },
+    "header": {
+      "description": "Faites correspondre les e-mails entrants par expéditeur ou objet pour ignorer le bruit, attribuer le bon client ou acheminer vers une destination. Les règles s'exécutent dans l'ordre ; la première correspondance l'emporte.",
+      "title": "Règles d'e-mails entrants"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Les noms extraits correspondent aux noms et alias de clients. Gérez les alias sur la fiche client ou ajoutez-les depuis le testeur de règle.",
+        "audit": "• Les e-mails ignorés restent auditables dans les diagnostics de traitement des e-mails, étiquetés avec la règle qui les a ignorés.",
+        "order": "• Les règles s'exécutent de haut en bas sur les nouveaux e-mails entrants ; la première règle correspondante s'applique.",
+        "replies": "• Les réponses aux tickets existants deviennent toujours des commentaires — les règles ne les touchent jamais."
+      },
+      "title": "Fonctionnement"
+    },
+    "loading": "Chargement des règles entrantes...",
+    "menu": {
+      "delete": "Supprimer",
+      "deleting": "Suppression…",
+      "edit": "Modifier"
+    },
+    "operators": {
+      "contains": "contient",
+      "endsWith": "se termine par",
+      "equals": "est égal à",
+      "matchesRegex": "correspond à la regex",
+      "startsWith": "commence par"
+    },
+    "summary": {
+      "aiClassify": "Classer avec l'IA",
+      "extractAssign": "Attribuer le client à partir de {{source}}",
+      "setDestination": "Acheminer vers une destination",
+      "skip": "Ignorer l'e-mail (aucun ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Ajouter un alias",
+      "aliasAdded": "Alias ajouté. Relancez le test pour le voir correspondre.",
+      "aliasAdding": "Ajout…",
+      "aliasClientPlaceholder": "Sélectionner un client",
+      "aliasLabel": "Ajouter \"{{value}}\" comme alias de",
+      "body": "Texte du corps",
+      "clientMatched": "Client trouvé via {{source}}",
+      "clientName": "nom du client",
+      "extracted": "Valeur extraite :",
+      "from": "De",
+      "noClient": "Aucun client correspondant",
+      "outcome": {
+        "assignClient": "Ticket attribué au client \"{{client}}\"",
+        "fallback": "Aucun client correspondant — ticket acheminé vers la destination de repli",
+        "none": "La règle n'a pas abouti — le traitement normal se poursuit",
+        "setDestination": "Ticket acheminé vers la destination sélectionnée",
+        "skip": "E-mail ignoré — aucun ticket créé"
+      },
+      "run": "Lancer le test",
+      "running": "Test en cours…",
+      "subject": "Objet",
+      "title": "Tester cette règle",
+      "to": "À"
     }
   }
 }

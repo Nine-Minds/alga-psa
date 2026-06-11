@@ -164,7 +164,8 @@
     "proceed": "Kontynuuj",
     "export": "Eksportuj",
     "reset": "Resetuj",
-    "importSelected": "Importuj zaznaczone"
+    "importSelected": "Importuj zaznaczone",
+    "printOptions": "Opcje drukowania"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "Nie udało się promować zgłoszenia głównego",
     "updateBundleSettingsFailed": "Nie udało się zaktualizować ustawień pakietu",
     "assetLoadFailed": "Nie udało się załadować szczegółów zasobu",
-    "assetNotFound": "Nie znaleziono zasobu"
+    "assetNotFound": "Nie znaleziono zasobu",
+    "addCommentFailed": "Nie udało się dodać komentarza",
+    "deleteTimeEntryFailed": "Nie udało się usunąć wpisu czasu",
+    "timeEntryDeleted": "Wpis czasu usunięty"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "Odpowiedzi przychodzące na zgłoszenia podrzędne (tylko do odczytu)",
     "childTicket": "Zgłoszenie podrzędne",
     "ticketPrefix": "Zgłoszenie {{number}}",
-    "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?"
+    "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?",
+    "replyCommentAriaLabel": "Odpowiedz na komentarz"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -427,7 +432,10 @@
         "title": "Opcje drukowania",
         "selectedTitle": "Opcje drukowania ({{count}} zaznaczonych)",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania zgłoszeń."
-      }
+      },
+      "selectedAction": "Drukuj zaznaczone ({{count}})",
+      "selectedTitle": "Zaznaczone zgłoszenia ({{count}})",
+      "subtitle": "{{count}} zgłoszeń"
     },
     "exportSelectedAction": "Eksportuj zaznaczone ({{count}})",
     "exportAction": "Eksportuj CSV",
@@ -495,7 +503,9 @@
       "success_one": "Przeniesiono {{count}} zgłoszenie",
       "success_other": "Przeniesiono {{count}} zgłoszeń",
       "partialFailure": "Niektórych zgłoszeń nie udało się przenieść",
-      "failure": "Nie udało się przenieść zaznaczonych zgłoszeń"
+      "failure": "Nie udało się przenieść zaznaczonych zgłoszeń",
+      "confirm": "Przenieś {{count}} zgłoszeń",
+      "success": "Przeniesiono {{count}} zgłoszeń"
     },
     "delete": {
       "dialogTitle": "Usuń zaznaczone zgłoszenia",
@@ -510,7 +520,9 @@
       "success_one": "Usunięto {{count}} zgłoszenie",
       "success_other": "Usunięto {{count}} zgłoszeń",
       "partialFailure": "Niektórych zgłoszeń nie udało się usunąć",
-      "failure": "Nie udało się usunąć zaznaczonych zgłoszeń"
+      "failure": "Nie udało się usunąć zaznaczonych zgłoszeń",
+      "confirm": "Czy na pewno chcesz usunąć te {{count}} zgłoszenia? Tej operacji nie można cofnąć.",
+      "success": "Usunięto {{count}} zgłoszeń"
     },
     "bundle": {
       "dialogTitle": "Połącz zgłoszenia",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "Wyświetl dzienniki powiadomień e-mail",
     "clipboardDraftMessage": "Ten opis zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Chcesz je zachować czy usunąć na stałe?",
     "clearDueDate": "Wyczyść termin",
-    "paused": "Wstrzymane"
+    "paused": "Wstrzymane",
+    "openActivityLog": "Zobacz dziennik aktywności",
+    "resolveLiveConflict": "Rozwiąż konflikty aktualizacji na żywo przed zapisaniem zmian."
   },
   "properties": {
     "timeEntry": "Wpis czasu",
@@ -997,7 +1011,11 @@
       "responseState": "Stan odpowiedzi",
       "ticketOrigin": "Źródło zgłoszenia",
       "tags": "Tagi"
-    }
+    },
+    "appliedFiltersSummary": "(z {{count}} zgłoszeń pasujących do zastosowanych filtrów)",
+    "completeMessage": "Pomyślnie wyeksportowano {{count}} zgłoszeń do CSV.",
+    "confirm": "Eksportuj {{count}} zgłoszeń",
+    "selectedTicketsSummary": "Eksportowanie {{count}} zaznaczonych zgłoszeń"
   },
   "materials": {
     "title": "Materiały",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "{{count}} kategorii",
     "excludingCount_one": "z wyłączeniem {{count}} kategorii",
     "excludingCount_other": "z wyłączeniem {{count}} kategorii",
-    "excludingPrefix": "z wyłączeniem {{name}}"
+    "excludingPrefix": "z wyłączeniem {{name}}",
+    "excludingCount": "z wyłączeniem {{count}} kategorii",
+    "selectedCount": "{{count}} kategorii"
   },
   "navigation": {
     "previousTicket": "Poprzednie zgłoszenie",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "Kontynuuj edycję"
+    "continueEditing": "Kontynuuj edycję",
+    "cancel": "Anuluj"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "bez {{count}} tablic",
     "placeholder": "Filtruj według tablicy",
     "title": "Wybór tablicy",
-    "searchPlaceholder": "Szukaj tablic..."
+    "searchPlaceholder": "Szukaj tablic...",
+    "excludingCount": "bez {{count}} tablic",
+    "selectedCount": "{{count}} tablic",
+    "statusActive": "Aktywne",
+    "statusAll": "Wszystkie",
+    "statusInactive": "Nieaktywne"
+  },
+  "checklist": {
+    "addFailed": "Nie udało się dodać elementu listy kontrolnej",
+    "addItem": "Dodaj",
+    "addItemPlaceholder": "Dodaj element listy kontrolnej",
+    "applyTemplate": "Zastosuj szablon",
+    "applyTemplateFailed": "Nie udało się zastosować szablonu listy kontrolnej",
+    "clickToRename": "Kliknij, aby zmienić nazwę",
+    "deleteFailed": "Nie udało się usunąć elementu listy kontrolnej",
+    "deleteItem": "Usuń element",
+    "empty": "Brak elementów listy kontrolnej.",
+    "itemMenu": "Menu elementu listy kontrolnej",
+    "loadTemplatesFailed": "Nie udało się załadować szablonów list kontrolnych",
+    "loading": "Ładowanie listy kontrolnej...",
+    "markOptional": "Oznacz jako opcjonalny",
+    "markRequired": "Oznacz jako wymagany",
+    "moveDown": "Przenieś w dół",
+    "moveUp": "Przenieś w górę",
+    "noTemplates": "Brak dostępnych szablonów.",
+    "progress": "{{done}} z {{total}} ukończono",
+    "renameFailed": "Nie udało się zmienić nazwy elementu listy kontrolnej",
+    "reorderFailed": "Nie udało się zmienić kolejności elementów listy kontrolnej",
+    "requiredBadge": "Wymagany",
+    "templateAlreadyApplied": "Ten szablon został już zastosowany do tego zgłoszenia.",
+    "templateApplied": "Zastosowano szablon listy kontrolnej.",
+    "templatesLoading": "Ładowanie szablonów...",
+    "title": "Lista kontrolna",
+    "toggleFailed": "Nie udało się zaktualizować elementu listy kontrolnej",
+    "updateFailed": "Nie udało się zaktualizować elementu listy kontrolnej"
   }
 }

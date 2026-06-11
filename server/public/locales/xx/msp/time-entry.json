@@ -121,7 +121,10 @@
       "minimumDuration": "11111",
       "serviceRequired": "11111",
       "timePeriodRange": "11111 {{periodRange}} 11111",
-      "endAfterStartPicker": "11111"
+      "endAfterStartPicker": "11111",
+      "durationSameDay": "11111",
+      "endSameDay": "11111",
+      "invalidTimeRange": "11111"
     }
   },
   "workItemPicker": {

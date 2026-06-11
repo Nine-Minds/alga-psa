@@ -91,7 +91,8 @@
         "single": "Seulement cet événement",
         "future": "Cet événement et les événements à venir",
         "all": "Tous les événements"
-      }
+      },
+      "messageWithTeamsWarning": "Êtes-vous sûr de vouloir supprimer cette entrée de planning ? Cette action ne peut pas être annulée. La réunion Microsoft Teams sera également supprimée."
     },
     "print": {
       "title": "Agenda du planning",
@@ -546,7 +547,9 @@
         "title": "Nomination approuvée",
         "descriptionWithDate": "Ce rendez-vous découle d'une demande d'un client et a été approuvé le {{date}}.",
         "description": "Ce rendez-vous est né d'une demande d'un client.",
-        "joinTeamsMeeting": "Rejoindre la réunion Teams"
+        "joinTeamsMeeting": "Rejoindre la réunion Teams",
+        "downloadRecording": "Télécharger l'enregistrement",
+        "viewTranscript": "Voir la transcription"
       },
       "pending": {
         "title": "Demande de rendez-vous en attente",
@@ -630,5 +633,9 @@
       "future": "Cet événement et les événements à venir",
       "all": "Tous les événements"
     }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
   }
 }

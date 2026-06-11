@@ -33,7 +33,8 @@
       "resources": "Risorse",
       "more": "Altro",
       "apps": "App"
-    }
+    },
+    "licenses": "Licenze"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -131,7 +132,8 @@
           "declined": "Appuntamento rifiutato: {{name}}",
           "cancelled": "Appuntamento annullato: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Quando i ticket vengono aggiornati, li vedrai qui."
     },
     "devices": {
       "title": "I tuoi dispositivi",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail.",
         "registrationFailed": "Non è stato possibile completare la registrazione. Riprova."
       }
-    }
+    },
+    "captchaRequired": "Completa la verifica qui sotto, quindi accedi di nuovo.",
+    "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare."
   },
   "account": {
     "title": "Account",

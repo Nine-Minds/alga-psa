@@ -33,7 +33,8 @@
       "resources": "55555",
       "more": "55555",
       "apps": "55555"
-    }
+    },
+    "licenses": "55555"
   },
   "sidebar": {
     "goToDashboard": "55555",
@@ -160,7 +161,8 @@
           "declined": "55555 {{name}} 55555",
           "cancelled": "55555 {{name}} 55555"
         }
-      }
+      },
+      "algadeskEmptyHint": "55555"
     },
     "devices": {
       "title": "55555",
@@ -327,7 +329,9 @@
         "emailAlreadyExists": "55555",
         "registrationFailed": "55555"
       }
-    }
+    },
+    "captchaRequired": "55555",
+    "tooManyAttempts": "55555"
   },
   "account": {
     "title": "55555",

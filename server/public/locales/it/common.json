@@ -48,7 +48,8 @@
     "resetPrintOptions": "Reimposta opzioni di stampa",
     "share": "Condividi",
     "done": "Fatto",
-    "continue": "Continua"
+    "continue": "Continua",
+    "printSelected": "Stampa selezionati ({{count}})"
   },
   "status": {
     "loading": "Caricamento...",
@@ -506,7 +507,10 @@
         "visible": "Visibile al cliente",
         "hidden": "Solo interno"
       },
-      "clientVisibilityLabel": "Visibilità cliente"
+      "clientVisibilityLabel": "Visibilità cliente",
+      "entityOptions": {
+        "all": "Tutte le entità"
+      }
     },
     "selector": {
       "title": "Seleziona documenti",
@@ -534,7 +538,10 @@
       "uploadingProgress": "Caricamento {{current}} di {{total}}",
       "pending": "In attesa",
       "error": "Impossibile caricare il documento",
-      "fileError": "Impossibile caricare il file"
+      "fileError": "Impossibile caricare il file",
+      "associatedEntityTypeLabel": "Associa a",
+      "noAssociation": "Nessuna associazione",
+      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare."
     },
     "folders": {
       "root": "Radice",
@@ -593,7 +600,20 @@
     "downloadVideo": "Scarica video",
     "downloadAsPdf": "Scarica come PDF",
     "downloadAsMarkdown": "Scarica come Markdown",
-    "move": "Sposta"
+    "move": "Sposta",
+    "associatedEntityPicker": {
+      "allEntities": "Tutte le entità",
+      "loadingClients": "Caricamento clienti...",
+      "loadingContacts": "Caricamento contatti...",
+      "noEntityTypes": "Nessun tipo di entità trovato",
+      "typeLabel": "Tipo di entità associata",
+      "typePlaceholder": "Seleziona tipo di entità",
+      "typeSearchPlaceholder": "Cerca tipi di entità...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Seleziona {{entityType}}",
+      "entitySearchPlaceholder": "Cerca {{entityType}}...",
+      "noEntities": "Nessun risultato per {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -1009,7 +1029,10 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "deleteComment": "Elimina commento",
     "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
-    "update": "Aggiorna"
+    "update": "Aggiorna",
+    "create": "Crea",
+    "replyComment": "Rispondi al commento",
+    "saving": "Salvataggio..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} colonne nascoste per spazio limitato.",
     "showAll": "Mostra tutto",
     "showingAllColumns": "Vengono mostrate tutte le colonne; scorri orizzontalmente per vederle.",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "columnsHidden": "{{count}} colonne nascoste per mancanza di spazio."
   }
 }

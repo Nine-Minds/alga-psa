@@ -216,6 +216,49 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "55555",
+        "delete": "55555",
+        "selectedCount": "55555 {{count}} 55555",
+        "setLocation": "55555",
+        "setStatus": "55555"
+      },
+      "actions": {
+        "apply": "55555",
+        "applying": "55555",
+        "deleteAssets": "55555",
+        "deleting": "55555",
+        "updateLocation": "55555",
+        "updateStatus": "55555"
+      },
+      "deleteDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "errors": {
+        "deleteFailed": "55555",
+        "updateLocationFailed": "55555",
+        "updateStatusFailed": "55555"
+      },
+      "locationDialog": {
+        "clearLocation": "55555",
+        "customLocation": "55555",
+        "customPlaceholder": "55555",
+        "description": "55555 {{count}} 55555",
+        "loadingLocations": "55555",
+        "savedDisabled": "55555",
+        "savedLocation": "55555",
+        "selectLocation": "55555",
+        "title": "55555"
+      },
+      "partialFailure": "55555 {{action}} 55555 {{succeeded}} 55555 {{failed}} 55555",
+      "statusDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "success": "55555 {{action}} 55555 {{count}} 55555"
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "55555",
       "clientsLoadFailed": "55555",
       "locationsLoadFailed": "55555",
-      "updateFailed": "55555"
+      "updateFailed": "55555",
+      "validation": "55555"
     },
     "actions": {
       "viewClient": "55555",
@@ -853,7 +897,9 @@
       "assetTagRequired": "55555",
       "typeRequired": "55555",
       "status": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocationOption": "55555",
+      "location": "55555"
     },
     "placeholders": {
       "workstationOsType": "55555",
@@ -869,7 +915,11 @@
       "assetTag": "55555",
       "selectType": "55555",
       "selectStatus": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocation": "55555",
+      "loadingLocations": "55555",
+      "selectClientFirst": "55555",
+      "selectLocation": "55555"
     },
     "sections": {
       "typeSpecificDetails": "55555"
@@ -979,7 +1029,8 @@
       "uptime": "55555",
       "lastSync": "55555",
       "network": "55555",
-      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555"
+      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555",
+      "taniumCriticality": "55555"
     },
     "values": {
       "never": "55555"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "55555",
     "acknowledge": "55555",
     "createTicket": "55555"
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555",
+    "printSelected": "55555 {{count}} 55555"
   }
 }

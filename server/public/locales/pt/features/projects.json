@@ -1474,5 +1474,13 @@
       "confirm_other": "Adicionar tags a {{count}} tarefas",
       "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:"
     }
+  },
+  "common:actions": {
+    "back": "Voltar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "done": "Concluído",
+    "edit": "Editar",
+    "save": "Salvar"
   }
 }

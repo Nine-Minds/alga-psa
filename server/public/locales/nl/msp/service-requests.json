@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "Configuratie formuliergedrag moet een JSON-object zijn",
       "formBehaviorInvalid": "Ongeldige JSON voor formuliergedrag",
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
-      "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid"
+      "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
+      "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}"
     }
   }
 }

@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Jeśli ustawione, nadpisuje docelowe miejsce klienta dla dokładnie tego kontaktu nadawcy. Kolejność: nadpisanie kontaktu -> docelowe miejsce klienta -> domyślne ustawienie dostawcy.",
       "tags": "Tagi",
       "notes": "Notatki",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefon"
     },
     "status": {
       "label": "Status",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notatki zapisane",
       "saveFailed": "Nie udało się zapisać notatek"
     }
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania"
   }
 }

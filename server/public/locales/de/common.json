@@ -48,7 +48,8 @@
     "resetPrintOptions": "Druckoptionen zurücksetzen",
     "share": "Teilen",
     "done": "Fertig",
-    "continue": "Weiter"
+    "continue": "Weiter",
+    "printSelected": "Ausgewählte drucken ({{count}})"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -462,7 +463,10 @@
         "visible": "Für Kunden sichtbar",
         "hidden": "Nur intern"
       },
-      "clientVisibilityLabel": "Kundensichtbarkeit"
+      "clientVisibilityLabel": "Kundensichtbarkeit",
+      "entityOptions": {
+        "all": "Alle Entitäten"
+      }
     },
     "selector": {
       "title": "Dokumente auswählen",
@@ -490,7 +494,10 @@
       "uploadingProgress": "{{current}} von {{total}} werden hochgeladen",
       "pending": "Ausstehend",
       "error": "Dokument konnte nicht hochgeladen werden",
-      "fileError": "Datei konnte nicht hochgeladen werden"
+      "fileError": "Datei konnte nicht hochgeladen werden",
+      "associatedEntityTypeLabel": "Verknüpfen mit",
+      "noAssociation": "Keine Verknüpfung",
+      "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus."
     },
     "folders": {
       "root": "Stammordner",
@@ -549,7 +556,20 @@
     "downloadVideo": "Video herunterladen",
     "downloadAsPdf": "Als PDF herunterladen",
     "downloadAsMarkdown": "Als Markdown herunterladen",
-    "move": "Verschieben"
+    "move": "Verschieben",
+    "associatedEntityPicker": {
+      "allEntities": "Alle Entitäten",
+      "loadingClients": "Kunden werden geladen...",
+      "loadingContacts": "Kontakte werden geladen...",
+      "noEntityTypes": "Keine Entitätstypen gefunden",
+      "typeLabel": "Verknüpfter Entitätstyp",
+      "typePlaceholder": "Entitätstyp auswählen",
+      "typeSearchPlaceholder": "Entitätstypen suchen...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "{{entityType}} auswählen",
+      "entitySearchPlaceholder": "{{entityType}} suchen...",
+      "noEntities": "Keine {{entityType}} gefunden"
+    }
   },
   "fields": {
     "notes": "Notizen"
@@ -1009,7 +1029,10 @@
     "deleteCommentAriaLabel": "Kommentar löschen",
     "deleteComment": "Kommentar löschen",
     "deleteCommentConfirmation": "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "update": "Aktualisieren"
+    "update": "Aktualisieren",
+    "create": "Erstellen",
+    "replyComment": "Auf Kommentar antworten",
+    "saving": "Wird gespeichert..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} Spalten aus Platzgründen ausgeblendet.",
     "showAll": "Alle anzeigen",
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
   }
 }

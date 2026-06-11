@@ -203,7 +203,7 @@
   {
     "id": "T026",
     "description": "actions.print / actions.printOptions resolve in every namespace that references them (no raw-key rendering in print/export menus)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -211,7 +211,7 @@
   {
     "id": "T027",
     "description": "find-missing-i18n-keys reports 0 missing for msp/workflows after backfill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -219,7 +219,7 @@
   {
     "id": "T028",
     "description": "find-missing-i18n-keys reports 0 missing for msp/email-providers after backfill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -227,7 +227,7 @@
   {
     "id": "T029",
     "description": "find-missing-i18n-keys reports 0 missing for msp/integrations after backfill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -235,7 +235,7 @@
   {
     "id": "T030",
     "description": "find-missing-i18n-keys reports 0 missing for features/tickets after backfill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -243,7 +243,7 @@
   {
     "id": "T031",
     "description": "find-missing-i18n-keys reports 0 missing for msp/clients, msp/assets, msp/user-activities after backfill",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",
@@ -253,7 +253,7 @@
   {
     "id": "T032",
     "description": "find-missing-i18n-keys exits 0 across the entire repo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F028"
@@ -262,7 +262,7 @@
   {
     "id": "T033",
     "description": "Backfilled en values match the defaultValue strings previously rendered (spot-check 20 keys against git history of components)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",
@@ -277,7 +277,7 @@
   {
     "id": "T034",
     "description": "validate-translations passes after backfill: all 7 locales have key parity with en including new keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -285,7 +285,7 @@
   {
     "id": "T035",
     "description": "Backfilled keys preserve interpolation variables across all locales (validate-translations variable check green)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -293,7 +293,7 @@
   {
     "id": "T036",
     "description": "Regenerated xx/yy pseudo-locales contain every backfilled key",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

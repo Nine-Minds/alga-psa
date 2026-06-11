@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Backfill cross-namespace actions.print / actions.printOptions keys in en for all 7+ affected namespaces (assets, clients, contacts, jobs, schedule, user-activities, workflows)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Backfill 131 missing en keys in msp/workflows (WorkflowRunList, WorkflowDesigner, RunStudioShell)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Backfill 111 missing en keys in msp/email-providers (InboundEmailRuleForm)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Backfill 81 missing en keys in msp/integrations (LevelIoIntegrationSettings, InboundEmailRulesManager)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Backfill 81 missing en keys in features/tickets (TicketChecklistSection, TicketingDashboard, TicketDetails)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Backfill 54 missing en keys in msp/clients (Clients.tsx, MeetingAttendeesPicker, InteractionDetails, ClientDetails, ClientContractAssignment)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Backfill 40 missing en keys in msp/assets (AssetDashboardClient)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Backfill 37 missing en keys in msp/user-activities (ActivitiesTableFilters, AdHocDetailPanel)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Backfill remaining ~120 missing en keys across msp/settings, common, msp/invoicing, msp/keyboard-shortcuts, msp/quotes, msp/contracts, projects, msp/schedule, msp/knowledge-base, features/projects, features/documents, client-portal, msp/time-entry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "Translate all backfilled keys into fr, es, de, nl, it, pl, pt",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Regenerate xx/yy pseudo-locales covering all backfilled keys",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "find-missing-i18n-keys.cjs reports 0 missing keys (exit 0)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2"
     ]

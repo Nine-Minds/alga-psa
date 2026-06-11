@@ -155,7 +155,11 @@
       "failedLast24h": "Falliti nelle ultime 24 ore",
       "openJobCenter": "Apri centro job"
     },
-    "breadcrumb": "Breadcrumb",
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "dashboard": "Dashboard",
+      "home": "Home"
+    },
     "tenantBadge": {
       "ariaLabel": "Tenant attivo {{tenant}}"
     },

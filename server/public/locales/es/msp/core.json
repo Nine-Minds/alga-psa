@@ -155,7 +155,11 @@
       "failedLast24h": "Fallidos últimas 24 h",
       "openJobCenter": "Abrir centro de trabajos"
     },
-    "breadcrumb": "Ruta de navegación",
+    "breadcrumb": {
+      "label": "Ruta de navegación",
+      "dashboard": "Panel de control",
+      "home": "Inicio"
+    },
     "tenantBadge": {
       "ariaLabel": "Tenant activo {{tenant}}"
     },

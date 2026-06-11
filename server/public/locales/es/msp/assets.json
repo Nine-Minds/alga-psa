@@ -216,6 +216,49 @@
         "title": "Opciones de impresión",
         "description": "Elige qué columnas incluir al imprimir los activos."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Borrar",
+        "delete": "Eliminar",
+        "selectedCount": "{{count}} seleccionados",
+        "setLocation": "Establecer ubicación",
+        "setStatus": "Establecer estado"
+      },
+      "actions": {
+        "apply": "Aplicar",
+        "applying": "Aplicando...",
+        "deleteAssets": "Eliminar",
+        "deleting": "Eliminando...",
+        "updateLocation": "Actualización de ubicación",
+        "updateStatus": "Actualización de estado"
+      },
+      "deleteDialog": {
+        "description": "Eliminar {{count}} activo(s) seleccionado(s). Los activos con dependencias pueden omitirse.",
+        "title": "Eliminar activos seleccionados"
+      },
+      "errors": {
+        "deleteFailed": "No se pudieron eliminar los activos seleccionados.",
+        "updateLocationFailed": "No se pudieron actualizar las ubicaciones de los activos seleccionados.",
+        "updateStatusFailed": "No se pudieron actualizar los activos seleccionados."
+      },
+      "locationDialog": {
+        "clearLocation": "Borrar ubicación",
+        "customLocation": "Ubicación personalizada",
+        "customPlaceholder": "Introduzca una ubicación o área personalizada",
+        "description": "Actualizar {{count}} activo(s) seleccionado(s).",
+        "loadingLocations": "Cargando ubicaciones...",
+        "savedDisabled": "Las ubicaciones guardadas del cliente solo están disponibles cuando todos los activos seleccionados están visibles y pertenecen a un mismo cliente.",
+        "savedLocation": "Ubicación guardada del cliente",
+        "selectLocation": "Seleccionar ubicación",
+        "title": "Establecer ubicación del activo"
+      },
+      "partialFailure": "{{action}} se completó para {{succeeded}} activo(s); {{failed}} fallaron.",
+      "statusDialog": {
+        "description": "Actualizar {{count}} activo(s) seleccionado(s).",
+        "title": "Establecer estado del activo"
+      },
+      "success": "{{action}} se completó para {{count}} activo(s)."
     }
   },
   "assetDashboardGrid": {
@@ -501,7 +544,8 @@
       "loadFailed": "No se pudieron cargar los detalles del activo",
       "clientsLoadFailed": "No se pueden cargar clientes",
       "locationsLoadFailed": "No se pueden cargar ubicaciones para este cliente",
-      "updateFailed": "No se pudo actualizar el activo"
+      "updateFailed": "No se pudo actualizar el activo",
+      "validation": "Corrija los campos resaltados antes de guardar."
     },
     "actions": {
       "viewClient": "Ver cliente",
@@ -853,7 +897,9 @@
       "assetTagRequired": "Etiqueta de activo *",
       "typeRequired": "Tipo *",
       "status": "Estado",
-      "serialNumber": "Número de serie"
+      "serialNumber": "Número de serie",
+      "customLocationOption": "Ubicación personalizada",
+      "location": "Ubicación"
     },
     "placeholders": {
       "workstationOsType": "por ejemplo, Windows, macOS, Linux",
@@ -869,7 +915,11 @@
       "assetTag": "Introduzca la etiqueta de activo",
       "selectType": "Seleccionar tipo",
       "selectStatus": "Seleccionar estado",
-      "serialNumber": "Introduzca el número de serie"
+      "serialNumber": "Introduzca el número de serie",
+      "customLocation": "Introduzca una ubicación o área personalizada",
+      "loadingLocations": "Cargando ubicaciones...",
+      "selectClientFirst": "Seleccione primero un cliente",
+      "selectLocation": "Seleccionar ubicación"
     },
     "sections": {
       "typeSpecificDetails": "Detalles específicos del tipo"
@@ -979,7 +1029,8 @@
       "uptime": "tiempo de actividad",
       "lastSync": "Última sincronización RMM",
       "network": "Red",
-      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}",
+      "taniumCriticality": "Criticidad de Tanium"
     },
     "values": {
       "never": "Nunca"
@@ -1278,5 +1329,10 @@
     "activeAlerts": "Alertas activas",
     "acknowledge": "Confirmar",
     "createTicket": "Crear ticket"
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión",
+    "printSelected": "Imprimir seleccionados ({{count}})"
   }
 }

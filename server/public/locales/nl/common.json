@@ -48,7 +48,8 @@
     "resetPrintOptions": "Afdrukopties resetten",
     "share": "Delen",
     "done": "Klaar",
-    "continue": "Doorgaan"
+    "continue": "Doorgaan",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -462,7 +463,10 @@
         "visible": "Zichtbaar voor klant",
         "hidden": "Alleen intern"
       },
-      "clientVisibilityLabel": "Zichtbaarheid voor klant"
+      "clientVisibilityLabel": "Zichtbaarheid voor klant",
+      "entityOptions": {
+        "all": "Alle entiteiten"
+      }
     },
     "selector": {
       "title": "Documenten selecteren",
@@ -490,7 +494,10 @@
       "uploadingProgress": "{{current}} van {{total}} uploaden",
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
-      "fileError": "Bestand kon niet worden geüpload"
+      "fileError": "Bestand kon niet worden geüpload",
+      "associatedEntityTypeLabel": "Koppelen aan",
+      "noAssociation": "Geen koppeling",
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat je uploadt."
     },
     "folders": {
       "root": "Hoofdmap",
@@ -549,7 +556,20 @@
     "downloadVideo": "Video downloaden",
     "downloadAsPdf": "Downloaden als PDF",
     "downloadAsMarkdown": "Downloaden als Markdown",
-    "move": "Verplaatsen"
+    "move": "Verplaatsen",
+    "associatedEntityPicker": {
+      "allEntities": "Alle entiteiten",
+      "loadingClients": "Klanten laden...",
+      "loadingContacts": "Contactpersonen laden...",
+      "noEntityTypes": "Geen entiteitstypen gevonden",
+      "typeLabel": "Type gekoppelde entiteit",
+      "typePlaceholder": "Selecteer entiteitstype",
+      "typeSearchPlaceholder": "Entiteitstypen zoeken...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Selecteer {{entityType}}",
+      "entitySearchPlaceholder": "{{entityType}} zoeken...",
+      "noEntities": "Geen {{entityType}} gevonden"
+    }
   },
   "fields": {
     "notes": "Notities"
@@ -1009,7 +1029,10 @@
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "deleteComment": "Commentaar verwijderen",
     "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-    "update": "Bijwerken"
+    "update": "Bijwerken",
+    "create": "Aanmaken",
+    "replyComment": "Reageren op opmerking",
+    "saving": "Opslaan..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1203,7 @@
     "columnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte.",
     "showAll": "Alles tonen",
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
   }
 }

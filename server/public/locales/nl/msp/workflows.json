@@ -24,7 +24,10 @@
   "actions": {
     "create": "Workflow maken",
     "open": "Openen",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "runList": {
     "shareTooltip": "Afdrukken en exporteren",
@@ -60,7 +63,8 @@
       "cancelSelected": "Selectie annuleren ({{count}})",
       "clearSelection": "Selectie wissen",
       "details": "Details",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "preview": "Voorbeeld"
     },
     "table": {
       "runId": "Uitvoerings-ID",
@@ -124,6 +128,15 @@
         "title": "Afdrukopties",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van workflow-uitvoeringen."
       }
+    },
+    "preview": {
+      "close": "Sluiten",
+      "next": "Volgende",
+      "openFullPage": "Volledige pagina openen",
+      "position": "{{current}} van {{total}} geladen uitvoeringen",
+      "previous": "Vorige",
+      "selectedRun": "Geselecteerde uitvoering",
+      "title": "Voorbeeld van uitvoering"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Gekoppeld",
       "identity": "Identiteit",
       "runErrorFallback": "Uitvoeringsfout",
-      "errorCategoryFallback": "Fout"
+      "errorCategoryFallback": "Fout",
+      "technicalDetailLabel": "Technisch detail:"
     },
     "stepTimeline": {
       "title": "Tijdlijn van stappen",
@@ -179,7 +193,8 @@
         "duration": "Duur",
         "nextRetry": "Volgende poging",
         "started": "Gestart",
-        "error": "Fout"
+        "error": "Fout",
+        "action": "Actie"
       },
       "empty": "Nog geen stapgeschiedenis."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Volgende poging",
       "errorTitle": "Fout",
       "stepErrorFallback": "Stapfout",
-      "errorCategoryFallback": "Fout"
+      "errorCategoryFallback": "Fout",
+      "technicalDetailLabel": "Technisch detail:"
     },
     "waitHistory": {
       "title": "Wachtgeschiedenis",
@@ -241,7 +257,8 @@
         "step": "Stap",
         "event": "Gebeurtenis",
         "correlation": "Correlatie"
-      }
+      },
+      "loading": "Logs laden..."
     },
     "audit": {
       "title": "Auditspoor",
@@ -253,7 +270,9 @@
         "operation": "Bewerking",
         "user": "Gebruiker",
         "details": "Details"
-      }
+      },
+      "loading": "Audittrail laden...",
+      "unknownUser": "Onbekende gebruiker"
     },
     "dialogs": {
       "reasonLabel": "Reden",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "CSV exporteren",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "refresh": "Vernieuwen"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Selecteer een workflow om de auditgeschiedenis te bekijken.",
-      "empty": "Nog geen auditgegevens."
+      "empty": "Nog geen auditgegevens.",
+      "loading": "Auditvermeldingen laden..."
     },
     "values": {
       "system": "systeem"
@@ -577,6 +598,19 @@
         "events": "Gebeurtenissen",
         "eventCatalog": "Gebeurteniscatalogus",
         "deadLetter": "Dead letter"
+      },
+      "quota": {
+        "consumedLabel": "Verbruikt",
+        "consumedUnit": "verbruikt",
+        "loading": "Laden...",
+        "planLimit": "Limiet: {{limit}}",
+        "remainingLabel": "Resterend",
+        "remainingUnit": "resterend",
+        "resetsOn": "Reset op {{date}}",
+        "title": "Workflowacties",
+        "unavailable": "Niet beschikbaar",
+        "unlimitedPlan": "Onbeperkt abonnement",
+        "unlimitedRemaining": "Onbeperkt"
       }
     },
     "toolbar": {
@@ -808,6 +842,60 @@
       "links.list_namespaces": {
         "label": "Koppelingsnaamruimten weergeven",
         "description": "Workflow-entiteitskoppelingsnaamruimten weergeven die door deze tenant worden gebruikt."
+      },
+      "ai": {
+        "infer": {
+          "label": "Gestructureerde output afleiden",
+          "description": "Genereer gestructureerde workflowdata uit een prompt met de geconfigureerde AI-provider."
+        }
+      },
+      "store": {
+        "get": {
+          "label": "Opgeslagen waarde ophalen",
+          "description": "Lees een opgeslagen workflow-sleutel/waarde-item."
+        },
+        "set": {
+          "label": "Opgeslagen waarde instellen",
+          "description": "Sla een workflow-sleutel/waarde-item op."
+        },
+        "delete": {
+          "label": "Opgeslagen waarde verwijderen",
+          "description": "Verwijder een opgeslagen workflow-sleutel/waarde-item."
+        },
+        "increment": {
+          "label": "Opgeslagen getal verhogen",
+          "description": "Verhoog een opgeslagen workflowgetal atomair."
+        },
+        "list": {
+          "label": "Opgeslagen waarden weergeven",
+          "description": "Geef opgeslagen workflow-sleutel/waarde-items in een naamruimte weer."
+        },
+        "list_namespaces": {
+          "label": "Opslagnaamruimten weergeven",
+          "description": "Geef de naamruimten van de workflow-datastore weer die door deze tenant worden gebruikt."
+        }
+      },
+      "links": {
+        "upsert": {
+          "label": "Entiteitskoppeling aanmaken/bijwerken",
+          "description": "Maak een opgeslagen koppeling tussen twee workflow-entiteiten aan of werk deze bij."
+        },
+        "lookup": {
+          "label": "Entiteitskoppelingen opzoeken",
+          "description": "Zoek opgeslagen entiteitskoppelingen op bronentiteit en richting."
+        },
+        "delete": {
+          "label": "Entiteitskoppelingen verwijderen",
+          "description": "Verwijder opgeslagen entiteitskoppelingen op basis van zijde en optionele relatie."
+        },
+        "list": {
+          "label": "Entiteitskoppelingen weergeven",
+          "description": "Geef opgeslagen entiteitskoppelingen in een naamruimte weer."
+        },
+        "list_namespaces": {
+          "label": "Koppelingsnaamruimten weergeven",
+          "description": "Geef de naamruimten van workflow-entiteitskoppelingen weer die door deze tenant worden gebruikt."
+        }
       }
     },
     "validation": {
@@ -876,6 +964,28 @@
         "control.return": {
           "label": "Terugkeren",
           "description": "Uitvoering stoppen"
+        },
+        "control": {
+          "if": {
+            "label": "Als",
+            "description": "Voorwaardelijke vertakking"
+          },
+          "forEach": {
+            "label": "Voor elk",
+            "description": "Itereren over items"
+          },
+          "tryCatch": {
+            "label": "Try/Catch",
+            "description": "Fouten afhandelen"
+          },
+          "callWorkflow": {
+            "label": "Workflow aanroepen",
+            "description": "Een andere workflow aanroepen"
+          },
+          "return": {
+            "label": "Terugkeren",
+            "description": "Uitvoering stoppen"
+          }
         }
       },
       "nodes": {
@@ -910,6 +1020,52 @@
         "human.task": {
           "label": "Handmatige taak",
           "description": "Pauzeren tot voltooiing van een handmatige taak"
+        },
+        "state": {
+          "set": {
+            "label": "Status instellen",
+            "description": "De workflowstatus bijwerken"
+          }
+        },
+        "event": {
+          "wait": {
+            "label": "Wachten op gebeurtenis",
+            "description": "Wachten op een externe gebeurtenis"
+          }
+        },
+        "time": {
+          "wait": {
+            "label": "Wachten op tijd",
+            "description": "Wachten op een duur of tot een datum/tijd"
+          }
+        },
+        "transform": {
+          "assign": {
+            "label": "Toewijzen",
+            "description": "Waarden toewijzen aan payload of variabelen"
+          }
+        },
+        "action": {
+          "call": {
+            "label": "Actie aanroepen",
+            "description": "Een geregistreerde actie aanroepen"
+          }
+        },
+        "email": {
+          "parseBody": {
+            "label": "E-mailinhoud parseren",
+            "description": "E-mailantwoord parseren en opschonen"
+          },
+          "renderCommentBlocks": {
+            "label": "Reactieblokken weergeven",
+            "description": "Reactieblokken weergeven vanuit e-mailinhoud"
+          }
+        },
+        "human": {
+          "task": {
+            "label": "Handmatige taak",
+            "description": "Pauzeren tot voltooiing van een handmatige taak"
+          }
         }
       },
       "groups": {
@@ -1437,7 +1593,10 @@
     "softEnumPlaceholder": "Selecteer of voer een waarde in",
     "softEnumSearchPlaceholder": "Zoek of voer een aangepaste waarde in",
     "softEnumNoResults": "Geen suggesties",
-    "softEnumUseCustom": "\"{{value}}\" gebruiken"
+    "softEnumUseCustom": "\"{{value}}\" gebruiken",
+    "expression": {
+      "placeholder": "bv. payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Selecteer een actie om het invoer-/uitvoerschema ervan te zien",
@@ -1542,7 +1701,8 @@
     },
     "actions": {
       "replay": "Opnieuw afspelen",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "refresh": "Vernieuwen"
     },
     "status": {
       "running": "Wordt uitgevoerd",
@@ -1550,7 +1710,8 @@
       "retrying": "Opnieuw proberen",
       "failed": "Mislukt",
       "pending": "In behandeling",
-      "canceled": "Geannuleerd"
+      "canceled": "Geannuleerd",
+      "loading": "Laden"
     },
     "failure": {
       "title": "Uitvoering mislukt",
@@ -1567,7 +1728,9 @@
         "loadingDefinition": "Workflowdefinitie laden…",
         "loadingDefinitionPlain": "Workflowdefinitie laden...",
         "noSteps": "Geen stappen om weer te geven."
-      }
+      },
+      "selectPrompt": "Selecteer een stap om deze te markeren.",
+      "selectedStep": "Geselecteerd: {{label}}"
     },
     "details": {
       "title": "Uitvoeringsdetails",
@@ -1697,8 +1860,14 @@
       "reasonRequired": "Reden is verplicht (minimaal 3 tekens).",
       "canceled": "Uitvoering geannuleerd.",
       "replayStarted": "Opnieuw afspelen van uitvoering gestart.",
-      "actionFailed": "Kan actie niet uitvoeren."
-    }
+      "actionFailed": "Kan actie niet uitvoeren.",
+      "loadFailed": "Kan uitvoeringsstudio niet laden"
+    },
+    "lastRefreshed": "Laatst vernieuwd {{time}}",
+    "navigation": {
+      "backToRuns": "← Terug naar workflow-uitvoeringen"
+    },
+    "title": "Workflow-uitvoeringsstudio"
   },
   "schedules": {
     "common": {

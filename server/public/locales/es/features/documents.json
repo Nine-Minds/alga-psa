@@ -273,5 +273,10 @@
   "uploadHint": "Sube archivos para compartir con esta tarea",
   "file": "archivo",
   "files": "archivos",
-  "view": "Ver"
+  "view": "Ver",
+  "common:pagination": {
+    "next": "Siguiente",
+    "pageOf": "Página {{current}} de {{total}}",
+    "previous": "Anterior"
+  }
 }

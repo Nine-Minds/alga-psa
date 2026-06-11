@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "11111",
-      "defaults": "11111"
+      "defaults": "11111",
+      "inboundRules": "11111"
     },
     "setup": {
       "title": "11111",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "11111",
         "popupBlocked": "11111",
         "closedEarly": "11111",
-        "authorizationFailed": "11111"
+        "authorizationFailed": "11111",
+        "senderDisplayNameInvalid": "11111"
       },
       "requiredFields": {
         "providerName": "11111",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "11111",
         "hostRequired": "11111",
         "usernameRequired": "11111",
-        "oauthInitiateFailed": "11111"
+        "oauthInitiateFailed": "11111",
+        "senderDisplayNameInvalid": "11111"
       },
       "basic": {
         "title": "11111",
@@ -835,6 +838,146 @@
       "mismatchHelp": "11111",
       "matchedHelp": "11111",
       "unknownHelp": "11111"
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "11111",
+      "aiClassify": "11111",
+      "aiClassifyUpsell": "11111",
+      "extractAssign": "11111",
+      "setDestination": "11111",
+      "skip": "11111"
+    },
+    "badges": {
+      "allMailboxes": "11111"
+    },
+    "empty": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "errors": {
+      "aliasAdd": "11111",
+      "delete": "11111",
+      "load": "11111",
+      "reorder": "11111",
+      "save": "11111",
+      "test": "11111",
+      "update": "11111"
+    },
+    "extraction": {
+      "after": "11111",
+      "before": "11111",
+      "between": "11111",
+      "regex": "11111"
+    },
+    "fields": {
+      "bodyText": "11111",
+      "fromAddress": "11111",
+      "fromDomain": "11111",
+      "subject": "11111",
+      "toAddress": "11111"
+    },
+    "form": {
+      "action": "11111",
+      "active": "11111",
+      "addCondition": "11111",
+      "aiAllowAssign": "11111",
+      "aiAllowSkip": "11111",
+      "aiInstruction": "11111",
+      "aiInstructionPlaceholder": "11111",
+      "aiUpsell": "11111",
+      "cancel": "11111",
+      "conditions": "11111",
+      "create": "11111",
+      "createTitle": "11111",
+      "description": "11111",
+      "destination": "11111",
+      "destinationPlaceholder": "11111",
+      "editTitle": "11111",
+      "endDelimiter": "11111",
+      "extractFrom": "11111",
+      "extractionTemplate": "11111",
+      "fallbackDestination": "11111",
+      "first": "11111",
+      "last": "11111",
+      "mailboxes": "11111",
+      "mailboxesHint": "11111",
+      "marker": "11111",
+      "markerPlaceholder": "11111",
+      "matchHint": "11111",
+      "name": "11111",
+      "namePlaceholder": "11111",
+      "noMailboxes": "11111",
+      "noMatchFallback": "11111",
+      "noMatchProceed": "11111",
+      "noMatchSkip": "11111",
+      "occurrence": "11111",
+      "onNoMatch": "11111",
+      "pattern": "11111",
+      "regexPlaceholder": "11111",
+      "saving": "11111",
+      "startDelimiter": "11111",
+      "update": "11111",
+      "valuePlaceholder": "11111"
+    },
+    "header": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "help": {
+      "items": {
+        "aliases": "11111",
+        "audit": "11111",
+        "order": "11111",
+        "replies": "11111"
+      },
+      "title": "11111"
+    },
+    "loading": "11111",
+    "menu": {
+      "delete": "11111",
+      "deleting": "11111",
+      "edit": "11111"
+    },
+    "operators": {
+      "contains": "11111",
+      "endsWith": "11111",
+      "equals": "11111",
+      "matchesRegex": "11111",
+      "startsWith": "11111"
+    },
+    "summary": {
+      "aiClassify": "11111",
+      "extractAssign": "11111 {{source}} 11111",
+      "setDestination": "11111",
+      "skip": "11111"
+    },
+    "tester": {
+      "alias": "11111",
+      "aliasAdd": "11111",
+      "aliasAdded": "11111",
+      "aliasAdding": "11111",
+      "aliasClientPlaceholder": "11111",
+      "aliasLabel": "11111 {{value}} 11111",
+      "body": "11111",
+      "clientMatched": "11111 {{source}} 11111",
+      "clientName": "11111",
+      "extracted": "11111",
+      "from": "11111",
+      "noClient": "11111",
+      "outcome": {
+        "assignClient": "11111 {{client}} 11111",
+        "fallback": "11111",
+        "none": "11111",
+        "setDestination": "11111",
+        "skip": "11111"
+      },
+      "run": "11111",
+      "running": "11111",
+      "subject": "11111",
+      "title": "11111",
+      "to": "11111"
     }
   }
 }

@@ -273,5 +273,10 @@
   "uploadHint": "Téléversez des fichiers à partager avec cette tâche",
   "file": "fichier",
   "files": "fichiers",
-  "view": "Voir"
+  "view": "Voir",
+  "common:pagination": {
+    "next": "Suivant",
+    "pageOf": "Page {{current}} sur {{total}}",
+    "previous": "Précédent"
+  }
 }

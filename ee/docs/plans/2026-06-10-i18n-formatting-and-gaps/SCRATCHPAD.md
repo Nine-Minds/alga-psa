@@ -58,6 +58,18 @@
 - **T001 inside-provider half**: not unit-tested (I18nProvider pulls i18next HTTP backend); covered by the null-outside test + app usage. T017 (PrintOptionsDialog render test) skipped — trivial wrapper. T024/T025 are manual dev-stack QA.
 - **Pre-existing test failures (not from P1)**: packages/core — index exports, logger.outputs, deletionMigrations (5-6 tests); packages/ui — Calendar today-button, DeleteEntityDialog ×2, printStylesheet, BoardPicker.keyboard, TreeSelect.contract ×2, command-palette.source (6 files). Verified identical on clean tree at cb6731584f.
 
+## P2 implementation notes (2026-06-10)
+
+- **Extraction**: one-off scanner re-implementation pulled `defaultValue` from each missing-key t() call; 505/551 keys merged mechanically into en (values are byte-identical to what the UI previously rendered — T033 holds by construction). Conflicting defaults for `inboundRules.fields.subject`/`bodyText` resolved to the capitalized field-label variants (3 of 4 usages).
+- **Scanner fixes (find-missing-i18n-keys.cjs)** — needed for exit-0 to be reachable:
+  1. *Plural-aware resolution*: `t('key', { count })` resolves via `key_one`/`key_other`/… in i18next v4; the scanner now accepts CLDR-suffixed variants (e.g. `emailLogs.results`, `quickAdd.tagCreatePartialFailure` already existed as `_one`/`_other` pairs and were false positives).
+  2. *Skip test files*: contract tests assert on `t('…')` source literals (`AdminWebhooksSetup.ui.contract.test.ts` greps for the `security.webhooks.inbound.` prefix; `i18n.contract.test.ts` contains namespace strings) — these aren't runtime calls. Also skip keys ending in '.'.
+- **Dynamic-default keys hand-resolved**: `documents.associatedEntityPicker.*` (4 keys → `{{entityType}}` interpolations), `messages.error.saveAllPartial` (`{{sections}}`), `settings.modHint` (template literal → `{{modKey}}` + KeyboardShortcutsPanel.tsx now passes `modKey`).
+- **header.breadcrumb restructure**: msp/core `header.breadcrumb` was a string (nav aria-label) blocking `header.breadcrumb.dashboard`/`home`. Converted to object `{label, dashboard, home}` in ALL 10 locales (translated label preserved); Header.tsx aria-label now uses `header.breadcrumb.label`.
+- Locale JSON now written with `ensure_ascii=False` — a handful of `\uXXXX` escapes became literal UTF-8 (cosmetic only).
+- Translation pass: 563 keys/locale (505 + hand-resolved + breadcrumb + small pre-existing drift), 7 parallel subagents → /tmp/i18n-backfill/out/<loc>/, merged with placeholder-preservation validation (0 problems). The batch contained no new `_one`/`_other` pairs, so no pl plural expansion was needed.
+- **P2 verification**: find-missing exits 0; validate-translations 0 errors / 8 warnings (the pre-existing pl false positives P4 removes). Billing suite baseline comparison (full run, clean tree vs P2 tree): 158 → 156 failed tests, failed-file set strictly shrank — P2 *fixed* ContractsIntegration T066 (de wizard keys) and InvoicingLocaleSmoke T048 (stale xx pseudo file). InvoicingLocaleSmoke T002 expected-groups list updated for the new `designer` group (2 keys referenced by invoice-designer components). TicketingDashboard.i18n T011 fails pre-existing (source-contract assertion on a file P2 never touched).
+
 ## Decisions
 - (2026-06-10) Formatting stays **purely locale-derived**; the explicit user-facing date-format preference is a separate future effort that layers on top (preference → locale default resolution chain). Decided with user.
 - (2026-06-10) Emails (EJS transactional templates) explicitly out of scope. Decided with user.

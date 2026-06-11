@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "55555",
       "tags": "55555",
       "notes": "55555",
-      "status": "55555"
+      "status": "55555",
+      "phone": "55555"
     },
     "status": {
       "label": "55555",
@@ -615,5 +616,9 @@
       "saveSuccess": "55555",
       "saveFailed": "55555"
     }
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555"
   }
 }

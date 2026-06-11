@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Se impostato, sovrascrive la destinazione del cliente per questo specifico contatto mittente. Priorità: sovrascrittura contatto -> destinazione cliente -> valore predefinito del provider.",
       "tags": "Tag",
       "notes": "Note",
-      "status": "Stato"
+      "status": "Stato",
+      "phone": "Telefono"
     },
     "status": {
       "label": "Stato",
@@ -615,5 +616,9 @@
       "saveSuccess": "Note salvate",
       "saveFailed": "Impossibile salvare le note"
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
   }
 }

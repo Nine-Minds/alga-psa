@@ -149,7 +149,9 @@
       "back": "Atrás",
       "moreActions": "Más acciones",
       "cancel": "Cancelar",
-      "previewPdf": "Vista previa del PDF"
+      "previewPdf": "Vista previa del PDF",
+      "backToQuotes": "Volver a cotizaciones",
+      "backToTemplates": "Volver a plantillas de cotización"
     },
     "headings": {
       "editQuote": "Editar cotización",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Contrato abierto convertido",
       "openConvertedInvoice": "Abrir factura convertida",
       "preview": "Avance",
-      "saveAsTemplate": "Guardar como plantilla"
+      "saveAsTemplate": "Guardar como plantilla",
+      "back": "Atrás"
     },
     "sections": {
       "activityLog": "Registro de actividad",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "Cotización de plantilla"
+      "templateQuote": "Cotización de plantilla",
+      "customItem": "Artículo personalizado",
+      "optional": "Opcional",
+      "recurring": "Recurrente"
     },
     "loading": "Cargando detalles de la cotización...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Cargando vista previa..."
     },
     "table": {
-      "description": "Descripción"
+      "description": "Descripción",
+      "billing": "Facturación",
+      "quantity": "Cant.",
+      "total": "Total",
+      "unitPrice": "Precio unitario"
     },
     "locations": {
       "groupHeading": "Ubicación",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Prestar",
-      "shape": "Forma"
+      "shape": "Forma",
+      "renderFailed": "Error de renderizado.",
+      "shapeFailed": "Error al dar forma a los datos.",
+      "shapingFailed": "Error al dar forma a los datos."
     },
     "tabs": {
       "code": "Código",

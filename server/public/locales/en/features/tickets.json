@@ -164,7 +164,8 @@
     "proceed": "Proceed",
     "export": "Export",
     "reset": "Reset",
-    "importSelected": "Import Selected"
+    "importSelected": "Import Selected",
+    "printOptions": "Print options"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -246,7 +247,10 @@
     "promoteMasterFailed": "Failed to promote master",
     "updateBundleSettingsFailed": "Failed to update bundle settings",
     "assetLoadFailed": "Failed to load asset details",
-    "assetNotFound": "Asset not found"
+    "assetNotFound": "Asset not found",
+    "addCommentFailed": "Failed to add comment",
+    "deleteTimeEntryFailed": "Failed to delete time entry",
+    "timeEntryDeleted": "Time entry deleted"
   },
   "conversation": {
     "comments": "Comments",
@@ -288,7 +292,8 @@
     "inboundChildReplies": "Inbound replies on child tickets (view-only)",
     "childTicket": "Child ticket",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
+    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
+    "replyCommentAriaLabel": "Reply to comment"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -427,7 +432,10 @@
         "title": "Print options",
         "selectedTitle": "Print options ({{count}} selected)",
         "description": "Choose which columns to include when printing tickets."
-      }
+      },
+      "selectedAction": "Print selected ({{count}})",
+      "selectedTitle": "Selected Tickets ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Export selected ({{count}})",
     "exportAction": "Export CSV",
@@ -512,7 +520,9 @@
       "success_one": "{{count}} ticket moved",
       "success_other": "{{count}} tickets moved",
       "partialFailure": "Some tickets could not be moved",
-      "failure": "Failed to move selected tickets"
+      "failure": "Failed to move selected tickets",
+      "confirm": "Move {{count}} tickets",
+      "success": "{{count}} tickets moved"
     },
     "delete": {
       "dialogTitle": "Delete Selected Tickets",
@@ -527,7 +537,9 @@
       "success_one": "{{count}} ticket deleted",
       "success_other": "{{count}} tickets deleted",
       "partialFailure": "Some tickets could not be deleted",
-      "failure": "Failed to delete selected tickets"
+      "failure": "Failed to delete selected tickets",
+      "confirm": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+      "success": "{{count}} tickets deleted"
     },
     "bundle": {
       "dialogTitle": "Bundle Tickets",
@@ -794,7 +806,9 @@
     "openEmailNotificationLogs": "View email notification logs",
     "clipboardDraftMessage": "This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
     "clearDueDate": "Clear due date",
-    "paused": "Paused"
+    "paused": "Paused",
+    "openActivityLog": "View activity log",
+    "resolveLiveConflict": "Resolve live update conflicts before saving your changes."
   },
   "properties": {
     "timeEntry": "Time Entry",
@@ -997,7 +1011,11 @@
       "responseState": "Response State",
       "ticketOrigin": "Ticket Origin",
       "tags": "Tags"
-    }
+    },
+    "appliedFiltersSummary": "(of {{count}} ticket matching applied filters)",
+    "completeMessage": "Successfully exported {{count}} ticket to CSV.",
+    "confirm": "Export {{count}} Ticket",
+    "selectedTicketsSummary": "Exporting {{count}} selected ticket"
   },
   "materials": {
     "title": "Materials",
@@ -1112,7 +1130,9 @@
     "selectedCount_other": "{{count}} categories",
     "excludingCount_one": "excluding {{count}} category",
     "excludingCount_other": "excluding {{count}} categories",
-    "excludingPrefix": "excluding {{name}}"
+    "excludingPrefix": "excluding {{name}}",
+    "excludingCount": "excluding {{count}} category",
+    "selectedCount": "{{count}} categories"
   },
   "navigation": {
     "previousTicket": "Previous ticket",
@@ -1220,7 +1240,8 @@
     }
   },
   "common": {
-    "continueEditing": "Continue Editing"
+    "continueEditing": "Continue Editing",
+    "cancel": "Cancel"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1302,40 @@
     "excludingCount_other": "excluding {{count}} boards",
     "placeholder": "Filter by board",
     "title": "Board Picker",
-    "searchPlaceholder": "Search boards..."
+    "searchPlaceholder": "Search boards...",
+    "excludingCount": "excluding {{count}} boards",
+    "selectedCount": "{{count}} boards",
+    "statusActive": "Active",
+    "statusAll": "All",
+    "statusInactive": "Inactive"
+  },
+  "checklist": {
+    "addFailed": "Failed to add checklist item",
+    "addItem": "Add",
+    "addItemPlaceholder": "Add a checklist item",
+    "applyTemplate": "Apply template",
+    "applyTemplateFailed": "Failed to apply checklist template",
+    "clickToRename": "Click to rename",
+    "deleteFailed": "Failed to delete checklist item",
+    "deleteItem": "Delete item",
+    "empty": "No checklist items yet.",
+    "itemMenu": "Checklist item menu",
+    "loadTemplatesFailed": "Failed to load checklist templates",
+    "loading": "Loading checklist...",
+    "markOptional": "Mark as optional",
+    "markRequired": "Mark as required",
+    "moveDown": "Move down",
+    "moveUp": "Move up",
+    "noTemplates": "No templates available.",
+    "progress": "{{done}} of {{total}} complete",
+    "renameFailed": "Failed to rename checklist item",
+    "reorderFailed": "Failed to reorder checklist items",
+    "requiredBadge": "Required",
+    "templateAlreadyApplied": "This template was already applied to this ticket.",
+    "templateApplied": "Checklist template applied.",
+    "templatesLoading": "Loading templates...",
+    "title": "Checklist",
+    "toggleFailed": "Failed to update checklist item",
+    "updateFailed": "Failed to update checklist item"
   }
 }

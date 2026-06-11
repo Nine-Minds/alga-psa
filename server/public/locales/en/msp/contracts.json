@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} days",
         "ongoing": "Ongoing",
         "renewalTermMonths_one": "{{count}} month",
-        "renewalTermMonths_other": "{{count}} months"
+        "renewalTermMonths_other": "{{count}} months",
+        "noticePeriodDays": "{{count}} day",
+        "renewalTermMonths": "{{count}} month"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Product {{index}}",
       "products": "Products",
       "quantity": "Quantity",
-      "selectProductPlaceholder": "Select a product"
+      "selectProductPlaceholder": "Select a product",
+      "catalogPriceInCurrency": "Catalog price in {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "No default price set. Enter a unit price.",
-      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price."
+      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price.",
+      "noCurrencyPriceEnterUnitPrice": "No {{currency}} price in the catalog. Enter a unit price.",
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit price in {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Hourly Services",
       "selectServicePlaceholder": "Select a service",
       "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours"
+      "setBucketOfHours": "Set bucket of hours",
+      "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter an hourly rate.",
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Set bucket allocation",
       "unitOfMeasure": "Unit of Measure",
       "unitOfMeasureHint": "Choose the unit this service bills on.",
-      "unitOfMeasurePlaceholder": "e.g., GB, API call, user"
+      "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
+      "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter a unit rate.",
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}."
     },
     "summary": {
       "labels": {

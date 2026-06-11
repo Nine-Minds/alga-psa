@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} días",
         "ongoing": "En curso",
         "renewalTermMonths_one": "{{count}} mes",
-        "renewalTermMonths_other": "{{count}} meses"
+        "renewalTermMonths_other": "{{count}} meses",
+        "noticePeriodDays": "{{count}} día",
+        "renewalTermMonths": "{{count}} mes"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Producto {{index}}",
       "products": "Productos",
       "quantity": "Cantidad",
-      "selectProductPlaceholder": "Seleccione un producto"
+      "selectProductPlaceholder": "Seleccione un producto",
+      "catalogPriceInCurrency": "Precio de catálogo en {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "No se ha establecido un precio predeterminado. Ingrese un precio unitario.",
-      "productMissingPrice": "Este producto no tiene precio predeterminado ni anulación. No se puede facturar hasta que ingrese un precio unitario."
+      "productMissingPrice": "Este producto no tiene precio predeterminado ni anulación. No se puede facturar hasta que ingrese un precio unitario.",
+      "noCurrencyPriceEnterUnitPrice": "No hay precio en {{currency}} en el catálogo. Introduzca un precio unitario.",
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca un precio unitario en {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Servicios por hora",
       "selectServicePlaceholder": "Seleccione un servicio",
       "serviceItem": "Servicio {{index}}",
-      "setBucketOfHours": "Establecer bloque de horas"
+      "setBucketOfHours": "Establecer bloque de horas",
+      "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa por hora.",
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "p. ej., 15 minutos: cualquier entrada de tiempo inferior a esto se redondeará hacia arriba",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Establecer asignación del bloque",
       "unitOfMeasure": "Unidad de medida",
       "unitOfMeasureHint": "Elija la unidad en la que se factura este servicio.",
-      "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario"
+      "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario",
+      "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria.",
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}."
     },
     "summary": {
       "labels": {

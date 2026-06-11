@@ -1525,6 +1525,12 @@
         "label": "Indirizzo tenant",
         "description": "L'indirizzo della tua azienda."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Limite del modello"
+    },
+    "dragOverlay": {
+      "component": "Componente"
     }
   }
 }

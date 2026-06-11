@@ -1049,7 +1049,22 @@
       "milestoneCompleted": "Projectmijlpaal voltooid",
       "dayAgo": "1 dag geleden",
       "createTicket": "Ticket aanmaken",
-      "viewProjects": "Projecten bekijken"
+      "viewProjects": "Projecten bekijken",
+      "activeDevices": "Actieve apparaten",
+      "basicSupport": "Basisondersteuning",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Goedemorgen, Alex 👋",
+      "navAppointments": "Afspraken",
+      "navDashboard": "Dashboard",
+      "navDevices": "Mijn apparaten",
+      "navProjects": "Projecten",
+      "navServiceRequests": "Serviceverzoeken",
+      "navTickets": "Tickets",
+      "serviceRequests": "Serviceverzoeken",
+      "upcomingShort": "Aankomend",
+      "upcomingVisits": "Aankomende bezoeken",
+      "welcomeBack": "Welkom terug",
+      "workspaceSection": "Werkruimte"
     },
     "signInPreview": {
       "portalTitle": "Klantenportaal",

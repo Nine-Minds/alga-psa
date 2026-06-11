@@ -28,7 +28,12 @@
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
-      "none": "None"
+      "none": "None",
+      "archived": "Archived",
+      "draft": "Draft",
+      "expired": "Expired",
+      "published": "Published",
+      "terminated": "Terminated"
     },
     "no": "No",
     "yes": "Yes"
@@ -155,8 +160,7 @@
         "description": "Choose which columns to include when printing clients."
       }
     },
-    "shareTooltip": "Print, import and export"
-    ,
+    "shareTooltip": "Print, import and export",
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
     "deletePermissionDenied": "Permission denied: Cannot delete clients."
@@ -248,10 +252,15 @@
       "accountManager": "Account Manager",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deactivates the record without deleting its data.",
-    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active."
+    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active.",
+    "nameAliasAddFailed": "Failed to add alias",
+    "nameAliasAdded": "Alias added",
+    "nameAliasRemoveFailed": "Failed to remove alias",
+    "nameAliasRemoved": "Alias removed",
+    "nameAliases": "Matching aliases",
+    "noNameAliases": "No aliases configured. The client name itself always matches."
   },
   "quickAddClient": {
     "title": "Add New Client",
@@ -418,7 +427,8 @@
     "invalidDate": "Invalid Date",
     "formattingError": "Formatting Error",
     "removeAssignmentTitle": "Remove Contract Line Assignment",
-    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted."
+    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted.",
+    "contracts": "Contracts"
   },
   "clientBillingSchedule": {
     "title": "Billing Schedule",
@@ -522,7 +532,9 @@
     "manualDue": "Manual (due {{date}})",
     "addError": "Failed to add contract to client",
     "deactivateError": "Failed to deactivate contract",
-    "updateError": "Failed to update contract"
+    "updateError": "Failed to update contract",
+    "createContract": "Create Contract",
+    "quickAdd": "Quick Add"
   },
   "clientContractDialog": {
     "assignTitle": "Assign Contract to Client",
@@ -1017,7 +1029,10 @@
   },
   "actions": {
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "print": "Print",
+    "printOptions": "Print options",
+    "printSelected": "Print selected ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1144,52 @@
     "messages": {
       "saveSuccess": "Notes saved",
       "saveFailed": "Failed to save notes"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Download recording",
+      "join": "Join",
+      "noArtifacts": "No recordings or transcripts are available yet.",
+      "recordingArtifact": "Recording",
+      "refreshFailed": "Failed to refresh recordings. Please try again.",
+      "refreshRecordings": "Refresh recordings",
+      "sectionTitle": "Online Meeting",
+      "transcriptArtifact": "Transcript",
+      "viewTranscript": "View transcript"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Add",
+          "addContact": "Select contacts...",
+          "addUser": "Select internal users...",
+          "badge": {
+            "clientLocation": "Client location",
+            "contact": "Contact",
+            "email": "Email",
+            "internal": "Internal"
+          },
+          "duplicateEmail": "That email is already on the attendee list.",
+          "emailPlaceholder": "name@example.com",
+          "empty": "No attendees added yet.",
+          "helper": "Attendees receive a Teams calendar invite from the meeting organizer.",
+          "invalidEmail": "Enter a valid email address.",
+          "label": "Attendees",
+          "remove": "Remove {{name}}",
+          "tabs": {
+            "contacts": "Contacts",
+            "email": "Email",
+            "users": "Users"
+          }
+        },
+        "checkingCapability": "Checking Teams meeting availability...",
+        "createFailed": "Failed to create Teams meeting",
+        "createToggle": "Create Teams meeting",
+        "endRequired": "End time is required to create a Teams meeting",
+        "startRequired": "Start time is required to create a Teams meeting",
+        "unavailable": "Teams meeting creation is not available for this tenant."
+      }
     }
   }
 }

@@ -115,7 +115,8 @@
       "inboundTicketDestinationHelp": "Falls gesetzt, überschreibt dies das Kundenziel für genau diesen Absenderkontakt. Vorrang: Kontaktüberschreibung -> Kundenziel -> Standard des Anbieters.",
       "tags": "Tags",
       "notes": "Notizen",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefon"
     },
     "status": {
       "label": "Status",
@@ -615,5 +616,9 @@
       "saveSuccess": "Notizen gespeichert",
       "saveFailed": "Notizen konnten nicht gespeichert werden"
     }
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen"
   }
 }

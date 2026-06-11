@@ -123,7 +123,27 @@
       "goToPage": "Zur Seite gehen",
       "dismissError": "Aufgabe konnte nicht verworfen werden: {{message}}"
     },
-    "retryLater": "Bitte versuchen Sie es später erneut."
+    "retryLater": "Bitte versuchen Sie es später erneut.",
+    "adHoc": {
+      "endBeforeStart": "Die Endzeit muss nach der Startzeit liegen.",
+      "fields": {
+        "end": "Ende (optional)",
+        "noTime": "Keine Zeit",
+        "notes": "Notizen",
+        "notesPlaceholder": "Notizen hinzufügen…",
+        "start": "Start (optional)",
+        "title": "Titel",
+        "titlePlaceholder": "Titel"
+      },
+      "loadError": "Dieses Element konnte nicht geladen werden. Bitte versuchen Sie es später erneut.",
+      "saveError": "Element konnte nicht gespeichert werden.",
+      "saveSuccess": "Element gespeichert",
+      "statusDone": "Erledigt",
+      "statusOpen": "Offen",
+      "title": "Ad-hoc-Element",
+      "toggleDoneError": "Element konnte nicht aktualisiert werden."
+    },
+    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion."
   },
   "groupedView": {
     "addGroup": "Gruppe hinzufügen",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Zeitplan-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
-        "refreshFailed": "Zeitplan-Aktivitäten konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut."
+        "refreshFailed": "Zeitplan-Aktivitäten konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut.",
+        "addAdHocFailed": "Aktivität konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
       },
       "filterDialog": {
         "title": "Zeitplan-Einträge filtern",
@@ -417,7 +438,13 @@
       "priority": "Priorität",
       "dueDate": "Fälligkeitsdatum",
       "showClosed": "Geschlossene anzeigen",
-      "search": "Suche"
+      "search": "Suche",
+      "client": "Kunde",
+      "dueDateShort": "Fällig",
+      "tags": "Tags",
+      "tagsSelected": "{{count}} Tags",
+      "tasksCompact": "Aufgaben",
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Zeitplan",
@@ -434,10 +461,16 @@
       "search": "Aktivitäten suchen...",
       "searchBoards": "Boards suchen...",
       "searchStatuses": "Status suchen...",
-      "searchProjects": "Projekte suchen..."
+      "searchProjects": "Projekte suchen...",
+      "allClients": "Alle Kunden",
+      "fromDateShort": "Von",
+      "projectTaskTags": "Aufgaben-Tags filtern...",
+      "ticketTags": "Ticket-Tags filtern...",
+      "toDateShort": "Bis"
     },
     "actions": {
-      "reset": "Zurücksetzen"
+      "reset": "Zurücksetzen",
+      "clearClient": "Kundenfilter zurücksetzen"
     },
     "statusClosedSuffix": " (geschlossen)",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "{{count}} Phasen",
       "excludingName": "ohne {{name}}",
       "excludingCount_one": "ohne {{count}}",
-      "excludingCount_other": "ohne {{count}}"
+      "excludingCount_other": "ohne {{count}}",
+      "boards": "{{count}} Boards",
+      "excludingCount": "ohne {{count}}",
+      "phases": "{{count}} Phasen",
+      "projects": "{{count}} Projekte",
+      "statuses": "{{count}} Status"
     }
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen"
   }
 }
