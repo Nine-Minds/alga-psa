@@ -308,7 +308,9 @@ interface StepGoLiveProps {
 
 function StepGoLive({ onDone }: StepGoLiveProps) {
   const [autoSyncStartDate, setAutoSyncStartDate] = React.useState(todayISO);
-  const [enableAutoSync, setEnableAutoSync] = React.useState(true);
+  // Default OFF (plan F004): going live with automatic sync must be an explicit
+  // opt-in, here or on the settings health panel — never a wizard side effect.
+  const [enableAutoSync, setEnableAutoSync] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -364,7 +366,9 @@ function StepGoLive({ onDone }: StepGoLiveProps) {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Runs every 15 minutes when enabled.
+            When enabled, invoices, payments, and credits sync with QuickBooks
+            every 15 minutes starting now. Leave off to review settings first —
+            you can turn it on any time from the QuickBooks settings panel.
           </p>
         </div>
       </div>
