@@ -230,6 +230,51 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
         invoiceId: payload.invoiceId,
         amountDollars
       });
+
+      // ── Detect a silently-unapplied payment ────────────────────────────
+      // When the linked invoice has no open balance on the QBO side, QBO
+      // accepts the create but drops the application line and books the full
+      // amount as unapplied customer credit. The money landed (op stays
+      // done), but a bookkeeper has to reapply it in QBO — surface that.
+      const entity = createdPayment?.Id ? createdPayment : createdPayment?.payment;
+      // UnappliedAmt is the authoritative signal — QBO always computes it on
+      // Payment responses, while Line can be sparse in mocks/partial reads.
+      const unappliedAmt = Number(entity?.UnappliedAmt ?? 0);
+      const responseLines = Array.isArray(entity?.Line) ? entity.Line : [];
+      if (unappliedAmt > 0) {
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_unmapped_payment',
+          entityType: 'invoice_payment',
+          entityId: paymentId,
+          title: 'Pushed payment was not applied to its invoice in QuickBooks',
+          context: {
+            reason: 'pushed_payment_unapplied',
+            alga_payment_id: paymentId,
+            alga_invoice_id: payload.invoiceId,
+            external_payment_id: externalPaymentId,
+            external_invoice_id: invoiceExternalId,
+            amount_cents: payload.amountCents,
+            unapplied_amount: unappliedAmt,
+            message:
+              'QuickBooks accepted the payment but recorded it as unapplied customer credit — ' +
+              'the linked invoice had no open balance. Apply or refund the credit in QuickBooks.',
+            details:
+              `QBO Payment ${externalPaymentId} for invoice ${invoiceExternalId}: ` +
+              `UnappliedAmt=${unappliedAmt}, applicationLines=${responseLines.length}`,
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+        logger.warn('[paymentPushApplier] Pushed payment landed unapplied in QBO', {
+          tenantId: deps.tenantId,
+          paymentId,
+          externalPaymentId,
+          invoiceId: payload.invoiceId,
+          unappliedAmt
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'QBO payment creation failed';
       logger.warn('[paymentPushApplier] Failed to create QBO Payment', {
