@@ -159,9 +159,11 @@ export default function RmmIntegrationsSetup() {
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
   const levelIoFlag = useFeatureFlag('levelio-rmm-integration', { defaultValue: false });
+  const huntressFlag = useFeatureFlag('huntress-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;
   const isTaniumEnabled = !!taniumFlag?.enabled;
   const isLevelIoEnabled = !!levelIoFlag?.enabled;
+  const isHuntressEnabled = !!huntressFlag?.enabled;
 
   const options = useMemo<RmmIntegrationOption[]>(
     () => {
@@ -170,7 +172,8 @@ export default function RmmIntegrationsSetup() {
         enabledFeatureFlags: {
           'tactical-rmm-integration': isTacticalEnabled,
           'tanium-rmm-integration': isTaniumEnabled,
-          'levelio-rmm-integration': isLevelIoEnabled
+          'levelio-rmm-integration': isLevelIoEnabled,
+          'huntress-rmm-integration': isHuntressEnabled
         }
       });
 
@@ -185,7 +188,7 @@ export default function RmmIntegrationsSetup() {
         })
         .filter((option): option is RmmIntegrationOption => option !== null);
     },
-    [isEEAvailable, isTacticalEnabled, isTaniumEnabled, isLevelIoEnabled]
+    [isEEAvailable, isTacticalEnabled, isTaniumEnabled, isLevelIoEnabled, isHuntressEnabled]
   );
 
   const [selected, setSelected] = useState<RmmProvider | null>(

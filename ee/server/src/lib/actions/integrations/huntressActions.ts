@@ -6,6 +6,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -34,12 +35,20 @@ import {
 import type { RmmOrganizationMapping } from '../../../interfaces/rmm.interfaces';
 
 const SETTINGS_PATH = '/msp/settings';
+const HUNTRESS_FEATURE_FLAG = 'huntress-rmm-integration';
 
 function withHuntressAccess<TArgs extends unknown[], TResult>(
   handler: (user: any, context: { tenant: string }, ...args: TArgs) => Promise<TResult>
 ) {
   return withAuth(async (user, context, ...args: TArgs): Promise<TResult> => {
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
+    const flagEnabled = await isFeatureFlagEnabled(HUNTRESS_FEATURE_FLAG, {
+      tenantId: (context as { tenant: string }).tenant,
+      userId: (user as { user_id?: string } | undefined)?.user_id,
+    });
+    if (!flagEnabled) {
+      throw new Error('The Huntress integration is not enabled for this tenant');
+    }
     return handler(user, context as { tenant: string }, ...args);
   });
 }
