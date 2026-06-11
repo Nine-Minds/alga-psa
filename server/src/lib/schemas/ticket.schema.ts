@@ -125,6 +125,8 @@ export const ticketListItemSchema = baseTicketSchema.extend({
 
 export const ticketListFiltersSchema = z.object({
     boardId: z.string().uuid().nullish(),
+    boardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
+    excludeBoardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
     statusId: z.string().optional(),
     priorityId: z.string().optional(),
     categoryId: z.union([
@@ -132,6 +134,8 @@ export const ticketListFiltersSchema = z.object({
         z.literal('no-category'),
         z.literal('all')
     ]).nullish(),
+    categoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
+    excludeCategoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
     clientId: z.string().uuid().nullish(),
     contactId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),

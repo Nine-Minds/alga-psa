@@ -56,7 +56,10 @@ describe('ticketing dashboard i18n wiring contract', () => {
       'dashboard.title',
       'dashboard.addTicket',
       'dashboard.filters.allAssignees',
-      'dashboard.exportDisabledTooltip',
+      // The standalone export button (dashboard.exportDisabledTooltip) was replaced
+      // by the ShareActionsMenu; its chrome keys are pseudo-localized instead.
+      'dashboard.shareTooltip',
+      'dashboard.exportAction',
       'dashboard.drawer.clientLoadFailed',
       'bulk.move.dialogTitle',
       'bulk.delete.dialogTitle',

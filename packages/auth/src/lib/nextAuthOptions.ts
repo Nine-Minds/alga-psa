@@ -1205,11 +1205,18 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
                 const { authenticateUser } = await import('../actions/auth');
+                const {
+                    enforceLoginProtection,
+                    normalizeLoginEmail,
+                    recordLoginFailure,
+                    recordLoginSuccess,
+                } = await import('./security/loginProtection');
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -1237,9 +1244,27 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         return null;
                     }
 
+                    // Brute-force gate: refuse rate-limited attempts and demand a captcha
+                    // after repeated failures, before any credential checking happens.
+                    // Throws CredentialsSignin subclasses (RATE_LIMITED / CAPTCHA_REQUIRED)
+                    // whose codes the login forms read from the signIn() response.
+                    let attemptIp = 'unknown';
+                    try {
+                        attemptIp = (request ? getClientIp(request as any) : 'unknown') || 'unknown';
+                    } catch {
+                        attemptIp = 'unknown';
+                    }
+                    const attemptContext = {
+                        email: normalizeLoginEmail(credentials.email),
+                        ip: attemptIp,
+                    };
+                    await enforceLoginProtection({
+                        ...attemptContext,
+                        captchaToken: typeof credentials.captchaToken === 'string' ? credentials.captchaToken : undefined,
+                    });
+
                     console.log('Attempting to authenticate user:', credentials.email);
                     console.log('user type', credentials.userType);
-                    console.log('next auth secret', process.env.NEXTAUTH_SECRET);
                     const user = await authenticateUser(
                         credentials.email as string,
                         credentials.password as string,
@@ -1251,6 +1276,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     );
                     if (!user) {
                         console.log('Authentication failed: No user returned');
+                        await recordLoginFailure(attemptContext);
                         return null;
                     }
                     if (credentials.userType && user.user_type !== credentials.userType) {
@@ -1348,19 +1374,23 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                             if (!isValid2FA) {
                                 console.log('2FA verification failed: Invalid code');
                                 logger.warn("Invalid 2FA code for email", credentials.email);
+                                // A wrong TOTP code is guessable evidence just like a wrong
+                                // password, so it shares the same failure budget.
+                                await recordLoginFailure(attemptContext);
                                 return null;
                             }
                             console.log('2FA verification successful');
                         }
                     }
 
+                    await recordLoginSuccess(attemptContext);
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
                     const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -1505,7 +1535,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -1795,6 +1825,25 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
             }
 
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
+                }
+            }
+
             // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
             // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
             // - With max 20 connections, pool exhausted instantly with multiple users
@@ -2008,10 +2057,17 @@ export const options: NextAuthConfig = {
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const { authenticateUser } = await import('../actions/auth');
+                const {
+                    enforceLoginProtection,
+                    normalizeLoginEmail,
+                    recordLoginFailure,
+                    recordLoginSuccess,
+                } = await import('./security/loginProtection');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
@@ -2040,6 +2096,23 @@ export const options: NextAuthConfig = {
                         return null;
                     }
 
+                    // Brute-force gate: refuse rate-limited attempts and demand a captcha
+                    // after repeated failures, before any credential checking happens.
+                    let attemptIp = 'unknown';
+                    try {
+                        attemptIp = (request ? getClientIp(request as any) : 'unknown') || 'unknown';
+                    } catch {
+                        attemptIp = 'unknown';
+                    }
+                    const attemptContext = {
+                        email: normalizeLoginEmail(credentials.email),
+                        ip: attemptIp,
+                    };
+                    await enforceLoginProtection({
+                        ...attemptContext,
+                        captchaToken: typeof credentials.captchaToken === 'string' ? credentials.captchaToken : undefined,
+                    });
+
                     console.log('Attempting to authenticate user:', credentials.email);
                     const user = await authenticateUser(
                         credentials.email as string,
@@ -2052,6 +2125,7 @@ export const options: NextAuthConfig = {
                     );
                     if (!user) {
                         console.log('Authentication failed: No user returned');
+                        await recordLoginFailure(attemptContext);
                         return null;
                     }
                     if (credentials.userType && user.user_type !== credentials.userType) {
@@ -2149,19 +2223,23 @@ export const options: NextAuthConfig = {
                             if (!isValid2FA) {
                                 console.log('2FA verification failed: Invalid code');
                                 logger.warn("Invalid 2FA code for email", credentials.email);
+                                // A wrong TOTP code is guessable evidence just like a wrong
+                                // password, so it shares the same failure budget.
+                                await recordLoginFailure(attemptContext);
                                 return null;
                             }
                             console.log('2FA verification successful');
                         }
                     }
 
+                    await recordLoginSuccess(attemptContext);
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
                     const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
+                        image: user.icon || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
                         tenant: user.tenant,
@@ -2304,7 +2382,7 @@ export const options: NextAuthConfig = {
         //                 id: user.user_id.toString(),
         //                 email: user.email,
         //                 username: user.username,
-        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 image: user.icon || '/image/avatar-purple-big.png',
         //                 name: `${user.first_name} ${user.last_name}`,
         //                 proToken: tokenData.access_token,
         //                 tenant: user.tenant,
@@ -2542,6 +2620,25 @@ export const options: NextAuthConfig = {
                 } catch (error) {
                     console.error('[auth] Session revocation check error:', error);
                     // Don't block on session check errors
+                }
+            }
+
+            // Slide the DB session expiry to track the rolling JWT so an active session
+            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
+            if (token.session_id) {
+                const lastExtend = (token.last_session_extend as number) || 0;
+                const nowMs = Date.now();
+                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
+                    try {
+                        await UserSession.extendExpiry(
+                            token.tenant as string,
+                            token.session_id as string,
+                            new Date(nowMs + SESSION_MAX_AGE * 1000),
+                        );
+                        token.last_session_extend = nowMs;
+                    } catch (error) {
+                        console.error('[auth] Failed to extend session expiry:', error);
+                    }
                 }
             }
 

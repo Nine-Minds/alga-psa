@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveProductCode } from '@alga-psa/types';
 
 // ITIL SLA configuration is injected by the composition layer to avoid tickets→sla cross-package violation
 let _configureItilSlaForBoardFn: ((trx: Knex.Transaction, tenant: string, boardId: string) => Promise<{ created: boolean }>) | null = null;
@@ -196,9 +197,17 @@ export class ItilStandardsService {
     if (priorityType === 'itil') {
       await this.copyItilPrioritiesToTenant(trx, tenant, createdBy);
 
-      // Auto-create "ITIL Standard" SLA policy and assign to board
-      // This creates industry-standard SLA targets for each ITIL priority level
-      if (_configureItilSlaForBoardFn) {
+      // SLA is a PSA-only capability. AlgaDesk tenants may use ITIL priorities for
+      // ticket prioritization, but must NOT get an SLA policy auto-created — doing so
+      // would generate SLA warning/breach notifications that AlgaDesk does not support.
+      const tenantRow = await trx('tenants').where({ tenant }).first('product_code');
+      const { productCode } = resolveProductCode(tenantRow?.product_code);
+
+      if (productCode === 'algadesk') {
+        console.log(`[ItilStandardsService] Skipping ITIL Standard SLA auto-config for AlgaDesk tenant ${tenant}`);
+      } else if (_configureItilSlaForBoardFn) {
+        // Auto-create "ITIL Standard" SLA policy and assign to board
+        // This creates industry-standard SLA targets for each ITIL priority level
         const slaResult = await _configureItilSlaForBoardFn(trx, tenant, boardId);
         if (slaResult.created) {
           console.log(`[ItilStandardsService] Auto-created ITIL Standard SLA policy for board ${boardId}`);

@@ -14,6 +14,7 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
 }));
 
 import { drainApplyCreditOps } from './creditApplicationApplier';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the applier bridges to
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 
 const TENANT = 'tenant-applier';

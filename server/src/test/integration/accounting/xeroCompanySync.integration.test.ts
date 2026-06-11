@@ -12,7 +12,7 @@ import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   XeroCompanyAdapter
-} from '@alga-psa/billing/services';
+} from '@alga-psa/billing';
 import { TestContext } from '../../../../test-utils/testContext';
 
 const helpers = TestContext.createHelpers();

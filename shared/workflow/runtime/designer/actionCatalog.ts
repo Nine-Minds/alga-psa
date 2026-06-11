@@ -141,6 +141,15 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     modules: ['crm']
   },
   {
+    groupKey: 'data-store',
+    label: 'Data Store',
+    iconToken: 'data-store',
+    tileKind: 'core-object',
+    description: 'Read and write durable workflow state across runs.',
+    defaultActionId: 'store.get',
+    modules: ['store', 'links']
+  },
+  {
     groupKey: 'transform',
     label: 'Transform',
     iconToken: 'transform',

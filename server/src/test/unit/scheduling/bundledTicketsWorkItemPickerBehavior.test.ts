@@ -19,11 +19,15 @@ describe('bundled ticket selection (static)', () => {
     expect(pickerSrc).toMatch(/master_ticket_number/);
   });
 
-  it('disables bundled tickets in the work item picker list with an explanation', () => {
+  it('renders bundled tickets as selectable with an informational badge', () => {
     const src = readRepoFile(
       'packages/scheduling/src/components/time-management/time-entry/time-sheet/WorkItemList.tsx'
     );
-    expect(src).toMatch(/item\.type\s*===\s*'ticket'\s*&&\s*!!item\.master_ticket_id/);
-    expect(src).toContain('Bundled ticket — log time on the master ticket');
+    // Bundled children stay selectable — no disable gating in the list.
+    expect(src).not.toContain('aria-disabled');
+    expect(src).not.toContain('Bundled ticket — log time on the master ticket');
+    // An informational badge points at the master instead.
+    expect(src).toMatch(/workItemList\.bundledUnder/);
+    expect(src).toContain('Bundled → {{number}}');
   });
 });

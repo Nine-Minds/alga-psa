@@ -120,7 +120,7 @@ describe('bulkLinkHistoricalInvoices', () => {
   ) {
     const fakeRow = {
       id: 'new-id',
-      tenant_id: 'tenant-test',
+      tenant: 'tenant-test',
       integration_type: 'quickbooks_online',
       alga_entity_type: 'invoice',
       alga_entity_id: 'inv-new',

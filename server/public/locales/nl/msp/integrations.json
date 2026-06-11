@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
         "tenantOauthTitle": "Tenant-eigen OAuth-app",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Synchronisatiestatus",
+        "healthCardDescription": "Status en bediening van de QuickBooks-boekhoudsynchronisatie. Wordt elke 15 minuten uitgevoerd.",
+        "lastCycleTitle": "Laatste synchronisatiecyclus",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Voltooid",
+        "lastCycleStats": "Resultaten",
+        "statOpsProcessed": "{{count}} bewerkingen verwerkt",
+        "statDriftFound": "{{count}} afwijkingen",
+        "statPaymentsApplied": "{{count}} betalingen toegepast",
+        "noLastCycle": "Er is nog geen synchronisatiecyclus uitgevoerd.",
+        "nextRunHint": "Wordt automatisch elke 15 minuten uitgevoerd wanneer automatische synchronisatie is ingeschakeld.",
+        "pendingOps": "Openstaande bewerkingen",
+        "erroredOps": "Mislukte bewerkingen",
+        "driftCount": "Afwijkingen",
+        "openExceptions": "Open uitzonderingen",
+        "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
+        "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
+        "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
+        "syncNowButton": "Nu synchroniseren",
+        "syncNowRunning": "Synchroniseren…",
+        "syncNowSuccess": "Synchronisatie voltooid.",
+        "syncNowSkipped": "Synchronisatie overgeslagen: {{reason}}",
+        "syncNowError": "Synchronisatie mislukt: {{error}}",
+        "viewExceptionsLink": "Uitzonderingen bekijken"
       }
     },
     "rmm": {
@@ -1535,63 +1561,84 @@
         },
         "title": "Microsoft Teams",
         "diagnostics": {
-          "title": "Diagnostics & Test Message",
-          "description": "Verify the Teams setup and send a proactive test message to your Teams bot conversation.",
-          "run": "Run diagnostics",
-          "running": "Running...",
-          "sendTest": "Send test message",
-          "sending": "Sending...",
-          "disabled": "Diagnostics and test messages are available after the Teams integration is active.",
-          "completedAt": "Completed {{time}}",
-          "lastSuccess": "Last success",
-          "lastFailure": "Last failure",
-          "noneRecorded": "None recorded",
-          "recommendations": "Recommendations",
+          "title": "Diagnostiek en testbericht",
+          "description": "Controleer de Teams-configuratie en stuur een proactief testbericht naar je Teams-botgesprek.",
+          "run": "Diagnostiek uitvoeren",
+          "running": "Bezig met uitvoeren...",
+          "sendTest": "Testbericht verzenden",
+          "sending": "Bezig met verzenden...",
+          "disabled": "Diagnostiek en testberichten zijn beschikbaar zodra de Teams-integratie actief is.",
+          "completedAt": "Voltooid {{time}}",
+          "lastSuccess": "Laatste succes",
+          "lastFailure": "Laatste fout",
+          "noneRecorded": "Geen geregistreerd",
+          "recommendations": "Aanbevelingen",
           "status": {
-            "pass": "Pass",
-            "warn": "Warn",
-            "fail": "Fail",
-            "skip": "Skip"
+            "pass": "Geslaagd",
+            "warn": "Waarschuwing",
+            "fail": "Mislukt",
+            "skip": "Overgeslagen"
           },
           "errors": {
-            "run": "Failed to run Teams diagnostics",
-            "testMessage": "Failed to send Teams test message"
+            "run": "Teams-diagnostiek kon niet worden uitgevoerd",
+            "testMessage": "Teams-testbericht kon niet worden verzonden"
           },
           "test": {
-            "sent": "Teams test message sent.",
-            "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
-            "integrationInactive": "Activate the Teams integration before sending a test message.",
-            "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
-            "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
-            "missingUserLinkage": "Link your Microsoft account before sending a Teams test message.",
-            "missingConversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "skipped": "Teams test message was skipped."
+            "sent": "Teams-testbericht verzonden.",
+            "failed": "Teams-testbericht mislukt.",
+            "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
+            "integrationInactive": "Activeer de Teams-integratie voordat je een testbericht verzendt.",
+            "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat je een testbericht verzendt.",
+            "botNotConfigured": "Configureer de Teams-botreferenties voordat je een testbericht verzendt.",
+            "missingUserLinkage": "Koppel je Microsoft-account voordat je een Teams-testbericht verzendt.",
+            "missingConversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
-            "integrationStatus": "Teams integration status",
-            "capabilities": "Teams capabilities",
-            "microsoftProfile": "Microsoft profile readiness",
-            "packageMetadata": "Teams package metadata",
-            "botConnector": "Bot connector credentials",
-            "userLinkage": "Admin Microsoft account linkage",
-            "conversationReference": "Admin Teams conversation reference",
-            "recentDeliveryHealth": "Recent Teams delivery health"
+            "addonEntitlement": "Teams-add-on-recht",
+            "integrationStatus": "Status van Teams-integratie",
+            "capabilities": "Teams-mogelijkheden",
+            "microsoftProfile": "Gereedheid van Microsoft-profiel",
+            "recordingPermissions": "Teams-machtigingen voor opname en transcriptie",
+            "packageMetadata": "Teams-pakketmetadata",
+            "botConnector": "Bot-connectorreferenties",
+            "userLinkage": "Microsoft-accountkoppeling van beheerder",
+            "conversationReference": "Teams-gespreksreferentie van beheerder",
+            "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
-            "activate": "Activate the Teams integration in settings.",
-            "capabilities": "Enable personal bot and activity notifications for Teams.",
-            "profile": "Select a ready Microsoft profile for Teams.",
-            "activeProfile": "Select an active Microsoft profile for Teams.",
-            "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
-            "package": "Generate the Teams app package before running end-to-end validation.",
-            "baseUrl": "Regenerate the Teams package with a reachable base URL.",
-            "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
-            "userLinkage": "Link your Microsoft account in your profile settings.",
-            "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
-            "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+            "addon": "Schakel de Microsoft Teams-add-on in voor deze tenant.",
+            "activate": "Activeer de Teams-integratie in de instellingen.",
+            "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
+            "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
+            "activeProfile": "Selecteer een actief Microsoft-profiel voor Teams.",
+            "profileCredentials": "Voltooi de Microsoft-profielreferenties voordat je Teams activeert.",
+            "meetingOrganizer": "Configureer de standaard Teams-vergaderingsorganisator in de Teams-instellingen.",
+            "meetingOrganizerObjectId": "Sla de standaard Teams-vergaderingsorganisator opnieuw op zodat Alga PSA de Microsoft Entra-object-ID kan omzetten.",
+            "package": "Genereer het Teams-app-pakket voordat je de end-to-end-validatie uitvoert.",
+            "baseUrl": "Genereer het Teams-pakket opnieuw met een bereikbare basis-URL.",
+            "botEnv": "Configureer TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID en TEAMS_BOT_APP_PASSWORD.",
+            "userLinkage": "Koppel je Microsoft-account in je profielinstellingen.",
+            "conversationReference": "Open de Alga PSA-bot in Teams en stuur er eerst een willekeurig bericht naartoe, en probeer het daarna opnieuw.",
+            "deliveryFailure": "Bekijk de meest recente Teams-leveringsfout en probeer het opnieuw nadat je de oorzaak hebt verholpen."
+          }
+        },
+        "meetings": {
+          "title": "Onlinevergaderingen en opnamen",
+          "description": "Gebruik één Microsoft-serviceaccount om Teams-vergaderingen te organiseren en te bepalen hoe opnamen worden bewaard.",
+          "organizer": {
+            "label": "Standaard-UPN van vergaderingsorganisator",
+            "placeholder": "scheduler@acme.com",
+            "help": "Bij het opslaan wordt de Microsoft Entra-object-ID die voor Graph-vergaderaanroepen wordt gebruikt, omgezet en opgeslagen.",
+            "resolved": "Omgezette object-ID: {{objectId}}"
+          },
+          "downloadRecordings": {
+            "label": "Opnamen downloaden naar interne opslag",
+            "description": "Indien ingeschakeld worden opname-blobs naar de tenantopslag gekopieerd, naast de geverifieerde Graph-proxy."
+          },
+          "exposeRecordingsInPortal": {
+            "label": "Opnamen en transcripties in het klantportaal weergeven",
+            "description": "Standaard uitgeschakeld; MSP-gebruikers kunnen artefacten nog steeds bekijken via de interactie- en afspraakdetails."
           }
         }
       }

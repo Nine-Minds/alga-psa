@@ -315,7 +315,9 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
       // The export landed, so any earlier export-failure exception is moot.
       await deps.exceptions.resolve('accounting_sync_export_error', 'invoice', op.alga_entity_id);
 
-      // Re-exported drifted invoices are back in agreement.
+      // Re-exported drifted invoices are back in agreement. The deliver step may
+      // already have reset the mapping to synced, so resolve unconditionally —
+      // resolving without an open task is a no-op.
       const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id);
       if (
         mapping &&
@@ -323,8 +325,8 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
           mapping.sync_status === MAPPING_SYNC_STATUS.externalVoided)
       ) {
         await deps.ledger.update(mapping.id, { syncStatus: MAPPING_SYNC_STATUS.synced, touchSyncedAt: true });
-        await deps.exceptions.resolve('accounting_sync_drift', 'invoice', op.alga_entity_id);
       }
+      await deps.exceptions.resolve('accounting_sync_drift', 'invoice', op.alga_entity_id);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'scheduled export failed';

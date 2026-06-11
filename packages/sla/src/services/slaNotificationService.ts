@@ -18,6 +18,7 @@
  */
 
 import { Knex } from 'knex';
+import { registerAfterCommit } from '@alga-psa/db';
 import { SlaNotificationChannel, SlaNotificationType } from '../types';
 import { formatRemainingTime } from './businessHoursCalculator';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
@@ -63,6 +64,7 @@ export interface NotificationResult {
   success: boolean;
   recipientCount: number;
   inAppSent: number;
+  /** Emails queued; the SMTP send runs after the caller's transaction commits. */
   emailSent: number;
   errors: string[];
 }
@@ -507,7 +509,10 @@ async function sendInAppNotification(
 }
 
 /**
- * Send an email notification using the email notification service.
+ * Queue an email notification to send after the caller's transaction commits.
+ * SMTP is network I/O and must never run while the transaction is open (a
+ * slow server would trip idle_in_transaction_session_timeout and roll back
+ * the in-app notifications). A true return means queued, not delivered.
  */
 async function sendEmailNotification(
   trx: Knex.Transaction,
@@ -517,7 +522,8 @@ async function sendEmailNotification(
   data: Record<string, unknown>
 ): Promise<boolean> {
   try {
-    if (!recipient.email) {
+    const emailAddress = recipient.email;
+    if (!emailAddress) {
       return false;
     }
 
@@ -533,18 +539,23 @@ async function sendEmailNotification(
       return false;
     }
 
-    await emailService.sendNotification({
-      tenant,
-      userId: recipient.user_id,
-      subtypeId: subtype.id,
-      emailAddress: recipient.email,
-      templateName,
-      data: data as Record<string, string | number | boolean>
-    });
+    registerAfterCommit(
+      trx,
+      () =>
+        emailService.sendNotification({
+          tenant,
+          userId: recipient.user_id,
+          subtypeId: subtype.id,
+          emailAddress,
+          templateName,
+          data: data as Record<string, string | number | boolean>
+        }),
+      `sla-notification-email ${templateName} user=${recipient.user_id}`
+    );
 
     return true;
   } catch (error) {
-    console.error('Error sending email notification:', error);
+    console.error('Error queueing email notification:', error);
     return false;
   }
 }

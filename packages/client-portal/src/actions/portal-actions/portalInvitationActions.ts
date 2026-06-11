@@ -14,6 +14,7 @@ import type {
   CompleteSetupResult as SharedCompleteSetupResult,
   InvitationHistoryItem as SharedInvitationHistoryItem,
   CreateClientPortalUserParams as SharedCreateClientPortalUserParams,
+  PortalInvitationErrorCode,
 } from '@alga-psa/portal-shared/types';
 
 export interface SendInvitationResult extends SharedSendInvitationResult {}
@@ -24,7 +25,7 @@ export interface CreateClientPortalUserParams extends SharedCreateClientPortalUs
 
 export async function createClientPortalUser(
   params: CreateClientPortalUserParams
-): Promise<{ success: boolean; userId?: string; message?: string; error?: string }> {
+): Promise<{ success: boolean; userId?: string; message?: string; error?: string; errorCode?: PortalInvitationErrorCode }> {
   return createClientPortalUserAction(params);
 }
 
@@ -46,6 +47,6 @@ export async function getPortalInvitations(contactId: string): Promise<Invitatio
 
 export async function revokePortalInvitation(
   invitationId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; errorCode?: PortalInvitationErrorCode }> {
   return revokePortalInvitationAction(invitationId);
 }

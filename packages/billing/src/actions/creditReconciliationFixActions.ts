@@ -9,12 +9,12 @@ import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 /**
  * Create a credit tracking entry for a missing entry
  *
  * @param reportId The ID of the reconciliation report
- * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @returns The resolved report
  */
@@ -22,9 +22,12 @@ export const createMissingCreditTrackingEntry = withAuth(async (
   user,
   { tenant },
   reportId: string,
-  userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+  const userId = user.user_id;
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for creating credit tracking entry');
@@ -88,7 +91,6 @@ export const createMissingCreditTrackingEntry = withAuth(async (
       // Resolve the reconciliation report
       const resolvedReport = await resolveReconciliationReport(
         reportId,
-        userId,
         notes,
         trx
       );
@@ -120,7 +122,6 @@ export const createMissingCreditTrackingEntry = withAuth(async (
  * Update the remaining amount in a credit tracking entry
  *
  * @param reportId The ID of the reconciliation report
- * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @returns The resolved report
  */
@@ -128,9 +129,12 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
   user,
   { tenant },
   reportId: string,
-  userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+  const userId = user.user_id;
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for updating credit tracking remaining amount');
@@ -193,7 +197,6 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
       // Resolve the reconciliation report
       const resolvedReport = await resolveReconciliationReport(
         reportId,
-        userId,
         notes,
         trx
       );
@@ -225,7 +228,6 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
  * Apply a custom credit adjustment
  *
  * @param reportId The ID of the reconciliation report
- * @param userId The ID of the user applying the fix
  * @param notes Notes explaining the reason for the fix
  * @param amount The custom adjustment amount (optional, defaults to the report difference)
  * @returns The resolved report
@@ -234,10 +236,13 @@ export const applyCustomCreditAdjustment = withAuth(async (
   user,
   { tenant },
   reportId: string,
-  userId: string,
   notes: string,
   amount?: number
 ): Promise<ICreditReconciliationReport> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+  const userId = user.user_id;
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for applying credit adjustment');
@@ -360,7 +365,6 @@ export const applyCustomCreditAdjustment = withAuth(async (
  * Mark a reconciliation report as resolved without making any changes
  *
  * @param reportId The ID of the reconciliation report
- * @param userId The ID of the user resolving the report
  * @param notes Notes explaining the reason for not making changes
  * @returns The resolved report
  */
@@ -368,9 +372,12 @@ export const markReportAsResolvedNoAction = withAuth(async (
   user,
   { tenant },
   reportId: string,
-  userId: string,
   notes: string
 ): Promise<ICreditReconciliationReport> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
+  const userId = user.user_id;
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required for resolving reconciliation report');
@@ -451,7 +458,6 @@ export const markReportAsResolvedNoAction = withAuth(async (
  * Apply the appropriate fix based on the fix type
  *
  * @param reportId The ID of the reconciliation report
- * @param userId The ID of the user applying the fix
  * @param fixType The type of fix to apply
  * @param notes Notes explaining the reason for the fix
  * @param customData Additional data for custom fixes
@@ -459,29 +465,28 @@ export const markReportAsResolvedNoAction = withAuth(async (
  */
 export async function applyReconciliationFix(
   reportId: string,
-  userId: string,
   fixType: string,
   notes: string,
   customData?: any
 ): Promise<ICreditReconciliationReport> {
   switch (fixType) {
     case 'create_tracking_entry':
-      return await createMissingCreditTrackingEntry(reportId, userId, notes);
+      return await createMissingCreditTrackingEntry(reportId, notes);
 
     case 'update_remaining_amount':
-      return await updateCreditTrackingRemainingAmount(reportId, userId, notes);
+      return await updateCreditTrackingRemainingAmount(reportId, notes);
 
     case 'apply_adjustment':
-      return await applyCustomCreditAdjustment(reportId, userId, notes);
+      return await applyCustomCreditAdjustment(reportId, notes);
 
     case 'custom_adjustment':
       if (!customData?.amount && customData?.amount !== 0) {
         throw new Error('Custom adjustment amount is required');
       }
-      return await applyCustomCreditAdjustment(reportId, userId, notes, customData.amount);
+      return await applyCustomCreditAdjustment(reportId, notes, customData.amount);
 
     case 'no_action':
-      return await markReportAsResolvedNoAction(reportId, userId, notes);
+      return await markReportAsResolvedNoAction(reportId, notes);
 
     default:
       throw new Error(`Unknown fix type: ${fixType}`);

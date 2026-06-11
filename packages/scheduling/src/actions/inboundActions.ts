@@ -164,21 +164,6 @@ async function assertTimeEntryReferences(args: {
     return;
   }
 
-  if (args.workItemType === 'ticket') {
-    const ticket = await args.trx('tickets')
-      .where({ tenant: args.tenant, ticket_id: args.workItemId })
-      .first('ticket_id', 'master_ticket_id');
-    if (!ticket) {
-      throw new Error(`VALIDATION_ERROR: ticket work_item_id "${args.workItemId}" does not exist`);
-    }
-    if (ticket.master_ticket_id) {
-      throw new Error(
-        'VALIDATION_ERROR: this ticket is bundled; time entries must be added on the master ticket.',
-      );
-    }
-    return;
-  }
-
   const workItem = await args.trx(workItemTable.table)
     .where({ tenant: args.tenant, [workItemTable.idColumn]: args.workItemId })
     .first(workItemTable.idColumn);

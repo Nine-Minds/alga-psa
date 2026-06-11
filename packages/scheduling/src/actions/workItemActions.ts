@@ -33,9 +33,7 @@ export interface DispatchSearchOptions extends BaseSearchOptions {
   filterUnscheduled?: boolean;
 }
 
-export interface PickerSearchOptions extends BaseSearchOptions {
-  isTimesheet?: boolean;
-}
+export interface PickerSearchOptions extends BaseSearchOptions {}
 
 interface SearchResult {
   items: Omit<IExtendedWorkItem, "tenant">[];
@@ -301,7 +299,6 @@ export const searchPickerWorkItems = withAuth(async (
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
-    const isTimesheet = options.isTimesheet || false;
     const availableWorkItemIds = sanitizeWorkItemIdsForUuidColumns(options.availableWorkItemIds);
 
     let ticketsQuery = db('tickets as t')

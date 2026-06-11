@@ -25,6 +25,7 @@ vi.mock('./syncOperationsRepository', () => ({
 }));
 
 import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid, enqueueExternalPaymentPush } from './syncProducers';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the producers bridge to
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getAccountingSyncSettings, resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';

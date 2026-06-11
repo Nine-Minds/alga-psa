@@ -343,6 +343,15 @@
       "@product/chat/ee/*": [
         "../packages/product-chat/ee/*"
       ],
+      "@product/mcp/entry": [
+        "../packages/product-mcp/oss/entry"
+      ],
+      "@product/mcp/ee/entry": [
+        "../packages/product-mcp/ee/entry"
+      ],
+      "@product/mcp/ee/*": [
+        "../packages/product-mcp/ee/*"
+      ],
       "@product/ext-proxy/handler": [
         "../packages/product-ext-proxy/oss/handler"
       ],

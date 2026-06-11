@@ -696,24 +696,78 @@ export default function TaskListView({
     return groups;
   }, [phases, filteredTasks, statuses, statusesByPhase]);
 
-  // Auto-expand phases and statuses that have tasks
+  // Auto-expand phases/statuses. By default we only expand the FIRST phase that
+  // has tasks: rendering every phase's rows at once (each with its own assignee
+  // picker, avatars, etc.) is what makes the list view slow and floods the
+  // network with per-row requests. This mirrors the kanban, which only ever
+  // renders one phase at a time. While a search/filter is active we instead
+  // expand every phase that still has matching tasks, otherwise matches in
+  // later phases would be hidden behind collapsed headers.
+  const hasActiveFilter = Boolean(
+    searchQuery.trim() ||
+    selectedPriorityFilter !== 'all' ||
+    selectedTaskTags.length > 0 ||
+    selectedAgentFilter.length > 0 ||
+    selectedTeamFilter.length > 0 ||
+    includeUnassignedAgents
+  );
+
+  // The first-phase default must apply only once, on initial load. Re-applying
+  // it whenever phaseGroups changes (which happens on every task edit/move/
+  // add/delete) would collapse the view back to the first phase and discard
+  // phases the user has opened. A ref tracks whether we've initialized.
+  const didInitialiseExpansion = useRef(false);
+  // When a filter activates we expand all matching phases; we stash the user's
+  // prior expansion so it can be restored verbatim once the filter clears.
+  const preFilterExpansion = useRef<{ phases: Set<string>; statuses: Set<string> } | null>(null);
+
   useEffect(() => {
-    const phasesWithTasks = new Set<string>();
-    const statusesWithTasks = new Set<string>();
-
-    phaseGroups.forEach(group => {
-      if (group.totalTasks > 0) {
-        phasesWithTasks.add(group.phase.phase_id);
+    const collectGroups = (groups: PhaseGroup[]) => {
+      const phasesToExpand = new Set<string>();
+      const statusesToExpand = new Set<string>();
+      groups.forEach(group => {
+        phasesToExpand.add(group.phase.phase_id);
         group.statusGroups.forEach(statusGroup => {
-          const statusKey = `${group.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
-          statusesWithTasks.add(statusKey);
+          statusesToExpand.add(`${group.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`);
         });
-      }
-    });
+      });
+      return { phasesToExpand, statusesToExpand };
+    };
 
-    setExpandedPhases(phasesWithTasks);
-    setExpandedStatuses(statusesWithTasks);
-  }, [phaseGroups]);
+    const groupsWithTasks = phaseGroups.filter(group => group.totalTasks > 0);
+
+    if (hasActiveFilter) {
+      // Remember what the user had open before we override it, but only on the
+      // transition into a filtered state (not on every keystroke afterwards).
+      if (!preFilterExpansion.current) {
+        preFilterExpansion.current = {
+          phases: new Set(expandedPhases),
+          statuses: new Set(expandedStatuses),
+        };
+      }
+      const { phasesToExpand, statusesToExpand } = collectGroups(groupsWithTasks);
+      setExpandedPhases(phasesToExpand);
+      setExpandedStatuses(statusesToExpand);
+      return;
+    }
+
+    // Filter just cleared: restore whatever the user had open beforehand.
+    if (preFilterExpansion.current) {
+      setExpandedPhases(preFilterExpansion.current.phases);
+      setExpandedStatuses(preFilterExpansion.current.statuses);
+      preFilterExpansion.current = null;
+      return;
+    }
+
+    // First unfiltered render with data: expand only the first phase that has
+    // tasks, then never auto-reset again so user edits don't collapse the view.
+    if (!didInitialiseExpansion.current && groupsWithTasks.length > 0) {
+      const { phasesToExpand, statusesToExpand } = collectGroups(groupsWithTasks.slice(0, 1));
+      setExpandedPhases(phasesToExpand);
+      setExpandedStatuses(statusesToExpand);
+      didInitialiseExpansion.current = true;
+    }
+  }, [phaseGroups, hasActiveFilter]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
@@ -1725,6 +1779,8 @@ export default function TaskListView({
                                                 teams={teams}
                                                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                                                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                                                initialUserAvatarUrls={avatarUrls}
+                                                initialTeamAvatarUrls={teamAvatarUrls}
                                               />
                                             ) : (
                                               (() => {

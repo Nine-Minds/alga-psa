@@ -50,4 +50,3 @@ export default function FolderManager({ open, onClose, currentFolder, onFolderCr
       </DialogContent>
     </Dialog>);
 }
-//# sourceMappingURL=FolderManager.jsx.map

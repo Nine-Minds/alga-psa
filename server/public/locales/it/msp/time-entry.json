@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} utente",
       "additionalUsersOther": "{{name}}, +{{count}} utenti"
     },
-    "bundledTicket": "Biglietto in bundle: registra l'ora sul biglietto principale{{suffix}}.",
+    "bundledUnder": "In bundle → {{number}}",
+    "bundled": "In bundle",
     "pagination": {
       "previous": "Precedente",
       "next": "Successivo",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Impossibile salvare le modifiche",
     "changesSaved": "Modifiche salvate con successo",
     "workItemDeleted": "Elemento di lavoro eliminato con successo"
+  },
+  "bundleNotice": {
+    "withNumber": "Questo ticket è in bundle sotto {{number}}. Il tempo del bundle viene solitamente registrato sul ticket principale.",
+    "withoutNumber": "Questo ticket fa parte di un bundle. Il tempo del bundle viene solitamente registrato sul ticket principale."
   }
 }

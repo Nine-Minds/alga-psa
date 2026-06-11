@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect } from 'vitest';
+import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { setupCommonMocks, createMockUser, mockGetCurrentUser } from '../../../../test-utils/testMocks';
@@ -11,6 +11,39 @@ import {
 } from '@alga-psa/integrations/actions';
 
 const helpers = TestContext.createHelpers();
+
+const authRef = vi.hoisted(() => ({
+  tenantId: '',
+  userId: 'mapping-test-user',
+}));
+
+// The mapping actions authenticate through @alga-psa/auth; inject the test
+// user directly so per-test tenant rotation can't leave a stale session user.
+vi.mock('@alga-psa/auth', () => ({
+  withAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: authRef.userId, tenant: authRef.tenantId, roles: [] },
+        { tenant: authRef.tenantId },
+        ...args
+      ),
+  withOptionalAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: authRef.userId, tenant: authRef.tenantId, roles: [] },
+        { tenant: authRef.tenantId },
+        ...args
+      ),
+  withAuthCheck:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn({ user_id: authRef.userId, tenant: authRef.tenantId, roles: [] }, ...args),
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
+}));
+
 const HOOK_TIMEOUT = 120_000;
 
 describe('Accounting Mapping CRUD integration', () => {
@@ -28,6 +61,13 @@ describe('Accounting Mapping CRUD integration', () => {
 
   beforeEach(async () => {
     ctx = await helpers.beforeEach();
+    authRef.tenantId = ctx.tenantId;
+    authRef.userId = ctx.user.user_id;
+
+    // The mapping actions resolve their connection via @alga-psa/db; pin it to
+    // the test context so they see rows seeded on ctx.db.
+    const algaDbModule = await import('@alga-psa/db');
+    vi.spyOn(algaDbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
     const financeUser = createMockUser('internal', {
       user_id: ctx.user.user_id,
       tenant: ctx.tenantId,

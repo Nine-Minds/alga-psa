@@ -5,6 +5,7 @@ import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSession } from '@alga-psa/auth';
 
 import {
   getQboRedirectUri,
@@ -94,6 +95,23 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!statePayload) {
     logger.warn('[qboOAuth] OAuth state validation failed on callback');
     return createRedirect(FAILURE_PATH, { qbo_error: 'invalid_state' });
+  }
+
+  // Defense in depth on top of the signed state cookie: the callback must be
+  // completed by an authenticated session belonging to the same tenant that
+  // started the flow (mirrors the session-tenant binding added on main).
+  const session = await getSession();
+  const sessionTenant = (session?.user as { tenant?: string } | undefined)?.tenant;
+  if (!sessionTenant) {
+    logger.warn('[qboOAuth] Callback received without an authenticated session');
+    return createRedirect(FAILURE_PATH, { qbo_error: 'session_expired' });
+  }
+  if (sessionTenant !== statePayload.tenantId) {
+    logger.warn('[qboOAuth] Callback state tenant does not match session tenant', {
+      stateTenant: statePayload.tenantId,
+      sessionTenant
+    });
+    return createRedirect(FAILURE_PATH, { qbo_error: 'tenant_mismatch' });
   }
 
   const tenantId = statePayload.tenantId;

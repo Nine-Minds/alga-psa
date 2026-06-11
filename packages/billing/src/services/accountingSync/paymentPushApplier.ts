@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
@@ -65,7 +66,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
   const depositAccountRef = await getDepositAccountRef(deps.knex, deps.tenantId);
 
   for (const op of pending) {
-    const payload = op.payload as RecordPaymentPayload | null;
+    const payload = op.payload as unknown as RecordPaymentPayload | null;
     if (!payload?.invoiceId || !payload?.amountCents || !payload?.referenceNumber) {
       logger.warn('[paymentPushApplier] record_payment op missing payload fields', {
         opId: op.op_id,

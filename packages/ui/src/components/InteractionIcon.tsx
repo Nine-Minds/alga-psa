@@ -49,7 +49,9 @@ export const InteractionIcon = ({
     let iconValue = '';
     
     // Map common type names to icon values
-    if (lowerType.includes('call') || lowerType.includes('phone')) {
+    if (lowerType.includes('online meeting') || lowerType.includes('video')) {
+      iconValue = 'video';
+    } else if (lowerType.includes('call') || lowerType.includes('phone')) {
       iconValue = 'phone';
     } else if (lowerType.includes('email') || lowerType.includes('mail')) {
       iconValue = 'mail';
@@ -59,8 +61,6 @@ export const InteractionIcon = ({
       iconValue = 'file-text';
     } else if (lowerType.includes('task') || lowerType.includes('todo')) {
       iconValue = 'check-square';
-    } else if (lowerType.includes('video')) {
-      iconValue = 'video';
     } else if (lowerType.includes('presentation') || lowerType.includes('demo')) {
       iconValue = 'presentation';
     }

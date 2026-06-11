@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} użytkownik",
       "additionalUsersOther": "{{name}}, +{{count}} użytkowników"
     },
-    "bundledTicket": "Bilet łączony — czas logowania na bilecie głównym{{suffix}}.",
+    "bundledUnder": "W pakiecie → {{number}}",
+    "bundled": "W pakiecie",
     "pagination": {
       "previous": "Wstecz",
       "next": "Dalej",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Nie udało się zapisać zmian",
     "changesSaved": "Zmiany zapisane pomyślnie",
     "workItemDeleted": "Element pracy usunięty pomyślnie"
+  },
+  "bundleNotice": {
+    "withNumber": "Ten bilet jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na bilecie głównym.",
+    "withoutNumber": "Ten bilet jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na bilecie głównym."
   }
 }

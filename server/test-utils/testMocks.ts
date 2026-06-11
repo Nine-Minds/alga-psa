@@ -33,6 +33,34 @@ const permissionCheckRef = vi.hoisted(() => ({
     user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 }));
 
+// Hoisted so the vi.mock('next/headers') factory below can safely reference it.
+// (vi.mock factories are hoisted to the top of the module; referencing a
+// function-local variable from a factory causes "mockHeaders is not defined".)
+const nextHeadersRef = vi.hoisted(() => {
+  const buildHeaders = (tenantId: string) => ({
+    get: (key: string) => (key === 'x-tenant-id' ? tenantId : null),
+    append: () => {},
+    delete: () => {},
+    entries: () => [][Symbol.iterator](),
+    forEach: () => {},
+    has: () => false,
+    keys: () => [][Symbol.iterator](),
+    set: () => {},
+    values: () => [][Symbol.iterator](),
+  });
+  return {
+    tenantId: '11111111-1111-1111-1111-111111111111',
+    current: buildHeaders('11111111-1111-1111-1111-111111111111') as ReturnType<typeof buildHeaders> | null,
+    buildHeaders
+  };
+});
+
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() =>
+    nextHeadersRef.current ?? nextHeadersRef.buildHeaders(nextHeadersRef.tenantId)
+  )
+}));
+
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user)),
   getCurrentUserPermissions: vi.fn(() => Promise.resolve(permissionRef.value))
@@ -58,6 +86,22 @@ vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
     Promise.resolve(permissionCheckRef.fn(user, resource, action))
   )
+}));
+
+// Package actions (billing, integrations, clients, …) import rbac from
+// @alga-psa/auth; route it through the same permissionCheck as the legacy paths.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  )
+}));
+
+// Integration tests have no Redis (none in CI; local creds differ); the real
+// publishers would block on connection retries until tests time out. Tests
+// that assert on publishes can vi.spyOn these mocked functions as usual.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
 /**
@@ -88,9 +132,10 @@ export const createMockHeaders = (tenantId: string = '11111111-1111-1111-1111-11
  */
 export function mockNextHeaders(tenantId?: string) {
   const mockHeaders = createMockHeaders(tenantId);
-  vi.mock('next/headers', () => ({
-    headers: vi.fn(() => mockHeaders)
-  }));
+  // The next/headers module mock is registered once at module scope (see
+  // nextHeadersRef above); here we just swap in the headers instance it returns.
+  nextHeadersRef.tenantId = tenantId ?? '11111111-1111-1111-1111-111111111111';
+  nextHeadersRef.current = mockHeaders as unknown as typeof nextHeadersRef.current;
   return mockHeaders;
 }
 
@@ -120,6 +165,13 @@ export function mockNextAuth(userId: string = 'mock-user-id', tenantId: string =
 export function mockNextCache() {
   vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    // Pass-through: callers get the wrapped function without Next's cache layer.
+    unstable_cache: vi.fn(
+      (fn: (...args: unknown[]) => unknown) =>
+        (...args: unknown[]) =>
+          fn(...args)
+    ),
   }));
 }
 

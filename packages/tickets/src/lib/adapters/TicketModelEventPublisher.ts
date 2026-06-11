@@ -1,7 +1,17 @@
 import type { IEventPublisher } from '@alga-psa/types';
+import type { Knex } from 'knex';
+import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 export class TicketModelEventPublisher implements IEventPublisher {
+  /**
+   * When constructed with the creating transaction, publishes are deferred
+   * until that transaction commits (via registerAfterCommit), so subscribers
+   * never race the still-open creation transaction. Requires the transaction
+   * to be owned by a withTransaction frame.
+   */
+  constructor(private readonly trx?: Knex.Transaction) {}
+
   async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent('TICKET_CREATED', {
       tenantId: data.tenantId,
@@ -62,13 +72,13 @@ export class TicketModelEventPublisher implements IEventPublisher {
   }
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
-    try {
-      const actorUserId =
-        typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
-          ? payload.assignedByUserId
-          : (typeof payload?.userId === 'string' ? payload.userId : undefined);
+    const actorUserId =
+      typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
+        ? payload.assignedByUserId
+        : (typeof payload?.userId === 'string' ? payload.userId : undefined);
 
-      await publishWorkflowEvent({
+    const publish = () =>
+      publishWorkflowEvent({
         eventType: eventType as any,
         payload,
         ctx: {
@@ -76,6 +86,14 @@ export class TicketModelEventPublisher implements IEventPublisher {
           actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
         }
       });
+
+    if (this.trx) {
+      registerAfterCommit(this.trx, publish, `${eventType} ticket=${payload?.ticketId ?? 'unknown'}`);
+      return;
+    }
+
+    try {
+      await publish();
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }

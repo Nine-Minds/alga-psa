@@ -160,7 +160,8 @@
       "additionalUsers": "11111 {{name}} 11111 {{count}} 11111",
       "additionalUsersOther": "11111 {{name}} 11111 {{count}} 11111"
     },
-    "bundledTicket": "11111 {{suffix}} 11111",
+    "bundledUnder": "11111 {{number}} 11111",
+    "bundled": "11111",
     "pagination": {
       "previous": "11111",
       "next": "11111",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "11111",
     "changesSaved": "11111",
     "workItemDeleted": "11111"
+  },
+  "bundleNotice": {
+    "withNumber": "11111 {{number}} 11111",
+    "withoutNumber": "11111"
   }
 }

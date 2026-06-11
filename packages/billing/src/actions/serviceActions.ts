@@ -514,7 +514,11 @@ export const deleteService = withAuth(async (
     _user,
     { tenant },
     serviceId: string
-  ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean } | ActionPermissionError> => {
+    if (!await hasPermission(_user, 'service', 'delete')) {
+      return permissionError('Permission denied: Cannot delete services');
+    }
+
     try {
         const { knex } = await createTenantKnex();
         const existing = await knex('service_catalog')
@@ -785,7 +789,11 @@ export const createServiceType = withAuth(async (
   user,
   { tenant },
   data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'>
-): Promise<IServiceType> => {
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'create')) {
+    return permissionError('Permission denied: Cannot create service types');
+  }
+
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
@@ -807,7 +815,11 @@ export const updateServiceType = withAuth(async (
   { tenant },
   id: string,
   data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
-): Promise<IServiceType> => {
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'update')) {
+    return permissionError('Permission denied: Cannot update service types');
+  }
+
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
@@ -841,7 +853,11 @@ export const getAllServiceTypes = withAuth(async (user, { tenant }): Promise<ISe
   }
 });
 
-export const deleteServiceType = withAuth(async (user, { tenant }, id: string): Promise<void> => {
+export const deleteServiceType = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'delete')) {
+    return permissionError('Permission denied: Cannot delete service types');
+  }
+
   try {
     // ServiceTypeModel is imported at the top of the file
 
@@ -899,7 +915,11 @@ export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
   name: string
-): Promise<IServiceType> => {
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'create')) {
+    return permissionError('Permission denied: Cannot create service types');
+  }
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -966,7 +986,11 @@ export const createServiceTypeInline = withAuth(async (
 /**
  * Update a service type name (inline editing)
  */
-export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType> => {
+export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'update')) {
+    return permissionError('Permission denied: Cannot update service types');
+  }
+
   try {
     // ServiceTypeModel is imported at the top of the file
     const { knex: db } = await createTenantKnex();
@@ -990,7 +1014,11 @@ export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: str
 /**
  * Delete a service type (inline deletion with usage check)
  */
-export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: string): Promise<void> => {
+export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'delete')) {
+    return permissionError('Permission denied: Cannot delete service types');
+  }
+
   // This is the same as deleteServiceType but renamed for clarity
   return deleteServiceType(id);
 });

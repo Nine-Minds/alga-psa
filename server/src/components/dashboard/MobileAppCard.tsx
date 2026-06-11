@@ -44,12 +44,14 @@ function StoreLink({ url, label, qrAlt, qrDataUrl }: StoreLinkProps) {
 interface MobileAppCardProps {
   onDismiss: () => void;
   isDismissing?: boolean;
+  selfHost?: boolean;
 }
 
-export default function MobileAppCard({ onDismiss, isDismissing = false }: MobileAppCardProps) {
+export default function MobileAppCard({ onDismiss, isDismissing = false, selfHost = false }: MobileAppCardProps) {
   const { t } = useTranslation('msp/dashboard');
   const [iosQr, setIosQr] = useState<string | null>(null);
   const [androidQr, setAndroidQr] = useState<string | null>(null);
+  const [connectQr, setConnectQr] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,11 +60,15 @@ export default function MobileAppCard({ onDismiss, isDismissing = false }: Mobil
     Promise.all([
       qrcode.toDataURL(APP_STORE_URL, options),
       qrcode.toDataURL(PLAY_STORE_URL, options),
+      selfHost
+        ? qrcode.toDataURL(`alga://server?url=${encodeURIComponent(window.location.origin)}`, options)
+        : Promise.resolve(null),
     ])
-      .then(([ios, android]) => {
+      .then(([ios, android, connect]) => {
         if (cancelled) return;
         setIosQr(ios);
         setAndroidQr(android);
+        setConnectQr(connect);
       })
       .catch((err) => {
         console.error('Error generating mobile app QR codes:', err);
@@ -71,7 +77,7 @@ export default function MobileAppCard({ onDismiss, isDismissing = false }: Mobil
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selfHost]);
 
   const hideLabel = isDismissing
     ? t('mobileApp.hiding', { defaultValue: 'Hiding...' })
@@ -99,9 +105,14 @@ export default function MobileAppCard({ onDismiss, isDismissing = false }: Mobil
         </h2>
       </div>
       <p className="mb-6 text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-        {t('mobileApp.description', {
-          defaultValue: 'Scan a QR code with your phone to download the Alga PSA mobile app.',
-        })}
+        {selfHost
+          ? t('mobileApp.selfHostDescription', {
+              defaultValue:
+                '1. Scan a store QR code to install the app. 2. In the app, tap "Change server" → "Scan QR code" and scan the "Connect this server" code.',
+            })
+          : t('mobileApp.description', {
+              defaultValue: 'Scan a QR code with your phone to download the Alga PSA mobile app.',
+            })}
       </p>
       <div className="flex flex-wrap items-start justify-center gap-12 py-2">
         <StoreLink
@@ -120,6 +131,30 @@ export default function MobileAppCard({ onDismiss, isDismissing = false }: Mobil
           })}
           qrDataUrl={androidQr}
         />
+        {selfHost ? (
+          <div
+            data-testid="connect-server-qr"
+            className="flex flex-col items-center gap-2 rounded-md border border-slate-200 bg-white p-4"
+          >
+            {connectQr ? (
+              <img
+                src={connectQr}
+                alt={t('mobileApp.connectServerQrAlt', {
+                  defaultValue: 'QR code that connects the AlgaPSA mobile app to this server',
+                })}
+                width={160}
+                height={160}
+                className="h-40 w-40"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : (
+              <div className="h-40 w-40 animate-pulse rounded bg-slate-100" />
+            )}
+            <span className="text-sm font-medium text-slate-900">
+              {t('mobileApp.connectServer', { defaultValue: 'Connect this server' })}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

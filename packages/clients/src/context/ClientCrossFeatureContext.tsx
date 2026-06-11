@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 
 export interface QuickAddTicketRenderProps {
   id?: string;
@@ -68,6 +68,33 @@ export interface ContractQuickAddRenderProps {
   clientId: string;
 }
 
+export interface TeamsMeetingCapability {
+  available: boolean;
+  reason?: string;
+  recordingsAvailable?: boolean;
+  recordingReason?: string;
+}
+
+export interface ScheduleTeamsMeetingFromClientInput {
+  subject: string;
+  startDateTime: string | Date;
+  endDateTime: string | Date;
+  client_id?: string | null;
+  contact_name_id?: string | null;
+  attendees?: Array<{ emailAddress: string; name?: string }>;
+}
+
+export interface ScheduleTeamsMeetingFromClientResult {
+  success: boolean;
+  data?: {
+    interaction_id: string;
+    meeting_id: string;
+    schedule_entry_id: string | null;
+    join_url: string;
+  };
+  error?: string;
+}
+
 export interface ClientCrossFeatureCallbacks {
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;
@@ -77,6 +104,9 @@ export interface ClientCrossFeatureCallbacks {
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;
+  scheduleTeamsMeeting?: (input: ScheduleTeamsMeetingFromClientInput) => Promise<ScheduleTeamsMeetingFromClientResult>;
+  refreshMeetingRecordings?: (meetingId: string) => Promise<IOnlineMeeting>;
   getSlaPolicies: () => Promise<ISlaPolicy[]>;
 }
 
@@ -91,6 +121,10 @@ export function useClientCrossFeature(): ClientCrossFeatureCallbacks {
     );
   }
   return ctx;
+}
+
+export function useOptionalClientCrossFeature(): ClientCrossFeatureCallbacks | null {
+  return useContext(ClientCrossFeatureContext);
 }
 
 export function ClientCrossFeatureProvider({

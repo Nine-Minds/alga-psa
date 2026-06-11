@@ -191,10 +191,13 @@
   "mobileApp": {
     "title": "Download de AlgaPSA mobiele app",
     "description": "Scan een QR-code met je telefoon om de AlgaPSA mobiele app te downloaden.",
+    "selfHostDescription": "1. Scan een store-QR-code om de app te installeren. 2. Tik in de app op \"Change server\" → \"Scan QR code\" en scan de code \"Deze server verbinden\".",
     "appStore": "App Store (iOS)",
     "playStore": "Google Play (Android)",
     "appStoreQrAlt": "QR-code die naar de AlgaPSA-app in de Apple App Store verwijst",
     "playStoreQrAlt": "QR-code die naar de AlgaPSA-app in Google Play verwijst",
+    "connectServer": "Deze server verbinden",
+    "connectServerQrAlt": "QR-code die de AlgaPSA mobiele app met deze server verbindt",
     "hide": "Verbergen",
     "hiding": "Verbergen...",
     "dismissAria": "Mobiele-app-kaart verbergen",

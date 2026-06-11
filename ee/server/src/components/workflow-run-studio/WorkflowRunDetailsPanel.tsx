@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
+import { AlertTriangle, StopCircle, Repeat } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { mapWorkflowServerError } from '../workflow-designer/workflowServerErrors';
 
@@ -28,10 +28,7 @@ import {
   listWorkflowAuditLogsAction,
   listWorkflowRunLogsAction,
   listWorkflowRunStepsAction,
-  requeueWorkflowRunEventWaitAction,
-  replayWorkflowRunAction,
-  resumeWorkflowRunAction,
-  retryWorkflowRunAction
+  replayWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import {
   useFormatWorkflowLogLevel,
@@ -341,10 +338,11 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
   const [selectedStepPath, setSelectedStepPath] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
-    'resume' | 'cancel' | 'retry' | 'replay' | 'requeue' | null
+    'cancel' | 'replay' | null
   >(null);
   const [actionReason, setActionReason] = useState('');
   const [replayPayload, setReplayPayload] = useState<string>('{}');
+  const replayPayloadPristineRef = useRef<string>('{}');
   const [stepStatusFilter, setStepStatusFilter] = useState<string>('all');
   const [stepTypeFilter, setStepTypeFilter] = useState<string>('all');
   const [collapseNested, setCollapseNested] = useState(false);
@@ -516,12 +514,18 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
 
   useEffect(() => {
     if (confirmAction !== 'replay') return;
+    // The fetched input_json may be redacted for display; it is only a preview.
+    // Unless the operator edits it, the replay omits the payload so the server
+    // re-uses the original (unredacted) input.
     const payload = run?.input_json ?? {};
+    let prefill = '{}';
     try {
-      setReplayPayload(JSON.stringify(payload, null, 2));
+      prefill = JSON.stringify(payload, null, 2);
     } catch {
-      setReplayPayload('{}');
+      prefill = '{}';
     }
+    replayPayloadPristineRef.current = prefill;
+    setReplayPayload(prefill);
   }, [confirmAction, run]);
 
   useEffect(() => {
@@ -901,28 +905,12 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
 
   const triggerLabel = formatWorkflowRunTrigger(run?.trigger_type ?? null, run?.event_type ?? null);
   const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
-  const canResume = canAdmin && run?.status === 'WAITING';
   const canCancel = canAdmin && run?.status && !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status);
-  const canRetry = canAdmin && run?.status === 'FAILED';
   const canReplay = canAdmin && !!run;
-  const hasEventWait = waits.some((wait) => wait.wait_type === 'event');
-  const canRequeue = canAdmin && hasEventWait;
-
-  const handleResume = async () => {
-    if (!run) return;
-    if (actionReason.trim().length < 3) {
-      toast.error(reasonTooShortLabel);
-      return;
-    }
-    try {
-      await resumeWorkflowRunAction({ runId: run.run_id, reason: actionReason.trim(), source: 'ui' });
-      toast.success(t('runDetails.toasts.runResumed', { defaultValue: 'Run resumed' }));
-      setConfirmAction(null);
-      fetchDetails();
-    } catch (error) {
-      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.resumeRunFailed', { defaultValue: 'Failed to resume run' })));
-    }
-  };
+  const isQueuedWithoutWorker = run?.status === 'RUNNING'
+    && steps.length === 0
+    && !!run?.started_at
+    && Date.now() - new Date(run.started_at).getTime() > 60_000;
 
   const handleCancel = async () => {
     if (!run) return;
@@ -958,74 +946,44 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
     }
   };
 
-  const handleRetry = async () => {
-    if (!run) return;
-    if (actionReason.trim().length < 3) {
-      toast.error(reasonTooShortLabel);
-      return;
-    }
-    try {
-      await retryWorkflowRunAction({ runId: run.run_id, reason: actionReason.trim(), source: 'ui' });
-      toast.success(t('runDetails.toasts.runRetryStarted', { defaultValue: 'Run retry started' }));
-      setConfirmAction(null);
-      fetchDetails();
-    } catch (error) {
-      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.retryRunFailed', { defaultValue: 'Failed to retry run' })));
-    }
-  };
-
   const handleReplay = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
       toast.error(reasonTooShortLabel);
       return;
     }
-    let parsedPayload: Record<string, unknown> = {};
-    try {
-      parsedPayload = replayPayload ? JSON.parse(replayPayload) : {};
-    } catch (error) {
-      toast.error(
-        t('runDetails.toasts.replayPayloadInvalid', {
-          defaultValue: 'Replay payload must be valid JSON.',
-        })
-      );
-      return;
+    const payloadEdited = replayPayload !== replayPayloadPristineRef.current;
+    let payloadOverride: Record<string, unknown> | undefined;
+    if (payloadEdited) {
+      try {
+        payloadOverride = replayPayload ? JSON.parse(replayPayload) : {};
+      } catch (error) {
+        toast.error(
+          t('runDetails.toasts.replayPayloadInvalid', {
+            defaultValue: 'Replay payload must be valid JSON.',
+          })
+        );
+        return;
+      }
     }
 
     try {
-      await replayWorkflowRunAction({
+      const result = await replayWorkflowRunAction({
         runId: run.run_id,
         reason: actionReason.trim(),
-        payload: parsedPayload,
+        ...(payloadOverride !== undefined ? { payload: payloadOverride } : {}),
         source: 'ui'
       });
       toast.success(t('runDetails.toasts.runReplayStarted', { defaultValue: 'Run replay started' }));
       setConfirmAction(null);
+      const newRunId = (result as { runId?: string } | undefined)?.runId;
+      if (newRunId) {
+        window.location.assign(`/msp/workflows/runs/${newRunId}`);
+        return;
+      }
       fetchDetails();
     } catch (error) {
       toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.replayRunFailed', { defaultValue: 'Failed to replay run' })));
-    }
-  };
-
-  const handleRequeue = async () => {
-    if (!run) return;
-    if (actionReason.trim().length < 3) {
-      toast.error(reasonTooShortLabel);
-      return;
-    }
-    try {
-      await requeueWorkflowRunEventWaitAction({
-        runId: run.run_id,
-        reason: actionReason.trim(),
-        source: 'ui'
-      });
-      toast.success(t('runDetails.toasts.eventWaitRequeued', { defaultValue: 'Event wait requeued' }));
-      setConfirmAction(null);
-      fetchDetails();
-    } catch (error) {
-      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.requeueEventWaitFailed', {
-              defaultValue: 'Failed to requeue event wait',
-            })));
     }
   };
 
@@ -1086,12 +1044,6 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             )}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[rgb(var(--color-border-200))] pt-3">
-            {canResume && (
-              <Button id="workflow-run-resume" variant="outline" size="sm" onClick={() => setConfirmAction('resume')}>
-                <Play className="h-4 w-4 mr-2" />
-                {t('runDetails.actions.resume', { defaultValue: 'Resume' })}
-              </Button>
-            )}
             {canCancel && (
               <Button id="workflow-run-cancel" variant="outline" size="sm" onClick={() => setConfirmAction('cancel')}>
                 <StopCircle className="h-4 w-4 mr-2" />
@@ -1103,22 +1055,10 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
                 {t('runDetails.actions.export', { defaultValue: 'Export' })}
               </Button>
             )}
-            {canRetry && (
-              <Button id="workflow-run-retry" variant="outline" size="sm" onClick={() => setConfirmAction('retry')}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                {t('runDetails.actions.retry', { defaultValue: 'Retry' })}
-              </Button>
-            )}
             {canReplay && (
               <Button id="workflow-run-replay" variant="outline" size="sm" onClick={() => setConfirmAction('replay')}>
                 <Repeat className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.replay', { defaultValue: 'Replay' })}
-              </Button>
-            )}
-            {canRequeue && (
-              <Button id="workflow-run-requeue" variant="outline" size="sm" onClick={() => setConfirmAction('requeue')}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                {t('runDetails.actions.requeueEvent', { defaultValue: 'Requeue Event' })}
               </Button>
             )}
             {onClose && (
@@ -1128,6 +1068,23 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             )}
           </div>
         </div>
+
+        {isQueuedWithoutWorker && (
+          <div
+            id="workflow-run-queued-warning"
+            className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+          >
+            <div className="font-semibold">
+              {t('runDetails.queuedWarning.title', { defaultValue: 'Queued — waiting for a workflow worker' })}
+            </div>
+            <div className="text-xs text-amber-900">
+              {t('runDetails.queuedWarning.description', {
+                defaultValue:
+                  'This run started over a minute ago but no steps have executed yet. Check that the workflow worker service is running and connected to Temporal.',
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
@@ -1788,28 +1745,6 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
       )}
 
       <ConfirmationDialog
-        id="workflow-run-resume-confirm"
-        isOpen={confirmAction === 'resume'}
-        title={t('runDetails.dialogs.resumeTitle', { defaultValue: 'Resume Workflow Run' })}
-        message={(
-          <div className="space-y-3">
-            <p>{t('runDetails.dialogs.resumeMessage', { defaultValue: 'Resume this workflow run now?' })}</p>
-            <TextArea
-              id="workflow-run-resume-reason"
-              label={reasonLabel}
-              value={actionReason}
-              onChange={(event) => setActionReason(event.target.value)}
-              placeholder={t('runDetails.dialogs.resumeReasonPlaceholder', {
-                defaultValue: 'Provide a reason for resuming',
-              })}
-            />
-          </div>
-        )}
-        confirmLabel={t('runDetails.actions.resume', { defaultValue: 'Resume' })}
-        onConfirm={handleResume}
-        onClose={() => setConfirmAction(null)}
-      />
-      <ConfirmationDialog
         id="workflow-run-cancel-confirm"
         isOpen={confirmAction === 'cancel'}
         title={t('runDetails.dialogs.cancelTitle', { defaultValue: 'Cancel Workflow Run' })}
@@ -1833,32 +1768,6 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
         )}
         confirmLabel={t('runDetails.dialogs.cancelConfirm', { defaultValue: 'Cancel run' })}
         onConfirm={handleCancel}
-        onClose={() => setConfirmAction(null)}
-      />
-      <ConfirmationDialog
-        id="workflow-run-retry-confirm"
-        isOpen={confirmAction === 'retry'}
-        title={t('runDetails.dialogs.retryTitle', { defaultValue: 'Retry Workflow Run' })}
-        message={(
-          <div className="space-y-3">
-            <p>
-              {t('runDetails.dialogs.retryMessage', {
-                defaultValue: 'Retry this run from the last failed step?',
-              })}
-            </p>
-            <TextArea
-              id="workflow-run-retry-reason"
-              label={reasonLabel}
-              value={actionReason}
-              onChange={(event) => setActionReason(event.target.value)}
-              placeholder={t('runDetails.dialogs.retryReasonPlaceholder', {
-                defaultValue: 'Provide a reason for retrying',
-              })}
-            />
-          </div>
-        )}
-        confirmLabel={t('runDetails.dialogs.retryConfirm', { defaultValue: 'Retry run' })}
-        onConfirm={handleRetry}
         onClose={() => setConfirmAction(null)}
       />
       <ConfirmationDialog
@@ -1894,32 +1803,6 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
         )}
         confirmLabel={t('runDetails.dialogs.replayConfirm', { defaultValue: 'Replay run' })}
         onConfirm={handleReplay}
-        onClose={() => setConfirmAction(null)}
-      />
-      <ConfirmationDialog
-        id="workflow-run-requeue-confirm"
-        isOpen={confirmAction === 'requeue'}
-        title={t('runDetails.dialogs.requeueTitle', { defaultValue: 'Requeue Event Wait' })}
-        message={(
-          <div className="space-y-3">
-            <p>
-              {t('runDetails.dialogs.requeueMessage', {
-                defaultValue: 'Requeue the most recent event wait for this run?',
-              })}
-            </p>
-            <TextArea
-              id="workflow-run-requeue-reason"
-              label={reasonLabel}
-              value={actionReason}
-              onChange={(event) => setActionReason(event.target.value)}
-              placeholder={t('runDetails.dialogs.requeueReasonPlaceholder', {
-                defaultValue: 'Provide a reason for requeuing',
-              })}
-            />
-          </div>
-        )}
-        confirmLabel={t('runDetails.dialogs.requeueConfirm', { defaultValue: 'Requeue wait' })}
-        onConfirm={handleRequeue}
         onClose={() => setConfirmAction(null)}
       />
     </div>

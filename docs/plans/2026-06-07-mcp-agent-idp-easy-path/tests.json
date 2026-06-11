@@ -1,0 +1,12 @@
+[
+  { "id": "T001", "implemented": true, "featureIds": ["F002"], "description": "OIDC discovery against the REAL Google well-known doc returns issuer=accounts.google.com + a jwks_uri (mcpIdpPresets.test.ts)" },
+  { "id": "T002", "implemented": true, "featureIds": ["F002"], "description": "OIDC discovery against the REAL Microsoft well-known (common) returns the v2.0 issuer + jwks_uri (mcpIdpPresets.test.ts)" },
+  { "id": "T003", "implemented": true, "featureIds": ["F003", "F004"], "description": "Preset resolution: microsoft + tenant id -> correct v2.0 issuer + discovered JWKS + default subject_claim azp; google -> fixed issuer + well-known JWKS + sub (mcpIdpPresets.test.ts)" },
+  { "id": "T004", "implemented": false, "featureIds": ["F001", "F004", "F005"], "description": "addTrustedIdp via the microsoft preset stores resolved issuer/jwks/subject_claim and kind='microsoft' (DB-backed; live-verified manually, not yet automated)" },
+  { "id": "T005", "implemented": true, "featureIds": ["F003", "F004", "F012"], "description": "Mock-IdP round-trip: a real RS256 token + local JWKS validates through authenticateAgentToken and resolves the bound agent; subject taken from the configured claim (mcpAgentTokenValidation.test.ts). DB dispatch itself is exercised by the live synthetic drive." },
+  { "id": "T006", "implemented": false, "featureIds": ["F006", "F007"], "description": "Admin UI happy path: pick Microsoft, enter tenant id, save -> issuer/JWKS auto-fill, the IdP appears in the list (live-verified in-browser)" },
+  { "id": "T007", "implemented": false, "featureIds": ["F008", "F009"], "description": "Reuse: a tenant with an existing Microsoft connection sees a pre-filled Entra tenant id suggestion (live-verified in-browser)" },
+  { "id": "T008", "implemented": true, "featureIds": ["F011", "F012", "F013"], "description": "Hosted built-in: validates with no registered row and skips the tenant match (mcpAgentTokenValidation.test.ts); PRM advertising built-ins live-verified via curl" },
+  { "id": "T009", "implemented": true, "featureIds": ["F004"], "description": "Regression: 'custom' kind still works with raw issuer/jwks/audience/claim, no discovery (mcpIdpPresets.test.ts)" },
+  { "id": "T010", "implemented": true, "featureIds": ["F015", "F016"], "description": "Subject-claim: Microsoft preset defaults to azp (mcpIdpPresets.test.ts); duplicate (issuer, subject) returns a friendly 409 (live-verified end-to-end via the API)" }
+]

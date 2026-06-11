@@ -385,41 +385,37 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         .insert({
           tenant: context.tenantId,
           priority_name: 'Medium',
-          priority_order: 1
+          order_number: 1,
+          created_by: context.userId
         })
         .returning('priority_id');
       testPriorityId = priorityResult[0].priority_id;
 
-      const categoryResult = await context.db('ticket_categories')
+      // Ticket categories live in `categories` (not the non-existent
+      // `ticket_categories`); created_by and display_order are NOT NULL.
+      const categoryResult = await context.db('categories')
         .insert({
           tenant: context.tenantId,
-          category_name: 'Test Category'
+          category_name: 'Test Category',
+          board_id: testBoardId,
+          created_by: context.userId,
+          display_order: 0
         })
         .returning('category_id');
       testCategoryId = categoryResult[0].category_id;
 
-      // Create a channel for tickets
-      const channelResult = await context.db('channels')
-        .insert({
-          tenant: context.tenantId,
-          channel_name: 'Email',
-          is_inactive: false
-        })
-        .returning('channel_id');
-      const testChannelId = channelResult[0].channel_id;
-
-      // Create a test ticket
+      // Create a test ticket (board_id replaces the former channel_id;
+      // client_id replaces company_id).
       const ticketResult = await context.db('tickets')
         .insert({
           tenant: context.tenantId,
           ticket_number: 'TEST-001',
           title: 'Test Ticket',
           board_id: testBoardId,
-          company_id: context.clientId,
+          client_id: context.clientId,
           status_id: testStatusId,
           priority_id: testPriorityId,
           category_id: testCategoryId,
-          channel_id: testChannelId,
           entered_by: context.userId,
           response_state: 'not_set'
         })
@@ -567,16 +563,10 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         ticket_number: 'TEST-001-B',
         title: 'Second Board Ticket',
         board_id: secondBoardId,
-        company_id: context.clientId,
+        client_id: context.clientId,
         status_id: secondStatusId,
         priority_id: testPriorityId,
         category_id: testCategoryId,
-        channel_id: (
-          await context.db('channels')
-            .select('channel_id')
-            .where({ tenant: context.tenantId })
-            .first()
-        )!.channel_id,
         entered_by: context.userId,
         response_state: 'not_set'
       });
@@ -606,27 +596,24 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         .insert({
           tenant: context.tenantId,
           priority_name: 'High',
-          priority_order: 1
+          order_number: 1,
+          created_by: context.userId
         })
         .returning('priority_id');
       testPriorityId = priorityResult[0].priority_id;
 
-      const categoryResult = await context.db('ticket_categories')
+      // Ticket categories live in `categories` (not the non-existent
+      // `ticket_categories`); created_by and display_order are NOT NULL.
+      const categoryResult = await context.db('categories')
         .insert({
           tenant: context.tenantId,
-          category_name: 'Support Category'
+          category_name: 'Support Category',
+          board_id: testBoardId,
+          created_by: context.userId,
+          display_order: 0
         })
         .returning('category_id');
       testCategoryId = categoryResult[0].category_id;
-
-      const channelResult = await context.db('channels')
-        .insert({
-          tenant: context.tenantId,
-          channel_name: 'Phone',
-          is_inactive: false
-        })
-        .returning('channel_id');
-      const testChannelId = channelResult[0].channel_id;
 
       const ticketResult = await context.db('tickets')
         .insert({
@@ -634,11 +621,10 @@ describe('SLA Pause Config Actions Integration Tests', () => {
           ticket_number: 'TEST-002',
           title: 'Combined Test Ticket',
           board_id: testBoardId,
-          company_id: context.clientId,
+          client_id: context.clientId,
           status_id: testStatusId,
           priority_id: testPriorityId,
           category_id: testCategoryId,
-          channel_id: testChannelId,
           entered_by: context.userId,
           response_state: 'not_set'
         })

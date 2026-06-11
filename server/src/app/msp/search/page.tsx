@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import {
   searchAppAction,
   type SearchAppResult,
@@ -7,6 +8,10 @@ import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import SearchPageClient from './SearchPageClient';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Search',
+};
 
 interface SearchPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

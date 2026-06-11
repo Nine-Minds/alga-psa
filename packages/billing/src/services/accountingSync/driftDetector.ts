@@ -42,7 +42,16 @@ export async function applyExternalDocumentChange(
 
   const metadata = mapping.metadata ?? {};
 
-  if (change.deleted) {
+  // QBO voids arrive as plain updates (TotalAmt 0 + PrivateNote "Voided"),
+  // not as CDC-deleted entities — treat them as external voids, not drift.
+  const payload = change.payload as { TotalAmt?: unknown; PrivateNote?: unknown } | undefined;
+  const looksVoided =
+    payload != null &&
+    Number(payload.TotalAmt) === 0 &&
+    typeof payload.PrivateNote === 'string' &&
+    /voided/i.test(payload.PrivateNote);
+
+  if (change.deleted || looksVoided) {
     if (
       mapping.sync_status === MAPPING_SYNC_STATUS.externalVoided ||
       mapping.sync_status === MAPPING_SYNC_STATUS.voided

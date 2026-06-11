@@ -10,10 +10,12 @@ import type {
   ActivityTaskEditRenderProps,
   ActivityEntryPopupRenderProps,
   ActivityTimeEntryDialogRenderProps,
+  ActivityConvertAdHocRenderProps,
 } from '@alga-psa/ui/context';
 
 // Ticket imports
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 // Client imports
@@ -21,6 +23,7 @@ import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
+import ConvertAdHocToProjectTaskDialog from '@alga-psa/projects/components/ConvertAdHocToProjectTaskDialog';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
 import { getProjects, getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 
@@ -33,11 +36,18 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 // Document imports
 import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
 
+// Workflow-task (EE-only) cross-feature members. Resolves to a CE stub that supplies
+// nothing, and in the EE app build to the real TaskForm + task-inbox actions. Keeping
+// this behind the alias is what lets msp-composition stay CE-safe (no @alga-psa/workflows).
+import { getWorkflowTaskCrossFeatureMembers } from '@alga-psa/user-activities/client/workflow-tasks';
+
 export function MspActivityCrossFeatureProvider({ children }: { children: ReactNode }) {
   const renderTicketDetailsRef = useRef<(props: ActivityTicketDetailsRenderProps) => ReactNode>(null);
   const renderTaskEditRef = useRef<(props: ActivityTaskEditRenderProps) => ReactNode>(null);
   const renderEntryPopupRef = useRef<(props: ActivityEntryPopupRenderProps) => ReactNode>(null);
   const renderTimeEntryDialogRef = useRef<(props: ActivityTimeEntryDialogRenderProps) => ReactNode>(null);
+  const renderConvertAdHocToTicketRef = useRef<(props: ActivityConvertAdHocRenderProps) => ReactNode>(null);
+  const renderConvertAdHocToProjectTaskRef = useRef<(props: ActivityConvertAdHocRenderProps) => ReactNode>(null);
 
   renderTicketDetailsRef.current = (props: ActivityTicketDetailsRenderProps) => {
     const d = props.consolidatedData;
@@ -110,8 +120,43 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
     />
   );
 
+  renderConvertAdHocToTicketRef.current = (props: ActivityConvertAdHocRenderProps) => (
+    <QuickAddTicket
+      open
+      onOpenChange={(isOpen) => {
+        if (!isOpen) props.onClose();
+      }}
+      onTicketAdded={() => {
+        void props.onConverted();
+        props.onClose();
+      }}
+      prefilledTitle={props.title}
+      prefilledDescription={props.description}
+      prefilledAssignedTo={props.assignedTo ?? undefined}
+    />
+  );
+
+  renderConvertAdHocToProjectTaskRef.current = (props: ActivityConvertAdHocRenderProps) => (
+    <ConvertAdHocToProjectTaskDialog
+      isOpen
+      onClose={props.onClose}
+      title={props.title}
+      description={props.description}
+      assignedTo={props.assignedTo}
+      onConverted={props.onConverted}
+    />
+  );
+
   const renderTicketDetails = useCallback(
     (props: ActivityTicketDetailsRenderProps) => renderTicketDetailsRef.current!(props),
+    []
+  );
+  const renderConvertAdHocToTicket = useCallback(
+    (props: ActivityConvertAdHocRenderProps) => renderConvertAdHocToTicketRef.current!(props),
+    []
+  );
+  const renderConvertAdHocToProjectTask = useCallback(
+    (props: ActivityConvertAdHocRenderProps) => renderConvertAdHocToProjectTaskRef.current!(props),
     []
   );
   const renderTaskEdit = useCallback(
@@ -127,12 +172,18 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
     []
   );
 
+  // EE-only workflow-task members (getTaskDetails/dismiss/hide/unhide/renderWorkflowTaskForm).
+  // Empty object in CE; real implementations in EE via the build-aliased import.
+  const workflowTaskMembers = useMemo(() => getWorkflowTaskCrossFeatureMembers(), []);
+
   const value = useMemo<ActivityCrossFeatureCallbacks>(
     () => ({
       renderTicketDetails,
       renderTaskEdit,
       renderEntryPopup,
       renderTimeEntryDialog,
+      renderConvertAdHocToTicket,
+      renderConvertAdHocToProjectTask,
       getConsolidatedTicketData,
       getTaskWithDetails,
       getScheduleEntries,
@@ -144,8 +195,9 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       getProjectsWithPhases,
       getAllClients,
       getAllContacts,
+      ...workflowTaskMembers,
     }),
-    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog]
+    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, workflowTaskMembers]
   );
 
   return (

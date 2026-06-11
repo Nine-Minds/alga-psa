@@ -352,7 +352,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const syncStatus = syncStatuses[record.invoice_id];
         if (!syncStatus) return null;
-        return <InvoiceSyncBadge status={syncStatus} />;
+        return <InvoiceSyncBadge status={syncStatus} environment={syncStatus.environment} />;
       },
     }]),
     {

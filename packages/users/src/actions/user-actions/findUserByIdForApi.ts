@@ -7,9 +7,9 @@
 
 import { Knex } from 'knex';
 import { getConnection, runWithTenant } from '@alga-psa/db';
-import { IUserWithRoles } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
+import { API_USER_CONTEXT_COLUMNS, type SafeApiUser } from '../../services/userResponseSanitizer';
 
 /**
  * Find a user by ID within a specific tenant context
@@ -18,7 +18,7 @@ import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 export async function findUserByIdForApi(
   userId: string, 
   tenantId: string
-): Promise<IUserWithRoles | null> {
+): Promise<SafeApiUser | null> {
   try {
     return await runWithTenant(tenantId, async () => {
       const knex = await getConnection(tenantId);
@@ -30,6 +30,7 @@ export async function findUserByIdForApi(
           tenant: tenantId,
           is_inactive: false
         })
+        .select(API_USER_CONTEXT_COLUMNS)
         .first();
 
       if (!user) {
@@ -38,7 +39,7 @@ export async function findUserByIdForApi(
       }
 
       // Get user roles
-      const roles = await User.getUserRoles(knex, userId);
+      const roles = await User.getUserRoles(knex, userId, tenantId);
 
       // Get avatar URL
       const avatarUrl = await getUserAvatarUrl(userId, tenantId);

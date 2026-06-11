@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import { MAPPING_SYNC_STATUS } from './accountingSync.types';

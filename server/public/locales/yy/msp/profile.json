@@ -134,7 +134,18 @@
         "noUsers": "55555 {{type}} 55555",
         "inactiveHidden": "55555"
       },
-      "inactiveTag": "55555"
+      "inactiveTag": "55555",
+      "messages": {
+        "success": {
+          "roleAssigned": "55555",
+          "roleRemoved": "55555"
+        },
+        "error": {
+          "assignFailed": "55555",
+          "removeFailed": "55555",
+          "permissionDenied": "55555"
+        }
+      }
     },
     "sessions": {
       "title": "55555",

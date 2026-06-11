@@ -21,6 +21,11 @@ export interface AuthorizationSubject {
   managedUserIds?: string[];
   portfolioClientIds?: string[];
   apiKeyId?: string | null;
+  // MCP agent identity (Phase 2). When subjectType === 'agent', this principal is
+  // a provisioned agent; agentId identifies it for attribution/audit. RBAC is
+  // enforced via the agent's backing internal user (so userId/roleIds still apply).
+  agentId?: string | null;
+  subjectType?: 'user' | 'agent';
 }
 
 export interface AuthorizationResourceRef {

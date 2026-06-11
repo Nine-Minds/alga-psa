@@ -47,6 +47,12 @@
           "microphonePermission": false
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AlgaPSA to use the camera to capture photos for tickets and scan your server's connection QR code."
+        }
+      ],
       "expo-document-picker",
       "expo-web-browser",
       "expo-apple-authentication",

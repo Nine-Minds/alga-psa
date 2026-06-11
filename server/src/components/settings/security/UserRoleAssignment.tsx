@@ -16,6 +16,7 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import toast from 'react-hot-toast';
 
 type ViewMode = 'msp' | 'client';
 
@@ -71,17 +72,35 @@ export default function UserRoleAssignment() {
 
   const handleAssignRole = async () => {
     if (selectedUser && selectedRole) {
-      await assignRoleToUser(selectedUser, selectedRole);
-      fetchUserRoles(selectedUser);
-      // Reset selections
-      setSelectedUser('');
-      setSelectedRole('');
+      try {
+        await assignRoleToUser(selectedUser, selectedRole);
+        await fetchUserRoles(selectedUser);
+        // Reset selections
+        setSelectedUser('');
+        setSelectedRole('');
+        toast.success(t('security.userRoles.messages.success.roleAssigned'));
+      } catch (error) {
+        console.error('Error assigning role:', error);
+        const isPermissionError = error instanceof Error && error.message.toLowerCase().includes('permission denied');
+        toast.error(isPermissionError
+          ? t('security.userRoles.messages.error.permissionDenied')
+          : t('security.userRoles.messages.error.assignFailed'));
+      }
     }
   };
 
   const handleRemoveRole = async (userId: string, roleId: string) => {
-    await removeRoleFromUser(userId, roleId);
-    fetchUserRoles(userId);
+    try {
+      await removeRoleFromUser(userId, roleId);
+      await fetchUserRoles(userId);
+      toast.success(t('security.userRoles.messages.success.roleRemoved'));
+    } catch (error) {
+      console.error('Error removing role:', error);
+      const isPermissionError = error instanceof Error && error.message.toLowerCase().includes('permission denied');
+      toast.error(isPermissionError
+        ? t('security.userRoles.messages.error.permissionDenied')
+        : t('security.userRoles.messages.error.removeFailed'));
+    }
   };
 
   // Filter users based on view mode and inactive status

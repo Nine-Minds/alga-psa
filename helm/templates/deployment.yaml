@@ -293,6 +293,23 @@ spec:
             {{- end }}
           {{- end }}
 
+          # ----------- OBSERVABILITY (OpenTelemetry) ----------------
+          # When enabled, the app's OTEL SDK (http+pg+redis instrumentation) exports
+          # traces to OTLP_ENDPOINT. In production this points at the Alloy collector,
+          # which fans traces out to Tempo (storage) and the metrics generator
+          # (traces_spanmetrics_* / traces_service_graph_*). See nm-kube-config/alloy
+          # and nm-kube-config/tempo-metrics-generator.
+          {{- if (default dict .Values.observability).enabled }}
+          - name: ALGA_OBSERVABILITY
+            value: "true"
+          - name: OTLP_ENDPOINT
+            value: "{{ .Values.observability.otlpEndpoint }}"
+          {{- with (default dict .Values.observability).deploymentId }}
+          - name: DEPLOYMENT_ID
+            value: "{{ . }}"
+          {{- end }}
+          {{- end }}
+
           # ----------- HOCUSPOCUS ----------------
           {{- if .Values.hocuspocus.enabled }}
           - name: REQUIRE_HOCUSPOCUS

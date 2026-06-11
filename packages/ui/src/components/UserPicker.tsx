@@ -31,6 +31,8 @@ interface UserPickerProps {
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
   buttonWidth?: 'fit' | 'full';
   placeholder?: string;
+  /** Label for the "clear selection" option (value=''). Defaults to 'Not assigned'. */
+  unassignedLabel?: string;
   userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
   modal?: boolean;
 }
@@ -78,6 +80,7 @@ const UserPicker = ({
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
+  unassignedLabel = 'Not assigned',
   userTypeFilter = 'internal',
   modal = true,
   'data-automation-id': dataAutomationId,
@@ -276,6 +279,16 @@ const UserPicker = ({
 
     const dropdownWidth = Math.max(buttonRect.width, 220);
 
+    // Clamp horizontally so a trigger near the right edge doesn't open a dropdown that
+    // overflows (and gets clipped) off-screen. Anchor to the trigger's left, but shift
+    // left as needed to keep the menu fully within the viewport.
+    const viewportWidth = window.innerWidth;
+    const edgeMargin = 8;
+    let left = buttonRect.left;
+    if (left + dropdownWidth > viewportWidth - edgeMargin) {
+      left = Math.max(edgeMargin, viewportWidth - edgeMargin - dropdownWidth);
+    }
+
     // More aggressive check for limited space below
     // If there's less than 250px below or the dropdown would be cut off, position it above
     if (spaceBelow < 250 || spaceBelow < estimatedDropdownHeight) {
@@ -284,14 +297,14 @@ const UserPicker = ({
         setDropdownPosition('top');
         setDropdownCoords({
           top: buttonRect.top - 2,
-          left: buttonRect.left,
+          left,
           width: dropdownWidth
         });
       } else {
         setDropdownPosition('bottom');
         setDropdownCoords({
           top: buttonRect.bottom + 2,
-          left: buttonRect.left,
+          left,
           width: dropdownWidth
         });
       }
@@ -299,7 +312,7 @@ const UserPicker = ({
       setDropdownPosition('bottom');
       setDropdownCoords({
         top: buttonRect.bottom + 2,
-        left: buttonRect.left,
+        left,
         width: dropdownWidth
       });
     }
@@ -382,15 +395,15 @@ const UserPicker = ({
             e.stopPropagation();
           }}
         >
-          {/* Not assigned option */}
+          {/* Not assigned / clear option */}
           <OptionButton
             id={`${pickerId}-option-unassigned`}
-            label="Not assigned"
+            label={unassignedLabel}
             onClick={() => handleSelectUser('unassigned')}
             className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
             parentId={pickerId}
           >
-            Not assigned
+            {unassignedLabel}
           </OptionButton>
 
           {/* User options */}

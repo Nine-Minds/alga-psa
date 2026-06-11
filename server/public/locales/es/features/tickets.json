@@ -39,7 +39,8 @@
     "breached": "Vencido",
     "paused": "Pausado",
     "allResponseStatuses": "Todos los estados de respuesta",
-    "responseStatus": "Estado de respuesta"
+    "responseStatus": "Estado de respuesta",
+    "board": "Filtrar por tablero"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -377,7 +378,10 @@
       "onTrack": "En curso",
       "breached": "Vencido",
       "paused": "Pausado",
-      "bundled": "Agrupado"
+      "bundled": "Agrupado",
+      "activeBoards": "Tableros activos",
+      "inactiveBoards": "Tableros inactivos",
+      "allBoards": "Todos los tableros"
     },
     "selection": {
       "pageSelected_one": "Todos los {{count}} ticket de esta página están seleccionados.",
@@ -1261,5 +1265,22 @@
       "reconnecting": "Actualizaciones en vivo sin conexión - reconectando...",
       "unavailable": "Actualizaciones en vivo no disponibles"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} eliminado correctamente.",
+    "error": "No se pudo eliminar el ticket. Inténtalo de nuevo.",
+    "validationError": "No se pudo validar la eliminación. Inténtalo de nuevo."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inactivo",
+    "noBoard": "Sin tablero",
+    "selectedCount_one": "{{count}} tablero",
+    "selectedCount_other": "{{count}} tableros",
+    "excludingPrefix": "excluyendo {{name}}",
+    "excludingCount_one": "excluyendo {{count}} tablero",
+    "excludingCount_other": "excluyendo {{count}} tableros",
+    "placeholder": "Filtrar por tablero",
+    "title": "Selector de tablero",
+    "searchPlaceholder": "Buscar tableros..."
   }
 }

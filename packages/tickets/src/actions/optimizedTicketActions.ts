@@ -16,7 +16,7 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
@@ -49,6 +49,8 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -306,8 +308,8 @@ async function updateTicketResponseStateFromComment(
       .where({ ticket_id: ticketId, tenant })
       .update({ response_state: newState });
 
-    try {
-      await publishEvent({
+    registerAfterCommit(trx, () =>
+      publishEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
@@ -317,10 +319,9 @@ async function updateTicketResponseStateFromComment(
           newState,
           trigger: 'comment',
         },
-      });
-    } catch (eventError) {
-      console.error('[updateTicketResponseStateFromComment] Failed to publish event:', eventError);
-    }
+      }),
+      `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
+    );
   }
 
   return { previousState, newState };
@@ -1013,9 +1014,24 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereNull('t.master_ticket_id');
     }
 
-    // Apply filters to base query
-    if (validatedFilters.boardId) {
-      baseQuery = baseQuery.where('t.board_id', validatedFilters.boardId);
+    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
+    // legacy single `boardId`. An explicit board selection takes precedence over the
+    // active/inactive status restriction (the user has positively chosen boards).
+    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
+      ? validatedFilters.boardIds
+      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
+    const includeNoBoard = includeBoardIds.includes('no-board');
+    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
+    if (includeBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoBoard && includeRealBoardIds.length > 0) {
+          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
+        } else if (includeNoBoard) {
+          this.whereNull('t.board_id');
+        } else {
+          this.whereIn('t.board_id', includeRealBoardIds);
+        }
+      });
     } else if (validatedFilters.boardFilterState !== 'all') {
       const boardSubquery = trx('boards')
         .select('board_id')
@@ -1023,6 +1039,19 @@ async function buildTicketListBaseQuery(
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
+    }
+
+    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
+    // sentinel excludes tickets that have no board.
+    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
+    if (excludeBoardIds.includes('no-board')) {
+      baseQuery = baseQuery.whereNotNull('t.board_id');
+    }
+    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
+    if (excludeRealBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
+      });
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
@@ -1043,12 +1072,50 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId) {
-      if (validatedFilters.categoryId === 'no-category') {
-        baseQuery = baseQuery.whereNull('t.category_id');
-      } else if (validatedFilters.categoryId !== 'all') {
-        baseQuery = baseQuery.where('t.category_id', validatedFilters.categoryId);
-      }
+    // Category include filter. A ticket "has" a category if either its
+    // category_id (parent) or subcategory_id (child) matches the selection, so
+    // selecting a parent matches its subcategorized tickets and selecting a
+    // subcategory matches tickets that reference it via subcategory_id.
+    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
+    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
+      ? validatedFilters.categoryIds
+      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
+          ? [validatedFilters.categoryId]
+          : []);
+    const includeNoCategory = includeCategoryIds.includes('no-category');
+    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (includeNoCategory || includeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoCategory && includeRealCategoryIds.length > 0) {
+          this.whereNull('t.category_id').orWhere(function () {
+            this.whereIn('t.category_id', includeRealCategoryIds)
+              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+          });
+        } else if (includeNoCategory) {
+          this.whereNull('t.category_id');
+        } else {
+          this.whereIn('t.category_id', includeRealCategoryIds)
+            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+        }
+      });
+    }
+
+    // Category exclude filter. Excludes any ticket whose parent or subcategory is
+    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
+    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
+    const excludeNoCategory = excludeCategoryIds.includes('no-category');
+    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (excludeNoCategory) {
+      baseQuery = baseQuery.whereNotNull('t.category_id');
+    }
+    if (excludeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.where(function () {
+          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
+        }).andWhere(function () {
+          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
+        });
+      });
     }
 
     if (validatedFilters.clientId) {
@@ -2006,12 +2073,28 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
  * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
  * a single check and reuse this core per ticket, avoiding one permission lookup per row.
  */
+export interface UpdateTicketInTransactionOptions {
+  /** Close despite unmet close rules; honored only with ticket:close_override. */
+  overrideCloseRules?: boolean;
+  overrideCloseRulesReason?: string | null;
+  /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
+  bypassCloseRules?: { source: CloseRuleBypassSource };
+  /**
+   * Attribute the change to the system rather than `user` (auto-close engine):
+   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
+   * system-sourced. `user` is still required for the call signature but is not
+   * referenced for attribution.
+   */
+  systemActor?: boolean;
+}
+
 export async function updateTicketInTransaction(
   trx: Knex.Transaction,
   user: IUserWithRoles,
   tenant: string,
   id: string,
   data: Partial<ITicket>,
+  options?: UpdateTicketInTransactionOptions,
 ): Promise<'success'> {
     try {
       // Validate update data
@@ -2130,7 +2213,45 @@ export async function updateTicketInTransaction(
         tenant: tenant
       })
       .first();
-    
+
+    const isSystemActor = options?.systemActor === true;
+
+    // Pre-close validation gates: when this update flips the ticket from an
+    // open to a closed status, enforce the board's close rules before any
+    // writes. Throws TicketCloseValidationError (aborting the transaction)
+    // unless gates pass, a permissioned override applies, or the caller is an
+    // exempt automation path (bypassCloseRules).
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const nextStatus = await trx('statuses')
+        .where({ status_id: updateData.status_id, tenant: tenant })
+        .first();
+      if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+        const merged = { ...currentTicket, ...updateData };
+        await enforceTicketCloseRules(trx, tenant, {
+          ticket: {
+            ticket_id: id,
+            board_id: merged.board_id ?? null,
+            category_id: merged.category_id ?? null,
+            subcategory_id: merged.subcategory_id ?? null,
+            priority_id: merged.priority_id ?? null,
+            assigned_to: merged.assigned_to ?? null,
+          },
+          override: options?.overrideCloseRules
+            ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
+            : undefined,
+          bypass: options?.bypassCloseRules,
+          actor: isSystemActor
+            ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+            : {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+          source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        });
+      }
+    }
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -2218,7 +2339,9 @@ export async function updateTicketInTransaction(
     const occurredAt = new Date().toISOString();
     const workflowCtx = {
       tenantId: tenant,
-      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      actor: isSystemActor
+        ? { actorType: 'SYSTEM' as const }
+        : { actorType: 'USER' as const, actorUserId: user.user_id },
       occurredAt,
     };
 
@@ -2326,13 +2449,16 @@ export async function updateTicketInTransaction(
       updatedTicket.is_closed = nextIsClosed;
     }
 
-    // Record closed_at / closed_by when transitioning to/from closed status
+    // Record closed_at / closed_by when transitioning to/from closed status.
+    // System closes (auto-close engine) leave closed_by null — attribution
+    // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      const closedBy = isSystemActor ? null : user.user_id;
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
-        .update({ closed_at: occurredAt, closed_by: user.user_id });
+        .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
-      updatedTicket.closed_by = user.user_id;
+      updatedTicket.closed_by = closedBy;
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
@@ -2341,23 +2467,60 @@ export async function updateTicketInTransaction(
       updatedTicket.closed_by = null;
     }
 
-    // Publish appropriate event based on the update
+    // Auto-apply checklist templates when the ticket's targeting attributes
+    // (board/category/subcategory/priority) changed. Idempotent per template.
+    const checklistTargetingChanged =
+      (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) ||
+      (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) ||
+      (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) ||
+      (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id);
+    if (checklistTargetingChanged) {
+      try {
+        await applyMatchingChecklistTemplates(trx, tenant, {
+          ticket_id: id,
+          board_id: updatedTicket.board_id,
+          category_id: updatedTicket.category_id,
+          subcategory_id: updatedTicket.subcategory_id,
+          priority_id: updatedTicket.priority_id,
+        }, isSystemActor
+          ? undefined
+          : {
+              actor: {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              source: TICKET_ACTIVITY_SOURCE.UI,
+            });
+      } catch (error) {
+        console.error('Failed to auto-apply checklist templates:', error);
+      }
+    }
+
+    // Publish appropriate event based on the update — after the save
+    // transaction commits, so subscribers never contend with our row locks.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      // Ticket was closed
-      await publishWorkflowEvent({
-        eventType: 'TICKET_CLOSED',
-        payload: {
-          ticketId: id,
-          userId: user.user_id,
-          closedByUserId: user.user_id,
-          closedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Closed',
-        fromState: currentTicket.status_id,
-        toState: updatedTicket.status_id,
-      });
+      // Ticket was closed. System closes (auto-close engine) omit user
+      // attribution — the v2 ticketClosedEventPayloadSchema treats
+      // closedByUserId as optional.
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_CLOSED',
+          payload: {
+            ticketId: id,
+            ...(isSystemActor
+              ? {}
+              : { userId: user.user_id, closedByUserId: user.user_id }),
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
+        }),
+        `TICKET_CLOSED ticket=${id}`
+      );
 
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
@@ -2367,67 +2530,84 @@ export async function updateTicketInTransaction(
         closedAt: occurredAt,
       });
       if (slaCompletionEvent) {
-        await publishWorkflowEvent({
-          eventType: slaCompletionEvent.eventType,
-          payload: slaCompletionEvent.payload,
-          ctx: workflowCtx,
-          idempotencyKey: slaCompletionEvent.idempotencyKey,
-        });
+        registerAfterCommit(trx, () =>
+          publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          }),
+          `${slaCompletionEvent.eventType} ticket=${id}`
+        );
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          ticketId: id,
-          userId: updateData.assigned_to, // Legacy: assigned user
-          assignedByUserId: user.user_id,
-          previousAssigneeId: currentTicket.assigned_to ?? undefined,
-          previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-          newAssigneeId: updateData.assigned_to,
-          newAssigneeType: 'user',
-          assignedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Assigned',
-      });
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            ticketId: id,
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
+        }),
+        `TICKET_ASSIGNED ticket=${id}`
+      );
     } else {
       // Regular update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_UPDATED',
-        payload: {
-          ticketId: id,
-          userId: user.user_id,
-          updatedByUserId: user.user_id,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Updated',
-      });
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_UPDATED',
+          payload: {
+            ticketId: id,
+            userId: user.user_id,
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
+        }),
+        `TICKET_UPDATED ticket=${id}`
+      );
     }
 
-    await publishTicketUpdate({
-      tenantId: tenant,
-      ticketId: id,
-      updatedFields,
-      updatedBy: {
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
-    });
+    // System closes (auto-close engine) skip the live UI update entirely.
+    if (!isSystemActor) {
+      registerAfterCommit(trx, () =>
+        publishTicketUpdate({
+          tenantId: tenant,
+          ticketId: id,
+          updatedFields,
+          updatedBy: {
+            userId: user.user_id,
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
+        }),
+        `ticket-live-update ticket=${id}`
+      );
+    }
 
     // Write a unified activity-timeline row for this update. We pick the
     // most specific event type so the UI can render a tight, human-readable
     // line ("Morgan changed status from New to In Progress") rather than a
     // generic "ticket updated" entry. The curated diff includes resolved
     // labels for IDs where possible.
-    const actorInfo = {
-      actorType: TICKET_ACTIVITY_ACTOR.USER,
-      userId: user.user_id,
-      displayName: formatLiveUpdateDisplayName(user),
-    };
+    const actorInfo = isSystemActor
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        };
     const curated = await buildCuratedTicketDiffWithLabels(
       trx,
       tenant,
@@ -2466,7 +2646,7 @@ export async function updateTicketInTransaction(
         entityType: TICKET_ACTIVITY_ENTITY.TICKET,
         entityId: id,
         actor: actorInfo,
-        source: TICKET_ACTIVITY_SOURCE.UI,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         occurredAt,
         changes: curated,
       });
@@ -2474,8 +2654,8 @@ export async function updateTicketInTransaction(
 
     // Publish response state change event if response_state was explicitly changed
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
-      try {
-        await publishEvent({
+      registerAfterCommit(trx, () =>
+        publishEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: {
             tenantId: tenant,
@@ -2485,10 +2665,9 @@ export async function updateTicketInTransaction(
             newState: updateData.response_state || null,
             trigger: 'manual',
           },
-        });
-      } catch (error) {
-        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
-      }
+        }),
+        `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
+      );
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
@@ -2524,16 +2703,19 @@ export async function updateTicketInTransaction(
           .update(propagate);
 
         for (const childPublish of childPublishes) {
-          await publishTicketUpdate({
-            tenantId: tenant,
-            ticketId: childPublish.ticketId,
-            updatedFields: childPublish.updatedFields,
-            updatedBy: {
-              userId: user.user_id,
-              displayName: formatLiveUpdateDisplayName(user),
-            },
-            updatedAt: propagate.updated_at,
-          });
+          registerAfterCommit(trx, () =>
+            publishTicketUpdate({
+              tenantId: tenant,
+              ticketId: childPublish.ticketId,
+              updatedFields: childPublish.updatedFields,
+              updatedBy: {
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              updatedAt: propagate.updated_at,
+            }),
+            `ticket-live-update ticket=${childPublish.ticketId}`
+          );
         }
       }
     }
@@ -2552,7 +2734,13 @@ export async function updateTicketInTransaction(
     }
 }
 
-export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+export const updateTicketWithCache = withAuth(async (
+  user,
+  { tenant },
+  id: string,
+  data: Partial<ITicket>,
+  options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
+) => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2560,7 +2748,7 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       throw new Error('Permission denied: Cannot update ticket');
     }
 
-    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data);
+    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
   });
 });
 
@@ -2762,22 +2950,25 @@ export const addTicketCommentWithCache = withAuth(async (
       }
     }
 
-    // Publish comment added event
-    await publishEvent({
-      eventType: 'TICKET_COMMENT_ADDED',
-      payload: {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: user.user_id,
-        comment: {
-          id: newComment.comment_id,
-          content: content,
-          author: `${user.first_name} ${user.last_name}`,
-          isInternal,
-          authorType,
+    // Publish comment added event after the comment transaction commits.
+    registerAfterCommit(trx, () =>
+      publishEvent({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: user.user_id,
+          comment: {
+            id: newComment.comment_id,
+            content: content,
+            author: `${user.first_name} ${user.last_name}`,
+            isInternal,
+            authorType,
+          }
         }
-      }
-    });
+      }),
+      `TICKET_COMMENT_ADDED ticket=${ticketId}`
+    );
 
     // Publish workflow v2 ticket message events (additive).
     try {
@@ -2799,22 +2990,29 @@ export const addTicketCommentWithCache = withAuth(async (
       });
 
       for (const ev of events) {
-        await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        registerAfterCommit(
+          trx,
+          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+          `${ev.eventType} ticket=${ticketId}`
+        );
       }
     } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
+      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
     }
 
-    await publishTicketUpdate({
-      tenantId: tenant,
-      ticketId,
-      updatedFields: ['comments'],
-      updatedBy: {
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-    });
+    registerAfterCommit(trx, () =>
+      publishTicketUpdate({
+        tenantId: tenant,
+        ticketId,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+      }),
+      `ticket-live-update ticket=${ticketId}`
+    );
 
     // Activity-timeline row for the MSP-side "add comment" flow. This path
     // is hit by the ticket detail UI, so source is always 'ui'. Internal

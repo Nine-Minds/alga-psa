@@ -73,10 +73,13 @@
   "mobileApp": {
     "title": "55555",
     "description": "55555",
+    "selfHostDescription": "55555",
     "appStore": "55555",
     "playStore": "55555",
     "appStoreQrAlt": "55555",
     "playStoreQrAlt": "55555",
+    "connectServer": "55555",
+    "connectServerQrAlt": "55555",
     "hide": "55555",
     "hiding": "55555",
     "dismissAria": "55555",

@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import '@testing-library/jest-dom/vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -17,13 +18,21 @@ vi.mock('@alga-psa/billing/actions', () => ({
   updateDefaultBillingSettings: (...args: unknown[]) => mockUpdateDefaultBillingSettings(...args),
 }));
 
-vi.mock('@alga-psa/tickets/actions', () => ({
-  getAllBoards: (...args: unknown[]) => mockGetAllBoards(...args),
-}));
-
+// The component imports getAllBoards from reference-data/actions, not
+// tickets/actions — mock the exact specifier the code under test imports.
 vi.mock('@alga-psa/reference-data/actions', () => ({
+  getAllBoards: (...args: unknown[]) => mockGetAllBoards(...args),
   getTicketStatuses: (...args: unknown[]) => mockGetTicketStatuses(...args),
 }));
+
+// Without this mock, react-i18next (never initialized in tests) returns a new
+// `t` per render; the component's load effect depends on [t] and sets fresh
+// array state, so rendering spins forever in microtasks — starving vitest's
+// test timeout timer and hanging the suite at 100% CPU.
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const t = (key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? key;
+  return { useTranslation: () => ({ t }) };
+});
 
 vi.mock('react-hot-toast', () => ({
   default: {

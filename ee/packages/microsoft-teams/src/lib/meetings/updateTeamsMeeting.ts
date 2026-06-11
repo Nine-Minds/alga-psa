@@ -5,6 +5,7 @@ import { resolveTeamsMeetingExecutionConfig } from './meetingConfig';
 export interface UpdateTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   startDateTime: string;
   endDateTime: string;
   appointmentRequestId?: string | null;
@@ -29,6 +30,7 @@ export async function updateTeamsMeeting(
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'update',
         meeting_id: input.meetingId,
+        event_id: input.eventId ?? null,
         status: null,
       });
       return false;
@@ -41,7 +43,7 @@ export async function updateTeamsMeeting(
     });
 
     const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/onlineMeetings/${encodeURIComponent(input.meetingId)}`,
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'PATCH',
         headers: {
@@ -49,8 +51,14 @@ export async function updateTeamsMeeting(
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          startDateTime: input.startDateTime,
-          endDateTime: input.endDateTime,
+          start: {
+            dateTime: input.startDateTime,
+            timeZone: 'UTC',
+          },
+          end: {
+            dateTime: input.endDateTime,
+            timeZone: 'UTC',
+          },
         }),
       }
     );
@@ -62,6 +70,7 @@ export async function updateTeamsMeeting(
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'update',
         meeting_id: input.meetingId,
+        event_id: input.eventId ?? null,
         status: response.status,
         graph_error: errorBody || response.statusText,
       });
@@ -73,6 +82,7 @@ export async function updateTeamsMeeting(
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'update',
       meeting_id: input.meetingId,
+      event_id: input.eventId ?? null,
       status: response.status,
     });
 
@@ -83,6 +93,7 @@ export async function updateTeamsMeeting(
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'update',
       meeting_id: input.meetingId,
+      event_id: input.eventId ?? null,
       status: null,
       error: normalizeErrorMessage(error),
     });

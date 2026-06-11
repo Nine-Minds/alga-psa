@@ -216,7 +216,7 @@ function StepHistory() {
                       <tr key={m.invoiceId}>
                         <td className="py-1 pr-3">{m.invoiceNumber}</td>
                         <td className="py-1 pr-3">{m.externalDocNumber}</td>
-                        <td className="py-1 text-right">{m.invoiceTotal.toFixed(2)}</td>
+                        <td className="py-1 text-right">{(Number(m.invoiceTotal) / 100).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -47,7 +47,8 @@
     "printOptions": "Print options",
     "resetPrintOptions": "Reset print options",
     "share": "Share",
-    "done": "Done"
+    "done": "Done",
+    "continue": "Continue"
   },
   "form": {
     "selectPlaceholder": "Select...",

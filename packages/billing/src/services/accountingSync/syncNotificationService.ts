@@ -120,7 +120,11 @@ export async function resolveTokenThresholdToAnnounce(
   }
 
   const daysLeft = msLeft / (24 * 60 * 60 * 1000);
-  const threshold = TOKEN_EXPIRY_THRESHOLD_DAYS.find((days) => daysLeft <= days);
+  // Pick the NARROWEST crossed band (e.g. 6 days left → the 7-day notice, not
+  // the 14-day one) so each escalation step fires as expiry approaches.
+  const threshold = [...TOKEN_EXPIRY_THRESHOLD_DAYS]
+    .sort((a, b) => a - b)
+    .find((days) => daysLeft <= days);
   if (!threshold) {
     return null;
   }

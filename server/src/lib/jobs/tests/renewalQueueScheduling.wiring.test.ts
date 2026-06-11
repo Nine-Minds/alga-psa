@@ -318,7 +318,7 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("const tenantId = typeof data.tenantId === 'string' ? data.tenantId : '';");
     expect(renewalHandlerSource).toContain("throw new Error('Tenant ID is required for renewal queue processing job');");
     expect(renewalHandlerSource).toContain("'cc.tenant': tenantId,");
-    expect(renewalHandlerSource).toContain(".where({ tenant_id: tenantId })");
+    expect(renewalHandlerSource).toContain(".where({ tenant: tenantId })");
     expect(renewalHandlerSource).toContain('tenant: tenantId,');
 
     expect(temporalRunnerSource).toContain("throw new Error('tenantId is required in job data');");

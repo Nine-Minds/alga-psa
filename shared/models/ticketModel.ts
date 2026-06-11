@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
@@ -740,6 +741,20 @@ export class TicketModel {
     // Insert the ticket
     await trx('tickets').insert(dbData);
 
+    // Auto-apply matching checklist templates (idempotent; null matcher =
+    // match any). Failure here must not break ticket creation.
+    try {
+      await applyMatchingChecklistTemplates(trx, tenant, {
+        ticket_id: ticketId,
+        board_id: cleanedInput.board_id,
+        category_id: cleanedInput.category_id ?? null,
+        subcategory_id: cleanedInput.subcategory_id ?? null,
+        priority_id: cleanedInput.priority_id ?? null,
+      });
+    } catch (error) {
+      console.error('Failed to auto-apply checklist templates:', error);
+    }
+
     // Publish event if publisher provided
     if (eventPublisher) {
       try {
@@ -1279,6 +1294,22 @@ export class TicketModel {
     // Publish comment event if publisher provided
     if (eventPublisher) {
       try {
+        // Resolve a display name so notification templates render the author/body.
+        let authorName: string | undefined;
+        if (validatedData.contact_id) {
+          const c = await trx('contacts')
+            .select('full_name')
+            .where({ tenant, contact_name_id: validatedData.contact_id })
+            .first();
+          authorName = c?.full_name || undefined;
+        } else if (validatedData.author_id) {
+          const u = await trx('users')
+            .select('first_name', 'last_name')
+            .where({ tenant, user_id: validatedData.author_id })
+            .first();
+          authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
+        }
+
         await eventPublisher.publishCommentCreated({
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
@@ -1287,7 +1318,10 @@ export class TicketModel {
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
-            is_resolution: validatedData.is_resolution
+            isInternal: commentIsInternal,
+            is_resolution: validatedData.is_resolution,
+            content: validatedData.content,
+            author: authorName
           }
         });
       } catch (error) {

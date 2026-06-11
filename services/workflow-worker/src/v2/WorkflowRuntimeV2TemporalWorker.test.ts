@@ -42,14 +42,12 @@ describe('WorkflowRuntimeV2TemporalWorker', () => {
       shutdown: workerShutdownMock,
     });
 
-    delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE;
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH;
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH;
     delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS;
   });
 
   it('starts Temporal polling for the authored queue and shuts down cleanly', async () => {
-    process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE = 'workflow-runtime-v2';
     process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH = './src/v2/WorkflowRuntimeV2TemporalWorker.test.activities.mjs';
     process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH = './src/v2/WorkflowRuntimeV2TemporalWorker.test.activities.mjs';
 

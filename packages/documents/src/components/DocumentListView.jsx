@@ -94,4 +94,3 @@ export default function DocumentListView({ documents, selectedDocuments, onSelec
       </Table>
     </div>);
 }
-//# sourceMappingURL=DocumentListView.jsx.map

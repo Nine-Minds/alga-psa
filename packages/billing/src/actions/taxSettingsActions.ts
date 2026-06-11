@@ -16,7 +16,7 @@ export const getClientTaxSettings = withAuth(async (user, { tenant }, clientId: 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxSettings = await trx<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId })
+        .where({ client_id: clientId, tenant })
         .first();
 
     // Removed fetching of components, thresholds, holidays based on tax_rate_id (Phase 1.2)
@@ -41,6 +41,9 @@ export const updateClientTaxSettings = withAuth(async (
   clientId: string,
   taxSettings: Omit<IClientTaxSettings, 'tenant'>
 ): Promise<IClientTaxSettings | null> => {
+  if (!(await hasPermission(user, 'billing', 'update'))) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -171,6 +174,9 @@ export const createTaxRegion = withAuth(async (
     is_active?: boolean;
   }
 ): Promise<ITaxRegion> => {
+  if (!(await hasPermission(user, 'billing', 'create'))) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   const { region_code, region_name, is_active = true } = data; // Default is_active to true
 
@@ -223,7 +229,7 @@ export const updateTaxRegion = withAuth(async (
   data: { region_code?: string; region_name?: string; is_active?: boolean }
 ): Promise<ITaxRegion> => {
   try {
-    if (!(hasPermission(user, 'billing', 'update'))) {
+    if (!(await hasPermission(user, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tax regions');
     }
 
@@ -376,6 +382,9 @@ export const createTaxComponent = withAuth(async (
   { tenant },
   component: Omit<ITaxComponent, 'tax_component_id' | 'tenant'>
 ): Promise<ITaxComponent> => {
+  if (!(await hasPermission(user, 'billing', 'create'))) {
+    throw new Error('Permission denied: billing create required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [createdComponent] = await knex<ITaxComponent>('tax_components')
@@ -396,10 +405,13 @@ export const updateTaxComponent = withAuth(async (
   componentId: string,
   component: Partial<ITaxComponent>
 ): Promise<ITaxComponent> => {
+  if (!(await hasPermission(user, 'billing', 'update'))) {
+    throw new Error('Permission denied: billing update required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [updatedComponent] = await knex<ITaxComponent>('tax_components')
-      .where({ tax_component_id: componentId })
+      .where({ tax_component_id: componentId, tenant })
       .update(component)
       .returning('*');
 
@@ -411,10 +423,13 @@ export const updateTaxComponent = withAuth(async (
 });
 
 export const deleteTaxComponent = withAuth(async (user, { tenant }, componentId: string): Promise<void> => {
+  if (!(await hasPermission(user, 'billing', 'delete'))) {
+    throw new Error('Permission denied: billing delete required');
+  }
   try {
     const { knex } = await createTenantKnex();
     await knex('tax_components')
-      .where({ tax_component_id: componentId })
+      .where({ tax_component_id: componentId, tenant })
       .del();
   } catch (error) {
     console.error('Error deleting tax component:', error);
@@ -427,6 +442,9 @@ export const createTaxRateThreshold = withAuth(async (
   { tenant },
   threshold: Omit<ITaxRateThreshold, 'tax_rate_threshold_id'>
 ): Promise<ITaxRateThreshold> => {
+  if (!(await hasPermission(user, 'billing', 'create'))) {
+    throw new Error('Permission denied: billing create required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [createdThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
@@ -446,6 +464,9 @@ export const updateTaxRateThreshold = withAuth(async (
   thresholdId: string,
   threshold: Partial<ITaxRateThreshold>
 ): Promise<ITaxRateThreshold> => {
+  if (!(await hasPermission(user, 'billing', 'update'))) {
+    throw new Error('Permission denied: billing update required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [updatedThreshold] = await knex<ITaxRateThreshold>('tax_rate_thresholds')
@@ -461,6 +482,9 @@ export const updateTaxRateThreshold = withAuth(async (
 });
 
 export const deleteTaxRateThreshold = withAuth(async (user, { tenant }, thresholdId: string): Promise<void> => {
+  if (!(await hasPermission(user, 'billing', 'delete'))) {
+    throw new Error('Permission denied: billing delete required');
+  }
   try {
     const { knex } = await createTenantKnex();
     await knex('tax_rate_thresholds')
@@ -477,6 +501,9 @@ export const createTaxHoliday = withAuth(async (
   { tenant },
   holiday: Omit<ITaxHoliday, 'tax_holiday_id'>
 ): Promise<ITaxHoliday> => {
+  if (!(await hasPermission(user, 'billing', 'create'))) {
+    throw new Error('Permission denied: billing create required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [createdHoliday] = await knex<ITaxHoliday>('tax_holidays')
@@ -496,6 +523,9 @@ export const updateTaxHoliday = withAuth(async (
   holidayId: string,
   holiday: Partial<ITaxHoliday>
 ): Promise<ITaxHoliday> => {
+  if (!(await hasPermission(user, 'billing', 'update'))) {
+    throw new Error('Permission denied: billing update required');
+  }
   try {
     const { knex } = await createTenantKnex();
     const [updatedHoliday] = await knex<ITaxHoliday>('tax_holidays')
@@ -511,6 +541,9 @@ export const updateTaxHoliday = withAuth(async (
 });
 
 export const deleteTaxHoliday = withAuth(async (user, { tenant }, holidayId: string): Promise<void> => {
+  if (!(await hasPermission(user, 'billing', 'delete'))) {
+    throw new Error('Permission denied: billing delete required');
+  }
   try {
     const { knex } = await createTenantKnex();
     await knex('tax_holidays')
@@ -522,6 +555,8 @@ export const deleteTaxHoliday = withAuth(async (user, { tenant }, holidayId: str
   }
 });
 
+// Internal helper — not a direct server action endpoint. Called only from already-authenticated
+// contexts (e.g. during client creation). Does not need its own withAuth/hasPermission wrapper.
 export async function createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
   const taxService = new TaxService();
   return taxService.createDefaultTaxSettings(clientId);
@@ -542,7 +577,7 @@ export const updateClientTaxExemptStatus = withAuth(async (
   taxExemptionCertificate?: string
 ): Promise<{ is_tax_exempt: boolean; tax_exemption_certificate?: string }> => {
   try {
-    if (!(hasPermission(user, 'client', 'update'))) {
+    if (!(await hasPermission(user, 'client', 'update'))) {
       throw new Error('Permission denied: Cannot update client tax settings');
     }
 
@@ -714,7 +749,7 @@ export const updateTenantTaxSettings = withAuth(async (
   }
 ): Promise<void> => {
   try {
-    if (!(hasPermission(user, 'billing', 'update'))) {
+    if (!(await hasPermission(user, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tenant tax settings');
     }
 
@@ -815,7 +850,7 @@ export const dismissTaxDelegationNudge = withAuth(async (
   user,
   { tenant }
 ): Promise<void> => {
-  if (!(hasPermission(user, 'billing', 'update'))) {
+  if (!(await hasPermission(user, 'billing', 'update'))) {
     throw new Error('Permission denied: Cannot dismiss tax delegation banner');
   }
   if (!tenant) {

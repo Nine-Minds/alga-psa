@@ -186,15 +186,8 @@ const DiscrepancyDetail: React.FC = () => {
       setIsResolvingReport(true);
       setResolutionError(null);
 
-      const sessionUser = session?.user as any;
-      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
-      if (!currentUserId) {
-        throw new Error('User not authenticated');
-      }
-
       const resolvedReport = await resolveReconciliationReport(
         report.report_id,
-        String(currentUserId),
         resolutionNotes
       );
 
@@ -217,16 +210,9 @@ const DiscrepancyDetail: React.FC = () => {
     try {
       setIsApplyingFix(true);
 
-      const sessionUser = session?.user as any;
-      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
-      if (!currentUserId) {
-        throw new Error('User not authenticated');
-      }
-
       // Call the server action to apply the fix
       const resolvedReport = await applyReconciliationFix(
         report.report_id,
-        String(currentUserId),
         fixType,
         notes,
         customData

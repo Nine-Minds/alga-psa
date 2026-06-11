@@ -1,8 +1,13 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getActivePlatformNotifications } from '@enterprise/lib/platformNotifications/actions';
 import { PlatformUpdateDetail } from '@/components/platform-updates/PlatformUpdateDetail';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Platform Update',
+};
 
 interface PageProps {
   params: Promise<{ notificationId: string }>;

@@ -51,6 +51,9 @@ export const getDefaultBillingSettings = withAuth(async (
   user,
   { tenant }
 ): Promise<BillingSettings> => {
+  if (!await hasPermission(user as any, 'billing_settings', 'read')) {
+    throw new Error('Permission denied: Cannot read billing settings');
+  }
   const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -199,6 +202,9 @@ export const getClientContractLineSettings = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<BillingSettings | null> => {
+  if (!await hasPermission(user as any, 'billing_settings', 'read')) {
+    throw new Error('Permission denied: Cannot read client billing settings');
+  }
   const { knex } = await createTenantKnex();
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -232,6 +238,9 @@ export const updateClientContractLineSettings = withAuth(async (
   clientId: string,
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean }> => {
+  if (!await hasPermission(user as any, 'billing_settings', 'update')) {
+    throw new Error('Permission denied: Cannot update client billing settings');
+  }
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {

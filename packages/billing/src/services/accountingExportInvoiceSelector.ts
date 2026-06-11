@@ -171,8 +171,10 @@ export class AccountingExportInvoiceSelector {
     }
 
     const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
-    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be selected again.
-    const shouldExcludeSynced = Boolean(adapterType);
+    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be
+    // selected again — except for deliberate re-exports (drift resolution), which pass
+    // excludeSyncedInvoices: false.
+    const shouldExcludeSynced = Boolean(adapterType) && filters.excludeSyncedInvoices !== false;
 
     if (shouldExcludeSynced) {
       const knex = this.knex;

@@ -15,6 +15,8 @@ describe('ticketing dashboard category creation wiring contract', () => {
     expect(source).toContain('onAddNew={() => setIsQuickAddCategoryOpen(true)}');
     expect(source).toContain('isOpen={isQuickAddCategoryOpen}');
     expect(source).toContain('preselectedBoardId={selectedBoard || undefined}');
-    expect(source).toContain('setSelectedCategories([newCategory.category_id]);');
+    // Category selection state was lifted into filter values; the new category
+    // is still auto-selected via onFilterChange({ categoryIds: [...] }).
+    expect(source).toContain('categoryIds: [newCategory.category_id],');
   });
 });

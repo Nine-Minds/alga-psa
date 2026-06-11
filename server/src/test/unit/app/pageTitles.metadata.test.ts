@@ -8,6 +8,14 @@ function read(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+// Recognises every form a route uses to declare title metadata, including the
+// `export { default, generateMetadata } from '...'` re-export used by extensions.
+const METADATA_EXPORT_RE = /export const metadata|export async function generateMetadata|export function generateMetadata|export \{ default, metadata \}|export \{ default, generateMetadata \}/;
+
+function hasMetadataExport(content: string): boolean {
+  return METADATA_EXPORT_RE.test(content);
+}
+
 function expectStaticTitle(relativePath: string, title: string): void {
   const content = read(relativePath);
   expect(content).toMatch(/export const metadata/);
@@ -20,9 +28,17 @@ function expectDynamicTitle(relativePath: string, title: string): void {
   expect(content).toContain(`title: '${title}'`);
 }
 
+// For routes that translate their title via generateMetadata and pass the English
+// string as the i18n `defaultValue` instead of a literal `title: '...'`.
+function expectTranslatedTitle(relativePath: string, defaultValue: string): void {
+  const content = read(relativePath);
+  expect(content).toMatch(/generateMetadata/);
+  expect(content).toContain(`defaultValue: '${defaultValue}'`);
+}
+
 function pageHasMetadata(relativePath: string): boolean {
   const pageContent = read(relativePath);
-  if (/export const metadata|export async function generateMetadata|export function generateMetadata|export \{ default, metadata \}/.test(pageContent)) {
+  if (hasMetadataExport(pageContent)) {
     return true;
   }
 
@@ -32,7 +48,7 @@ function pageHasMetadata(relativePath: string): boolean {
   }
 
   const layoutContent = read(layoutPath);
-  return /export const metadata|export async function generateMetadata|export function generateMetadata|export \{ default, metadata \}/.test(layoutContent);
+  return hasMetadataExport(layoutContent);
 }
 
 function collectPages(rootRelativePath: string): string[] {
@@ -106,7 +122,6 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/assets/integrations/page.tsx', 'Asset Integrations'],
       ['server/src/app/msp/assets/maintenance/page.tsx', 'Asset Maintenance'],
       ['server/src/app/msp/assets/policies/page.tsx', 'Asset Policies'],
-      ['server/src/app/msp/billing/page.tsx', 'Billing'],
       ['server/src/app/msp/billing/credits/page.tsx', 'Credits'],
       ['server/src/app/msp/time-entry/page.tsx', 'Time Entry'],
       ['server/src/app/msp/time-sheet-approvals/page.tsx', 'Timesheet Approvals'],
@@ -125,15 +140,12 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/workflow-control/page.tsx', 'Workflow Control'],
       ['server/src/app/msp/workflows/page.tsx', 'Workflows'],
       ['server/src/app/msp/automation-hub/layout.tsx', 'Automation Hub'],
-      ['server/src/app/msp/settings/page.tsx', 'Settings'],
       ['server/src/app/msp/settings/extensions/layout.tsx', 'Extension Settings'],
       ['server/src/app/msp/settings/extensions/install/layout.tsx', 'Install Extension'],
       ['server/src/app/msp/settings/notifications/layout.tsx', 'Notification Settings'],
       ['server/src/app/msp/settings/sla/layout.tsx', 'SLA Settings'],
       ['server/src/app/msp/security-settings/page.tsx', 'Security Settings'],
       ['server/src/app/msp/extensions/layout.tsx', 'Extensions'],
-      ['server/src/app/msp/licenses/purchase/layout.tsx', 'Purchase Licenses'],
-      ['server/src/app/msp/licenses/purchase/success/layout.tsx', 'Purchase Success'],
       ['server/src/app/msp/reports/page.tsx', 'Reports'],
       ['server/src/app/msp/user-activities/page.tsx', 'User Activities'],
       ['server/src/app/msp/onboarding/layout.tsx', 'Onboarding'],
@@ -157,7 +169,6 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/contacts/[id]/activity/page.tsx', 'Contact Activity'],
       ['server/src/app/msp/projects/[id]/page.tsx', 'Project Details'],
       ['server/src/app/msp/assets/[asset_id]/page.tsx', 'Asset Details'],
-      ['server/src/app/msp/workflows/[executionId]/page.tsx', 'Workflow Execution'],
     ] as const;
 
     for (const [relativePath, title] of dynamicMspRoutes) {
@@ -179,6 +190,34 @@ describe('route title metadata coverage', () => {
 
     for (const [relativePath, title] of staticDynamicRoutes) {
       expectStaticTitle(relativePath, title);
+    }
+  });
+
+  it('T007c: single-route tabbed pages derive the title from the ?tab= param', () => {
+    // Billing and Settings are single routes whose sections are selected via the
+    // `?tab=` query param. They use generateMetadata to mirror the active section
+    // in the browser tab title, falling back to the page name.
+    const tabbedRoutes = [
+      {
+        path: 'server/src/app/msp/billing/page.tsx',
+        fallback: 'Billing',
+        sampleTitles: ['Invoicing', 'Quotes', 'Reports'],
+      },
+      {
+        path: 'server/src/app/msp/settings/page.tsx',
+        fallback: 'Settings',
+        sampleTitles: ['Integrations', 'Users', 'Email'],
+      },
+    ] as const;
+
+    for (const { path, fallback, sampleTitles } of tabbedRoutes) {
+      const content = read(path);
+      expect(content).toMatch(/generateMetadata/);
+      expect(content).toContain('searchParams');
+      expect(content).toContain(`'${fallback}'`);
+      for (const title of sampleTitles) {
+        expect(content).toContain(`'${title}'`);
+      }
     }
   });
 
@@ -320,13 +359,48 @@ describe('route title metadata coverage', () => {
 
   it('T024: EE MSP routes export the expected titles', () => {
     expectStaticTitle('ee/server/src/app/msp/chat/page.tsx', 'Chat');
-    expectStaticTitle('ee/server/src/app/msp/licenses/purchase/layout.tsx', 'Purchase Licenses');
-    expectStaticTitle('ee/server/src/app/msp/licenses/purchase/success/layout.tsx', 'Purchase Success');
     expectStaticTitle('ee/server/src/app/msp/settings/page.tsx', 'Settings');
+  });
+
+  it('T024b: license purchase layouts translate their title via generateMetadata', () => {
+    // CE and EE share the same license purchase layouts, which localize the browser
+    // title through getServerTranslation and pass the English copy as `defaultValue`.
+    expectTranslatedTitle('server/src/app/msp/licenses/purchase/layout.tsx', 'Purchase Licenses');
+    expectTranslatedTitle('server/src/app/msp/licenses/purchase/success/layout.tsx', 'Purchase Success');
+    expectTranslatedTitle('ee/server/src/app/msp/licenses/purchase/layout.tsx', 'Purchase Licenses');
+    expectTranslatedTitle('ee/server/src/app/msp/licenses/purchase/success/layout.tsx', 'Purchase Success');
   });
 
   it('T025: EE Client Portal extension route exports a static title', () => {
     expectStaticTitle('ee/server/src/app/client-portal/extensions/[id]/page.tsx', 'Extension');
+  });
+
+  it('T027: newly covered routes export the expected titles', () => {
+    const newStaticRoutes = [
+      // MSP
+      ['server/src/app/msp/knowledge-base/page.tsx', 'Knowledge Base'],
+      ['server/src/app/msp/knowledge-base/review/page.tsx', 'Knowledge Base Review'],
+      ['server/src/app/msp/platform-updates/[notificationId]/page.tsx', 'Platform Update'],
+      ['server/src/app/msp/search/page.tsx', 'Search'],
+      // Teams (CE + EE)
+      ['server/src/app/teams/tab/page.tsx', 'Teams'],
+      ['server/src/app/teams/auth/popup-complete/page.tsx', 'Teams Authentication'],
+      ['ee/server/src/app/teams/tab/page.tsx', 'Teams'],
+      ['ee/server/src/app/teams/auth/popup-complete/page.tsx', 'Teams Authentication'],
+      // Client Portal
+      ['server/src/app/client-portal/documents/page.tsx', 'Documents'],
+      ['server/src/app/client-portal/request-services/page.tsx', 'Request Services'],
+      ['server/src/app/client-portal/request-services/[definitionId]/page.tsx', 'Service Request'],
+      ['server/src/app/client-portal/request-services/my-requests/page.tsx', 'My Requests'],
+      ['server/src/app/client-portal/request-services/my-requests/[submissionId]/page.tsx', 'Request Details'],
+      // Client components covered via a sibling layout
+      ['server/src/app/client-portal/knowledge-base/layout.tsx', 'Knowledge Base'],
+      ['server/src/app/share/[token]/layout.tsx', 'Shared Document'],
+    ] as const;
+
+    for (const [relativePath, title] of newStaticRoutes) {
+      expectStaticTitle(relativePath, title);
+    }
   });
 
   it('T026: every CE and EE page route has metadata coverage', () => {

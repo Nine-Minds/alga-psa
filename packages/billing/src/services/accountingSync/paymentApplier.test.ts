@@ -17,7 +17,7 @@ import { recordExternalPayment, reverseExternalPayment } from './recordExternalP
 
 function makeFakeLedger(existing: any = null) {
   const ledger: any = {
-    findByExternalId: vi.fn(async () => existing),
+    findByExternalId: vi.fn(async (entityType?: string) => (entityType === 'credit_application' ? null : existing)),
     findByAlgaId: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
@@ -97,6 +97,7 @@ describe('paymentApplier', () => {
     const ledger = makeFakeLedger(null);
     // findByExternalId: first call (payment lookup) → null; subsequent call (invoice lookup) → invoiceMapping
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)         // credit_application echo probe
       .mockResolvedValueOnce(null)         // payment mapping not found
       .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
 
@@ -172,6 +173,7 @@ describe('paymentApplier', () => {
     const ledger = makeFakeLedger(existing);
     // first call returns existing payment mapping, second call (invoice lookup) returns invoice mapping
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)         // credit_application echo probe
       .mockResolvedValueOnce(existing)
       .mockResolvedValueOnce(invoiceMapping);
 
@@ -234,6 +236,7 @@ describe('paymentApplier', () => {
   it('unmapped linked invoice → exception created, nothing applied', async () => {
     const ledger = makeFakeLedger(null); // payment not in ledger
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)  // credit_application echo probe
       .mockResolvedValueOnce(null)  // payment mapping
       .mockResolvedValueOnce(null); // invoice mapping — unmapped!
 
@@ -295,6 +298,7 @@ describe('paymentApplier', () => {
 
     const ledger = makeFakeLedger(null);
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)    // credit_application echo probe
       .mockResolvedValueOnce(null)    // payment mapping
       .mockResolvedValueOnce(invMap1) // invoice 1 mapping
       .mockResolvedValueOnce(invMap2); // invoice 2 mapping
@@ -339,6 +343,7 @@ describe('paymentApplier', () => {
     const invMap = { id: 'imap-1', alga_entity_id: 'alga-inv-1', external_entity_id: 'inv-ext-001', sync_status: 'synced', metadata: {} };
     const ledger = makeFakeLedger(null);
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)         // credit_application echo probe
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(invMap);
 
@@ -405,6 +410,7 @@ describe('paymentApplier — over-application guard', () => {
 
     const ledger = makeFakeLedger(null);
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // credit_application echo probe
       .mockResolvedValueOnce(null)          // payment not in ledger (NEW)
       .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
 
@@ -447,6 +453,7 @@ describe('paymentApplier — over-application guard', () => {
 
     const ledger = makeFakeLedger(null);
     ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // credit_application echo probe
       .mockResolvedValueOnce(null)          // payment not in ledger (NEW)
       .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
 

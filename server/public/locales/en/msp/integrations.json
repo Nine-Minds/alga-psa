@@ -1599,6 +1599,7 @@
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
+            "recordingPermissions": "Teams recording and transcript permissions",
             "packageMetadata": "Teams package metadata",
             "botConnector": "Bot connector credentials",
             "userLinkage": "Admin Microsoft account linkage",
@@ -1612,12 +1613,32 @@
             "profile": "Select a ready Microsoft profile for Teams.",
             "activeProfile": "Select an active Microsoft profile for Teams.",
             "profileCredentials": "Complete Microsoft profile credentials before activating Teams.",
+            "meetingOrganizer": "Configure the default Teams meeting organizer in Teams settings.",
+            "meetingOrganizerObjectId": "Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.",
             "package": "Generate the Teams app package before running end-to-end validation.",
             "baseUrl": "Regenerate the Teams package with a reachable base URL.",
             "botEnv": "Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Link your Microsoft account in your profile settings.",
             "conversationReference": "Open the Alga PSA bot in Teams and send it any message first, then retry.",
             "deliveryFailure": "Review the most recent Teams delivery failure and retry after correcting the cause."
+          }
+        },
+        "meetings": {
+          "title": "Online meetings and recordings",
+          "description": "Use one Microsoft service account to organize Teams meetings and control how recordings are retained.",
+          "organizer": {
+            "label": "Default meeting organizer UPN",
+            "placeholder": "scheduler@acme.com",
+            "help": "Saving resolves and stores the Microsoft Entra object ID used for Graph meeting calls.",
+            "resolved": "Resolved object ID: {{objectId}}"
+          },
+          "downloadRecordings": {
+            "label": "Download recordings to internal storage",
+            "description": "When enabled, recording blobs are copied into tenant storage in addition to the authenticated Graph proxy."
+          },
+          "exposeRecordingsInPortal": {
+            "label": "Show recordings and transcripts in the client portal",
+            "description": "Off by default; MSP users can still view artifacts from interaction and appointment details."
           }
         }
       }

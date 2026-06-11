@@ -134,7 +134,18 @@
         "inactiveHidden": "(utenti inattivi nascosti)"
       },
       "inactiveTag": "(Inattivo)",
-      "unnamedUser": "Utente senza nome"
+      "unnamedUser": "Utente senza nome",
+      "messages": {
+        "success": {
+          "roleAssigned": "Ruolo assegnato con successo",
+          "roleRemoved": "Ruolo rimosso con successo"
+        },
+        "error": {
+          "assignFailed": "Impossibile assegnare il ruolo. Riprova.",
+          "removeFailed": "Impossibile rimuovere il ruolo. Riprova.",
+          "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
+        }
+      }
     },
     "sessions": {
       "title": "Tutte le sessioni utente",

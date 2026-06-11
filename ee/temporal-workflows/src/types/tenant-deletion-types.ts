@@ -107,6 +107,38 @@ export interface ConfirmDeletionSignal {
 export interface RollbackDeletionSignal {
   reason: string;
   rolledBackBy: string;
+  reactivation?: TenantReactivationRollbackInput;
+}
+
+export interface TenantReactivationRollbackInput {
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  stripeSubscriptionItemId?: string;
+  stripePriceId: string;
+  checkoutSessionId?: string;
+  sendPasswordReset?: boolean;
+}
+
+export interface LinkSubscriptionToExistingTenantInput extends TenantReactivationRollbackInput {
+  tenantId: string;
+}
+
+export interface LinkSubscriptionToExistingTenantResult {
+  linked: boolean;
+  duplicateActiveSubscription: boolean;
+  stripeSubscriptionId?: string;
+}
+
+export interface TriggerReactivationPasswordResetInput {
+  tenantId: string;
+}
+
+export interface RecordReactivationPaymentAlertInput {
+  tenantId: string;
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?: string;
+  stripeSubscriptionExternalId?: string;
+  reason: 'past_window' | 'duplicate_payment' | 'reactivated_unbilled' | 'reactivated_no_access';
 }
 
 // ============================================

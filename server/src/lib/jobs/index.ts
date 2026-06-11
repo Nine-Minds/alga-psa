@@ -14,6 +14,7 @@ import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImport
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
@@ -23,6 +24,12 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  renewTeamsMeetingArtifactSubscriptions,
+  processTeamsMeetingArtifactNotification,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
+} from './handlers/teamsMeetingArtifactWebhookHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
   workflowQuotaResumeScanHandler,
@@ -145,6 +152,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await handleReconcileBucketUsage(job);
     });
 
+    // Register auto-close tickets handler
+    jobScheduler.registerJobHandler<AutoCloseTicketsJobData>('auto-close-tickets', async (job: Job<AutoCloseTicketsJobData>) => {
+      await autoCloseTicketsHandler(job.data);
+    });
+
     // Register email webhook maintenance handler
     jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
       await emailWebhookMaintenanceHandler(job);
@@ -190,6 +202,22 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         await verifyGoogleCalendarProvisioning(job.data);
       }
     );
+
+    if (isEnterpriseWorkflowEdition()) {
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+        'renew-teams-meeting-artifact-subscriptions',
+        async (job: Job<TeamsMeetingArtifactSubscriptionRenewalJobData>) => {
+          await renewTeamsMeetingArtifactSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactNotificationJobData>(
+        'process-teams-meeting-artifact-notification',
+        async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
+          await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+    }
 
     // Register SLA timer handler (CE only — EE uses Temporal workflows)
     if (process.env.EDITION !== 'enterprise') {
@@ -243,6 +271,8 @@ export type {
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
   EmailWebhookMaintenanceJobData,
@@ -405,6 +435,18 @@ export const scheduleReconcileBucketUsageJob = async (
   );
 };
 
+export const scheduleAutoCloseTicketsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/15 * * * *' // Default: every 15 minutes
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<AutoCloseTicketsJobData>(
+    'auto-close-tickets',
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleMicrosoftWebhookRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
@@ -424,6 +466,21 @@ export const scheduleGooglePubSubVerificationJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<GooglePubSubVerificationJobData>(
     'verify-google-calendar-pubsub',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
+  tenantId: string,
+  cronExpression: string = '*/30 * * * *'
+): Promise<string | null> => {
+  if (!isEnterpriseWorkflowEdition()) {
+    return null;
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+    'renew-teams-meeting-artifact-subscriptions',
     cronExpression,
     { tenantId }
   );

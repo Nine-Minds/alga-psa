@@ -1,4 +1,3 @@
-import { Toaster } from 'react-hot-toast';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -14,7 +13,6 @@ export default function OnboardingLayout({
   return (
     <div className="min-h-screen">
       {children}
-      <Toaster position="top-right" />
     </div>
   );
 }

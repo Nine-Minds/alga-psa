@@ -78,7 +78,14 @@ exports.up = async function(knex) {
     });
 
     // Add constraints
-    await knex.raw(`
+    // Citus cannot distribute a table with a unique constraint that
+    // excludes the partition column, and nothing references client_id
+    // alone (all FKs are composite on tenant). Skip it on Citus so the
+    // clients table stays distributable.
+    const citusForUnique = await knex.raw(
+      "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled"
+    );
+    if (!citusForUnique.rows[0].enabled) await knex.raw(`
       ALTER TABLE clients
       ADD CONSTRAINT clients_client_id_unique UNIQUE (client_id)
     `);

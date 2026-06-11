@@ -15,6 +15,7 @@ import {
 import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
 import {
   AccountingExportAdapterContext,
+  AccountingExportDeliveryDocumentFailure,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
   AccountingExportDocument,
@@ -292,45 +293,89 @@ export class AccountingExportService {
     try {
       transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
+      const failedDocuments = deliveryResult.failedDocuments ?? [];
 
-    for (const delivered of deliveryResult.deliveredLines) {
-      // Delivery/retry transitions may change transport state, but the stored line-level
-      // service-period projection stays immutable so replay, reread, and dashboard inspection
-      // keep the original canonical-vs-fallback provenance for each exported line.
-      await this.repository.updateLine(delivered.lineId, {
-        status: 'delivered',
-        external_document_ref: delivered.externalDocumentRef ?? null
-      });
-    }
+      for (const delivered of deliveryResult.deliveredLines) {
+        // Delivery/retry transitions may change transport state, but the stored line-level
+        // service-period projection stays immutable so replay, reread, and dashboard inspection
+        // keep the original canonical-vs-fallback provenance for each exported line.
+        await this.repository.updateLine(delivered.lineId, {
+          status: 'delivered',
+          external_document_ref: delivered.externalDocumentRef ?? null
+        });
+      }
 
-      const transactionIds = collectTransactionIds(context.lines);
+      for (const failure of failedDocuments) {
+        await this.persistDeliveryDocumentFailure(batchId, adapter.type, failure);
+      }
+
+      const deliveredLineIds = new Set(deliveryResult.deliveredLines.map((item) => item.lineId));
+      const deliveredContextLines =
+        failedDocuments.length > 0
+          ? context.lines.filter((line) => deliveredLineIds.has(line.line_id))
+          : context.lines;
+
+      const transactionIds = collectTransactionIds(deliveredContextLines);
       if (transactionIds.length > 0) {
         await this.repository.attachTransactionsToBatch(transactionIds, batchId);
       }
 
-      await this.repository.updateBatchStatus(batchId, {
-        status: 'delivered',
-        delivered_at: new Date().toISOString()
-      });
-
-      if (typeof adapter.postProcess === 'function') {
-        await adapter.postProcess(deliveryResult, context);
+      const hasDeliveredLines = deliveryResult.deliveredLines.length > 0;
+      if (failedDocuments.length === 0) {
+        await this.repository.updateBatchStatus(batchId, {
+          status: 'delivered',
+          delivered_at: new Date().toISOString()
+        });
+      } else {
+        await this.repository.updateBatchStatus(batchId, {
+          status: hasDeliveredLines ? 'needs_attention' : 'failed',
+          delivered_at: hasDeliveredLines ? new Date().toISOString() : undefined,
+          notes: `${failedDocuments.length} of ${transformResult.documents.length} invoice(s) failed to deliver. See batch errors for details.`
+        });
       }
 
-      // Automatically import external tax after successful delivery with tax delegation
-      if (context.taxDelegationMode === 'delegate') {
-        await this.importExternalTaxAfterDelivery(deliveryResult, context, adapter);
-      }
-
-      await publishEvent({
-        eventType: 'ACCOUNTING_EXPORT_COMPLETED',
-        payload: {
-          tenantId: context.batch.tenant,
-          batchId: context.batch.batch_id,
-          adapterType: adapter.type,
-          deliveredLineIds: deliveryResult.deliveredLines.map((item) => item.lineId)
+      if (failedDocuments.length === 0 || hasDeliveredLines) {
+        if (typeof adapter.postProcess === 'function') {
+          await adapter.postProcess(deliveryResult, context);
         }
-      });
+
+        // Automatically import external tax after successful delivery with tax delegation
+        if (context.taxDelegationMode === 'delegate') {
+          await this.importExternalTaxAfterDelivery(
+            deliveryResult,
+            { ...context, lines: deliveredContextLines },
+            adapter
+          );
+        }
+      }
+
+      if (failedDocuments.length === 0) {
+        await publishEvent({
+          eventType: 'ACCOUNTING_EXPORT_COMPLETED',
+          payload: {
+            tenantId: context.batch.tenant,
+            batchId: context.batch.batch_id,
+            adapterType: adapter.type,
+            deliveredLineIds: deliveryResult.deliveredLines.map((item) => item.lineId)
+          }
+        });
+      } else {
+        await publishEvent({
+          eventType: 'ACCOUNTING_EXPORT_FAILED',
+          payload: {
+            tenantId: context.batch.tenant,
+            batchId: context.batch.batch_id,
+            adapterType: adapter.type,
+            deliveredLineIds: deliveryResult.deliveredLines.map((item) => item.lineId),
+            error: {
+              message: `${failedDocuments.length} of ${transformResult.documents.length} invoice(s) failed to deliver: ${failedDocuments
+                .map((failure) => failure.message)
+                .join(' | ')}`,
+              code: failedDocuments[0].code
+            }
+          }
+        });
+      }
 
       return deliveryResult;
     } catch (error: any) {
@@ -398,6 +443,44 @@ export class AccountingExportService {
     }
 
     return 'none';
+  }
+
+  private async persistDeliveryDocumentFailure(
+    batchId: string,
+    adapterType: string,
+    failure: AccountingExportDeliveryDocumentFailure
+  ): Promise<void> {
+    const metadata = {
+      adapterType,
+      documentId: failure.documentId,
+      ...(failure.metadata ?? {})
+    };
+
+    if (failure.lineIds.length === 0) {
+      await this.repository.addError({
+        batch_id: batchId,
+        line_id: null,
+        code: failure.code,
+        message: failure.message,
+        metadata
+      });
+      return;
+    }
+
+    for (const lineId of failure.lineIds) {
+      await this.repository.updateLine(lineId, {
+        status: 'failed',
+        external_document_ref: null,
+        notes: failure.message
+      });
+      await this.repository.addError({
+        batch_id: batchId,
+        line_id: lineId,
+        code: failure.code,
+        message: failure.message,
+        metadata
+      });
+    }
   }
 
   private async persistAdapterFailure(params: {

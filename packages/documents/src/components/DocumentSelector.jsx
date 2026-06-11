@@ -297,4 +297,3 @@ export default function DocumentSelector({ id, entityId, entityType, onDocumentS
             </DialogContent>
         </Dialog>);
 }
-//# sourceMappingURL=DocumentSelector.jsx.map

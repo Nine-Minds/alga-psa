@@ -147,7 +147,7 @@ export async function enqueueInvoiceVoid(
     // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
     const mapping = await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenantId,
+        tenant: tenantId,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: invoiceId
@@ -219,7 +219,7 @@ export async function enqueueExternalPaymentPush(
     // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
     const mapping = await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenantId,
+        tenant: tenantId,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: params.invoiceId

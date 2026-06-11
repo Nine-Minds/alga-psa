@@ -58,6 +58,8 @@ interface TeamsIntegrationRow {
   enabled_capabilities: unknown;
   app_id?: string | null;
   package_metadata?: unknown;
+  default_meeting_organizer_upn?: string | null;
+  default_meeting_organizer_object_id?: string | null;
 }
 
 interface MicrosoftProfileRow {
@@ -593,6 +595,48 @@ export async function runTeamsDiagnosticsImpl(
       status: 'pass',
       detail: 'Selected Microsoft profile is ready.',
       data: { selectedProfileId },
+    };
+  });
+
+  await runStep('recording_permissions', 'Teams recording and transcript permissions', async () => {
+    if (!integration) {
+      return { status: 'skip', detail: 'Teams integration settings are required before recording permissions can be checked.' };
+    }
+
+    const organizerUpn = normalizeString(integration.default_meeting_organizer_upn);
+    const organizerObjectId = normalizeString(integration.default_meeting_organizer_object_id);
+    if (!organizerUpn) {
+      return {
+        status: 'warn',
+        detail: 'No Teams meeting organizer is configured, so recording and transcript capture cannot run.',
+        data: { recordingsAvailable: false, reason: 'no_organizer' },
+        recommendations: ['Configure the default Teams meeting organizer in Teams settings.'],
+      };
+    }
+
+    if (!organizerObjectId) {
+      return {
+        status: 'warn',
+        detail: 'The Teams meeting organizer object id is missing. Save the organizer in Teams settings so recording and transcript capture can address Graph by object id.',
+        data: { recordingsAvailable: false, reason: 'missing_organizer_object_id', organizerUpn },
+        recommendations: ['Save the default Teams meeting organizer again so Alga PSA can resolve its Microsoft Entra object id.'],
+      };
+    }
+
+    return {
+      status: 'pass',
+      detail: 'Recording capture prerequisites are configured in Alga PSA. Confirm Microsoft Graph recording/transcript admin consent and Exchange mailbox scoping in Microsoft 365.',
+      data: {
+        recordingsAvailable: true,
+        organizerUpn,
+        organizerObjectId,
+        requiredGraphApplicationPermissions: [
+          'Calendars.ReadWrite',
+          'OnlineMeetingRecording.Read.All',
+          'OnlineMeetingTranscript.Read.All',
+        ],
+        exchangeMailboxScopingRequired: true,
+      },
     };
   });
 
