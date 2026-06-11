@@ -26,6 +26,7 @@ import {
   flattenThreadGroups,
   type FlattenedThreadNode,
 } from "../commentThreads";
+import { isTokenOnlyComment } from "../tokenOnlyComments";
 import { ExpandableComment } from "./ExpandableComment";
 
 const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
@@ -99,15 +100,16 @@ export function CommentsSection({
   // the same key flattenThreadGroups uses. Independent of the global collapse.
   const [collapsedRootIds, setCollapsedRootIds] = useState<Set<string>>(new Set());
 
-  // Classify a node for moderation: 'visible' renders normally, 'hidden'
-  // renders a [hidden] placeholder (muted author but has children — keep the
-  // subtree), 'drop' removes it entirely (muted leaf/standalone — today's
-  // behavior). System events and optimistic rows are never muted.
-  const mutedState = useCallback(
+  // Classify a node for visibility: 'visible' renders normally, 'hidden'
+  // renders a [hidden] placeholder (suppressed comment with children — keep
+  // the subtree), 'drop' removes it entirely (suppressed leaf/standalone).
+  // Suppressed = muted author or a token-only inbound-email artifact. System
+  // events and optimistic rows are never suppressed.
+  const visibilityState = useCallback(
     (node: FlattenedThreadNode<TicketComment>): "visible" | "hidden" | "drop" => {
       const c = node.comment;
       if (isSystemEvent(c) || c.optimistic) return "visible";
-      if (!moderation.isMuted(c.created_by ?? null)) return "visible";
+      if (!moderation.isMuted(c.created_by ?? null) && !isTokenOnlyComment(c)) return "visible";
       const childCount = c.comment_id
         ? node.group.childrenByParentId.get(c.comment_id)?.length ?? 0
         : 0;
@@ -121,8 +123,8 @@ export function CommentsSection({
       getCommentId: (c) => c.comment_id,
       collapsedRootIds,
     });
-    return flat.filter((node) => mutedState(node) !== "drop");
-  }, [threadGroups, collapsedRootIds, mutedState]);
+    return flat.filter((node) => visibilityState(node) !== "drop");
+  }, [threadGroups, collapsedRootIds, visibilityState]);
 
   const visible = renderable.slice(0, visibleCount);
   const remainingCount = Math.max(0, renderable.length - visibleCount);
@@ -449,7 +451,7 @@ export function CommentsSection({
             const isSystemEventComment = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean(c.optimistic);
             const deleted = isDeleted(c);
-            const hidden = mutedState(node) === "hidden";
+            const hidden = visibilityState(node) === "hidden";
             const isEditingThis = editingCommentId === c.comment_id;
             const isReplyingThis = replyingToCommentId === c.comment_id;
             const canEdit = !isSystemEventComment && !isOptimistic && !deleted && !hidden && Boolean(meUserId && c.created_by === meUserId);

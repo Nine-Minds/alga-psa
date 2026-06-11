@@ -563,6 +563,51 @@ describe("CommentsSection — threaded rendering", () => {
     expect(hasText(renderer, "[hidden]")).toBe(false);
   });
 
+  it("T043: a token-only root with a visible reply renders [hidden] and keeps the reply", () => {
+    const renderer = render({
+      comments: [
+        root("tok-root", "th1", 1, { comment_text: "[ALGA-REPLY-TOKEN:abc123]" }),
+        reply("ok-reply", "th1", "tok-root", 2),
+      ],
+    });
+
+    expect(hasText(renderer, "[hidden]")).toBe(true);
+    expect(hasText(renderer, "ALGA-REPLY-TOKEN")).toBe(false);
+    const wrappers = commentWrappers(renderer);
+    expect(wrappers).toHaveLength(2);
+    expect(
+      wrappers.some((w) => String(w.props.accessibilityLabel ?? "").includes("Reply ok-reply")),
+    ).toBe(true);
+  });
+
+  it("T044: a token-only standalone/leaf comment is filtered out entirely", () => {
+    const renderer = render({
+      comments: [
+        root("visible", "thV", 1),
+        root("tok-standalone", "thT", 2, { comment_text: "ALGA-TICKET-ID: 42" }),
+        root("kept-root", "thK", 3),
+        reply("tok-leaf", "thK", "kept-root", 4, { comment_text: "\\[ALGA-REPLY-TOKEN:xyz" }),
+      ],
+    });
+
+    const labels = commentWrappers(renderer).map((w) => String(w.props.accessibilityLabel ?? ""));
+    expect(labels).toHaveLength(2);
+    expect(labels.some((l) => l.includes("Root visible"))).toBe(true);
+    expect(labels.some((l) => l.includes("Root kept-root"))).toBe(true);
+    expect(hasText(renderer, "[hidden]")).toBe(false);
+  });
+
+  it("T045: a comment mixing a token with real text stays fully visible", () => {
+    const renderer = render({
+      comments: [
+        root("mixed", "th1", 1, { comment_text: "Real reply\n[ALGA-REPLY-TOKEN:abc123]" }),
+      ],
+    });
+
+    expect(commentWrappers(renderer)).toHaveLength(1);
+    expect(hasText(renderer, "[hidden]")).toBe(false);
+  });
+
   it("T037: reactions add button + see-more render on a reply node", () => {
     const renderer = render({
       comments: [

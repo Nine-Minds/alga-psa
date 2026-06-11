@@ -1,8 +1,33 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
-import type { SuccessResponse } from "./tickets";
+import type { PaginatedResponse, SuccessResponse } from "./tickets";
 
 export type WorkItemType = "ticket" | "project_task" | "non_billable_category" | "ad_hoc" | "interaction";
+
+export type TimePeriod = {
+  period_id: string;
+  start_date: string;
+  end_date: string;
+  is_current?: boolean | null;
+};
+
+export type TimeEntryListItem = {
+  entry_id: string;
+  work_item_id?: string | null;
+  work_item_type?: WorkItemType | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  work_date?: string | null;
+  billable_duration?: number | null;
+  notes?: string | null;
+  user_id?: string | null;
+  approval_status?: string | null;
+  service_id?: string | null;
+  service_name?: string | null;
+  user_name?: string | null;
+  duration_hours?: number | null;
+  is_billable?: boolean | null;
+};
 
 export type TimeEntry = {
   entry_id: string;
@@ -56,6 +81,72 @@ export function getServices(
   return client.request<SuccessResponse<ServiceOption[]>>({
     method: "GET",
     path: "/api/v1/services?is_active=true&limit=100",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function listTimePeriods(
+  client: ApiClient,
+  params: { apiKey: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TimePeriod[]>>> {
+  return client.request<SuccessResponse<TimePeriod[]>>({
+    method: "GET",
+    path: "/api/v1/time-periods",
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getCurrentTimePeriod(
+  client: ApiClient,
+  params: { apiKey: string; date?: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TimePeriod>>> {
+  return client.request<SuccessResponse<TimePeriod>>({
+    method: "GET",
+    path: "/api/v1/time-periods/current",
+    query: {
+      date: params.date,
+    },
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export type ListTimeEntriesParams = {
+  apiKey: string;
+  page: number;
+  limit: number;
+  user_id?: string;
+  date_from?: string;
+  date_to?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  signal?: AbortSignal;
+};
+
+export function listTimeEntries(
+  client: ApiClient,
+  params: ListTimeEntriesParams,
+): Promise<ApiResult<PaginatedResponse<TimeEntryListItem>>> {
+  return client.request<PaginatedResponse<TimeEntryListItem>>({
+    method: "GET",
+    path: "/api/v1/time-entries",
+    signal: params.signal,
+    query: {
+      page: params.page,
+      limit: params.limit,
+      sort: params.sort ?? "start_time",
+      order: params.order ?? "desc",
+      user_id: params.user_id,
+      date_from: params.date_from,
+      date_to: params.date_to,
+    },
     headers: {
       "x-api-key": params.apiKey,
     },

@@ -46,6 +46,7 @@ export type TicketRichAttributes = {
 
 export type TicketDetail = TicketListItem & {
   attributes?: TicketRichAttributes | null;
+  tags?: string[] | null;
   description_html?: string | null;
   priority_id?: string | null;
   assigned_to?: string | null;

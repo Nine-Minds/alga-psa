@@ -80,7 +80,6 @@ let tenantColumns: Record<string, unknown>;
 let userColumns: Record<string, unknown>;
 let boardColumns: Record<string, unknown>;
 let nextNumberColumns: Record<string, unknown>;
-let standardStatusColumns: Record<string, unknown>;
 
 function hasColumn(columns: Record<string, unknown>, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
@@ -89,7 +88,6 @@ function hasColumn(columns: Record<string, unknown>, columnName: string): boolea
 async function cleanupTenant(tenantId: string) {
   await db('next_number').where({ tenant: tenantId }).delete().catch(() => undefined);
   await db('priorities').where({ tenant: tenantId, item_type: 'ticket' }).delete().catch(() => undefined);
-  await db('standard_statuses').where({ tenant: tenantId }).delete().catch(() => undefined);
   await db('statuses').where({ tenant: tenantId }).delete().catch(() => undefined);
   await db('categories').where({ tenant: tenantId }).delete().catch(() => undefined);
   await db('boards').where({ tenant: tenantId }).delete().catch(() => undefined);
@@ -126,27 +124,28 @@ async function seedTenantAndUser() {
   return { tenantId, userId };
 }
 
-async function seedStandardTicketStatuses(tenantId: string) {
-  await db('standard_statuses').insert([
-    {
-      standard_status_id: uuidv4(),
-      tenant: tenantId,
-      name: 'Open',
-      item_type: 'ticket',
-      display_order: 1,
-      ...(hasColumn(standardStatusColumns, 'is_default') ? { is_default: true } : {}),
-      ...(hasColumn(standardStatusColumns, 'is_closed') ? { is_closed: false } : {}),
-    },
-    {
-      standard_status_id: uuidv4(),
-      tenant: tenantId,
-      name: 'Resolved',
-      item_type: 'ticket',
-      display_order: 2,
-      ...(hasColumn(standardStatusColumns, 'is_default') ? { is_default: false } : {}),
-      ...(hasColumn(standardStatusColumns, 'is_closed') ? { is_closed: true } : {}),
-    },
-  ]);
+async function seedStandardTicketStatuses() {
+  await db('standard_statuses')
+    .insert([
+      {
+        standard_status_id: uuidv4(),
+        name: 'Open',
+        item_type: 'ticket',
+        display_order: 1,
+        is_default: true,
+        is_closed: false,
+      },
+      {
+        standard_status_id: uuidv4(),
+        name: 'Resolved',
+        item_type: 'ticket',
+        display_order: 2,
+        is_default: false,
+        is_closed: true,
+      },
+    ])
+    .onConflict(['name', 'item_type'])
+    .ignore();
 }
 
 describe('Onboarding board-specific ticket statuses', () => {
@@ -157,7 +156,6 @@ describe('Onboarding board-specific ticket statuses', () => {
     userColumns = await db('users').columnInfo();
     boardColumns = await db('boards').columnInfo();
     nextNumberColumns = await db('next_number').columnInfo();
-    standardStatusColumns = await db('standard_statuses').columnInfo();
   }, 180_000);
 
   afterEach(async () => {
@@ -242,7 +240,7 @@ describe('Onboarding board-specific ticket statuses', () => {
 
   it('T052: importReferenceData creates ticket statuses on the target board without colliding with another board', async () => {
     const { tenantId, userId } = await seedTenantAndUser();
-    await seedStandardTicketStatuses(tenantId);
+    await seedStandardTicketStatuses();
     const boardA = uuidv4();
     const boardB = uuidv4();
 

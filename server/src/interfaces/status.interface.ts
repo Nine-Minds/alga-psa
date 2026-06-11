@@ -20,7 +20,7 @@ export interface IStatus extends TenantEntity {
   icon?: string | null; // Lucide icon name (e.g., 'Clipboard', 'PlayCircle')
 }
 
-export interface IStandardStatus extends TenantEntity {
+export interface IStandardStatus {
   standard_status_id: string;
   name: string;
   item_type: ItemType;

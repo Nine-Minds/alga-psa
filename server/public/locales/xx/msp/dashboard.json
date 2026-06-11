@@ -80,6 +80,7 @@
     "playStoreQrAlt": "11111",
     "connectServer": "11111",
     "connectServerQrAlt": "11111",
+    "zoomAria": "11111 {{label}} 11111",
     "hide": "11111",
     "hiding": "11111",
     "dismissAria": "11111",

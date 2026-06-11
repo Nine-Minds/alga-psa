@@ -813,8 +813,7 @@ const ProjectTaskModel = {
               .andOn('psm.tenant', 's.tenant');
         })
         .leftJoin('standard_statuses as ss', function() {
-          this.on('psm.standard_status_id', 'ss.standard_status_id')
-              .andOn('psm.tenant', 'ss.tenant');
+          this.on('psm.standard_status_id', 'ss.standard_status_id');
         })
         .select(
           'project_ticket_links.link_id',

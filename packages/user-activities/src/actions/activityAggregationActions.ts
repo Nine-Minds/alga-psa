@@ -464,8 +464,7 @@ export async function fetchProjectActivities(
             .andOn("project_tasks.tenant", "project_status_mappings.tenant");
       })
       .leftJoin("standard_statuses", function() {
-        this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
-            .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
+        this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
       })
       .leftJoin({ custom_statuses: "statuses" }, function() {
         this.on("project_status_mappings.status_id", "custom_statuses.status_id")
@@ -496,8 +495,7 @@ export async function fetchProjectActivities(
             this.select("project_status_mappings.project_status_mapping_id")
               .from("project_status_mappings")
               .join("standard_statuses", function() {
-                this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
-                    .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
+                this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id");
               })
               .where("project_status_mappings.tenant", tenant)
               .whereIn("standard_statuses.name", filters.status || []);
@@ -524,8 +522,7 @@ export async function fetchProjectActivities(
                 this.select("psm.project_status_mapping_id")
                   .from({ psm: "project_status_mappings" })
                   .leftJoin({ ss: "standard_statuses" }, function() {
-                    this.on("psm.standard_status_id", "ss.standard_status_id")
-                        .andOn("psm.tenant", "ss.tenant");
+                    this.on("psm.standard_status_id", "ss.standard_status_id");
                   })
                   .leftJoin({ cs: "statuses" }, function() {
                     this.on("psm.status_id", "cs.status_id")

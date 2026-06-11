@@ -1,5 +1,6 @@
 {
   "retry": "Retry",
+  "back": "Back",
   "close": "Close",
   "cancel": "Cancel",
   "clear": "Clear",
@@ -17,6 +18,7 @@
   "search": "Search\u2026",
   "noResults": "No results found.",
   "create": "Create",
+  "menu": "Menu",
   "required": "Required",
   "copied": "Copied",
   "on": "On",

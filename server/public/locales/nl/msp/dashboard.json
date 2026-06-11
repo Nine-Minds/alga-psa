@@ -198,6 +198,7 @@
     "playStoreQrAlt": "QR-code die naar de AlgaPSA-app in Google Play verwijst",
     "connectServer": "Deze server verbinden",
     "connectServerQrAlt": "QR-code die de AlgaPSA mobiele app met deze server verbindt",
+    "zoomAria": "Vergroot de QR-code voor {{label}}",
     "hide": "Verbergen",
     "hiding": "Verbergen...",
     "dismissAria": "Mobiele-app-kaart verbergen",

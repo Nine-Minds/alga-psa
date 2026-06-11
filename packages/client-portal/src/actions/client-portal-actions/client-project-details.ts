@@ -142,7 +142,7 @@ export const getClientProjectTasks = withAuth(async (
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function() {
-      this.on('psm.standard_status_id', 'ss.standard_status_id').andOn('psm.tenant', 'ss.tenant');
+      this.on('psm.standard_status_id', 'ss.standard_status_id');
     })
     .leftJoin('priorities as pri', function() {
       this.on('pt.priority_id', 'pri.priority_id').andOn('pt.tenant', 'pri.tenant');
@@ -423,7 +423,7 @@ export const getClientProjectStatuses = withAuth(async (
         this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
       })
       .leftJoin('standard_statuses as ss', function() {
-        this.on('psm.standard_status_id', 'ss.standard_status_id').andOn('psm.tenant', 'ss.tenant');
+        this.on('psm.standard_status_id', 'ss.standard_status_id');
       })
       .where({ 'psm.project_id': projectId, 'psm.tenant': tenant, 'psm.is_visible': true })
       .select(

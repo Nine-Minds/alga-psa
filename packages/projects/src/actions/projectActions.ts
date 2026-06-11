@@ -471,7 +471,7 @@ export const getProjectsWithPhases = withAuth(async (
             this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
           })
           .leftJoin('standard_statuses as ss', function () {
-            this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+            this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
           })
           .where('psm.tenant', tenant)
           .select(
