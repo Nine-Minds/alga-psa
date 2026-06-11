@@ -1,28 +1,217 @@
 [
-  { "id": "F001", "description": "applyCreditToInvoice no longer decrements invoices.total_amount; credit_applied increment and existing transaction/allocation/pool writes unchanged.", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F002", "description": "computeBalanceDue derivation becomes total_amount − credit_applied − payments; slice-1 call sites unchanged, helper internals swapped.", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F003", "description": "Read-site audit: every amount-due consumer switched to computeBalanceDue — MSP invoice list/detail, client portal list/detail/pay, overdue detection, export selectors. Audited-site list recorded in SCRATCHPAD before backfill merges.", "implemented": false, "prdRefs": ["5.1", "7"] },
-  { "id": "F004", "description": "Stripe payment-link amount (getOrCreateInvoicePaymentLinkUrl) charges computeBalanceDue, not total_amount.", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F005", "description": "Invoice PDF and email templates rendering an amount due use the derived balance (with credit shown as its own line where templates support it).", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F006", "description": "Backfill migration: total_amount += credit_applied where credit_applied > 0; down migration reverses; transaction-safe.", "implemented": false, "prdRefs": ["5.1", "6"] },
-  { "id": "F007", "description": "Migration + model: invoices.invoice_type ('standard'|'credit_note'|'prepayment') backfilled from is_prepayment and negative totals; is_prepayment kept in sync.", "implemented": false, "prdRefs": ["5.1", "6"] },
-  { "id": "F008", "description": "Finalizing a negative-total invoice sets invoice_type 'credit_note' (existing credit_issuance_from_negative_invoice behavior unchanged).", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F009", "description": "Credit-note number sequence: CM- prefixed, configurable alongside invoice numbering settings; credit notes draw from it at creation/finalize.", "implemented": false, "prdRefs": ["5.1", "6"] },
-  { "id": "F010", "description": "Producer: finalizing a credit_note invoice with a connected realm + auto-sync on enqueues export_credit_memo.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F011", "description": "Adapter CreditMemo transform: sign-flipped lines, same item/tax mappings and tax-delegation behavior as invoices; QboClientService gains CreditMemo create/update.", "implemented": false, "prdRefs": ["5.2", "6"] },
-  { "id": "F012", "description": "CreditMemo delivery writes mapping ledger rows (external_entity_type 'CreditMemo') with sync token + exported-total snapshot.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F013", "description": "Validation: prepayment invoices are excluded from accounting export with a clear, translated message; credit notes validate like invoices (item/tax mappings).", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F014", "description": "Manual export batches can include credit notes through the existing selector (preview credit_memo flag honored); scheduled and manual paths share the pipeline.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F015", "description": "Drift detection covers mapped CreditMemos (total change, void/delete in QBO) using the slice-1 comparator and exception flow.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F016", "description": "Producer: applyCreditToInvoice enqueues apply_credit keyed to the credit_allocations row when a realm is connected.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F017", "description": "apply_credit op processes only when both credit note and target invoice are mapped; otherwise remains pending with a reason and drains after exports complete.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F018", "description": "apply_credit execution creates a zero-dollar QBO Payment linking CreditMemo→Invoice for the applied amount; allocation-keyed mapping row provides idempotency/echo suppression.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F019", "description": "voidInvoice action: reason required, permission-gated; status → 'cancelled'; writes invoice_cancelled transaction; auto-reverses credit applications (pools + client balance + reversal transactions).", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F020", "description": "voidInvoice guards: blocked while payments exist; credit notes voidable only when unapplied (applied → must unwind first); drafts excluded (delete remains for drafts).", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F021", "description": "Invoice detail UI: Void action with confirmation dialog + reason field; voided invoices render the cancelled state.", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F022", "description": "hardDeleteInvoice blocked when an external accounting mapping exists; error message directs to void.", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F023", "description": "Outbound void_invoice op: adapter voids the linked QBO Invoice/CreditMemo (QBO void operation); mapping status → 'voided'; slice-1 badge renders it.", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F024", "description": "Producer: voidInvoice on an exported document enqueues void_invoice (auto-sync state does not gate voids — books must follow).", "implemented": false, "prdRefs": ["5.4"] },
-  { "id": "F025", "description": "Alga-side credit unapply (if invoked on a synced allocation) files an exception rather than silently diverging (non-goal: auto-reversal in QBO).", "implemented": false, "prdRefs": ["3", "5.3"] },
-  { "id": "F026", "description": "i18n: credit-note labels, CM numbering settings, void dialog, validation and exception messages in en + translated locales; pseudo-locales regenerated.", "implemented": false, "prdRefs": ["5.1", "5.4"] }
+  {
+    "id": "F001",
+    "description": "applyCreditToInvoice no longer decrements invoices.total_amount; credit_applied increment and existing transaction/allocation/pool writes unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "computeBalanceDue derivation becomes total_amount \u2212 credit_applied \u2212 payments; slice-1 call sites unchanged, helper internals swapped.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Read-site audit: every amount-due consumer switched to computeBalanceDue \u2014 MSP invoice list/detail, client portal list/detail/pay, overdue detection, export selectors. Audited-site list recorded in SCRATCHPAD before backfill merges.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "7"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Stripe payment-link amount (getOrCreateInvoicePaymentLinkUrl) charges computeBalanceDue, not total_amount.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Invoice PDF and email templates rendering an amount due use the derived balance (with credit shown as its own line where templates support it).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Backfill migration: total_amount += credit_applied where credit_applied > 0; down migration reverses; transaction-safe.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Migration + model: invoices.invoice_type ('standard'|'credit_note'|'prepayment') backfilled from is_prepayment and negative totals; is_prepayment kept in sync.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Finalizing a negative-total invoice sets invoice_type 'credit_note' (existing credit_issuance_from_negative_invoice behavior unchanged).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Credit-note number sequence: CM- prefixed, configurable alongside invoice numbering settings; credit notes draw from it at creation/finalize.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Producer: finalizing a credit_note invoice with a connected realm + auto-sync on enqueues export_credit_memo.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Adapter CreditMemo transform: sign-flipped lines, same item/tax mappings and tax-delegation behavior as invoices; QboClientService gains CreditMemo create/update.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2",
+      "6"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "CreditMemo delivery writes mapping ledger rows (external_entity_type 'CreditMemo') with sync token + exported-total snapshot.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Validation: prepayment invoices are excluded from accounting export with a clear, translated message; credit notes validate like invoices (item/tax mappings).",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Manual export batches can include credit notes through the existing selector (preview credit_memo flag honored); scheduled and manual paths share the pipeline.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Drift detection covers mapped CreditMemos (total change, void/delete in QBO) using the slice-1 comparator and exception flow.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Producer: applyCreditToInvoice enqueues apply_credit keyed to the credit_allocations row when a realm is connected.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "apply_credit op processes only when both credit note and target invoice are mapped; otherwise remains pending with a reason and drains after exports complete.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "apply_credit execution creates a zero-dollar QBO Payment linking CreditMemo\u2192Invoice for the applied amount; allocation-keyed mapping row provides idempotency/echo suppression.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "voidInvoice action: reason required, permission-gated; status \u2192 'cancelled'; writes invoice_cancelled transaction; auto-reverses credit applications (pools + client balance + reversal transactions).",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "voidInvoice guards: blocked while payments exist; credit notes voidable only when unapplied (applied \u2192 must unwind first); drafts excluded (delete remains for drafts).",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Invoice detail UI: Void action with confirmation dialog + reason field; voided invoices render the cancelled state.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "hardDeleteInvoice blocked when an external accounting mapping exists; error message directs to void.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Outbound void_invoice op: adapter voids the linked QBO Invoice/CreditMemo (QBO void operation); mapping status \u2192 'voided'; slice-1 badge renders it.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Producer: voidInvoice on an exported document enqueues void_invoice (auto-sync state does not gate voids \u2014 books must follow).",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Alga-side credit unapply (if invoked on a synced allocation) files an exception rather than silently diverging (non-goal: auto-reversal in QBO).",
+    "implemented": true,
+    "prdRefs": [
+      "3",
+      "5.3"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "i18n: credit-note labels, CM numbering settings, void dialog, validation and exception messages in en + translated locales; pseudo-locales regenerated.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.4"
+    ]
+  }
 ]

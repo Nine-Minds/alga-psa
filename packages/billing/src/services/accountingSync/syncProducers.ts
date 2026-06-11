@@ -125,6 +125,59 @@ export async function satisfyExportOpsForManualBatch(
 }
 
 /**
+ * Enqueue a void_invoice op for the given invoice. Unlike auto-export, this
+ * fires regardless of the auto-sync toggle because voids must propagate to
+ * keep the books consistent. Only fires when EE + connected realm + mapping.
+ */
+export async function enqueueInvoiceVoid(
+  knex: Knex,
+  tenantId: string,
+  invoiceId: string
+): Promise<void> {
+  try {
+    if (!isEnterpriseEdition()) {
+      return;
+    }
+
+    const realm = await getDefaultQboRealmId(tenantId);
+    if (!realm) {
+      return;
+    }
+
+    // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
+    const mapping = await knex('tenant_external_entity_mappings')
+      .where({
+        tenant_id: tenantId,
+        integration_type: SYNC_ADAPTER_TYPE,
+        alga_entity_type: 'invoice',
+        alga_entity_id: invoiceId
+      })
+      .first('id');
+
+    if (!mapping) {
+      return;
+    }
+
+    await new SyncOperationsRepository(knex).enqueue({
+      tenant: tenantId,
+      adapterType: SYNC_ADAPTER_TYPE,
+      targetRealm: realm,
+      operation: 'void_invoice',
+      algaEntityType: 'invoice',
+      algaEntityId: invoiceId
+    });
+
+    logger.debug('[accountingSync] Queued invoice void', { tenantId, invoiceId, realm });
+  } catch (error) {
+    logger.warn('[accountingSync] Failed to queue invoice void (void action unaffected)', {
+      tenantId,
+      invoiceId,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+}
+
+/**
  * Enqueue an apply_credit op for the given credit allocation. This is called
  * fire-and-forget after applyCreditToInvoice commits. The op stays pending
  * until both the credit-note invoice and the target invoice are mapped in QBO,

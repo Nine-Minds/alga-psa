@@ -19,7 +19,7 @@ vi.mock('./syncOperationsRepository', () => ({
   }))
 }));
 
-import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication } from './syncProducers';
+import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid } from './syncProducers';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
@@ -32,6 +32,19 @@ function makeKnex(invoiceType: string | null = 'standard'): any {
   const first = vi.fn(async () => invoiceType !== null ? { invoice_type: invoiceType } : null);
   const select = vi.fn(() => ({ first }));
   const where = vi.fn(() => ({ select }));
+  const table = vi.fn(() => ({ where }));
+  const fn = Object.assign(table, { fn: { now: vi.fn() } });
+  return fn;
+}
+
+/**
+ * Build a fake knex for enqueueInvoiceVoid tests.
+ * The void producer queries tenant_external_entity_mappings to check for a mapping.
+ */
+function makeVoidKnex(hasMapping: boolean = true): any {
+  const mappingRow = hasMapping ? { id: 'map-1' } : null;
+  const first = vi.fn(async (..._args: any[]) => mappingRow);
+  const where = vi.fn(() => ({ first }));
   const table = vi.fn(() => ({ where }));
   const fn = Object.assign(table, { fn: { now: vi.fn() } });
   return fn;
@@ -229,6 +242,96 @@ describe('enqueueCreditApplication', () => {
         amountCents: 2000
       })
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('enqueueInvoiceVoid', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetRealm.mockResolvedValue('realm-1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('does nothing when not enterprise edition', async () => {
+    vi.stubEnv('EDITION', 'community');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
+
+    await enqueueInvoiceVoid(makeVoidKnex(), 't1', 'inv-void-1');
+
+    expect(mockGetRealm).not.toHaveBeenCalled();
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      expect((result.value as any)?.enqueue).not.toHaveBeenCalled();
+    }
+  });
+
+  it('does nothing when realm is null', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetRealm.mockResolvedValue(null);
+
+    await enqueueInvoiceVoid(makeVoidKnex(), 't1', 'inv-void-2');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      expect((result.value as any)?.enqueue).not.toHaveBeenCalled();
+    }
+  });
+
+  it('does nothing when no mapping exists for the invoice', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueInvoiceVoid(makeVoidKnex(false), 't1', 'inv-void-3');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('enqueues void_invoice when EE + realm + mapping exists', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueInvoiceVoid(makeVoidKnex(true), 't1', 'inv-void-4');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const enqueueFn = (results[results.length - 1].value as any)?.enqueue as ReturnType<typeof vi.fn>;
+    expect(enqueueFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'void_invoice',
+        algaEntityType: 'invoice',
+        algaEntityId: 'inv-void-4',
+        adapterType: 'quickbooks_online'
+      })
+    );
+  });
+
+  it('does NOT check autoSyncEnabled (always enqueues regardless of toggle)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    // autoSyncEnabled=false should NOT stop void from enqueuing
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null });
+
+    await enqueueInvoiceVoid(makeVoidKnex(true), 't1', 'inv-void-5');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const enqueueFn = (results[results.length - 1].value as any)?.enqueue as ReturnType<typeof vi.fn>;
+    expect(enqueueFn).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'void_invoice' })
+    );
+  });
+
+  it('swallows errors without throwing (fire-and-forget)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetRealm.mockRejectedValue(new Error('realm lookup failed'));
+
+    await expect(enqueueInvoiceVoid(makeVoidKnex(), 't1', 'inv-void-6')).resolves.toBeUndefined();
   });
 });
 

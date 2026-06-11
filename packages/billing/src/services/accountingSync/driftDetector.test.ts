@@ -138,6 +138,38 @@ describe('driftDetector', () => {
     expect(exCall.context.drift_kind).toBe('total_changed');
   });
 
+  it('deleted invoice with externalVoided status → no-op (already voided externally)', async () => {
+    const mapping = makeMapping({ sync_status: MAPPING_SYNC_STATUS.externalVoided });
+    const ledger = makeFakeLedger(mapping);
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalDocumentChange(
+      { tenantId: 't1', targetRealm: 'r1', ledger: ledger as any, exceptions, stats },
+      makeChange({ deleted: true })
+    );
+
+    expect(ledger.update).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+    expect(stats.driftFound).toBe(0);
+  });
+
+  it('deleted invoice with voided status → no-op (already voided locally)', async () => {
+    const mapping = makeMapping({ sync_status: MAPPING_SYNC_STATUS.voided });
+    const ledger = makeFakeLedger(mapping);
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalDocumentChange(
+      { tenantId: 't1', targetRealm: 'r1', ledger: ledger as any, exceptions, stats },
+      makeChange({ deleted: true })
+    );
+
+    expect(ledger.update).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+    expect(stats.driftFound).toBe(0);
+  });
+
   it('doc number changed → drift status + exception drift_kind=doc_number_changed', async () => {
     const mapping = makeMapping();
     const ledger = makeFakeLedger(mapping);

@@ -735,6 +735,47 @@ export class QboClientService {
     return this.extractEntityPayload<T>(payload, entityType);
   }
 
+  /**
+   * Void a QBO Invoice (sets DocStatus=Voided in place).
+   */
+  public async voidInvoice(id: string, syncToken: string): Promise<any> {
+    const url = this.buildCompanyUrl('/invoice');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, id }, 'Voiding QBO Invoice');
+    const payload = await this.requestQbo<any>(
+      {
+        method: 'POST',
+        url,
+        data: { Id: id, SyncToken: syncToken },
+        params: this.getDefaultParams({ operation: 'void' }),
+        headers: { 'Content-Type': 'application/json' }
+      },
+      'voidInvoice',
+      'Invoice'
+    );
+    return this.extractEntityPayload<any>(payload, 'Invoice');
+  }
+
+  /**
+   * Delete a QBO CreditMemo (QBO has no void for credit memos; delete is the
+   * equivalent operation).
+   */
+  public async deleteCreditMemo(id: string, syncToken: string): Promise<any> {
+    const url = this.buildCompanyUrl('/creditmemo');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, id }, 'Deleting QBO CreditMemo');
+    const payload = await this.requestQbo<any>(
+      {
+        method: 'POST',
+        url,
+        data: { Id: id, SyncToken: syncToken },
+        params: this.getDefaultParams({ operation: 'delete' }),
+        headers: { 'Content-Type': 'application/json' }
+      },
+      'deleteCreditMemo',
+      'CreditMemo'
+    );
+    return this.extractEntityPayload<any>(payload, 'CreditMemo');
+  }
+
   public async read<T>(entityType: string, id: string): Promise<T | null> {
     const normalizedEntityType = this.normalizeEntityType(entityType);
     const url = this.buildCompanyUrl(`/${normalizedEntityType}/${id}`);

@@ -43,7 +43,10 @@ export async function applyExternalDocumentChange(
   const metadata = mapping.metadata ?? {};
 
   if (change.deleted) {
-    if (mapping.sync_status === MAPPING_SYNC_STATUS.externalVoided) {
+    if (
+      mapping.sync_status === MAPPING_SYNC_STATUS.externalVoided ||
+      mapping.sync_status === MAPPING_SYNC_STATUS.voided
+    ) {
       return;
     }
 

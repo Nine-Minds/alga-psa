@@ -80,6 +80,10 @@ vi.mock('./creditApplicationApplier', () => ({
   drainApplyCreditOps: vi.fn(async () => undefined)
 }));
 
+vi.mock('./invoiceVoidApplier', () => ({
+  drainVoidInvoiceOps: vi.fn(async () => undefined)
+}));
+
 import { runAccountingSyncCycle, CURSOR_OVERLAP_MS } from './accountingSyncCycleService';
 import { SyncCycleRepository } from './syncCycleRepository';
 import { SyncOperationsRepository } from './syncOperationsRepository';
@@ -92,6 +96,7 @@ import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelec
 import { AccountingExportService } from '../accountingExportService';
 import { AppError } from '@alga-psa/core';
 import { drainApplyCreditOps } from './creditApplicationApplier';
+import { drainVoidInvoiceOps } from './invoiceVoidApplier';
 import { SyncMappingLedger } from './syncMappingLedger';
 
 const TENANT = 'tenant-abc';
@@ -606,6 +611,37 @@ describe('runAccountingSyncCycle', () => {
 
     // drainApplyCreditOps should also have been called (credit application drain)
     expect(vi.mocked(drainApplyCreditOps)).toHaveBeenCalled();
+  });
+
+  it('void-invoice drain: drainVoidInvoiceOps is called each cycle', async () => {
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(vi.mocked(drainVoidInvoiceOps)).toHaveBeenCalled();
+    expect(result.status).toBe('succeeded');
+  });
+
+  it('void-invoice drain error is swallowed and cycle still succeeds', async () => {
+    vi.mocked(drainVoidInvoiceOps).mockRejectedValueOnce(new Error('void drain exploded'));
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(result.status).toBe('succeeded');
   });
 });
 

@@ -43,3 +43,30 @@
   stale sync tokens surface as QBO_STALE_OBJECT — re-read then void.
 - CreditMemo tax: sign-flip must keep TxnTaxDetail consistent in internal-tax
   mode; in delegated mode QBO computes — mirror the invoice transform paths.
+
+## Implementation notes (built 2026-06-11)
+
+- Read-site audit executed via subagent sweep; every MUST-CHANGE applied
+  (Stripe link amount now charges balance due with a zero-balance guard;
+  refund thresholds, portal amounts, emails, AR sums all net of credits).
+  KEEP list honored — purchaseOrderService / aging / outstanding_amount
+  formulas became correct automatically once totals turned immutable.
+- Backfill is `total_amount += credit_applied` (single UPDATE, recoverable
+  pair); `invoice_type` backfilled from is_prepayment + negative totals.
+- Credit notes renumber to the CM- sequence AT FINALIZE (issuance moment);
+  drafts keep their provisional invoice number until then.
+- F025 (unapply exception): NO unapply action exists in the codebase, so
+  there is nothing to hook — recorded as satisfied-by-absence.
+- F026 (i18n): billing-dashboard components follow the package's existing
+  non-localized convention; no integrations-namespace strings were added.
+- apply_credit ops are enqueued per (allocation, credit-note) pair via the
+  credit_tracking→transactions join, so multi-pool applications reconcile
+  per memo; ops wait (no attempt burn) until both documents are mapped.
+- Voids: QBO Invoice uses operation=void; CreditMemo has no void in QBO →
+  operation=delete; drift detector ignores changes on 'voided'/'external_voided'
+  mappings so our own void doesn't file drift.
+- Deferred to a DB-enabled env: T001 (apply leaves total untouched — code
+  audited), T003/T006 (migration round-trips), T004/T005 (Stripe/portal
+  contract — Stripe integration suite is DB-skipped locally), T007 (CM
+  sequence uses the generate_next_number PG function), T010 (validation
+  exclusion), T017 (hardDelete block), T020 (full-cycle integration).

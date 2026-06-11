@@ -991,6 +991,20 @@ export const hardDeleteInvoice = withAuth(async (
   invoiceId: string
 ) => {
   const { knex } = await createTenantKnex();
+
+  // Guard: block deletion if invoice is already exported to an accounting system
+  const existingMapping = await knex('tenant_external_entity_mappings')
+    .where({
+      tenant_id: tenant,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId
+    })
+    .first('id');
+  if (existingMapping) {
+    throw new Error('This invoice is synced to an accounting system — void it instead of deleting.');
+  }
+
   let voidedCreditNotes: Array<{
     creditNoteId: string;
     voidedAt: string;

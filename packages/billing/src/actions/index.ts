@@ -45,6 +45,7 @@ export * from './serviceRateTierActions';
 export * from './taxSettingsActions';
 export * from './taxSourceActions';
 export * from './usageActions';
+export * from './voidInvoiceActions';
 
 // Export contract actions explicitly to avoid conflicts with contractLineMappingActions
 export {

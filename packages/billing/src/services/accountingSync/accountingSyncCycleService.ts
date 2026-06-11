@@ -24,6 +24,7 @@ import {
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
 import { AccountingExportService } from '../accountingExportService';
 import { drainApplyCreditOps } from './creditApplicationApplier';
+import { drainVoidInvoiceOps } from './invoiceVoidApplier';
 
 /**
  * One accounting sync cycle for a tenant×realm:
@@ -204,6 +205,17 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
     await drainApplyCreditOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
   } catch (error) {
     logger.error('[accountingSync] Credit-application drain error', {
+      tenantId,
+      targetRealm,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+
+  // ── Void invoice ops ────────────────────────────────────────────────────
+  try {
+    await drainVoidInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+  } catch (error) {
+    logger.error('[accountingSync] Void-invoice drain error', {
       tenantId,
       targetRealm,
       error: error instanceof Error ? error.message : error
