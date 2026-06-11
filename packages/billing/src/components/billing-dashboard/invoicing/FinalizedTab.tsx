@@ -548,6 +548,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 onUnfinalize={handleUnfinalize}
                 isFinalized={true}
                 creditApplied={selectedInvoice?.credit_applied || 0}
+                clientId={selectedInvoice?.client_id ?? null}
+                invoiceTotal={selectedInvoice?.total_amount ?? 0}
+                onCreditApplied={async () => {
+                  await loadData();
+                  onRefreshNeeded();
+                }}
               />
             </div>
           </Panel>
