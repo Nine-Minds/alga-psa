@@ -1,64 +1,527 @@
 [
-  { "id": "T001", "description": "useOptionalI18n returns context inside I18nProvider and null outside without throwing", "implemented": false, "featureIds": ["F001"] },
-  { "id": "T002", "description": "Component using useOptionalI18n renders on a page without I18nProvider (auth-page scenario) without crashing, falling back to default locale", "implemented": false, "featureIds": ["F001"] },
-  { "id": "T003", "description": "DatePicker renders 2026-06-10 as locale short date under fr (10/06/2026) and de (10.06.2026)", "implemented": false, "featureIds": ["F002"] },
-  { "id": "T004", "description": "DatePicker under en renders MM/dd/yyyy-equivalent short date (no regression for English users)", "implemented": false, "featureIds": ["F002"] },
-  { "id": "T005", "description": "DatePicker honors displayFormat prop override regardless of locale", "implemented": false, "featureIds": ["F003"] },
-  { "id": "T006", "description": "DatePicker call-site audit documented: zero call sites parse the displayed string", "implemented": false, "featureIds": ["F004"] },
-  { "id": "T007", "description": "DateTimePicker with explicit timeFormat='24h' renders 24h time with locale date under fr", "implemented": false, "featureIds": ["F005"] },
-  { "id": "T008", "description": "DateTimePicker without timeFormat renders locale-derived date+time ('P p') under en and de", "implemented": false, "featureIds": ["F005"] },
-  { "id": "T009", "description": "Calendar shows French weekday/month names when locale is fr", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T010", "description": "Calendar MonthYearSelect caption shows localized month name under es", "implemented": false, "featureIds": ["F007"] },
-  { "id": "T011", "description": "CurrencyInput formats 1234.56 as '1.234,56' under de and '1 234,56' under fr on blur", "implemented": false, "featureIds": ["F008"] },
-  { "id": "T012", "description": "CurrencyInput under fr: typing '12,5' fires onChange with 12.5 (not 125 or 1250)", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T013", "description": "CurrencyInput under de: typing '1.234,56' parses to 1234.56", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T014", "description": "CurrencyInput under en: typing '1,234.56' still parses to 1234.56 (no regression)", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T015", "description": "CurrencyInput round-trip (format → parse → format) is lossless for en, de, fr, pl across 0, 0.5, 999, 1234.56, 1000000.01", "implemented": false, "featureIds": ["F008", "F009"] },
-  { "id": "T016", "description": "CurrencyInput clears to empty and fires onChange(undefined) on invalid input in all tested locales", "implemented": false, "featureIds": ["F009"] },
-  { "id": "T017", "description": "PrintOptionsDialog renders Date cell values using the active locale", "implemented": false, "featureIds": ["F010"] },
-  { "id": "T018", "description": "ReportEngine.formatValue with locale 'de' renders currency as 1.234,56 € style and with no locale renders en-US style (backward compat)", "implemented": false, "featureIds": ["F011"] },
-  { "id": "T019", "description": "ReportEngine formatNumber/formatPercentage/formatDate respect passed locale in packages/reporting copy", "implemented": false, "featureIds": ["F011"] },
-  { "id": "T020", "description": "server/src ReportEngine copy produces identical localized output to packages/reporting copy for the same inputs", "implemented": false, "featureIds": ["F012"] },
-  { "id": "T021", "description": "executeReport passes hierarchically-resolved locale into ReportEngine (unit test with mocked getHierarchicalLocaleAction)", "implemented": false, "featureIds": ["F013"] },
-  { "id": "T022", "description": "filterPseudoLocales returns xx/yy when NODE_ENV=development and strips them when NODE_ENV=production", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T023", "description": "filterPseudoLocales strips pt in both development and production", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T024", "description": "Dev server: MSP user language picker lists Pseudo (xx) and Pseudo (yy); production build does not (manual/visual via dev stack)", "implemented": false, "featureIds": ["F015"] },
-  { "id": "T025", "description": "Selecting xx in dev persists preference, survives reload, and renders pseudo-accented strings on a translated MSP page", "implemented": false, "featureIds": ["F016"] },
-  { "id": "T026", "description": "actions.print / actions.printOptions resolve in every namespace that references them (no raw-key rendering in print/export menus)", "implemented": false, "featureIds": ["F017"] },
-  { "id": "T027", "description": "find-missing-i18n-keys reports 0 missing for msp/workflows after backfill", "implemented": false, "featureIds": ["F018"] },
-  { "id": "T028", "description": "find-missing-i18n-keys reports 0 missing for msp/email-providers after backfill", "implemented": false, "featureIds": ["F019"] },
-  { "id": "T029", "description": "find-missing-i18n-keys reports 0 missing for msp/integrations after backfill", "implemented": false, "featureIds": ["F020"] },
-  { "id": "T030", "description": "find-missing-i18n-keys reports 0 missing for features/tickets after backfill", "implemented": false, "featureIds": ["F021"] },
-  { "id": "T031", "description": "find-missing-i18n-keys reports 0 missing for msp/clients, msp/assets, msp/user-activities after backfill", "implemented": false, "featureIds": ["F022", "F023", "F024"] },
-  { "id": "T032", "description": "find-missing-i18n-keys exits 0 across the entire repo", "implemented": false, "featureIds": ["F025", "F028"] },
-  { "id": "T033", "description": "Backfilled en values match the defaultValue strings previously rendered (spot-check 20 keys against git history of components)", "implemented": false, "featureIds": ["F018", "F019", "F020", "F021", "F022", "F023", "F024", "F025"] },
-  { "id": "T034", "description": "validate-translations passes after backfill: all 7 locales have key parity with en including new keys", "implemented": false, "featureIds": ["F026"] },
-  { "id": "T035", "description": "Backfilled keys preserve interpolation variables across all locales (validate-translations variable check green)", "implemented": false, "featureIds": ["F026"] },
-  { "id": "T036", "description": "Regenerated xx/yy pseudo-locales contain every backfilled key", "implemented": false, "featureIds": ["F027"] },
-  { "id": "T037", "description": "MspClientTickets has zero hardcoded user-visible strings (i18n audit test asserting useTranslation usage + key coverage)", "implemented": false, "featureIds": ["F029"] },
-  { "id": "T038", "description": "Client page Tickets tab renders pseudo-accented strings under xx locale (column headers, filters, 'Loading tickets...', search placeholder)", "implemented": false, "featureIds": ["F029", "F035"] },
-  { "id": "T039", "description": "MspClientAssets has zero hardcoded user-visible strings (i18n audit test)", "implemented": false, "featureIds": ["F030"] },
-  { "id": "T040", "description": "Client page Assets tab renders pseudo-accented strings under xx ('Loading assets...', 'All asset types...' filter)", "implemented": false, "featureIds": ["F030", "F035"] },
-  { "id": "T041", "description": "MspContactTickets has zero hardcoded user-visible strings (i18n audit test)", "implemented": false, "featureIds": ["F031"] },
-  { "id": "T042", "description": "InteractionsFeed renders translated strings under fr (search, filter, reset, apply controls)", "implemented": false, "featureIds": ["F032", "F035"] },
-  { "id": "T043", "description": "OverallInteractionsFeed renders translated strings under fr", "implemented": false, "featureIds": ["F033", "F035"] },
-  { "id": "T044", "description": "SchedulingInteractionDetails renders translated strings under fr", "implemented": false, "featureIds": ["F034", "F035"] },
-  { "id": "T045", "description": "All new P3 keys present in en + 7 locales + pseudo (validate-translations green)", "implemented": false, "featureIds": ["F035"] },
-  { "id": "T046", "description": "Navigating to /msp/clients?tab=tickets loads required namespaces without missing-namespace console warnings", "implemented": false, "featureIds": ["F036"] },
-  { "id": "T047", "description": "msp-composition sweep documented: each of the 16 remaining files listed with 'no user-visible strings' verdict", "implemented": false, "featureIds": ["F037"] },
-  { "id": "T048", "description": "grep for '_plural' across server/public/locales returns zero matches after migration", "implemented": false, "featureIds": ["F038", "F039", "F040"] },
-  { "id": "T049", "description": "t('teams.details.memberCount', {count: 1}) renders singular and {count: 5} renders plural under en", "implemented": false, "featureIds": ["F039", "F042"] },
-  { "id": "T050", "description": "Polish plural forms resolve correctly for counts 1 (_one), 2 (_few), 5 (_many) on migrated keys", "implemented": false, "featureIds": ["F040"] },
-  { "id": "T051", "description": "AdminSessionManagement renders correct subtitle for 1 session and 5 sessions via single t() call with both sessionCount and userCount interpolated", "implemented": false, "featureIds": ["F041"] },
-  { "id": "T052", "description": "Interaction-types import toast renders correct singular/plural under en and pl", "implemented": false, "featureIds": ["F042"] },
-  { "id": "T053", "description": "validate-translations does not warn on pl _few/_many suffixes (CLDR-aware)", "implemented": false, "featureIds": ["F043"] },
-  { "id": "T054", "description": "validate-translations errors when pl omits a required _many form for a key that has _one/_other in en (negative test with fixture)", "implemented": false, "featureIds": ["F043"] },
-  { "id": "T055", "description": "validate-translations accepts en having only _one/_other (does not demand _few/_many from English)", "implemented": false, "featureIds": ["F043"] },
-  { "id": "T056", "description": "Pseudo-locale generator output contains plural-suffixed keys with accents applied and variables intact", "implemented": false, "featureIds": ["F044"] },
-  { "id": "T057", "description": "validate-translations full run: 0 errors, 0 warnings", "implemented": false, "featureIds": ["F045"] },
-  { "id": "T058", "description": "CI workflow runs find-missing-i18n-keys job and fails on a fixture branch referencing a nonexistent key", "implemented": false, "featureIds": ["F046"] },
-  { "id": "T059", "description": "CI workflow triggers on a PR touching only packages/**/*.tsx (no locale changes)", "implemented": false, "featureIds": ["F047"] },
-  { "id": "T060", "description": "CI green on no-op PR from clean main after P5", "implemented": false, "featureIds": ["F048"] },
-  { "id": "T061", "description": "Existing .i18n.test.* audit suites pass unchanged after each phase", "implemented": false, "featureIds": ["F002", "F005", "F008", "F029", "F030", "F031", "F039"] },
-  { "id": "T062", "description": "npx tsc --noEmit passes for packages/ui, packages/reporting, packages/msp-composition, packages/clients, packages/scheduling after changes", "implemented": false, "featureIds": ["F001", "F011", "F029", "F032", "F034"] }
+  {
+    "id": "T001",
+    "description": "useOptionalI18n returns context inside I18nProvider and null outside without throwing",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Component using useOptionalI18n renders on a page without I18nProvider (auth-page scenario) without crashing, falling back to default locale",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DatePicker renders 2026-06-10 as locale short date under fr (10/06/2026) and de (10.06.2026)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DatePicker under en renders MM/dd/yyyy-equivalent short date (no regression for English users)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DatePicker honors displayFormat prop override regardless of locale",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DatePicker call-site audit documented: zero call sites parse the displayed string",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DateTimePicker with explicit timeFormat='24h' renders 24h time with locale date under fr",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DateTimePicker without timeFormat renders locale-derived date+time ('P p') under en and de",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Calendar shows French weekday/month names when locale is fr",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Calendar MonthYearSelect caption shows localized month name under es",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "CurrencyInput formats 1234.56 as '1.234,56' under de and '1 234,56' under fr on blur",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "CurrencyInput under fr: typing '12,5' fires onChange with 12.5 (not 125 or 1250)",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "CurrencyInput under de: typing '1.234,56' parses to 1234.56",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "CurrencyInput under en: typing '1,234.56' still parses to 1234.56 (no regression)",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "CurrencyInput round-trip (format \u2192 parse \u2192 format) is lossless for en, de, fr, pl across 0, 0.5, 999, 1234.56, 1000000.01",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "CurrencyInput clears to empty and fires onChange(undefined) on invalid input in all tested locales",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "PrintOptionsDialog renders Date cell values using the active locale",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "ReportEngine.formatValue with locale 'de' renders currency as 1.234,56 \u20ac style and with no locale renders en-US style (backward compat)",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "ReportEngine formatNumber/formatPercentage/formatDate respect passed locale in packages/reporting copy",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "server/src ReportEngine copy produces identical localized output to packages/reporting copy for the same inputs",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "executeReport passes hierarchically-resolved locale into ReportEngine (unit test with mocked getHierarchicalLocaleAction)",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "filterPseudoLocales returns xx/yy when NODE_ENV=development and strips them when NODE_ENV=production",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "filterPseudoLocales strips pt in both development and production",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Dev server: MSP user language picker lists Pseudo (xx) and Pseudo (yy); production build does not (manual/visual via dev stack)",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Selecting xx in dev persists preference, survives reload, and renders pseudo-accented strings on a translated MSP page",
+    "implemented": false,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "actions.print / actions.printOptions resolve in every namespace that references them (no raw-key rendering in print/export menus)",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "find-missing-i18n-keys reports 0 missing for msp/workflows after backfill",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "find-missing-i18n-keys reports 0 missing for msp/email-providers after backfill",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "find-missing-i18n-keys reports 0 missing for msp/integrations after backfill",
+    "implemented": false,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "find-missing-i18n-keys reports 0 missing for features/tickets after backfill",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "find-missing-i18n-keys reports 0 missing for msp/clients, msp/assets, msp/user-activities after backfill",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "find-missing-i18n-keys exits 0 across the entire repo",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F028"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Backfilled en values match the defaultValue strings previously rendered (spot-check 20 keys against git history of components)",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F023",
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "validate-translations passes after backfill: all 7 locales have key parity with en including new keys",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Backfilled keys preserve interpolation variables across all locales (validate-translations variable check green)",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Regenerated xx/yy pseudo-locales contain every backfilled key",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "MspClientTickets has zero hardcoded user-visible strings (i18n audit test asserting useTranslation usage + key coverage)",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Client page Tickets tab renders pseudo-accented strings under xx locale (column headers, filters, 'Loading tickets...', search placeholder)",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F035"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "MspClientAssets has zero hardcoded user-visible strings (i18n audit test)",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Client page Assets tab renders pseudo-accented strings under xx ('Loading assets...', 'All asset types...' filter)",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F035"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "MspContactTickets has zero hardcoded user-visible strings (i18n audit test)",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "InteractionsFeed renders translated strings under fr (search, filter, reset, apply controls)",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F035"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "OverallInteractionsFeed renders translated strings under fr",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F035"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "SchedulingInteractionDetails renders translated strings under fr",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "All new P3 keys present in en + 7 locales + pseudo (validate-translations green)",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Navigating to /msp/clients?tab=tickets loads required namespaces without missing-namespace console warnings",
+    "implemented": false,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "msp-composition sweep documented: each of the 16 remaining files listed with 'no user-visible strings' verdict",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "grep for '_plural' across server/public/locales returns zero matches after migration",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "t('teams.details.memberCount', {count: 1}) renders singular and {count: 5} renders plural under en",
+    "implemented": false,
+    "featureIds": [
+      "F039",
+      "F042"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Polish plural forms resolve correctly for counts 1 (_one), 2 (_few), 5 (_many) on migrated keys",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "AdminSessionManagement renders correct subtitle for 1 session and 5 sessions via single t() call with both sessionCount and userCount interpolated",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Interaction-types import toast renders correct singular/plural under en and pl",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "validate-translations does not warn on pl _few/_many suffixes (CLDR-aware)",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "validate-translations errors when pl omits a required _many form for a key that has _one/_other in en (negative test with fixture)",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "validate-translations accepts en having only _one/_other (does not demand _few/_many from English)",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Pseudo-locale generator output contains plural-suffixed keys with accents applied and variables intact",
+    "implemented": false,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "validate-translations full run: 0 errors, 0 warnings",
+    "implemented": false,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "CI workflow runs find-missing-i18n-keys job and fails on a fixture branch referencing a nonexistent key",
+    "implemented": false,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "CI workflow triggers on a PR touching only packages/**/*.tsx (no locale changes)",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "CI green on no-op PR from clean main after P5",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Existing .i18n.test.* audit suites pass unchanged after each phase",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F005",
+      "F008",
+      "F029",
+      "F030",
+      "F031",
+      "F039"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "npx tsc --noEmit passes for packages/ui, packages/reporting, packages/msp-composition, packages/clients, packages/scheduling after changes",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F011",
+      "F029",
+      "F032",
+      "F034"
+    ]
+  }
 ]

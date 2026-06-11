@@ -122,13 +122,15 @@ export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
 
 /**
  * Filter pseudo-locales and incomplete locales from a list. Use this for any
- * user-facing language picker.
+ * user-facing language picker. Pseudo-locales stay selectable in development
+ * builds so translated surfaces can be QA'd visually.
  */
 export function filterPseudoLocales(
   locales: readonly SupportedLocale[],
 ): SupportedLocale[] {
+  const includePseudo = process.env.NODE_ENV === 'development';
   return locales
-    .filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l))
+    .filter((l) => includePseudo || !(PSEUDO_LOCALES as readonly string[]).includes(l))
     .filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
 }
 

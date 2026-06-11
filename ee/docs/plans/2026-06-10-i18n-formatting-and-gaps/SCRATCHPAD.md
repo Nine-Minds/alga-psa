@@ -46,6 +46,18 @@
 ### CI (P5)
 - `.github/workflows/validate-translations.yml` triggers only on `server/public/locales/**` + the two scripts → component-only PRs never validated. Expand paths + add find-missing job. Must land after P2 (else red on arrival).
 
+## P1 implementation notes (2026-06-10)
+
+- **DatePicker call-site audit (F004/T006): clean.** 55 call sites repo-wide (packages 47, server 5, ee 3). Zero parse/serialize/test-assert on the rendered MM/dd/yyyy string; all pass Date objects (DocumentFilters constructs Dates from strings before passing). All 8 test files that touch DatePicker mock it. Three *unrelated* components format their own strings with MM/dd/yyyy (ContractBasicsStep summary, DeadlineFilter label, DisplaySettings config constant) — untouched by this change.
+- **DateTimePicker**: when `timeFormat` prop unset, the internal hour-list/AM-PM UI now derives 12h/24h from the locale via `Intl.DateTimeFormat(locale, {hour:'numeric'}).resolvedOptions().hour12` (xx/yy normalized to en), keeping picker UI consistent with the `'P p'` display.
+- **CurrencyInput parse strategy**: keep digits/sign/locale-decimal-separator (normalized to '.'), drop everything else — covers group separators incl. plain-space/NBSP/narrow-NBSP variants users type. Helpers `formatCurrencyValue`/`parseCurrencyValue`/`getNumberSeparators` exported for tests. Default placeholder now locale-formatted `0.00`.
+- **PrintOptionsDialog**: Date cells render via internal `<LocaleDateTime>` (useOptionalI18n + Intl dateStyle/timeStyle short) since `formatDefaultPrintValue` is a plain function.
+- **executeReport**: explicit `options.locale` wins; otherwise resolved via `getHierarchicalLocaleAction()`. `packages/reporting` gained an `@alga-psa/tenancy` dep (no cycle: tenancy doesn't depend on reporting). Both copies kept byte-identical (`cp` + diff).
+- **ReportEngine copies**: locale threaded through formatCurrency/formatNumber/formatPercentage/formatDate in both; formatDuration left as-is (English unit words are a translation problem, out of P1 scope).
+- **T020** satisfied by construction: the two ReportEngine copies differ only in import paths/execute signature (verified by diff), so formatting output is identical.
+- **T001 inside-provider half**: not unit-tested (I18nProvider pulls i18next HTTP backend); covered by the null-outside test + app usage. T017 (PrintOptionsDialog render test) skipped — trivial wrapper. T024/T025 are manual dev-stack QA.
+- **Pre-existing test failures (not from P1)**: packages/core — index exports, logger.outputs, deletionMigrations (5-6 tests); packages/ui — Calendar today-button, DeleteEntityDialog ×2, printStylesheet, BoardPicker.keyboard, TreeSelect.contract ×2, command-palette.source (6 files). Verified identical on clean tree at cb6731584f.
+
 ## Decisions
 - (2026-06-10) Formatting stays **purely locale-derived**; the explicit user-facing date-format preference is a separate future effort that layers on top (preference → locale default resolution chain). Decided with user.
 - (2026-06-10) Emails (EJS transactional templates) explicitly out of scope. Decided with user.

@@ -7,6 +7,9 @@ import * as Popover from '@radix-ui/react-popover';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DatePickerComponent } from '../ui-reflection/types';
 import { Calendar } from './Calendar';
+import { useOptionalI18n } from '../lib/i18n/client';
+import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { getDateFnsLocale } from '../lib/dateFnsLocale';
 import '../styles/calendar.css';
 
 interface DatePickerBaseProps {
@@ -20,6 +23,8 @@ interface DatePickerBaseProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
+  /** Fixed date-fns display pattern; overrides the locale-derived format */
+  displayFormat?: string;
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
 }
@@ -48,9 +53,13 @@ export function DatePicker({
   label,
   required,
   clearable = false,
+  displayFormat,
   ref
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const i18n = useOptionalI18n();
+  const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  const dateFnsLocale = getDateFnsLocale(locale);
 
   // Type-safe helper for clearing - only defined when clearable is true
   // This avoids repeated type assertions throughout the component
@@ -114,7 +123,7 @@ export function DatePicker({
           `}
         >
           <span className="flex-1 min-w-0 text-left truncate">
-            {value ? format(value, 'MM/dd/yyyy') : placeholder}
+            {value ? format(value, displayFormat ?? 'P', { locale: dateFnsLocale }) : placeholder}
           </span>
           {clearValue && value && !disabled && (
             <span

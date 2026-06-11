@@ -11,7 +11,8 @@ import {
   DialogFooter,
 } from './Dialog';
 import type { PrintableTableColumn } from './PrintableTable';
-import { useTranslation } from '../lib/i18n/client';
+import { useTranslation, useOptionalI18n } from '../lib/i18n/client';
+import { LOCALE_CONFIG } from '../lib/i18n/config';
 import type { ColumnDefinition } from '@alga-psa/types';
 
 export type PrintColumnOption<T> = PrintableTableColumn<T> & {
@@ -62,9 +63,17 @@ function getNestedColumnValue<T>(record: T, dataIndex: string | string[]): unkno
   ), record);
 }
 
+function LocaleDateTime({ date }: { date: Date }) {
+  const i18n = useOptionalI18n();
+  const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  return (
+    <>{new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(date)}</>
+  );
+}
+
 function formatDefaultPrintValue(value: unknown, emptyValue: React.ReactNode): React.ReactNode {
   if (value === null || value === undefined || value === '') return emptyValue;
-  if (value instanceof Date) return value.toLocaleString();
+  if (value instanceof Date) return <LocaleDateTime date={value} />;
   if (Array.isArray(value)) return value.filter(Boolean).join(', ') || emptyValue;
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);

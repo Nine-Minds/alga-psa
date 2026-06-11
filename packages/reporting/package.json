@@ -25,6 +25,7 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*"
   },

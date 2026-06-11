@@ -191,4 +191,5 @@ export interface ReportExecutionOptions {
   skipCache?: boolean;            // Skip cache lookup
   forceRefresh?: boolean;         // Force cache refresh
   timeout?: number;               // Query timeout in milliseconds
+  locale?: string;                // BCP 47 locale for formatted values; defaults to 'en-US'
 }

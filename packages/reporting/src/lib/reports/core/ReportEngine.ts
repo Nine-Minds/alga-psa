@@ -50,6 +50,7 @@ export class ReportEngine {
       
       // Add tenant and calculated parameters
       const enrichedParameters = this.enrichParameters(parameters, tenant);
+      const locale = options.locale ?? 'en-US';
       
       // Execute report within transaction
       const result = await withTransaction(knex, async (trx) => {
@@ -59,7 +60,7 @@ export class ReportEngine {
         for (const metric of definition.metrics) {
           try {
             const value = await this.executeMetric(trx, metric, enrichedParameters);
-            metrics[metric.id] = this.formatMetricValue(value, metric.formatting);
+            metrics[metric.id] = this.formatMetricValue(value, metric.formatting, locale);
           } catch (error) {
             console.error(`Error executing metric ${metric.id}:`, error);
             // Continue with other metrics, setting this one to null
@@ -147,7 +148,7 @@ export class ReportEngine {
   /**
    * Format a metric value according to its formatting options
    */
-  private static formatMetricValue(value: any, formatting?: FormattingOptions): any {
+  private static formatMetricValue(value: any, formatting: FormattingOptions | undefined, locale: string): any {
     if (!formatting || value === null || value === undefined) {
       return value;
     }
@@ -157,21 +158,21 @@ export class ReportEngine {
         case 'currency':
           return {
             raw: value,
-            formatted: this.formatCurrency(value, formatting),
+            formatted: this.formatCurrency(value, formatting, locale),
             type: 'currency'
           } as FormattedMetricValue;
         
         case 'number':
           return {
             raw: value,
-            formatted: this.formatNumber(value, formatting),
+            formatted: this.formatNumber(value, formatting, locale),
             type: 'number'
           } as FormattedMetricValue;
         
         case 'percentage':
           return {
             raw: value,
-            formatted: this.formatPercentage(value, formatting),
+            formatted: this.formatPercentage(value, formatting, locale),
             type: 'percentage'
           } as FormattedMetricValue;
         
@@ -185,7 +186,7 @@ export class ReportEngine {
         case 'date':
           return {
             raw: value,
-            formatted: this.formatDate(value, formatting),
+            formatted: this.formatDate(value, formatting, locale),
             type: 'date'
           } as FormattedMetricValue;
         
@@ -201,9 +202,9 @@ export class ReportEngine {
   /**
    * Format a value as currency
    */
-  private static formatCurrency(value: number, formatting: FormattingOptions): string {
+  private static formatCurrency(value: number, formatting: FormattingOptions, locale: string): string {
     const amount = formatting.divisor ? value / formatting.divisor : value;
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: formatting.currency || 'USD',
       minimumFractionDigits: formatting.decimals ?? 2,
@@ -214,8 +215,8 @@ export class ReportEngine {
   /**
    * Format a value as a number
    */
-  private static formatNumber(value: number, formatting: FormattingOptions): string {
-    return new Intl.NumberFormat('en-US', {
+  private static formatNumber(value: number, formatting: FormattingOptions, locale: string): string {
+    return new Intl.NumberFormat(locale, {
       minimumFractionDigits: formatting.decimals || 0,
       maximumFractionDigits: formatting.decimals || 0
     }).format(value);
@@ -224,8 +225,8 @@ export class ReportEngine {
   /**
    * Format a value as a percentage
    */
-  private static formatPercentage(value: number, formatting: FormattingOptions): string {
-    return new Intl.NumberFormat('en-US', {
+  private static formatPercentage(value: number, formatting: FormattingOptions, locale: string): string {
+    return new Intl.NumberFormat(locale, {
       style: 'percent',
       minimumFractionDigits: formatting.decimals || 1,
       maximumFractionDigits: formatting.decimals || 1
@@ -249,16 +250,16 @@ export class ReportEngine {
   /**
    * Format a date value
    */
-  private static formatDate(value: string | Date, formatting: FormattingOptions): string {
+  private static formatDate(value: string | Date, formatting: FormattingOptions, locale: string): string {
     const date = typeof value === 'string' ? new Date(value) : value;
     
     if (formatting.dateFormat) {
       // For now, use toLocaleString with basic options
       // Could be enhanced with a proper date formatting library
-      return date.toLocaleString('en-US');
+      return date.toLocaleString(locale);
     }
     
-    return date.toLocaleDateString('en-US');
+    return date.toLocaleDateString(locale);
   }
   
   /**
