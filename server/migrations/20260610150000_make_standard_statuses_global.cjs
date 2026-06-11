@@ -44,6 +44,45 @@ const CANONICAL_MAP_SQL = `
   WHERE ss.standard_status_id <> m.canonical_id
 `;
 
+async function recoverOrphanedProjectTaskMappings(knex) {
+  const allStandardStatuses = await knex('standard_statuses').select('standard_status_id');
+  const projectTaskStatuses = await knex('standard_statuses')
+    .select('name', 'standard_status_id')
+    .where({ item_type: 'project_task' });
+
+  if (allStandardStatuses.length === 0 || projectTaskStatuses.length === 0) {
+    return;
+  }
+
+  const caseClauses = [];
+  const bindings = [];
+
+  for (const status of projectTaskStatuses) {
+    caseClauses.push('WHEN ? THEN ?::uuid');
+    bindings.push(status.name, status.standard_status_id);
+  }
+
+  bindings.push(
+    allStandardStatuses.map((status) => status.standard_status_id),
+    projectTaskStatuses.map((status) => status.name),
+  );
+
+  // Keep the distributed UPDATE independent of standard_statuses. Citus rejects
+  // this recovery step when the target table is distributed and the UPDATE also
+  // reads the reference/local catalog in FROM or a correlated subquery.
+  await knex.raw(`
+    UPDATE project_status_mappings
+    SET standard_status_id = CASE custom_name
+      ${caseClauses.join('\n      ')}
+      ELSE standard_status_id
+    END
+    WHERE is_standard = true
+      AND standard_status_id IS NOT NULL
+      AND NOT (standard_status_id = ANY(?::uuid[]))
+      AND custom_name = ANY(?::text[])
+  `, bindings);
+}
+
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
@@ -91,19 +130,7 @@ exports.up = async function up(knex) {
 
     // Mappings left pointing at rows that no longer exist (e.g. removed by
     // tenant deletion before this migration) are recovered via custom_name.
-    await knex.raw(`
-      UPDATE project_status_mappings psm
-      SET standard_status_id = ss.standard_status_id
-      FROM standard_statuses ss
-      WHERE psm.is_standard = true
-        AND psm.standard_status_id IS NOT NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM standard_statuses e
-          WHERE e.standard_status_id = psm.standard_status_id
-        )
-        AND ss.item_type = 'project_task'
-        AND ss.name = psm.custom_name
-    `);
+    await recoverOrphanedProjectTaskMappings(knex);
 
     await knex.raw('ALTER TABLE standard_statuses DROP CONSTRAINT IF EXISTS standard_statuses_name_item_type_tenant_key');
     await knex.raw('ALTER TABLE standard_statuses DROP COLUMN tenant');
