@@ -34,6 +34,7 @@ export interface LicenseStateRow {
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
   | 'ce'            // Community Edition chosen — always essentials
+  | 'trial_available' // EE install, no license, trial not yet used — essentials, trial can be started
   | 'trial'         // Enterprise trial active
   | 'trial_expired' // Trial window elapsed, no license
   | 'licensed'      // Valid unexpired license present
@@ -163,7 +164,9 @@ export function resolveSelfHostTier(
   }
 
   // 4. EE chosen but no trial started yet — essentials until trial starts.
-  return { state: 'trial_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
+  // Distinct from trial_expired: a fresh install has NOT used its trial, and
+  // surfacing it as "expired" (banner + License page) misleads on day one.
+  return { state: 'trial_available', tier: 'essentials', expiresAt: null, daysRemaining: null };
 }
 
 /**
