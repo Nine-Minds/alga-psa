@@ -5,14 +5,13 @@ const CUSTOM_HOST_KEY = "alga.mobile.customHost";
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 
-// Bare hostnames get https:// prefixed; explicit http:// is accepted.
-// TODO(harden): require https for user-entered hosts before GA — http is
-// temporarily allowed for appliance bring-up against bare-IP hosts.
+// Bare hostnames get https:// prefixed; anything other than https is rejected.
 export function normalizeHostInput(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
   const withScheme = SCHEME_RE.test(trimmed) ? trimmed : `https://${trimmed}`;
-  return normalizeBaseUrl(withScheme);
+  const normalized = normalizeBaseUrl(withScheme);
+  return normalized && normalized.startsWith("https://") ? normalized : undefined;
 }
 
 export async function loadStoredHost(): Promise<string | null> {

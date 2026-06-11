@@ -22,11 +22,9 @@ describe("parseServerHostPayload", () => {
     expect(parseServerHostPayload("helpdesk.acme.com")).toBe("https://helpdesk.acme.com");
   });
 
-  // TODO(harden): flip back to rejection when https is enforced for user input.
-  it("temporarily accepts http targets", () => {
-    expect(parseServerHostPayload("alga://server?url=http%3A%2F%2F192.168.64.2%3A3000")).toBe(
-      "http://192.168.64.2:3000",
-    );
+  it("rejects http targets", () => {
+    expect(parseServerHostPayload("alga://server?url=http%3A%2F%2F192.168.64.2%3A3000")).toBeNull();
+    expect(parseServerHostPayload("http://192.168.64.2:3000")).toBeNull();
   });
 
   it("rejects other alga:// deep links", () => {
