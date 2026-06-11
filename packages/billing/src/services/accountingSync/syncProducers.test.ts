@@ -13,7 +13,8 @@ vi.mock('./accountingSyncSettings', () => ({
     defaultClassRef: null,
     defaultDepartmentRef: null,
     defaultRealm: null
-  }))
+  })),
+  resolveDefaultRealm: vi.fn(async () => 'realm-1')
 }));
 
 vi.mock('./syncOperationsRepository', () => ({
@@ -25,10 +26,10 @@ vi.mock('./syncOperationsRepository', () => ({
 
 import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid, enqueueExternalPaymentPush } from './syncProducers';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { getAccountingSyncSettings } from './accountingSyncSettings';
+import { getAccountingSyncSettings, resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
 
-const mockGetRealm = vi.mocked(getDefaultQboRealmId);
+const mockGetRealm = vi.mocked(resolveDefaultRealm);
 const mockGetSettings = vi.mocked(getAccountingSyncSettings);
 
 /** Build a fake knex that returns the given invoice_type for any invoice lookup. */

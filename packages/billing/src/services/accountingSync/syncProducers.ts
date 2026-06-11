@@ -1,7 +1,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- producers consult the QBO connection state to decide whether to enqueue */
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { resolveDefaultRealm } from './accountingSyncSettings';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
 
@@ -53,7 +53,7 @@ export async function enqueueInvoiceAutoExport(
       }
     }
 
-    const realm = await getDefaultQboRealmId(tenantId);
+    const realm = await resolveDefaultRealm(knex, tenantId);
     if (!realm) {
       return;
     }
@@ -139,7 +139,7 @@ export async function enqueueInvoiceVoid(
       return;
     }
 
-    const realm = await getDefaultQboRealmId(tenantId);
+    const realm = await resolveDefaultRealm(knex, tenantId);
     if (!realm) {
       return;
     }
@@ -211,7 +211,7 @@ export async function enqueueExternalPaymentPush(
       return;
     }
 
-    const realm = await getDefaultQboRealmId(tenantId);
+    const realm = await resolveDefaultRealm(knex, tenantId);
     if (!realm) {
       return;
     }
@@ -291,7 +291,7 @@ export async function enqueueCreditApplication(
       return;
     }
 
-    const realm = await getDefaultQboRealmId(tenantId);
+    const realm = await resolveDefaultRealm(knex, tenantId);
     if (!realm) {
       return;
     }

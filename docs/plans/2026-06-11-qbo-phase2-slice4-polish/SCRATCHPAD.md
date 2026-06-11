@@ -58,9 +58,7 @@
   realm picker appears only with >1 realm. Wizard intentionally runs against
   the default realm (resolveDefaultRealm inside the onboarding actions).
 - resolveDefaultRealm (settings.defaultRealm validated against the credential
-  map, else first-stored-key) adopted by billing call sites; syncProducers'
-  three getDefaultQboRealmId calls left as a follow-up TODO (file ownership
-  collision during parallel build) — behavior identical until a tenant sets a
-  non-first default realm AND relies on producer enqueue realm stamping.
+  map, else first-stored-key) adopted by ALL billing call sites including the
+  four syncProducers producers (follow-up TODO closed same day).
 - Settings-dir contract suites (Microsoft/Xero/MspSso) have 13 pre-existing,
   shuffle-sensitive failures — identical on a clean tree (stash-verified).
