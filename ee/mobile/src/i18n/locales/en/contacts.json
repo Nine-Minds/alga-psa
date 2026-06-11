@@ -22,6 +22,9 @@
     "inactive": "Inactive",
     "client": "Client",
     "noClient": "No client",
+    "viewClient": "View client",
+    "viewClientAccessibility": "View client {{name}}",
+    "viewTickets": "View tickets",
     "contactInfo": "Contact info",
     "noContactInfo": "No contact info on file.",
     "phone": "Phone",
@@ -38,5 +41,9 @@
       "personal": "Personal",
       "billing": "Billing"
     }
+  },
+  "ticketsFilter": {
+    "chip": "Contact: {{name}}",
+    "clear": "Clear contact filter"
   }
 }

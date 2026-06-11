@@ -1,5 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { CommonActions } from "@react-navigation/native";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
@@ -113,6 +115,26 @@ export function ContactDetailScreen({ route, navigation }: Props) {
     [t],
   );
 
+  const onViewTickets = useCallback(() => {
+    navigation.dispatch(
+      CommonActions.navigate("Tabs", {
+        screen: "TicketsTab",
+        params: {
+          screen: "TicketsList",
+          params: { contactId, contactName: contact?.full_name ?? route.params.contactName },
+        },
+      }),
+    );
+  }, [contact?.full_name, contactId, navigation, route.params.contactName]);
+
+  const onOpenClient = useCallback(() => {
+    if (!contact?.client_id) return;
+    navigation.navigate("ClientDetail", {
+      clientId: contact.client_id,
+      clientName: contact.client_name ?? undefined,
+    });
+  }, [contact?.client_id, contact?.client_name, navigation]);
+
   if (!config.ok) {
     return <ErrorState title={t("common:configurationError")} description={config.error} />;
   }
@@ -177,10 +199,33 @@ export function ContactDetailScreen({ route, navigation }: Props) {
         </Text>
       ) : null}
 
+      <View style={{ marginTop: theme.spacing.lg }}>
+        <PrimaryButton onPress={onViewTickets}>
+          {t("detail.viewTickets", { defaultValue: "View tickets" })}
+        </PrimaryButton>
+      </View>
+
       <SectionCard theme={theme} label={t("detail.client")}>
-        <Text style={{ ...theme.typography.body, color: contact.client_name ? theme.colors.text : theme.colors.textSecondary }}>
-          {contact.client_name ?? t("detail.noClient")}
-        </Text>
+        {contact.client_id ? (
+          <Pressable
+            onPress={onOpenClient}
+            accessibilityRole="button"
+            accessibilityLabel={t("detail.viewClientAccessibility", {
+              defaultValue: "View client {{name}}",
+              name: contact.client_name ?? t("detail.client"),
+            })}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", opacity: pressed ? 0.7 : 1 })}
+          >
+            <Text style={{ ...theme.typography.body, color: theme.colors.primary, flex: 1 }}>
+              {contact.client_name ?? t("detail.viewClient", { defaultValue: "View client" })}
+            </Text>
+            <Feather name="chevron-right" size={16} color={theme.colors.textSecondary} />
+          </Pressable>
+        ) : (
+          <Text style={{ ...theme.typography.body, color: contact.client_name ? theme.colors.text : theme.colors.textSecondary }}>
+            {contact.client_name ?? t("detail.noClient")}
+          </Text>
+        )}
       </SectionCard>
 
       <SectionCard theme={theme} label={t("detail.contactInfo")}>

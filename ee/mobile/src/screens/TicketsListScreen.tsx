@@ -26,7 +26,7 @@ import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { DatePickerField } from "../ui/components/DatePickerField";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
-import { withClientFilter } from "./ticketsClientFilter";
+import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -79,9 +79,12 @@ function dateOnlyToIsoUtc(dateOnly: string): string | null {
 export function TicketsListScreen({ navigation, route }: Props) {
   const { t } = useTranslation("tickets");
   const { t: tClients } = useTranslation("clients");
+  const { t: tContacts } = useTranslation("contacts");
   const theme = useTheme();
   const clientFilterId = route.params?.clientId;
   const clientFilterName = route.params?.clientName;
+  const contactFilterId = route.params?.contactId;
+  const contactFilterName = route.params?.contactName;
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
@@ -196,11 +199,15 @@ export function TicketsListScreen({ navigation, route }: Props) {
       out.updated_from = new Date(Date.now() - filters.updatedSinceDays * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    return withClientFilter(out, clientFilterId);
-  }, [clientFilterId, filters, session]);
+    return withContactFilter(withClientFilter(out, clientFilterId), contactFilterId);
+  }, [clientFilterId, contactFilterId, filters, session]);
 
   const clearClientFilter = useCallback(() => {
     navigation.setParams({ clientId: undefined, clientName: undefined });
+  }, [navigation]);
+
+  const clearContactFilter = useCallback(() => {
+    navigation.setParams({ contactId: undefined, contactName: undefined });
   }, [navigation]);
 
   const listCacheKey = useMemo(() => {
@@ -410,11 +417,23 @@ export function TicketsListScreen({ navigation, route }: Props) {
   );
 
   const clientFilterChip = clientFilterId ? (
-    <ClientFilterChip
+    <RouteFilterChip
       theme={theme}
       label={tClients("ticketsFilter.chip", { name: clientFilterName ?? clientFilterId })}
       clearLabel={tClients("ticketsFilter.clear")}
       onClear={clearClientFilter}
+    />
+  ) : null;
+
+  const contactFilterChip = contactFilterId ? (
+    <RouteFilterChip
+      theme={theme}
+      label={tContacts("ticketsFilter.chip", {
+        defaultValue: "Contact: {{name}}",
+        name: contactFilterName ?? contactFilterId,
+      })}
+      clearLabel={tContacts("ticketsFilter.clear", { defaultValue: "Clear contact filter" })}
+      onClear={clearContactFilter}
     />
   ) : null;
 
@@ -471,6 +490,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
 
   const hasActiveFilters =
     Boolean(clientFilterId) ||
+    Boolean(contactFilterId) ||
     filters.status !== DEFAULT_FILTERS.status ||
     filters.statusIds.length > 0 ||
     filters.assignee !== DEFAULT_FILTERS.assignee ||
@@ -547,6 +567,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
             </Pressable>
           </View>
           {clientFilterChip}
+          {contactFilterChip}
           <FilterChipBar
             theme={theme}
             filters={filters}
@@ -652,6 +673,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
       {clientFilterChip}
+      {contactFilterChip}
       <FilterChipBar
         theme={theme}
         filters={filters}
@@ -757,7 +779,7 @@ function FilterChipBar({
   );
 }
 
-function ClientFilterChip({
+function RouteFilterChip({
   theme,
   label,
   clearLabel,

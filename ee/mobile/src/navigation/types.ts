@@ -29,7 +29,7 @@ export type RootStackParamList = {
 };
 
 export type TicketsStackParamList = {
-  TicketsList: { clientId?: string; clientName?: string } | undefined;
+  TicketsList: { clientId?: string; clientName?: string; contactId?: string; contactName?: string } | undefined;
 };
 
 export type DrawerParamList = {
