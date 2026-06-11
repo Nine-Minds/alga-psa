@@ -18,6 +18,7 @@ import {
     buildCreditNoteAppliedPayload,
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
+import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
 
 type CreditInvoicePeriodSummary = {
     service_period_start: string | null;
@@ -721,6 +722,14 @@ export const applyCreditToInvoice = withAuth(async (
         appliedServicePeriodEnd: string | null;
     }> = [];
 
+    // Ops to fire-and-forget after the transaction commits for QBO credit-application sync.
+    const creditSyncOps: Array<{
+        allocationId: string;
+        creditNoteInvoiceId: string;
+        targetInvoiceId: string;
+        amountCents: number;
+    }> = [];
+
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied and get its currency
         const invoice = await trx('invoices')
@@ -890,8 +899,9 @@ export const applyCreditToInvoice = withAuth(async (
         }).returning('*');
 
         // Create credit allocation record
+        const allocationId = uuidv4();
         await trx('credit_allocations').insert({
-            allocation_id: uuidv4(),
+            allocation_id: allocationId,
             transaction_id: creditTransaction.transaction_id,
             invoice_id: invoiceId,
             amount: totalAppliedAmount,
@@ -948,6 +958,27 @@ export const applyCreditToInvoice = withAuth(async (
             appliedServicePeriodStart: appliedInvoice.summary.service_period_start,
             appliedServicePeriodEnd: appliedInvoice.summary.service_period_end,
         }));
+
+        // Collect QBO credit-application ops. For each credit pool consumed from a
+        // credit-note invoice, emit one apply_credit op. Each op has a separate allocationId
+        // (simplification: one allocation row per apply_credit call; multi-source draws
+        // map one credit note per op so QBO knows which CreditMemo to link).
+        // Lookups happen inside the transaction so we see committed data.
+        for (const appliedCredit of appliedCredits) {
+            const creditTx = await trx('transactions')
+                .where({ transaction_id: appliedCredit.transactionId, tenant })
+                .select('invoice_id')
+                .first();
+            const creditNoteInvoiceId: string | undefined = creditTx?.invoice_id;
+            if (creditNoteInvoiceId) {
+                creditSyncOps.push({
+                    allocationId,
+                    creditNoteInvoiceId,
+                    targetInvoiceId: invoiceId,
+                    amountCents: appliedCredit.amount
+                });
+            }
+        }
     });
 
     for (const event of creditNoteAppliedEvents) {
@@ -973,6 +1004,13 @@ export const applyCreditToInvoice = withAuth(async (
             },
             idempotencyKey: event.idempotencyKey,
         });
+    }
+
+    // Fire-and-forget: enqueue apply_credit ops for QBO. Never throw — applyCreditToInvoice
+    // must succeed even if the accounting sync enqueue fails.
+    for (const op of creditSyncOps) {
+        const { knex: syncKnex } = await createTenantKnex();
+        void enqueueCreditApplication(syncKnex, tenant, op);
     }
 });
 

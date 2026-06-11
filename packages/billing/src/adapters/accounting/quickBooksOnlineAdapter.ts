@@ -36,6 +36,7 @@ type DbInvoice = {
   client_id?: string | null;
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
+  invoice_type?: string | null;
 };
 
 type DbCharge = {
@@ -92,6 +93,8 @@ interface InvoiceDocumentPayload {
   totals: {
     amountCents: number;
   };
+  /** QBO entity type: 'Invoice' for standard invoices, 'CreditMemo' for credit notes. */
+  documentType?: 'Invoice' | 'CreditMemo';
 }
 
 export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
@@ -221,6 +224,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
       let invoiceNetCents = 0;
       let invoiceTaxCents = 0;
+      // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
+      const isCreditNote = invoice.invoice_type === 'credit_note';
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
@@ -250,11 +255,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         };
 
         if (charge.quantity != null) {
-          salesDetail.Qty = charge.quantity;
+          salesDetail.Qty = isCreditNote ? Math.abs(charge.quantity) : charge.quantity;
         }
 
         if (charge.unit_price != null) {
-          salesDetail.UnitPrice = centsToAmount(charge.unit_price);
+          salesDetail.UnitPrice = isCreditNote
+            ? centsToAmount(Math.abs(charge.unit_price))
+            : centsToAmount(charge.unit_price);
         }
 
         const serviceDate = resolveQboServiceDate(line);
@@ -290,18 +297,19 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
         // QBO will apply default tax behavior or NON depending on settings
 
-        const netAmountCents = coerceChargeCents(charge.net_amount);
-        if (netAmountCents === null) {
+        const rawNetAmountCents = coerceChargeCents(charge.net_amount);
+        if (rawNetAmountCents === null) {
           throw new AppError(
             'QBO_CHARGE_MISSING_NET_AMOUNT',
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
+        const netAmountCents = isCreditNote ? Math.abs(rawNetAmountCents) : rawNetAmountCents;
         invoiceNetCents += netAmountCents;
         if (shouldIncludeAuthoritativeTax) {
-          const taxCents = coerceChargeCents(charge.tax_amount);
-          if (taxCents !== null) {
-            invoiceTaxCents += taxCents;
+          const rawTaxCents = coerceChargeCents(charge.tax_amount);
+          if (rawTaxCents !== null) {
+            invoiceTaxCents += isCreditNote ? Math.abs(rawTaxCents) : rawTaxCents;
           }
         }
 
@@ -386,7 +394,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         },
         totals: {
           amountCents: invoiceNetCents
-        }
+        },
+        documentType: isCreditNote ? 'CreditMemo' : 'Invoice'
       };
 
       documents.push({
@@ -437,6 +446,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       });
       const mappingMetadata = mapping?.metadata ?? null;
       const existingMetadata = mappingMetadata ?? undefined;
+      const qboEntityType = payload.documentType ?? 'Invoice';
       let response: QboInvoice;
 
       if (mapping?.externalInvoiceId) {
@@ -444,7 +454,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           existingMetadata?.sync_token ??
           existingMetadata?.syncToken;
         if (!syncToken) {
-          const remoteInvoice = await qboClient.read<QboInvoice>('Invoice', mapping.externalInvoiceId);
+          const remoteInvoice = await qboClient.read<QboInvoice>(qboEntityType, mapping.externalInvoiceId);
           syncToken = remoteInvoice?.SyncToken ? String(remoteInvoice.SyncToken) : undefined;
         }
 
@@ -459,9 +469,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           sparse: true
         } as { [key: string]: any; Id: string; SyncToken: string };
 
-        response = await qboClient.update<QboInvoice>('Invoice', updatePayload);
+        response = await qboClient.update<QboInvoice>(qboEntityType, updatePayload);
       } else {
-        response = await qboClient.create<QboInvoice>('Invoice', payload.invoice);
+        response = await qboClient.create<QboInvoice>(qboEntityType, payload.invoice);
       }
 
       // Build charge-to-QBO-line mapping from response
@@ -486,7 +496,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Drift baseline: what we believe the document looks like in QBO.
         exported_total: typeof response.TotalAmt === 'number' ? response.TotalAmt : (existingMetadata?.exported_total ?? null),
         doc_number: response.DocNumber ?? existingMetadata?.doc_number ?? null,
-        chargeLineMappings // Store mapping for tax import
+        chargeLineMappings, // Store mapping for tax import
+        external_entity_type: qboEntityType
       };
 
       const externalRef = response.Id;
@@ -540,7 +551,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'total_amount',
         'client_id',
         'currency_code',
-        'exchange_rate_basis_points'
+        'exchange_rate_basis_points',
+        'invoice_type'
       )
       .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);

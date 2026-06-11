@@ -176,7 +176,7 @@ export class EmailService {
     let result = template
       .replace(/{{client_name}}/g, invoice.client.name)
       .replace(/{{invoice_number}}/g, invoice.invoice_number)
-      .replace(/{{total_amount}}/g, `$${(invoice.total_amount / 100).toFixed(2)}`)
+      .replace(/{{total_amount}}/g, `$${((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100).toFixed(2)}`)
       .replace(/{{company_name}}/g, options?.companyName || 'Your Company');
 
     if (options?.paymentLink) {

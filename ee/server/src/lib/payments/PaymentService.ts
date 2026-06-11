@@ -45,6 +45,7 @@ interface InvoiceData {
   invoice_number: string;
   client_id: string;
   total_amount: number;
+  credit_applied: number;
   currency_code: string;
   status: string;
 }
@@ -215,10 +216,26 @@ export class PaymentService {
     const successUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}`;
 
+    // Compute balance due: gross total minus credits already applied minus prior payments
+    const priorPaymentsRow = await this.knex('invoice_payments')
+      .where({ tenant: this.tenantId, invoice_id: invoiceId })
+      .sum('amount as total')
+      .first();
+    const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
+    const balanceDue = invoice.total_amount - (invoice.credit_applied ?? 0) - priorPayments;
+    if (balanceDue <= 0) {
+      logger.debug('[PaymentService] Invoice balance already satisfied', {
+        tenantId: this.tenantId,
+        invoiceId,
+        balanceDue,
+      });
+      return null;
+    }
+
     // Create payment link
     const request: CreatePaymentLinkRequest = {
       invoiceId,
-      amount: invoice.total_amount,
+      amount: balanceDue,
       currency: invoice.currency_code || 'USD',
       description: `Invoice ${invoice.invoice_number}`,
       clientId: client.client_id,
@@ -515,11 +532,11 @@ export class PaymentService {
       if (netPaid <= 0) {
         // Full refund or overpayment refunded - back to sent
         newStatus = 'sent';
-      } else if (netPaid < invoice.total_amount) {
+      } else if (netPaid < invoice.total_amount - (invoice.credit_applied ?? 0)) {
         // Partial refund - partially applied
         newStatus = 'partially_applied';
       }
-      // If netPaid >= total_amount, stay as 'paid'
+      // If netPaid >= total_amount - credit_applied, stay as 'paid'
 
       if (newStatus !== invoice.status) {
         await trx('invoices')
@@ -536,7 +553,7 @@ export class PaymentService {
       // Record refund transaction
       // Determine if it's a full or partial refund
       const refundAmount = Math.abs(event.amount!);
-      const isFullRefund = refundAmount >= invoice.total_amount;
+      const isFullRefund = refundAmount >= invoice.total_amount - (invoice.credit_applied ?? 0);
       const refundType: 'refund_full' | 'refund_partial' = isFullRefund ? 'refund_full' : 'refund_partial';
       
       await recordTransaction(
@@ -629,7 +646,7 @@ export class PaymentService {
 
     // Validate amount - warn if significantly different from expected
     // For now, we allow partial payments but log a warning for mismatches
-    if (event.amount > invoice.total_amount * 1.01) { // Allow 1% tolerance for rounding
+    if (event.amount > (invoice.total_amount - (invoice.credit_applied ?? 0)) * 1.01) { // Allow 1% tolerance for rounding
       logger.warn('[PaymentService] Payment amount exceeds invoice total', {
         tenantId: this.tenantId,
         invoiceId: event.invoiceId,

@@ -1177,8 +1177,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new Error('Credit amount must be positive');
       }
 
-      if (data.credit_amount > invoice.total_amount) {
-        throw new Error('Credit amount cannot exceed invoice total');
+      if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
+        throw new Error('Credit amount cannot exceed invoice balance due');
       }
 
       // Insert credit record

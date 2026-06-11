@@ -236,7 +236,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       }
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const totalAmount = formatCurrency(invoice.total_amount / 100, 'en-US', currencyCode);
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, 'en-US', currencyCode);
 
       const invoiceDate = invoice.invoice_date
         ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
@@ -464,7 +464,7 @@ export const sendInvoiceEmailAction = withAuth(async (
       const pdfBuffer = await fs.readFile(tempPdfPath);
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const totalAmount = formatCurrency(invoice.total_amount / 100, 'en-US', currencyCode);
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, 'en-US', currencyCode);
 
       const invoiceDate = invoice.invoice_date
         ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {

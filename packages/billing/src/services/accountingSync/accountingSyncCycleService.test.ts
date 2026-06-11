@@ -76,6 +76,10 @@ vi.mock('../accountingExportService', () => ({
   }
 }));
 
+vi.mock('./creditApplicationApplier', () => ({
+  drainApplyCreditOps: vi.fn(async () => undefined)
+}));
+
 import { runAccountingSyncCycle, CURSOR_OVERLAP_MS } from './accountingSyncCycleService';
 import { SyncCycleRepository } from './syncCycleRepository';
 import { SyncOperationsRepository } from './syncOperationsRepository';
@@ -87,6 +91,7 @@ import { resolveTokenThresholdToAnnounce } from './syncNotificationService';
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
 import { AccountingExportService } from '../accountingExportService';
 import { AppError } from '@alga-psa/core';
+import { drainApplyCreditOps } from './creditApplicationApplier';
 import { SyncMappingLedger } from './syncMappingLedger';
 
 const TENANT = 'tenant-abc';
@@ -378,7 +383,9 @@ describe('runAccountingSyncCycle', () => {
     ];
 
     const markDone = vi.fn(async () => undefined);
-    const listPending = vi.fn(async () => pendingOps);
+    // Return ops only for export_invoice; export_credit_memo yields empty (none queued in this test).
+    const listPending = vi.fn(async (_t: string, _a: string, opts: any) =>
+      opts?.operation === 'export_invoice' ? pendingOps : []);
     const markInProgress = vi.fn(async () => undefined);
 
     vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
@@ -420,7 +427,8 @@ describe('runAccountingSyncCycle', () => {
     const pendingOps = [{ op_id: 'op-3', alga_entity_id: 'inv-3', attempts: 0 }];
 
     vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
-      listPending: vi.fn(async () => pendingOps),
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
       markDone: vi.fn(async () => undefined),
       markFailed: vi.fn(async () => 'pending'),
@@ -454,7 +462,8 @@ describe('runAccountingSyncCycle', () => {
     const markFailed = vi.fn(async () => 'pending');
 
     vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
-      listPending: vi.fn(async () => pendingOps),
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
       markDone: vi.fn(async () => undefined),
       markFailed,
@@ -506,7 +515,8 @@ describe('runAccountingSyncCycle', () => {
     vi.mocked(SyncMappingLedger).mockImplementationOnce(() => ledgerInstance as any);
 
     vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
-      listPending: vi.fn(async () => pendingOps),
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
       markDone: vi.fn(async () => undefined),
       markFailed: vi.fn(async () => 'pending'),
@@ -540,4 +550,62 @@ describe('runAccountingSyncCycle', () => {
     );
     expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_drift', 'invoice', 'inv-drift');
   });
+
+  it('drain includes export_credit_memo ops in the same batch as export_invoice ops', async () => {
+    // Mix of invoice and credit_memo ops
+    const invoiceOp = { op_id: 'op-inv-10', alga_entity_id: 'inv-10', attempts: 0 };
+    const creditMemoOp = { op_id: 'op-cm-10', alga_entity_id: 'inv-cm-10', attempts: 0 };
+
+    // listPending is called twice (once per operation type); return each op from its call
+    const listPending = vi.fn()
+      .mockResolvedValueOnce([invoiceOp])      // export_invoice call
+      .mockResolvedValueOnce([creditMemoOp]);  // export_credit_memo call
+
+    const markDone = vi.fn(async () => undefined);
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+      listPending,
+      markInProgress: vi.fn(async () => undefined),
+      markDone,
+      markFailed: vi.fn(async () => 'pending'),
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any));
+
+    const createBatchFromFilters = vi.fn(async () => ({ batch: { batch_id: 'batch-mixed' } }));
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+      createBatchFromFilters
+    } as any));
+
+    const executeBatch = vi.fn(async () => undefined);
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({ executeBatch } as any);
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    // Both op types should be in the same createBatchFromFilters call
+    expect(createBatchFromFilters).toHaveBeenCalledTimes(1);
+    expect(createBatchFromFilters).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({
+          invoiceIds: expect.arrayContaining(['inv-10', 'inv-cm-10'])
+        })
+      })
+    );
+
+    // Both ops marked done
+    expect(markDone).toHaveBeenCalledTimes(2);
+    expect(result.stats?.opsProcessed).toBe(2);
+
+    // drainApplyCreditOps should also have been called (credit application drain)
+    expect(vi.mocked(drainApplyCreditOps)).toHaveBeenCalled();
+  });
 });
+

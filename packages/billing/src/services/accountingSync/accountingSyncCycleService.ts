@@ -23,6 +23,7 @@ import {
 } from './syncNotificationService';
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
 import { AccountingExportService } from '../accountingExportService';
+import { drainApplyCreditOps } from './creditApplicationApplier';
 
 /**
  * One accounting sync cycle for a tenant×realm:
@@ -197,6 +198,18 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
     });
   }
 
+  // ── Credit application (runs after exports so both CreditMemo and Invoice ──
+  // ── mappings are available for the Payment-linking step)               ──
+  try {
+    await drainApplyCreditOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+  } catch (error) {
+    logger.error('[accountingSync] Credit-application drain error', {
+      tenantId,
+      targetRealm,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+
   if (stats.exceptionsCreated > 0) {
     try {
       await notifications.notifyNewExceptions(targetRealm, stats.exceptionsCreated);
@@ -230,15 +243,22 @@ interface DrainDeps {
 }
 
 /**
- * Drain pending export_invoice ops into one scheduled batch through the
- * existing validate→transform→deliver pipeline, so scheduled and manual
- * exports share one code path, error surface, and audit trail.
+ * Drain pending export_invoice and export_credit_memo ops into one scheduled
+ * batch through the existing validate→transform→deliver pipeline, so scheduled
+ * and manual exports share one code path, error surface, and audit trail.
  */
 async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
-  const pending = await deps.ops.listPending(deps.tenantId, deps.adapterType, {
-    operation: 'export_invoice',
-    targetRealm: deps.targetRealm
-  });
+  const [invoiceOps, creditMemoOps] = await Promise.all([
+    deps.ops.listPending(deps.tenantId, deps.adapterType, {
+      operation: 'export_invoice',
+      targetRealm: deps.targetRealm
+    }),
+    deps.ops.listPending(deps.tenantId, deps.adapterType, {
+      operation: 'export_credit_memo',
+      targetRealm: deps.targetRealm
+    })
+  ]);
+  const pending = [...invoiceOps, ...creditMemoOps];
 
   if (pending.length === 0) {
     return;

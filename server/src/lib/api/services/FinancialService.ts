@@ -600,7 +600,6 @@ export class FinancialService extends BaseService<ITransaction> {
         .where({ invoice_id: request.invoice_id, tenant })
         .update({
           credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
-          total_amount: Number(currentInvoice.total_amount) - totalApplied
         });
 
       // Update client balance
@@ -1205,7 +1204,7 @@ export class FinancialService extends BaseService<ITransaction> {
         tenant: client.tenant,
         status: 'sent'
       })
-      .sum('total_amount as total');
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'));
 
     // Get overdue invoices
     const overdueInvoices = await knex('invoices')
@@ -1214,7 +1213,7 @@ export class FinancialService extends BaseService<ITransaction> {
         tenant: client.tenant,
         status: 'overdue'
       })
-      .sum('total_amount as total');
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'));
 
     // Get last payment
     const lastPayment = await knex('transactions')

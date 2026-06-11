@@ -21,15 +21,12 @@ export interface InvoiceBalanceInputs {
 }
 
 /**
- * Amount still owed on an invoice, in cents.
- *
- * Slice-1 semantics: total_amount − payments. Credit application currently
- * decrements total_amount directly (creditActions), so subtracting
- * credit_applied here would double-count; the slice-2 credit reshape makes
- * totals immutable and switches this to totalAmount − creditApplied − totalPaid.
+ * Amount still owed on an invoice, in cents. Invoice totals are immutable
+ * (credit reshape): the document total stays gross and what is owed is
+ * derived from credits applied plus net payments.
  */
 export function computeBalanceDue(inputs: InvoiceBalanceInputs): number {
-  return Math.round(inputs.totalAmount) - Math.round(inputs.totalPaid);
+  return Math.round(inputs.totalAmount) - Math.round(inputs.creditApplied) - Math.round(inputs.totalPaid);
 }
 
 export interface ExternalPaymentInput {
