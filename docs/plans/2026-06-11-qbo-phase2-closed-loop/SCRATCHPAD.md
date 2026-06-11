@@ -71,3 +71,34 @@
 - Targeted suites: `cd server && npx vitest run src/test/unit/api/qboOAuthRoutes.test.ts`
 - Typecheck a package: `cd packages/<pkg> && npx tsc --noEmit -p tsconfig.json`
 - Pseudo-locales after en changes: `node scripts/generate-pseudo-locales.cjs`
+
+## Implementation notes (slice 1 built 2026-06-11)
+
+- **Scheduling deviation (F011):** instead of connect/disconnect registration,
+  `accounting-sync-cycle` is scheduled for EVERY tenant at startup
+  (`initializeScheduledJobs`) like the platform's other per-tenant jobs, with a
+  cheap no-op guard for CE/unconnected/auto-sync-off tenants. Cron `*/15 * * * *`
+  goes through `getJobRunner()` (PgBossJobRunner uses real `boss.schedule()`
+  per-schedule queues; Temporal in EE) — NOT the legacy `initializeScheduler()`
+  JobScheduler, which coerces intervals to 24h.
+- The auto-sync toggle is the engine's master switch: cycles skip when off;
+  `force` (Sync Now) bypasses. First-run cursor = now − 5min (never imports
+  history; the slice-3 wizard is the deliberate path for that).
+- One job tick per tenant enumerates realms and runs sequential per-realm
+  cycles (multi-realm scheduling needs no extra registration in slice 4).
+- `RefundReceipt` added to the CDC entity set + change-entity union (stats-only).
+- Health panel = `QboSyncHealthPanel` in packages/billing, injected into
+  `QboIntegrationSettings` via a `syncHealthSlot` prop threaded from
+  `server/src/components/settings/SettingsPage.tsx` — avoids the
+  billing↔integrations package cycle (nx cycles broke appliance builds before).
+- `recordExternalPayment` transaction metadata is a superset of the old Stripe
+  metadata (adds `reference_number`); PaymentService webhook path now delegates
+  to it (validation + PAYMENT_RECORDED/APPLIED publication unchanged).
+- Notifications: `system-announcement` internal template; recipients = active
+  internal users with role_name 'admin'. Token thresholds remembered in
+  tenant_settings.settings.accountingSync.tokenNotices[realm].
+- Sync Now runs the cycle inline in the server action (no job round-trip).
+- T032 (DB-backed integration cycle test) + T033 (migration round-trip)
+  deferred: local test DB unavailable (pre-existing). Stripe integration tests
+  are DB-skipped locally; T016 verified via typecheck + unchanged validation
+  semantics. Live-smoke T034-T041 pending an Intuit sandbox session.

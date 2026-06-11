@@ -976,6 +976,32 @@
         "tenantOauthDescription": "55555",
         "tenantOauthTitle": "55555",
         "title": "55555"
+      },
+      "sync": {
+        "healthCardTitle": "55555",
+        "healthCardDescription": "55555",
+        "lastCycleTitle": "55555",
+        "lastCycleStatus": "55555",
+        "lastCycleFinishedAt": "55555",
+        "lastCycleStats": "55555",
+        "statOpsProcessed": "55555 {{count}} 55555",
+        "statDriftFound": "55555 {{count}} 55555",
+        "statPaymentsApplied": "55555 {{count}} 55555",
+        "noLastCycle": "55555",
+        "nextRunHint": "55555",
+        "pendingOps": "55555",
+        "erroredOps": "55555",
+        "driftCount": "55555",
+        "openExceptions": "55555",
+        "refreshTokenExpiry": "55555 {{date}} 55555",
+        "refreshTokenExpired": "55555",
+        "autoSyncLabel": "55555",
+        "syncNowButton": "55555",
+        "syncNowRunning": "55555",
+        "syncNowSuccess": "55555",
+        "syncNowSkipped": "55555 {{reason}} 55555",
+        "syncNowError": "55555 {{error}} 55555",
+        "viewExceptionsLink": "55555"
       }
     },
     "rmm": {

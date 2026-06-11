@@ -28,6 +28,7 @@ import {
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
+import { recordExternalPayment } from '@alga-psa/billing/services';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildPaymentAppliedPayload,
@@ -637,90 +638,40 @@ export class PaymentService {
       });
     }
 
-    // Use transaction for atomicity with row locking to prevent race conditions
-    const paymentId = await this.knex.transaction(async (trx) => {
-      // Lock the invoice row to prevent concurrent payment processing
-      // This ensures only one webhook at a time can update the invoice status
-      await trx('invoices')
-        .where({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-        })
-        .forUpdate()
-        .first();
+    // Shared provider-agnostic AR landing (same path the accounting sync uses):
+    // invoice lock, invoice_payments row, status flip, payment transaction.
+    const recordResult = await recordExternalPayment(this.knex, this.tenantId, {
+      invoiceId: event.invoiceId,
+      amount: event.amount,
+      provider: event.provider, // Provider is already 'stripe'
+      referenceNumber: event.paymentIntentId,
+      currency: event.currency,
+      notes: `Stripe payment via ${event.eventType}`,
+      transactionDescription: `Payment received via Stripe - ${event.paymentIntentId}`,
+      transactionMetadata: {
+        payment_provider: 'stripe',
+        stripe_payment_intent_id: event.paymentIntentId,
+        stripe_event_id: event.eventId,
+        currency: event.currency,
+      },
+    });
 
-      // Insert payment record
-      const [payment] = await trx('invoice_payments')
-        .insert({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-          amount: event.amount,
-          payment_method: event.provider, // Provider is already 'stripe'
-          payment_date: new Date(),
-          reference_number: event.paymentIntentId,
-          notes: `Stripe payment via ${event.eventType}`,
-        })
-        .returning('payment_id');
+    if (!recordResult.success || !recordResult.paymentId) {
+      return {
+        success: false,
+        paymentRecorded: false,
+        error: recordResult.error,
+      };
+    }
 
-      // Calculate total payments (now safe due to row lock)
-      const totalPayments = await trx('invoice_payments')
-        .where({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-        })
-        .sum('amount as total')
-        .first();
+    const paymentId = recordResult.paymentId;
 
-      const totalPaid = parseInt(totalPayments?.total || '0', 10);
-
-      // Update invoice status
-      let newStatus = invoice.status;
-      if (totalPaid >= invoice.total_amount) {
-        newStatus = 'paid';
-      } else if (totalPaid > 0) {
-        newStatus = 'partially_applied';
-      }
-
-      if (newStatus !== invoice.status) {
-        await trx('invoices')
-          .where({
-            tenant: this.tenantId,
-            invoice_id: event.invoiceId,
-          })
-          .update({
-            status: newStatus,
-            updated_at: trx.fn.now(),
-          });
-      }
-
-      // Record transaction
-      await recordTransaction(
-        trx,
-        {
-          clientId: invoice.client_id,
-          invoiceId: event.invoiceId,
-          amount: event.amount!,
-          type: 'payment',
-          description: `Payment received via Stripe - ${event.paymentIntentId}`,
-          metadata: {
-            payment_provider: 'stripe',
-            stripe_payment_intent_id: event.paymentIntentId,
-            stripe_event_id: event.eventId,
-            currency: event.currency,
-          },
-        },
-        this.tenantId
-      );
-
-      logger.info('[PaymentService] Payment recorded', {
-        tenantId: this.tenantId,
-        invoiceId: event.invoiceId,
-        paymentId: payment.payment_id,
-        amount: event.amount,
-        newStatus,
-      });
-
-      return payment.payment_id;
+    logger.info('[PaymentService] Payment recorded', {
+      tenantId: this.tenantId,
+      invoiceId: event.invoiceId,
+      paymentId,
+      amount: event.amount,
+      newStatus: recordResult.newStatus,
     });
 
     const occurredAt = new Date().toISOString();

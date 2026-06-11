@@ -36,3 +36,6 @@ export { default as TaxSourceSettings } from './settings/tax/TaxSourceSettings';
 export { default as TaxThresholdEditor } from './settings/tax/TaxThresholdEditor';
 export { InvoiceTaxSourceBadge } from './invoices/InvoiceTaxSourceBadge';
 export type { InvoiceTaxSourceBadgeProps } from './invoices/InvoiceTaxSourceBadge';
+
+// Accounting integration components
+export { default as QboSyncHealthPanel } from './accounting/QboSyncHealthPanel';

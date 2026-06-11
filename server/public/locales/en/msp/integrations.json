@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.",
         "tenantOauthTitle": "Tenant-Owned OAuth App",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Sync Health",
+        "healthCardDescription": "QuickBooks accounting sync status and controls. Runs every 15 minutes.",
+        "lastCycleTitle": "Last Sync Cycle",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Finished",
+        "lastCycleStats": "Results",
+        "statOpsProcessed": "{{count}} ops processed",
+        "statDriftFound": "{{count}} drift",
+        "statPaymentsApplied": "{{count}} payments applied",
+        "noLastCycle": "No sync cycle has run yet.",
+        "nextRunHint": "Runs automatically every 15 minutes when auto-sync is enabled.",
+        "pendingOps": "Pending ops",
+        "erroredOps": "Errored ops",
+        "driftCount": "Drift",
+        "openExceptions": "Open exceptions",
+        "refreshTokenExpiry": "QuickBooks token expires {{date}}",
+        "refreshTokenExpired": "QuickBooks token expired — reconnect to resume syncing.",
+        "autoSyncLabel": "Auto-sync enabled",
+        "syncNowButton": "Sync Now",
+        "syncNowRunning": "Syncing…",
+        "syncNowSuccess": "Sync completed successfully.",
+        "syncNowSkipped": "Sync skipped: {{reason}}",
+        "syncNowError": "Sync failed: {{error}}",
+        "viewExceptionsLink": "View exceptions"
       }
     },
     "rmm": {

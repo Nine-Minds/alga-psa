@@ -24,9 +24,17 @@ import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
+import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
+import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  queueInvoiceSync,
+  runAccountingSyncNow,
+  resolveAccountingDriftReExport,
+  resolveAccountingDriftAccept,
+} from '../../../actions/accountingSyncActions';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -76,7 +84,14 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
   const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
   const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
+  const [syncActionLoading, setSyncActionLoading] = useState(false);
+  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // QBO sync status for this invoice
+  const syncIds = invoiceId ? [invoiceId] : [];
+  const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
+  const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -336,7 +351,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <h3 className="text-lg font-semibold">
               {t('invoicePreview.title', { defaultValue: 'Invoice Preview' })}
             </h3>
-            <InvoiceTaxSourceBadge taxSource={taxSource} />
+            <div className="flex items-center gap-2">
+              <InvoiceTaxSourceBadge taxSource={taxSource} />
+              {!syncHidden && syncStatus && (
+                <InvoiceSyncBadge status={syncStatus} />
+              )}
+            </div>
           </div>
           <CustomSelect
             options={templates.map((template) => ({
@@ -366,6 +386,104 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           <Alert variant="destructive" className="mb-4">
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
+        )}
+
+        {syncActionFeedback && (
+          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : 'destructive'} className="mb-4">
+            <AlertDescription className="text-sm">{syncActionFeedback.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {!syncHidden && invoiceId && syncStatus && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              id="invoice-sync-now-button"
+              variant="outline"
+              size="sm"
+              disabled={syncActionLoading}
+              onClick={async () => {
+                if (!invoiceId) return;
+                setSyncActionLoading(true);
+                setSyncActionFeedback(null);
+                try {
+                  await queueInvoiceSync(invoiceId);
+                  await runAccountingSyncNow();
+                  setSyncActionFeedback({ type: 'success', message: 'Invoice queued for QuickBooks sync.' });
+                } catch (err) {
+                  setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
+                } finally {
+                  setSyncActionLoading(false);
+                }
+              }}
+            >
+              {t('invoicePreview.actions.syncNow', { defaultValue: 'Sync to QuickBooks' })}
+            </Button>
+
+            {syncStatus.state === 'drift' && (
+              <>
+                <Button
+                  id="invoice-drift-reexport-button"
+                  variant="outline"
+                  size="sm"
+                  disabled={syncActionLoading}
+                  onClick={async () => {
+                    if (!invoiceId) return;
+                    setSyncActionLoading(true);
+                    setSyncActionFeedback(null);
+                    try {
+                      await resolveAccountingDriftReExport(invoiceId);
+                      setSyncActionFeedback({ type: 'success', message: 'Re-export to QuickBooks queued.' });
+                    } catch (err) {
+                      setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Re-export failed.' });
+                    } finally {
+                      setSyncActionLoading(false);
+                    }
+                  }}
+                >
+                  {t('invoicePreview.actions.driftReexport', { defaultValue: 'Re-export to QuickBooks' })}
+                </Button>
+
+                <Button
+                  id="invoice-drift-accept-button"
+                  variant="outline"
+                  size="sm"
+                  disabled={syncActionLoading}
+                  onClick={async () => {
+                    if (!invoiceId) return;
+                    setSyncActionLoading(true);
+                    setSyncActionFeedback(null);
+                    try {
+                      await resolveAccountingDriftAccept(invoiceId);
+                      setSyncActionFeedback({ type: 'success', message: 'QuickBooks version accepted.' });
+                    } catch (err) {
+                      setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Accept failed.' });
+                    } finally {
+                      setSyncActionLoading(false);
+                    }
+                  }}
+                >
+                  {t('invoicePreview.actions.driftAccept', { defaultValue: 'Accept QuickBooks Version' })}
+                </Button>
+              </>
+            )}
+
+            {syncStatus.state === 'synced' && syncStatus.externalId && (
+              <Button
+                id="invoice-view-in-qbo-button"
+                variant="outline"
+                size="sm"
+                asChild
+              >
+                <a
+                  href={`https://app.qbo.intuit.com/app/invoice?txnId=${encodeURIComponent(syncStatus.externalId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
+                </a>
+              </Button>
+            )}
+          </div>
         )}
 
         {sourceQuote ? (

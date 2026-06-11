@@ -21,6 +21,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
+interface QboIntegrationSettingsProps {
+  syncHealthSlot?: React.ReactNode;
+}
+
 function describeCallbackError(code: string | null, t: TranslateFn): string | null {
   switch (code) {
     case 'config_missing':
@@ -50,7 +54,7 @@ function statusBadgeVariant(status?: 'active' | 'expired' | 'error'): 'success' 
   return 'secondary';
 }
 
-export default function QboIntegrationSettings() {
+export default function QboIntegrationSettings({ syncHealthSlot }: QboIntegrationSettingsProps = {}) {
   const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<QboStatus | null>(null);
@@ -389,6 +393,8 @@ export default function QboIntegrationSettings() {
           </div>
         </CardFooter>
       </Card>
+
+      {defaultConnection ? syncHealthSlot : null}
 
       {defaultConnection ? (
         <Card id="qbo-integration-mapping-card">

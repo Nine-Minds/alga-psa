@@ -85,3 +85,20 @@ export {
   updateTaxRate,
   deleteTaxRate,
 } from './taxRateActions';
+
+// Accounting sync actions (EE only)
+export {
+  getAccountingSyncSettingsAction,
+  updateAccountingSyncSettingsAction,
+  runAccountingSyncNow,
+  queueInvoiceSync,
+  resolveAccountingDriftReExport,
+  resolveAccountingDriftAccept,
+  getInvoiceSyncStatuses,
+  getAccountingSyncHealth,
+} from './accountingSyncActions';
+export type {
+  InvoiceSyncState,
+  InvoiceSyncStatus,
+  AccountingSyncHealth,
+} from './accountingSyncActions';

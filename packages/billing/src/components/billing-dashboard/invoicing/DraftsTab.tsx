@@ -29,6 +29,8 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
+import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 
 interface DraftsTabProps {
   onRefreshNeeded: () => void;
@@ -151,6 +153,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
   // For server-side pagination, filteredInvoices is just invoices (already filtered server-side)
   const filteredInvoices = invoices;
+
+  const invoiceIds = filteredInvoices.map((inv) => inv.invoice_id);
+  const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(invoiceIds);
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
@@ -430,6 +435,15 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         </Badge>
       ),
     },
+    ...(syncHidden ? [] : [{
+      title: t('draftsTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      dataIndex: 'invoice_id' as const,
+      render: (_: unknown, record: DbInvoiceViewModel) => {
+        const syncStatus = syncStatuses[record.invoice_id];
+        if (!syncStatus) return null;
+        return <InvoiceSyncBadge status={syncStatus} />;
+      },
+    }]),
     {
       title: t('draftsTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',

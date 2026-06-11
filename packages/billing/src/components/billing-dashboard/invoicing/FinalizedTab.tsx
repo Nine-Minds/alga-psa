@@ -29,6 +29,8 @@ import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
+import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
@@ -97,6 +99,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 
   // For server-side pagination, filteredInvoices is just invoices (already filtered server-side)
   const filteredInvoices = invoices;
+
+  const invoiceIds = filteredInvoices.map((inv) => inv.invoice_id);
+  const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(invoiceIds);
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
@@ -341,6 +346,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         </Badge>
       ),
     },
+    ...(syncHidden ? [] : [{
+      title: t('finalizedTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      dataIndex: 'invoice_id' as const,
+      render: (_: unknown, record: DbInvoiceViewModel) => {
+        const syncStatus = syncStatuses[record.invoice_id];
+        if (!syncStatus) return null;
+        return <InvoiceSyncBadge status={syncStatus} />;
+      },
+    }]),
     {
       title: t('finalizedTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',
