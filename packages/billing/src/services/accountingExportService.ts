@@ -116,6 +116,36 @@ export class AccountingExportService {
     return this.repository.updateBatchStatus(batchId, updates);
   }
 
+  /**
+   * Cancel a batch that has not been delivered. Cancelled batches stop
+   * blocking the duplicate-selection guard, so this is the recovery path for
+   * wedged selections (manual or scheduled) without touching SQL.
+   */
+  async cancelBatch(
+    batchId: string,
+    options: { cancelledBy?: string | null; reason?: string | null } = {}
+  ): Promise<AccountingExportBatch> {
+    const batch = await this.repository.getBatch(batchId);
+    if (!batch) {
+      throw new AppError('ACCOUNTING_EXPORT_NOT_FOUND', `Export batch ${batchId} not found`, { batchId });
+    }
+
+    const cancellable: AccountingExportStatus[] = ['pending', 'validating', 'ready', 'needs_attention', 'failed'];
+    if (!cancellable.includes(batch.status)) {
+      throw new AppError('ACCOUNTING_EXPORT_INVALID_STATE', `Cannot cancel batch in status ${batch.status}`, {
+        batchId,
+        status: batch.status
+      });
+    }
+
+    const updated = await this.repository.updateBatchStatus(batchId, {
+      status: 'cancelled',
+      last_updated_by: options.cancelledBy ?? null,
+      notes: options.reason ?? batch.notes ?? null
+    });
+    return updated ?? { ...batch, status: 'cancelled' };
+  }
+
   async getBatchWithDetails(batchId: string): Promise<{
     batch: AccountingExportBatch | null;
     lines: AccountingExportLine[];
@@ -210,7 +240,18 @@ export class AccountingExportService {
           }
         }
       });
-      throw new Error(`Export batch ${batchId} is not ready for delivery (status ${refreshed.batch.status})`);
+      const openErrors = refreshed.errors.filter((item) => item.resolution_state === 'open');
+      // Typed so callers (e.g. the scheduled drain) can tell deterministic
+      // validation failures apart from transient transport errors.
+      throw new AppError(
+        'ACCOUNTING_EXPORT_VALIDATION_FAILED',
+        `Export batch ${batchId} is not ready for delivery (status ${refreshed.batch.status})`,
+        {
+          batchId,
+          status: refreshed.batch.status,
+          validationErrors: openErrors.slice(0, 10).map((item) => ({ code: item.code, message: item.message }))
+        }
+      );
     }
 
     const normalizedBatch: AccountingExportBatch = {

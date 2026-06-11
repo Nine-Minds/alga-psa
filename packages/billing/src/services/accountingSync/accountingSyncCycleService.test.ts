@@ -2,32 +2,32 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // ── Module mocks ────────────────────────────────────────────────────────────
 vi.mock('./syncCycleRepository', () => ({
-  SyncCycleRepository: vi.fn().mockImplementation(() => ({
+  SyncCycleRepository: vi.fn().mockImplementation(function () { return ({
     getLastSuccessfulCursor: vi.fn(async () => null),
     startCycle: vi.fn(async () => 'cycle-001'),
     finishCycle: vi.fn(async () => undefined)
-  }))
+  }); })
 }));
 
 vi.mock('./syncOperationsRepository', () => ({
-  SyncOperationsRepository: vi.fn().mockImplementation(() => ({
+  SyncOperationsRepository: vi.fn().mockImplementation(function () { return ({
     listPending: vi.fn(async () => []),
     markInProgress: vi.fn(async () => undefined),
     markDone: vi.fn(async () => undefined),
     markFailed: vi.fn(async () => 'pending'),
     satisfyPending: vi.fn(async () => 0),
     enqueue: vi.fn(async () => ({}))
-  }))
+  }); })
 }));
 
 vi.mock('./syncMappingLedger', () => ({
-  SyncMappingLedger: vi.fn().mockImplementation(() => ({
+  SyncMappingLedger: vi.fn().mockImplementation(function () { return ({
     findByExternalId: vi.fn(async () => undefined),
     findByAlgaId: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis()
-  }))
+  }); })
 }));
 
 vi.mock('./paymentApplier', () => ({
@@ -54,25 +54,25 @@ vi.mock('./accountingSyncSettings', () => ({
 }));
 
 vi.mock('./syncExceptionService', () => ({
-  WorkflowTaskSyncExceptionService: vi.fn().mockImplementation(() => ({
+  WorkflowTaskSyncExceptionService: vi.fn().mockImplementation(function () { return ({
     createOrUpdate: vi.fn(async () => ({ created: true })),
     resolve: vi.fn(async () => undefined)
-  }))
+  }); })
 }));
 
 vi.mock('./syncNotificationService', () => ({
-  DefaultSyncNotificationService: vi.fn().mockImplementation(() => ({
+  DefaultSyncNotificationService: vi.fn().mockImplementation(function () { return ({
     notifyConnectionExpired: vi.fn(async () => undefined),
     notifyTokenExpiring: vi.fn(async () => undefined),
     notifyNewExceptions: vi.fn(async () => undefined)
-  })),
+  }); }),
   resolveTokenThresholdToAnnounce: vi.fn(async () => null)
 }));
 
 vi.mock('../accountingExportInvoiceSelector', () => ({
-  AccountingExportInvoiceSelector: vi.fn().mockImplementation(() => ({
+  AccountingExportInvoiceSelector: vi.fn().mockImplementation(function () { return ({
     createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-001' } }))
-  }))
+  }); })
 }));
 
 vi.mock('../accountingExportService', () => ({
@@ -117,7 +117,7 @@ const ADAPTER_TYPE = 'quickbooks_online';
 
 function makeFakeAdapter(overrides: any = {}) {
   return {
-    capabilities: vi.fn(() => ({ supportsChangePolling: true })),
+    capabilities: vi.fn(function () { return ({ supportsChangePolling: true }); }),
     fetchChanges: vi.fn(async () => ({
       changes: [],
       truncated: false,
@@ -158,7 +158,7 @@ describe('runAccountingSyncCycle', () => {
   });
 
   it('skips when adapter does not support change polling', async () => {
-    const adapter = { capabilities: vi.fn(() => ({ supportsChangePolling: false })), fetchChanges: undefined };
+    const adapter = { capabilities: vi.fn(function () { return ({ supportsChangePolling: false }); }), fetchChanges: undefined };
     const result = await runAccountingSyncCycle({
       knex: {} as any,
       tenantId: TENANT,
@@ -226,11 +226,11 @@ describe('runAccountingSyncCycle', () => {
   it('subsequent run: cursor is storedCursor − CURSOR_OVERLAP_MS', async () => {
     const storedCursor = '2026-01-14T10:00:00.000Z';
     // Override SyncCycleRepository for this test
-    vi.mocked(SyncCycleRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
       getLastSuccessfulCursor: vi.fn(async () => storedCursor),
       startCycle: vi.fn(async () => 'cycle-002'),
       finishCycle: vi.fn(async () => undefined)
-    } as any));
+    } as any); });
 
     const adapter = makeFakeAdapter();
     await runAccountingSyncCycle({
@@ -254,13 +254,13 @@ describe('runAccountingSyncCycle', () => {
     });
 
     let finishCycleCall: any = null;
-    vi.mocked(SyncCycleRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
       getLastSuccessfulCursor: vi.fn(async () => null),
       startCycle: vi.fn(async () => 'cycle-003'),
       finishCycle: vi.fn(async (_tenant: string, _cycleId: string, result: any) => {
         finishCycleCall = result;
       })
-    } as any));
+    } as any); });
 
     await runAccountingSyncCycle({
       knex: {} as any,
@@ -285,13 +285,13 @@ describe('runAccountingSyncCycle', () => {
     });
 
     let finishCall: any = null;
-    vi.mocked(SyncCycleRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
       getLastSuccessfulCursor: vi.fn(async () => null),
       startCycle: vi.fn(async () => 'cycle-fail'),
       finishCycle: vi.fn(async (_t: string, _c: string, result: any) => {
         finishCall = result;
       })
-    } as any));
+    } as any); });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -320,13 +320,13 @@ describe('runAccountingSyncCycle', () => {
     const notifications = makeFakeNotifications();
 
     let finishCall: any = null;
-    vi.mocked(SyncCycleRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
       getLastSuccessfulCursor: vi.fn(async () => null),
       startCycle: vi.fn(async () => 'cycle-auth'),
       finishCycle: vi.fn(async (_t: string, _c: string, result: any) => {
         finishCall = result;
       })
-    } as any));
+    } as any); });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -405,19 +405,19 @@ describe('runAccountingSyncCycle', () => {
       opts?.operation === 'export_invoice' ? pendingOps : []);
     const markInProgress = vi.fn(async () => undefined);
 
-    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
       listPending,
       markInProgress,
       markDone,
       markFailed: vi.fn(async () => 'pending'),
       satisfyPending: vi.fn(async () => 0),
       enqueue: vi.fn(async () => ({}))
-    } as any));
+    } as any); });
 
     const createBatchFromFilters = vi.fn(async () => ({ batch: { batch_id: 'batch-drain' } }));
-    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
       createBatchFromFilters
-    } as any));
+    } as any); });
 
     const executeBatch = vi.fn(async () => undefined);
     vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({ executeBatch } as any);
@@ -443,7 +443,7 @@ describe('runAccountingSyncCycle', () => {
   it('drain: ACCOUNTING_EXPORT_EMPTY_BATCH → ops marked done (already exported)', async () => {
     const pendingOps = [{ op_id: 'op-3', alga_entity_id: 'inv-3', attempts: 0 }];
 
-    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
       listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
         opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
@@ -451,13 +451,13 @@ describe('runAccountingSyncCycle', () => {
       markFailed: vi.fn(async () => 'pending'),
       satisfyPending: vi.fn(async () => 0),
       enqueue: vi.fn(async () => ({}))
-    } as any));
+    } as any); });
 
-    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
       createBatchFromFilters: vi.fn(async () => {
         throw new AppError('ACCOUNTING_EXPORT_EMPTY_BATCH', 'nothing to export');
       })
-    } as any));
+    } as any); });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -478,7 +478,7 @@ describe('runAccountingSyncCycle', () => {
     const pendingOps = [{ op_id: 'op-4', alga_entity_id: 'inv-4', attempts: 0 }];
     const markFailed = vi.fn(async () => 'pending');
 
-    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
       listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
         opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
@@ -486,11 +486,11 @@ describe('runAccountingSyncCycle', () => {
       markFailed,
       satisfyPending: vi.fn(async () => 0),
       enqueue: vi.fn(async () => ({}))
-    } as any));
+    } as any); });
 
-    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
       createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-fail' } }))
-    } as any));
+    } as any); });
 
     vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({
       executeBatch: vi.fn(async () => { throw new Error('export pipeline error'); })
@@ -512,6 +512,275 @@ describe('runAccountingSyncCycle', () => {
     expect(result.stats?.opsFailed).toBe(1);
   });
 
+  it('drain validation failure → exception filed immediately (before attempts cap) and scheduled batch auto-cancelled', async () => {
+    const pendingOps = [{ op_id: 'op-val', alga_entity_id: 'inv-val', attempts: 0 }];
+    const markFailed = vi.fn(async () => 'pending'); // NOT at the cap
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone: vi.fn(async () => undefined),
+      markFailed,
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-val' } }))
+    } as any); });
+
+    const cancelBatch = vi.fn(async () => ({ batch_id: 'batch-val', status: 'cancelled' }));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => {
+        throw new AppError('ACCOUNTING_EXPORT_VALIDATION_FAILED', 'batch not ready', {
+          batchId: 'batch-val',
+          status: 'needs_attention',
+          validationErrors: [{ code: 'missing_item_mapping', message: 'No item mapping for service X' }]
+        });
+      }),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-val', status: 'needs_attention', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    // Exception filed on the FIRST failure — no 75-minute silent retry window.
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_export_error',
+        entityId: 'inv-val',
+        title: 'Scheduled accounting export failed validation',
+        context: expect.objectContaining({
+          details: expect.stringContaining('missing_item_mapping')
+        })
+      })
+    );
+    // The wedge-maker is gone: scheduled batch cancelled so the next drain can recreate it.
+    expect(cancelBatch).toHaveBeenCalledWith('batch-val', expect.anything());
+    // Op still retries (admin may fix the mapping before the cap).
+    expect(markFailed).toHaveBeenCalled();
+    expect(result.status).toBe('succeeded');
+
+    vi.mocked(AccountingExportService.createForTenant).mockReset();
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+  });
+
+  it('drain transient failure → exception NOT filed before the attempts cap', async () => {
+    const pendingOps = [{ op_id: 'op-net', alga_entity_id: 'inv-net', attempts: 0 }];
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone: vi.fn(async () => undefined),
+      markFailed: vi.fn(async () => 'pending'),
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-net' } }))
+    } as any); });
+
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => { throw new Error('socket hang up'); }),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-net', status: 'failed', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch: vi.fn(async () => ({}))
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    // Transient failures keep the retry-then-alert shape.
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+
+    vi.mocked(AccountingExportService.createForTenant).mockReset();
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+  });
+
+  it('drain recovers from a stale scheduled batch wedging the duplicate guard: cancels it and retries', async () => {
+    const pendingOps = [{ op_id: 'op-wedge', alga_entity_id: 'inv-wedge', attempts: 2 }];
+    const markDone = vi.fn(async () => undefined);
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone,
+      markFailed: vi.fn(async () => 'pending'),
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+
+    // First create hits the duplicate guard (stale batch from a failed prior drain);
+    // after the stale batch is cancelled, the retry succeeds.
+    const createBatchFromFilters = vi.fn()
+      .mockRejectedValueOnce(new AppError('ACCOUNTING_EXPORT_DUPLICATE', 'An export batch already exists for this filter selection', {
+        batchId: 'batch-stale',
+        status: 'needs_attention'
+      }))
+      .mockResolvedValueOnce({ batch: { batch_id: 'batch-fresh' } });
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters
+    } as any); });
+
+    const cancelBatch = vi.fn(async () => ({}));
+    const executeBatch = vi.fn(async () => undefined);
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch,
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-stale', status: 'needs_attention', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch
+    } as any);
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(cancelBatch).toHaveBeenCalledWith('batch-stale', expect.anything());
+    expect(createBatchFromFilters).toHaveBeenCalledTimes(2);
+    expect(executeBatch).toHaveBeenCalledWith('batch-fresh');
+    expect(markDone).toHaveBeenCalled();
+    expect(result.stats?.opsProcessed).toBe(1);
+
+    vi.mocked(AccountingExportService.createForTenant).mockReset();
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+  });
+
+  it('drain does NOT auto-cancel a manual batch blocking the duplicate guard', async () => {
+    const pendingOps = [{ op_id: 'op-manual-block', alga_entity_id: 'inv-mb', attempts: 0 }];
+    const markFailed = vi.fn(async () => 'pending');
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone: vi.fn(async () => undefined),
+      markFailed,
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+
+    const createBatchFromFilters = vi.fn()
+      .mockRejectedValue(new AppError('ACCOUNTING_EXPORT_DUPLICATE', 'An export batch already exists for this filter selection', {
+        batchId: 'batch-manual',
+        status: 'ready'
+      }));
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters
+    } as any); });
+
+    const cancelBatch = vi.fn(async () => ({}));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-manual', status: 'ready', origin: 'manual' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch
+    } as any);
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    // Operator-owned batches are never auto-cancelled; the op fails normally.
+    expect(cancelBatch).not.toHaveBeenCalled();
+    expect(createBatchFromFilters).toHaveBeenCalledTimes(1);
+    expect(markFailed).toHaveBeenCalled();
+
+    vi.mocked(AccountingExportService.createForTenant).mockReset();
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+  });
+
+  it('drain success resolves a previously filed export-error exception', async () => {
+    const pendingOps = [{ op_id: 'op-heal', alga_entity_id: 'inv-heal', attempts: 1 }];
+
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone: vi.fn(async () => undefined),
+      markFailed: vi.fn(async () => 'pending'),
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-heal' } }))
+    } as any); });
+
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_export_error', 'invoice', 'inv-heal');
+  });
+
   it('drain: drift mapping reset and exception resolved after successful re-export', async () => {
     const pendingOps = [{ op_id: 'op-5', alga_entity_id: 'inv-drift', attempts: 0 }];
 
@@ -529,9 +798,9 @@ describe('runAccountingSyncCycle', () => {
       withKnex: vi.fn().mockReturnThis()
     };
 
-    vi.mocked(SyncMappingLedger).mockImplementationOnce(() => ledgerInstance as any);
+    vi.mocked(SyncMappingLedger).mockImplementationOnce(function () { return ledgerInstance as any; });
 
-    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
       listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
         opts?.operation === 'export_invoice' ? pendingOps : []),
       markInProgress: vi.fn(async () => undefined),
@@ -539,11 +808,11 @@ describe('runAccountingSyncCycle', () => {
       markFailed: vi.fn(async () => 'pending'),
       satisfyPending: vi.fn(async () => 0),
       enqueue: vi.fn(async () => ({}))
-    } as any));
+    } as any); });
 
-    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
       createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-drift' } }))
-    } as any));
+    } as any); });
 
     vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({
       executeBatch: vi.fn(async () => undefined)
@@ -580,19 +849,19 @@ describe('runAccountingSyncCycle', () => {
 
     const markDone = vi.fn(async () => undefined);
 
-    vi.mocked(SyncOperationsRepository).mockImplementationOnce(() => ({
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
       listPending,
       markInProgress: vi.fn(async () => undefined),
       markDone,
       markFailed: vi.fn(async () => 'pending'),
       satisfyPending: vi.fn(async () => 0),
       enqueue: vi.fn(async () => ({}))
-    } as any));
+    } as any); });
 
     const createBatchFromFilters = vi.fn(async () => ({ batch: { batch_id: 'batch-mixed' } }));
-    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(() => ({
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
       createBatchFromFilters
-    } as any));
+    } as any); });
 
     const executeBatch = vi.fn(async () => undefined);
     vi.mocked(AccountingExportService.createForTenant).mockResolvedValueOnce({ executeBatch } as any);

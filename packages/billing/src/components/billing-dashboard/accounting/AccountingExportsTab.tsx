@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  cancelAccountingExportBatch,
   createAccountingExportBatch,
   executeAccountingExportBatch,
   getAccountingExportBatch,
@@ -265,6 +266,29 @@ export default function AccountingExportsTab(): React.JSX.Element {
       }));
     }
   };
+
+  const onCancel = async (batchId: string) => {
+    try {
+      const result = await cancelAccountingExportBatch(batchId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+      toast.success(t('accountingExports.toast.cancelled', {
+        defaultValue: 'Batch cancelled',
+      }));
+      await loadBatches();
+      await loadBatchDetail(batchId);
+    } catch (e) {
+      handleError(e, t('accountingExports.toast.cancelError', {
+        defaultValue: 'Failed to cancel batch',
+      }));
+    }
+  };
+
+  const isCancellable = (status: AccountingExportStatus): boolean =>
+    status === 'pending' || status === 'validating' || status === 'ready' ||
+    status === 'needs_attention' || status === 'failed';
 
   return (
     <div className="space-y-6" id="billing-accounting-exports">
@@ -572,6 +596,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 >
                   {t('accountingExports.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
+                {isCancellable(selectedBatch.status) && (
+                  <Button
+                    id="accounting-exports-detail-cancel"
+                    variant="destructive"
+                    onClick={() => void onCancel(selectedBatch.batch_id)}
+                  >
+                    {t('accountingExports.actions.cancelBatch', { defaultValue: 'Cancel Batch' })}
+                  </Button>
+                )}
                 <Button
                   id="accounting-exports-detail-execute"
                   onClick={() => void onExecute(selectedBatch.batch_id)}
