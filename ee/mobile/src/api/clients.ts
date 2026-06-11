@@ -1,6 +1,7 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
 import type { PaginatedResponse, SuccessResponse } from "./tickets";
+import type { ContactListItem } from "./contacts";
 
 export type ClientListItem = {
   client_id: string;
@@ -20,6 +21,7 @@ export type ClientDetail = ClientListItem & {
   account_manager_id?: string | null;
   notes?: string | null;
   updated_at?: string | null;
+  properties?: ({ industry?: string | null } & Record<string, unknown>) | null;
 } & Record<string, unknown>;
 
 export type ClientLocation = {
@@ -74,6 +76,50 @@ export function getClient(
     method: "GET",
     path: `/api/v1/clients/${params.clientId}`,
     signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export type UpdateClientInput = {
+  account_manager_id?: string;
+};
+
+export function updateClient(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    clientId: string;
+    data: UpdateClientInput;
+    auditHeaders?: Record<string, string | undefined>;
+    signal?: AbortSignal;
+  },
+): Promise<ApiResult<SuccessResponse<ClientDetail>>> {
+  return client.request<SuccessResponse<ClientDetail>>({
+    method: "PUT",
+    path: `/api/v1/clients/${params.clientId}`,
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: params.data,
+  });
+}
+
+export function getClientContacts(
+  client: ApiClient,
+  params: { apiKey: string; clientId: string; page: number; limit: number; signal?: AbortSignal },
+): Promise<ApiResult<PaginatedResponse<ContactListItem>>> {
+  return client.request<PaginatedResponse<ContactListItem>>({
+    method: "GET",
+    path: `/api/v1/clients/${params.clientId}/contacts`,
+    signal: params.signal,
+    query: {
+      page: params.page,
+      limit: params.limit,
+    },
     headers: {
       "x-api-key": params.apiKey,
     },

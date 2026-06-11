@@ -25,10 +25,29 @@
     "website": "Website",
     "address": "Address",
     "accountManager": "Account manager",
+    "clientType": "Client type",
+    "industry": "Industry",
+    "notSet": "Not set",
+    "changeAccountManager": "Change account manager",
     "viewTickets": "View tickets",
     "locations": "Locations",
     "locationFallback": "Location",
-    "defaultLocation": "Default"
+    "defaultLocation": "Default",
+    "contacts": "Contacts",
+    "noContacts": "No contacts",
+    "showMoreContacts": "Show more",
+    "contactAccessibility": "Contact {{name}}",
+    "errors": {
+      "managerPermission": "You do not have permission to update this client.",
+      "managerGeneric": "Unable to update the account manager. Try again."
+    }
+  },
+  "managerPicker": {
+    "title": "Assign account manager",
+    "searchPlaceholder": "Search users",
+    "unableToLoad": "Unable to load users",
+    "noResults": "No matching users",
+    "assignTo": "Assign to {{name}}"
   },
   "ticketsFilter": {
     "chip": "Client: {{name}}",
