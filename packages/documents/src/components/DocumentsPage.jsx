@@ -222,4 +222,3 @@ export default function DocumentsPage() {
       </div>
     </div>);
 }
-//# sourceMappingURL=DocumentsPage.jsx.map

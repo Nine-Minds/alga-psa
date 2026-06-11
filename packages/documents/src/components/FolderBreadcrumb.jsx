@@ -31,4 +31,3 @@ export default function FolderBreadcrumb({ folderPath, onNavigate }) {
         </React.Fragment>))}
     </div>);
 }
-//# sourceMappingURL=FolderBreadcrumb.jsx.map

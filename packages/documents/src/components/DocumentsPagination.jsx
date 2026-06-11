@@ -4,4 +4,3 @@ const DocumentsPagination = ({ id, currentPage, totalItems, itemsPerPage, onPage
     return (<Pagination id={id} currentPage={currentPage} totalItems={totalItems} itemsPerPage={itemsPerPage} onPageChange={onPageChange} onItemsPerPageChange={onItemsPerPageChange} itemsPerPageOptions={itemsPerPageOptions} variant={onItemsPerPageChange ? "clients" : "compact"}/>);
 };
 export default DocumentsPagination;
-//# sourceMappingURL=DocumentsPagination.jsx.map

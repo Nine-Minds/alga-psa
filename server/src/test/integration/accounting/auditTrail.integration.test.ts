@@ -215,7 +215,7 @@ describe('Accounting export audit trail integration', () => {
 
     const registrySpy = vi.spyOn(AccountingAdapterRegistry, 'createDefault').mockResolvedValue(new AccountingAdapterRegistry([new StubQuickBooksAdapter()]));
     const repositorySpy = vi.spyOn(AccountingExportRepository, 'create').mockResolvedValue(repository);
-    const publishModule = await import('server/src/lib/eventBus/publishers');
+    const publishModule = await import('@alga-psa/event-bus/publishers');
     vi.spyOn(publishModule, 'publishEvent').mockResolvedValue();
 
     const { batch, lines: previewLines } = await selector.createBatchFromFilters({

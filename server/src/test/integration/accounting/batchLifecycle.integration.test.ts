@@ -110,7 +110,7 @@ describe('Accounting export batch lifecycle integration', () => {
       permissionCheck: () => true
     });
     mockGetCurrentUser(financeUser);
-    const publishModule = await import('server/src/lib/eventBus/publishers');
+    const publishModule = await import('@alga-psa/event-bus/publishers');
     vi.spyOn(publishModule, 'publishEvent').mockResolvedValue();
 
     const dbModule = await import('server/src/lib/db');

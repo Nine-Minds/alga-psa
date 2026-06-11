@@ -14,4 +14,3 @@ const DocumentDownload = ({ document, className }) => {
         </a>);
 };
 export default DocumentDownload;
-//# sourceMappingURL=DocumentDownload.jsx.map
