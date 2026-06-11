@@ -1,0 +1,20 @@
+[
+  { "id": "F001", "description": "getQboCustomers server action: realm-scoped, cached (catalog-action pattern), EE + billing_settings read gated; returns id, display name, active flag.", "implemented": false, "prdRefs": ["5.1", "6"] },
+  { "id": "F002", "description": "Customers mapping tab (bespoke component in the live mapping manager): per-client row with mapping state and actions link-to-existing / create-in-QBO-now / leave.", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F003", "description": "Searchable QBO customer picker for link-to-existing, writing a realm-scoped client mapping row.", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F004", "description": "Create-in-QBO-now runs the company-sync adapter immediately and writes the mapping row; failures surface inline.", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F005", "description": "Name normalization + matcher: case/punctuation/whitespace/legal-suffix folding; exact = normalized equality; near matches scored as suggestions only.", "implemented": false, "prdRefs": ["5.1", "7"] },
+  { "id": "F006", "description": "Bulk-accept bar for exact customer matches ('Accept N exact matches'); fuzzy suggestions require per-row confirmation.", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F007", "description": "Exporter customer resolution consults the new client mapping rows before auto-provisioning (link beats display-name auto-match).", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F008", "description": "Wizard shell: launches after first successful OAuth connect when no completion record exists for the realm; re-runnable from QBO settings; three steps with progress state.", "implemented": false, "prdRefs": ["5.2"] },
+  { "id": "F009", "description": "Wizard step 1 embeds the customer mapping surface.", "implemented": false, "prdRefs": ["5.2"] },
+  { "id": "F010", "description": "Historical invoice fetch: paged QBO invoice query over a selectable date window via QboClientService.", "implemented": false, "prdRefs": ["5.2", "6"] },
+  { "id": "F011", "description": "Invoice candidate matcher: doc number + total + (when mapped) customer; confident matches bulk-linkable; collisions/total-mismatches to a review list, never auto-linked; 0 matches is a normal outcome.", "implemented": false, "prdRefs": ["5.2", "7"] },
+  { "id": "F012", "description": "Bulk link writes invoice mapping rows with sync-token + total snapshot WITHOUT exporting; linked invoices are excluded from future export selection as already-synced.", "implemented": false, "prdRefs": ["5.2"] },
+  { "id": "F013", "description": "Payment backfill (wizard option, default on): per linked invoice, one-time QBO payment query applied through recordExternalPayment; invoices already 'paid' skipped; runs as a progress-reporting wizard batch, not in the sync cycle.", "implemented": false, "prdRefs": ["5.2", "7"] },
+  { "id": "F014", "description": "Wizard step 3: auto_sync_start_date tenant setting (default today) with explanation copy; completion recorded per tenant×realm; settings shows completed/last-run + re-run entry point.", "implemented": false, "prdRefs": ["5.2", "6"] },
+  { "id": "F015", "description": "Slice-1 finalize producer respects auto_sync_start_date: only invoices finalized on/after the cutoff auto-enqueue; earlier invoices remain manual-batch only.", "implemented": false, "prdRefs": ["5.2", "6"] },
+  { "id": "F016", "description": "Wizard idempotency: re-running skips already-mapped customers/invoices and already-backfilled payments (mapping-ledger checks); no duplicate mappings or payments possible.", "implemented": false, "prdRefs": ["5.2"] },
+  { "id": "F017", "description": "Customer-unlinked exceptions (slice 1) deep-link into the Customers mapping tab.", "implemented": false, "prdRefs": ["5.1"] },
+  { "id": "F018", "description": "i18n: wizard steps, mapping tab, match/bulk-accept copy, backfill progress in en + translated locales; pseudo-locales regenerated.", "implemented": false, "prdRefs": ["5.1", "5.2"] }
+]

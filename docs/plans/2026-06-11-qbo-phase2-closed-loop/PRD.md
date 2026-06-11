@@ -161,7 +161,12 @@ new exceptions appeared.
   token alert fires when expiry forced.
 - Auto-sync default flipped on only after the smoke passes.
 
-## 9. Later slices (outline only — re-plan each when it starts)
+## 9. Later slices (planned separately)
+
+Each later slice has its own full plan:
+`../2026-06-11-qbo-phase2-slice2-credits-voids/`,
+`../2026-06-11-qbo-phase2-slice3-onboarding/`,
+`../2026-06-11-qbo-phase2-slice4-polish/`.
 
 - **Slice 2 — Credits & voids:** credit reshape (immutable totals + backfill,
   `invoice_type`, CM- numbering, balance-due read-site audit incl. Stripe
