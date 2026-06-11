@@ -51,12 +51,14 @@ export function TagPickerModal({
       });
       if (controller.signal.aborted) return;
       if (!res.ok) {
+        setSuggestions([]);
         setError(t("tags.errors.suggestions", { defaultValue: "Unable to load tags." }));
         return;
       }
       setSuggestions(res.data);
     } catch {
       if (!controller.signal.aborted) {
+        setSuggestions([]);
         setError(t("tags.errors.suggestions", { defaultValue: "Unable to load tags." }));
       }
     } finally {
@@ -142,46 +144,47 @@ export function TagPickerModal({
           </Text>
         ) : null}
 
-        {loading && suggestions.length === 0 ? (
-          <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
-            <ActivityIndicator />
-            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
-              {t("common:loading")}
-            </Text>
-          </View>
-        ) : error ? (
-          <Text style={{ ...typography.caption, paddingHorizontal: spacing.lg, color: colors.danger }}>
-            {error}
-          </Text>
-        ) : (
-          <ScrollView style={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-            {showCreateRow ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
-                disabled={busy}
-                onPress={() => onSelect(trimmedSearch)}
-                style={({ pressed }) => ({
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingVertical: spacing.sm,
-                  paddingHorizontal: spacing.md,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: colors.primary,
-                  backgroundColor: colors.card,
-                  opacity: busy ? 0.65 : pressed ? 0.95 : 1,
-                  marginBottom: spacing.sm,
-                })}
-              >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", flex: 1 }}>
-                  {t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
-                </Text>
-                {busy ? <ActivityIndicator size="small" /> : null}
-              </Pressable>
-            ) : null}
+        <ScrollView style={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
+          {showCreateRow ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
+              disabled={busy}
+              onPress={() => onSelect(trimmedSearch)}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                backgroundColor: colors.card,
+                opacity: busy ? 0.65 : pressed ? 0.95 : 1,
+                marginBottom: spacing.sm,
+              })}
+            >
+              <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", flex: 1 }}>
+                {t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
+              </Text>
+              {busy ? <ActivityIndicator size="small" /> : null}
+            </Pressable>
+          ) : null}
 
-            {suggestions.length === 0 && !showCreateRow && !loading ? (
+          {loading && suggestions.length === 0 ? (
+            <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
+              <ActivityIndicator />
+              <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+                {t("common:loading")}
+              </Text>
+            </View>
+          ) : error ? (
+            <Text style={{ ...typography.caption, color: colors.danger, paddingVertical: spacing.sm }}>
+              {error}
+            </Text>
+          ) : (
+            <>
+            {suggestions.length === 0 && !showCreateRow ? (
               <Text style={{ ...typography.body, color: colors.textSecondary, paddingVertical: spacing.sm }}>
                 {t("tags.noResults", { defaultValue: "No tags found." })}
               </Text>
@@ -237,8 +240,9 @@ export function TagPickerModal({
                 </Pressable>
               );
             })}
-          </ScrollView>
-        )}
+            </>
+          )}
+        </ScrollView>
       </View>
       </KeyboardAvoidingView>
     </Modal>
