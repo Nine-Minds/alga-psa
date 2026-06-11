@@ -28,6 +28,7 @@ import {
 } from '../schemas/timeSheet';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import { hasPermission } from '../../auth/rbac';
 
 export class TimeSheetService extends BaseService<any> {
   constructor() {
@@ -899,34 +900,57 @@ export class TimeSheetService extends BaseService<any> {
   
       // Check permissions for private entries
       if (!await this.canViewAllSchedules(context)) {
+        const userId = context.userId;
         query = query.where(function() {
           this.where('is_private', false)
-            .orWhere('created_by', context.userId);
+            .orWhere('created_by', userId)
+            .orWhereExists(function() {
+              this.select('user_id')
+                .from('schedule_entry_assignees as sea')
+                .whereRaw('sea.entry_id = schedule_entries.entry_id')
+                .whereRaw('sea.tenant = schedule_entries.tenant')
+                .where('sea.user_id', userId);
+            });
         });
       }
-  
+
       const entries = await query
         .select('schedule_entries.*')
         .distinct()
         .orderBy('scheduled_start');
-  
+
       // Get assigned users for each entry
       return Promise.all(entries.map(async entry => {
         const assignedUsers = await this.getScheduleAssignees(entry.entry_id, context);
         const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
-        
+
         const startTime = entry.scheduled_start ? new Date(entry.scheduled_start) : new Date();
         const endTime = entry.scheduled_end ? new Date(entry.scheduled_end) : new Date();
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationHours = durationMs / (1000 * 60 * 60);
-  
-        return {
+
+        const result = {
           ...entry,
           assigned_users: assignedUsers,
           work_item: workItem,
           duration_hours: Math.round(durationHours * 100) / 100,
           is_current: startTime <= new Date() && endTime >= new Date()
         };
+
+        // Private entries are masked for anyone who is not the creator or an assignee
+        const isOwnEntry = entry.created_by === context.userId ||
+          assignedUsers.some((u: any) => u.user_id === context.userId);
+        if (entry.is_private && !isOwnEntry) {
+          return {
+            ...result,
+            title: 'Busy',
+            notes: '',
+            work_item_id: null,
+            work_item: null
+          };
+        }
+
+        return result;
       }));
     }
 
@@ -995,12 +1019,27 @@ export class TimeSheetService extends BaseService<any> {
         if (!existing) {
           throw new Error('Schedule entry not found');
         }
-  
+
         // Check permissions
-        if (existing.created_by !== context.userId && !await this.canManageSchedules(context)) {
-          throw new Error('Permission denied: Cannot update this schedule entry');
+        const assigneeIds = await trx('schedule_entry_assignees')
+          .where({ entry_id: id, tenant: context.tenant })
+          .pluck('user_id');
+        const isOwnEntry = existing.created_by === context.userId ||
+          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
+
+        if (existing.is_private && !isOwnEntry) {
+          throw new Error('Permission denied: Cannot update a private schedule entry');
         }
-  
+
+        if (!await this.canManageSchedules(context, 'update')) {
+          const assignmentRemainsOwn = data.assigned_user_ids
+            ? data.assigned_user_ids.length === 1 && data.assigned_user_ids[0] === context.userId
+            : true;
+          if (!isOwnEntry || !assignmentRemainsOwn) {
+            throw new Error('Permission denied: Cannot update this schedule entry');
+          }
+        }
+
         const updateData = {
           ...data,
           updated_at: new Date()
@@ -1068,12 +1107,22 @@ export class TimeSheetService extends BaseService<any> {
         if (!existing) {
           throw new Error('Schedule entry not found');
         }
-  
+
         // Check permissions
-        if (existing.created_by !== context.userId && !await this.canManageSchedules(context)) {
+        const assigneeIds = await trx('schedule_entry_assignees')
+          .where({ entry_id: id, tenant: context.tenant })
+          .pluck('user_id');
+        const isOwnEntry = existing.created_by === context.userId ||
+          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
+
+        if (existing.is_private && !isOwnEntry) {
+          throw new Error('Permission denied: Cannot delete a private schedule entry');
+        }
+
+        if (!isOwnEntry && !await this.canManageSchedules(context, 'delete')) {
           throw new Error('Permission denied: Cannot delete this schedule entry');
         }
-  
+
         await trx('schedule_entries')
           .where({ entry_id: id, tenant: context.tenant })
           .del();
@@ -1210,13 +1259,15 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canViewAllSchedules(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'user_schedule', 'update', knex);
   }
 
-  private async canManageSchedules(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+  private async canManageSchedules(context: ServiceContext, action: 'update' | 'delete' = 'update'): Promise<boolean> {
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'user_schedule', action, knex);
   }
 
   private async getUserRole(userId: string, context: ServiceContext): Promise<string> {
@@ -1275,7 +1326,7 @@ export class TimeSheetService extends BaseService<any> {
 
 
 
-  private async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
+  async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
       const entry = await knex('schedule_entries')
