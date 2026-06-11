@@ -706,7 +706,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </AlertDescription>
           </Alert>
         )}
-        <div className="overflow-x-auto [scrollbar-color:rgb(var(--color-border-300))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
+        <div className="overflow-x-auto supports-[not_selector(::-webkit-scrollbar)]:[scrollbar-color:rgb(var(--color-border-300))_transparent] supports-[not_selector(::-webkit-scrollbar)]:[scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
           <table
             className="border-collapse text-[13px]"
             style={{ minWidth: '100%', width: table.getTotalSize() }}
