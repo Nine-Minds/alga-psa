@@ -97,10 +97,10 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   }, [fetchContact]);
 
   useEffect(() => {
-    if (contact?.full_name) {
-      navigation.setOptions({ title: contact.full_name });
+    if (contact?.full_name && contact.full_name !== route.params.contactName) {
+      navigation.setParams({ contactName: contact.full_name });
     }
-  }, [contact?.full_name, navigation]);
+  }, [contact?.full_name, navigation, route.params.contactName]);
 
   const { refreshing, refresh } = usePullToRefresh(fetchContact);
 

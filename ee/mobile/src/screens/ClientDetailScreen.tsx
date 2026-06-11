@@ -133,6 +133,12 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const { refreshing, refresh } = usePullToRefresh(load, { haptics: true });
 
   useEffect(() => {
+    if (detail?.client_name && detail.client_name !== clientName) {
+      navigation.setParams({ clientName: detail.client_name });
+    }
+  }, [clientName, detail?.client_name, navigation]);
+
+  useEffect(() => {
     let canceled = false;
     const run = async () => {
       if (!client || !session) return;
