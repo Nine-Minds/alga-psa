@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -394,6 +395,27 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
 
+  // Mailing-list / Google-Group DMARC rewrites replace the visible From with the
+  // list address (e.g. "'Jane Doe' via support <support@lists.example.com>").
+  // Recover the verified original author so downstream contact/watcher/notify
+  // logic uses the real sender. Returns null for ordinary direct mail.
+  const listRewrite = resolveListRewriteSender(params.parsed);
+  const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
+  const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
+  const resolvedHeaders: Record<string, string> = {};
+  if (listRewrite) {
+    resolvedHeaders['x-list-address'] = listRewrite.listAddress;
+    resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
+    resolvedHeaders['x-resolved-original-sender-via'] = listRewrite.via;
+    console.info('[UnifiedInboundEmailQueueJobProcessor] Recovered original sender from list rewrite', {
+      tenant: params.tenant,
+      providerId: params.providerId,
+      listAddress: listRewrite.listAddress,
+      originalSender: listRewrite.sender.email,
+      via: listRewrite.via,
+    });
+  }
+
   return {
     id: messageId,
     provider: params.provider,
@@ -401,8 +423,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
     tenant: params.tenant,
     receivedAt: params.parsed.date ? new Date(params.parsed.date).toISOString() : new Date().toISOString(),
     from: {
-      email: from?.address || '',
-      name: from?.name || undefined,
+      email: fromEmail,
+      name: fromName,
     },
     to: to.map((item: any) => ({
       email: item?.address || '',
@@ -439,6 +461,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
     references: references.length ? references : undefined,
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
+    headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
   };
 }
 
@@ -777,7 +800,7 @@ async function insertProcessingRecord(params: {
 async function updateProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
-  status: 'success' | 'partial' | 'failed';
+  status: 'success' | 'partial' | 'failed' | 'skipped';
   emailData?: EmailMessageDetails;
   ticketId?: string | null;
   errorMessage?: string | null;
@@ -930,7 +953,13 @@ export async function processUnifiedInboundEmailQueueJob(
       }, {
         collectDiagnostics: true,
       });
-      const status = result.outcome === 'skipped' ? 'partial' : 'success';
+      // Rule-driven skips are intentional outcomes, not partial failures.
+      const status =
+        result.outcome === 'skipped'
+          ? result.reason === 'rule_skip'
+            ? 'skipped'
+            : 'partial'
+          : 'success';
       await updateProcessingRecord({
         job,
         externalIdentity,

@@ -1,0 +1,500 @@
+[
+  {
+    "id": "T001",
+    "description": "launchPublishedWorkflowRun creates run with engine='temporal' with no env flags set",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "launchPublishedWorkflowRun creates run with engine='temporal' even when WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING=false is present in the environment",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "launchPublishedWorkflowRun calls startWorkflowRuntimeV2TemporalRun and persists temporal_workflow_id/temporal_run_id",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Temporal start failure marks the run FAILED with stage='launch' and rethrows (toast path preserved)",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "startRun writes engine='temporal'; StartRunParams no longer accepts an engine value (type-level)",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Producer client.workflow.start uses the contract task-queue constant",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Temporal worker polls the contract task-queue constant even when WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE is set in the environment",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "repo grep: no references to WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE outside the contract constant",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F036"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "worker index startup: Temporal worker starts with no flags set",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F042"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "worker index startup: Temporal worker starts even with WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING=false in env",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F042"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "worker index startup: no DB poller is constructed or started under any env combination",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F042"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "repo compiles with both WorkflowRuntimeV2Worker files deleted (no dangling imports)",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "data-store sweep module deletes expired workflow_data_store rows on its interval",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "data-store sweep starts with the worker service and stops cleanly on shutdown",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "health endpoint reports temporal, eventStream, and dataStoreSweep workers; no dbPolling key",
+    "implemented": false,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "POST /api/workflow-runs/[runId]/retry returns 404 (route deleted)",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "POST /api/workflow-runs/[runId]/resume returns 404 (route deleted)",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "POST /api/workflow-runs/[runId]/requeue returns 404 (route deleted)",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "actions module no longer exports retry/resume/requeue actions or the legacy-control guards (type-level/grep)",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "cancelWorkflowRunAction cancels a Temporal run via handle.cancel and updates run status",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "cancelWorkflowRunAction surfaces a clear error when the Temporal cancel fails",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "resumeWorkflowRunFromQuotaPauseAction signals quota resume for any run (no engine branch)",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "submitWorkflowEventAction signals every matched run (no engine filter)",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "event stream worker signals event waits for matched runs without checking engine",
+    "implemented": false,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "event stream worker still launches new runs for event-triggered workflows end to end",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F001"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "quota resume scan handler signals Temporal for due quota waits (no executeRun branch)",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F043"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "activities module no longer exports executeWorkflowRuntimeV2Run",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "WorkflowRuntimeV2 class exposes startRun but not executeRun/acquireRunnableRun/resumeRunFromEvent/resumeRunFromTimeout",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "child-run launch via startWorkflowRuntimeV2ChildRun still creates and executes a child Temporal run",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "manual run via startWorkflowRunAction executes end to end on the Temporal stack (steps appear, run succeeds)",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F001"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "run studio renders snapshots for a pre-cutover run with snapshot rows (historical read path intact)",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "bulk run delete and tenant deletion still clean up workflow_run_snapshots",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "run details panel renders no Retry button for FAILED runs",
+    "implemented": false,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "run details panel renders no Resume button for WAITING runs (quota-pause resume UI unaffected)",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "run details panel renders no Requeue Event button for runs with event waits",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Replay with unedited payload sends no payload field to replayWorkflowRunAction",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "replayWorkflowRunAction without payload uses the original input_json (not the redacted copy)",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Replay with edited payload sends exactly the edited JSON as the override",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Replay with invalid edited JSON shows the validation toast and does not call the action",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Replay success navigates to /msp/workflows/runs/<newRunId>",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Replay failure keeps the operator on the original run with an error toast",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "banner shows for RUNNING run with zero steps older than 60s",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "banner absent for RUNNING run younger than 60s",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "banner absent once the run has any step rows",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "banner absent for WAITING/SUCCEEDED/FAILED/CANCELED runs regardless of steps",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "migration cancels a RUNNING engine='db' run: status CANCELED, completed_at set, error_json explains cutover",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "migration cancels a WAITING engine=null run and resolves its open workflow_run_waits",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "migration leaves terminal db-engine runs untouched",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "migration leaves RUNNING engine='temporal' runs untouched",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "docker-compose.ee.yaml alone brings up Temporal + worker; manual run executes end to end",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "docker-compose.temporal.ee.yaml no longer exists; docs/scripts don't reference it",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "playwright workflow suite passes against the Temporal-backed deps compose",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "repo grep: zero matches for WORKFLOW_RUNTIME_V2_ENABLE_ anywhere",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "db reference workflow test file deleted; CI passes without it",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "e2e suite covers run start, event wait + signal, time wait, child run, cancel on the Temporal path",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "control integration suite retains Temporal control cases (cancel, quota resume, submit event) and passes",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "publish integration suite passes without executeRun/acquireRunnableRun usage",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "launcher unit tests assert temporal launch with flags absent and with stale flags present",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "full typecheck and lint pass across server, shared, ee packages, services",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "cutover support-posture doc reflects engine removal (no references to enabling DB polling as a remediation)",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  }
+]

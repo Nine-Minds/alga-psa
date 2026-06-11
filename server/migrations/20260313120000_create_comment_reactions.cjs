@@ -146,6 +146,46 @@ exports.up = async function(knex) {
   `);
 
   if (citusFn.rows?.[0]?.exists) {
+    // The FK re-adds below need project_tasks distributed, which on fresh
+    // Citus chains pulls in the whole projects subsystem in dependency
+    // order. project_status_mappings carries two Citus-incompatible
+    // constraints: a lone UNIQUE(project_status_mapping_id) backing a
+    // single-column FK from project_tasks (recreated as a composite FK
+    // against the PK), and an ON DELETE SET NULL FK to standard_statuses,
+    // which must stay local (PK has no tenant) — dropped on Citus. No-op on
+    // clusters where the subsystem is already distributed.
+    for (const table of ['projects', 'project_phases']) {
+      if (!(await isTableDistributed(knex, table))) {
+        await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
+      }
+    }
+
+    if (!(await isTableDistributed(knex, 'project_status_mappings'))) {
+      for (const [table, constraint] of [
+        ['project_tasks', 'project_tasks_project_status_mapping_id_foreign'],
+        ['project_status_mappings', 'project_status_mappings_project_status_mapping_id_unique'],
+        ['project_status_mappings', 'project_status_mappings_standard_status_id_foreign'],
+      ]) {
+        if (await hasConstraint(knex, table, constraint)) {
+          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint}`);
+        }
+      }
+      await knex.raw(`SELECT create_distributed_table('project_status_mappings', 'tenant', colocate_with => 'tenants')`);
+    }
+
+    if (!(await isTableDistributed(knex, 'project_tasks'))) {
+      await knex.raw(`SELECT create_distributed_table('project_tasks', 'tenant', colocate_with => 'tenants')`);
+    }
+
+    if (!(await hasConstraint(knex, 'project_tasks', 'project_tasks_project_status_mapping_id_foreign'))) {
+      await knex.raw(`
+        ALTER TABLE project_tasks
+        ADD CONSTRAINT project_tasks_project_status_mapping_id_foreign
+        FOREIGN KEY (tenant, project_status_mapping_id)
+        REFERENCES project_status_mappings(tenant, project_status_mapping_id)
+      `);
+    }
+
     const projectTaskCommentsExists = await knex.schema.hasTable('project_task_comments');
 
     if (projectTaskCommentsExists && !(await isTableDistributed(knex, 'project_task_comments'))) {
@@ -155,9 +195,10 @@ exports.up = async function(knex) {
       await dropProjectTaskCommentsForeignKeys(knex);
     }
 
-    // project_task_comments must be distributed before we can distribute
-    // project_task_comment_reactions (Citus requires referenced tables to be distributed)
-    for (const table of ['project_task_comments', 'comment_reactions', 'project_task_comment_reactions']) {
+    // comments / project_task_comments must be distributed before the
+    // reaction tables that FK them (Citus requires referenced tables to be
+    // distributed). comments is a no-op on clusters that already have it.
+    for (const table of ['comments', 'project_task_comments', 'comment_reactions', 'project_task_comment_reactions']) {
       if (!(await isTableDistributed(knex, table))) {
         await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       }

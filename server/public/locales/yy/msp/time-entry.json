@@ -160,7 +160,8 @@
       "additionalUsers": "55555 {{name}} 55555 {{count}} 55555",
       "additionalUsersOther": "55555 {{name}} 55555 {{count}} 55555"
     },
-    "bundledTicket": "55555 {{suffix}} 55555",
+    "bundledUnder": "55555 {{number}} 55555",
+    "bundled": "55555",
     "pagination": {
       "previous": "55555",
       "next": "55555",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "55555",
     "changesSaved": "55555",
     "workItemDeleted": "55555"
+  },
+  "bundleNotice": {
+    "withNumber": "55555 {{number}} 55555",
+    "withoutNumber": "55555"
   }
 }

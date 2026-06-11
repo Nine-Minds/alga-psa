@@ -17,6 +17,15 @@ export type WorkflowEditorKind = 'text' | 'picker' | 'color' | 'json' | 'custom'
 export type WorkflowEditorInlineMode = 'input' | 'textarea' | 'picker-summary' | 'swatch';
 export type WorkflowEditorDialogMode = 'large-text';
 
+export type WorkflowEditorSoftEnumMetadata = {
+  component: 'soft-enum-combobox';
+  suggestionKind: 'workflow-data-store-namespace' | 'workflow-entity-type' | 'workflow-link-relation';
+  suggestionActionIds?: string[];
+  namespaceField?: string;
+  curatedValues?: string[];
+  allowCustomValue?: boolean;
+};
+
 export type WorkflowEditorJsonSchemaMetadata = {
   kind: WorkflowEditorKind;
   inline?: {
@@ -31,6 +40,7 @@ export type WorkflowEditorJsonSchemaMetadata = {
   picker?: {
     resource: string;
   };
+  softEnum?: WorkflowEditorSoftEnumMetadata;
 };
 
 export type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
@@ -79,15 +89,21 @@ export const zodToWorkflowJsonSchema = (
   schema: ZodSchema<unknown>,
   options?: string | Partial<Options>
 ): Record<string, unknown> => {
+  // Inline subschemas instead of emitting `$ref`s. The designer's field editor
+  // does not resolve `$ref`, so a schema reused across fields (e.g. links.upsert's
+  // `left`/`right` both using entityRefSchema) would otherwise render the second
+  // occurrence as an unresolved ref (shown as a bare "string").
   if (typeof options === 'string') {
     return zodToJsonSchema(schema, {
       name: options,
+      $refStrategy: 'none',
       postProcess: buildWorkflowJsonSchemaPostProcess(),
     }) as Record<string, unknown>;
   }
 
   const nextPostProcess = options?.postProcess;
   return zodToJsonSchema(schema, {
+    $refStrategy: 'none',
     ...options,
     postProcess: buildWorkflowJsonSchemaPostProcess(nextPostProcess),
   }) as Record<string, unknown>;

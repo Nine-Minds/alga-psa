@@ -163,15 +163,14 @@ export function WorkItemList({
                 {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
+            {isBundledTicket && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+                {item.master_ticket_number
+                  ? t('workItemList.bundledUnder', { defaultValue: 'Bundled → {{number}}', number: item.master_ticket_number })
+                  : t('workItemList.bundled', { defaultValue: 'Bundled' })}
+              </span>
+            )}
           </div>
-          {isBundledTicket && (
-            <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 italic">
-              {t('workItemList.bundledTicket', {
-                defaultValue: 'Bundled ticket — log time on the master ticket{{suffix}}.',
-                suffix: item.master_ticket_number ? ` #${item.master_ticket_number}` : ''
-              })}
-            </div>
-          )}
         </>
       );
     } else if (item.type === 'project_task') {
@@ -310,22 +309,17 @@ export function WorkItemList({
               )}
               <ul className="divide-y divide-[rgb(var(--color-border-200))]">
                 {items.map((item) => {
-                  const isDisabled = item.type === 'ticket' && !!item.master_ticket_id;
                   const isSelected = selectedWorkItemId === item.work_item_id;
                   return (
                     <li
                       key={item.work_item_id}
-                      aria-disabled={isDisabled}
                       className={[
                         'bg-[rgb(var(--color-border-50))] transition-colors duration-150',
                         isSelected ? 'bg-[rgb(var(--color-primary-50))]' : '',
-                        isDisabled
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:bg-[rgb(var(--color-border-100))] cursor-pointer',
+                        'hover:bg-[rgb(var(--color-border-100))] cursor-pointer',
                       ].join(' ')}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isDisabled) return;
                         onSelect(item);
                       }}
                     >

@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} utilisateur",
       "additionalUsersOther": "{{name}}, +{{count}} utilisateurs"
     },
-    "bundledTicket": "Ticket groupé: enregistrez l'heure sur le ticket principal{{suffix}}.",
+    "bundledUnder": "Groupé → {{number}}",
+    "bundled": "Groupé",
     "pagination": {
       "previous": "Précédent",
       "next": "Suivant",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Échec de l'enregistrement des modifications",
     "changesSaved": "Modifications enregistrées avec succès",
     "workItemDeleted": "Élément de travail supprimé avec succès"
+  },
+  "bundleNotice": {
+    "withNumber": "Ce ticket est groupé sous {{number}}. Le temps du groupe est généralement enregistré sur le ticket principal.",
+    "withoutNumber": "Ce ticket fait partie d’un groupe. Le temps du groupe est généralement enregistré sur le ticket principal."
   }
 }

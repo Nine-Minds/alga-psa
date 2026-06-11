@@ -95,6 +95,7 @@ export default function LicenseManagementPage() {
     trial_expired: 'Trial Expired — Essentials',
     licensed: 'Licensed',
     license_expired: 'License Expired — Essentials',
+    license_wrong_tenant: 'License Not Valid for This Install — Essentials',
   };
 
   const stateLabel = status.state ? (stateLabelMap[status.state] ?? status.state) : 'Unknown';
@@ -150,6 +151,17 @@ export default function LicenseManagementPage() {
               <span style={{ color: '#6b7280' }}>Air-gapped / not connected</span>
             )}
           </dd>
+          {status.tenantId && (
+            <>
+              <dt style={{ color: '#6b7280' }}>Install ID</dt>
+              <dd>
+                <code style={{ fontFamily: 'monospace', fontSize: '0.85em', userSelect: 'all' }}>{status.tenantId}</code>
+                <span style={{ display: 'block', color: '#6b7280', fontSize: '0.8em', marginTop: '0.2rem' }}>
+                  Provide this when purchasing an air-gapped license so the key is bound to this install.
+                </span>
+              </dd>
+            </>
+          )}
         </dl>
       </section>
 

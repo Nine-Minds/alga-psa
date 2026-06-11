@@ -29,6 +29,7 @@ import {
 interface DashboardContainerProps {
   onboardingSection?: React.ReactNode;
   initialMobileAppCardDismissed?: boolean;
+  selfHost?: boolean;
 }
 
 interface FeatureCardProps {
@@ -142,7 +143,7 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
   );
 };
 
-const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false }: DashboardContainerProps) => {
+const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false, selfHost = false }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
   const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
@@ -287,7 +288,7 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
               </div>
 
               {isEnterprise && !mobileDismissed ? (
-                <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} />
+                <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} selfHost={selfHost} />
               ) : null}
 
               <div className="rounded-lg border border-dashed border-[rgb(var(--color-border-200))] bg-white p-4">

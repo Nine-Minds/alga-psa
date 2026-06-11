@@ -31,6 +31,16 @@ describe('ticket time entry context helpers', () => {
     expect(context.timeDescription).toBe('Fixed bug');
   });
 
+  it('carries bundle info when the ticket is a bundled child', () => {
+    const context = buildTicketTimeEntryContext({
+      ticket: { ...baseTicket, master_ticket_id: 'master-1' },
+      masterTicketNumber: 'T-099',
+    });
+
+    expect(context.masterTicketId).toBe('master-1');
+    expect(context.masterTicketNumber).toBe('T-099');
+  });
+
   it('onComplete resets timer state after save', () => {
     const stopTracking = vi.fn();
     const setElapsedTime = vi.fn();

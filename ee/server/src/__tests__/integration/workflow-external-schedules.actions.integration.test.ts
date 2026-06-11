@@ -14,7 +14,8 @@ import { createTestDbConnection } from '@main-test-utils/dbConfig';
 const require = createRequire(import.meta.url);
 
 let db: Knex;
-let tenantId = 'tenant-workflow-schedules';
+const WORKFLOW_SCHEDULES_TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+let tenantId = WORKFLOW_SCHEDULES_TENANT;
 
 const hasPermissionMock = vi.fn(async () => true);
 const runner = {
@@ -73,7 +74,7 @@ async function seedWorkflow(params?: {
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: tenantId,
+    tenant: tenantId,
     name,
     description: null,
     payload_schema_ref: payloadSchemaRef,
@@ -179,7 +180,7 @@ describe('Workflow external schedules actions – DB integration', () => {
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
-    tenantId = 'tenant-workflow-schedules';
+    tenantId = WORKFLOW_SCHEDULES_TENANT;
     hasPermissionMock.mockReset();
     hasPermissionMock.mockResolvedValue(true);
     runner.scheduleJobAt.mockClear();
@@ -259,7 +260,7 @@ describe('Workflow external schedules actions – DB integration', () => {
 
     await db('tenant_workflow_schedule').insert({
       id: uuidv4(),
-      tenant_id: 'other-tenant',
+      tenant: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       workflow_id: a.workflowId,
       workflow_version: 1,
       name: 'Foreign schedule',
@@ -781,7 +782,7 @@ describe('Workflow external schedules actions – DB integration', () => {
     }
 
     const rows = await db('tenant_workflow_schedule')
-      .where({ tenant_id: tenantId, name: 'Rollback invalid payload' })
+      .where({ tenant: tenantId, name: 'Rollback invalid payload' })
       .select('*');
     expect(rows).toHaveLength(0);
   });

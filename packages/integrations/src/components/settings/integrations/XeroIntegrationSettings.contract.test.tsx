@@ -70,14 +70,20 @@ describe('XeroIntegrationSettings contracts', () => {
     expect(screen.getByText('accounting.contacts')).toBeInTheDocument();
   });
 
-  it('T009/T027: keeps Connect disabled and surfaces the missing-credentials error until credentials are configured', async () => {
+  it('T009/T027: keeps Connect disabled and surfaces missing-credentials guidance until credentials are configured', async () => {
     const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
 
     render(<XeroIntegrationSettings />);
 
+    expect(await screen.findByText('Credentials Required')).toBeInTheDocument();
     expect(
-      await screen.findByText('Add a Xero client ID and client secret before connecting live Xero.')
+      screen.getByText('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.')
     ).toBeInTheDocument();
+    // fdce19500a: the raw status.error alert is reserved for connection-level issues
+    // (expired tokens); when no connection exists it must not echo the disconnected state.
+    expect(
+      screen.queryByText('Add a Xero client ID and client secret before connecting live Xero.')
+    ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: 'Connect Xero' })[0]).toBeDisabled();
     });

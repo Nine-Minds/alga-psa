@@ -384,7 +384,10 @@ describe('Xero integration actions', () => {
   });
 
   it('exports saveXeroCredentials from the integrations action indexes', () => {
-    const repoRoot = path.resolve(process.cwd(), '..');
+    // Resolve from this file's location so the test passes regardless of cwd
+    // (server-level vitest config vs package-level vitest config).
+    const testDir = path.dirname(new URL(import.meta.url).pathname);
+    const repoRoot = path.resolve(testDir, '../../../../..');
     const integrationsIndex = fs.readFileSync(
       path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
       'utf8'

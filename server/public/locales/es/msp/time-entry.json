@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} usuario",
       "additionalUsersOther": "{{name}}, +{{count}} usuarios"
     },
-    "bundledTicket": "Boleto combinado: registra el tiempo en el boleto maestro{{suffix}}.",
+    "bundledUnder": "Agrupado → {{number}}",
+    "bundled": "Agrupado",
     "pagination": {
       "previous": "Anterior",
       "next": "Siguiente",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Error al guardar los cambios",
     "changesSaved": "Cambios guardados correctamente",
     "workItemDeleted": "Elemento de trabajo eliminado correctamente"
+  },
+  "bundleNotice": {
+    "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",
+    "withoutNumber": "Este ticket forma parte de un grupo. El tiempo del grupo se suele registrar en el ticket maestro."
   }
 }

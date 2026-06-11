@@ -63,6 +63,7 @@ export interface IAppointmentRequest {
   declined_reason?: string;
   created_at: Date;
   updated_at: Date;
+  online_meeting_artifacts?: OnlineMeetingPortalArtifact[];
 }
 
 export interface AppointmentRequestResult<T> {
@@ -70,6 +71,74 @@ export interface AppointmentRequestResult<T> {
   data?: T;
   error?: string;
   teamsMeetingWarning?: string;
+}
+
+export interface OnlineMeetingPortalArtifact {
+  artifact_id: string;
+  artifact_type: 'recording' | 'transcript';
+  document_id: string | null;
+  created_date_time: Date | null;
+}
+
+async function areOnlineMeetingArtifactsVisibleInPortal(trx: Knex.Transaction, tenant: string): Promise<boolean> {
+  try {
+    const row = await trx('teams_integrations')
+      .where({ tenant })
+      .first('expose_recordings_in_portal');
+    return row?.expose_recordings_in_portal === true;
+  } catch (error) {
+    console.warn('[ClientPortalAppointmentRequests] Recording portal visibility setting unavailable', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+async function loadVisibleOnlineMeetingArtifactsForAppointments(
+  trx: Knex.Transaction,
+  tenant: string,
+  appointmentRequestIds: string[],
+): Promise<Map<string, OnlineMeetingPortalArtifact[]>> {
+  const result = new Map<string, OnlineMeetingPortalArtifact[]>();
+  const ids = [...new Set(appointmentRequestIds.filter(Boolean))];
+  if (ids.length === 0) {
+    return result;
+  }
+
+  const visible = await areOnlineMeetingArtifactsVisibleInPortal(trx, tenant);
+  if (!visible) {
+    return result;
+  }
+
+  const rows = await trx('online_meeting_artifacts as artifact')
+    .join('online_meetings as meeting', function joinMeeting() {
+      this.on('artifact.tenant', '=', 'meeting.tenant')
+        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
+    })
+    .where('meeting.tenant', tenant)
+    .whereIn('meeting.appointment_request_id', ids)
+    .select(
+      'meeting.appointment_request_id',
+      'artifact.artifact_id',
+      'artifact.artifact_type',
+      'artifact.document_id',
+      'artifact.created_date_time',
+    )
+    .orderBy('artifact.created_date_time', 'desc');
+
+  for (const row of rows) {
+    const appointmentRequestId = row.appointment_request_id as string;
+    const artifacts = result.get(appointmentRequestId) ?? [];
+    artifacts.push({
+      artifact_id: row.artifact_id,
+      artifact_type: row.artifact_type,
+      document_id: row.document_id ?? null,
+      created_date_time: row.created_date_time ?? null,
+    });
+    result.set(appointmentRequestId, artifacts);
+  }
+
+  return result;
 }
 
 type TenantSettings = {
@@ -185,6 +254,7 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
 async function deleteTeamsMeetingIfAvailable(params: {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   appointmentRequestId: string;
 }): Promise<boolean> {
   if (!isEnterprise) {
@@ -200,6 +270,7 @@ async function deleteTeamsMeetingIfAvailable(params: {
     return teamsModule.deleteTeamsMeeting({
       tenantId: params.tenantId,
       meetingId: params.meetingId,
+      eventId: params.eventId ?? null,
       appointmentRequestId: params.appointmentRequestId,
     });
   } catch (error) {
@@ -980,7 +1051,7 @@ export const getMyAppointmentRequests = withAuth(async (
     // Validate filters if provided (all fields are already optional in the schema)
     const validatedFilters = filters ? appointmentRequestFilterSchema.parse(filters) : {};
 
-    const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const { requests, artifactsByAppointmentRequestId } = await withTransaction(db, async (trx: Knex.Transaction) => {
       let query = trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
@@ -1024,7 +1095,17 @@ export const getMyAppointmentRequests = withAuth(async (
         query = query.where('ar.requested_date', '<=', validatedFilters.end_date);
       }
 
-      return await query;
+      const rows = await query;
+      const artifacts = await loadVisibleOnlineMeetingArtifactsForAppointments(
+        trx,
+        tenant,
+        rows.map((row: any) => row.appointment_request_id),
+      );
+
+      return {
+        requests: rows,
+        artifactsByAppointmentRequestId: artifacts,
+      };
     });
 
     console.log('[getMyAppointmentRequests] Found appointments:', requests.length);
@@ -1034,7 +1115,8 @@ export const getMyAppointmentRequests = withAuth(async (
       ...request,
       preferred_assigned_user_name: request.preferred_technician_first_name && request.preferred_technician_last_name
         ? `${request.preferred_technician_first_name} ${request.preferred_technician_last_name}`
-        : undefined
+        : undefined,
+      online_meeting_artifacts: artifactsByAppointmentRequestId.get(request.appointment_request_id) ?? [],
     }));
 
     console.log('[getMyAppointmentRequests] Returning appointments:', mappedRequests.length);
@@ -1084,7 +1166,7 @@ export const getAppointmentRequestDetails = withAuth(async (
     const clientId = contact.client_id;
 
     const request = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests as ar')
+      const row = await trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
             .andOn('ar.tenant', 'sc.tenant');
@@ -1117,6 +1199,21 @@ export const getAppointmentRequestDetails = withAuth(async (
           't.title as ticket_title'
         )
         .first();
+
+      if (!row) {
+        return row;
+      }
+
+      const artifacts = await loadVisibleOnlineMeetingArtifactsForAppointments(
+        trx,
+        tenant,
+        [row.appointment_request_id],
+      );
+
+      return {
+        ...row,
+        online_meeting_artifacts: artifacts.get(row.appointment_request_id) ?? [],
+      };
     });
 
     if (!request) {
@@ -1189,6 +1286,12 @@ export const cancelAppointmentRequest = withAuth(async (
       }
 
       const now = new Date();
+      const onlineMeeting = await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .first();
 
       if (request.schedule_entry_id) {
         await trx('schedule_entry_assignees')
@@ -1220,6 +1323,16 @@ export const cancelAppointmentRequest = withAuth(async (
           online_meeting_url: null,
           online_meeting_id: null,
           updated_at: now
+        });
+
+      await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .update({
+          status: 'cancelled',
+          updated_at: now,
         });
 
       try {
@@ -1333,10 +1446,12 @@ export const cancelAppointmentRequest = withAuth(async (
 
       return {
         appointmentRequestId: request.appointment_request_id,
-        meetingId:
-          request.online_meeting_provider === 'teams' && request.online_meeting_id
+        meetingId: onlineMeeting?.provider === 'teams'
+          ? onlineMeeting.provider_meeting_id
+          : request.online_meeting_provider === 'teams' && request.online_meeting_id
             ? request.online_meeting_id
             : null,
+        eventId: onlineMeeting?.provider_event_id ?? null,
       };
     });
 
@@ -1346,6 +1461,7 @@ export const cancelAppointmentRequest = withAuth(async (
       const deletedMeeting = await deleteTeamsMeetingIfAvailable({
         tenantId: tenant,
         meetingId: cancellationContext.meetingId,
+        eventId: cancellationContext.eventId,
         appointmentRequestId: cancellationContext.appointmentRequestId,
       });
 

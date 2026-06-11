@@ -340,6 +340,48 @@ Is it testing a single function/class/component in isolation?
                 └─ Workflow? → server/src/test/e2e/<workflow-name>/<feature>.test.ts
 ```
 
+## Continuous Integration
+
+Test execution in CI is tiered to keep PR feedback fast while still exercising
+the expensive suites regularly:
+
+| Workflow | Trigger | What runs | Database |
+|---|---|---|---|
+| `unit-tests.yml` | every PR, push to main | `nx affected -t test` (DB-free unit suites across projects with a `test` target, Nx-cached, two-pass to avoid runner OOM) + skipped-test budget guard | none |
+| `unit-tests.yml` (coverage job) | push to main only | server unit suite with coverage, lcov uploaded as artifact (informational) | none |
+| `integration-tests.yml` | PRs touching server/packages/shared/ee | Tier-1 subset: `server npm run test:integration:tier1` (billing, accounting, authorization) | Postgres service container (pgvector) |
+| `integration-tests.yml` | nightly cron, manual dispatch (`suite: full`) | full `server/src/test/integration` suite | Postgres service container |
+| `e2e-fresh-install-tests.yaml` | PRs (path-filtered), push to main | full docker-compose stack + Playwright | full stack |
+
+Notes:
+- CI sets `REQUIRE_DB=1`, which makes `describeWithDb()` (server/test-utils/requireDb.ts)
+  **throw** instead of skipping when Postgres is unreachable. Never reintroduce
+  silent `dbReachable ? describe : describe.skip` probes — a DB outage in CI must fail.
+- CI pins the vitest shuffle seed via `VITEST_SEED` so order-dependent failures
+  reproduce across reruns.
+- Skipped tests are budgeted: `scripts/check-skip-budget.mjs` fails CI when the
+  number of `.skip`/`xit`/`xdescribe` markers exceeds `skip-budget.json`. Lower the
+  budget when you fix skips; raising it requires editing the budget file in your PR.
+- New workflows start as non-required checks; they are promoted to required in
+  branch protection after a green shakeout period.
+
+## Coverage Roadmap (priority order)
+
+Seeded suites exist for authorization, tenancy, job handlers, inbound webhooks,
+and the billing money paths. Highest-value areas still needing depth:
+
+1. Invoice generation & recurring billing (`packages/billing/src/actions/`) — extend the seeded integration suites
+2. Payments (`paymentActions.ts`, `paymentWebhookHelpers.ts`, `ee/server/src/lib/payments`)
+3. Tax (`taxService.ts`, tax actions) and accounting export (`accountingExportService.ts`, companySync adapters)
+4. Integrations mappers (QuickBooks, Xero, CSV in `packages/integrations`)
+5. API route contract tests (`server/src/app/api/v1/*`) — auth required, input validation, error shapes
+6. `shared/billingClients` (54 files, ~1 test)
+7. Email (`packages/email`), reports (`server/src/lib/reports`), EE integrations (Tactical RMM, NinjaOne)
+
+When adding tests to a package that has none, give it a `vitest.config.ts`
+(model: `packages/tickets/vitest.config.ts`) and a `"test": "vitest run"` script
+so `nx affected -t test` picks it up in CI.
+
 ## Running Tests
 
 ### NPM Scripts

@@ -210,4 +210,3 @@ export default function DocumentUpload({ id, userId, entityId, entityType, folde
                 : t('documents.folderSelector.defaultDescription', 'Choose where to save this document')}/>
         </>);
 }
-//# sourceMappingURL=DocumentUpload.jsx.map

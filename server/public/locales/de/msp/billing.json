@@ -665,8 +665,10 @@
         "created": "Erstellt",
         "lines": "Zeilen",
         "errors": "Fehler",
-        "delivered": "Geliefert"
-      }
+        "delivered": "Geliefert",
+        "notes": "Notizen"
+      },
+      "errorDetails": "Fehlerdetails"
     },
     "toast": {
       "created": "Buchhaltungsexportstapel erstellt",

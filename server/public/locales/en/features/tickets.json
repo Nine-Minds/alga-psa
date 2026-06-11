@@ -39,7 +39,8 @@
     "breached": "Breached",
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
-    "responseStatus": "Response Status"
+    "responseStatus": "Response Status",
+    "board": "Filter by board"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -377,7 +378,10 @@
       "onTrack": "On Track",
       "breached": "Breached",
       "paused": "Paused",
-      "bundled": "Bundled"
+      "bundled": "Bundled",
+      "activeBoards": "Active Boards",
+      "inactiveBoards": "Inactive Boards",
+      "allBoards": "All Boards"
     },
     "selection": {
       "pageSelected_one": "All {{count}} ticket on this page are selected.",
@@ -1261,5 +1265,22 @@
       "reconnecting": "Live updates offline - reconnecting...",
       "unavailable": "Live updates unavailable"
     }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} deleted successfully.",
+    "error": "Failed to delete ticket. Please try again.",
+    "validationError": "Failed to validate deletion. Please try again."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inactive",
+    "noBoard": "No Board",
+    "selectedCount_one": "{{count}} board",
+    "selectedCount_other": "{{count}} boards",
+    "excludingPrefix": "excluding {{name}}",
+    "excludingCount_one": "excluding {{count}} board",
+    "excludingCount_other": "excluding {{count}} boards",
+    "placeholder": "Filter by board",
+    "title": "Board Picker",
+    "searchPlaceholder": "Search boards..."
   }
 }

@@ -578,4 +578,3 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.isContentDocument === nextProps.isContentDocument);
 });
 export default DocumentStorageCard;
-//# sourceMappingURL=DocumentStorageCard.jsx.map

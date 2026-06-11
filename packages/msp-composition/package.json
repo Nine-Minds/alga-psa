@@ -82,13 +82,13 @@
       "import": "./src/workflows/*.tsx",
       "types": "./src/workflows/*.tsx"
     },
-    "./workflows/registerScheduleEntryIntegration": {
-      "import": "./src/workflows/registerScheduleEntryIntegration.ts",
-      "types": "./src/workflows/registerScheduleEntryIntegration.ts"
-    },
     "./reports/*": {
       "import": "./src/reports/*.tsx",
       "types": "./src/reports/*.tsx"
+    },
+    "./user-activities": {
+      "import": "./src/user-activities/index.ts",
+      "types": "./src/user-activities/index.ts"
     }
   },
   "dependencies": {
@@ -109,6 +109,7 @@
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
+    "@alga-psa/user-activities": "*",
     "@alga-psa/user-composition": "*"
   }
 }

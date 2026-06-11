@@ -1,0 +1,145 @@
+name: Citus Migration Smoke
+
+# Production EE runs on Citus, but every other migration check runs on plain
+# Postgres — so the Citus branches in the migrations (create_distributed_table,
+# reference tables, colocation guards) are otherwise never exercised before
+# they reach a real cluster. This job runs the combined CE+EE migration chain
+# (the same merge recipe as validate-tenant-management.yaml and
+# setup/entrypoint.sh — the only live migration path) against a fresh
+# single-node Citus and asserts distribution actually happened.
+#
+# pgvector note: the official Citus image does not ship pgvector, so the
+# vector-dependent pieces of the EE AI migrations skip themselves via their
+# pg_available_extensions guard. The vector path is covered by
+# validate-tenant-management.yaml, which runs the same combined chain against
+# ankane/pgvector. Between the two jobs, both dimensions are exercised without
+# maintaining a custom citus+pgvector image.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+      - '.github/workflows/citus-migration-smoke.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/migrations/**'
+      - 'ee/server/migrations/**'
+
+jobs:
+  citus-migrate:
+    name: Combined migrations on single-node Citus
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      citus:
+        image: citusdata/citus:12.1
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: citus_test
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: citus_test
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: citus_test
+      DB_NAME_SERVER: server
+      PGPASSWORD: citus_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      # No npm install fallback: a failing npm ci means the lockfile is out of
+      # sync with a package.json — fail loudly (see unit/integration workflows).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Citus to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for citus..."
+            sleep 2
+          done
+
+      - name: Create database, role, and citus extension
+        run: |
+          psql -h localhost -U postgres -c "CREATE DATABASE server;"
+          psql -h localhost -U postgres -c "CREATE ROLE app_user WITH LOGIN PASSWORD 'citus_test';"
+          psql -h localhost -U postgres -d server -c "CREATE EXTENSION citus;"
+          # Keep shard fan-out small: hundreds of distributed tables x default
+          # 32 shards would create tens of thousands of shard relations.
+          psql -h localhost -U postgres -d server -c "ALTER DATABASE server SET citus.shard_count = 4;"
+
+      - name: Run combined CE+EE migrations
+        run: |
+          # Same merge recipe as setup/entrypoint.sh and validate-tenant-management.yaml.
+          mkdir -p server/combined-migrations
+          cp server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+          cp -r server/migrations/utils server/combined-migrations/ 2>/dev/null || true
+          cp ee/server/migrations/*.cjs server/combined-migrations/ 2>/dev/null || true
+          cp -r ee/server/migrations/utils server/combined-migrations/ 2>/dev/null || true
+
+          cat > server/knexfile-combined.cjs << 'EOF'
+          module.exports = {
+            migration: {
+              client: 'pg',
+              connection: {
+                host: process.env.DB_HOST || 'localhost',
+                port: process.env.DB_PORT || '5432',
+                user: process.env.DB_USER_ADMIN || 'postgres',
+                password: process.env.DB_PASSWORD_ADMIN,
+                database: process.env.DB_NAME_SERVER || 'server',
+              },
+              pool: { min: 2, max: 20 },
+              migrations: { directory: './combined-migrations', loadExtensions: ['.cjs'] }
+            }
+          };
+          EOF
+
+          cd server && npx knex migrate:latest --knexfile knexfile-combined.cjs --env migration
+
+      - name: Assert tables were distributed
+        run: |
+          DISTRIBUTED=$(psql -h localhost -U postgres -d server -tAc "SELECT count(*) FILTER (WHERE partmethod = 'h') FROM pg_dist_partition;")
+          REFERENCE=$(psql -h localhost -U postgres -d server -tAc "SELECT count(*) FILTER (WHERE partmethod = 'n' AND repmodel = 't') FROM pg_dist_partition;")
+          echo "Distributed tables: $DISTRIBUTED, reference tables: $REFERENCE"
+          psql -h localhost -U postgres -d server -c "SELECT logicalrelid::regclass AS table_name, CASE WHEN partmethod = 'h' THEN 'distributed' WHEN repmodel = 't' THEN 'reference' ELSE 'citus-local' END AS type FROM pg_dist_partition ORDER BY 2, 1;"
+          # A green run distributes ~160 tables; 100 is a safe floor that still
+          # catches wholesale silent breakage.
+          if [ "$DISTRIBUTED" -lt 100 ]; then
+            echo "::error::Only $DISTRIBUTED tables distributed (expected ~160) — Citus branches of the migrations did not run."
+            exit 1
+          fi
+          # Cornerstone tables that must be distributed for the schema to work
+          # at all on Citus.
+          for t in tenants users clients contacts tickets projects documents comments workflow_tasks; do
+            STATE=$(psql -h localhost -U postgres -d server -tAc "SELECT partmethod FROM pg_dist_partition WHERE logicalrelid = '$t'::regclass;")
+            if [ "$STATE" != "h" ]; then
+              echo "::error::Table $t is not distributed (partmethod='$STATE')."
+              exit 1
+            fi
+          done

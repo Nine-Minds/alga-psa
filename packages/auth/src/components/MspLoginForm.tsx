@@ -8,6 +8,8 @@ import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
+import CaptchaChallenge from './CaptchaChallenge';
+import { useLoginCaptcha } from './useLoginCaptcha';
 
 interface MspLoginFormProps {
   callbackUrl: string;
@@ -28,6 +30,7 @@ export default function MspLoginForm({
   const [isPublicWorkstation, setIsPublicWorkstation] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const captcha = useLoginCaptcha();
 
   useEffect(() => {
     setEmail(initialEmail ?? '');
@@ -68,15 +71,28 @@ export default function MspLoginForm({
         userType: 'internal',
         redirect: false,
         callbackUrl,
+        ...(captcha.token ? { captchaToken: captcha.token } : {}),
       });
 
       if (result?.error === '2FA_REQUIRED') {
         onTwoFactorRequired();
+      } else if (result?.code === 'CAPTCHA_REQUIRED') {
+        await captcha.requireCaptcha();
+        setLookupError('Please complete the verification below, then sign in again.');
+      } else if (result?.code === 'RATE_LIMITED') {
+        onError({
+          type: 'error',
+          title: 'Too Many Attempts',
+          message: 'Too many failed sign-in attempts. Please wait a few minutes before trying again.'
+        });
       } else if (result?.error) {
-        onError({ 
-          type: 'error', 
-          title: 'Sign-in Failed', 
-          message: 'Invalid email or password. Please try again.' 
+        if (captcha.required) {
+          captcha.refreshChallenge();
+        }
+        onError({
+          type: 'error',
+          title: 'Sign-in Failed',
+          message: 'Invalid email or password. Please try again.'
         });
       } else if (result?.url) {
         await persistRememberedEmail();
@@ -160,6 +176,15 @@ export default function MspLoginForm({
         </Alert>
       )}
 
+      {captcha.required && captcha.config?.siteKey && (
+        <CaptchaChallenge
+          siteKey={captcha.config.siteKey}
+          onToken={captcha.setToken}
+          resetSignal={captcha.resetSignal}
+          id="msp-login-captcha"
+        />
+      )}
+
         <div className="text-sm text-right space-y-1">
           <div>
             <Link href="/auth/msp/forgot-password"
@@ -186,7 +211,7 @@ export default function MspLoginForm({
           type="submit"
           className="w-full"
           id="msp-sign-in-button"
-          disabled={isSubmitting}
+          disabled={isSubmitting || (captcha.required && !!captcha.config?.siteKey && !captcha.token)}
         >
           Sign in
         </Button>

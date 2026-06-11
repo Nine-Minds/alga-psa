@@ -9,7 +9,7 @@ async function getLatestRun({ db, workflowId, tenantId, startedAfter }) {
         run_id,
         workflow_id,
         workflow_version,
-        tenant_id,
+        tenant,
         status,
         event_type,
         source_payload_schema_ref,
@@ -20,7 +20,7 @@ async function getLatestRun({ db, workflowId, tenantId, startedAfter }) {
         error_json
       from workflow_runs
       where workflow_id = $1
-        and tenant_id = $2
+        and tenant = $2
         and started_at >= $3
       order by started_at desc
       limit 1
@@ -41,7 +41,7 @@ async function listRecentRuns({ db, workflowId, tenantId, limit = 5 }) {
         completed_at
       from workflow_runs
       where workflow_id = $1
-        and tenant_id = $2
+        and tenant = $2
       order by started_at desc
       limit $3
     `,

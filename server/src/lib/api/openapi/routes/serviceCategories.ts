@@ -50,7 +50,7 @@ export function registerServiceCategoryRoutes(
   const CategoryIdParam = registry.registerSchema(
     'CategoryIdParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Category UUID from service_categories.category_id or ticket_categories.category_id.'),
+      id: zOpenApi.string().uuid().describe('Category UUID from service_categories.category_id or categories.category_id.'),
     }),
   );
 
@@ -68,19 +68,18 @@ export function registerServiceCategoryRoutes(
         category_id: zOpenApi.string().uuid(),
         category_name: zOpenApi.string(),
         parent_category: zOpenApi.string().uuid().nullable().optional(),
-        board_id: zOpenApi.string().uuid(),
-        description: zOpenApi.string().nullable().optional(),
+        board_id: zOpenApi.string().uuid().nullable(),
+        display_order: zOpenApi.number().optional(),
+        is_from_itil_standard: zOpenApi.boolean().nullable().optional(),
         created_by: zOpenApi.string().uuid(),
-        updated_by: zOpenApi.string().uuid(),
         created_at: zOpenApi.string().datetime().optional(),
-        updated_at: zOpenApi.string().datetime().optional(),
         tenant: zOpenApi.string().uuid(),
         children: zOpenApi.array(zOpenApi.unknown()).optional(),
         depth: zOpenApi.number().optional(),
         path: zOpenApi.string().optional(),
         children_count: zOpenApi.number().optional(),
       })
-      .describe('Ticket category resource from ticket_categories, including optional hierarchy fields.'),
+      .describe('Ticket category resource from the categories table, including optional hierarchy fields. The categories table has no description/updated_by/updated_at columns.'),
   );
 
   const TicketCategoryCreateRequest = registry.registerSchema(
@@ -89,7 +88,6 @@ export function registerServiceCategoryRoutes(
       category_name: zOpenApi.string().min(1).max(255),
       board_id: zOpenApi.string().uuid(),
       parent_category: zOpenApi.string().uuid().optional(),
-      description: zOpenApi.string().max(1000).optional(),
     }),
   );
 
@@ -377,7 +375,7 @@ export function registerServiceCategoryRoutes(
       'x-tenant-header-required': true,
       'x-rbac-resource': 'ticket_settings',
       'x-rbac-action': 'create',
-      'x-id-provenance': { category_id: 'ticket_categories.category_id' },
+      'x-id-provenance': { category_id: 'categories.category_id' },
     },
     edition: 'both',
   });
@@ -401,7 +399,7 @@ export function registerServiceCategoryRoutes(
       'x-tenant-header-required': true,
       'x-rbac-resource': 'ticket_settings',
       'x-rbac-action': 'read',
-      'x-id-provenance': { category_id: 'ticket_categories.category_id' },
+      'x-id-provenance': { category_id: 'categories.category_id' },
     },
     edition: 'both',
   });
@@ -425,7 +423,7 @@ export function registerServiceCategoryRoutes(
       'x-tenant-header-required': true,
       'x-rbac-resource': 'ticket_settings',
       'x-rbac-action': 'update',
-      'x-id-provenance': { category_id: 'ticket_categories.category_id' },
+      'x-id-provenance': { category_id: 'categories.category_id' },
     },
     edition: 'both',
   });
@@ -449,7 +447,7 @@ export function registerServiceCategoryRoutes(
       'x-tenant-header-required': true,
       'x-rbac-resource': 'ticket_settings',
       'x-rbac-action': 'delete',
-      'x-id-provenance': { category_id: 'ticket_categories.category_id' },
+      'x-id-provenance': { category_id: 'categories.category_id' },
     },
     edition: 'both',
   });
@@ -522,7 +520,7 @@ export function registerServiceCategoryRoutes(
       'x-tenant-header-required': true,
       'x-rbac-resource': 'ticket_settings',
       'x-rbac-action': 'update',
-      'x-id-provenance': { category_id: 'ticket_categories.category_id' },
+      'x-id-provenance': { category_id: 'categories.category_id' },
     },
     edition: 'both',
   });

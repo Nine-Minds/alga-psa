@@ -1599,6 +1599,7 @@
             "integrationStatus": "11111",
             "capabilities": "11111",
             "microsoftProfile": "11111",
+            "recordingPermissions": "11111",
             "packageMetadata": "11111",
             "botConnector": "11111",
             "userLinkage": "11111",
@@ -1612,12 +1613,32 @@
             "profile": "11111",
             "activeProfile": "11111",
             "profileCredentials": "11111",
+            "meetingOrganizer": "11111",
+            "meetingOrganizerObjectId": "11111",
             "package": "11111",
             "baseUrl": "11111",
             "botEnv": "11111",
             "userLinkage": "11111",
             "conversationReference": "11111",
             "deliveryFailure": "11111"
+          }
+        },
+        "meetings": {
+          "title": "11111",
+          "description": "11111",
+          "organizer": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111",
+            "resolved": "11111 {{objectId}} 11111"
+          },
+          "downloadRecordings": {
+            "label": "11111",
+            "description": "11111"
+          },
+          "exposeRecordingsInPortal": {
+            "label": "11111",
+            "description": "11111"
           }
         }
       }

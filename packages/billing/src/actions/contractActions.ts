@@ -213,11 +213,13 @@ export const getContractById = withAuth(async (user, { tenant }, contractId: str
 });
 
 export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[]> => {
+  await assertBillingPermission(user, 'read', 'view contract line mappings');
   const { knex } = await createTenantKnex();
   return fetchContractLineMappings(knex, tenant, contractId);
 });
 
 export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<DetailedContractLine[]> => {
+  await assertBillingPermission(user, 'read', 'view detailed contract lines');
   const { knex } = await createTenantKnex();
   return fetchDetailedContractLines(knex, tenant, contractId);
 });
@@ -231,7 +233,7 @@ export const addContractLine = withAuth(async (
 ): Promise<IContractLineMapping | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = await hasPermission(user, 'billing', 'delete');
+  const canUpdate = await hasPermission(user, 'billing', 'create');
   if (!canUpdate) {
     return permissionError('Permission denied: Cannot modify contract lines');
   }
@@ -562,6 +564,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
 
 export const getContractLinesForContract = withAuth(async (user, { tenant }, contractId: string): Promise<any[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view contract lines');
     const { knex } = await createTenantKnex();
 
     return await Contract.getContractLines(knex, tenant, contractId);
@@ -586,6 +589,7 @@ export interface IContractSummary {
 
 export const getContractSummary = withAuth(async (user, { tenant }, contractId: string): Promise<IContractSummary> => {
   try {
+    await assertBillingPermission(user, 'read', 'view contract summary');
     const { knex } = await createTenantKnex();
 
     const templateRecord = await knex('contract_templates')
@@ -675,6 +679,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
 
 export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view contract assignments');
     const { knex } = await createTenantKnex();
 
     const selection = [
@@ -825,6 +830,7 @@ export interface IContractOverview {
  */
 export const getContractOverview = withAuth(async (user, { tenant }, contractId: string): Promise<IContractOverview> => {
   try {
+    await assertBillingPermission(user, 'read', 'view contract overview');
     const { knex } = await createTenantKnex();
 
     // Check if this is a template contract

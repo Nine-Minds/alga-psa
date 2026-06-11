@@ -58,7 +58,7 @@ export class WorkflowRuntimeV2TemporalWorker {
     this.workerId = workerId;
     this.temporalAddress = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
     this.temporalNamespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
-    this.taskQueue = process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE || WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE;
+    this.taskQueue = WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE;
     const useSourcePaths = ['true', '1', 'yes'].includes(
       String(process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS ?? '').toLowerCase(),
     );

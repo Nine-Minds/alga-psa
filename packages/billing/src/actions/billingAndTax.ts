@@ -7,6 +7,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -1006,6 +1007,14 @@ function applyClientCadenceMaterializationGapBlocks(
             `${gap.clientId}:${gap.scheduleKey}:${gap.periodKey}:${gap.invoiceWindowStart}:${gap.invoiceWindowEnd}`,
         ),
     );
+    // Gaps describe obligations that have NO persisted row, so they can never
+    // match a candidate member key one-to-one. A candidate window is partially
+    // materialized when any gap targets the same client + invoice window.
+    const blockedClientWindowKeys = new Set(
+        materializationGaps.map((gap) =>
+            `${gap.clientId}:${normalizeDateOnly(gap.invoiceWindowStart)}:${normalizeDateOnly(gap.invoiceWindowEnd)}`,
+        ),
+    );
 
     return invoiceCandidates.map((candidate) => {
         const isClientCadenceCandidate = candidate.cadenceOwners.includes('client');
@@ -1013,20 +1022,22 @@ function applyClientCadenceMaterializationGapBlocks(
             return candidate;
         }
 
-        const hasBlockedMember = candidate.members.some((member) => {
-            if (blockedExecutionIdentityKeys.has(member.executionIdentityKey)) {
-                return true;
-            }
-            if (blockedSelectionKeys.has(member.selectionKey)) {
-                return true;
-            }
-            if (!member.scheduleKey || !member.periodKey) {
-                return false;
-            }
+        const candidateWindowKey = `${candidate.clientId}:${normalizeDateOnly(candidate.windowStart)}:${normalizeDateOnly(candidate.windowEnd)}`;
+        const hasBlockedMember = blockedClientWindowKeys.has(candidateWindowKey)
+            || candidate.members.some((member) => {
+                if (blockedExecutionIdentityKeys.has(member.executionIdentityKey)) {
+                    return true;
+                }
+                if (blockedSelectionKeys.has(member.selectionKey)) {
+                    return true;
+                }
+                if (!member.scheduleKey || !member.periodKey) {
+                    return false;
+                }
 
-            const memberSchedulePeriodKey = `${candidate.clientId}:${member.scheduleKey}:${member.periodKey}:${member.invoiceWindowStart}:${member.invoiceWindowEnd}`;
-            return blockedSchedulePeriodKeys.has(memberSchedulePeriodKey);
-        });
+                const memberSchedulePeriodKey = `${candidate.clientId}:${member.scheduleKey}:${member.periodKey}:${member.invoiceWindowStart}:${member.invoiceWindowEnd}`;
+                return blockedSchedulePeriodKeys.has(memberSchedulePeriodKey);
+            });
 
         if (!hasBlockedMember) {
             return candidate;
@@ -1147,6 +1158,10 @@ export const getClientTaxRate = withAuth(async (
     taxRegion: string,
     date: ISO8601String
 ): Promise<number> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('tax_rates')
@@ -1172,6 +1187,10 @@ export const getAvailableBillingPeriods = withAuth(async (
     { tenant },
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const {
         page = 1,
         pageSize = 10,
@@ -1310,6 +1329,10 @@ export const getAvailableRecurringDueWork = withAuth(async (
     { tenant },
     options: FetchRecurringDueWorkOptions = {},
 ): Promise<PaginatedRecurringDueWorkResult> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const {
         page = 1,
         pageSize = 10,
@@ -1462,6 +1485,10 @@ export const getDueDate = withAuth(async (
     clientId: string,
     invoiceDate: ISO8601String
 ): Promise<ISO8601String> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('clients')
@@ -1495,6 +1522,10 @@ export const getNextBillingDate = withAuth(async (
     clientId: string,
     currentEndDate: ISO8601String
 ): Promise<ISO8601String> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const { knex } = await createTenantKnex();
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('client_billing_cycles')
@@ -1546,6 +1577,12 @@ export async function calculatePreviewTax(
     cycleEnd: ISO8601String,
     defaultTaxRegion: string
 ): Promise<number> {
+    const { getCurrentUserAsync } = await import('../lib/authHelpers');
+    const currentUser = await getCurrentUserAsync();
+    if (!currentUser || !await hasPermission(currentUser as any, 'billing', 'read')) {
+        throw new Error('Permission denied');
+    }
+
     const taxService = new TaxService();
     let totalTax = 0;
 

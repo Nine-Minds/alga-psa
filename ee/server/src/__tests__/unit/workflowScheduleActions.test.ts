@@ -211,7 +211,7 @@ describe('workflow schedule actions', () => {
         })
       ]
     });
-    expect(listQuery.where).toHaveBeenCalledWith('tws.tenant_id', 'tenant-1');
+    expect(listQuery.where).toHaveBeenCalledWith('tws.tenant', 'tenant-1');
   });
 
   it('T002: rejects one-time schedules that set non-any day filters', async () => {

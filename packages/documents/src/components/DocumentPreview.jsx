@@ -130,4 +130,3 @@ const DocumentPreview = ({ document, className }) => {
         </div>);
 };
 export default DocumentPreview;
-//# sourceMappingURL=DocumentPreview.jsx.map

@@ -44,7 +44,7 @@ Based on database query, the following permissions are currently defined:
 - [x] Other Actions (15+ files, 50+ functions) - ⏳ **PENDING** (mostly unprotected)
 
 **TOTAL AUDITED**: 60+ files, 300+ server action functions
-**TOTAL SECURED**: 115 critical functions (38% complete)
+**TOTAL SECURED**: 117 critical functions (39% complete)
 
 ## Critical Security Issues Found
 
@@ -55,6 +55,14 @@ Based on database query, the following permissions are currently defined:
 - `updateUser()` - ❌ No permission check for user updates
 - `updateUserRoles()` - ❌ No permission check for role modifications
 - `checkEmailExistsGlobally()` - ❌ Exposes email existence across tenants
+
+### 🚨 HIGH PRIORITY - Role Assignment Actions (Packages) ✅ SECURED
+**Files**: `packages/users/src/lib/roleActions.ts`, `packages/auth/src/actions/policyActions.ts`
+
+These functions are duplicate implementations of role assignment used by the MSP "Assign Roles to Users" screen, the contact portal tab, and the client portal. Prior to PR #2652 they had **no permission checks at all**, allowing any authenticated user to assign or remove any role from any other user — a privilege-escalation vector distinct from the `updateUserRoles()` path in `userActions.ts` secured in Phase 2A.
+
+- `assignRoleToUser()` - ✅ **SECURED** (PR #2652) — Role-type-aware: MSP roles require `user:update`; pure client-portal roles accept `client:update` or `user:update`.
+- `removeRoleFromUser()` - ✅ **SECURED** (PR #2652) — Same role-type-aware permission model.
 
 ### 🚨 HIGH PRIORITY - Project Actions
 **File**: `server/src/lib/actions/project-actions/regenerateOrderKeys.ts`
@@ -122,6 +130,8 @@ Based on database query, the following permissions are currently defined:
 12. ❌ `getUserContactId()` → Add `user:read` permission check
 13. ❌ `registerClientUser()` → Add `user:create` permission check
 14. ❌ `getClientUsersForCompany()` → Add `user:read` permission check
+15. ✅ `assignRoleToUser()` / `removeRoleFromUser()` in `packages/users/src/lib/roleActions.ts` → Role-type-aware: `user:update` for MSP roles; `client:update` for pure client-portal roles (secured PR #2652)
+16. ✅ `assignRoleToUser()` / `removeRoleFromUser()` in `packages/auth/src/actions/policyActions.ts` → Same permission model; path used by MSP "Assign Roles to Users" screen, contact portal tab, and client portal (secured PR #2652)
 
 ### Ticket Actions - LOW PRIORITY
 1. ❌ `getTicketFormData()` → Add `ticket:read` permission check
@@ -258,7 +268,7 @@ The following new permissions need to be added to the database:
 **Timeline**: Complete audit of all server actions for permission checks
 
 ### Critical Findings ✅ **RESOLVED**
-- ~~**75% of server actions lack proper permission checks**~~ → **62% now have permission checks**
+- ~~**75% of server actions lack proper permission checks**~~ → **61% now have permission checks**
 - ~~**Financial systems completely exposed** (billing, invoicing, credit management)~~ → ✅ **SECURED**
 - ~~**Time tracking systems unprotected** (payroll and billing impact)~~ → ✅ **SECURED**
 - ~~**Business data systems unprotected** (companies, assets, documents)~~ → ✅ **SECURED**
@@ -285,7 +295,7 @@ The following new permissions need to be added to the database:
 ### Next Steps
 1. ✅ ~~Create database migration for new permissions~~ - COMPLETED
 2. ✅ ~~Update role assignments in existing data~~ - COMPLETED
-3. ✅ ~~Implement permission checks following established patterns~~ - 115 functions COMPLETED
+3. ✅ ~~Implement permission checks following established patterns~~ - 117 functions COMPLETED
 4. ⏳ Continue with Phase 4: Contact, team, service actions
 5. ⏳ Complete Phase 5: Tag, category, priority actions
 6. ⏳ Phase 6: Testing & validation
@@ -331,7 +341,9 @@ This section provides a systematic approach to implementing all security fixes i
 - [x] **2A.5** Fix `checkEmailExistsGlobally()` - Add `user:read` permission check ✅
 - [x] **2A.6** Test user management functions ✅
 - [x] **2A.7** Deploy user management fixes ✅
-- **TOTAL**: 14 user management functions secured
+- [x] **2A.8** Fix `assignRoleToUser()` / `removeRoleFromUser()` in `packages/users/src/lib/roleActions.ts` — Role-type-aware permission checks (`user:update` for MSP roles; `client:update` for pure client-portal roles) ✅ (PR #2652)
+- [x] **2A.9** Fix `assignRoleToUser()` / `removeRoleFromUser()` in `packages/auth/src/actions/policyActions.ts` — Same permission model; path used by MSP "Assign Roles to Users" screen, contact portal tab, and client portal ✅ (PR #2652)
+- **TOTAL**: 16 user management functions secured
 
 #### Sub-Phase 2B: Financial Systems ✅ **COMPLETED**
 - [x] **2B.1** Fix invoice generation functions - Add `invoice:generate` permission checks ✅
@@ -363,7 +375,11 @@ server/src/lib/actions/taxRateActions.ts
 server/src/lib/actions/timeEntryCrudActions.ts
 server/src/lib/actions/timeSheetActions.ts
 server/src/lib/actions/timePeriodsActions.ts
+packages/users/src/lib/roleActions.ts
+packages/auth/src/actions/policyActions.ts
 ```
+
+**Phase 2 TOTAL: 64 critical functions secured**
 
 ### Phase 3: High Priority Business Functions ✅ **COMPLETED**
 
@@ -553,6 +569,19 @@ export const exampleAction = withAuth(async (user, { tenant }, data: any): Promi
 - `withOptionalAuth(action)` - For actions that work differently for auth/anon users
 - `withAuthCheck(action)` - Auth check only, no tenant context (for non-DB operations)
 
+**Role-type-aware pattern (for role assignment actions):**
+
+When an action's permission depends on the type of role being managed, load the role record first and branch on its `msp`/`client` flags:
+
+```typescript
+const role = await trx('roles').where({ role_id: roleId, tenant }).first();
+const requiresUserUpdate = role?.msp || !role?.client;  // MSP role or unknown
+const allowed = requiresUserUpdate
+  ? await hasPermission(user, 'user', 'update')
+  : await hasPermission(user, 'client', 'update') || await hasPermission(user, 'user', 'update');
+if (!allowed) throw new Error('Permission denied: You do not have permission to change user roles.');
+```
+
 #### Legacy Pattern (for reference only):
 ```typescript
 // DO NOT USE in new code - shown for understanding existing code only
@@ -592,7 +621,7 @@ export async function exampleAction(data: any): Promise<any> {
 
 ## 🎉 IMPLEMENTATION STATUS SUMMARY
 
-### ✅ **COMPLETED PHASES** (As of 2025-06-19)
+### ✅ **COMPLETED PHASES** (As of 2025-06-19; role assignment packages secured 2026-06-10)
 
 #### **Phase 1: Database Setup** ✅ **COMPLETE**
 - **Migration Deployed**: `20250619120000_add_comprehensive_permissions.cjs`
@@ -600,10 +629,10 @@ export async function exampleAction(data: any): Promise<any> {
 - **Roles Updated**: Admin (all permissions), Manager (business permissions)
 
 #### **Phase 2: Critical Security Fixes** ✅ **COMPLETE**
-- **User Management**: 14 functions secured
+- **User Management**: 16 functions secured (includes `assignRoleToUser`/`removeRoleFromUser` in `packages/users` and `packages/auth`, secured 2026-06-10 via PR #2652 with role-type-aware permission model)
 - **Financial Systems**: 25 functions secured (invoices, credits, billing, tax)
 - **Time Tracking**: 23 functions secured (time entries, timesheets, periods)
-- **TOTAL**: **62 critical functions secured**
+- **TOTAL**: **64 critical functions secured**
 
 #### **Phase 3: High Priority Business Functions** ✅ **COMPLETE**
 - **Company Management**: 11 functions secured
@@ -616,7 +645,7 @@ export async function exampleAction(data: any): Promise<any> {
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| **Functions with Permission Checks** | 25% | 62% | +37% improvement |
+| **Functions with Permission Checks** | 25% | 63% | +38% improvement |
 | **Critical Vulnerabilities** | 100+ | 0 | ✅ **100% resolved** |
 | **Financial Systems Protected** | 0% | 100% | ✅ **Fully secured** |
 | **Time Tracking Protected** | 0% | 100% | ✅ **Fully secured** |
@@ -631,6 +660,7 @@ export async function exampleAction(data: any): Promise<any> {
 ✅ **Data Protection**: All business data operations secured  
 ✅ **RBAC Implementation**: Comprehensive role-based access control deployed  
 ✅ **Database Security**: All new permissions deployed and configured  
+✅ **Role Assignment Security**: `assignRoleToUser`/`removeRoleFromUser` in `packages/users` and `packages/auth` secured with role-type-aware checks (PR #2652, 2026-06-10)
 
 ### ⏳ **REMAINING WORK** (Future Phases)
 
@@ -640,9 +670,9 @@ export async function exampleAction(data: any): Promise<any> {
 
 ### 🚀 **MASSIVE SECURITY UPGRADE COMPLETED**
 
-**Total Server Actions Secured: 115 out of 300+ functions (38% complete)**
+**Total Server Actions Secured: 117 out of 300+ functions (39% complete)**
 
 All **CRITICAL** and **HIGH PRIORITY** security vulnerabilities identified in the audit have been systematically resolved. The application now has robust permission checks on all core business functions, preventing unauthorized access to sensitive financial, user, and operational data.
 
 ---
-*Security audit completed on 2025-06-19. Implementation of critical and high priority fixes completed on 2025-06-19. This represents a comprehensive security overhaul of the most important server action files in the codebase.*
+*Security audit completed on 2025-06-19. Implementation of critical and high priority fixes completed on 2025-06-19. Role assignment security in `packages/users` and `packages/auth` extended on 2026-06-10 (PR #2652) with role-type-aware permission checks (`user:update` for MSP roles, `client:update` for client-portal-only roles). This represents a comprehensive security overhaul of the most important server action files in the codebase.*

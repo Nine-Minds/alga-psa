@@ -563,6 +563,34 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 </div>
               </div>
 
+              {selectedBatch.notes ? (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.notes', { defaultValue: 'Notes' })}
+                  </div>
+                  <div className="text-sm whitespace-pre-wrap">{selectedBatch.notes}</div>
+                </div>
+              ) : null}
+
+              {(selectedDetail?.errors?.length ?? 0) > 0 ? (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.errorDetails', { defaultValue: 'Error Details' })}
+                  </div>
+                  <div className="mt-1 max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
+                    {(selectedDetail?.errors ?? []).map((error) => (
+                      <div key={error.error_id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-muted-foreground">{error.code}</span>
+                          <span className="text-xs text-muted-foreground">{formatIso(error.created_at)}</span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{error.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="flex items-center justify-end gap-2">
                 <Button
                   id="accounting-exports-detail-refresh"

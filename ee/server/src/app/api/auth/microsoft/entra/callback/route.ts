@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from '@ee/lib/integrations/entra/auth/directScopes';
@@ -71,6 +72,19 @@ export async function GET(request: NextRequest) {
 
   if (Date.now() - state.timestamp > 10 * 60 * 1000) {
     return failureRedirect('expired_state', 'OAuth state has expired.');
+  }
+
+  // The state payload is not integrity-protected, so its tenant/user cannot be
+  // trusted on their own. Require an authenticated session whose tenant matches
+  // the state tenant before writing tokens or partner-connection rows —
+  // otherwise a forged callback could overwrite another tenant's Entra Direct
+  // connection with attacker-controlled Microsoft tokens.
+  const sessionUser = await getCurrentUser();
+  if (!sessionUser?.tenant) {
+    return failureRedirect('session_expired', 'Your session has expired. Please sign in and retry.');
+  }
+  if (sessionUser.tenant !== state.tenant) {
+    return failureRedirect('tenant_mismatch', 'Your session does not match the requested tenant.');
   }
 
   const credentials = await resolveMicrosoftCredentialsForTenant(state.tenant);

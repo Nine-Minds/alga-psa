@@ -47,7 +47,8 @@
     "printOptions": "Opzioni di stampa",
     "resetPrintOptions": "Reimposta opzioni di stampa",
     "share": "Condividi",
-    "done": "Fatto"
+    "done": "Fatto",
+    "continue": "Continua"
   },
   "status": {
     "loading": "Caricamento...",

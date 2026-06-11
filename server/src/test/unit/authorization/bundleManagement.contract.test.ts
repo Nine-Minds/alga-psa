@@ -10,6 +10,7 @@ const readSource = (relativePath: string) =>
 describe('EE bundle management contracts', () => {
   const actionSource = readSource('ee/server/src/lib/actions/auth/authorizationBundleActions.ts');
   const uiSource = readSource('ee/server/src/components/settings/policy/PolicyManagement.tsx');
+  const policyLocale = JSON.parse(readSource('server/public/locales/en/msp/admin.json')).policyManagement;
 
   it('T024: library/editor/assignment flows remain draft-first and publish via explicit revision switch', () => {
     expect(actionSource).toContain('export const createAuthorizationBundleAction = withAuth(');
@@ -24,23 +25,37 @@ describe('EE bundle management contracts', () => {
     expect(actionSource).toContain('export const setAuthorizationBundleAssignmentStatusAction = withAuth(');
     expect(uiSource).toContain('id="authorization-bundle-create-button"');
     expect(uiSource).toContain('id="authorization-bundle-publish-draft-button"');
-    expect(uiSource).toContain('Revision summary: {editorData.revisionChangeSummary}');
+    expect(uiSource).toContain(
+      "{t('policyManagement.editor.revisionSummary', { summary: editorData.revisionChangeSummary })}"
+    );
+    expect(policyLocale.editor.revisionSummary).toBe('Revision summary: {{summary}}');
     expect(uiSource).toContain('listAuthorizationBundleAssignmentsAction(bundleId)');
     expect(uiSource).toContain('id="authorization-bundle-assignment-add-button"');
   });
 
   it('T025: UI and action payloads include human-readable rule/revision summaries by resource section', () => {
-    expect(uiSource).toContain('const RESOURCE_SECTIONS: Array<{ label: string; resourceType: string }> = [');
-    expect(uiSource).toContain("{ label: 'Tickets', resourceType: 'ticket' }");
-    expect(uiSource).toContain("{ label: 'Documents', resourceType: 'document' }");
-    expect(uiSource).toContain("{ label: 'Time', resourceType: 'time_entry' }");
-    expect(uiSource).toContain("{ label: 'Projects', resourceType: 'project' }");
-    expect(uiSource).toContain("{ label: 'Assets', resourceType: 'asset' }");
-    expect(uiSource).toContain("{ label: 'Billing', resourceType: 'billing' }");
+    expect(uiSource).toContain('const RESOURCE_SECTIONS: Array<{ labelKey: string; resourceType: string }> = [');
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.tickets', resourceType: 'ticket' }");
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.documents', resourceType: 'document' }");
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.time', resourceType: 'time_entry' }");
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.projects', resourceType: 'project' }");
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.assets', resourceType: 'asset' }");
+    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.billing', resourceType: 'billing' }");
+    expect(policyLocale.resourceSections).toEqual({
+      tickets: 'Tickets',
+      documents: 'Documents',
+      time: 'Time',
+      projects: 'Projects',
+      assets: 'Assets',
+      billing: 'Billing',
+    });
     expect(uiSource).toContain('function summarizeRule(rule: {');
-    expect(uiSource).toContain('Selected client scopes');
-    expect(uiSource).toContain('Selected board scopes');
-    expect(uiSource).toContain('Redacted fields');
+    expect(uiSource).toContain("t('policyManagement.editor.rule.selectedClientScopes')");
+    expect(uiSource).toContain("t('policyManagement.editor.rule.selectedBoardScopes')");
+    expect(uiSource).toContain("t('policyManagement.editor.rule.redactedFields')");
+    expect(policyLocale.editor.rule.selectedClientScopes).toBe('Selected client scopes');
+    expect(policyLocale.editor.rule.selectedBoardScopes).toBe('Selected board scopes');
+    expect(policyLocale.editor.rule.redactedFields).toBe('Redacted fields');
     expect(actionSource).toContain('selectedClientIds: string[];');
     expect(actionSource).toContain('selectedBoardIds: string[];');
     expect(actionSource).toContain('redactedFields: string[];');

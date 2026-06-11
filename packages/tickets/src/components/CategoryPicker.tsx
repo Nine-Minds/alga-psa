@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { ITicketCategory } from '@alga-psa/types';
-import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
+import TreeSelect, { TreeSelectOption, TreeSelectPath, TreeSelectMode } from '@alga-psa/ui/components/TreeSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -46,6 +46,20 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
   const { t } = useTranslation('features/tickets');
+
+  // Filters with an exclude option use a single Include/Exclude mode toggle so include
+  // and exclude can't contradict each other.
+  const modeToggle = multiSelect && showExclude;
+
+  const handleModeChange = (mode: TreeSelectMode) => {
+    // Clear the opposite set so the filter is never both include- and exclude-based.
+    if (mode === 'include') {
+      onSelect(selectedCategories, []);
+    } else {
+      onSelect([], excludedCategories);
+    }
+  };
+
   // Register components with UI reflection system
   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id,
@@ -287,6 +301,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           modal={modal}
           onAddNew={onAddNew}
           addNewLabel={t('categoryPicker.addNew', 'Add new category')}
+          modeToggle={modeToggle}
+          onModeChange={handleModeChange}
         />
       </div>
     </ReflectionContainer>

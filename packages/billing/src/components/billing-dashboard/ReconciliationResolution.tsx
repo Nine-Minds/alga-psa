@@ -380,10 +380,8 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         : parseFloat(customAmount);
 
       // In a real implementation, this would call the server action
-      const userId = 'current-user-id'; // This would come from authentication
       const resolvedReport = await resolveReconciliationReport(
         report.report_id,
-        userId,
         approval.notes
       );
       

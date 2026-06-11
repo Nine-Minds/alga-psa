@@ -3,7 +3,7 @@
 import React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../ui-reflection/types';
-import { LucideIcon, ChevronDown } from 'lucide-react';
+import { type LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   id: string;

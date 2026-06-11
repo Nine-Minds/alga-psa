@@ -13,13 +13,19 @@ exports.up = async function(knex) {
 
         // Create an index on contact_id
         table.index('contact_id');
-
-        // Add the foreign key constraint referencing both tenant and contact_name_id
-        table.foreign(['tenant', 'contact_id'])
-            .references(['tenant', 'contact_name_id'])
-            .inTable('contacts')
-            .onDelete('SET NULL');
     });
+
+    // Composite FK including tenant: a bare ON DELETE SET NULL would null the
+    // tenant column too when a contact is deleted, stripping tenancy from the
+    // user row. On PG 15+ null only contact_id; otherwise restrict deletes.
+    const versionRow = await knex.raw("SELECT current_setting('server_version_num')::int AS v");
+    const onDelete = versionRow.rows[0].v >= 150000 ? 'ON DELETE SET NULL (contact_id)' : '';
+    await knex.raw(`
+        ALTER TABLE users
+        ADD CONSTRAINT users_tenant_contact_id_foreign
+        FOREIGN KEY (tenant, contact_id)
+        REFERENCES contacts (tenant, contact_name_id) ${onDelete}
+    `);
 
     // Then, attempt to match existing client users with contacts
     const clientUsers = await knex('users')

@@ -134,7 +134,18 @@
         "noUsers": "No {{type}} users found",
         "inactiveHidden": "(inactive users hidden)"
       },
-      "inactiveTag": "(Inactive)"
+      "inactiveTag": "(Inactive)",
+      "messages": {
+        "success": {
+          "roleAssigned": "Função atribuída com sucesso",
+          "roleRemoved": "Função removida com sucesso"
+        },
+        "error": {
+          "assignFailed": "Falha ao atribuir a função. Tente novamente.",
+          "removeFailed": "Falha ao remover a função. Tente novamente.",
+          "permissionDenied": "Você não tem permissão para alterar funções de usuário."
+        }
+      }
     },
     "sessions": {
       "title": "All User Sessions",

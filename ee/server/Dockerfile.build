@@ -17,6 +17,9 @@ WORKDIR /app
 FROM base AS deps
 # Copy package files for both root and server parts of the project
 COPY package.json package-lock.json ./
+# .npmrc carries legacy-peer-deps=true (next-auth@5 beta wants nodemailer ^7,
+# project uses ^8); without it this stage's `npm install` fails ERESOLVE on npm@11.
+COPY .npmrc ./
 COPY server/package.json ./server/
 COPY ee/server/package.json ./ee/server/
 COPY tsconfig.base.json ./
@@ -36,7 +39,11 @@ ENV AUTH_SECRET=${NEXTAUTH_SECRET_BUILD}
 COPY . .
 
 WORKDIR /app
-RUN npm install --workspace=shared
+# Full install AFTER `COPY . .` so every workspace package (packages/*, @product/*,
+# @alga-psa/*) is symlinked into node_modules. The deps-stage install ran before
+# those dirs existed, so a shared-only relink leaves @product/chat (and siblings)
+# unresolvable by the EE build (`Module not found: @product/chat/context`).
+RUN npm install
 
 # Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
 RUN npx nx build-deps server
@@ -117,6 +124,10 @@ COPY --from=builder /app/server/index.ts ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
+# server/scripts holds runtime entrypoints invoked at boot, notably
+# create-tenant.ts which the appliance bootstrap runs to seed the initial
+# tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
+COPY --from=builder /app/server/scripts/ ./server/scripts/
 COPY --from=builder /app/secrets ./secrets
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules

@@ -665,8 +665,10 @@
         "created": "Created",
         "lines": "Lines",
         "errors": "Errors",
-        "delivered": "Delivered"
-      }
+        "delivered": "Delivered",
+        "notes": "Notes"
+      },
+      "errorDetails": "Error Details"
     },
     "toast": {
       "created": "Accounting export batch created",

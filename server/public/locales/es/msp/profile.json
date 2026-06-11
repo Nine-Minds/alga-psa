@@ -134,7 +134,18 @@
         "inactiveHidden": "(usuarios inactivos ocultos)"
       },
       "inactiveTag": "(Inactivo)",
-      "unnamedUser": "Usuario sin nombre"
+      "unnamedUser": "Usuario sin nombre",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rol asignado correctamente",
+          "roleRemoved": "Rol eliminado correctamente"
+        },
+        "error": {
+          "assignFailed": "No se pudo asignar el rol. Inténtalo de nuevo.",
+          "removeFailed": "No se pudo eliminar el rol. Inténtalo de nuevo.",
+          "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
+        }
+      }
     },
     "sessions": {
       "title": "Todas las sesiones de usuarios",

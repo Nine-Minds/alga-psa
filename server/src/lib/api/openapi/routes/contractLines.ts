@@ -217,7 +217,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
   const CreateFromTemplateBody = registry.registerSchema(
     'CreateContractLineFromTemplateBody',
     zOpenApi.object({
-      template_id: zOpenApi.string().uuid().describe('Used by service; current controller ignores the path id and relies on this field.'),
+      template_id: zOpenApi.string().uuid().optional().describe('Optional; the template id is taken from the path {id} and overrides this field when both are present.'),
       contract_line_name: zOpenApi.string().min(1).max(255),
       modify_rates: zOpenApi
         .object({
@@ -285,7 +285,7 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/contract-lines',
     summary: 'List contract lines',
     description:
-      'Lists contract lines with pagination/filtering and optional include flags. Route requires x-api-key at middleware and a request context in-controller (requireRequestContext). Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.',
+      'Lists contract lines with pagination/filtering and optional include flags. Authenticated and tenant-scoped via withApiKeyRouteAuth. Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContractLineListQuery },
@@ -757,19 +757,18 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/contract-line-templates/{id}/create-contract-line',
     summary: 'Create contract line from template',
     description:
-      'Creates a contract line from a template. Current controller validates body createPlanFromTemplateSchema and passes that body to service; path `{id}` is not used by service logic.',
+      'Creates a contract line from a template. The template id is taken from the path `{id}` (it takes precedence over any template_id in the body), and the rest of the body is validated with createPlanFromTemplateSchema. Authenticated and tenant-scoped via withApiKeyRouteAuth.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContractLineTemplateParam, body: { schema: CreateFromTemplateBody } },
     responses: {
       201: { description: 'Contract line created from template.', schema: ContractLineApiSuccess },
       400: { description: 'Invalid request payload.', schema: ContractLineApiError },
-      401: { description: 'x-api-key missing at middleware.', schema: ContractLineApiError },
-      500: { description: 'Request context missing or template application failure.', schema: ContractLineApiError },
+      401: { description: 'x-api-key missing/invalid.', schema: ContractLineApiError },
+      500: { description: 'Template application failure.', schema: ContractLineApiError },
     },
     extensions: {
       ...commonExtensions,
-      'x-path-id-ignored-currently': true,
     },
     edition: 'both',
   });

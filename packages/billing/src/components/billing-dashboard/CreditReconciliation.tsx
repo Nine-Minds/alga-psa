@@ -263,14 +263,8 @@ const CreditReconciliation: React.FC = () => {
     try {
       setRunningValidation(true);
 
-      const sessionUser = session?.user as any;
-      const currentUserId = sessionUser?.id ?? sessionUser?.user_id;
-      if (!currentUserId) {
-        throw new Error('User not authenticated');
-      }
-
       // Call the server action to run validation for the selected client
-      const result = await validateClientCredit(selectedClient, String(currentUserId));
+      const result = await validateClientCredit(selectedClient);
 
       console.log('Validation result:', result);
 

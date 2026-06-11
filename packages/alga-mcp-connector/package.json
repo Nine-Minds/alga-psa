@@ -1,0 +1,34 @@
+{
+  "name": "@alga-psa/mcp-connector",
+  "version": "0.1.0",
+  "description": "AlgaPSA local MCP connector (stdio). Exposes AlgaPSA to MCP clients (Claude Desktop, Cursor, ...) via 3 progressive-disclosure meta-tools, acting under your own AlgaPSA API token.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "alga-mcp-connector": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@alga-psa/agent-tooling": "*",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

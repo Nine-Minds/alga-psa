@@ -138,6 +138,8 @@ export function revokeSession(
 }
 
 export type MobileAuthCapabilities = {
+  // Absent on older servers; only an explicit false means mobile is disabled.
+  enabled?: boolean;
   providers: {
     microsoft: boolean;
     google: boolean;

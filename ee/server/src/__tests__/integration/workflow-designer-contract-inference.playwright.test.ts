@@ -194,7 +194,7 @@ async function createWorkflowWithTrigger(
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: tenantId,
+    tenant: tenantId,
     name,
     description: null,
     payload_schema_ref: payloadSchemaRef,

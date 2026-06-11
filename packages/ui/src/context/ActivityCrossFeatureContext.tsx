@@ -45,12 +45,36 @@ export interface ActivityTimeEntryDialogRenderProps {
   timeSheetId?: string;
 }
 
+export interface ActivityConvertAdHocRenderProps {
+  /** Source ad-hoc item fields, used to prefill the new entity. */
+  title: string;
+  description?: string;
+  assignedTo?: string | null;
+  /** Called after the ticket/task is successfully created. */
+  onConverted: () => void | Promise<void>;
+  onClose: () => void;
+}
+
+export interface ActivityWorkflowTaskFormRenderProps {
+  taskId: string;
+  schema: Record<string, any>;
+  uiSchema: Record<string, any>;
+  initialFormData: Record<string, any>;
+  onComplete: () => void;
+  contextData?: Record<string, any>;
+  executionId?: string;
+  isInDrawer: boolean;
+}
+
 export interface ActivityCrossFeatureCallbacks {
   // Render callbacks
   renderTicketDetails: (props: ActivityTicketDetailsRenderProps) => ReactNode;
   renderTaskEdit: (props: ActivityTaskEditRenderProps) => ReactNode;
   renderEntryPopup: (props: ActivityEntryPopupRenderProps) => ReactNode;
   renderTimeEntryDialog: (props: ActivityTimeEntryDialogRenderProps) => ReactNode;
+  // Convert an ad-hoc item into a real ticket / project task (optional — host-provided).
+  renderConvertAdHocToTicket?: (props: ActivityConvertAdHocRenderProps) => ReactNode;
+  renderConvertAdHocToProjectTask?: (props: ActivityConvertAdHocRenderProps) => ReactNode;
 
   // Data-fetching callbacks
   getConsolidatedTicketData: (ticketId: string) => Promise<any>;
@@ -64,6 +88,16 @@ export interface ActivityCrossFeatureCallbacks {
   getProjectsWithPhases: () => Promise<any>;
   getAllClients: (includeInactive?: boolean) => Promise<any>;
   getAllContacts: (status?: 'active' | 'inactive' | 'all', sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<any>;
+
+  // Workflow tasks are an EE-only activity source. These members are absent in CE and
+  // supplied by the MSP composition layer in EE (via a build-aliased workflow import).
+  // Base user-activities components must treat them as optional and degrade to an
+  // Enterprise placeholder / no-op when missing.
+  getTaskDetails?: (taskId: string) => Promise<any>;
+  dismissTask?: (taskId: string) => Promise<any>;
+  hideTask?: (taskId: string) => Promise<any>;
+  unhideTask?: (taskId: string) => Promise<any>;
+  renderWorkflowTaskForm?: (props: ActivityWorkflowTaskFormRenderProps) => ReactNode;
 }
 
 const ActivityCrossFeatureContext = createContext<ActivityCrossFeatureCallbacks | null>(null);

@@ -99,6 +99,10 @@ function createAdvancedMockTrx() {
   };
 
   const trx = ((table: string) => createChain(table)) as any;
+  trx.raw = vi.fn().mockImplementation((sql: string, bindings?: any[]) => {
+    calls.push({ table: '__raw', method: 'raw', args: [sql, bindings] });
+    return Promise.resolve({ rows: [] });
+  });
   trx.setData = (table: string, data: any) => {
     mockData[table] = data;
   };

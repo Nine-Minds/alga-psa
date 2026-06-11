@@ -9,11 +9,23 @@
  * (and its own `billing_method`) is intentionally left untouched.
  *
  * Citus note: `service_types` is distributed and `standard_service_types`
- * is a reference table; `ALTER TABLE ... DROP COLUMN` is propagated to all
- * nodes/shards automatically, so no Citus-specific migration is required.
+ * is a reference table. DDL on the distributed table opens parallel
+ * connections to all shards, after which Citus refuses further DDL on
+ * another Citus table in the same transaction ("parallel DDL access").
+ * We must force sequential multi-shard modification first so the
+ * distributed + reference DDL can share one transaction.
  */
 
+const isCitusEnabled = async (knex) => {
+  const r = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled");
+  return Boolean(r.rows?.[0]?.enabled);
+};
+
 exports.up = async function (knex) {
+  if (await isCitusEnabled(knex)) {
+    await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+  }
+
   await knex.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS billing_method_check');
   await knex.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS service_types_billing_method_check');
   await knex.raw('ALTER TABLE service_types DROP COLUMN IF EXISTS billing_method');
@@ -24,6 +36,10 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
+  if (await isCitusEnabled(knex)) {
+    await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+  }
+
   // Best-effort restore only. The original per-row values are not recoverable;
   // re-add as nullable TEXT and backfill a neutral default.
   await knex.raw('ALTER TABLE standard_service_types ADD COLUMN IF NOT EXISTS billing_method TEXT');

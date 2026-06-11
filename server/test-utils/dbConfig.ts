@@ -68,10 +68,26 @@ export async function createTestDbConnection(
     },
   });
 
+  // Citus-distribution probes (SELECT ... FROM pg_dist_partition) run inside
+  // dozens of migrations; on plain Postgres each one ERRORs server-side before
+  // its try/catch concludes "not Citus". An empty stand-in catalog makes every
+  // probe succeed with is_distributed=false — same behavior, silent logs.
+  await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+
   await adminKnex.migrate.latest();
   if (runSeeds) {
     await adminKnex.seed.run();
   }
+
+  // The DB-guardrail migration sets cluster-wide role GUCs
+  // (idle_in_transaction_session_timeout, lock_timeout) on the app role.
+  // They are production insurance; in tests they turn legitimate lock waits
+  // and slow in-transaction work into spurious timeouts. Reset them after
+  // every bootstrap (the migration re-sets them each run).
+  const safeAppUser = appUser.replace(/[^a-zA-Z0-9_]/g, '');
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET idle_in_transaction_session_timeout`);
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET lock_timeout`);
+
   await adminKnex.destroy();
 
   const db = knex({

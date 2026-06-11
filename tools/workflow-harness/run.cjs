@@ -153,7 +153,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
         throw new Error('--skip-import requires bundle.json to have a workflow key');
       }
       const rows = await db.query(
-        `SELECT workflow_id FROM workflow_definitions WHERE tenant_id = $1 AND key = $2`,
+        `SELECT workflow_id FROM workflow_definitions WHERE tenant = $1 AND key = $2`,
         [tenantId, workflowKey]
       );
       if (!rows || rows.length === 0) {
@@ -184,11 +184,11 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
     // This keeps event→run fanout deterministic even when many fixtures exist in the DB.
     if (workflowKey && typeof workflowKey === 'string') {
       await dbWrite.query(
-        `update workflow_definitions set is_paused = true where tenant_id = $1 and key like 'fixture.%' and key <> $2`,
+        `update workflow_definitions set is_paused = true where tenant = $1 and key like 'fixture.%' and key <> $2`,
         [tenantId, workflowKey]
       );
     }
-    await dbWrite.query(`update workflow_definitions set is_paused = $3 where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId, workflowIsPausedInBundle]);
+    await dbWrite.query(`update workflow_definitions set is_paused = $3 where workflow_id = $1 and tenant = $2`, [workflowId, tenantId, workflowIsPausedInBundle]);
 
     if (debug) {
       // eslint-disable-next-line no-console
@@ -295,7 +295,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
               run_id,
               workflow_id,
               workflow_version,
-              tenant_id,
+              tenant,
               status,
               event_type,
               started_at,
@@ -304,7 +304,7 @@ async function runFixture({ testDir, bundlePath, testPath, baseUrl, tenantId, co
               error_json
             from workflow_runs
             where workflow_id = $1
-              and tenant_id = $2
+              and tenant = $2
               and started_at >= $3
             order by started_at desc
             limit 1

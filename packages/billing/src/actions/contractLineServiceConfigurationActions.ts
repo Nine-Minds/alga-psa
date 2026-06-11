@@ -11,6 +11,7 @@ import {
   IUserTypeRate
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 async function assertContractLineIsAuthorableByLineId(
   knex: any,
@@ -59,6 +60,9 @@ export const getConfigurationWithDetails = withAuth(async (
   { tenant },
   configId: string
 ) => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -72,6 +76,9 @@ export const getConfigurationsForPlan = withAuth(async (
   { tenant },
   contractLineId: string
 ) => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -86,6 +93,9 @@ export const getConfigurationForService = withAuth(async (
   contractLineId: string,
   serviceId: string
 ) => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -102,6 +112,9 @@ export const createConfiguration = withAuth(async (
   rateTiers?: IContractLineServiceRateTierInput[],
   userTypeRates?: Array<Omit<IUserTypeRate, 'created_at' | 'updated_at' | 'config_id' | 'rate_id'>>
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -119,6 +132,9 @@ export const updateConfiguration = withAuth(async (
   typeConfig?: Partial<IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | Record<string, unknown>>,
   rateTiers?: IContractLineServiceRateTierInput[]
 ) => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -133,6 +149,9 @@ export const deleteConfiguration = withAuth(async (
   { tenant },
   configId: string
 ) => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -149,6 +168,9 @@ export const upsertPlanServiceHourlyConfiguration = withAuth(async (
   serviceId: string,
   hourlyConfigData: Partial<IContractLineServiceHourlyConfig>
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -165,6 +187,9 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
   serviceId: string,
   bucketConfigData: Partial<IContractLineServiceBucketConfig>
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -189,6 +214,9 @@ export const upsertPlanServiceConfiguration = withAuth(async (
   { tenant },
   payload: UsageConfigPayload
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
@@ -236,6 +264,9 @@ export const upsertUserTypeRatesForConfig = withAuth(async (
   configId: string,
   rates: Array<Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>>
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');

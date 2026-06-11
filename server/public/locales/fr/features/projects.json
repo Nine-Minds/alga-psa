@@ -436,6 +436,7 @@
     "selectFolderDescription": "Choisissez où enregistrer ce nouveau document"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Détails limités — vous n'êtes pas assigné à ce ticket",
     "title": "Tickets associés",
     "linkExistingTitle": "Lier un ticket existant",
     "createTicket": "Créer un ticket",
@@ -724,6 +725,7 @@
       "allPriorities": "Toutes les priorités"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Détails limités — vous n'êtes pas assigné à cette tâche",
       "title": "Tâches de projet liées",
       "loadFailed": "Échec du chargement de la tâche",
       "phaseNotFound": "Phase de tâche introuvable",
@@ -745,6 +747,9 @@
       "assigning": "Affectation...",
       "confirm": "Affecter les tâches",
       "teamReplaceNotice": "Les tâches déjà affectées à une autre équipe seront réaffectées à l’équipe sélectionnée."
+    },
+    "convertAdHocToTask": {
+      "title": "Convertir en tâche de projet"
     }
   },
   "filters": {

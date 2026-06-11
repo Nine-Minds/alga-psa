@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.1.9",
+  "version": "1.1.18",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -49,10 +49,6 @@
     "./config/deletion": {
       "import": "./dist/config/deletion/index.js",
       "types": "./src/config/deletion/index.ts"
-    },
-    "./lib/scheduleEntryRegistry": {
-      "import": "./dist/lib/scheduleEntryRegistry.js",
-      "types": "./src/lib/scheduleEntryRegistry.ts"
     },
     "./context/DocumentsCrossFeatureContext": {
       "import": "./dist/context/DocumentsCrossFeatureContext.js",

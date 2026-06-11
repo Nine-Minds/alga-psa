@@ -118,14 +118,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         toast.error(t('messages.invalidService'));
         return;
       }
-
-      const hasTaxableRate = selectedService.tax_rate_id != null &&
-        selectedService.tax_percentage != null &&
-        selectedService.tax_percentage > 0;
-      if (hasTaxableRate && !entry.tax_region) {
-        toast.error(t('messages.taxRegionRequired'));
-        return;
-      }
+      // Tax region is no longer collected at time entry. Billing derives it from
+      // the service's tax_rate_id (falling back to the client default), so there
+      // is nothing to validate here. See billingEngine.getTaxInfoFromService.
     }
 
     if (!validateTimeEntry(entry)) {
@@ -285,6 +280,18 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {workItem.type === 'ticket' && workItem.master_ticket_id && (
+        <div className="mb-3 rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-[rgb(var(--color-text-700))]">
+          {workItem.master_ticket_number
+            ? t('bundleNotice.withNumber', {
+                defaultValue: 'This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.',
+                number: workItem.master_ticket_number
+              })
+            : t('bundleNotice.withoutNumber', {
+                defaultValue: 'This ticket is part of a bundle. Bundle time is usually logged on the master ticket.'
+              })}
+        </div>
+      )}
       {isLoading ? (
         <TimeEntrySkeletons />
       ) : entries[0] ? (

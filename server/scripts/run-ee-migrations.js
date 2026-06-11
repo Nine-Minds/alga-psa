@@ -1,13 +1,27 @@
-// Runs CE + EE migrations locally by copying into a temp directory
-// and invoking knex with MIGRATIONS_DIR pointing to that temp path.
-// Overlay rule: EE files overwrite CE files when names collide.
+// Runs CE + EE migrations by merging both migration sets into a single
+// directory *under server/* and invoking knex with MIGRATIONS_DIR pointing at
+// it. Overlay rule: EE files overwrite CE files when names collide.
+//
+// Why under server/ (and NOT os.tmpdir())? Migrations resolve sibling resources
+// relative to their own file location:
+//   - bare requires (e.g. require('pg-boss')) resolve via the nearest
+//     node_modules found walking up the tree.
+//   - file reads like path.resolve(__dirname, '..', 'src/invoice-templates/...')
+//     resolve to <migrationsDir>/../src.
+// Both only work when the merged dir sits one level under server/, so that
+// `..` === server/ (giving server/node_modules and server/src). A dir in
+// /tmp has neither nearby and breaks migrations that import modules or read
+// source files. This mirrors the Docker setup container, which builds
+// /app/server/combined-migrations for exactly the same reason.
 //
 // Usage: node run-ee-migrations.js [action]
 //   action: latest (default), down, status
+// Env:
+//   EE_MIGRATIONS_DEBUG=1    pass --debug to knex
+//   EE_MIGRATIONS_KEEP_TMP=1 keep the merged dir after running (for debugging)
 
 import fs from 'fs';
 import fsp from 'fs/promises';
-import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
@@ -61,7 +75,8 @@ async function main() {
 
   // Resolve repo root from server/scripts/
   const repoRoot = path.resolve(__dirname, '..', '..');
-  const ceDir = path.resolve(repoRoot, 'server', 'migrations');
+  const serverDir = path.resolve(repoRoot, 'server');
+  const ceDir = path.resolve(serverDir, 'migrations');
   const eeDir = path.resolve(repoRoot, 'ee', 'server', 'migrations');
 
   // Validate inputs
@@ -72,45 +87,73 @@ async function main() {
     process.exit(1);
   }
 
-  // Create temp workspace under OS tmp
-  const tmpBase = await fsp.mkdtemp(path.join(os.tmpdir(), 'alga-ee-migrations-'));
-  const tmpMigrations = path.join(tmpBase, 'migrations');
-  await ensureDir(tmpMigrations);
+  // Create the merged workspace DIRECTLY under server/ (one level down) so that
+  // `path.resolve(__dirname, '..', ...)` inside a migration points at server/,
+  // and bare requires resolve via server/node_modules -> repo node_modules.
+  // See the file header for the full rationale. The dir is removed in `finally`.
+  const mergedDir = path.join(serverDir, `.ee-combined-migrations-${process.pid}-${Date.now()}`);
+  await ensureDir(mergedDir);
 
-  // Copy CE first
-  if (ceExists) {
-    console.log(`Copying CE migrations from ${ceDir} -> ${tmpMigrations}`);
-    await copyDir(ceDir, tmpMigrations);
-  } else {
-    console.log('CE migrations folder not found; continuing with EE only.');
+  const cleanup = async () => {
+    if (process.env.EE_MIGRATIONS_KEEP_TMP) {
+      console.log(`EE_MIGRATIONS_KEEP_TMP set; leaving merged migrations at: ${mergedDir}`);
+      return;
+    }
+    try {
+      await fsp.rm(mergedDir, { recursive: true, force: true });
+    } catch (err) {
+      console.warn(`Warning: failed to clean up ${mergedDir}: ${err?.message || err}`);
+    }
+  };
+
+  try {
+    // Copy CE first (recursive: brings utils/ and other helper trees that
+    // migrations import via relative requires).
+    if (ceExists) {
+      console.log(`Copying CE migrations from ${ceDir} -> ${mergedDir}`);
+      await copyDir(ceDir, mergedDir);
+    } else {
+      console.log('CE migrations folder not found; continuing with EE only.');
+    }
+
+    // Overlay EE (overwrites collisions)
+    if (eeExists) {
+      console.log(`Overlaying EE migrations from ${eeDir} -> ${mergedDir}`);
+      await copyDir(eeDir, mergedDir);
+    } else {
+      console.log('EE migrations folder not found; continuing with CE only.');
+    }
+
+    console.log(`Prepared merged migrations in: ${mergedDir}`);
+
+    // Run knex migrate:<action> with MIGRATIONS_DIR override and migration env
+    // (uses admin connection). NODE_PATH is set as a backstop so bare requires
+    // in migrations resolve regardless of where node is launched from.
+    const knexfilePath = path.resolve(serverDir, 'knexfile.cjs');
+    const nodePath = [
+      path.join(serverDir, 'node_modules'),
+      path.join(repoRoot, 'node_modules'),
+      process.env.NODE_PATH,
+    ].filter(Boolean).join(path.delimiter);
+    const env = {
+      ...process.env,
+      MIGRATIONS_DIR: mergedDir,
+      NODE_ENV: 'migration',
+      NODE_PATH: nodePath,
+    };
+
+    const knexAction = `migrate:${action}`;
+    console.log(`Running knex ${knexAction}...`);
+    const debugArgs = env.EE_MIGRATIONS_DEBUG ? ['--debug'] : [];
+    if (env.EE_MIGRATIONS_DEBUG) {
+      console.log('EE_MIGRATIONS_DEBUG=1 enabled: knex will print debug output.');
+    }
+    await run('npx', ['knex', knexAction, '--knexfile', knexfilePath, '--env', 'migration', ...debugArgs], { env, cwd: serverDir });
+
+    console.log(`Migration ${action} completed successfully.`);
+  } finally {
+    await cleanup();
   }
-
-  // Overlay EE (overwrites collisions)
-  if (eeExists) {
-    console.log(`Overlaying EE migrations from ${eeDir} -> ${tmpMigrations}`);
-    await copyDir(eeDir, tmpMigrations);
-  } else {
-    console.log('EE migrations folder not found; continuing with CE only.');
-  }
-
-  console.log(`Prepared merged migrations in: ${tmpMigrations}`);
-
-  // Run knex migrate:<action> with MIGRATIONS_DIR override and migration env (uses admin connection)
-  const serverDir = path.resolve(repoRoot, 'server');
-  const knexfilePath = path.resolve(serverDir, 'knexfile.cjs');
-  const env = { ...process.env, MIGRATIONS_DIR: tmpMigrations, NODE_ENV: 'migration' };
-
-  const knexAction = `migrate:${action}`;
-  console.log(`Running knex ${knexAction}...`);
-  const debugArgs = env.EE_MIGRATIONS_DEBUG ? ['--debug'] : [];
-  if (env.EE_MIGRATIONS_DEBUG) {
-    console.log('EE_MIGRATIONS_DEBUG=1 enabled: knex will print debug output.');
-  }
-  await run('npx', ['knex', knexAction, '--knexfile', knexfilePath, '--env', 'migration', ...debugArgs], { env, cwd: serverDir });
-
-  console.log(`Migration ${action} completed successfully.`);
-  console.log(`Temporary migrations directory preserved at: ${tmpMigrations}`);
-  console.log('Delete it when you are done, e.g. rm -rf', tmpBase);
 }
 
 main().catch((err) => {

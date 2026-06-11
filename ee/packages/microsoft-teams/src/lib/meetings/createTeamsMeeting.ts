@@ -7,17 +7,38 @@ export interface CreateTeamsMeetingInput {
   subject: string;
   startDateTime: string;
   endDateTime: string;
+  attendees?: TeamsMeetingAttendee[];
   appointmentRequestId?: string | null;
 }
 
 export interface CreateTeamsMeetingResult {
   joinWebUrl: string;
   meetingId: string;
+  organizerUpn: string;
+  organizerUserId: string;
+  eventId: string;
 }
 
-interface GraphMeetingResponse {
+export interface TeamsMeetingAttendee {
+  emailAddress: {
+    address: string;
+    name?: string;
+  };
+  type?: 'required' | 'optional' | 'resource';
+}
+
+interface GraphEventResponse {
   id?: unknown;
-  joinWebUrl?: unknown;
+  onlineMeeting?: {
+    joinUrl?: unknown;
+  } | null;
+}
+
+interface GraphOnlineMeetingListResponse {
+  value?: Array<{
+    id?: unknown;
+    joinWebUrl?: unknown;
+  }>;
 }
 
 function normalizeString(value: unknown): string {
@@ -30,6 +51,40 @@ function normalizeErrorMessage(error: unknown): string {
   }
 
   return String(error || 'Unknown error');
+}
+
+function escapeODataString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+async function resolveOnlineMeetingIdFromJoinUrl(params: {
+  accessToken: string;
+  organizerUpn: string;
+  joinWebUrl: string;
+}): Promise<string> {
+  const filter = encodeURIComponent(`JoinWebUrl eq '${escapeODataString(params.joinWebUrl)}'`);
+  const response = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(params.organizerUpn)}/onlineMeetings?$filter=${filter}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to resolve online meeting (${response.status}): ${errorBody || response.statusText}`);
+  }
+
+  const payload = (await response.json()) as GraphOnlineMeetingListResponse;
+  const meetingId = normalizeString(payload.value?.[0]?.id);
+  if (!meetingId) {
+    throw new Error('Microsoft Graph did not return an onlineMeeting id for the event join URL.');
+  }
+
+  return meetingId;
 }
 
 export async function createTeamsMeeting(
@@ -54,7 +109,7 @@ export async function createTeamsMeeting(
     });
 
     const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/onlineMeetings`,
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/events`,
       {
         method: 'POST',
         headers: {
@@ -63,8 +118,17 @@ export async function createTeamsMeeting(
         },
         body: JSON.stringify({
           subject: input.subject,
-          startDateTime: input.startDateTime,
-          endDateTime: input.endDateTime,
+          start: {
+            dateTime: input.startDateTime,
+            timeZone: 'UTC',
+          },
+          end: {
+            dateTime: input.endDateTime,
+            timeZone: 'UTC',
+          },
+          isOnlineMeeting: true,
+          onlineMeetingProvider: 'teamsForBusiness',
+          ...(input.attendees?.length ? { attendees: input.attendees } : {}),
         }),
       }
     );
@@ -81,11 +145,11 @@ export async function createTeamsMeeting(
       return null;
     }
 
-    const payload = (await response.json()) as GraphMeetingResponse;
-    const joinWebUrl = normalizeString(payload.joinWebUrl);
-    const meetingId = normalizeString(payload.id);
+    const payload = (await response.json()) as GraphEventResponse;
+    const eventId = normalizeString(payload.id);
+    const joinWebUrl = normalizeString(payload.onlineMeeting?.joinUrl);
 
-    if (!joinWebUrl || !meetingId) {
+    if (!joinWebUrl || !eventId) {
       logger.warn('[TeamsMeetings] Graph create response was missing meeting fields', {
         tenant: input.tenantId,
         appointment_request_id: input.appointmentRequestId ?? null,
@@ -96,17 +160,27 @@ export async function createTeamsMeeting(
       return null;
     }
 
+    const meetingId = await resolveOnlineMeetingIdFromJoinUrl({
+      accessToken,
+      organizerUpn: config.organizerUpn,
+      joinWebUrl,
+    });
+
     logger.info('[TeamsMeetings] Created Teams meeting', {
       tenant: input.tenantId,
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'create',
       status: response.status,
       meeting_id: meetingId,
+      event_id: eventId,
     });
 
     return {
       joinWebUrl,
       meetingId,
+      organizerUpn: config.organizerUpn,
+      organizerUserId: config.organizerUserId,
+      eventId,
     };
   } catch (error) {
     logger.warn('[TeamsMeetings] Failed to create Teams meeting', {
