@@ -87,6 +87,20 @@ export {
   deleteTaxRate,
 } from './taxRateActions';
 
+// QBO onboarding & reconciliation actions (EE only)
+export {
+  getCustomerMatchCandidates,
+  linkClientToQboCustomer,
+  bulkLinkExactCustomerMatches,
+  createQboCustomerForClient,
+  getHistoricalInvoiceMatches,
+  bulkLinkHistoricalInvoices,
+  backfillPaymentsForLinkedInvoices,
+  getOnboardingWizardState,
+  completeOnboardingWizard,
+  type HistMatch,
+} from './qboOnboardingActions';
+
 // Accounting sync actions (EE only)
 export {
   getAccountingSyncSettingsAction,

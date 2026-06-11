@@ -9,6 +9,7 @@ export {
   disconnectQbo,
   getQboTaxCodes,
   getQboTerms,
+  getQboCustomers,
   resetQboCatalogCacheForTenant,
   getTenantQboCredentials,
   type QboConnectionSummary,
@@ -16,7 +17,8 @@ export {
   type QboCredentialStatus,
   type QboItem,
   type QboTaxCode,
-  type QboTerm
+  type QboTerm,
+  type QboCustomer
 } from './qboActions';
 export {
   getCalendarProviders,

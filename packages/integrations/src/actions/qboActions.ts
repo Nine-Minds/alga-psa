@@ -119,6 +119,12 @@ type QboClientInfoRow = {
   companyName?: string;
 };
 
+type QboCustomerRow = {
+  Id: string;
+  DisplayName?: string;
+  Active?: boolean;
+};
+
 function buildCacheKey(tenantId: string, realmId: string | null, scope: string): string {
   return `${tenantId}:${realmId ?? 'default'}:${scope}`;
 }
@@ -148,6 +154,7 @@ function setCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string, value
 const itemCache = new Map<string, CacheEntry<QboItem[]>>();
 const taxCodeCache = new Map<string, CacheEntry<QboTaxCode[]>>();
 const termCache = new Map<string, CacheEntry<QboTerm[]>>();
+const customerCache = new Map<string, CacheEntry<QboCustomer[]>>();
 
 function clearCacheEntriesForTenant<T>(
   cache: Map<string, CacheEntry<T>>,
@@ -165,6 +172,7 @@ function clearAllCatalogCachesForTenant(tenantId: string): void {
   clearCacheEntriesForTenant(itemCache, tenantId);
   clearCacheEntriesForTenant(taxCodeCache, tenantId);
   clearCacheEntriesForTenant(termCache, tenantId);
+  clearCacheEntriesForTenant(customerCache, tenantId);
 }
 
 export async function resetQboCatalogCacheForTenant(tenantId: string): Promise<void> {
@@ -182,6 +190,14 @@ function normalizeTaxCodeRow(row: QboTaxCodeRow): QboTaxCode {
   return {
     id: row.Id ?? row.id ?? '',
     name: row.Name ?? row.name ?? ''
+  };
+}
+
+function normalizeCustomerRow(row: QboCustomerRow): QboCustomer {
+  return {
+    id: row.Id,
+    name: row.DisplayName ?? row.Id,
+    active: row.Active !== false,
   };
 }
 
@@ -354,6 +370,12 @@ export interface QboTaxCode { // Exporting for use in components
 export interface QboTerm { // Exporting for use in components
   id: string; // QBO SalesTermRef.value
   name: string; // Qbo Term Name
+}
+
+export interface QboCustomer { // Exporting for use in components
+  id: string; // QBO Customer.Id
+  name: string; // QBO Customer.DisplayName
+  active: boolean; // QBO Customer.Active
 }
 
 // --- Server Actions ---
@@ -684,6 +706,64 @@ export const getQboTaxCodes = withAuth(async (
  * Fetches a list of Terms from QuickBooks Online.
  * Respects the requested realm and falls back to other connected realms.
  */
+/**
+ * Fetches a paged list of Customers from QuickBooks Online.
+ * Pages through all results using STARTPOSITION/MAXRESULTS (1000 per page).
+ * Respects the requested realm and falls back to other connected realms.
+ * Results are cached for CATALOG_CACHE_TTL_MS per (tenant, realm) pair.
+ */
+export const getQboCustomers = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboCustomer[]> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const targetRealm = options.realmId ?? null;
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'customers');
+  const cached = getCachedValue(customerCache, cacheKey);
+  if (cached) {
+    return [...cached];
+  }
+
+  const credentials = await getTenantCredentialMap(tenant);
+  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds.length === 0) {
+    logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
+    return [];
+  }
+
+  for (const realmId of candidateRealmIds) {
+    try {
+      logger.debug('Fetching QBO customers', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
+
+      const PAGE_SIZE = 1000;
+      const allCustomers: QboCustomer[] = [];
+      let startPosition = 1;
+
+      while (true) {
+        const page = await qboClient.query<QboCustomerRow>(
+          `SELECT Id, DisplayName, Active FROM Customer STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`
+        );
+        allCustomers.push(...page.map(normalizeCustomerRow));
+        if (page.length < PAGE_SIZE) break;
+        startPosition += PAGE_SIZE;
+      }
+
+      setCachedValue(customerCache, buildCacheKey(tenant, realmId, 'customers'), allCustomers);
+      return [...allCustomers];
+    } catch (error) {
+      logger.warn('Failed to fetch QBO customers', { tenantId: tenant, realmId, error });
+      continue;
+    }
+  }
+
+  logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
+  return [];
+});
+
 export const getQboTerms = withAuth(async (
   user,
   { tenant },

@@ -111,6 +111,8 @@ interface IntegrationsSettingsPageProps {
   canUseTeams?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
+  /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
+  qboOnboardingSlot?: React.ReactNode;
 }
 
 const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
@@ -118,6 +120,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseCipp = true,
   canUseTeams = true,
   qboSyncHealthSlot,
+  qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
   const isEEAvailable = isCalendarEnterpriseEdition();
@@ -150,7 +153,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'accounting-setup',
           name: t('integrations.items.accountingSetup.name'),
           description: t('integrations.items.accountingSetup.description'),
-          component: () => <AccountingIntegrationsSetup qboSyncHealthSlot={qboSyncHealthSlot} />,
+          component: () => <AccountingIntegrationsSetup qboSyncHealthSlot={qboSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
         }
       ],
     },

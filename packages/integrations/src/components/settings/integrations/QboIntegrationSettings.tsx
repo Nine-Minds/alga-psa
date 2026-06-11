@@ -23,6 +23,7 @@ type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 interface QboIntegrationSettingsProps {
   syncHealthSlot?: React.ReactNode;
+  onboardingSlot?: React.ReactNode;
 }
 
 function describeCallbackError(code: string | null, t: TranslateFn): string | null {
@@ -54,7 +55,7 @@ function statusBadgeVariant(status?: 'active' | 'expired' | 'error'): 'success' 
   return 'secondary';
 }
 
-export default function QboIntegrationSettings({ syncHealthSlot }: QboIntegrationSettingsProps = {}) {
+export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot }: QboIntegrationSettingsProps = {}) {
   const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<QboStatus | null>(null);
@@ -395,6 +396,8 @@ export default function QboIntegrationSettings({ syncHealthSlot }: QboIntegratio
       </Card>
 
       {defaultConnection ? syncHealthSlot : null}
+
+      {defaultConnection ? onboardingSlot : null}
 
       {defaultConnection ? (
         <Card id="qbo-integration-mapping-card">

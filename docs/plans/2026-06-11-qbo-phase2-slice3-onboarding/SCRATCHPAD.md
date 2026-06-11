@@ -37,3 +37,24 @@
   total+customer agreement is what makes a match "confident".
 - `excludeSyncedInvoices` in the export selector keys off mapping presence —
   verify linked-without-export rows are treated as synced.
+
+## Implementation notes (built 2026-06-11)
+
+- All onboarding UI lives in packages/billing/src/components/accounting
+  (QboCustomerMappingPanel, QboOnboardingWizard + Entry) and reaches
+  QboIntegrationSettings via a second slot (`onboardingSlot`) threaded from
+  SettingsPage — same cycle-avoidance as the health panel. The customer
+  mapping surface is therefore NOT a 4th live-mapping tab; it renders inside
+  the wizard and the connection-card slot (deviation from PRD §5.1 framing,
+  same capability).
+- Payment backfill reuses applyExternalPaymentChange with synthetic change
+  objects, so backfilled history gets identical mappings/idempotency/status
+  flips as the live pull; payments are fetched once per distinct customer.
+- Wizard completion state per realm under
+  tenant_settings.settings.accountingSync.onboarding.
+- F015 (go-live cutoff in the producer) was already shipped in slice 1.
+- Deferred to DB env / live smoke: T007 (link-without-export exclusion uses
+  excludeSyncedInvoices mapping presence — code-audited), T011 (DB-backed
+  wizard integration), T012-T015 (sandbox smoke).
+- Pre-existing billing-suite failures (14, DB-dependent) verified unchanged
+  via git-stash baseline by the server agent.

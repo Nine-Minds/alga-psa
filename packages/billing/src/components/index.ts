@@ -39,3 +39,5 @@ export type { InvoiceTaxSourceBadgeProps } from './invoices/InvoiceTaxSourceBadg
 
 // Accounting integration components
 export { default as QboSyncHealthPanel } from './accounting/QboSyncHealthPanel';
+export { QboCustomerMappingPanel } from './accounting/QboCustomerMappingPanel';
+export { QboOnboardingWizard, QboOnboardingWizardEntry } from './accounting/QboOnboardingWizard';

@@ -326,4 +326,39 @@ describe('QboIntegrationSettings contracts', () => {
 
     expect(screen.queryByTestId('health-slot')).not.toBeInTheDocument();
   });
+
+  it('T065: onboardingSlot is rendered when a default connection exists', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      connected: true,
+      connections: [{ realmId: 'realm-1', displayName: 'Acme Books', status: 'active' as const }],
+      defaultRealmId: 'realm-1',
+      defaultConnection: { realmId: 'realm-1', displayName: 'Acme Books', status: 'active' as const },
+      redirectUri: 'https://example.com/api/integrations/qbo/callback',
+      scopes: ['com.intuit.quickbooks.accounting'],
+      environment: 'sandbox' as const,
+      credentials: { clientIdConfigured: true, clientSecretConfigured: true, ready: true },
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+
+    render(<QboIntegrationSettings onboardingSlot={<div data-testid="onboarding-slot" />} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('onboarding-slot')).toBeInTheDocument();
+    });
+  });
+
+  it('T066: onboardingSlot is NOT rendered when no default connection exists', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+
+    render(<QboIntegrationSettings onboardingSlot={<div data-testid="onboarding-slot" />} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('https://example.com/api/integrations/qbo/callback')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('onboarding-slot')).not.toBeInTheDocument();
+  });
 });
