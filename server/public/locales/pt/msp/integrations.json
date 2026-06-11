@@ -760,7 +760,10 @@
         "selectClient": "Selecionar cliente",
         "buttons": {
           "refresh": "Atualizar empresas",
-          "refreshing": "Atualizando..."
+          "refreshing": "Atualizando...",
+          "save": "Salvar mapeamentos",
+          "saving": "Salvando...",
+          "discard": "Descartar"
         },
         "counters": {
           "mapped": "mapeadas",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Mapeada",
           "suggested": "Sugerida",
-          "unmapped": "Não mapeada"
+          "unmapped": "Não mapeada",
+          "pending": "Pendente"
         },
         "suggestion": {
           "label": "Sugerida",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "A documentação só é exibida para clientes mapeados. Mapeie cada empresa do Hudu para um cliente do AlgaPSA para habilitá-la.",
         "success": {
-          "refreshed": "Empresas do Hudu atualizadas."
+          "refreshed": "Empresas do Hudu atualizadas.",
+          "saved": "Mapeamentos salvos: {{total}}"
         },
         "errors": {
           "load": "Falha ao carregar os mapeamentos de empresas do Hudu.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Erro de mapeamento do Hudu"
+        },
+        "pendingSummary": "Alterações não salvas: {{total}}",
+        "rowActions": {
+          "unmap": "Remover mapeamento",
+          "revert": "Reverter alteração",
+          "dismiss": "Descartar sugestão"
         }
       },
       "settings": {

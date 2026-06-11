@@ -760,7 +760,10 @@
         "selectClient": "Klant selecteren",
         "buttons": {
           "refresh": "Bedrijven vernieuwen",
-          "refreshing": "Vernieuwen..."
+          "refreshing": "Vernieuwen...",
+          "save": "Toewijzingen opslaan",
+          "saving": "Opslaan...",
+          "discard": "Verwerpen"
         },
         "counters": {
           "mapped": "toegewezen",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Toegewezen",
           "suggested": "Voorgesteld",
-          "unmapped": "Niet toegewezen"
+          "unmapped": "Niet toegewezen",
+          "pending": "In afwachting"
         },
         "suggestion": {
           "label": "Voorgesteld",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "Documentatie wordt alleen weergegeven voor toegewezen klanten. Wijs elk Hudu-bedrijf toe aan een AlgaPSA-klant om dit in te schakelen.",
         "success": {
-          "refreshed": "Hudu-bedrijven vernieuwd."
+          "refreshed": "Hudu-bedrijven vernieuwd.",
+          "saved": "Toewijzingen opgeslagen: {{total}}"
         },
         "errors": {
           "load": "Kan Hudu-bedrijfstoewijzingen niet laden.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Hudu-toewijzingsfout"
+        },
+        "pendingSummary": "Niet-opgeslagen wijzigingen: {{total}}",
+        "rowActions": {
+          "unmap": "Toewijzing opheffen",
+          "revert": "Wijziging ongedaan maken",
+          "dismiss": "Suggestie negeren"
         }
       },
       "settings": {

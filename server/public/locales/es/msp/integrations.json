@@ -760,7 +760,10 @@
         "selectClient": "Seleccionar cliente",
         "buttons": {
           "refresh": "Actualizar empresas",
-          "refreshing": "Actualizando..."
+          "refreshing": "Actualizando...",
+          "save": "Guardar asignaciones",
+          "saving": "Guardando...",
+          "discard": "Descartar"
         },
         "counters": {
           "mapped": "asignadas",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Asignada",
           "suggested": "Sugerida",
-          "unmapped": "Sin asignar"
+          "unmapped": "Sin asignar",
+          "pending": "Pendiente"
         },
         "suggestion": {
           "label": "Sugerencia",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "La documentación solo se muestra para los clientes asignados. Asigne cada empresa de Hudu a un cliente de AlgaPSA para habilitarla.",
         "success": {
-          "refreshed": "Empresas de Hudu actualizadas."
+          "refreshed": "Empresas de Hudu actualizadas.",
+          "saved": "Asignaciones guardadas: {{total}}"
         },
         "errors": {
           "load": "No se pudieron cargar las asignaciones de empresas de Hudu.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Error de asignación de Hudu"
+        },
+        "pendingSummary": "Cambios sin guardar: {{total}}",
+        "rowActions": {
+          "unmap": "Quitar asignación",
+          "revert": "Revertir cambio",
+          "dismiss": "Descartar sugerencia"
         }
       },
       "settings": {

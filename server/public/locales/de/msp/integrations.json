@@ -760,7 +760,10 @@
         "selectClient": "Kunde auswählen",
         "buttons": {
           "refresh": "Unternehmen aktualisieren",
-          "refreshing": "Wird aktualisiert..."
+          "refreshing": "Wird aktualisiert...",
+          "save": "Zuordnungen speichern",
+          "saving": "Wird gespeichert...",
+          "discard": "Verwerfen"
         },
         "counters": {
           "mapped": "zugeordnet",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Zugeordnet",
           "suggested": "Vorgeschlagen",
-          "unmapped": "Nicht zugeordnet"
+          "unmapped": "Nicht zugeordnet",
+          "pending": "Ausstehend"
         },
         "suggestion": {
           "label": "Vorgeschlagen",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "Dokumentation wird nur für zugeordnete Kunden angezeigt. Ordnen Sie jedes Hudu-Unternehmen einem AlgaPSA-Kunden zu, um sie zu aktivieren.",
         "success": {
-          "refreshed": "Hudu-Unternehmen aktualisiert."
+          "refreshed": "Hudu-Unternehmen aktualisiert.",
+          "saved": "Zuordnungen gespeichert: {{total}}"
         },
         "errors": {
           "load": "Hudu-Unternehmenszuordnungen konnten nicht geladen werden.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Hudu-Zuordnungsfehler"
+        },
+        "pendingSummary": "Nicht gespeicherte Änderungen: {{total}}",
+        "rowActions": {
+          "unmap": "Zuordnung aufheben",
+          "revert": "Änderung rückgängig machen",
+          "dismiss": "Vorschlag verwerfen"
         }
       },
       "settings": {

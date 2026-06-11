@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { Building2, Link2, Link2Off, RefreshCw, Sparkles } from 'lucide-react';
+import { Building2, Link2, Link2Off, RefreshCw, RotateCcw, Save, Sparkles, X } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
@@ -49,7 +49,11 @@ const HuduCompanyMappingManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSyncing, startSyncTransition] = useTransition();
-  const [savingCompanyId, setSavingCompanyId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  // Staged picks awaiting explicit Save, keyed by Hudu company id (null = staged unmap).
+  const [pendingSelections, setPendingSelections] = useState<Map<number, string | null>>(new Map());
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const loadData = async () => {
     setIsLoading(true);
@@ -57,7 +61,7 @@ const HuduCompanyMappingManager: React.FC = () => {
     try {
       const [mappingsResult, clientsResult] = await Promise.all([
         getHuduCompanyMappings(),
-        getAllClients(false), // Only active clients
+        getAllClients(true), // All clients; the picker's state filter defaults to active
       ]);
       if (isMappingFailure(mappingsResult)) {
         setError(
@@ -152,52 +156,122 @@ const HuduCompanyMappingManager: React.FC = () => {
     });
   };
 
-  const handleSelect = async (row: HuduCompanyMappingView, clientId: string | null) => {
-    if (savingCompanyId !== null) return;
-    const currentClientId = row.mapping?.client_id ?? null;
-    if (clientId === currentClientId) return;
-    // Clearing an unmapped row's suggested pre-fill persists nothing.
-    if (clientId === null && !row.mapping) return;
+  // Persisted state vs. what the row's picker shows: a suggestion pre-fills the
+  // picker but is only persisted once the user confirms with Save.
+  const baselineSelection = (row: HuduCompanyMappingView): string | null => row.mapping?.client_id ?? null;
+  const defaultSelection = (row: HuduCompanyMappingView): string | null =>
+    row.mapping?.client_id ?? row.suggestion?.client_id ?? null;
+  const effectiveSelection = (row: HuduCompanyMappingView): string | null =>
+    pendingSelections.has(row.hudu_company_id)
+      ? pendingSelections.get(row.hudu_company_id)!
+      : defaultSelection(row);
+  const isDirty = (row: HuduCompanyMappingView): boolean =>
+    effectiveSelection(row) !== baselineSelection(row);
 
-    setSavingCompanyId(row.hudu_company_id);
+  const stageSelection = (row: HuduCompanyMappingView, clientId: string | null) => {
+    if (isSaving) return;
+    setPendingSelections((prev) => {
+      const next = new Map(prev);
+      if (clientId === defaultSelection(row)) {
+        next.delete(row.hudu_company_id);
+      } else {
+        next.set(row.hudu_company_id, clientId);
+      }
+      return next;
+    });
+  };
+
+  // One button per row: revert a staged change, stage an unmap of a saved
+  // mapping, or dismiss a suggestion (a dismissed suggestion is excluded from Save).
+  const handleRowAction = (row: HuduCompanyMappingView) => {
+    if (isSaving) return;
+    if (pendingSelections.has(row.hudu_company_id)) {
+      setPendingSelections((prev) => {
+        const next = new Map(prev);
+        next.delete(row.hudu_company_id);
+        return next;
+      });
+    } else if (row.mapping || row.suggestion) {
+      stageSelection(row, null);
+    }
+  };
+
+  const handleDiscard = () => {
+    if (isSaving) return;
+    setPendingSelections(new Map());
+  };
+
+  const handleSaveAll = async () => {
+    const dirtyRows = rows.filter(isDirty);
+    if (dirtyRows.length === 0 || isSaving) return;
+
+    setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
+    let savedCount = 0;
+    let firstFailure: { error: string; code?: string } | null = null;
+    const remainingPending = new Map(pendingSelections);
+
     try {
-      if (row.mapping) {
-        // Replace is explicit clear+set: the server rejects overwrites.
-        const cleared = await clearHuduCompanyMapping({ mappingId: row.mapping.mapping_id });
-        if (isMappingFailure(cleared)) {
-          reportMappingFailure(cleared);
-          return;
+      for (const row of dirtyRows) {
+        const target = effectiveSelection(row);
+        try {
+          if (row.mapping) {
+            // Replace is explicit clear+set: the server rejects overwrites.
+            const cleared = await clearHuduCompanyMapping({ mappingId: row.mapping.mapping_id });
+            if (isMappingFailure(cleared)) {
+              firstFailure = firstFailure ?? cleared;
+              continue;
+            }
+            updateRow(row.hudu_company_id, null);
+            if (target === null) {
+              remainingPending.delete(row.hudu_company_id);
+              savedCount += 1;
+              continue;
+            }
+          }
+
+          const result = await setHuduCompanyMapping({
+            clientId: target as string,
+            huduCompanyId: row.hudu_company_id,
+            metadata: {
+              hudu_company_name: row.hudu_company_name,
+              id_in_integration: row.id_in_integration,
+              url: row.url,
+            },
+          });
+          if (isMappingFailure(result)) {
+            firstFailure = firstFailure ?? result;
+            continue;
+          }
+
+          const clientName = clients.find((c) => c.client_id === target)?.client_name ?? null;
+          updateRow(row.hudu_company_id, {
+            mapping_id: result.data.mapping_id,
+            client_id: target as string,
+            client_name: clientName,
+          });
+          remainingPending.delete(row.hudu_company_id);
+          savedCount += 1;
+        } catch (err) {
+          firstFailure = firstFailure ?? { error: err instanceof Error ? err.message : String(err) };
         }
-        updateRow(row.hudu_company_id, null);
-        if (clientId === null) return;
       }
 
-      const result = await setHuduCompanyMapping({
-        clientId: clientId as string,
-        huduCompanyId: row.hudu_company_id,
-        metadata: {
-          hudu_company_name: row.hudu_company_name,
-          id_in_integration: row.id_in_integration,
-          url: row.url,
-        },
-      });
-      if (isMappingFailure(result)) {
-        reportMappingFailure(result);
-        return;
+      setPendingSelections(remainingPending);
+      if (firstFailure) {
+        reportMappingFailure(firstFailure);
       }
-
-      const clientName = clients.find((c) => c.client_id === clientId)?.client_name ?? null;
-      updateRow(row.hudu_company_id, {
-        mapping_id: result.data.mapping_id,
-        client_id: clientId as string,
-        client_name: clientName,
-      });
-    } catch (err) {
-      reportMappingFailure({ error: err instanceof Error ? err.message : String(err) });
+      if (savedCount > 0 && !firstFailure) {
+        setSuccessMessage(
+          t('integrations.hudu.mapping.success.saved', {
+            defaultValue: 'Mappings saved: {{total}}',
+            total: savedCount,
+          })
+        );
+      }
     } finally {
-      setSavingCompanyId(null);
+      setIsSaving(false);
     }
   };
 
@@ -217,6 +291,7 @@ const HuduCompanyMappingManager: React.FC = () => {
   const mappedCount = rows.filter((row) => rowStatus(row) === 'mapped').length;
   const suggestedCount = rows.filter((row) => rowStatus(row) === 'suggested').length;
   const unmappedCount = rows.length - mappedCount - suggestedCount;
+  const dirtyCount = rows.filter(isDirty).length;
 
   if (isLoading) {
     return (
@@ -334,9 +409,14 @@ const HuduCompanyMappingManager: React.FC = () => {
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const status = rowStatus(row);
-                  const isSaving = savingCompanyId === row.hudu_company_id;
-                  const selectedClientId = row.mapping?.client_id ?? row.suggestion?.client_id ?? null;
+                  const hasPendingEntry = pendingSelections.has(row.hudu_company_id);
+                  const selectedClientId = effectiveSelection(row);
+                  // A pending entry that isn't dirty is a dismissed suggestion → Unmapped.
+                  const status: RowStatus | 'pending' = hasPendingEntry
+                    ? isDirty(row)
+                      ? 'pending'
+                      : 'unmapped'
+                    : rowStatus(row);
                   return (
                     <tr
                       key={row.hudu_company_id}
@@ -356,25 +436,50 @@ const HuduCompanyMappingManager: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
+                        <div className={`flex items-center gap-1 ${isSaving ? 'pointer-events-none opacity-60' : ''}`}>
                           <ClientPicker
                             id={`hudu-client-picker-${row.hudu_company_id}`}
                             clients={clients}
                             selectedClientId={selectedClientId}
-                            onSelect={(clientId) => {
-                              if (isSaving) return;
-                              void handleSelect(row, clientId);
-                            }}
-                            filterState="active"
-                            onFilterStateChange={() => {}}
-                            clientTypeFilter="all"
-                            onClientTypeFilterChange={() => {}}
+                            onSelect={(clientId) => stageSelection(row, clientId)}
+                            filterState={clientFilterState}
+                            onFilterStateChange={setClientFilterState}
+                            clientTypeFilter={clientTypeFilter}
+                            onClientTypeFilterChange={setClientTypeFilter}
                             placeholder={t('integrations.hudu.mapping.selectClient', {
                               defaultValue: 'Select client',
                             })}
                             fitContent={true}
                             className="w-full"
                           />
+                          {(hasPendingEntry || row.mapping || row.suggestion) && (
+                            <Button
+                              id={`hudu-mapping-row-action-${row.hudu_company_id}`}
+                              variant="ghost"
+                              size="sm"
+                              disabled={isSaving}
+                              title={
+                                hasPendingEntry
+                                  ? t('integrations.hudu.mapping.rowActions.revert', {
+                                      defaultValue: 'Revert change',
+                                    })
+                                  : row.mapping
+                                    ? t('integrations.hudu.mapping.rowActions.unmap', { defaultValue: 'Unmap' })
+                                    : t('integrations.hudu.mapping.rowActions.dismiss', {
+                                        defaultValue: 'Dismiss suggestion',
+                                      })
+                              }
+                              onClick={() => handleRowAction(row)}
+                            >
+                              {hasPendingEntry ? (
+                                <RotateCcw className="h-4 w-4" />
+                              ) : row.mapping ? (
+                                <Link2Off className="h-4 w-4" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                         {status === 'suggested' && row.suggestion && (
                           <div
@@ -388,7 +493,11 @@ const HuduCompanyMappingManager: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {status === 'mapped' ? (
+                        {status === 'pending' ? (
+                          <Badge id={`hudu-mapping-status-${row.hudu_company_id}`} variant="secondary">
+                            {t('integrations.hudu.mapping.status.pending', { defaultValue: 'Pending' })}
+                          </Badge>
+                        ) : status === 'mapped' ? (
                           <Badge id={`hudu-mapping-status-${row.hudu_company_id}`} variant="success">
                             {t('integrations.hudu.mapping.status.mapped', { defaultValue: 'Mapped' })}
                           </Badge>
@@ -417,6 +526,41 @@ const HuduCompanyMappingManager: React.FC = () => {
                 'Documentation is only surfaced for mapped clients. Map each Hudu company to an AlgaPSA client to enable it.',
             })}
           </p>
+        )}
+
+        {dirtyCount > 0 && (
+          <div id="hudu-mapping-save-bar" className="flex items-center justify-end gap-3 border-t pt-4">
+            <span className="text-sm text-muted-foreground">
+              {t('integrations.hudu.mapping.pendingSummary', {
+                defaultValue: 'Unsaved changes: {{total}}',
+                total: dirtyCount,
+              })}
+            </span>
+            {pendingSelections.size > 0 && (
+              <Button
+                id="hudu-mapping-discard-btn"
+                variant="outline"
+                size="sm"
+                onClick={handleDiscard}
+                disabled={isSaving}
+              >
+                {t('integrations.hudu.mapping.buttons.discard', { defaultValue: 'Discard' })}
+              </Button>
+            )}
+            <Button id="hudu-mapping-save-btn" size="sm" onClick={() => void handleSaveAll()} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  {t('integrations.hudu.mapping.buttons.saving', { defaultValue: 'Saving...' })}
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  {t('integrations.hudu.mapping.buttons.save', { defaultValue: 'Save mappings' })}
+                </>
+              )}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -217,12 +217,21 @@ describe('HuduCompanyMappingManager', () => {
     expect(document.getElementById('hudu-mapping-suggestion-103')).toBeNull();
   });
 
-  it('T051: selecting a client persists immediately and re-renders the row as Mapped', async () => {
+  it('T051: selecting a client only stages the change; Save persists it and the row becomes Mapped', async () => {
     setHuduCompanyMappingMock.mockResolvedValue({ success: true, data: { mapping_id: 'map-new' } });
 
     await renderManager();
 
+    // Dismiss the pre-filled suggestion (row 102) to isolate the manual pick.
+    fireEvent.click(document.getElementById('hudu-mapping-row-action-102')!);
     fireEvent.change(screen.getByTestId('hudu-client-picker-103'), { target: { value: 'client-3' } });
+
+    // Staged only: nothing persisted, row flagged Pending, save bar visible.
+    expect(setHuduCompanyMappingMock).not.toHaveBeenCalled();
+    expect(document.getElementById('hudu-mapping-status-103')?.textContent).toBe('Pending');
+    expect(document.getElementById('hudu-mapping-save-bar')?.textContent).toContain('Unsaved changes');
+
+    fireEvent.click(screen.getByRole('button', { name: /Save mappings/ }));
 
     await waitFor(() => {
       expect(setHuduCompanyMappingMock).toHaveBeenCalledTimes(1);
@@ -237,16 +246,60 @@ describe('HuduCompanyMappingManager', () => {
       expect(document.getElementById('hudu-mapping-status-103')?.textContent).toBe('Mapped');
     });
     expect(document.getElementById('hudu-mapping-count-mapped')?.textContent).toBe('2 mapped');
-    expect(document.getElementById('hudu-mapping-count-unmapped')?.textContent).toBe('0 unmapped');
     expect(clearHuduCompanyMappingMock).not.toHaveBeenCalled();
   });
 
-  it('T051: clearing a mapped row calls clearHuduCompanyMapping and re-renders as Unmapped', async () => {
+  it('T051: Save confirms an untouched suggestion (the one-click human confirmation path)', async () => {
+    setHuduCompanyMappingMock.mockResolvedValue({ success: true, data: { mapping_id: 'map-102' } });
+
+    await renderManager();
+
+    // The suggestion alone makes the save bar appear; Save is the confirmation.
+    expect(document.getElementById('hudu-mapping-save-bar')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Save mappings/ }));
+
+    await waitFor(() => {
+      expect(setHuduCompanyMappingMock).toHaveBeenCalledWith({
+        clientId: 'client-2',
+        huduCompanyId: 102,
+        metadata: { hudu_company_name: 'Globex', id_in_integration: null, url: null },
+      });
+    });
+    await waitFor(() => {
+      expect(document.getElementById('hudu-mapping-status-102')?.textContent).toBe('Mapped');
+    });
+    expect(document.getElementById('hudu-mapping-save-bar')).toBeNull();
+  });
+
+  it('T051: dismissing a suggestion excludes it from Save; revert brings it back', async () => {
+    await renderManager();
+
+    fireEvent.click(document.getElementById('hudu-mapping-row-action-102')!);
+
+    // No dirty rows left: bar gone, picker emptied, row shows Unmapped, hint hidden.
+    expect(document.getElementById('hudu-mapping-save-bar')).toBeNull();
+    expect((screen.getByTestId('hudu-client-picker-102') as HTMLSelectElement).value).toBe('');
+    expect(document.getElementById('hudu-mapping-status-102')?.textContent).toBe('Unmapped');
+    expect(document.getElementById('hudu-mapping-suggestion-102')).toBeNull();
+
+    // The same button now reverts the dismissal.
+    fireEvent.click(document.getElementById('hudu-mapping-row-action-102')!);
+    expect((screen.getByTestId('hudu-client-picker-102') as HTMLSelectElement).value).toBe('client-2');
+    expect(document.getElementById('hudu-mapping-save-bar')).not.toBeNull();
+  });
+
+  it('T051: staging an unmap via the row action and saving clears the mapping', async () => {
     clearHuduCompanyMappingMock.mockResolvedValue({ success: true, data: { cleared: 1 } });
 
     await renderManager();
 
-    fireEvent.change(screen.getByTestId('hudu-client-picker-101'), { target: { value: '' } });
+    fireEvent.click(document.getElementById('hudu-mapping-row-action-102')!); // dismiss suggestion
+    fireEvent.click(document.getElementById('hudu-mapping-row-action-101')!); // stage unmap
+
+    expect(document.getElementById('hudu-mapping-status-101')?.textContent).toBe('Pending');
+    expect(clearHuduCompanyMappingMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Save mappings/ }));
 
     await waitFor(() => {
       expect(clearHuduCompanyMappingMock).toHaveBeenCalledWith({ mappingId: 'map-1' });
@@ -257,7 +310,21 @@ describe('HuduCompanyMappingManager', () => {
     expect(setHuduCompanyMappingMock).not.toHaveBeenCalled();
   });
 
-  it('T051: a one-to-one conflict error surfaces as a destructive toast and the row stays unmapped', async () => {
+  it('T051: Discard reverts staged picks without persisting anything', async () => {
+    await renderManager();
+
+    fireEvent.change(screen.getByTestId('hudu-client-picker-103'), { target: { value: 'client-3' } });
+    expect(document.getElementById('hudu-mapping-status-103')?.textContent).toBe('Pending');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+
+    expect((screen.getByTestId('hudu-client-picker-103') as HTMLSelectElement).value).toBe('');
+    expect(document.getElementById('hudu-mapping-status-103')?.textContent).toBe('Unmapped');
+    expect(setHuduCompanyMappingMock).not.toHaveBeenCalled();
+    expect(clearHuduCompanyMappingMock).not.toHaveBeenCalled();
+  });
+
+  it('T051: a one-to-one conflict error surfaces as a destructive toast and the row stays staged', async () => {
     setHuduCompanyMappingMock.mockResolvedValue({
       success: false,
       error: 'Client is already mapped to a Hudu company.',
@@ -267,6 +334,7 @@ describe('HuduCompanyMappingManager', () => {
     await renderManager();
 
     fireEvent.change(screen.getByTestId('hudu-client-picker-102'), { target: { value: 'client-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save mappings/ }));
 
     await waitFor(() => {
       expect(toastMock).toHaveBeenCalledWith(
@@ -277,7 +345,9 @@ describe('HuduCompanyMappingManager', () => {
         })
       );
     });
-    expect(document.getElementById('hudu-mapping-status-102')?.textContent).toBe('Suggested');
+    // The failed row keeps its staged pick so the user can adjust and retry.
+    expect(document.getElementById('hudu-mapping-status-102')?.textContent).toBe('Pending');
+    expect((screen.getByTestId('hudu-client-picker-102') as HTMLSelectElement).value).toBe('client-1');
     expect(document.getElementById('hudu-mapping-count-mapped')?.textContent).toBe('1 mapped');
   });
 

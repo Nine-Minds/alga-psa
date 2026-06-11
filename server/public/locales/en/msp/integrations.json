@@ -760,7 +760,10 @@
         "selectClient": "Select client",
         "buttons": {
           "refresh": "Refresh Companies",
-          "refreshing": "Refreshing..."
+          "refreshing": "Refreshing...",
+          "save": "Save mappings",
+          "saving": "Saving...",
+          "discard": "Discard"
         },
         "counters": {
           "mapped": "mapped",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Mapped",
           "suggested": "Suggested",
-          "unmapped": "Unmapped"
+          "unmapped": "Unmapped",
+          "pending": "Pending"
         },
         "suggestion": {
           "label": "Suggested",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "Documentation is only surfaced for mapped clients. Map each Hudu company to an AlgaPSA client to enable it.",
         "success": {
-          "refreshed": "Hudu companies refreshed."
+          "refreshed": "Hudu companies refreshed.",
+          "saved": "Mappings saved: {{total}}"
         },
         "errors": {
           "load": "Failed to load Hudu company mappings.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Hudu mapping error"
+        },
+        "pendingSummary": "Unsaved changes: {{total}}",
+        "rowActions": {
+          "unmap": "Unmap",
+          "revert": "Revert change",
+          "dismiss": "Dismiss suggestion"
         }
       },
       "settings": {

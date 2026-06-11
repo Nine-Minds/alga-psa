@@ -121,7 +121,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownCoords, setDropdownCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    listMaxHeight: number;
+  }>({ top: 0, left: 0, width: 0, listMaxHeight: 320 });
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === selectedClientId),
@@ -187,6 +193,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
 
     const buttonRect = triggerRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const margin = 16;
 
     const dropdownWidth = Math.min(400, Math.max(buttonRect.width, 250));
@@ -204,12 +211,25 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       }
     }
 
+    // Search + filter header, and the optional add-new footer, surround the list.
+    const chromeHeight = 125 + (onAddNew ? 49 : 0);
+    const minListHeight = 150;
+    const maxListHeight = 320;
+
+    const spaceBelow = viewportHeight - buttonRect.bottom - 4 - margin;
+    const spaceAbove = buttonRect.top - 4 - margin;
+    const showAbove = spaceBelow < chromeHeight + minListHeight && spaceAbove > spaceBelow;
+    const available = (showAbove ? spaceAbove : spaceBelow) - chromeHeight;
+    const listMaxHeight = Math.max(minListHeight, Math.min(maxListHeight, available));
+
     setDropdownCoords({
-      top: buttonRect.bottom + 4,
+      top: showAbove ? undefined : buttonRect.bottom + 4,
+      bottom: showAbove ? viewportHeight - buttonRect.top + 4 : undefined,
       left,
       width: dropdownWidth,
+      listMaxHeight,
     });
-  }, []);
+  }, [onAddNew]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -333,7 +353,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       <div
         ref={dropdownRef}
         className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
-        style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width, pointerEvents: 'auto' }}
+        style={{
+          top: dropdownCoords.top,
+          bottom: dropdownCoords.bottom,
+          left: dropdownCoords.left,
+          width: dropdownCoords.width,
+          pointerEvents: 'auto',
+        }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
@@ -373,8 +399,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           id={`${id}-listbox`}
           role="listbox"
           aria-label={placeholder}
-          className="max-h-[320px] overflow-y-auto"
-          style={{ overscrollBehavior: 'contain' }}
+          className="overflow-y-auto"
+          style={{ overscrollBehavior: 'contain', maxHeight: dropdownCoords.listMaxHeight }}
           onWheel={(e) => e.stopPropagation()}
         >
           {filteredClients.length === 0 ? (

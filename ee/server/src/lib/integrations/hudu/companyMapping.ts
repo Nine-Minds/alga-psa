@@ -112,6 +112,25 @@ function normalizeName(value: string | null | undefined): string {
     .trim();
 }
 
+const LEGAL_SUFFIXES = new Set([
+  'inc', 'incorporated', 'llc', 'llp', 'ltd', 'limited', 'corp', 'corporation',
+  'co', 'company', 'plc', 'gmbh', 'pty', 'srl',
+]);
+
+/** Drop trailing legal-entity tokens ("Acme Co Ltd" → "acme"), never to empty. */
+function stripLegalSuffixes(normalized: string): string {
+  const tokens = normalized.split(' ');
+  while (tokens.length > 1 && LEGAL_SUFFIXES.has(tokens[tokens.length - 1])) {
+    tokens.pop();
+  }
+  return tokens.join(' ');
+}
+
+function levenshteinSimilarity(a: string, b: string): number {
+  if (a === b) return 1;
+  return 1 - levenshtein(a, b) / Math.max(a.length, b.length);
+}
+
 /** Two-row Levenshtein distance (dependency-free). */
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
@@ -133,14 +152,19 @@ function levenshtein(a: string, b: string): number {
   return prev[b.length];
 }
 
-/** Normalized-Levenshtein name similarity in [0, 1]. */
+/**
+ * Normalized-Levenshtein name similarity in [0, 1]. Scored on both the raw
+ * normalized names and the legal-suffix-stripped names (best wins), so
+ * "Emerald City Ltd" ↔ "Emerald City" scores 1.0 instead of 0.75.
+ */
 export function huduNameSimilarity(a: string | null | undefined, b: string | null | undefined): number {
   const na = normalizeName(a);
   const nb = normalizeName(b);
   if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  const maxLen = Math.max(na.length, nb.length);
-  return 1 - levenshtein(na, nb) / maxLen;
+  return Math.max(
+    levenshteinSimilarity(na, nb),
+    levenshteinSimilarity(stripLegalSuffixes(na), stripLegalSuffixes(nb))
+  );
 }
 
 /**

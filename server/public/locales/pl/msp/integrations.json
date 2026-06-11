@@ -760,7 +760,10 @@
         "selectClient": "Wybierz klienta",
         "buttons": {
           "refresh": "Odśwież firmy",
-          "refreshing": "Odświeżanie..."
+          "refreshing": "Odświeżanie...",
+          "save": "Zapisz mapowania",
+          "saving": "Zapisywanie...",
+          "discard": "Odrzuć"
         },
         "counters": {
           "mapped": "zmapowane",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Zmapowane",
           "suggested": "Sugerowane",
-          "unmapped": "Niezmapowane"
+          "unmapped": "Niezmapowane",
+          "pending": "Oczekujące"
         },
         "suggestion": {
           "label": "Sugerowane",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "Dokumentacja jest wyświetlana tylko dla zmapowanych klientów. Zmapuj każdą firmę Hudu do klienta AlgaPSA, aby ją włączyć.",
         "success": {
-          "refreshed": "Odświeżono firmy Hudu."
+          "refreshed": "Odświeżono firmy Hudu.",
+          "saved": "Zapisano mapowania: {{total}}"
         },
         "errors": {
           "load": "Nie udało się załadować mapowań firm Hudu.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Błąd mapowania Hudu"
+        },
+        "pendingSummary": "Niezapisane zmiany: {{total}}",
+        "rowActions": {
+          "unmap": "Usuń mapowanie",
+          "revert": "Cofnij zmianę",
+          "dismiss": "Odrzuć sugestię"
         }
       },
       "settings": {

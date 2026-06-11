@@ -78,9 +78,10 @@ describe('T042: exact-name then fuzzy-name fallbacks with lower confidence', () 
   });
 
   it('falls back to a fuzzy name match with confidence between the threshold and 0.9', () => {
+    // Misspellings (not legal suffixes, which now score 1.0): 3 edits / 19 chars ≈ 0.842.
     const suggestions = suggestHuduCompanyMappings(
-      [{ id: 3, name: 'Globex Corporation' }],
-      [{ client_id: CLIENT_B, client_name: 'Globex Corporation Inc' }],
+      [{ id: 3, name: 'Vandelay Industries' }],
+      [{ client_id: CLIENT_B, client_name: 'Vandalay Industreis' }],
       []
     );
 
@@ -100,6 +101,21 @@ describe('T042: exact-name then fuzzy-name fallbacks with lower confidence', () 
     );
     // Not an exact string match, so it lands in the fuzzy pass at score 1.0.
     expect(suggestions.get(4)).toMatchObject({ client_id: CLIENT_A, source: 'fuzzy_name', confidence: 1 });
+  });
+
+  it('ignores trailing legal-entity suffixes so "Emerald City Ltd" matches "Emerald City" at 1.0', () => {
+    expect(huduNameSimilarity('Emerald City Ltd', 'Emerald City')).toBe(1);
+    expect(huduNameSimilarity('Acme Co Ltd', 'Acme, Inc.')).toBe(1);
+    // Stripping never lowers a score: here the raw comparison (0.889) still wins
+    // over the stripped one ("exampleco" vs "exampl" = 0.667).
+    expect(huduNameSimilarity('ExampleCo', 'exampl co')).toBeCloseTo(1 - 1 / 9, 4);
+
+    const suggestions = suggestHuduCompanyMappings(
+      [{ id: 6, name: 'Emerald City Ltd' }],
+      [{ client_id: CLIENT_A, client_name: 'Emerald City' }],
+      []
+    );
+    expect(suggestions.get(6)).toMatchObject({ client_id: CLIENT_A, source: 'fuzzy_name', confidence: 1 });
   });
 });
 

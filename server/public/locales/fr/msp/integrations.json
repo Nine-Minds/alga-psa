@@ -760,7 +760,10 @@
         "selectClient": "Sélectionner un client",
         "buttons": {
           "refresh": "Actualiser les entreprises",
-          "refreshing": "Actualisation..."
+          "refreshing": "Actualisation...",
+          "save": "Enregistrer les mappages",
+          "saving": "Enregistrement...",
+          "discard": "Abandonner"
         },
         "counters": {
           "mapped": "mappées",
@@ -776,7 +779,8 @@
         "status": {
           "mapped": "Mappée",
           "suggested": "Suggérée",
-          "unmapped": "Non mappée"
+          "unmapped": "Non mappée",
+          "pending": "En attente"
         },
         "suggestion": {
           "label": "Suggestion",
@@ -792,7 +796,8 @@
         },
         "unmappedHint": "La documentation n'est affichée que pour les clients mappés. Mappez chaque entreprise Hudu à un client AlgaPSA pour l'activer.",
         "success": {
-          "refreshed": "Entreprises Hudu actualisées."
+          "refreshed": "Entreprises Hudu actualisées.",
+          "saved": "Mappages enregistrés : {{total}}"
         },
         "errors": {
           "load": "Échec du chargement des mappages d'entreprises Hudu.",
@@ -805,6 +810,12 @@
         },
         "toasts": {
           "errorTitle": "Erreur de mappage Hudu"
+        },
+        "pendingSummary": "Modifications non enregistrées : {{total}}",
+        "rowActions": {
+          "unmap": "Supprimer le mappage",
+          "revert": "Annuler la modification",
+          "dismiss": "Ignorer la suggestion"
         }
       },
       "settings": {
