@@ -26,7 +26,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
+import { InvoiceSyncBadge, qboInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
@@ -376,7 +376,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <div className="flex items-center gap-2">
               <InvoiceTaxSourceBadge taxSource={taxSource} />
               {!syncHidden && syncStatus && (
-                <InvoiceSyncBadge status={syncStatus} />
+                <InvoiceSyncBadge status={syncStatus} environment={syncStatus.environment} />
               )}
             </div>
           </div>
@@ -497,7 +497,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 asChild
               >
                 <a
-                  href={`https://app.qbo.intuit.com/app/invoice?txnId=${encodeURIComponent(syncStatus.externalId)}`}
+                  href={qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

@@ -290,13 +290,34 @@ export async function finalizeInvoiceWithKnex(
       throw new Error('Invoice is already finalized');
     }
 
+    // Financial-document identity is fixed at finalization: negative-total
+    // invoices become credit notes (CM-numbered), prepayments are tagged so
+    // downstream consumers (export validation, void guards) can rely on it.
+    const handlingKind = classifyInvoiceCreditHandling(invoice);
+    const identityUpdates: Record<string, unknown> = {};
+    if (handlingKind === 'negative_total') {
+      identityUpdates.invoice_type = 'credit_note';
+      const { SharedNumberingService } = await import('@alga-psa/shared/services/numberingService');
+      identityUpdates.invoice_number = await SharedNumberingService.getNextNumber('CREDIT_NOTE', {
+        knex: trx,
+        tenant
+      });
+    } else if (handlingKind === 'prepayment') {
+      identityUpdates.invoice_type = 'prepayment';
+    }
+
     await trx('invoices')
       .where({ invoice_id: invoiceId, tenant: tenant })
       .update({
         status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
-        updated_at: toISODate(Temporal.Now.plainDateISO())
+        updated_at: toISODate(Temporal.Now.plainDateISO()),
+        ...identityUpdates
       });
+
+    if (Object.keys(identityUpdates).length > 0) {
+      invoice = { ...invoice, ...identityUpdates };
+    }
 
     // Record audit log
     // await auditLog(
@@ -995,7 +1016,7 @@ export const hardDeleteInvoice = withAuth(async (
   // Guard: block deletion if invoice is already exported to an accounting system
   const existingMapping = await knex('tenant_external_entity_mappings')
     .where({
-      tenant_id: tenant,
+      tenant: tenant,
       integration_type: 'quickbooks_online',
       alga_entity_type: 'invoice',
       alga_entity_id: invoiceId

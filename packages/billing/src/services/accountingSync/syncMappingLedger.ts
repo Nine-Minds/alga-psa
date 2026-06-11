@@ -10,7 +10,7 @@ const TABLE = 'tenant_external_entity_mappings';
 
 export interface ExternalEntityMappingRow {
   id: string;
-  tenant_id: string;
+  tenant: string;
   integration_type: string;
   alga_entity_type: string;
   alga_entity_id: string;
@@ -37,7 +37,7 @@ export class SyncMappingLedger {
   ): Promise<ExternalEntityMappingRow | undefined> {
     const query = this.knex<ExternalEntityMappingRow>(TABLE)
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         external_entity_id: externalEntityId
@@ -58,7 +58,7 @@ export class SyncMappingLedger {
   ): Promise<ExternalEntityMappingRow | undefined> {
     return this.knex<ExternalEntityMappingRow>(TABLE)
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         alga_entity_id: algaEntityId
@@ -76,7 +76,7 @@ export class SyncMappingLedger {
   }): Promise<ExternalEntityMappingRow> {
     const [row] = await this.knex<ExternalEntityMappingRow>(TABLE)
       .insert({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         integration_type: this.integrationType,
         alga_entity_type: params.algaEntityType,
         alga_entity_id: params.algaEntityId,
@@ -111,14 +111,14 @@ export class SyncMappingLedger {
     }
 
     await this.knex(TABLE)
-      .where({ tenant_id: this.tenantId, id })
+      .where({ tenant: this.tenantId, id })
       .update(update);
   }
 
   /** Counts by sync_status for the health panel. */
   async countByStatus(): Promise<Record<string, number>> {
     const rows = await this.knex(TABLE)
-      .where({ tenant_id: this.tenantId, integration_type: this.integrationType })
+      .where({ tenant: this.tenantId, integration_type: this.integrationType })
       .select('sync_status')
       .count<{ sync_status: string | null; count: string }[]>('* as count')
       .groupBy('sync_status');

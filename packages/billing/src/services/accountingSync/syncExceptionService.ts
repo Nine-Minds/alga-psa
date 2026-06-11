@@ -17,10 +17,28 @@ function dedupeKey(entityType: string, entityId: string): string {
 }
 
 export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
+  private adminRoleIdPromise: Promise<string | null> | null = null;
+
   constructor(
     private readonly knex: Knex,
     private readonly tenantId: string
   ) {}
+
+  /**
+   * The inbox only surfaces tasks assigned to the viewer's user id or role ids,
+   * so exception tasks must carry the tenant's admin role to be visible.
+   */
+  private getAdminRoleId(): Promise<string | null> {
+    if (!this.adminRoleIdPromise) {
+      this.adminRoleIdPromise = this.knex('roles')
+        .where({ tenant: this.tenantId })
+        .whereRaw('LOWER(role_name) = ?', ['admin'])
+        .first<{ role_id: string } | undefined>('role_id')
+        .then((row) => row?.role_id ?? null)
+        .catch(() => null);
+    }
+    return this.adminRoleIdPromise;
+  }
 
   private openTaskQuery(type: SyncExceptionType, entityType: string, entityId: string) {
     return this.knex('workflow_tasks')
@@ -56,6 +74,8 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
       return { created: false };
     }
 
+    const adminRoleId = await this.getAdminRoleId();
+
     await this.knex('workflow_tasks').insert({
       task_id: uuidv4(),
       tenant: this.tenantId,
@@ -66,6 +86,7 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
       description: '',
       status: 'pending',
       priority: 'medium',
+      assigned_roles: adminRoleId ? JSON.stringify([adminRoleId]) : null,
       context_data: JSON.stringify(contextData),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

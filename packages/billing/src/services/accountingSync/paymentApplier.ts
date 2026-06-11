@@ -166,6 +166,19 @@ export async function applyExternalPaymentChange(
   deps: PaymentApplierDeps,
   change: AccountingExternalChange
 ): Promise<void> {
+  // Zero-dollar payments we pushed to link CreditMemo→Invoice echo back through
+  // CDC as ordinary payments — the credit is already reflected on the invoice
+  // via credit_applied, so applying them as AR would double-count.
+  const creditApplicationEcho = await deps.ledger.findByExternalId(
+    'credit_application',
+    change.externalId,
+    deps.targetRealm
+  );
+  if (creditApplicationEcho) {
+    deps.stats.paymentsSkipped += 1;
+    return;
+  }
+
   const existing = await deps.ledger.findByExternalId(
     PAYMENT_MAPPING_ENTITY_TYPE,
     change.externalId,

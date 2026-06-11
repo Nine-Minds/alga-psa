@@ -473,12 +473,19 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       let response: QboInvoice;
 
       if (mapping?.externalInvoiceId) {
-        let syncToken =
-          existingMetadata?.sync_token ??
-          existingMetadata?.syncToken;
-        if (!syncToken) {
+        // Always read the live SyncToken: the stored one is stale whenever QBO
+        // changed out-of-band (which is precisely the drift re-export case) and
+        // QBO rejects updates with stale tokens (error 5010).
+        let syncToken: string | undefined;
+        try {
           const remoteInvoice = await qboClient.read<QboInvoice>(qboEntityType, mapping.externalInvoiceId);
-          syncToken = remoteInvoice?.SyncToken ? String(remoteInvoice.SyncToken) : undefined;
+          syncToken = remoteInvoice?.SyncToken !== undefined ? String(remoteInvoice.SyncToken) : undefined;
+        } catch {
+          // fall back to the stored token below
+        }
+        if (!syncToken) {
+          const stored = existingMetadata?.sync_token ?? existingMetadata?.syncToken;
+          syncToken = stored != null ? String(stored) : undefined;
         }
 
         if (!syncToken) {

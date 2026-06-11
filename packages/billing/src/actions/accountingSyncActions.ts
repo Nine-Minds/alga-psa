@@ -215,6 +215,8 @@ export interface InvoiceSyncStatus {
   docNumber?: string | null;
   lastSyncedAt?: string | null;
   error?: string | null;
+  /** Intuit environment of the connection — drives the View-in-QuickBooks deep link. */
+  environment?: 'sandbox' | 'production';
 }
 
 /** Batched per-invoice sync status for list views and the badge. */
@@ -234,7 +236,7 @@ export const getInvoiceSyncStatuses = withAuth(async (
 
   const [mappings, ops] = await Promise.all([
     knex('tenant_external_entity_mappings')
-      .where({ tenant_id: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
+      .where({ tenant: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
       .whereIn('alga_entity_id', ids)
       .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
     knex('accounting_sync_operations')
@@ -254,15 +256,21 @@ export const getInvoiceSyncStatuses = withAuth(async (
     }
   }
 
+  const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
+  const environment = getQboEnvironment();
+
   const result: Record<string, InvoiceSyncStatus> = {};
   for (const invoiceId of ids) {
     const mapping = mappingByInvoice.get(invoiceId);
     const op = opByInvoice.get(invoiceId);
 
     let state: InvoiceSyncState = 'not_synced';
-    if (op?.status === 'skipped') {
+    if (op?.status === 'skipped' && !mapping) {
+      // A terminal skipped op only matters while the invoice has never been
+      // exported — once a mapping exists, a later export succeeded and the
+      // mapping is the live truth.
       state = 'error';
-    } else if (op) {
+    } else if (op && op.status !== 'skipped') {
       state = 'queued';
     } else if (mapping?.sync_status === MAPPING_SYNC_STATUS.drift) {
       state = 'drift';
@@ -281,7 +289,8 @@ export const getInvoiceSyncStatuses = withAuth(async (
       externalId: mapping?.external_entity_id ?? null,
       docNumber: mapping?.metadata?.doc_number ?? null,
       lastSyncedAt: mapping?.last_synced_at ?? null,
-      error: op?.last_error ?? null
+      error: op?.last_error ?? null,
+      environment
     };
   }
 

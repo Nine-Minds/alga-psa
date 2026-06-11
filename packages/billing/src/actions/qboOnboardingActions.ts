@@ -103,7 +103,7 @@ export const getCustomerMatchCandidates = withAuth(async (
   const existingMappings: Array<{ alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
     await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenant,
+        tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'client',
         external_realm_id: realm
@@ -184,7 +184,7 @@ export const linkClientToQboCustomer = withAuth(async (
   // Reject if external id already linked to a different client
   const existing = await knex('tenant_external_entity_mappings')
     .where({
-      tenant_id: tenant,
+      tenant: tenant,
       integration_type: SYNC_ADAPTER_TYPE,
       alga_entity_type: 'client',
       external_entity_id: input.externalId,
@@ -343,33 +343,38 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   // Fetch invoice ids already mapped in QBO for this realm
   const mappedIds: string[] = await knex('tenant_external_entity_mappings')
     .where({
-      tenant_id: tenant,
+      tenant: tenant,
       integration_type: SYNC_ADAPTER_TYPE,
       alga_entity_type: 'invoice',
       external_realm_id: realm
     })
     .pluck('alga_entity_id');
 
-  const excludeClause = mappedIds.length > 0 ? mappedIds : ['__none__'];
-
   // Finalized Alga invoices not already mapped: status 'sent' or 'paid'
+  const candidateQuery = (status: string) => {
+    const query = knex('invoices')
+      .where({ tenant: tenant, status })
+      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id');
+    if (mappedIds.length > 0) {
+      query.whereNotIn('invoice_id', mappedIds);
+    }
+    return query;
+  };
   const [sentRows, paidRows]: [any[], any[]] = await Promise.all([
-    knex('invoices')
-      .where({ tenant: tenant, status: 'sent' })
-      .whereNotIn('invoice_id', excludeClause)
-      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id'),
-    knex('invoices')
-      .where({ tenant: tenant, status: 'paid' })
-      .whereNotIn('invoice_id', excludeClause)
-      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id')
+    candidateQuery('sent'),
+    candidateQuery('paid')
   ]);
-  const allAlgaInvoices = [...sentRows, ...paidRows];
+  // pg returns bigint columns as strings — coerce before numeric comparison
+  const allAlgaInvoices = [...sentRows, ...paidRows].map((row) => ({
+    ...row,
+    total_amount: Number(row.total_amount)
+  }));
 
   // Client→external customer mappings for consistency check
   const clientMappingRows: Array<{ external_entity_id: string; alga_entity_id: string }> =
     await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenant,
+        tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'client',
         external_realm_id: realm
@@ -417,7 +422,9 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
       syncStatus: 'synced',
       metadata: {
         sync_token: match.externalSyncToken ?? null,
-        exported_total: match.externalTotal,
+        // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
+        // the matcher carries cents internally.
+        exported_total: match.externalTotal / 100,
         doc_number: match.externalDocNumber,
         linked_via: 'onboarding'
       }
@@ -468,7 +475,7 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
   const mappingRows: Array<{ alga_entity_id: string; external_entity_id: string }> =
     await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenant,
+        tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         external_realm_id: realm
@@ -484,7 +491,7 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
   const clientMappingRows: Array<{ alga_entity_id: string; external_entity_id: string }> =
     await knex('tenant_external_entity_mappings')
       .where({
-        tenant_id: tenant,
+        tenant: tenant,
         integration_type: SYNC_ADAPTER_TYPE,
         alga_entity_type: 'client',
         external_realm_id: realm
