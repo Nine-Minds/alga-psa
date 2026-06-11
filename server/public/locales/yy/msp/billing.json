@@ -631,7 +631,8 @@
       "open": "55555",
       "execute": "55555",
       "createBatch": "55555",
-      "creating": "55555"
+      "creating": "55555",
+      "cancelBatch": "55555"
     },
     "states": {
       "loadingBatches": "55555",
@@ -676,7 +677,9 @@
       "loadBatchesError": "55555",
       "loadDetailError": "55555",
       "createError": "55555",
-      "executeError": "55555"
+      "executeError": "55555",
+      "cancelled": "55555",
+      "cancelError": "55555"
     },
     "status": {
       "pending": "55555",

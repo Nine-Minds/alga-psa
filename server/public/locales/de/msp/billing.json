@@ -631,7 +631,8 @@
       "open": "Öffnen",
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
-      "creating": "Erstellen..."
+      "creating": "Erstellen...",
+      "cancelBatch": "Stapel stornieren"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -676,7 +677,9 @@
       "loadBatchesError": "Das Laden der Buchhaltungsexport-Batches ist fehlgeschlagen",
       "loadDetailError": "Batch-Details konnten nicht geladen werden",
       "createError": "Exportstapel konnte nicht erstellt werden",
-      "executeError": "Batch konnte nicht ausgeführt werden"
+      "executeError": "Batch konnte nicht ausgeführt werden",
+      "cancelled": "Stapel storniert",
+      "cancelError": "Batch konnte nicht storniert werden"
     },
     "status": {
       "pending": "Ausstehend",

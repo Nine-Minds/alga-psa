@@ -631,7 +631,8 @@
       "open": "Ouvrir",
       "execute": "Exécuter",
       "createBatch": "Créer un lot",
-      "creating": "Création..."
+      "creating": "Création...",
+      "cancelBatch": "Annuler le lot"
     },
     "states": {
       "loadingBatches": "Chargement des lots...",
@@ -676,7 +677,9 @@
       "loadBatchesError": "Échec du chargement des lots d'exportation comptable",
       "loadDetailError": "Échec du chargement des détails du lot",
       "createError": "Échec de la création du lot d'exportation",
-      "executeError": "Échec de l'exécution du lot"
+      "executeError": "Échec de l'exécution du lot",
+      "cancelled": "Lot annulé",
+      "cancelError": "Échec de l'annulation du lot"
     },
     "status": {
       "pending": "En attente",
