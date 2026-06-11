@@ -111,9 +111,11 @@ export {
   resolveAccountingDriftAccept,
   getInvoiceSyncStatuses,
   getAccountingSyncHealth,
+  setDefaultQboRealm,
 } from './accountingSyncActions';
 export type {
   InvoiceSyncState,
   InvoiceSyncStatus,
   AccountingSyncHealth,
+  AccountingSyncRealmInfo,
 } from './accountingSyncActions';

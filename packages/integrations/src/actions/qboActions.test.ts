@@ -97,7 +97,10 @@ vi.mock('../lib/qbo/qboClientService', () => ({
 import {
   saveQboCredentials,
   getQboConnectionStatus,
-  disconnectQbo
+  disconnectQbo,
+  getQboAccounts,
+  getQboClasses,
+  getQboDepartments
 } from './qboActions';
 
 describe('QBO integration actions', () => {
@@ -298,5 +301,80 @@ describe('QBO integration actions', () => {
     });
     expect(deleteTenantSecretMock).not.toHaveBeenCalled();
     expect(axiosPostMock).not.toHaveBeenCalled();
+  });
+
+  // --- catalog actions: getQboAccounts, getQboClasses, getQboDepartments ---
+
+  it('getQboAccounts: returns only Bank and Other Current Asset accounts', async () => {
+    const credMap = {
+      'realm-111': {
+        accessToken: 'at', refreshToken: 'rt', realmId: 'realm-111',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    };
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
+
+    const queryMock = vi.fn(async () => [
+      { Id: 'acct-1', Name: 'Checking', AccountType: 'Bank' },
+      { Id: 'acct-2', Name: 'Undeposited Funds', AccountType: 'Other Current Asset' },
+      { Id: 'acct-3', Name: 'Accounts Receivable', AccountType: 'Accounts Receivable' },
+      { Id: 'acct-4', Name: 'Retained Earnings', AccountType: 'Equity' }
+    ]);
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboAccounts();
+
+    expect(result).toHaveLength(2);
+    expect(result.map((a) => a.id)).toEqual(['acct-1', 'acct-2']);
+    expect(result.every((a) => ['Bank', 'Other Current Asset'].includes(a.accountType))).toBe(true);
+    expect(result.find((a) => a.accountType === 'Accounts Receivable')).toBeUndefined();
+  });
+
+  it('getQboClasses: returns active classes only', async () => {
+    const credMap = {
+      'realm-222': {
+        accessToken: 'at', refreshToken: 'rt', realmId: 'realm-222',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    };
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
+
+    const queryMock = vi.fn(async () => [
+      { Id: 'cls-1', Name: 'Managed Services', Active: true },
+      { Id: 'cls-2', Name: 'Old Class', Active: false },
+      { Id: 'cls-3', Name: 'Professional Services' } // Active omitted = treated as active
+    ]);
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboClasses();
+
+    expect(result).toHaveLength(2);
+    expect(result.map((c) => c.id)).toEqual(['cls-1', 'cls-3']);
+    expect(result.find((c) => c.id === 'cls-2')).toBeUndefined();
+  });
+
+  it('getQboDepartments: returns all departments from QBO', async () => {
+    const credMap = {
+      'realm-333': {
+        accessToken: 'at', refreshToken: 'rt', realmId: 'realm-333',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    };
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
+
+    const queryMock = vi.fn(async () => [
+      { Id: 'dept-1', Name: 'East Region' },
+      { Id: 'dept-2', Name: 'West Region' }
+    ]);
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboDepartments();
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ id: 'dept-1', name: 'East Region' });
+    expect(result[1]).toEqual({ id: 'dept-2', name: 'West Region' });
   });
 });

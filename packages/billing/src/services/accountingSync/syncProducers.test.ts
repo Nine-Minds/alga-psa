@@ -8,7 +8,11 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
 vi.mock('./accountingSyncSettings', () => ({
   getAccountingSyncSettings: vi.fn(async () => ({
     autoSyncEnabled: true,
-    autoSyncStartDate: null
+    autoSyncStartDate: null,
+    depositAccountRef: null,
+    defaultClassRef: null,
+    defaultDepartmentRef: null,
+    defaultRealm: null
   }))
 }));
 
@@ -19,7 +23,7 @@ vi.mock('./syncOperationsRepository', () => ({
   }))
 }));
 
-import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid } from './syncProducers';
+import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid, enqueueExternalPaymentPush } from './syncProducers';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
@@ -55,7 +59,7 @@ describe('enqueueInvoiceAutoExport', () => {
     vi.clearAllMocks();
     // Reset to default happy-path mocks
     mockGetRealm.mockResolvedValue('realm-1');
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
   });
 
   afterEach(() => {
@@ -74,7 +78,7 @@ describe('enqueueInvoiceAutoExport', () => {
 
   it('does nothing when autoSyncEnabled=false', async () => {
     vi.stubEnv('EDITION', 'ee');
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     await enqueueInvoiceAutoExport(makeKnex(), 't1', 'inv-1');
 
@@ -84,7 +88,7 @@ describe('enqueueInvoiceAutoExport', () => {
   it('does nothing when today is before autoSyncStartDate cutoff', async () => {
     vi.stubEnv('EDITION', 'ee');
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: futureDate });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: futureDate, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     await enqueueInvoiceAutoExport(makeKnex(), 't1', 'inv-1');
 
@@ -111,7 +115,7 @@ describe('enqueueInvoiceAutoExport', () => {
   it('enqueues the invoice when all gates pass (EE + autoSync + past cutoff + realm found)', async () => {
     vi.stubEnv('EDITION', 'ee');
     const pastDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: pastDate });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: pastDate, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     await enqueueInvoiceAutoExport(makeKnex(), 't1', 'inv-42');
 
@@ -173,7 +177,7 @@ describe('enqueueCreditApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRealm.mockResolvedValue('realm-1');
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
   });
 
   afterEach(() => {
@@ -315,7 +319,7 @@ describe('enqueueInvoiceVoid', () => {
   it('does NOT check autoSyncEnabled (always enqueues regardless of toggle)', async () => {
     vi.stubEnv('EDITION', 'ee');
     // autoSyncEnabled=false should NOT stop void from enqueuing
-    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null });
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     await enqueueInvoiceVoid(makeVoidKnex(true), 't1', 'inv-void-5');
 
@@ -332,6 +336,106 @@ describe('enqueueInvoiceVoid', () => {
     mockGetRealm.mockRejectedValue(new Error('realm lookup failed'));
 
     await expect(enqueueInvoiceVoid(makeVoidKnex(), 't1', 'inv-void-6')).resolves.toBeUndefined();
+  });
+});
+
+describe('enqueueExternalPaymentPush', () => {
+  const BASE_PARAMS = {
+    invoiceId: 'inv-push-1',
+    paymentId: 'pay-push-1',
+    amountCents: 10000,
+    provider: 'stripe',
+    referenceNumber: 'ch_stripe_123'
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetRealm.mockResolvedValue('realm-1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('enqueues record_payment when all gates pass (EE + non-qbo provider + realm + mapped invoice)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueExternalPaymentPush(makeVoidKnex(true), 't1', BASE_PARAMS);
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const enqueueFn = (results[results.length - 1].value as any)?.enqueue as ReturnType<typeof vi.fn>;
+    expect(enqueueFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'record_payment',
+        algaEntityType: 'invoice_payment',
+        algaEntityId: 'pay-push-1',
+        adapterType: 'quickbooks_online',
+        payload: expect.objectContaining({
+          invoiceId: 'inv-push-1',
+          amountCents: 10000,
+          referenceNumber: 'ch_stripe_123',
+          provider: 'stripe'
+        })
+      })
+    );
+  });
+
+  it('skips when provider is "quickbooks" (echo guard)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueExternalPaymentPush(makeVoidKnex(true), 't1', {
+      ...BASE_PARAMS,
+      provider: 'quickbooks'
+    });
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('skips when not enterprise edition (CE)', async () => {
+    vi.stubEnv('EDITION', 'community');
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
+
+    await enqueueExternalPaymentPush(makeVoidKnex(true), 't1', BASE_PARAMS);
+
+    expect(mockGetRealm).not.toHaveBeenCalled();
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('skips quietly when invoice has no QBO mapping (pre-go-live)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    // No mapping found for the invoice
+    await enqueueExternalPaymentPush(makeVoidKnex(false), 't1', BASE_PARAMS);
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('swallows errors without throwing (fire-and-forget)', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetRealm.mockRejectedValue(new Error('realm lookup boom'));
+
+    await expect(
+      enqueueExternalPaymentPush(makeVoidKnex(true), 't1', BASE_PARAMS)
+    ).resolves.toBeUndefined();
   });
 });
 

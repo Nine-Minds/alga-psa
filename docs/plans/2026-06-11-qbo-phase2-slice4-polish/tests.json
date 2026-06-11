@@ -1,16 +1,139 @@
 [
-  { "id": "T001", "mode": "automated", "description": "Producer: Stripe success enqueues record_payment only with connected realm + mapped invoice; unmapped → skipped op with stat; CE/disconnected → no-op.", "implemented": false, "featureIds": ["F001"] },
-  { "id": "T002", "mode": "automated", "description": "record_payment payload: customer/invoice refs from mappings, amount, Stripe reference, deposit account from setting with Undeposited Funds fallback.", "implemented": false, "featureIds": ["F002", "F004"] },
-  { "id": "T003", "mode": "automated", "description": "Echo suppression: pushed payment's mapping row makes the subsequent CDC delivery of the same payment a no-op.", "implemented": false, "featureIds": ["F003"] },
-  { "id": "T004", "mode": "automated", "description": "record_payment failure paths file accounting_sync_export_error and retry within the op cap.", "implemented": false, "featureIds": ["F005"] },
-  { "id": "T005", "mode": "automated", "description": "Double-entry guard: a distinct QBO payment arriving for an already-settled invoice files an exception instead of over-applying.", "implemented": false, "featureIds": ["F006"] },
-  { "id": "T006", "mode": "automated", "description": "getQboAccounts/getQboClasses/getQboDepartments: realm scoping, caching, EE/permission gates (catalog-action pattern).", "implemented": false, "featureIds": ["F004", "F007"] },
-  { "id": "T007", "mode": "automated", "description": "Transform class/department matrix: item metadata classId wins, tenant default fills, both omitted cleanly; DepartmentRef from tenant default; CreditMemo parity.", "implemented": false, "featureIds": ["F009", "F010"] },
-  { "id": "T008", "mode": "automated", "description": "Settings: deposit/class/department pickers persist tenant settings; values appear in subsequent transforms.", "implemented": false, "featureIds": ["F008"] },
-  { "id": "T009", "mode": "automated", "description": "default_realm: make-default switches getDefaultQboRealmId result; batch stamping and cycle targeting follow; falls back to first stored realm when unset.", "implemented": false, "featureIds": ["F011"] },
-  { "id": "T010", "mode": "automated", "description": "Realm UI gating: connection list and realm pickers appear only with >1 realm; single-realm rendering unchanged (contract test).", "implemented": false, "featureIds": ["F012", "F013", "F015"] },
-  { "id": "T011", "mode": "automated", "description": "Realm scheduling: connecting a second realm registers its cycle; disconnecting it deregisters only that realm's job and leaves the default realm syncing.", "implemented": false, "featureIds": ["F014"] },
-  { "id": "T012", "mode": "live-smoke", "description": "Sandbox: portal Stripe payment → QBO Payment with Stripe reference in the configured account within one cycle; no echo duplicate on the following cycle.", "implemented": false, "featureIds": ["F002", "F003"] },
-  { "id": "T013", "mode": "live-smoke", "description": "Sandbox: set default class + per-item override → delivered QBO invoice shows the expected ClassRef per line and DepartmentRef on the header.", "implemented": false, "featureIds": ["F008", "F009", "F010"] },
-  { "id": "T014", "mode": "live-smoke", "description": "Sandbox: connect a second company → connection list shows both, make-default switches, a batch routed to the non-default realm delivers there, per-realm health reads correctly.", "implemented": false, "featureIds": ["F011", "F012", "F013", "F014"] }
+  {
+    "id": "T001",
+    "mode": "automated",
+    "description": "Producer: Stripe success enqueues record_payment only with connected realm + mapped invoice; unmapped \u2192 skipped op with stat; CE/disconnected \u2192 no-op.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "mode": "automated",
+    "description": "record_payment payload: customer/invoice refs from mappings, amount, Stripe reference, deposit account from setting with Undeposited Funds fallback.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "mode": "automated",
+    "description": "Echo suppression: pushed payment's mapping row makes the subsequent CDC delivery of the same payment a no-op.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "mode": "automated",
+    "description": "record_payment failure paths file accounting_sync_export_error and retry within the op cap.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "mode": "automated",
+    "description": "Double-entry guard: a distinct QBO payment arriving for an already-settled invoice files an exception instead of over-applying.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "mode": "automated",
+    "description": "getQboAccounts/getQboClasses/getQboDepartments: realm scoping, caching, EE/permission gates (catalog-action pattern).",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "mode": "automated",
+    "description": "Transform class/department matrix: item metadata classId wins, tenant default fills, both omitted cleanly; DepartmentRef from tenant default; CreditMemo parity.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "mode": "automated",
+    "description": "Settings: deposit/class/department pickers persist tenant settings; values appear in subsequent transforms.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "mode": "automated",
+    "description": "default_realm: make-default switches getDefaultQboRealmId result; batch stamping and cycle targeting follow; falls back to first stored realm when unset.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T010",
+    "mode": "automated",
+    "description": "Realm UI gating: connection list and realm pickers appear only with >1 realm; single-realm rendering unchanged (contract test).",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F015"
+    ]
+  },
+  {
+    "id": "T011",
+    "mode": "automated",
+    "description": "Realm scheduling: connecting a second realm registers its cycle; disconnecting it deregisters only that realm's job and leaves the default realm syncing.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T012",
+    "mode": "live-smoke",
+    "description": "Sandbox: portal Stripe payment \u2192 QBO Payment with Stripe reference in the configured account within one cycle; no echo duplicate on the following cycle.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T013",
+    "mode": "live-smoke",
+    "description": "Sandbox: set default class + per-item override \u2192 delivered QBO invoice shows the expected ClassRef per line and DepartmentRef on the header.",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "mode": "live-smoke",
+    "description": "Sandbox: connect a second company \u2192 connection list shows both, make-default switches, a batch routed to the non-default realm delivers there, per-realm health reads correctly.",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014"
+    ]
+  }
 ]

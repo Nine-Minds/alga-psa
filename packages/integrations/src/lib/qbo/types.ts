@@ -99,6 +99,8 @@ export interface QboSalesItemLineDetail {
   TaxCodeRef?: QboRef; // Maps from Alga tax_region via lookup
   ServiceDate?: string; // YYYY-MM-DD format, potentially from billing_period
   TaxInclusiveAmt?: boolean;
+  /** Per-line class reference (from item mapping metadata.classId or tenant default). */
+  ClassRef?: QboRef;
   // Add other relevant fields
 }
 
@@ -150,6 +152,8 @@ export interface QboInvoice {
   MetaData?: QboMetaData;
   CurrencyRef?: QboRef;
   ExchangeRate?: number;
+  /** Invoice-level department reference from tenant default setting. */
+  DepartmentRef?: QboRef;
   // Add other relevant fields as needed
 }
 

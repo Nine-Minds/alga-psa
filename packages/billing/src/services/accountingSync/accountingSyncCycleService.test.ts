@@ -43,7 +43,14 @@ vi.mock('./driftDetector', () => ({
 }));
 
 vi.mock('./accountingSyncSettings', () => ({
-  getAccountingSyncSettings: vi.fn(async () => ({ autoSyncEnabled: true, autoSyncStartDate: null }))
+  getAccountingSyncSettings: vi.fn(async () => ({
+    autoSyncEnabled: true,
+    autoSyncStartDate: null,
+    depositAccountRef: null,
+    defaultClassRef: null,
+    defaultDepartmentRef: null,
+    defaultRealm: null
+  }))
 }));
 
 vi.mock('./syncExceptionService', () => ({
@@ -84,6 +91,10 @@ vi.mock('./invoiceVoidApplier', () => ({
   drainVoidInvoiceOps: vi.fn(async () => undefined)
 }));
 
+vi.mock('./paymentPushApplier', () => ({
+  drainRecordPaymentOps: vi.fn(async () => undefined)
+}));
+
 import { runAccountingSyncCycle, CURSOR_OVERLAP_MS } from './accountingSyncCycleService';
 import { SyncCycleRepository } from './syncCycleRepository';
 import { SyncOperationsRepository } from './syncOperationsRepository';
@@ -97,6 +108,7 @@ import { AccountingExportService } from '../accountingExportService';
 import { AppError } from '@alga-psa/core';
 import { drainApplyCreditOps } from './creditApplicationApplier';
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
+import { drainRecordPaymentOps } from './paymentPushApplier';
 import { SyncMappingLedger } from './syncMappingLedger';
 
 const TENANT = 'tenant-abc';
@@ -141,7 +153,7 @@ describe('runAccountingSyncCycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset all module-level mocks to defaults
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
     vi.mocked(resolveTokenThresholdToAnnounce).mockResolvedValue(null);
   });
 
@@ -160,7 +172,7 @@ describe('runAccountingSyncCycle', () => {
   });
 
   it('skips when autoSyncEnabled=false and force not set', async () => {
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -175,7 +187,7 @@ describe('runAccountingSyncCycle', () => {
   });
 
   it('runs when autoSyncEnabled=false but force=true', async () => {
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -630,6 +642,37 @@ describe('runAccountingSyncCycle', () => {
 
   it('void-invoice drain error is swallowed and cycle still succeeds', async () => {
     vi.mocked(drainVoidInvoiceOps).mockRejectedValueOnce(new Error('void drain exploded'));
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(result.status).toBe('succeeded');
+  });
+
+  it('record_payment drain: drainRecordPaymentOps is called each cycle', async () => {
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(vi.mocked(drainRecordPaymentOps)).toHaveBeenCalled();
+    expect(result.status).toBe('succeeded');
+  });
+
+  it('record_payment drain error is swallowed and cycle still succeeds', async () => {
+    vi.mocked(drainRecordPaymentOps).mockRejectedValueOnce(new Error('payment push drain exploded'));
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,

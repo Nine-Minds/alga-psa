@@ -4,7 +4,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('./recordExternalPayment', () => ({
   recordExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'pay-1', paymentRecorded: true })),
   reverseExternalPayment: vi.fn(async () => ({ success: true, paymentId: 'rev-1', paymentRecorded: true })),
-  computeBalanceDue: vi.fn()
+  computeBalanceDue: vi.fn(
+    ({ totalAmount, creditApplied, totalPaid }: { totalAmount: number; creditApplied: number; totalPaid: number }) =>
+      totalAmount - creditApplied - totalPaid
+  )
 }));
 
 import { applyExternalPaymentChange } from './paymentApplier';
@@ -38,9 +41,18 @@ function makeFakeExceptions() {
   };
 }
 
-/** knex.transaction that immediately calls the callback with itself */
-function makeFakeKnex() {
-  const trx: any = { transaction: vi.fn(async (cb: any) => cb(trx)) };
+/** knex.transaction that immediately calls the callback with itself.
+ *  Also handles table queries — defaults to returning a 'sent' (non-settled) invoice
+ *  so the double-entry guard passes through in normal tests.
+ */
+function makeFakeKnex(invoiceRow: any = { status: 'sent', total_amount: 20000, credit_applied: 0 }) {
+  const first = vi.fn(async () => invoiceRow);
+  const select = vi.fn(() => ({ first }));
+  const where = vi.fn(() => ({ select, first }));
+  const trx: any = Object.assign(vi.fn(() => ({ where })), {
+    transaction: vi.fn(async (cb: any) => cb(trx)),
+    fn: { now: vi.fn() }
+  });
   return trx;
 }
 
@@ -350,5 +362,112 @@ describe('paymentApplier', () => {
     expect(insertCall.metadata.sync_token).toBe('7');
     expect(Array.isArray(insertCall.metadata.allocations)).toBe(true);
     expect(insertCall.metadata.allocations[0].amountCents).toBe(20000); // 200.0 * 100
+  });
+});
+
+// ── Double-entry / over-application guard (§7) ──────────────────────────────
+
+/**
+ * Build a fake knex that answers the invoices query (for the over-application guard)
+ * AND supports knex.transaction (used by the happy path).
+ */
+function makeKnexWithInvoice(invoiceRow: any): any {
+  const first = vi.fn(async () => invoiceRow);
+  const select = vi.fn(() => ({ first }));
+  const where = vi.fn(() => ({ select, first }));
+  const table = vi.fn(() => ({ where }));
+  const trx: any = Object.assign(table, {
+    transaction: vi.fn(async (cb: any) => cb(trx)),
+    fn: { now: vi.fn() }
+  });
+  return trx;
+}
+
+describe('paymentApplier — over-application guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(recordExternalPayment).mockResolvedValue({
+      success: true,
+      paymentId: 'pay-1',
+      paymentRecorded: true
+    });
+  });
+
+  it('NEW payment targeting a fully-settled (status=paid) invoice → exception + nothing applied', async () => {
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+    const settledInvoice = { status: 'paid', total_amount: 20000, credit_applied: 0 };
+
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // payment not in ledger (NEW)
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice(settledInvoice),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        context: expect.objectContaining({ reason: 'over_application' })
+      })
+    );
+    expect(stats.paymentsSkipped).toBe(1);
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
+  it('NEW payment targeting a partially-paid invoice → applies normally', async () => {
+    const invoiceMapping = {
+      id: 'imap-1',
+      alga_entity_id: 'alga-inv-1',
+      external_entity_id: 'inv-ext-001',
+      sync_status: 'synced',
+      metadata: {}
+    };
+    const partialInvoice = { status: 'partially_applied', total_amount: 50000, credit_applied: 0 };
+
+    const ledger = makeFakeLedger(null);
+    ledger.findByExternalId
+      .mockResolvedValueOnce(null)          // payment not in ledger (NEW)
+      .mockResolvedValueOnce(invoiceMapping); // invoice mapping found
+
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeKnexWithInvoice(partialInvoice),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).toHaveBeenCalled();
+    expect(stats.paymentsApplied).toBe(1);
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
   });
 });

@@ -5,11 +5,13 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getStoredQboCredentialsMap, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import {
   getAccountingSyncSettings,
   updateAccountingSyncSettings,
-  type AccountingSyncSettings
+  resolveDefaultRealm,
+  type AccountingSyncSettings,
+  type QboRef
 } from '../services/accountingSync/accountingSyncSettings';
 import { runAccountingSyncCycle, type RunCycleResult } from '../services/accountingSync/accountingSyncCycleService';
 import { SyncOperationsRepository } from '../services/accountingSync/syncOperationsRepository';
@@ -68,7 +70,11 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
   const { knex } = await createTenantKnex();
   return updateAccountingSyncSettings(knex, tenant, {
     ...(patch.autoSyncEnabled !== undefined ? { autoSyncEnabled: Boolean(patch.autoSyncEnabled) } : {}),
-    ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {})
+    ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {}),
+    ...(patch.depositAccountRef !== undefined ? { depositAccountRef: patch.depositAccountRef } : {}),
+    ...(patch.defaultClassRef !== undefined ? { defaultClassRef: patch.defaultClassRef } : {}),
+    ...(patch.defaultDepartmentRef !== undefined ? { defaultDepartmentRef: patch.defaultDepartmentRef } : {}),
+    ...(patch.defaultRealm !== undefined ? { defaultRealm: patch.defaultRealm } : {})
   });
 });
 
@@ -81,7 +87,7 @@ export const runAccountingSyncNow = withAuth(async (
   await checkBillingUpdateAccess(user);
   const { knex } = await createTenantKnex();
 
-  const realm = await getDefaultQboRealmId(tenant);
+  const realm = await resolveDefaultRealm(knex, tenant);
   if (!realm) {
     return { ran: false, status: 'skipped', error: 'No QuickBooks company is connected.' };
   }
@@ -115,7 +121,7 @@ export const queueInvoiceSync = withAuth(async (
   await checkBillingUpdateAccess(user);
   const { knex } = await createTenantKnex();
 
-  const realm = await getDefaultQboRealmId(tenant);
+  const realm = await resolveDefaultRealm(knex, tenant);
   if (!realm) {
     return { queued: false, error: 'No QuickBooks company is connected.' };
   }
@@ -142,7 +148,7 @@ export const resolveAccountingDriftReExport = withAuth(async (
   await checkBillingUpdateAccess(user);
   const { knex } = await createTenantKnex();
 
-  const realm = await getDefaultQboRealmId(tenant);
+  const realm = await resolveDefaultRealm(knex, tenant);
   if (!realm) {
     return { queued: false, error: 'No QuickBooks company is connected.' };
   }
@@ -282,6 +288,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
   return result;
 });
 
+export interface AccountingSyncRealmInfo {
+  realmId: string;
+  isDefault: boolean;
+}
+
 export interface AccountingSyncHealth {
   connected: boolean;
   settings: AccountingSyncSettings;
@@ -291,6 +302,8 @@ export interface AccountingSyncHealth {
   driftCount: number;
   openExceptions: number;
   refreshTokenExpiresAt: string | null;
+  /** All connected realms. Length > 1 means the multi-realm UX should be shown. */
+  realms: AccountingSyncRealmInfo[];
 }
 
 /** Health panel data for the integration settings page. */
@@ -303,7 +316,18 @@ export const getAccountingSyncHealth = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const settings = await getAccountingSyncSettings(knex, tenant);
-  const realm = await getDefaultQboRealmId(tenant).catch(() => null);
+  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
+  const credentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
+
+  const realmIds = Object.keys(credentials);
+  const defaultRealm = settings.defaultRealm && realmIds.includes(settings.defaultRealm)
+    ? settings.defaultRealm
+    : (realm ?? realmIds[0] ?? null);
+
+  const realms: AccountingSyncRealmInfo[] = realmIds.map((r) => ({
+    realmId: r,
+    isDefault: r === defaultRealm
+  }));
 
   if (!realm) {
     return {
@@ -314,17 +338,17 @@ export const getAccountingSyncHealth = withAuth(async (
       erroredOps: 0,
       driftCount: 0,
       openExceptions: 0,
-      refreshTokenExpiresAt: null
+      refreshTokenExpiresAt: null,
+      realms
     };
   }
 
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
-  const [lastCycle, opCounts, statusCounts, openExceptions, credentials] = await Promise.all([
+  const [lastCycle, opCounts, statusCounts, openExceptions] = await Promise.all([
     new SyncCycleRepository(knex).getLatestCycle(tenant, SYNC_ADAPTER_TYPE, realm),
     new SyncOperationsRepository(knex).countByStatus(tenant, SYNC_ADAPTER_TYPE),
     ledger.countByStatus(),
-    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
-    getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>))
+    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen()
   ]);
 
   return {
@@ -336,6 +360,34 @@ export const getAccountingSyncHealth = withAuth(async (
     driftCount:
       (statusCounts[MAPPING_SYNC_STATUS.drift] ?? 0) + (statusCounts[MAPPING_SYNC_STATUS.externalVoided] ?? 0),
     openExceptions,
-    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null
+    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
+    realms
   };
+});
+
+/**
+ * Set the default QBO realm for this tenant.
+ * Validates that the realm exists in the stored credentials map before saving.
+ */
+export const setDefaultQboRealm = withAuth(async (
+  user,
+  { tenant },
+  realmId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    assertEnterpriseEdition();
+    await checkBillingUpdateAccess(user);
+
+    const credentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
+    if (!(realmId in credentials)) {
+      return { success: false, error: `Realm ${realmId} is not a connected QuickBooks company for this tenant.` };
+    }
+
+    const { knex } = await createTenantKnex();
+    await updateAccountingSyncSettings(knex, tenant, { defaultRealm: realmId });
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+    return { success: false, error: message };
+  }
 });

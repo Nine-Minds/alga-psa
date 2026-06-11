@@ -15,7 +15,8 @@ import {
   createAccountingExportBatch,
   executeAccountingExportBatch,
   getAccountingExportBatch,
-  listAccountingExportBatches
+  listAccountingExportBatches,
+  getAccountingSyncHealth
 } from '@alga-psa/billing/actions';
 
 type AccountingExportStatus =
@@ -126,6 +127,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [clientSearch, setClientSearch] = useState<string>('');
   const [invoiceStatuses, setInvoiceStatuses] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [targetRealm, setTargetRealm] = useState<string>('');
+  const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
 
   const loadBatches = useCallback(async () => {
     setLoading(true);
@@ -168,6 +171,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   }, [t]);
 
+  // Load available realms once on mount for multi-realm picker in the create dialog
+  useEffect(() => {
+    getAccountingSyncHealth()
+      .then((health) => {
+        if (health.realms.length > 1) {
+          setAvailableRealms(health.realms);
+          const defaultRealm = health.realms.find((r) => r.isDefault);
+          if (defaultRealm) {
+            setTargetRealm(defaultRealm.realmId);
+          }
+        }
+      })
+      .catch(() => {
+        // Not EE or no permission — realm picker stays hidden
+      });
+  }, []);
+
   useEffect(() => {
     void loadBatches();
   }, [loadBatches]);
@@ -204,7 +224,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
         adapter_type: adapterType,
         export_type: 'invoice',
         filters,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        ...(targetRealm ? { target_realm: targetRealm } : {})
       });
       if (isActionPermissionError(batchResult)) {
         handleError(batchResult.permissionError);
@@ -376,6 +397,28 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 }))}
               />
             </div>
+
+            {availableRealms.length > 1 && (
+              <div className="space-y-2" id="accounting-export-realm-picker">
+                <Label htmlFor="accounting-export-realm">
+                  {t('accountingExports.createDialog.fields.realm', { defaultValue: 'Target Company (Realm)' })}
+                </Label>
+                <CustomSelect
+                  id="accounting-export-realm"
+                  value={targetRealm}
+                  onValueChange={(value) => setTargetRealm(value)}
+                  options={availableRealms.map((r) => ({
+                    value: r.realmId,
+                    label: r.isDefault
+                      ? t('accountingExports.createDialog.defaultRealmLabel', {
+                          realmId: r.realmId,
+                          defaultValue: `${r.realmId} (default)`,
+                        })
+                      : r.realmId,
+                  }))}
+                />
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

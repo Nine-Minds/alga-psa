@@ -4,6 +4,9 @@
 
 export {
   getQboItems,
+  getQboAccounts,
+  getQboClasses,
+  getQboDepartments,
   getQboConnectionStatus,
   saveQboCredentials,
   disconnectQbo,
@@ -18,7 +21,10 @@ export {
   type QboItem,
   type QboTaxCode,
   type QboTerm,
-  type QboCustomer
+  type QboCustomer,
+  type QboAccount,
+  type QboClass,
+  type QboDepartment
 } from './qboActions';
 export {
   getCalendarProviders,

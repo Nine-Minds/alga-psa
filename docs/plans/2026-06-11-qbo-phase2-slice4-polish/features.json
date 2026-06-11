@@ -1,18 +1,137 @@
 [
-  { "id": "F001", "description": "Producer: Stripe success path in recordExternalPayment enqueues record_payment when a realm is connected and the invoice is mapped; unmapped invoice → skipped with stat, not exception.", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F002", "description": "record_payment op execution: QBO Payment with CustomerRef from client mapping, Line linking the mapped invoice, PaymentRefNum = Stripe reference, DepositToAccountRef from tenant setting (default Undeposited Funds resolved at delivery).", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F003", "description": "Payment mapping row written at push time so the next CDC poll treats the pushed payment as already-applied (echo suppression).", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F004", "description": "getQboAccounts server action (deposit-eligible accounts, catalog pattern) + deposit-account picker in QBO settings.", "implemented": false, "prdRefs": ["5.1", "6"] },
-  { "id": "F005", "description": "record_payment failures (invoice deleted in QBO, invalid account) file accounting_sync_export_error exceptions via the slice-1 framework.", "implemented": false, "prdRefs": ["5.1"] },
-  { "id": "F006", "description": "Double-entry guard verified: a QBO-side manual duplicate of a pushed payment surfaces as an exception on the already-settled invoice rather than double-applying.", "implemented": false, "prdRefs": ["7"] },
-  { "id": "F007", "description": "getQboClasses and getQboDepartments server actions (catalog pattern, realm-scoped, cached).", "implemented": false, "prdRefs": ["5.2", "6"] },
-  { "id": "F008", "description": "Tenant default class + department settings with pickers in QBO settings.", "implemented": false, "prdRefs": ["5.2", "6"] },
-  { "id": "F009", "description": "Item mapping metadata supports classId; mapping dialog documents it; items tab renders a class column when present.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F010", "description": "Invoice transform emits per-line SalesItemLineDetail.ClassRef (item metadata → tenant default → omit) and header DepartmentRef (tenant default → omit); CreditMemo transform mirrors it.", "implemented": false, "prdRefs": ["5.2"] },
-  { "id": "F011", "description": "default_realm tenant setting consumed by getDefaultQboRealmId (explicit default replaces first-stored-key ordering); make-default action in settings.", "implemented": false, "prdRefs": ["5.3", "6"] },
-  { "id": "F012", "description": "Settings connection list renders one row per connected realm (company name, status, last cycle) replacing the single-connection card when realm count > 1.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F013", "description": "Realm picker in the batch creation dialog and the slice-3 wizard, shown only when more than one realm is connected.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F014", "description": "Cycle scheduling enumerates realms: connect registers that realm's cycle, disconnect deregisters only that realm; per-realm cursors/health already from slice 1.", "implemented": false, "prdRefs": ["5.3", "7"] },
-  { "id": "F015", "description": "Realm-scoped surfaces (badge aggregation, health panel, mapping tabs) consistently read the selected/default realm; single-realm tenants see no UI change.", "implemented": false, "prdRefs": ["5.3"] },
-  { "id": "F016", "description": "i18n: deposit/class/department pickers, connection list, realm pickers in en + translated locales; pseudo-locales regenerated.", "implemented": false, "prdRefs": ["5.1", "5.2", "5.3"] }
+  {
+    "id": "F001",
+    "description": "Producer: Stripe success path in recordExternalPayment enqueues record_payment when a realm is connected and the invoice is mapped; unmapped invoice \u2192 skipped with stat, not exception.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "record_payment op execution: QBO Payment with CustomerRef from client mapping, Line linking the mapped invoice, PaymentRefNum = Stripe reference, DepositToAccountRef from tenant setting (default Undeposited Funds resolved at delivery).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Payment mapping row written at push time so the next CDC poll treats the pushed payment as already-applied (echo suppression).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "getQboAccounts server action (deposit-eligible accounts, catalog pattern) + deposit-account picker in QBO settings.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "record_payment failures (invoice deleted in QBO, invalid account) file accounting_sync_export_error exceptions via the slice-1 framework.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Double-entry guard verified: a QBO-side manual duplicate of a pushed payment surfaces as an exception on the already-settled invoice rather than double-applying.",
+    "implemented": true,
+    "prdRefs": [
+      "7"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "getQboClasses and getQboDepartments server actions (catalog pattern, realm-scoped, cached).",
+    "implemented": true,
+    "prdRefs": [
+      "5.2",
+      "6"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Tenant default class + department settings with pickers in QBO settings.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2",
+      "6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Item mapping metadata supports classId; mapping dialog documents it; items tab renders a class column when present.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Invoice transform emits per-line SalesItemLineDetail.ClassRef (item metadata \u2192 tenant default \u2192 omit) and header DepartmentRef (tenant default \u2192 omit); CreditMemo transform mirrors it.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "default_realm tenant setting consumed by getDefaultQboRealmId (explicit default replaces first-stored-key ordering); make-default action in settings.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3",
+      "6"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Settings connection list renders one row per connected realm (company name, status, last cycle) replacing the single-connection card when realm count > 1.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Realm picker in the batch creation dialog and the slice-3 wizard, shown only when more than one realm is connected.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Cycle scheduling enumerates realms: connect registers that realm's cycle, disconnect deregisters only that realm; per-realm cursors/health already from slice 1.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3",
+      "7"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Realm-scoped surfaces (badge aggregation, health panel, mapping tabs) consistently read the selected/default realm; single-realm tenants see no UI change.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "i18n: deposit/class/department pickers, connection list, realm pickers in en + translated locales; pseudo-locales regenerated.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.2",
+      "5.3"
+    ]
+  }
 ]

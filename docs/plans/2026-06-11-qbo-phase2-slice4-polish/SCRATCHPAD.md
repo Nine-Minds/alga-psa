@@ -37,3 +37,30 @@
   settled invoice — exception, never auto-reversal.
 - Disconnecting one realm of several must not deregister the other realm's
   cycle (singleton keys are per tenant×realm).
+
+## Implementation notes (built 2026-06-11)
+
+- Payment push producer lives INSIDE recordExternalPayment's success path
+  with a provider !== 'quickbooks' echo guard, so any future provider pushes
+  automatically; reverseExternalPayment pushes nothing (refunds out of scope).
+- DepositToAccountRef omitted when unconfigured — QBO defaults to Undeposited
+  Funds natively (no account lookup needed). PaymentRefNum truncated to QBO's
+  21-char limit.
+- Echo suppression verified end-to-end: push stores String(response.SyncToken)
+  in the payment mapping; the CDC change for the same payment carries the same
+  token → inbound applier no-ops.
+- Double-entry guard: NEW external payments against fully-settled invoices
+  file an accounting_sync_unmapped_payment exception with reason
+  'over_application' and apply nothing; partial invoices accept normally.
+- Realm UX landed in QboSyncHealthPanel (realm list + make-default via
+  AccountingSyncHealth.realms + setDefaultQboRealm) instead of the
+  integrations connection card — package-direction constraint. Batch dialog
+  realm picker appears only with >1 realm. Wizard intentionally runs against
+  the default realm (resolveDefaultRealm inside the onboarding actions).
+- resolveDefaultRealm (settings.defaultRealm validated against the credential
+  map, else first-stored-key) adopted by billing call sites; syncProducers'
+  three getDefaultQboRealmId calls left as a follow-up TODO (file ownership
+  collision during parallel build) — behavior identical until a tenant sets a
+  non-first default realm AND relies on producer enqueue realm stamping.
+- Settings-dir contract suites (Microsoft/Xero/MspSso) have 13 pre-existing,
+  shuffle-sensitive failures — identical on a clean tree (stash-verified).

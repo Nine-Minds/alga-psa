@@ -25,6 +25,7 @@ import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapt
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
 
 type DbInvoice = {
   invoice_id: string;
@@ -153,6 +154,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         adapterType === QuickBooksOnlineAdapter.TYPE ? this.companyAdapter : null
     });
 
+    // Read tenant sync settings once per transform for class/department defaults
+    const syncSettings = await getAccountingSyncSettings(knex, tenantId).catch(() => null);
+    const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
+    const tenantDefaultDepartmentRef = syncSettings?.defaultDepartmentRef ?? null;
+
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
@@ -272,6 +278,18 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           }
         }
 
+        // ClassRef: per-item mapping metadata.classId takes precedence over tenant default
+        const serviceMeta = serviceMapping.metadata as Record<string, any> | null | undefined;
+        const itemClassId: string | null =
+          typeof serviceMeta?.classId === 'string' && serviceMeta.classId
+            ? serviceMeta.classId
+            : null;
+        if (itemClassId) {
+          salesDetail.ClassRef = { value: itemClassId };
+        } else if (tenantDefaultClassRef) {
+          salesDetail.ClassRef = { value: tenantDefaultClassRef.value };
+        }
+
         // Handle tax based on delegation mode
         const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
 
@@ -344,6 +362,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       if (invoice.po_number) {
         qboInvoice.PrivateNote = buildQboPrivateNoteForPurchaseOrder(invoice.po_number);
+      }
+
+      // DepartmentRef: tenant default at the invoice header level
+      if (tenantDefaultDepartmentRef) {
+        qboInvoice.DepartmentRef = { value: tenantDefaultDepartmentRef.value };
       }
 
       if (clientRow?.payment_terms) {

@@ -155,6 +155,9 @@ const itemCache = new Map<string, CacheEntry<QboItem[]>>();
 const taxCodeCache = new Map<string, CacheEntry<QboTaxCode[]>>();
 const termCache = new Map<string, CacheEntry<QboTerm[]>>();
 const customerCache = new Map<string, CacheEntry<QboCustomer[]>>();
+const accountCache = new Map<string, CacheEntry<QboAccount[]>>();
+const classCache = new Map<string, CacheEntry<QboClass[]>>();
+const departmentCache = new Map<string, CacheEntry<QboDepartment[]>>();
 
 function clearCacheEntriesForTenant<T>(
   cache: Map<string, CacheEntry<T>>,
@@ -173,6 +176,9 @@ function clearAllCatalogCachesForTenant(tenantId: string): void {
   clearCacheEntriesForTenant(taxCodeCache, tenantId);
   clearCacheEntriesForTenant(termCache, tenantId);
   clearCacheEntriesForTenant(customerCache, tenantId);
+  clearCacheEntriesForTenant(accountCache, tenantId);
+  clearCacheEntriesForTenant(classCache, tenantId);
+  clearCacheEntriesForTenant(departmentCache, tenantId);
 }
 
 export async function resetQboCatalogCacheForTenant(tenantId: string): Promise<void> {
@@ -378,7 +384,208 @@ export interface QboCustomer { // Exporting for use in components
   active: boolean; // QBO Customer.Active
 }
 
+export interface QboAccount { // Exporting for use in components
+  id: string; // QBO Account.Id
+  name: string; // QBO Account.Name
+  accountType: string; // QBO Account.AccountType
+}
+
+export interface QboClass { // Exporting for use in components
+  id: string; // QBO Class.Id
+  name: string; // QBO Class.Name
+}
+
+export interface QboDepartment { // Exporting for use in components
+  id: string; // QBO Department.Id
+  name: string; // QBO Department.Name
+}
+
+type QboAccountRow = {
+  Id?: string;
+  id?: string;
+  Name?: string;
+  name?: string;
+  AccountType?: string;
+  accountType?: string;
+};
+
+type QboClassRow = {
+  Id?: string;
+  id?: string;
+  Name?: string;
+  name?: string;
+  Active?: boolean;
+};
+
+type QboDepartmentRow = {
+  Id?: string;
+  id?: string;
+  Name?: string;
+  name?: string;
+};
+
+const DEPOSIT_ACCOUNT_TYPES = new Set(['Bank', 'Other Current Asset']);
+
+function normalizeAccountRow(row: QboAccountRow): QboAccount {
+  return {
+    id: row.Id ?? row.id ?? '',
+    name: row.Name ?? row.name ?? '',
+    accountType: row.AccountType ?? row.accountType ?? ''
+  };
+}
+
+function normalizeClassRow(row: QboClassRow): QboClass {
+  return {
+    id: row.Id ?? row.id ?? '',
+    name: row.Name ?? row.name ?? ''
+  };
+}
+
+function normalizeDepartmentRow(row: QboDepartmentRow): QboDepartment {
+  return {
+    id: row.Id ?? row.id ?? '',
+    name: row.Name ?? row.name ?? ''
+  };
+}
+
 // --- Server Actions ---
+
+/**
+ * Fetches QBO Accounts filtered to valid payment deposit targets:
+ * AccountType in ('Bank', 'Other Current Asset').
+ * Mirrors the getQboItems cache/realm-priority/EE+read-gate pattern.
+ */
+export const getQboAccounts = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboAccount[]> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const targetRealm = options.realmId ?? null;
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'accounts');
+  const cached = getCachedValue(accountCache, cacheKey);
+  if (cached) {
+    return [...cached];
+  }
+
+  const credentials = await getTenantCredentialMap(tenant);
+  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds.length === 0) {
+    logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
+    return [];
+  }
+
+  for (const realmId of candidateRealmIds) {
+    try {
+      logger.debug('Fetching QBO accounts', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
+      const rows = await qboClient.query<QboAccountRow>('SELECT Id, Name, AccountType FROM Account');
+      const filtered = rows
+        .map(normalizeAccountRow)
+        .filter((a) => DEPOSIT_ACCOUNT_TYPES.has(a.accountType));
+      setCachedValue(accountCache, buildCacheKey(tenant, realmId, 'accounts'), filtered);
+      return [...filtered];
+    } catch (error) {
+      logger.warn('Failed to fetch QBO accounts', { tenantId: tenant, realmId, error });
+      continue;
+    }
+  }
+
+  logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
+  return [];
+});
+
+/**
+ * Fetches QBO Classes (active only) for use in per-line ClassRef assignment.
+ * Mirrors the getQboItems cache/realm-priority/EE+read-gate pattern.
+ */
+export const getQboClasses = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboClass[]> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const targetRealm = options.realmId ?? null;
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'classes');
+  const cached = getCachedValue(classCache, cacheKey);
+  if (cached) {
+    return [...cached];
+  }
+
+  const credentials = await getTenantCredentialMap(tenant);
+  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds.length === 0) {
+    logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
+    return [];
+  }
+
+  for (const realmId of candidateRealmIds) {
+    try {
+      logger.debug('Fetching QBO classes', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
+      const rows = await qboClient.query<QboClassRow>('SELECT Id, Name FROM Class');
+      const mapped = rows
+        .filter((r) => r.Active !== false)
+        .map(normalizeClassRow);
+      setCachedValue(classCache, buildCacheKey(tenant, realmId, 'classes'), mapped);
+      return [...mapped];
+    } catch (error) {
+      logger.warn('Failed to fetch QBO classes', { tenantId: tenant, realmId, error });
+      continue;
+    }
+  }
+
+  logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
+  return [];
+});
+
+/**
+ * Fetches QBO Departments for use in invoice-header DepartmentRef assignment.
+ * Mirrors the getQboItems cache/realm-priority/EE+read-gate pattern.
+ */
+export const getQboDepartments = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<QboDepartment[]> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const targetRealm = options.realmId ?? null;
+  const cacheKey = buildCacheKey(tenant, targetRealm, 'departments');
+  const cached = getCachedValue(departmentCache, cacheKey);
+  if (cached) {
+    return [...cached];
+  }
+
+  const credentials = await getTenantCredentialMap(tenant);
+  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds.length === 0) {
+    logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
+    return [];
+  }
+
+  for (const realmId of candidateRealmIds) {
+    try {
+      logger.debug('Fetching QBO departments', { tenantId: tenant, realmId });
+      const qboClient = await QboClientService.create(tenant, realmId);
+      const rows = await qboClient.query<QboDepartmentRow>('SELECT Id, Name FROM Department');
+      const mapped = rows.map(normalizeDepartmentRow);
+      setCachedValue(departmentCache, buildCacheKey(tenant, realmId, 'departments'), mapped);
+      return [...mapped];
+    } catch (error) {
+      logger.warn('Failed to fetch QBO departments', { tenantId: tenant, realmId, error });
+      continue;
+    }
+  }
+
+  logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
+  return [];
+});
 
 /**
  * Fetches a list of Items (Products/Services) from QuickBooks Online.

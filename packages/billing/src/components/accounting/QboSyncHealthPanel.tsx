@@ -7,13 +7,21 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAccountingSyncHealth,
   updateAccountingSyncSettingsAction,
   runAccountingSyncNow,
+  setDefaultQboRealm,
 } from '../../actions/accountingSyncActions';
 import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
+import {
+  getQboAccounts,
+  getQboClasses,
+  getQboDepartments,
+} from '@alga-psa/integrations/actions';
+import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions';
 
 export default function QboSyncHealthPanel() {
   const { t } = useTranslation('msp/integrations');
@@ -23,6 +31,13 @@ export default function QboSyncHealthPanel() {
   const [syncNowRunning, setSyncNowRunning] = React.useState(false);
   const [syncNowFeedback, setSyncNowFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [autoSyncToggling, setAutoSyncToggling] = React.useState(false);
+
+  // Sync config catalog data
+  const [accounts, setAccounts] = React.useState<QboAccount[]>([]);
+  const [classes, setClasses] = React.useState<QboClass[]>([]);
+  const [departments, setDepartments] = React.useState<QboDepartment[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = React.useState(false);
+  const [savingRef, setSavingRef] = React.useState<string | null>(null);
 
   const loadHealth = React.useCallback(async () => {
     if (healthHidden) return;
@@ -39,9 +54,26 @@ export default function QboSyncHealthPanel() {
     void loadHealth();
   }, [loadHealth]);
 
+  React.useEffect(() => {
+    if (!health?.connected || catalogLoaded) return;
+    Promise.all([
+      getQboAccounts().catch(() => []),
+      getQboClasses().catch(() => []),
+      getQboDepartments().catch(() => [])
+    ]).then(([accts, cls, deps]) => {
+      setAccounts(accts);
+      setClasses(cls);
+      setDepartments(deps);
+      setCatalogLoaded(true);
+    });
+  }, [health?.connected, catalogLoaded]);
+
   if (healthHidden || !health) {
     return null;
   }
+
+  const defaultRealm = health.realms.find((r) => r.isDefault)?.realmId ?? null;
+  const multiRealm = health.realms.length > 1;
 
   return (
     <Card id="qbo-integration-sync-health-card">
@@ -162,6 +194,119 @@ export default function QboSyncHealthPanel() {
               </Alert>
             );
           })()}
+
+          {/* Multi-realm: realm list with Make default */}
+          {multiRealm && (
+            <div id="qbo-realm-list" className="rounded-lg border p-4 space-y-2 text-sm">
+              <p className="font-medium text-foreground">
+                {t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected Companies' })}
+              </p>
+              <div className="space-y-2">
+                {health.realms.map((realm) => (
+                  <div key={realm.realmId} className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">{realm.realmId}</span>
+                    {realm.isDefault ? (
+                      <Badge variant="secondary">
+                        {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
+                      </Badge>
+                    ) : (
+                      <Button
+                        id={`qbo-make-default-${realm.realmId}`}
+                        variant="outline"
+                        size="sm"
+                        disabled={savingRef === realm.realmId}
+                        onClick={async () => {
+                          setSavingRef(realm.realmId);
+                          try {
+                            await setDefaultQboRealm(realm.realmId);
+                            await loadHealth();
+                          } finally {
+                            setSavingRef(null);
+                          }
+                        }}
+                      >
+                        {savingRef === realm.realmId
+                          ? t('integrations.qbo.sync.saving', { defaultValue: 'Saving…' })
+                          : t('integrations.qbo.sync.makeDefault', { defaultValue: 'Make default' })}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sync configuration: deposit / class / department pickers */}
+          {health.connected && (
+            <div id="qbo-sync-config-section" className="rounded-lg border p-4 space-y-4 text-sm">
+              <p className="font-medium text-foreground">
+                {t('integrations.qbo.sync.configTitle', { defaultValue: 'Sync Configuration' })}
+              </p>
+
+              {/* Deposit account */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('integrations.qbo.sync.depositAccount', { defaultValue: 'Deposit Account' })}
+                </label>
+                <CustomSelect
+                  id="qbo-sync-deposit-account"
+                  value={health.settings.depositAccountRef?.value ?? ''}
+                  onValueChange={async (value) => {
+                    const account = accounts.find((a) => a.id === value) ?? null;
+                    const ref = account ? { value: account.id, name: account.name } : null;
+                    const updated = await updateAccountingSyncSettingsAction({ depositAccountRef: ref });
+                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                  }}
+                  options={[
+                    { value: '', label: t('integrations.qbo.sync.undepositedFunds', { defaultValue: 'Undeposited Funds (default)' }) },
+                    ...accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.accountType})` }))
+                  ]}
+                />
+              </div>
+
+              {/* Default class */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('integrations.qbo.sync.defaultClass', { defaultValue: 'Default Class' })}
+                </label>
+                <CustomSelect
+                  id="qbo-sync-default-class"
+                  value={health.settings.defaultClassRef?.value ?? ''}
+                  onValueChange={async (value) => {
+                    const cls = classes.find((c) => c.id === value) ?? null;
+                    const ref = cls ? { value: cls.id, name: cls.name } : null;
+                    const updated = await updateAccountingSyncSettingsAction({ defaultClassRef: ref });
+                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                  }}
+                  options={[
+                    { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
+                    ...classes.map((c) => ({ value: c.id, label: c.name }))
+                  ]}
+                />
+              </div>
+
+              {/* Default department */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('integrations.qbo.sync.defaultDepartment', { defaultValue: 'Default Department' })}
+                </label>
+                <CustomSelect
+                  id="qbo-sync-default-department"
+                  value={health.settings.defaultDepartmentRef?.value ?? ''}
+                  onValueChange={async (value) => {
+                    const dept = departments.find((d) => d.id === value) ?? null;
+                    const ref = dept ? { value: dept.id, name: dept.name } : null;
+                    const updated = await updateAccountingSyncSettingsAction({ defaultDepartmentRef: ref });
+                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                  }}
+                  options={[
+                    { value: '', label: t('integrations.qbo.sync.noDefault', { defaultValue: 'No default' }) },
+                    ...departments.map((d) => ({ value: d.id, label: d.name }))
+                  ]}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Auto-sync toggle */}
           <div className="flex items-center justify-between">

@@ -25,6 +25,7 @@ import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelec
 import { AccountingExportService } from '../accountingExportService';
 import { drainApplyCreditOps } from './creditApplicationApplier';
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
+import { drainRecordPaymentOps } from './paymentPushApplier';
 
 /**
  * One accounting sync cycle for a tenant×realm:
@@ -216,6 +217,17 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
     await drainVoidInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
   } catch (error) {
     logger.error('[accountingSync] Void-invoice drain error', {
+      tenantId,
+      targetRealm,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+
+  // ── Outbound payment push (Stripe → QBO) ────────────────────────────────
+  try {
+    await drainRecordPaymentOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+  } catch (error) {
+    logger.error('[accountingSync] Record-payment drain error', {
       tenantId,
       targetRealm,
       error: error instanceof Error ? error.message : error

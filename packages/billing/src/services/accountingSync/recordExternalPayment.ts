@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { enqueueExternalPaymentPush } from './syncProducers';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -199,6 +200,16 @@ export async function recordExternalPayment(
     });
 
     return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid };
+  });
+
+  // Fire-and-forget: push the payment to QBO on the next sync cycle.
+  // Must never throw — a producer failure must not fail the payment action.
+  void enqueueExternalPaymentPush(knex, tenantId, {
+    invoiceId: input.invoiceId,
+    paymentId,
+    amountCents: input.amount,
+    provider: input.provider,
+    referenceNumber: input.referenceNumber
   });
 
   return {

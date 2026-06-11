@@ -178,6 +178,94 @@ export async function enqueueInvoiceVoid(
 }
 
 /**
+ * Enqueue a record_payment op to push an Alga-originated payment (e.g. Stripe)
+ * to QBO as a Payment object. Called fire-and-forget from the recordExternalPayment
+ * success path; must never throw into the payment action.
+ *
+ * Guards (all must pass to enqueue):
+ *   - Enterprise Edition only
+ *   - provider must NOT be 'quickbooks' (echo guard — QBO-pulled payments must
+ *     not be pushed back)
+ *   - A realm must be connected
+ *   - The invoice must already have a 'quickbooks_online' invoice mapping (invoices
+ *     predating go-live are silently skipped, NOT an exception)
+ */
+export async function enqueueExternalPaymentPush(
+  knex: Knex,
+  tenantId: string,
+  params: {
+    invoiceId: string;
+    paymentId: string;
+    amountCents: number;
+    provider: string;
+    referenceNumber: string;
+  }
+): Promise<void> {
+  try {
+    // Echo guard: never push back payments that originated from QBO.
+    if (params.provider === 'quickbooks') {
+      return;
+    }
+
+    if (!isEnterpriseEdition()) {
+      return;
+    }
+
+    const realm = await getDefaultQboRealmId(tenantId);
+    if (!realm) {
+      return;
+    }
+
+    // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
+    const mapping = await knex('tenant_external_entity_mappings')
+      .where({
+        tenant_id: tenantId,
+        integration_type: SYNC_ADAPTER_TYPE,
+        alga_entity_type: 'invoice',
+        alga_entity_id: params.invoiceId
+      })
+      .first('id');
+
+    if (!mapping) {
+      logger.debug('[accountingSync] Skipping payment push — invoice has no QBO mapping (pre-go-live)', {
+        tenantId,
+        invoiceId: params.invoiceId,
+        paymentId: params.paymentId
+      });
+      return;
+    }
+
+    await new SyncOperationsRepository(knex).enqueue({
+      tenant: tenantId,
+      adapterType: SYNC_ADAPTER_TYPE,
+      targetRealm: realm,
+      operation: 'record_payment',
+      algaEntityType: 'invoice_payment',
+      algaEntityId: params.paymentId,
+      payload: {
+        invoiceId: params.invoiceId,
+        amountCents: params.amountCents,
+        referenceNumber: params.referenceNumber,
+        provider: params.provider
+      }
+    });
+
+    logger.debug('[accountingSync] Queued payment push to QBO', {
+      tenantId,
+      invoiceId: params.invoiceId,
+      paymentId: params.paymentId,
+      realm
+    });
+  } catch (error) {
+    logger.warn('[accountingSync] Failed to queue payment push (payment action unaffected)', {
+      tenantId,
+      paymentId: params.paymentId,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+}
+
+/**
  * Enqueue an apply_credit op for the given credit allocation. This is called
  * fire-and-forget after applyCreditToInvoice commits. The op stays pending
  * until both the credit-note invoice and the target invoice are mapped in QBO,

@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
-import { recordExternalPayment, reverseExternalPayment } from './recordExternalPayment';
+import { recordExternalPayment, reverseExternalPayment, computeBalanceDue } from './recordExternalPayment';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncExceptionService } from './syncExceptions.types';
 
@@ -231,6 +231,70 @@ export async function applyExternalPaymentChange(
   if (allocations.length === 0) {
     deps.stats.paymentsSkipped += 1;
     return;
+  }
+
+  // ── Double-entry guard (§7) ─────────────────────────────────────────────
+  // When a NEW external payment targets an invoice that Alga already shows as
+  // fully settled, flag it as an over-application drift exception rather than
+  // applying it. This detects the "bookkeeper manually re-keyed a Stripe payment
+  // in QBO" scenario. Only applies to brand-new payments (no existing mapping);
+  // edits to existing mappings go through the reverse-and-reapply path normally.
+  if (!existing) {
+    for (const allocation of allocations) {
+      const invoiceRow = await deps.knex('invoices')
+        .where({ tenant: deps.tenantId, invoice_id: allocation.invoiceId })
+        .select('status', 'total_amount', 'credit_applied')
+        .first<{ status: string; total_amount: number; credit_applied: number | null } | undefined>();
+
+      if (!invoiceRow) {
+        continue; // Invoice disappeared — let the normal path handle it
+      }
+
+      const isFullySettled =
+        invoiceRow.status === 'paid' ||
+        (() => {
+          // Also check computeBalanceDue with only the recorded payments,
+          // to catch cases where status hasn't been flushed yet.
+          // We only want to know if total_amount minus credits is already <= 0
+          // using the stored status as the primary signal (avoids a second sum query).
+          return false; // primary check is status === 'paid'; secondary check below
+        })();
+
+      // Secondary balance check: compute from what we know without a sum query.
+      // If the invoice has credit_applied >= total_amount it is also settled.
+      const secondarySettled = computeBalanceDue({
+        totalAmount: Number(invoiceRow.total_amount),
+        creditApplied: Number(invoiceRow.credit_applied ?? 0),
+        totalPaid: 0 // Only checking credit coverage; payment coverage checked via status
+      }) <= 0;
+
+      if (isFullySettled || secondarySettled) {
+        deps.stats.paymentsSkipped += 1;
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_unmapped_payment',
+          entityType: 'external_payment',
+          entityId: change.externalId,
+          title: 'QuickBooks payment targets an already-settled invoice',
+          context: {
+            external_payment_id: change.externalId,
+            reference: paymentReference(change.payload, change.externalId),
+            alga_invoice_id: allocation.invoiceId,
+            invoice_status: invoiceRow.status,
+            reason: 'over_application',
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+        logger.info('[accountingSync] Over-application guard: skipped payment for settled invoice', {
+          tenantId: deps.tenantId,
+          externalPaymentId: change.externalId,
+          invoiceId: allocation.invoiceId
+        });
+        return;
+      }
+    }
   }
 
   const previousAllocations: RecordedAllocation[] =

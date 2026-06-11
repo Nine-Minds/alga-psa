@@ -2,10 +2,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const qboClientCreateMock = vi.hoisted(() => vi.fn());
 const getDefaultQboRealmIdMock = vi.hoisted(() => vi.fn());
+const getAccountingSyncSettingsMock = vi.hoisted(() => vi.fn(async () => ({
+  autoSyncEnabled: false,
+  autoSyncStartDate: null,
+  depositAccountRef: null,
+  defaultClassRef: null,
+  defaultDepartmentRef: null,
+  defaultRealm: null
+})));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   QboClientService: { create: qboClientCreateMock },
   getDefaultQboRealmId: getDefaultQboRealmIdMock
+}));
+
+vi.mock('../../../../../packages/billing/src/services/accountingSync/accountingSyncSettings', () => ({
+  getAccountingSyncSettings: getAccountingSyncSettingsMock
 }));
 
 import { QuickBooksOnlineAdapter } from '../../../../../packages/billing/src/adapters/accounting/quickBooksOnlineAdapter';
@@ -876,5 +888,180 @@ describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
       /connected QuickBooks Online company/
     );
     expect(qboClientCreateMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Class & Department transform tests ────────────────────────────────────────
+
+describe('QuickBooksOnlineAdapter class/department transform', () => {
+  const mockResolver = {
+    resolveServiceMapping: vi.fn(),
+    resolveTaxCodeMapping: vi.fn()
+  };
+
+  const baseLine: MinimalLine = {
+    line_id: 'line-cls-1',
+    batch_id: 'batch-cls',
+    invoice_id: INVOICE_ID,
+    invoice_charge_id: 'charge-cls-1',
+    client_id: CLIENT_ID,
+    amount_cents: 10_000,
+    currency_code: 'USD',
+    status: 'ready',
+    payload: null,
+    mapping_resolution: null,
+    service_period_start: null,
+    service_period_end: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const baseInvoice = {
+    invoice_id: INVOICE_ID,
+    invoice_number: 'INV-CLS-001',
+    invoice_date: '2026-01-01',
+    due_date: '2026-01-30',
+    total_amount: 10_000,
+    client_id: CLIENT_ID,
+    currency_code: 'USD'
+  };
+
+  const baseCharge = {
+    item_id: 'charge-cls-1',
+    invoice_id: INVOICE_ID,
+    service_id: 'svc-cls-1',
+    description: 'Managed services',
+    quantity: 1,
+    unit_price: 10_000,
+    net_amount: 10_000,
+    total_price: 10_000,
+    tax_amount: 0,
+    tax_region: null
+  };
+
+  const baseClientMapping = {
+    clients: new Map([[CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: null, payment_terms: null }]]),
+    mappings: new Map([[CLIENT_ID, { id: 'm-1', integration_type: 'quickbooks_online', alga_entity_type: 'client', alga_entity_id: CLIENT_ID, external_entity_id: 'qb-cust-1', metadata: null }]])
+  };
+
+  beforeEach(() => {
+    mockResolver.resolveServiceMapping.mockReset();
+    mockResolver.resolveTaxCodeMapping.mockReset();
+    getAccountingSyncSettingsMock.mockReset();
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(mockResolver as unknown as AccountingMappingResolver);
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses item mapping metadata.classId over tenant default class', async () => {
+    // item metadata has classId, tenant also has a default — item wins
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: false,
+      autoSyncStartDate: null,
+      depositAccountRef: null,
+      defaultClassRef: { value: 'cls-tenant', name: 'Tenant Default' },
+      defaultDepartmentRef: null,
+      defaultRealm: null
+    });
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-1',
+      metadata: { classId: 'cls-item' }
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([{ ...baseLine }]);
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(new Map([[INVOICE_ID, baseInvoice]]));
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(new Map([['charge-cls-1', baseCharge]]));
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue(baseClientMapping);
+
+    const result = await adapter.transform(context);
+    const salesDetail = (result.documents[0].payload as any).invoice.Line[0].SalesItemLineDetail;
+
+    expect(salesDetail.ClassRef).toEqual({ value: 'cls-item' });
+  });
+
+  it('falls back to tenant default class when item mapping has no classId', async () => {
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: false,
+      autoSyncStartDate: null,
+      depositAccountRef: null,
+      defaultClassRef: { value: 'cls-default', name: 'Managed Services' },
+      defaultDepartmentRef: null,
+      defaultRealm: null
+    });
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-1',
+      metadata: {} // no classId
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([{ ...baseLine }]);
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(new Map([[INVOICE_ID, baseInvoice]]));
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(new Map([['charge-cls-1', baseCharge]]));
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue(baseClientMapping);
+
+    const result = await adapter.transform(context);
+    const salesDetail = (result.documents[0].payload as any).invoice.Line[0].SalesItemLineDetail;
+
+    expect(salesDetail.ClassRef).toEqual({ value: 'cls-default' });
+  });
+
+  it('omits ClassRef/DepartmentRef when no class or department configured', async () => {
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: false,
+      autoSyncStartDate: null,
+      depositAccountRef: null,
+      defaultClassRef: null,
+      defaultDepartmentRef: null,
+      defaultRealm: null
+    });
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-1',
+      metadata: {} // no classId
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([{ ...baseLine }]);
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(new Map([[INVOICE_ID, baseInvoice]]));
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(new Map([['charge-cls-1', baseCharge]]));
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue(baseClientMapping);
+
+    const result = await adapter.transform(context);
+    const payload = result.documents[0].payload as any;
+    const salesDetail = payload.invoice.Line[0].SalesItemLineDetail;
+    const invoiceHeader = payload.invoice;
+
+    expect(salesDetail.ClassRef).toBeUndefined();
+    expect(invoiceHeader.DepartmentRef).toBeUndefined();
+  });
+
+  it('sets DepartmentRef on the invoice header from tenant default department', async () => {
+    getAccountingSyncSettingsMock.mockResolvedValue({
+      autoSyncEnabled: false,
+      autoSyncStartDate: null,
+      depositAccountRef: null,
+      defaultClassRef: null,
+      defaultDepartmentRef: { value: 'dept-east', name: 'East Region' },
+      defaultRealm: null
+    });
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-1',
+      metadata: {}
+    });
+
+    const adapter = new QuickBooksOnlineAdapter();
+    const context = buildContext([{ ...baseLine }]);
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(new Map([[INVOICE_ID, baseInvoice]]));
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(new Map([['charge-cls-1', baseCharge]]));
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue(baseClientMapping);
+
+    const result = await adapter.transform(context);
+    const invoiceHeader = (result.documents[0].payload as any).invoice;
+
+    expect(invoiceHeader.DepartmentRef).toEqual({ value: 'dept-east' });
   });
 });
