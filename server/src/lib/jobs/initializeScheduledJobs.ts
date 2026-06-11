@@ -1,4 +1,5 @@
 import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob } from './index';
+import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -109,6 +110,17 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule search index reconciliation job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule the accounting sync cycle (every 15 minutes, EE only; cheap
+      // no-op for tenants without a connected accounting integration)
+      try {
+        const syncJobId = await scheduleAccountingSyncCycleJob(tenantId);
+        if (syncJobId) {
+          logger.info(`Scheduled accounting sync cycle for tenant ${tenantId} with job ID ${syncJobId}`);
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule accounting sync cycle for tenant ${tenantId}`, error);
       }
 
       // Schedule Microsoft calendar webhook renewal (every 30 minutes)

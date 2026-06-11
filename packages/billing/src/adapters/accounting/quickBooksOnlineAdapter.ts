@@ -3,6 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
+  AccountingChangeSet,
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
@@ -125,8 +126,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
       supportsInvoiceFetch: true,
-      supportsTaxComponentImport: true // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
+      supportsTaxComponentImport: true, // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
+      supportsChangePolling: true,
+      supportsPaymentRecording: true
     };
+  }
+
+  async fetchChanges(tenantId: string, since: string, targetRealm?: string | null): Promise<AccountingChangeSet> {
+    const qboClient = await QboClientService.create(tenantId, targetRealm ?? null);
+    return qboClient.fetchChanges(since);
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
@@ -475,6 +483,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         ...(existingMetadata ?? {}),
         sync_token: response.SyncToken ?? existingMetadata?.sync_token ?? null,
         last_exported_at: new Date().toISOString(),
+        // Drift baseline: what we believe the document looks like in QBO.
+        exported_total: typeof response.TotalAmt === 'number' ? response.TotalAmt : (existingMetadata?.exported_total ?? null),
+        doc_number: response.DocNumber ?? existingMetadata?.doc_number ?? null,
         chargeLineMappings // Store mapping for tax import
       };
 

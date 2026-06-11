@@ -58,6 +58,10 @@ import {
   WorkflowQuotaResumeScanJobData,
 } from './handlers/workflowQuotaResumeScanHandler';
 import {
+  accountingSyncCycleHandler,
+  AccountingSyncCycleJobData,
+} from './handlers/accountingSyncCycleHandler';
+import {
   SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
   searchVisibleUserReindexHandler,
   SearchVisibleUserReindexJobData,
@@ -300,6 +304,19 @@ export async function registerAllJobHandlers(
   // ============================================================================
 
   if (includeEnterprise) {
+    // Accounting sync cycle (QBO closed-loop sync; cheap no-op for unconnected tenants)
+    JobHandlerRegistry.register<AccountingSyncCycleJobData & BaseJobData>(
+      {
+        name: 'accounting-sync-cycle',
+        handler: async (_jobId, data) => {
+          await accountingSyncCycleHandler(data);
+        },
+        retry: { maxAttempts: 1 }, // cycles are self-healing on the next tick
+        timeoutMs: 600000, // 10 minutes
+      },
+      registerOpts
+    );
+
     JobHandlerRegistry.register<ExtensionScheduledInvocationJobData & BaseJobData>(
       {
         name: 'extension-scheduled-invocation',
@@ -467,7 +484,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['cleanup-ai-session-keys', 'workflow-quota-resume-scan']
+        ? ['cleanup-ai-session-keys', 'workflow-quota-resume-scan', 'accounting-sync-cycle']
         : []
     ),
   ];

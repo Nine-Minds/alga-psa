@@ -6,6 +6,7 @@ import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alg
 import { AppError } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps the default QBO realm so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
 
 type Nullable<T> = T | null | undefined;
 
@@ -76,6 +77,7 @@ interface CreateBatchOptions {
   targetRealm?: Nullable<string>;
   notes?: Nullable<string>;
   createdBy?: Nullable<string>;
+  origin?: 'manual' | 'scheduled';
   filters: InvoiceSelectionFilters;
 }
 
@@ -329,8 +331,19 @@ export class AccountingExportInvoiceSelector {
       target_realm: targetRealm,
       filters: normalizeFilters(options.filters),
       notes: options.notes ?? null,
-      created_by: options.createdBy ?? null
+      created_by: options.createdBy ?? null,
+      origin: options.origin ?? 'manual'
     });
+
+    if ((options.origin ?? 'manual') === 'manual') {
+      // Manual batches cover any queued auto-export ops for the same invoices.
+      await satisfyExportOpsForManualBatch(
+        this.knex,
+        this.tenantId,
+        options.adapterType,
+        Array.from(new Set(preview.map((line) => line.invoiceId)))
+      );
+    }
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,

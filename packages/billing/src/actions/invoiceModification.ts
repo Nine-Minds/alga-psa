@@ -23,6 +23,7 @@ import {
 } from '@alga-psa/workflow-streams';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
+import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 
@@ -534,6 +535,9 @@ export async function finalizeInvoiceWithKnex(
       idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
     });
   }
+
+  // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
+  await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
 }
 
 export const unfinalizeInvoice = withAuth(async (

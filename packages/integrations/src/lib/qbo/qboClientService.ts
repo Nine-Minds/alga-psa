@@ -2,7 +2,13 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
-import type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
+import type {
+  AccountingChangeSet,
+  AccountingExternalChange,
+  AccountingExternalChangeEntity,
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '@alga-psa/types';
 
 const logger = {
   debug: (...args: any[]) => console.debug('[QboClientService]', ...args),
@@ -456,6 +462,68 @@ export class QboClientService {
         qboEntityType: entityType
       });
     }
+  }
+
+  /**
+   * QuickBooks Change Data Capture: every Customer/Payment/Invoice/CreditMemo
+   * changed (or deleted) since the given ISO timestamp, in one call.
+   * QBO caps CDC at 1000 rows per entity; `truncated` signals the caller to
+   * poll again soon with the same cursor.
+   */
+  public async fetchChanges(since: string): Promise<AccountingChangeSet> {
+    const CDC_ENTITIES: AccountingExternalChangeEntity[] = ['Customer', 'Payment', 'Invoice', 'CreditMemo', 'RefundReceipt'];
+    const url = this.buildCompanyUrl('/cdc');
+
+    const data = await this.requestQbo<any>(
+      {
+        method: 'GET',
+        url,
+        params: this.getDefaultParams({
+          entities: CDC_ENTITIES.join(','),
+          changedSince: since
+        })
+      },
+      'changeDataCapture'
+    );
+
+    const changes: AccountingExternalChange[] = [];
+    let truncated = false;
+
+    const cdcResponses = Array.isArray(data?.CDCResponse) ? data.CDCResponse : [];
+    for (const cdcResponse of cdcResponses) {
+      const queryResponses = Array.isArray(cdcResponse?.QueryResponse) ? cdcResponse.QueryResponse : [];
+      for (const queryResponse of queryResponses) {
+        for (const entityType of CDC_ENTITIES) {
+          const rows = queryResponse?.[entityType];
+          if (!Array.isArray(rows)) {
+            continue;
+          }
+          if (rows.length >= 1000) {
+            truncated = true;
+          }
+          for (const row of rows) {
+            if (!row?.Id) {
+              continue;
+            }
+            changes.push({
+              entityType,
+              externalId: String(row.Id),
+              syncToken: row.SyncToken !== undefined && row.SyncToken !== null ? String(row.SyncToken) : undefined,
+              deleted: row.status === 'Deleted',
+              updatedAt: row.MetaData?.LastUpdatedTime,
+              payload: row
+            });
+          }
+        }
+      }
+    }
+
+    logger.debug(
+      { tenantId: this.tenantId, realmId: this.realmId, since, count: changes.length, truncated },
+      'QBO change data capture fetched'
+    );
+
+    return { changes, truncated, fetchedAt: new Date().toISOString() };
   }
 
   public async query<T>(selectQuery: string): Promise<T[]> {

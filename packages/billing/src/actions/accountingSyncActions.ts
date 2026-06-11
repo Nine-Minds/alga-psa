@@ -1,0 +1,341 @@
+'use server';
+
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- sync actions consult QBO connection state */
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex } from '@alga-psa/db';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { getStoredQboCredentialsMap, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import {
+  getAccountingSyncSettings,
+  updateAccountingSyncSettings,
+  type AccountingSyncSettings
+} from '../services/accountingSync/accountingSyncSettings';
+import { runAccountingSyncCycle, type RunCycleResult } from '../services/accountingSync/accountingSyncCycleService';
+import { SyncOperationsRepository } from '../services/accountingSync/syncOperationsRepository';
+import { SyncCycleRepository } from '../services/accountingSync/syncCycleRepository';
+import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
+import { WorkflowTaskSyncExceptionService } from '../services/accountingSync/syncExceptionService';
+import { MAPPING_SYNC_STATUS, type AccountingSyncCycleRecord } from '../services/accountingSync/accountingSync.types';
+import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
+
+const SYNC_ADAPTER_TYPE = 'quickbooks_online';
+
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
+
+function assertEnterpriseEdition(): void {
+  if (!isEnterpriseEdition()) {
+    throw new Error('Accounting sync is only available in Enterprise Edition.');
+  }
+}
+
+async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
+}
+
+async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
+}
+
+export const getAccountingSyncSettingsAction = withAuth(async (
+  user,
+  { tenant }
+): Promise<AccountingSyncSettings> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const { knex } = await createTenantKnex();
+  return getAccountingSyncSettings(knex, tenant);
+});
+
+export const updateAccountingSyncSettingsAction = withAuth(async (
+  user,
+  { tenant },
+  patch: Partial<AccountingSyncSettings>
+): Promise<AccountingSyncSettings> => {
+  assertEnterpriseEdition();
+  await checkBillingUpdateAccess(user);
+  const { knex } = await createTenantKnex();
+  return updateAccountingSyncSettings(knex, tenant, {
+    ...(patch.autoSyncEnabled !== undefined ? { autoSyncEnabled: Boolean(patch.autoSyncEnabled) } : {}),
+    ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {})
+  });
+});
+
+/** Run an immediate sync cycle for the tenant's default realm (Sync Now). */
+export const runAccountingSyncNow = withAuth(async (
+  user,
+  { tenant }
+): Promise<RunCycleResult> => {
+  assertEnterpriseEdition();
+  await checkBillingUpdateAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const realm = await getDefaultQboRealmId(tenant);
+  if (!realm) {
+    return { ran: false, status: 'skipped', error: 'No QuickBooks company is connected.' };
+  }
+
+  const registry = await AccountingAdapterRegistry.createDefault();
+  const adapter = registry.get(SYNC_ADAPTER_TYPE);
+  if (!adapter) {
+    return { ran: false, status: 'skipped', error: 'QuickBooks adapter unavailable.' };
+  }
+
+  const credentials = await getStoredQboCredentialsMap(tenant);
+
+  return runAccountingSyncCycle({
+    knex,
+    tenantId: tenant,
+    adapterType: SYNC_ADAPTER_TYPE,
+    targetRealm: realm,
+    adapter,
+    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
+    force: true
+  });
+});
+
+/** Queue a single invoice for (re-)export on the next cycle. */
+export const queueInvoiceSync = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ queued: boolean; error?: string }> => {
+  assertEnterpriseEdition();
+  await checkBillingUpdateAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const realm = await getDefaultQboRealmId(tenant);
+  if (!realm) {
+    return { queued: false, error: 'No QuickBooks company is connected.' };
+  }
+
+  await new SyncOperationsRepository(knex).enqueue({
+    tenant,
+    adapterType: SYNC_ADAPTER_TYPE,
+    targetRealm: realm,
+    operation: 'export_invoice',
+    algaEntityType: 'invoice',
+    algaEntityId: invoiceId
+  });
+
+  return { queued: true };
+});
+
+/** Drift resolution: push Alga's version back to QBO (queues a re-export). */
+export const resolveAccountingDriftReExport = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ queued: boolean; error?: string }> => {
+  assertEnterpriseEdition();
+  await checkBillingUpdateAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const realm = await getDefaultQboRealmId(tenant);
+  if (!realm) {
+    return { queued: false, error: 'No QuickBooks company is connected.' };
+  }
+
+  await new SyncOperationsRepository(knex).enqueue({
+    tenant,
+    adapterType: SYNC_ADAPTER_TYPE,
+    targetRealm: realm,
+    operation: 'export_invoice',
+    algaEntityType: 'invoice',
+    algaEntityId: invoiceId,
+    payload: { reason: 'drift_reexport' }
+  });
+
+  return { queued: true };
+});
+
+/** Drift resolution: accept QBO's version (refresh the snapshot, no Alga change). */
+export const resolveAccountingDriftAccept = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<{ resolved: boolean; error?: string }> => {
+  assertEnterpriseEdition();
+  await checkBillingUpdateAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
+  const mapping = await ledger.findByAlgaId('invoice', invoiceId);
+  if (!mapping) {
+    return { resolved: false, error: 'Invoice has no QuickBooks mapping.' };
+  }
+
+  const metadata = mapping.metadata ?? {};
+  const observed = metadata.external_observed ?? {};
+
+  await ledger.update(mapping.id, {
+    syncStatus: MAPPING_SYNC_STATUS.synced,
+    metadata: {
+      ...metadata,
+      exported_total: observed.total ?? metadata.exported_total ?? null,
+      doc_number: observed.doc_number ?? metadata.doc_number ?? null,
+      sync_token: observed.sync_token ?? metadata.sync_token ?? null,
+      drift_accepted_at: new Date().toISOString()
+    },
+    touchSyncedAt: true
+  });
+
+  await new WorkflowTaskSyncExceptionService(knex, tenant).resolve(
+    'accounting_sync_drift',
+    'invoice',
+    invoiceId
+  );
+
+  return { resolved: true };
+});
+
+export type InvoiceSyncState = 'not_synced' | 'queued' | 'synced' | 'drift' | 'error' | 'voided';
+
+export interface InvoiceSyncStatus {
+  invoiceId: string;
+  state: InvoiceSyncState;
+  externalId?: string | null;
+  docNumber?: string | null;
+  lastSyncedAt?: string | null;
+  error?: string | null;
+}
+
+/** Batched per-invoice sync status for list views and the badge. */
+export const getInvoiceSyncStatuses = withAuth(async (
+  user,
+  { tenant },
+  invoiceIds: string[]
+): Promise<Record<string, InvoiceSyncStatus>> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const ids = Array.from(new Set(invoiceIds)).filter(Boolean);
+  if (ids.length === 0) {
+    return {};
+  }
+
+  const [mappings, ops] = await Promise.all([
+    knex('tenant_external_entity_mappings')
+      .where({ tenant_id: tenant, integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
+      .whereIn('alga_entity_id', ids)
+      .select('alga_entity_id', 'external_entity_id', 'sync_status', 'last_synced_at', 'metadata'),
+    knex('accounting_sync_operations')
+      .where({ tenant, adapter_type: SYNC_ADAPTER_TYPE, operation: 'export_invoice', alga_entity_type: 'invoice' })
+      .whereIn('alga_entity_id', ids)
+      .whereIn('status', ['pending', 'in_progress', 'skipped'])
+      .select('alga_entity_id', 'status', 'last_error')
+  ]);
+
+  const mappingByInvoice = new Map(mappings.map((row: any) => [row.alga_entity_id, row]));
+  const opByInvoice = new Map<string, any>();
+  for (const op of ops) {
+    // skipped (terminal failure) outranks queued for display purposes
+    const existing = opByInvoice.get(op.alga_entity_id);
+    if (!existing || op.status === 'skipped') {
+      opByInvoice.set(op.alga_entity_id, op);
+    }
+  }
+
+  const result: Record<string, InvoiceSyncStatus> = {};
+  for (const invoiceId of ids) {
+    const mapping = mappingByInvoice.get(invoiceId);
+    const op = opByInvoice.get(invoiceId);
+
+    let state: InvoiceSyncState = 'not_synced';
+    if (op?.status === 'skipped') {
+      state = 'error';
+    } else if (op) {
+      state = 'queued';
+    } else if (mapping?.sync_status === MAPPING_SYNC_STATUS.drift) {
+      state = 'drift';
+    } else if (
+      mapping?.sync_status === MAPPING_SYNC_STATUS.externalVoided ||
+      mapping?.sync_status === MAPPING_SYNC_STATUS.voided
+    ) {
+      state = 'voided';
+    } else if (mapping) {
+      state = 'synced';
+    }
+
+    result[invoiceId] = {
+      invoiceId,
+      state,
+      externalId: mapping?.external_entity_id ?? null,
+      docNumber: mapping?.metadata?.doc_number ?? null,
+      lastSyncedAt: mapping?.last_synced_at ?? null,
+      error: op?.last_error ?? null
+    };
+  }
+
+  return result;
+});
+
+export interface AccountingSyncHealth {
+  connected: boolean;
+  settings: AccountingSyncSettings;
+  lastCycle: AccountingSyncCycleRecord | null;
+  pendingOps: number;
+  erroredOps: number;
+  driftCount: number;
+  openExceptions: number;
+  refreshTokenExpiresAt: string | null;
+}
+
+/** Health panel data for the integration settings page. */
+export const getAccountingSyncHealth = withAuth(async (
+  user,
+  { tenant }
+): Promise<AccountingSyncHealth> => {
+  assertEnterpriseEdition();
+  await checkBillingReadAccess(user);
+  const { knex } = await createTenantKnex();
+
+  const settings = await getAccountingSyncSettings(knex, tenant);
+  const realm = await getDefaultQboRealmId(tenant).catch(() => null);
+
+  if (!realm) {
+    return {
+      connected: false,
+      settings,
+      lastCycle: null,
+      pendingOps: 0,
+      erroredOps: 0,
+      driftCount: 0,
+      openExceptions: 0,
+      refreshTokenExpiresAt: null
+    };
+  }
+
+  const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
+  const [lastCycle, opCounts, statusCounts, openExceptions, credentials] = await Promise.all([
+    new SyncCycleRepository(knex).getLatestCycle(tenant, SYNC_ADAPTER_TYPE, realm),
+    new SyncOperationsRepository(knex).countByStatus(tenant, SYNC_ADAPTER_TYPE),
+    ledger.countByStatus(),
+    new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(),
+    getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>))
+  ]);
+
+  return {
+    connected: true,
+    settings,
+    lastCycle,
+    pendingOps: (opCounts['pending'] ?? 0) + (opCounts['in_progress'] ?? 0),
+    erroredOps: opCounts['skipped'] ?? 0,
+    driftCount:
+      (statusCounts[MAPPING_SYNC_STATUS.drift] ?? 0) + (statusCounts[MAPPING_SYNC_STATUS.externalVoided] ?? 0),
+    openExceptions,
+    refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null
+  };
+});
