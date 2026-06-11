@@ -68,6 +68,7 @@ vi.mock('../services/accountingSync/accountingSync.types', () => ({
 import { createTenantKnex } from '@alga-psa/db';
 import { bulkLinkHistoricalInvoices, backfillPaymentsForLinkedInvoices } from './qboOnboardingActions';
 import { applyExternalPaymentChange } from '../services/accountingSync/paymentApplier';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the onboarding actions bridge to
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
