@@ -40,6 +40,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
           color: theme.colors.text,
           fontWeight: "600" as const,
         },
+        headerBackButtonDisplayMode: "minimal",
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
