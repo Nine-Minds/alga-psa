@@ -13,6 +13,7 @@ vi.mock('./accountingSyncSettings', () => ({
 }));
 
 import { drainRecordPaymentOps } from './paymentPushApplier';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the applier bridges to
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getDepositAccountRef } from './accountingSyncSettings';
 import { emptyCycleStats } from './accountingSync.types';

@@ -1197,23 +1197,23 @@ export class FinancialService extends BaseService<ITransaction> {
       })
       .sum('amount as total');
 
-    // Get pending invoices
-    const pendingInvoices = await knex('invoices')
+    // Get pending invoices (balance due is derived: total − credit applied)
+    const pendingInvoices = (await knex('invoices')
       .where({
         client_id: clientId,
         tenant: client.tenant,
         status: 'sent'
       })
-      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'));
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get overdue invoices
-    const overdueInvoices = await knex('invoices')
+    const overdueInvoices = (await knex('invoices')
       .where({
         client_id: clientId,
         tenant: client.tenant,
         status: 'overdue'
       })
-      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'));
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get last payment
     const lastPayment = await knex('transactions')

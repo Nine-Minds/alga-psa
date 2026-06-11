@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
@@ -59,7 +60,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
   }
 
   for (const op of pending) {
-    const payload = op.payload as ApplyCreditPayload | null;
+    const payload = op.payload as unknown as ApplyCreditPayload | null;
     if (!payload?.creditNoteInvoiceId || !payload?.targetInvoiceId) {
       // Malformed op — skip to avoid blocking the drain.
       logger.warn('[creditApplicationApplier] apply_credit op missing payload fields', {
