@@ -167,6 +167,9 @@
       "name": "Workflow Definitions"
     },
     {
+      "name": "Workflow Registry"
+    },
+    {
       "name": "Workflow Runs"
     },
     {
@@ -242,9 +245,6 @@
       "name": "platform-reports"
     },
     {
-      "name": "projects"
-    },
-    {
       "name": "public"
     },
     {
@@ -267,9 +267,6 @@
     },
     {
       "name": "webhooks"
-    },
-    {
-      "name": "workflow"
     }
   ],
   "components": {
@@ -12804,6 +12801,166 @@
         },
         "required": [
           "eventId"
+        ]
+      },
+      "WorkflowJsonSchemaDocument": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "A JSON Schema document."
+      },
+      "WorkflowRegistryAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable action identifier (e.g. \"ticket.create\")."
+          },
+          "version": {
+            "type": "integer",
+            "description": "Action version."
+          },
+          "sideEffectful": {
+            "type": "boolean",
+            "description": "Whether executing the action mutates external state."
+          },
+          "retryHint": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Suggested retry policy, or null."
+          },
+          "idempotency": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Idempotency configuration for the action."
+          },
+          "ui": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Designer UI metadata (label, group, icon, etc.)."
+          },
+          "inputSchema": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+              },
+              {
+                "description": "JSON Schema for the action input, annotated with designer presentation metadata."
+              }
+            ]
+          },
+          "outputSchema": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+              },
+              {
+                "description": "JSON Schema for the action output."
+              }
+            ]
+          },
+          "examples": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "Example invocations, or null."
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "sideEffectful",
+          "retryHint",
+          "idempotency",
+          "ui",
+          "inputSchema",
+          "outputSchema",
+          "examples"
+        ]
+      },
+      "WorkflowRegistryNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Node type identifier."
+          },
+          "ui": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Designer UI metadata for the node."
+          },
+          "configSchema": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+              },
+              {
+                "description": "JSON Schema for the node configuration."
+              }
+            ]
+          },
+          "examples": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "Example configurations, or null."
+          },
+          "defaultRetry": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Default retry policy for the node, or null."
+          }
+        },
+        "required": [
+          "id",
+          "ui",
+          "configSchema",
+          "examples",
+          "defaultRetry"
+        ]
+      },
+      "WorkflowSchemaRefParam": {
+        "type": "object",
+        "properties": {
+          "schemaRef": {
+            "type": "string",
+            "description": "Registered schema reference; URL-encode it in the path."
+          }
+        },
+        "required": [
+          "schemaRef"
+        ]
+      },
+      "WorkflowSchemaResponse": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "The resolved schema reference."
+          },
+          "schema": {
+            "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+          }
+        },
+        "required": [
+          "ref",
+          "schema"
         ]
       },
       "FileDownloadParams": {
@@ -56088,6 +56245,414 @@
           },
           "404": {
             "description": "Event not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/actions": {
+      "get": {
+        "summary": "List workflow registry actions",
+        "description": "Lists every action registered in the workflow runtime — the building blocks workflow definitions can invoke — including JSON Schemas for each action's input and output. Returns a bare array (no envelope).",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Registered actions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowRegistryAction"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/nodes": {
+      "get": {
+        "summary": "List workflow registry node types",
+        "description": "Lists the node types available to workflow definitions (triggers, control flow, action nodes, etc.) with each node's configuration JSON Schema and default retry policy. Returns a bare array (no envelope).",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Registered node types.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowRegistryNode"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/designer-catalog": {
+      "get": {
+        "summary": "Get the workflow designer action catalog",
+        "description": "Returns the action catalog the workflow designer renders: registry actions and integration modules grouped into tiles, filtered to the integrations actually available to the tenant. Returns a bare array of catalog records (no envelope).",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Designer catalog tiles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {},
+                    "description": "Catalog tile (groupKey, tileKind, actions, UI metadata)."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/schemas/{schemaRef}": {
+      "get": {
+        "summary": "Get a workflow schema by ref",
+        "description": "Resolves a registered workflow schema reference (URL-encoded) to its JSON Schema document.",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Registered schema reference; URL-encode it in the path."
+            },
+            "required": true,
+            "description": "Registered schema reference; URL-encode it in the path.",
+            "name": "schemaRef",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSchemaResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown schema ref.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "List projects",
+        "description": "Lists all projects for the tenant. Returns a bare array of project records (no envelope); responds 403 with an error message when the caller lacks project read permission.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "project",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects for the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {},
+                    "description": "Project record."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
             "content": {
               "application/json": {
                 "schema": {
@@ -100902,54 +101467,6 @@
         }
       }
     },
-    "/api/projects": {
-      "get": {
-        "summary": "GET projects",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "projects"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/public/appointment-request": {
       "post": {
         "summary": "POST public",
@@ -107128,198 +107645,6 @@
         },
         "responses": {
           "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workflow/registry/actions": {
-      "get": {
-        "summary": "GET workflow",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflow"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workflow/registry/designer-catalog": {
-      "get": {
-        "summary": "GET workflow",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflow"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workflow/registry/nodes": {
-      "get": {
-        "summary": "GET workflow",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflow"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workflow/registry/schemas/{schemaRef}": {
-      "get": {
-        "summary": "GET workflow",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflow"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "responses": {
-          "200": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
