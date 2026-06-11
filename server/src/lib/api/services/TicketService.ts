@@ -2067,6 +2067,26 @@ export class TicketService extends BaseService<ITicket> {
                 .andWhere('cat.category_name', value);
           });
           break;
+        case 'tags':
+          if (Array.isArray(value) && value.length > 0) {
+            const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
+            query.whereExists(function() {
+              this.select('*')
+                  .from('tag_mappings as tm')
+                  .join('tag_definitions as td', function() {
+                    this.on('tm.tenant', '=', 'td.tenant')
+                        .andOn('tm.tag_id', '=', 'td.tag_id');
+                  })
+                  .whereRaw('tm.tagged_id = t.ticket_id')
+                  .andWhere('tm.tenant', query.client.raw('t.tenant'))
+                  .andWhere('tm.tagged_type', 'ticket')
+                  .whereRaw(
+                    `LOWER(td.tag_text) IN (${tagTexts.map(() => '?').join(', ')})`,
+                    tagTexts
+                  );
+            });
+          }
+          break;
         case 'search':
           if (this.searchableFields.length > 0) {
             query.where(subQuery => {
