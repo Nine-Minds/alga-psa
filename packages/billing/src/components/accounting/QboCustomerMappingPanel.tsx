@@ -11,6 +11,7 @@ import {
   bulkLinkExactCustomerMatches,
   createQboCustomerForClient,
 } from '../../actions/qboOnboardingActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned onboarding panel reads the QBO customer catalog directly (same bridge as the accounting export adapter)
 import { getQboCustomers } from '@alga-psa/integrations/actions';
 
 type QboCustomer = { id: string; name: string; active: boolean };
