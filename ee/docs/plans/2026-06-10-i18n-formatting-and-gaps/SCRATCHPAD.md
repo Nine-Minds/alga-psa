@@ -91,6 +91,15 @@
 - Tests: `packages/core/src/lib/i18n/validateTranslations.test.ts` (fixture-driven CLDR checks incl. legacy-_plural error), `packages/ui/src/lib/i18n/pluralResolution.test.ts` (real i18next instance over real locale files; en/pl counts 1/2/5; pseudo plural-key carry-through).
 - validate-translations.cjs final state: **0 errors, 0 warnings** across 9 locales.
 
+## P5 implementation notes (2026-06-10)
+
+- `validate-translations.yml`: paths expanded to `packages/**`, `server/src/**`, `ee/server/src/**` + the find-missing script; new `find-missing-keys` job runs `find-missing-i18n-keys.cjs`. Landed after P2/P4 zeroed both scripts — both exit 0 from a clean tree, so CI arrives green.
+- Not verifiable locally (left open in tests.json): T058/T059/T060 (actual CI runs on a PR), T024/T025 (dev-stack visual pseudo-locale QA), T046 (runtime namespace-warning check), T017 (PrintOptionsDialog render test, trivial wrapper skipped).
+
+## Status: all 5 phases implemented (2026-06-10)
+
+Commits on `i18n/formatting_and_gaps`: P1 958f4e15e0, P2 12c732c630, P3 fa1cf5d88a, P4 f0109ed354, P5 (this commit). 48/48 features, 55/62 tests (7 open are CI/manual-QA verifications listed above).
+
 ## Decisions
 - (2026-06-10) Formatting stays **purely locale-derived**; the explicit user-facing date-format preference is a separate future effort that layers on top (preference → locale default resolution chain). Decided with user.
 - (2026-06-10) Emails (EJS transactional templates) explicitly out of scope. Decided with user.

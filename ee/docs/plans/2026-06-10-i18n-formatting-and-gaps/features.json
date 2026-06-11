@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "find-missing-i18n-keys job added to .github/workflows/validate-translations.yml",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "Workflow paths triggers expanded to packages/**, server/src/**, ee/server/src/**, and the find-missing script so component changes trigger validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "CI green on a no-op PR after P5 lands (both scripts pass from clean main)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5"
     ]

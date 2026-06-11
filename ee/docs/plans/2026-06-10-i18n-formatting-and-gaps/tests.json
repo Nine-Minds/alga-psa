@@ -501,7 +501,7 @@
   {
     "id": "T061",
     "description": "Existing .i18n.test.* audit suites pass unchanged after each phase",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F005",
@@ -515,7 +515,7 @@
   {
     "id": "T062",
     "description": "npx tsc --noEmit passes for packages/ui, packages/reporting, packages/msp-composition, packages/clients, packages/scheduling after changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F011",
