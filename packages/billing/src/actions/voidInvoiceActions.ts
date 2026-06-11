@@ -126,9 +126,13 @@ export const voidInvoice = withAuth(async (
     (Number(invoice.total_amount ?? 0) < 0 && !invoice.is_prepayment);
 
   if (isCreditNote) {
-    // Find transactions generated from this invoice (credit issuance)
+    // Find transactions generated from this invoice (credit issuance).
+    // Credit notes finalized from negative invoices write
+    // 'credit_issuance_from_negative_invoice'; prepayment credits write
+    // 'credit_issuance' — cover both so neither slips through the guard.
     const creditIssuanceTxns = await knex('transactions')
-      .where({ invoice_id: invoiceId, type: 'credit_issuance', tenant })
+      .where({ invoice_id: invoiceId, tenant })
+      .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
       .select('transaction_id');
     const txnIds = creditIssuanceTxns.map((t: any) => t.transaction_id);
 
@@ -147,9 +151,13 @@ export const voidInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     if (isCreditNote) {
-      // Expire/remove credit_tracking pool for this credit note
+      // Claw back the issued pool credit: voiding the source document must
+      // remove the credit it put into the pool, or the customer keeps
+      // spendable phantom credit that no longer exists in the accounting
+      // system. Matches both issuance transaction types (see guard above).
       const creditIssuanceTxns = await trx('transactions')
-        .where({ invoice_id: invoiceId, type: 'credit_issuance', tenant })
+        .where({ invoice_id: invoiceId, tenant })
+        .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
         .select('transaction_id', 'client_id', 'amount');
 
       for (const txn of creditIssuanceTxns) {
@@ -158,15 +166,37 @@ export const voidInvoice = withAuth(async (
           .first('credit_id', 'remaining_amount');
 
         if (creditRow && Number(creditRow.remaining_amount) > 0) {
+          const clawedBack = Number(creditRow.remaining_amount);
+
           // Decrement client.credit_balance by remaining amount
           await trx('clients')
             .where({ client_id: txn.client_id, tenant })
-            .decrement('credit_balance', Number(creditRow.remaining_amount));
+            .decrement('credit_balance', clawedBack);
 
           // Zero out the credit tracking entry
           await trx('credit_tracking')
             .where({ credit_id: creditRow.credit_id, tenant })
             .update({ remaining_amount: 0, updated_at: now });
+
+          // Audit trail for the balance change
+          await trx('transactions').insert({
+            transaction_id: uuidv4(),
+            client_id: txn.client_id,
+            invoice_id: invoiceId,
+            amount: -clawedBack,
+            type: 'credit_adjustment',
+            status: 'completed',
+            description: `Issued credit clawed back: credit note voided (${trimmedReason})`,
+            created_at: now,
+            balance_after: null,
+            tenant,
+            metadata: {
+              reversal_of: txn.transaction_id,
+              credit_id: creditRow.credit_id,
+              reason: 'credit_note_voided',
+              voided_by: user.user_id
+            }
+          });
         }
       }
     } else {
