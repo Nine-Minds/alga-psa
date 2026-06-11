@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Pegue las credenciales de la aplicación Intuit registradas para este inquilino, o déjelas en blanco para usar la aplicación QuickBooks a nivel de aplicación si hay una configurada. Los valores de secreto nunca se devuelven al navegador después de guardarse.",
         "tenantOauthTitle": "Aplicación OAuth propia del inquilino",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Estado de sincronización",
+        "healthCardDescription": "Estado y controles de la sincronización contable de QuickBooks. Se ejecuta cada 15 minutos.",
+        "lastCycleTitle": "Último ciclo de sincronización",
+        "lastCycleStatus": "Estado",
+        "lastCycleFinishedAt": "Finalizado",
+        "lastCycleStats": "Resultados",
+        "statOpsProcessed": "{{count}} operaciones procesadas",
+        "statDriftFound": "{{count}} desviaciones",
+        "statPaymentsApplied": "{{count}} pagos aplicados",
+        "noLastCycle": "Aún no se ha ejecutado ningún ciclo de sincronización.",
+        "nextRunHint": "Se ejecuta automáticamente cada 15 minutos cuando la sincronización automática está activada.",
+        "pendingOps": "Operaciones pendientes",
+        "erroredOps": "Operaciones con error",
+        "driftCount": "Desviaciones",
+        "openExceptions": "Excepciones abiertas",
+        "refreshTokenExpiry": "El token de QuickBooks caduca el {{date}}",
+        "refreshTokenExpired": "El token de QuickBooks ha caducado: vuelva a conectarse para reanudar la sincronización.",
+        "autoSyncLabel": "Sincronización automática activada",
+        "syncNowButton": "Sincronizar ahora",
+        "syncNowRunning": "Sincronizando…",
+        "syncNowSuccess": "Sincronización completada correctamente.",
+        "syncNowSkipped": "Sincronización omitida: {{reason}}",
+        "syncNowError": "Error de sincronización: {{error}}",
+        "viewExceptionsLink": "Ver excepciones"
       }
     },
     "rmm": {

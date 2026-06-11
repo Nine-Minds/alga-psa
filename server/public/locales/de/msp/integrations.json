@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Fügen Sie die für diesen Tenant registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
         "tenantOauthTitle": "Tenant-eigene OAuth-App",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Synchronisierungsstatus",
+        "healthCardDescription": "Status und Steuerung der QuickBooks-Buchhaltungssynchronisierung. Läuft alle 15 Minuten.",
+        "lastCycleTitle": "Letzter Synchronisierungslauf",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Abgeschlossen",
+        "lastCycleStats": "Ergebnisse",
+        "statOpsProcessed": "{{count}} Vorgänge verarbeitet",
+        "statDriftFound": "{{count}} Abweichungen",
+        "statPaymentsApplied": "{{count}} Zahlungen verbucht",
+        "noLastCycle": "Es wurde noch kein Synchronisierungslauf ausgeführt.",
+        "nextRunHint": "Läuft automatisch alle 15 Minuten, wenn die automatische Synchronisierung aktiviert ist.",
+        "pendingOps": "Ausstehende Vorgänge",
+        "erroredOps": "Fehlgeschlagene Vorgänge",
+        "driftCount": "Abweichungen",
+        "openExceptions": "Offene Ausnahmen",
+        "refreshTokenExpiry": "QuickBooks-Token läuft am {{date}} ab",
+        "refreshTokenExpired": "QuickBooks-Token abgelaufen — erneut verbinden, um die Synchronisierung fortzusetzen.",
+        "autoSyncLabel": "Automatische Synchronisierung aktiviert",
+        "syncNowButton": "Jetzt synchronisieren",
+        "syncNowRunning": "Synchronisierung läuft…",
+        "syncNowSuccess": "Synchronisierung erfolgreich abgeschlossen.",
+        "syncNowSkipped": "Synchronisierung übersprungen: {{reason}}",
+        "syncNowError": "Synchronisierung fehlgeschlagen: {{error}}",
+        "viewExceptionsLink": "Ausnahmen anzeigen"
       }
     },
     "rmm": {

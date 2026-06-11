@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Cole as credenciais do aplicativo Intuit registradas para este tenant ou deixe em branco para usar o aplicativo QuickBooks no nível do aplicativo, se configurado. Valores de secret nunca são retornados ao navegador após serem salvos.",
         "tenantOauthTitle": "Aplicativo OAuth de propriedade do tenant",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Estado da sincronização",
+        "healthCardDescription": "Estado e controlos da sincronização contabilística do QuickBooks. Executada a cada 15 minutos.",
+        "lastCycleTitle": "Último ciclo de sincronização",
+        "lastCycleStatus": "Estado",
+        "lastCycleFinishedAt": "Concluído",
+        "lastCycleStats": "Resultados",
+        "statOpsProcessed": "{{count}} operações processadas",
+        "statDriftFound": "{{count}} divergências",
+        "statPaymentsApplied": "{{count}} pagamentos aplicados",
+        "noLastCycle": "Ainda não foi executado nenhum ciclo de sincronização.",
+        "nextRunHint": "Executada automaticamente a cada 15 minutos quando a sincronização automática está ativada.",
+        "pendingOps": "Operações pendentes",
+        "erroredOps": "Operações com erro",
+        "driftCount": "Divergências",
+        "openExceptions": "Exceções abertas",
+        "refreshTokenExpiry": "O token do QuickBooks expira em {{date}}",
+        "refreshTokenExpired": "Token do QuickBooks expirado — volte a ligar para retomar a sincronização.",
+        "autoSyncLabel": "Sincronização automática ativada",
+        "syncNowButton": "Sincronizar agora",
+        "syncNowRunning": "A sincronizar…",
+        "syncNowSuccess": "Sincronização concluída com êxito.",
+        "syncNowSkipped": "Sincronização ignorada: {{reason}}",
+        "syncNowError": "Falha na sincronização: {{error}}",
+        "viewExceptionsLink": "Ver exceções"
       }
     },
     "rmm": {

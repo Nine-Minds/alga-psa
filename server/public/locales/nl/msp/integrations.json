@@ -976,6 +976,32 @@
         "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
         "tenantOauthTitle": "Tenant-eigen OAuth-app",
         "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Synchronisatiestatus",
+        "healthCardDescription": "Status en bediening van de QuickBooks-boekhoudsynchronisatie. Wordt elke 15 minuten uitgevoerd.",
+        "lastCycleTitle": "Laatste synchronisatiecyclus",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Voltooid",
+        "lastCycleStats": "Resultaten",
+        "statOpsProcessed": "{{count}} bewerkingen verwerkt",
+        "statDriftFound": "{{count}} afwijkingen",
+        "statPaymentsApplied": "{{count}} betalingen toegepast",
+        "noLastCycle": "Er is nog geen synchronisatiecyclus uitgevoerd.",
+        "nextRunHint": "Wordt automatisch elke 15 minuten uitgevoerd wanneer automatische synchronisatie is ingeschakeld.",
+        "pendingOps": "Openstaande bewerkingen",
+        "erroredOps": "Mislukte bewerkingen",
+        "driftCount": "Afwijkingen",
+        "openExceptions": "Open uitzonderingen",
+        "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
+        "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
+        "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
+        "syncNowButton": "Nu synchroniseren",
+        "syncNowRunning": "Synchroniseren…",
+        "syncNowSuccess": "Synchronisatie voltooid.",
+        "syncNowSkipped": "Synchronisatie overgeslagen: {{reason}}",
+        "syncNowError": "Synchronisatie mislukt: {{error}}",
+        "viewExceptionsLink": "Uitzonderingen bekijken"
       }
     },
     "rmm": {
