@@ -288,4 +288,90 @@ export function registerUnversionedPublicV1Routes(
   readRoute('/api/workflow/events/export', 'Export workflow events', 'Exports workflow events (JSON/CSV).', 'workflow');
   readRoute('/api/workflow/events/summary', 'Get workflow events summary', 'Returns aggregate workflow-event metrics.', 'workflow');
   readRoute('/api/workflow/events/{eventId}', 'Get a workflow event', 'Returns a single workflow event by id.', 'workflow', EventIdParam, 'Event not found.');
+
+  // ---- Workflow registry (designer building blocks; read-only) ----
+  const regTag = 'Workflow Registry';
+  const JsonSchemaDoc = registry.registerSchema(
+    'WorkflowJsonSchemaDocument',
+    zOpenApi.record(zOpenApi.unknown()).describe('A JSON Schema document.'),
+  );
+  const WorkflowRegistryAction = registry.registerSchema(
+    'WorkflowRegistryAction',
+    zOpenApi.object({
+      id: zOpenApi.string().describe('Stable action identifier (e.g. "ticket.create").'),
+      version: zOpenApi.number().int().describe('Action version.'),
+      sideEffectful: zOpenApi.boolean().describe('Whether executing the action mutates external state.'),
+      retryHint: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Suggested retry policy, or null.'),
+      idempotency: zOpenApi.record(zOpenApi.unknown()).describe('Idempotency configuration for the action.'),
+      ui: zOpenApi.record(zOpenApi.unknown()).describe('Designer UI metadata (label, group, icon, etc.).'),
+      inputSchema: JsonSchemaDoc.describe('JSON Schema for the action input, annotated with designer presentation metadata.'),
+      outputSchema: JsonSchemaDoc.describe('JSON Schema for the action output.'),
+      examples: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).nullable().describe('Example invocations, or null.'),
+    }),
+  );
+  const WorkflowRegistryNode = registry.registerSchema(
+    'WorkflowRegistryNode',
+    zOpenApi.object({
+      id: zOpenApi.string().describe('Node type identifier.'),
+      ui: zOpenApi.record(zOpenApi.unknown()).describe('Designer UI metadata for the node.'),
+      configSchema: JsonSchemaDoc.describe('JSON Schema for the node configuration.'),
+      examples: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).nullable().describe('Example configurations, or null.'),
+      defaultRetry: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Default retry policy for the node, or null.'),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/actions',
+    summary: 'List workflow registry actions',
+    description: 'Lists every action registered in the workflow runtime — the building blocks workflow definitions can invoke — including JSON Schemas for each action\'s input and output. Returns a bare array (no envelope).',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    responses: { 200: { description: 'Registered actions.', schema: zOpenApi.array(WorkflowRegistryAction) }, ...errs() },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/nodes',
+    summary: 'List workflow registry node types',
+    description: 'Lists the node types available to workflow definitions (triggers, control flow, action nodes, etc.) with each node\'s configuration JSON Schema and default retry policy. Returns a bare array (no envelope).',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    responses: { 200: { description: 'Registered node types.', schema: zOpenApi.array(WorkflowRegistryNode) }, ...errs() },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/designer-catalog',
+    summary: 'Get the workflow designer action catalog',
+    description: 'Returns the action catalog the workflow designer renders: registry actions and integration modules grouped into tiles, filtered to the integrations actually available to the tenant. Returns a bare array of catalog records (no envelope).',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    responses: { 200: { description: 'Designer catalog tiles.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.unknown()).describe('Catalog tile (groupKey, tileKind, actions, UI metadata).')) }, ...errs() },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/schemas/{schemaRef}',
+    summary: 'Get a workflow schema by ref',
+    description: 'Resolves a registered workflow schema reference (URL-encoded) to its JSON Schema document.',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    request: { params: registry.registerSchema('WorkflowSchemaRefParam', zOpenApi.object({
+      schemaRef: zOpenApi.string().describe('Registered schema reference; URL-encode it in the path.'),
+    })) },
+    responses: {
+      200: { description: 'Resolved schema.', schema: registry.registerSchema('WorkflowSchemaResponse', zOpenApi.object({
+        ref: zOpenApi.string().describe('The resolved schema reference.'),
+        schema: JsonSchemaDoc,
+      })) },
+      ...errs({ 404: 'Unknown schema ref.' }),
+    },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+
+  // ---- Projects (unversioned list used by the UI; distinct from /api/v1/projects) ----
+  registry.registerRoute({
+    method: 'get', path: '/api/projects',
+    summary: 'List projects',
+    description: 'Lists all projects for the tenant. Returns a bare array of project records (no envelope); responds 403 with an error message when the caller lacks project read permission.',
+    tags: ['Projects'], security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Projects for the tenant.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.unknown()).describe('Project record.')) },
+      ...errs(),
+    },
+    extensions: ext('project', 'read'), edition: 'both',
+  });
 }
