@@ -1337,5 +1337,9 @@
     "title": "Checklist",
     "toggleFailed": "Failed to update checklist item",
     "updateFailed": "Failed to update checklist item"
+  },
+  "integration": {
+    "loadTicketFailed": "Failed to load ticket",
+    "noUserSession": "No user session found"
   }
 }

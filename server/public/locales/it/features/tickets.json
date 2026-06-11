@@ -1337,5 +1337,9 @@
     "title": "Checklist",
     "toggleFailed": "Impossibile aggiornare l'elemento della checklist",
     "updateFailed": "Impossibile aggiornare l'elemento della checklist"
+  },
+  "integration": {
+    "loadTicketFailed": "Impossibile caricare il ticket",
+    "noUserSession": "Nessuna sessione utente trovata"
   }
 }

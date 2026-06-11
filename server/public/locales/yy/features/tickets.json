@@ -1337,5 +1337,9 @@
     "title": "55555",
     "toggleFailed": "55555",
     "updateFailed": "55555"
+  },
+  "integration": {
+    "loadTicketFailed": "55555",
+    "noUserSession": "55555"
   }
 }

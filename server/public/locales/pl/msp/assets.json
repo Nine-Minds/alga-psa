@@ -1334,5 +1334,9 @@
     "print": "Drukuj",
     "printOptions": "Opcje drukowania",
     "printSelected": "Drukuj zaznaczone ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+    "openTicketFailed": "Nie udało się otworzyć zgłoszenia"
   }
 }

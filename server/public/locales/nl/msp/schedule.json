@@ -637,5 +637,24 @@
   "actions": {
     "print": "Afdrukken",
     "printOptions": "Afdrukopties"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Klant",
+      "contact": "Contact",
+      "duration": "Duur",
+      "endTime": "Eindtijd",
+      "notes": "Notities",
+      "startTime": "Starttijd",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Gebruiker"
+    },
+    "noClient": "Geen klant gekoppeld",
+    "noContact": "Geen contact gekoppeld",
+    "noTitle": "Geen titel",
+    "notAvailable": "N.v.t.",
+    "title": "Interactiedetails",
+    "unknownUser": "Onbekend"
   }
 }

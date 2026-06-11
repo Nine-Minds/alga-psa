@@ -620,5 +620,32 @@
   "actions": {
     "print": "Afdrukken",
     "printOptions": "Afdrukopties"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ticket toevoegen",
+      "empty": "Geen tickets gevonden voor dit contact",
+      "filters": {
+        "allAssignees": "Alle toegewezen personen",
+        "allPriorities": "Alle prioriteiten",
+        "categoryPlaceholder": "Filteren op categorie",
+        "reset": "Resetten",
+        "searchPlaceholder": "Tickets zoeken...",
+        "statusPlaceholder": "Status selecteren"
+      },
+      "loadMore": {
+        "label": "Meer tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Laden...",
+      "title": "Contacttickets",
+      "toasts": {
+        "clientNotFound": "Klant niet gevonden",
+        "loadClientFailed": "Kan klantgegevens niet laden",
+        "loadTicketFailed": "Kan ticket niet laden",
+        "openTicketFailed": "Kan ticket niet openen",
+        "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
+      }
+    }
   }
 }

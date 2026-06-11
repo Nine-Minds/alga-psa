@@ -1337,5 +1337,9 @@
     "title": "Lista de verificación",
     "toggleFailed": "Error al actualizar el elemento de la lista de verificación",
     "updateFailed": "Error al actualizar el elemento de la lista de verificación"
+  },
+  "integration": {
+    "loadTicketFailed": "No se pudo cargar el ticket",
+    "noUserSession": "No se encontró ninguna sesión de usuario"
   }
 }

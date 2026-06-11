@@ -1337,5 +1337,9 @@
     "title": "Checkliste",
     "toggleFailed": "Checklistenpunkt konnte nicht aktualisiert werden",
     "updateFailed": "Checklistenpunkt konnte nicht aktualisiert werden"
+  },
+  "integration": {
+    "loadTicketFailed": "Ticket konnte nicht geladen werden",
+    "noUserSession": "Keine Benutzersitzung gefunden"
   }
 }

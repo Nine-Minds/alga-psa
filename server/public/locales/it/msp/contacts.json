@@ -620,5 +620,32 @@
   "actions": {
     "print": "Stampa",
     "printOptions": "Opzioni di stampa"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Aggiungi ticket",
+      "empty": "Nessun ticket trovato per questo contatto",
+      "filters": {
+        "allAssignees": "Tutti gli assegnatari",
+        "allPriorities": "Tutte le priorità",
+        "categoryPlaceholder": "Filtra per categoria",
+        "reset": "Reimposta",
+        "searchPlaceholder": "Cerca ticket...",
+        "statusPlaceholder": "Seleziona stato"
+      },
+      "loadMore": {
+        "label": "Carica altri ticket",
+        "loading": "Caricamento..."
+      },
+      "loading": "Caricamento...",
+      "title": "Ticket del contatto",
+      "toasts": {
+        "clientNotFound": "Cliente non trovato",
+        "loadClientFailed": "Impossibile caricare i dettagli del cliente",
+        "loadTicketFailed": "Impossibile caricare il ticket",
+        "openTicketFailed": "Impossibile aprire il ticket",
+        "userNotAuthenticated": "Utente non autenticato"
+      }
+    }
   }
 }

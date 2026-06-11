@@ -1337,5 +1337,9 @@
     "title": "Checklist",
     "toggleFailed": "Kan checklistitem niet bijwerken",
     "updateFailed": "Kan checklistitem niet bijwerken"
+  },
+  "integration": {
+    "loadTicketFailed": "Kan ticket niet laden",
+    "noUserSession": "Geen gebruikerssessie gevonden"
   }
 }

@@ -1337,5 +1337,9 @@
     "title": "Liste de contrôle",
     "toggleFailed": "Échec de la mise à jour de l'élément de la liste de contrôle",
     "updateFailed": "Échec de la mise à jour de l'élément de la liste de contrôle"
+  },
+  "integration": {
+    "loadTicketFailed": "Échec du chargement du ticket",
+    "noUserSession": "Aucune session utilisateur trouvée"
   }
 }

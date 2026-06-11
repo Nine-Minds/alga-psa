@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "MspClientTickets.tsx (client page Tickets tab) wired with useTranslation using msp/clients namespace; all hardcoded strings keyed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "MspClientAssets.tsx (client page Assets tab) wired with useTranslation using msp/clients namespace; all hardcoded strings keyed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "MspContactTickets.tsx (contact page Tickets tab) wired with useTranslation using msp/contacts namespace; all hardcoded strings keyed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "InteractionsFeed.tsx (client page Interactions tab) wired with useTranslation using msp/clients interactions.* keys",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "OverallInteractionsFeed.tsx wired with useTranslation using msp/clients interactions.* keys",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "SchedulingInteractionDetails.tsx wired with useTranslation using msp/schedule namespace",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "All P3 component keys added to en + 7 production locales + regenerated pseudo-locales",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "ROUTE_NAMESPACES verified to load msp/clients on /msp/clients, msp/contacts on /msp/contacts, and msp/schedule where SchedulingInteractionDetails renders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Remaining 16 msp-composition files swept and documented in SCRATCHPAD as having no user-visible strings (providers/wrappers)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3"
     ]

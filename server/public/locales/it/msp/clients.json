@@ -1190,6 +1190,122 @@
         "startRequired": "L'ora di inizio è obbligatoria per creare una riunione Teams",
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       }
+    },
+    "feed": {
+      "addInteraction": "Aggiungi interazione",
+      "allTypes": "Tutti i tipi",
+      "applyFilters": "Applica filtri",
+      "endDate": "Data di fine",
+      "filter": "Filtra",
+      "filterDialogTitle": "Filtra interazioni",
+      "reset": "Reimposta",
+      "searchPlaceholder": "Cerca interazioni",
+      "startDate": "Data di inizio",
+      "title": "Interazioni",
+      "typePlaceholder": "Tipo di interazione"
+    },
+    "overall": {
+      "allContacts": "Tutti i contatti",
+      "allStatuses": "Tutti gli stati",
+      "allUsers": "Tutti gli utenti",
+      "byUser": "Di {{name}}",
+      "collapse": "Comprimi le interazioni recenti",
+      "contactsFromClient": "Contatti del cliente selezionato",
+      "endTime": "Ora di fine",
+      "endTimeLabel": "Ora di fine dell'interazione",
+      "endTimePlaceholder": "Filtra fino a questa ora di fine",
+      "expand": "Espandi le interazioni recenti",
+      "startTime": "Ora di inizio",
+      "startTimeLabel": "Ora di inizio dell'interazione",
+      "startTimePlaceholder": "Filtra a partire da questa ora di inizio",
+      "statusPlaceholder": "Stato",
+      "title": "Interazioni recenti"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Impossibile caricare i dettagli del cliente.",
+    "loading": "Caricamento...",
+    "notFound": "Cliente non trovato."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Etichetta risorsa",
+        "details": "Dettagli",
+        "location": "Posizione",
+        "name": "Nome",
+        "purchaseDate": "Data di acquisto",
+        "serialNumber": "Numero di serie",
+        "status": "Stato",
+        "type": "Tipo",
+        "warrantyEnd": "Fine della garanzia"
+      },
+      "details": {
+        "local": "Locale",
+        "network": "Rete",
+        "noIp": "Nessun IP",
+        "none": "Nessun dettaglio disponibile"
+      },
+      "drawerLoadError": "Impossibile caricare i dettagli dell'asset in questo momento. Riprova.",
+      "expiredSuffix": "(Scaduta)",
+      "filterByType": "Filtra per tipo",
+      "inventory": {
+        "subtitle": "Gestisci e monitora tutti gli asset del cliente",
+        "title": "Inventario asset"
+      },
+      "loading": "Caricamento asset...",
+      "loadingHint": "Attendi mentre recuperiamo i tuoi dati",
+      "maintenanceTypes": {
+        "subtitle": "Suddivisione per categoria",
+        "title": "Tipi di manutenzione"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Asset con manutenzione",
+        "coverageRate": "Tasso di copertura",
+        "subtitle": "Statistiche di manutenzione",
+        "title": "Panoramica degli asset",
+        "totalSchedules": "Pianificazioni totali"
+      },
+      "summary": {
+        "activeBadge": "Attivi",
+        "maintenanceRate": "Tasso di manutenzione",
+        "needsAttention": "Richiede attenzione",
+        "overdueMaintenance": "Manutenzione scaduta",
+        "scheduledBadge": "Pianificata",
+        "totalAssets": "Asset totali",
+        "upcomingMaintenance": "Prossima manutenzione"
+      },
+      "typePlaceholder": "Tutti i tipi di asset...",
+      "types": {
+        "all": "Tutti i tipi di asset",
+        "mobileDevice": "Dispositivo mobile",
+        "networkDevice": "Dispositivo di rete",
+        "printer": "Stampante",
+        "server": "Server",
+        "workstation": "Stazione di lavoro"
+      }
+    },
+    "tickets": {
+      "addTicket": "Aggiungi ticket",
+      "filters": {
+        "allAssignees": "Tutti gli assegnatari",
+        "allPriorities": "Tutte le priorità",
+        "categoryPlaceholder": "Filtra per categoria",
+        "reset": "Reimposta",
+        "searchPlaceholder": "Cerca ticket...",
+        "statusPlaceholder": "Seleziona stato"
+      },
+      "loadMore": {
+        "label": "Carica altri ticket",
+        "loading": "Caricamento..."
+      },
+      "loading": "Caricamento ticket...",
+      "title": "Ticket del cliente",
+      "toasts": {
+        "loadTicketFailed": "Impossibile caricare il ticket",
+        "openTicketFailed": "Impossibile aprire il ticket",
+        "userNotAuthenticated": "Utente non autenticato"
+      }
     }
   }
 }

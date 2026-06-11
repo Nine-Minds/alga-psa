@@ -637,5 +637,24 @@
   "actions": {
     "print": "11111",
     "printOptions": "11111"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "11111",
+      "contact": "11111",
+      "duration": "11111",
+      "endTime": "11111",
+      "notes": "11111",
+      "startTime": "11111",
+      "status": "11111",
+      "title": "11111",
+      "user": "11111"
+    },
+    "noClient": "11111",
+    "noContact": "11111",
+    "noTitle": "11111",
+    "notAvailable": "11111",
+    "title": "11111",
+    "unknownUser": "11111"
   }
 }

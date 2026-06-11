@@ -1190,6 +1190,122 @@
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       }
+    },
+    "feed": {
+      "addInteraction": "Interactie toevoegen",
+      "allTypes": "Alle typen",
+      "applyFilters": "Filters toepassen",
+      "endDate": "Einddatum",
+      "filter": "Filteren",
+      "filterDialogTitle": "Interacties filteren",
+      "reset": "Resetten",
+      "searchPlaceholder": "Interacties zoeken",
+      "startDate": "Startdatum",
+      "title": "Interacties",
+      "typePlaceholder": "Interactietype"
+    },
+    "overall": {
+      "allContacts": "Alle contacten",
+      "allStatuses": "Alle statussen",
+      "allUsers": "Alle gebruikers",
+      "byUser": "Door {{name}}",
+      "collapse": "Recente interacties samenvouwen",
+      "contactsFromClient": "Contacten van de geselecteerde klant",
+      "endTime": "Eindtijd",
+      "endTimeLabel": "Eindtijd interactie",
+      "endTimePlaceholder": "Filteren tot deze eindtijd",
+      "expand": "Recente interacties uitvouwen",
+      "startTime": "Starttijd",
+      "startTimeLabel": "Starttijd interactie",
+      "startTimePlaceholder": "Filteren vanaf deze starttijd",
+      "statusPlaceholder": "Status",
+      "title": "Recente interacties"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Kan klantgegevens niet laden.",
+    "loading": "Laden...",
+    "notFound": "Klant niet gevonden."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Asset-tag",
+        "details": "Details",
+        "location": "Locatie",
+        "name": "Naam",
+        "purchaseDate": "Aankoopdatum",
+        "serialNumber": "Serienummer",
+        "status": "Status",
+        "type": "Type",
+        "warrantyEnd": "Einde garantie"
+      },
+      "details": {
+        "local": "Lokaal",
+        "network": "Netwerk",
+        "noIp": "Geen IP",
+        "none": "Geen details beschikbaar"
+      },
+      "drawerLoadError": "Kan assetdetails momenteel niet laden. Probeer het opnieuw.",
+      "expiredSuffix": "(Verlopen)",
+      "filterByType": "Filteren op type",
+      "inventory": {
+        "subtitle": "Beheer en volg alle assets van de klant",
+        "title": "Assetinventaris"
+      },
+      "loading": "Assets laden...",
+      "loadingHint": "Even geduld terwijl we uw gegevens ophalen",
+      "maintenanceTypes": {
+        "subtitle": "Uitsplitsing per categorie",
+        "title": "Onderhoudstypen"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Assets met onderhoud",
+        "coverageRate": "Dekkingsgraad",
+        "subtitle": "Onderhoudsstatistieken",
+        "title": "Assetoverzicht",
+        "totalSchedules": "Totaal aantal schema's"
+      },
+      "summary": {
+        "activeBadge": "Actief",
+        "maintenanceRate": "Onderhoudspercentage",
+        "needsAttention": "Heeft aandacht nodig",
+        "overdueMaintenance": "Achterstallig onderhoud",
+        "scheduledBadge": "Gepland",
+        "totalAssets": "Totaal aantal assets",
+        "upcomingMaintenance": "Aankomend onderhoud"
+      },
+      "typePlaceholder": "Alle assettypen...",
+      "types": {
+        "all": "Alle assettypen",
+        "mobileDevice": "Mobiel apparaat",
+        "networkDevice": "Netwerkapparaat",
+        "printer": "Printer",
+        "server": "Server",
+        "workstation": "Werkstation"
+      }
+    },
+    "tickets": {
+      "addTicket": "Ticket toevoegen",
+      "filters": {
+        "allAssignees": "Alle toegewezen personen",
+        "allPriorities": "Alle prioriteiten",
+        "categoryPlaceholder": "Filteren op categorie",
+        "reset": "Resetten",
+        "searchPlaceholder": "Tickets zoeken...",
+        "statusPlaceholder": "Status selecteren"
+      },
+      "loadMore": {
+        "label": "Meer tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Tickets laden...",
+      "title": "Klanttickets",
+      "toasts": {
+        "loadTicketFailed": "Kan ticket niet laden",
+        "openTicketFailed": "Kan ticket niet openen",
+        "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
+      }
     }
   }
 }

@@ -1190,6 +1190,122 @@
         "startRequired": "L'heure de début est requise pour créer une réunion Teams",
         "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
       }
+    },
+    "feed": {
+      "addInteraction": "Ajouter une interaction",
+      "allTypes": "Tous les types",
+      "applyFilters": "Appliquer les filtres",
+      "endDate": "Date de fin",
+      "filter": "Filtrer",
+      "filterDialogTitle": "Filtrer les interactions",
+      "reset": "Réinitialiser",
+      "searchPlaceholder": "Rechercher des interactions",
+      "startDate": "Date de début",
+      "title": "Interactions",
+      "typePlaceholder": "Type d'interaction"
+    },
+    "overall": {
+      "allContacts": "Tous les contacts",
+      "allStatuses": "Tous les statuts",
+      "allUsers": "Tous les utilisateurs",
+      "byUser": "Par {{name}}",
+      "collapse": "Réduire les interactions récentes",
+      "contactsFromClient": "Contacts du client sélectionné",
+      "endTime": "Heure de fin",
+      "endTimeLabel": "Heure de fin de l'interaction",
+      "endTimePlaceholder": "Filtrer jusqu'à cette heure de fin",
+      "expand": "Développer les interactions récentes",
+      "startTime": "Heure de début",
+      "startTimeLabel": "Heure de début de l'interaction",
+      "startTimePlaceholder": "Filtrer à partir de cette heure de début",
+      "statusPlaceholder": "Statut",
+      "title": "Interactions récentes"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Échec du chargement des détails du client.",
+    "loading": "Chargement...",
+    "notFound": "Client introuvable."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Étiquette d'actif",
+        "details": "Détails",
+        "location": "Emplacement",
+        "name": "Nom",
+        "purchaseDate": "Date d'achat",
+        "serialNumber": "Numéro de série",
+        "status": "Statut",
+        "type": "Type",
+        "warrantyEnd": "Fin de garantie"
+      },
+      "details": {
+        "local": "Local",
+        "network": "Réseau",
+        "noIp": "Aucune IP",
+        "none": "Aucun détail disponible"
+      },
+      "drawerLoadError": "Impossible de charger les détails de l'actif pour le moment. Veuillez réessayer.",
+      "expiredSuffix": "(Expirée)",
+      "filterByType": "Filtrer par type",
+      "inventory": {
+        "subtitle": "Gérez et suivez tous les actifs du client",
+        "title": "Inventaire des actifs"
+      },
+      "loading": "Chargement des actifs...",
+      "loadingHint": "Veuillez patienter pendant la récupération de vos données",
+      "maintenanceTypes": {
+        "subtitle": "Répartition par catégorie",
+        "title": "Types de maintenance"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Actifs avec maintenance",
+        "coverageRate": "Taux de couverture",
+        "subtitle": "Statistiques de maintenance",
+        "title": "Aperçu des actifs",
+        "totalSchedules": "Total des calendriers"
+      },
+      "summary": {
+        "activeBadge": "Actif",
+        "maintenanceRate": "Taux de maintenance",
+        "needsAttention": "Nécessite une attention",
+        "overdueMaintenance": "Maintenance en retard",
+        "scheduledBadge": "Planifiée",
+        "totalAssets": "Total des actifs",
+        "upcomingMaintenance": "Maintenance à venir"
+      },
+      "typePlaceholder": "Tous les types d'actifs...",
+      "types": {
+        "all": "Tous les types d'actifs",
+        "mobileDevice": "Appareil mobile",
+        "networkDevice": "Périphérique réseau",
+        "printer": "Imprimante",
+        "server": "Serveur",
+        "workstation": "Poste de travail"
+      }
+    },
+    "tickets": {
+      "addTicket": "Ajouter un ticket",
+      "filters": {
+        "allAssignees": "Tous les assignés",
+        "allPriorities": "Toutes les priorités",
+        "categoryPlaceholder": "Filtrer par catégorie",
+        "reset": "Réinitialiser",
+        "searchPlaceholder": "Rechercher des tickets...",
+        "statusPlaceholder": "Sélectionner un statut"
+      },
+      "loadMore": {
+        "label": "Charger plus de tickets",
+        "loading": "Chargement..."
+      },
+      "loading": "Chargement des tickets...",
+      "title": "Tickets du client",
+      "toasts": {
+        "loadTicketFailed": "Échec du chargement du ticket",
+        "openTicketFailed": "Échec de l'ouverture du ticket",
+        "userNotAuthenticated": "Utilisateur non authentifié"
+      }
     }
   }
 }

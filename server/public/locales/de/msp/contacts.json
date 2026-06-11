@@ -620,5 +620,32 @@
   "actions": {
     "print": "Drucken",
     "printOptions": "Druckoptionen"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ticket hinzufügen",
+      "empty": "Keine Tickets für diesen Kontakt gefunden",
+      "filters": {
+        "allAssignees": "Alle Zuständigen",
+        "allPriorities": "Alle Prioritäten",
+        "categoryPlaceholder": "Nach Kategorie filtern",
+        "reset": "Zurücksetzen",
+        "searchPlaceholder": "Tickets suchen...",
+        "statusPlaceholder": "Status auswählen"
+      },
+      "loadMore": {
+        "label": "Mehr Tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Laden...",
+      "title": "Kontakt-Tickets",
+      "toasts": {
+        "clientNotFound": "Kunde nicht gefunden",
+        "loadClientFailed": "Kundendetails konnten nicht geladen werden",
+        "loadTicketFailed": "Ticket konnte nicht geladen werden",
+        "openTicketFailed": "Ticket konnte nicht geöffnet werden",
+        "userNotAuthenticated": "Benutzer nicht authentifiziert"
+      }
+    }
   }
 }

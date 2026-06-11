@@ -1334,5 +1334,9 @@
     "print": "Afdrukken",
     "printOptions": "Afdrukopties",
     "printSelected": "Geselecteerde afdrukken ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Kan ticket niet laden",
+    "openTicketFailed": "Kan ticket niet openen"
   }
 }

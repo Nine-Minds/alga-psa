@@ -1190,6 +1190,122 @@
         "startRequired": "11111",
         "unavailable": "11111"
       }
+    },
+    "feed": {
+      "addInteraction": "11111",
+      "allTypes": "11111",
+      "applyFilters": "11111",
+      "endDate": "11111",
+      "filter": "11111",
+      "filterDialogTitle": "11111",
+      "reset": "11111",
+      "searchPlaceholder": "11111",
+      "startDate": "11111",
+      "title": "11111",
+      "typePlaceholder": "11111"
+    },
+    "overall": {
+      "allContacts": "11111",
+      "allStatuses": "11111",
+      "allUsers": "11111",
+      "byUser": "11111 {{name}} 11111",
+      "collapse": "11111",
+      "contactsFromClient": "11111",
+      "endTime": "11111",
+      "endTimeLabel": "11111",
+      "endTimePlaceholder": "11111",
+      "expand": "11111",
+      "startTime": "11111",
+      "startTimeLabel": "11111",
+      "startTimePlaceholder": "11111",
+      "statusPlaceholder": "11111",
+      "title": "11111"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "11111",
+    "loading": "11111",
+    "notFound": "11111"
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "11111",
+        "details": "11111",
+        "location": "11111",
+        "name": "11111",
+        "purchaseDate": "11111",
+        "serialNumber": "11111",
+        "status": "11111",
+        "type": "11111",
+        "warrantyEnd": "11111"
+      },
+      "details": {
+        "local": "11111",
+        "network": "11111",
+        "noIp": "11111",
+        "none": "11111"
+      },
+      "drawerLoadError": "11111",
+      "expiredSuffix": "11111",
+      "filterByType": "11111",
+      "inventory": {
+        "subtitle": "11111",
+        "title": "11111"
+      },
+      "loading": "11111",
+      "loadingHint": "11111",
+      "maintenanceTypes": {
+        "subtitle": "11111",
+        "title": "11111"
+      },
+      "overview": {
+        "assetsWithMaintenance": "11111",
+        "coverageRate": "11111",
+        "subtitle": "11111",
+        "title": "11111",
+        "totalSchedules": "11111"
+      },
+      "summary": {
+        "activeBadge": "11111",
+        "maintenanceRate": "11111",
+        "needsAttention": "11111",
+        "overdueMaintenance": "11111",
+        "scheduledBadge": "11111",
+        "totalAssets": "11111",
+        "upcomingMaintenance": "11111"
+      },
+      "typePlaceholder": "11111",
+      "types": {
+        "all": "11111",
+        "mobileDevice": "11111",
+        "networkDevice": "11111",
+        "printer": "11111",
+        "server": "11111",
+        "workstation": "11111"
+      }
+    },
+    "tickets": {
+      "addTicket": "11111",
+      "filters": {
+        "allAssignees": "11111",
+        "allPriorities": "11111",
+        "categoryPlaceholder": "11111",
+        "reset": "11111",
+        "searchPlaceholder": "11111",
+        "statusPlaceholder": "11111"
+      },
+      "loadMore": {
+        "label": "11111",
+        "loading": "11111"
+      },
+      "loading": "11111",
+      "title": "11111",
+      "toasts": {
+        "loadTicketFailed": "11111",
+        "openTicketFailed": "11111",
+        "userNotAuthenticated": "11111"
+      }
     }
   }
 }

@@ -620,5 +620,32 @@
   "actions": {
     "print": "11111",
     "printOptions": "11111"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "11111",
+      "empty": "11111",
+      "filters": {
+        "allAssignees": "11111",
+        "allPriorities": "11111",
+        "categoryPlaceholder": "11111",
+        "reset": "11111",
+        "searchPlaceholder": "11111",
+        "statusPlaceholder": "11111"
+      },
+      "loadMore": {
+        "label": "11111",
+        "loading": "11111"
+      },
+      "loading": "11111",
+      "title": "11111",
+      "toasts": {
+        "clientNotFound": "11111",
+        "loadClientFailed": "11111",
+        "loadTicketFailed": "11111",
+        "openTicketFailed": "11111",
+        "userNotAuthenticated": "11111"
+      }
+    }
   }
 }

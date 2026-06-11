@@ -1190,6 +1190,122 @@
         "startRequired": "Godzina rozpoczęcia jest wymagana do utworzenia spotkania Teams",
         "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
       }
+    },
+    "feed": {
+      "addInteraction": "Dodaj interakcję",
+      "allTypes": "Wszystkie typy",
+      "applyFilters": "Zastosuj filtry",
+      "endDate": "Data zakończenia",
+      "filter": "Filtruj",
+      "filterDialogTitle": "Filtruj interakcje",
+      "reset": "Resetuj",
+      "searchPlaceholder": "Szukaj interakcji",
+      "startDate": "Data rozpoczęcia",
+      "title": "Interakcje",
+      "typePlaceholder": "Typ interakcji"
+    },
+    "overall": {
+      "allContacts": "Wszystkie kontakty",
+      "allStatuses": "Wszystkie statusy",
+      "allUsers": "Wszyscy użytkownicy",
+      "byUser": "Przez {{name}}",
+      "collapse": "Zwiń ostatnie interakcje",
+      "contactsFromClient": "Kontakty wybranego klienta",
+      "endTime": "Czas zakończenia",
+      "endTimeLabel": "Czas zakończenia interakcji",
+      "endTimePlaceholder": "Filtruj do tego czasu zakończenia",
+      "expand": "Rozwiń ostatnie interakcje",
+      "startTime": "Czas rozpoczęcia",
+      "startTimeLabel": "Czas rozpoczęcia interakcji",
+      "startTimePlaceholder": "Filtruj od tego czasu rozpoczęcia",
+      "statusPlaceholder": "Status",
+      "title": "Ostatnie interakcje"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Nie udało się załadować szczegółów klienta.",
+    "loading": "Ładowanie...",
+    "notFound": "Nie znaleziono klienta."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Znacznik zasobu",
+        "details": "Szczegóły",
+        "location": "Lokalizacja",
+        "name": "Nazwa",
+        "purchaseDate": "Data zakupu",
+        "serialNumber": "Numer seryjny",
+        "status": "Status",
+        "type": "Typ",
+        "warrantyEnd": "Koniec gwarancji"
+      },
+      "details": {
+        "local": "Lokalny",
+        "network": "Sieć",
+        "noIp": "Brak adresu IP",
+        "none": "Brak dostępnych szczegółów"
+      },
+      "drawerLoadError": "Nie można teraz załadować szczegółów zasobu. Spróbuj ponownie.",
+      "expiredSuffix": "(Wygasła)",
+      "filterByType": "Filtruj według typu",
+      "inventory": {
+        "subtitle": "Zarządzaj wszystkimi zasobami klienta i śledź je",
+        "title": "Inwentarz zasobów"
+      },
+      "loading": "Ładowanie zasobów...",
+      "loadingHint": "Proszę czekać, trwa pobieranie danych",
+      "maintenanceTypes": {
+        "subtitle": "Podział według kategorii",
+        "title": "Rodzaje konserwacji"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Zasoby z konserwacją",
+        "coverageRate": "Wskaźnik pokrycia",
+        "subtitle": "Statystyki konserwacji",
+        "title": "Przegląd zasobów",
+        "totalSchedules": "Harmonogramy ogółem"
+      },
+      "summary": {
+        "activeBadge": "Aktywne",
+        "maintenanceRate": "Wskaźnik konserwacji",
+        "needsAttention": "Wymaga uwagi",
+        "overdueMaintenance": "Zaległa konserwacja",
+        "scheduledBadge": "Zaplanowane",
+        "totalAssets": "Zasoby ogółem",
+        "upcomingMaintenance": "Nadchodząca konserwacja"
+      },
+      "typePlaceholder": "Wszystkie typy zasobów...",
+      "types": {
+        "all": "Wszystkie typy zasobów",
+        "mobileDevice": "Urządzenie mobilne",
+        "networkDevice": "Urządzenie sieciowe",
+        "printer": "Drukarka",
+        "server": "Serwer",
+        "workstation": "Stacja robocza"
+      }
+    },
+    "tickets": {
+      "addTicket": "Dodaj zgłoszenie",
+      "filters": {
+        "allAssignees": "Wszyscy przypisani",
+        "allPriorities": "Wszystkie priorytety",
+        "categoryPlaceholder": "Filtruj według kategorii",
+        "reset": "Resetuj",
+        "searchPlaceholder": "Szukaj zgłoszeń...",
+        "statusPlaceholder": "Wybierz status"
+      },
+      "loadMore": {
+        "label": "Załaduj więcej zgłoszeń",
+        "loading": "Ładowanie..."
+      },
+      "loading": "Ładowanie zgłoszeń...",
+      "title": "Zgłoszenia klienta",
+      "toasts": {
+        "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+        "openTicketFailed": "Nie udało się otworzyć zgłoszenia",
+        "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
+      }
     }
   }
 }

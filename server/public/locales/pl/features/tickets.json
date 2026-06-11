@@ -1337,5 +1337,9 @@
     "title": "Lista kontrolna",
     "toggleFailed": "Nie udało się zaktualizować elementu listy kontrolnej",
     "updateFailed": "Nie udało się zaktualizować elementu listy kontrolnej"
+  },
+  "integration": {
+    "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+    "noUserSession": "Nie znaleziono sesji użytkownika"
   }
 }

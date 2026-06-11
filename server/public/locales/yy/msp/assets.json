@@ -1334,5 +1334,9 @@
     "print": "55555",
     "printOptions": "55555",
     "printSelected": "55555 {{count}} 55555"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "55555",
+    "openTicketFailed": "55555"
   }
 }

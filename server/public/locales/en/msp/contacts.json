@@ -620,5 +620,32 @@
   "actions": {
     "print": "Print",
     "printOptions": "Print options"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Add Ticket",
+      "empty": "No tickets found for this contact",
+      "filters": {
+        "allAssignees": "All Assignees",
+        "allPriorities": "All Priorities",
+        "categoryPlaceholder": "Filter by category",
+        "reset": "Reset",
+        "searchPlaceholder": "Search tickets...",
+        "statusPlaceholder": "Select Status"
+      },
+      "loadMore": {
+        "label": "Load More Tickets",
+        "loading": "Loading..."
+      },
+      "loading": "Loading...",
+      "title": "Contact Tickets",
+      "toasts": {
+        "clientNotFound": "Client not found",
+        "loadClientFailed": "Failed to load client details",
+        "loadTicketFailed": "Failed to load ticket",
+        "openTicketFailed": "Failed to open ticket",
+        "userNotAuthenticated": "User not authenticated"
+      }
+    }
   }
 }

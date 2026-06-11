@@ -28,6 +28,7 @@ import {
   tabToPanelParam,
   type AssetDrawerServerData,
 } from '@alga-psa/assets/components/AssetDetailDrawer.types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientAssetsProps {
   clientId: string;
@@ -35,16 +36,16 @@ interface ClientAssetsProps {
 
 type AssetType = 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer';
 
-const ASSET_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All Asset Types' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'network_device', label: 'Network Device' },
-  { value: 'server', label: 'Server' },
-  { value: 'mobile_device', label: 'Mobile Device' },
-  { value: 'printer', label: 'Printer' }
-];
-
 const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
+  const { t } = useTranslation('msp/clients');
+  const assetTypeOptions: SelectOption[] = [
+    { value: 'all', label: t('clientTabs.assets.types.all', { defaultValue: 'All Asset Types' }) },
+    { value: 'workstation', label: t('clientTabs.assets.types.workstation', { defaultValue: 'Workstation' }) },
+    { value: 'network_device', label: t('clientTabs.assets.types.networkDevice', { defaultValue: 'Network Device' }) },
+    { value: 'server', label: t('clientTabs.assets.types.server', { defaultValue: 'Server' }) },
+    { value: 'mobile_device', label: t('clientTabs.assets.types.mobileDevice', { defaultValue: 'Mobile Device' }) },
+    { value: 'printer', label: t('clientTabs.assets.types.printer', { defaultValue: 'Printer' }) }
+  ];
   const [summary, setSummary] = useState<ClientMaintenanceSummary | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -91,7 +92,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       }
       console.error('Failed to load asset drawer data', error);
       setDrawerData({ asset: null });
-      setDrawerError('Unable to load asset details right now. Please try again.');
+      setDrawerError(t('clientTabs.assets.drawerLoadError', { defaultValue: 'Unable to load asset details right now. Please try again.' }));
     } finally {
       if (lastRequestIdRef.current === requestId) {
         setDrawerLoading(false);
@@ -182,7 +183,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
     }
     if (asset.network_device) {
-      return `${asset.network_device.device_type} - ${asset.network_device.management_ip || 'No IP'}`;
+      return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('clientTabs.assets.details.noIp', { defaultValue: 'No IP' })}`;
     }
     if (asset.server) {
       return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
@@ -191,14 +192,14 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;
     }
     if (asset.printer) {
-      return `${asset.printer.model} - ${asset.printer.is_network_printer ? 'Network' : 'Local'}`;
+      return `${asset.printer.model} - ${asset.printer.is_network_printer ? t('clientTabs.assets.details.network', { defaultValue: 'Network' }) : t('clientTabs.assets.details.local', { defaultValue: 'Local' })}`;
     }
-    return 'No details available';
+    return t('clientTabs.assets.details.none', { defaultValue: 'No details available' });
   };
 
   const columns = [
     {
-      title: 'Asset Tag',
+      title: t('clientTabs.assets.columns.assetTag', { defaultValue: 'Asset Tag' }),
       dataIndex: 'asset_tag',
       render: (value: string, record: Asset) => (
         <Link
@@ -211,14 +212,14 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       )
     },
     {
-      title: 'Name',
+      title: t('clientTabs.assets.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       render: (value: string) => (
         <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">{value}</span>
       )
     },
     {
-      title: 'Type',
+      title: t('clientTabs.assets.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'asset_type',
       render: (value: string) => (
         <div className="flex items-center gap-2">
@@ -232,19 +233,19 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       )
     },
     {
-      title: 'Details',
+      title: t('clientTabs.assets.columns.details', { defaultValue: 'Details' }),
       dataIndex: 'details',
       render: (_: unknown, record: Asset): string => renderAssetDetails(record)
     },
     {
-      title: 'Serial Number',
+      title: t('clientTabs.assets.columns.serialNumber', { defaultValue: 'Serial Number' }),
       dataIndex: 'serial_number',
       render: (value: string | null) => (
         <span className="font-mono text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
       )
     },
     {
-      title: 'Status',
+      title: t('clientTabs.assets.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value: string) => (
         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -262,14 +263,14 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       )
     },
     {
-      title: 'Location',
+      title: t('clientTabs.assets.columns.location', { defaultValue: 'Location' }),
       dataIndex: 'location',
       render: (value: string | null) => (
         <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
       )
     },
     {
-      title: 'Purchase Date',
+      title: t('clientTabs.assets.columns.purchaseDate', { defaultValue: 'Purchase Date' }),
       dataIndex: 'purchase_date',
       render: (value: string | null) => (
         <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">
@@ -278,7 +279,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       )
     },
     {
-      title: 'Warranty End',
+      title: t('clientTabs.assets.columns.warrantyEnd', { defaultValue: 'Warranty End' }),
       dataIndex: 'warranty_end_date',
       render: (value: string | null) => {
         if (!value) return <span className="text-sm text-gray-400 dark:text-[rgb(var(--color-text-400))]">—</span>;
@@ -287,7 +288,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         return (
           <span className={`text-sm font-medium ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-[rgb(var(--color-text-600))]'}`}>
             {date.toLocaleDateString()}
-            {isExpired && <span className="ml-1 text-xs">(Expired)</span>}
+            {isExpired && <span className="ml-1 text-xs">{t('clientTabs.assets.expiredSuffix', { defaultValue: '(Expired)' })}</span>}
           </span>
         );
       }
@@ -300,8 +301,8 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         <div className="text-center space-y-4">
           <Spinner size="lg" />
           <div className="space-y-1">
-            <p className="text-lg font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">Loading assets...</p>
-            <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">Please wait while we fetch your data</p>
+            <p className="text-lg font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.loading', { defaultValue: 'Loading assets...' })}</p>
+            <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('clientTabs.assets.loadingHint', { defaultValue: 'Please wait while we fetch your data' })}</p>
           </div>
         </div>
       </div>
@@ -320,10 +321,10 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               <div className="p-3 bg-blue-500/10 rounded-lg ring-1 ring-blue-500/20">
                 <Boxes className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-2.5 py-1 rounded-full">Active</span>
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-2.5 py-1 rounded-full">{t('clientTabs.assets.summary.activeBadge', { defaultValue: 'Active' })}</span>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900/60 dark:text-blue-300/80">Total Assets</p>
+              <p className="text-sm font-medium text-blue-900/60 dark:text-blue-300/80">{t('clientTabs.assets.summary.totalAssets', { defaultValue: 'Total Assets' })}</p>
               <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{summary?.total_assets || 0}</p>
             </div>
           </div>
@@ -340,7 +341,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-emerald-900/60 dark:text-emerald-300/80">Maintenance Rate</p>
+              <p className="text-sm font-medium text-emerald-900/60 dark:text-emerald-300/80">{t('clientTabs.assets.summary.maintenanceRate', { defaultValue: 'Maintenance Rate' })}</p>
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">
                   {Math.round(summary?.compliance_rate || 0)}%
@@ -359,11 +360,11 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
                 <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
               {(summary?.overdue_maintenances || 0) > 0 && (
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-1 rounded-full">Needs attention</span>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-1 rounded-full">{t('clientTabs.assets.summary.needsAttention', { defaultValue: 'Needs attention' })}</span>
               )}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-amber-900/60 dark:text-amber-300/80">Overdue Maintenance</p>
+              <p className="text-sm font-medium text-amber-900/60 dark:text-amber-300/80">{t('clientTabs.assets.summary.overdueMaintenance', { defaultValue: 'Overdue Maintenance' })}</p>
               <p className="text-3xl font-bold text-amber-900 dark:text-amber-100">{summary?.overdue_maintenances || 0}</p>
             </div>
           </div>
@@ -377,10 +378,10 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               <div className="p-3 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
                 <Clock className="h-6 w-6 text-violet-600 dark:text-violet-400" />
               </div>
-              <span className="text-xs font-medium text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/50 px-2.5 py-1 rounded-full">Scheduled</span>
+              <span className="text-xs font-medium text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/50 px-2.5 py-1 rounded-full">{t('clientTabs.assets.summary.scheduledBadge', { defaultValue: 'Scheduled' })}</span>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-violet-900/60 dark:text-violet-300/80">Upcoming Maintenance</p>
+              <p className="text-sm font-medium text-violet-900/60 dark:text-violet-300/80">{t('clientTabs.assets.summary.upcomingMaintenance', { defaultValue: 'Upcoming Maintenance' })}</p>
               <p className="text-3xl font-bold text-violet-900 dark:text-violet-100">{summary?.upcoming_maintenances || 0}</p>
             </div>
           </div>
@@ -392,13 +393,13 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 max-w-xs">
             <label className="block text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-700))] mb-2">
-              Filter by Type
+              {t('clientTabs.assets.filterByType', { defaultValue: 'Filter by Type' })}
             </label>
             <CustomSelect
-              options={ASSET_TYPE_OPTIONS}
+              options={assetTypeOptions}
               value={selectedType}
               onValueChange={setSelectedType}
-              placeholder="All asset types..."
+              placeholder={t('clientTabs.assets.typePlaceholder', { defaultValue: 'All asset types...' })}
             />
           </div>
           <div className="flex items-end">
@@ -413,8 +414,8 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       {/* Assets Table - Enhanced container */}
       <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-xl shadow-sm border border-gray-100 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">Asset Inventory</h2>
-          <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-1">Manage and track all client assets</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Asset Inventory' })}</h2>
+          <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-1">{t('clientTabs.assets.inventory.subtitle', { defaultValue: 'Manage and track all client assets' })}</p>
         </div>
         <DataTable
           id="client-assets-table"
@@ -440,8 +441,8 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
                 <CheckCircle2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">Maintenance Types</h3>
-                <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">Breakdown by category</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.maintenanceTypes.title', { defaultValue: 'Maintenance Types' })}</h3>
+                <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('clientTabs.assets.maintenanceTypes.subtitle', { defaultValue: 'Breakdown by category' })}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -462,15 +463,15 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               <Boxes className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">Asset Overview</h3>
-              <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">Maintenance statistics</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.overview.title', { defaultValue: 'Asset Overview' })}</h3>
+              <p className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-500))]">{t('clientTabs.assets.overview.subtitle', { defaultValue: 'Maintenance statistics' })}</p>
             </div>
           </div>
           <div className="space-y-4">
             <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg p-4 border border-blue-100 dark:border-blue-800/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-[rgb(var(--color-text-600))]">Assets with Maintenance</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-[rgb(var(--color-text-600))]">{t('clientTabs.assets.overview.assetsWithMaintenance', { defaultValue: 'Assets with Maintenance' })}</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-[rgb(var(--color-text-900))] mt-1">{summary?.assets_with_maintenance || 0}</p>
                 </div>
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
@@ -481,12 +482,12 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg p-4 border border-blue-100 dark:border-blue-800/30">
-                <p className="text-xs font-medium text-gray-500 dark:text-[rgb(var(--color-text-500))] uppercase tracking-wide mb-1">Total Schedules</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-[rgb(var(--color-text-500))] uppercase tracking-wide mb-1">{t('clientTabs.assets.overview.totalSchedules', { defaultValue: 'Total Schedules' })}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{summary?.total_schedules || 0}</p>
               </div>
 
               <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg p-4 border border-blue-100 dark:border-blue-800/30">
-                <p className="text-xs font-medium text-gray-500 dark:text-[rgb(var(--color-text-500))] uppercase tracking-wide mb-1">Coverage Rate</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-[rgb(var(--color-text-500))] uppercase tracking-wide mb-1">{t('clientTabs.assets.overview.coverageRate', { defaultValue: 'Coverage Rate' })}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-[rgb(var(--color-text-900))]">
                   {(summary?.assets_with_maintenance || 0) > 0
                     ? Math.round(

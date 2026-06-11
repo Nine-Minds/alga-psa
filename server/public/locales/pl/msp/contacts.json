@@ -620,5 +620,32 @@
   "actions": {
     "print": "Drukuj",
     "printOptions": "Opcje drukowania"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Dodaj zgłoszenie",
+      "empty": "Nie znaleziono zgłoszeń dla tego kontaktu",
+      "filters": {
+        "allAssignees": "Wszyscy przypisani",
+        "allPriorities": "Wszystkie priorytety",
+        "categoryPlaceholder": "Filtruj według kategorii",
+        "reset": "Resetuj",
+        "searchPlaceholder": "Szukaj zgłoszeń...",
+        "statusPlaceholder": "Wybierz status"
+      },
+      "loadMore": {
+        "label": "Załaduj więcej zgłoszeń",
+        "loading": "Ładowanie..."
+      },
+      "loading": "Ładowanie...",
+      "title": "Zgłoszenia kontaktu",
+      "toasts": {
+        "clientNotFound": "Nie znaleziono klienta",
+        "loadClientFailed": "Nie udało się załadować szczegółów klienta",
+        "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+        "openTicketFailed": "Nie udało się otworzyć zgłoszenia",
+        "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
+      }
+    }
   }
 }

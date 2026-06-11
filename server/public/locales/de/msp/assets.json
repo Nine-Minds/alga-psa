@@ -1334,5 +1334,9 @@
     "print": "Drucken",
     "printOptions": "Druckoptionen",
     "printSelected": "Ausgewählte drucken ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Ticket konnte nicht geladen werden",
+    "openTicketFailed": "Ticket konnte nicht geöffnet werden"
   }
 }

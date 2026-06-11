@@ -301,7 +301,7 @@
   {
     "id": "T037",
     "description": "MspClientTickets has zero hardcoded user-visible strings (i18n audit test asserting useTranslation usage + key coverage)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -309,7 +309,7 @@
   {
     "id": "T038",
     "description": "Client page Tickets tab renders pseudo-accented strings under xx locale (column headers, filters, 'Loading tickets...', search placeholder)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F035"
@@ -318,7 +318,7 @@
   {
     "id": "T039",
     "description": "MspClientAssets has zero hardcoded user-visible strings (i18n audit test)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -326,7 +326,7 @@
   {
     "id": "T040",
     "description": "Client page Assets tab renders pseudo-accented strings under xx ('Loading assets...', 'All asset types...' filter)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F035"
@@ -335,7 +335,7 @@
   {
     "id": "T041",
     "description": "MspContactTickets has zero hardcoded user-visible strings (i18n audit test)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -343,7 +343,7 @@
   {
     "id": "T042",
     "description": "InteractionsFeed renders translated strings under fr (search, filter, reset, apply controls)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F035"
@@ -352,7 +352,7 @@
   {
     "id": "T043",
     "description": "OverallInteractionsFeed renders translated strings under fr",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F035"
@@ -361,7 +361,7 @@
   {
     "id": "T044",
     "description": "SchedulingInteractionDetails renders translated strings under fr",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F035"
@@ -370,7 +370,7 @@
   {
     "id": "T045",
     "description": "All new P3 keys present in en + 7 locales + pseudo (validate-translations green)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "T047",
     "description": "msp-composition sweep documented: each of the 16 remaining files listed with 'no user-visible strings' verdict",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]

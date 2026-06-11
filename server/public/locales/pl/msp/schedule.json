@@ -637,5 +637,24 @@
   "actions": {
     "print": "Drukuj",
     "printOptions": "Opcje drukowania"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Klient",
+      "contact": "Kontakt",
+      "duration": "Czas trwania",
+      "endTime": "Czas zakończenia",
+      "notes": "Notatki",
+      "startTime": "Czas rozpoczęcia",
+      "status": "Status",
+      "title": "Tytuł",
+      "user": "Użytkownik"
+    },
+    "noClient": "Brak powiązanego klienta",
+    "noContact": "Brak powiązanego kontaktu",
+    "noTitle": "Brak tytułu",
+    "notAvailable": "N/D",
+    "title": "Szczegóły interakcji",
+    "unknownUser": "Nieznany"
   }
 }
