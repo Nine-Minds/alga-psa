@@ -3,6 +3,7 @@
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
+import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { UserService } from '@alga-psa/users';
 import { runAsSystem, createSystemContext } from '@alga-psa/db';
@@ -417,8 +418,21 @@ export const sendPortalInvitation = withAuth(async (
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
+      // Prefer the tenant's active custom portal domain (vanity host) so the
+      // invitation lands on the host the client portal is served from.
+      let vanityBaseUrl = '';
+      try {
+        const portalDomain = await getPortalDomainStatusForTenant(tenant);
+        if (portalDomain.status === 'active' && portalDomain.domain) {
+          vanityBaseUrl = `https://${portalDomain.domain}`;
+        }
+      } catch (domainError) {
+        console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
+      }
+
       // Generate portal setup URL with robust base URL fallback
       const baseUrl =
+        vanityBaseUrl ||
         process.env.NEXT_PUBLIC_BASE_URL ||
         process.env.NEXTAUTH_URL ||
         (process.env.HOST ? `https://${process.env.HOST}` : '');
