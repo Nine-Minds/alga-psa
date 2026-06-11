@@ -15,8 +15,6 @@ import {
  * See docs/plans/2026-06-10-ticket-close-rules/PRD.md §5.1 / §5.3.
  */
 
-export type { CloseRuleRequiredField };
-
 export interface IBoardCloseRules {
   board_id: string;
   require_resolution_comment: boolean;
