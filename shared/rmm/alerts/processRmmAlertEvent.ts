@@ -20,13 +20,23 @@ import { isTicketUntouched } from './untouched';
  * transaction; workflow events and notifications publish after commit.
  * Replayed deliveries are no-ops, so at-least-once sources are safe.
  */
+export interface ProcessRmmAlertEventOptions {
+  /**
+   * Reconciliation passes this so a still-active suppressed alert re-enters
+   * the pipeline once its maintenance window has ended (the window check runs
+   * again against the event's occurredAt).
+   */
+  reprocessSuppressed?: boolean;
+}
+
 export async function processRmmAlertEvent(
   ctx: RmmAlertProcessingContext,
-  event: NormalizedRmmAlertEvent
+  event: NormalizedRmmAlertEvent,
+  options: ProcessRmmAlertEventOptions = {}
 ): Promise<RmmAlertProcessingResult> {
   switch (event.kind) {
     case 'triggered':
-      return processTriggered(ctx, event);
+      return processTriggered(ctx, event, options);
     case 'reset':
       return processReset(ctx, event);
     case 'acknowledged':
@@ -82,7 +92,8 @@ async function resolveAlertContext(knex: Knex, event: NormalizedRmmAlertEvent): 
 
 async function processTriggered(
   ctx: RmmAlertProcessingContext,
-  event: NormalizedRmmAlertEvent
+  event: NormalizedRmmAlertEvent,
+  options: ProcessRmmAlertEventOptions = {}
 ): Promise<RmmAlertProcessingResult> {
   const { knex, deps } = ctx;
   const warnings: string[] = [];
@@ -99,7 +110,11 @@ async function processTriggered(
       .first('alert_id', 'status', 'ticket_id');
 
     // Same external alert in a live state again = redelivery; nothing to do.
-    if (existing && ['active', 'acknowledged', 'suppressed'].includes(existing.status)) {
+    // Suppressed alerts fall through when reconciliation reprocesses them.
+    const duplicateStatuses = options.reprocessSuppressed
+      ? ['active', 'acknowledged']
+      : ['active', 'acknowledged', 'suppressed'];
+    if (existing && duplicateStatuses.includes(existing.status)) {
       await trx('rmm_alerts')
         .where({ tenant: event.tenantId, alert_id: existing.alert_id })
         .update({ updated_at: new Date().toISOString() });

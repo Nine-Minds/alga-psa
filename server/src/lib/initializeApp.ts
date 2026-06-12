@@ -615,6 +615,15 @@ async function initializeJobScheduler(storageService: StorageService) {
     } catch (error) {
       logger.error('Failed to register Huntress incident polling:', error);
     }
+
+    try {
+      const { registerRmmAlertReconciliation } = await import(
+        '@enterprise/lib/integrations/rmm/alertReconciliationScheduling'
+      );
+      await registerRmmAlertReconciliation(jobScheduler);
+    } catch (error) {
+      logger.error('Failed to register RMM alert reconciliation:', error);
+    }
   }
 }
 
