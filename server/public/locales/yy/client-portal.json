@@ -487,6 +487,8 @@
       "disabled": "55555"
     },
     "notifications": {
+      "unreadCount_one": "55555 {{count}} 55555",
+      "unreadCount_other": "55555 {{count}} 55555",
       "title": "55555",
       "email": "55555",
       "ticketUpdates": "55555",

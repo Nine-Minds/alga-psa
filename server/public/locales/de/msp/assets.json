@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Wählen Sie alle sichtbaren Assets aus",
       "selectAsset": "Asset {{name}} auswählen",
-      "selectedAssets": "{{count}} Asset{{suffix}} ausgewählt",
+      "selectedAssets_one": "{{count}} Asset ausgewählt",
+      "selectedAssets_other": "{{count}} Assets ausgewählt",
       "clearSelection": "Auswahl aufheben",
       "bulkActionsComingSoon": "Massenaktionen folgen bald"
     },
@@ -384,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "vor wenigen Augenblicken",
-      "minutesAgo": "Vor {{count}} Minute{{suffix}}",
-      "hoursAgo": "Vor {{count}} Stunde{{suffix}}",
-      "daysAgo": "Vor {{count}} Tag{{suffix}}"
+      "minutesAgo_one": "Vor {{count}} Minute",
+      "minutesAgo_other": "Vor {{count}} Minuten",
+      "hoursAgo_one": "Vor {{count}} Stunde",
+      "hoursAgo_other": "Vor {{count}} Stunden",
+      "daysAgo_one": "Vor {{count}} Tag",
+      "daysAgo_other": "Vor {{count}} Tagen"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +755,8 @@
     "actions": {
       "addAsset": "Asset hinzufügen",
       "showLess": "Weniger anzeigen",
-      "moreAssets": "{{count}} mehr Asset{{suffix}}"
+      "moreAssets_one": "{{count}} weiteres Asset",
+      "moreAssets_other": "{{count}} weitere Assets"
     },
     "errors": {
       "loadAvailableAssets": "Die verfügbaren Assets konnten nicht geladen werden",
@@ -763,8 +768,10 @@
       "removeFailed": "Die Asset-Verknüpfung konnte nicht entfernt werden"
     },
     "success": {
-      "associated": "{{count}} Asset{{suffix}} erfolgreich verknüpft",
-      "associatedPartial": "{{count}} Asset{{suffix}} erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
+      "associated_one": "{{count}} Asset erfolgreich verknüpft",
+      "associated_other": "{{count}} Assets erfolgreich verknüpft",
+      "associatedPartial_one": "{{count}} Asset erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
+      "associatedPartial_other": "{{count}} Assets erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
       "removed": "Asset-Zuordnung entfernt"
     },
     "empty": {
@@ -787,7 +794,8 @@
         "placeholder": "Typ..."
       },
       "actions": {
-        "addAssets": "Asset{{suffix}} hinzufügen"
+        "addAssets_one": "Asset hinzufügen",
+        "addAssets_other": "Assets hinzufügen"
       }
     },
     "table": {
@@ -1187,13 +1195,19 @@
       "actions": "Aktionen"
     },
     "frequency": {
-      "every": "Alle {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Pro {{frequency}}",
+      "every_other": "Alle {{count}} {{frequency}}",
       "units": {
-        "daily": "Tag",
-        "weekly": "Woche",
-        "monthly": "Monat",
-        "quarterly": "Quartal",
-        "yearly": "Jahr"
+        "daily_one": "Tag",
+        "daily_other": "Tage",
+        "weekly_one": "Woche",
+        "weekly_other": "Wochen",
+        "monthly_one": "Monat",
+        "monthly_other": "Monate",
+        "quarterly_one": "Quartal",
+        "quarterly_other": "Quartale",
+        "yearly_one": "Jahr",
+        "yearly_other": "Jahre"
       }
     },
     "status": {

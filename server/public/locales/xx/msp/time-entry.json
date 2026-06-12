@@ -368,6 +368,10 @@
     "active": "11111"
   },
   "intervals": {
+    "createdFromNote_one": "11111 {{count}} 11111",
+    "createdFromNote_other": "11111 {{count}} 11111",
+    "selectedCount_one": "11111 {{count}} 11111",
+    "selectedCount_other": "11111 {{count}} 11111",
     "title": "11111",
     "hideShortIntervals": "11111",
     "totalTime": "11111 {{value}} 11111",

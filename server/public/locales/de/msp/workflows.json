@@ -1232,7 +1232,7 @@
     "ticketSelect": "Ticket auswählen",
     "ticketTypeAbove": "Oben tippen, um Tickets zu suchen",
     "placeholders": {
-      "board": "Tafel auswählen",
+      "board": "Board auswählen",
       "client": "Kunde auswählen",
       "contact": "Kontakt auswählen",
       "user": "Benutzer auswählen",
@@ -1479,6 +1479,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} Schritt)",
+    "stepCount_other": "({{count}} Schritte)",
     "start": "Start",
     "insertStepHere": "Schritt hier einfügen",
     "emptyDisabled": "Noch keine Schritte.",

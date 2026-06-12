@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} carpeta",
+    "folderCount_other": "{{count}} carpetas"
+  },
   "title": "Documentos",
   "noDocuments": "No hay documentos adjuntos",
   "upload": "Subir documento",

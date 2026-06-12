@@ -112,7 +112,7 @@
       },
       "actions": {
         "save": "Speichern",
-        "saving": "Sparen..."
+        "saving": "Speichern..."
       },
       "toast": {
         "updated": "Die Einstellungen für die Automatisierung der Verlängerung wurden aktualisiert."
@@ -168,7 +168,7 @@
       "actions": {
         "cancel": "Stornieren",
         "save": "Einstellungen speichern",
-        "saving": "Sparen..."
+        "saving": "Speichern..."
       },
       "toast": {
         "saved": "Steuerquelleneinstellungen erfolgreich gespeichert."
@@ -205,7 +205,7 @@
         "deactivate": "Deaktivieren",
         "cancel": "Stornieren",
         "save": "Änderungen speichern",
-        "saving": "Sparen..."
+        "saving": "Speichern..."
       },
       "toast": {
         "created": "Steuerregion erfolgreich erstellt.",
@@ -270,7 +270,7 @@
         "delete": "Löschen",
         "cancel": "Stornieren",
         "save": "Speichern",
-        "saving": "Sparen...",
+        "saving": "Speichern...",
         "deleting": "Löschen..."
       },
       "delete": {
@@ -340,7 +340,7 @@
         "delete": "Löschen",
         "cancel": "Stornieren",
         "save": "Speichern",
-        "saving": "Sparen...",
+        "saving": "Speichern...",
         "deleting": "Löschen..."
       },
       "delete": {
@@ -392,7 +392,7 @@
         "delete": "Löschen",
         "cancel": "Stornieren",
         "save": "Speichern",
-        "saving": "Sparen...",
+        "saving": "Speichern...",
         "deleting": "Löschen..."
       },
       "delete": {
@@ -932,7 +932,7 @@
       "actions": {
         "cancel": "Stornieren",
         "save": "Steuerbefreiungsstatus speichern",
-        "saving": "Sparen..."
+        "saving": "Speichern..."
       }
     },
     "advanced": {

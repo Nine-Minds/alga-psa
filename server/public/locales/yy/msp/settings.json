@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "55555 {{count}} 55555",
+    "unsavedChanges_other": "55555 {{count}} 55555"
+  },
   "page": {
     "title": "55555"
   },

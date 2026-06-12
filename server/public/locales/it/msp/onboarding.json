@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "Tipo di servizio importato con successo!",
           "titleOther": "Tipi di servizio importati con successo!",
-          "description": "{{count}} tipo{{suffix}} aggiunto al catalogo.",
+          "description_one": "{{count}} tipo aggiunto al catalogo.",
+          "description_other": "{{count}} tipi aggiunti al catalogo.",
           "skipped": "{{count}} saltato/i."
         },
         "actions": {

@@ -1,4 +1,10 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} folder",
+    "folderCount_few": "{{count}} foldery",
+    "folderCount_many": "{{count}} folderów",
+    "folderCount_other": "{{count}} folderów"
+  },
   "title": "Dokumenty",
   "noDocuments": "Brak dołączonych dokumentów",
   "upload": "Prześlij dokument",

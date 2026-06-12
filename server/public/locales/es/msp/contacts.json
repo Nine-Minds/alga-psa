@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Último uso del tipo de teléfono",
-      "message": "El siguiente tipo de teléfono personalizado{{suffix}} ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo{{definitionSuffix}} o conservarla para uso futuro?",
+      "message_one": "El siguiente tipo de teléfono personalizado ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo o conservarla para uso futuro?",
+      "message_other": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
       "deleteType": "Eliminar tipo",
       "keepType": "Conservar tipo"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tablero",
+    "boardCount_other": "{{count}} tableros",
     "title": "Acceso al portal",
     "description": "Gestión del acceso al portal del cliente para un contacto, incluidas invitaciones y actualizaciones de roles",
     "loadingDescription": "Cargando información del portal...",

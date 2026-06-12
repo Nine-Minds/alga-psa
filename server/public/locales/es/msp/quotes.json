@@ -19,7 +19,7 @@
       "requestChanges": "Solicitar cambios",
       "resend": "Reenviar",
       "revise": "Revisar",
-      "save": "Ahorrar",
+      "save": "Guardar",
       "saveQuote": "Guardar cotización",
       "saveTemplate": "Guardar plantilla",
       "send": "Enviar",
@@ -69,7 +69,7 @@
     "states": {
       "generating": "Generando...",
       "loading": "Cargando...",
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "sending": "Envío..."
     }
   },

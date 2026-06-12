@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "Service type imported successfully!",
           "titleOther": "Service types imported successfully!",
-          "description": "{{count}} type{{suffix}} added to your catalog.",
+          "description_one": "{{count}} type added to your catalog.",
+          "description_other": "{{count}} types added to your catalog.",
           "skipped": "{{count}} skipped."
         },
         "actions": {

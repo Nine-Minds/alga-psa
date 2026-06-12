@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} réaction",
+    "ariaSummary_other": "{{emoji}} {{count}} réactions",
+    "ariaYouReacted": ", vous avez réagi"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Expire dans {{count}} jour, le {{date}}",
+    "expiresInDaysOn_other": "Expire dans {{count}} jours, le {{date}}",
+    "expiringForClient_one": "{{count}} crédit pour {{clientName}} expirera bientôt",
+    "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "L'essai Enterprise expire dans {{count}} jour. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
+    "trialExpiresIn_other": "L'essai Enterprise expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
+    "trialDaysRemaining_one": "Essai Enterprise actif — {{count}} jour restant.",
+    "trialDaysRemaining_other": "Essai Enterprise actif — {{count}} jours restants.",
+    "licenseExpiresIn_one": "La licence expire dans {{count}} jour. Renouvelez pour éviter toute interruption de service.",
+    "licenseExpiresIn_other": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service."
+  },
   "nav": {
     "dashboard": "Tableau de bord",
     "tickets": "Tickets",
@@ -939,7 +958,8 @@
       "revoke": "Révoquer",
       "revoking": "Révocation...",
       "loggingOut": "Déconnexion...",
-      "logoutFromOther": "Déconnecter de {{count}} autre appareil{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Déconnecter de {{count}} autre appareil",
+      "logoutFromOther_other": "Déconnecter de {{count}} autres appareils"
     },
     "confirmations": {
       "logoutCurrent": "Cela vous déconnectera de votre session actuelle. Êtes-vous sûr ?",

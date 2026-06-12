@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "55555",
-      "message": "55555 {{suffix}} 55555 {{labels}} 55555 {{definitionSuffix}} 55555",
+      "message_one": "55555 {{labels}} 55555",
+      "message_other": "55555 {{labels}} 55555",
       "deleteType": "55555",
       "keepType": "55555"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "55555 {{count}} 55555",
+    "boardCount_other": "55555 {{count}} 55555",
     "title": "55555",
     "description": "55555",
     "loadingDescription": "55555",

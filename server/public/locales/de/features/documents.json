@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} Ordner",
+    "folderCount_other": "{{count}} Ordner"
+  },
   "title": "Dokumente",
   "noDocuments": "Keine Dokumente angehängt",
   "upload": "Dokument hochladen",

@@ -69,7 +69,7 @@
     "states": {
       "generating": "Generazione...",
       "loading": "Caricamento...",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "sending": "Invio..."
     }
   },

@@ -403,7 +403,7 @@
     },
     "validation": {
       "nameRequired": "Le nom court et le nom d’affichage sont requis",
-      "boardRequired": "Le conseil est requis",
+      "boardRequired": "Le tableau est requis",
       "statusRequired": "Le statut est requis",
       "priorityRequired": "La priorité est requise",
       "clientRequired": "La société est requise"
@@ -426,7 +426,7 @@
         "label": "Actif"
       },
       "board": {
-        "label": "Conseil *",
+        "label": "Tableau *",
         "placeholder": "Sélectionner le tableau"
       },
       "status": {

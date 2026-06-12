@@ -438,6 +438,10 @@
       "disabled": "Wyłączone"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
+      "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+      "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
+      "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
       "title": "Ustawienia powiadomień",
       "email": "Powiadomienia e-mail",
       "ticketUpdates": "Aktualizacje zgłoszeń",

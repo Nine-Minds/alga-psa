@@ -899,7 +899,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{group.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {group.board_count} board{group.board_count === 1 ? '' : 's'}
+                          {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
                         </p>
                         {group.description ? (
                           <p className="text-xs text-muted-foreground">{group.description}</p>

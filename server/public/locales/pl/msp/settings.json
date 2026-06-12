@@ -1,4 +1,10 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} niezapisana zmiana",
+    "unsavedChanges_few": "{{count}} niezapisane zmiany",
+    "unsavedChanges_many": "{{count}} niezapisanych zmian",
+    "unsavedChanges_other": "{{count}} niezapisanych zmian"
+  },
   "page": {
     "title": "Ustawienia administratora"
   },

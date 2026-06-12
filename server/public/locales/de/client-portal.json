@@ -438,6 +438,8 @@
       "disabled": "Deaktiviert"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} ungelesene Benachrichtigung",
+      "unreadCount_other": "{{count}} ungelesene Benachrichtigungen",
       "title": "Benachrichtigungseinstellungen",
       "email": "E-Mail-Benachrichtigungen",
       "ticketUpdates": "Ticket-Updates",

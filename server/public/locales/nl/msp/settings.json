@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
+    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"
+  },
   "page": {
     "title": "Beheerdersinstellingen"
   },

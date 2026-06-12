@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} ungespeicherte Änderung",
+    "unsavedChanges_other": "{{count}} ungespeicherte Änderungen"
+  },
   "page": {
     "title": "Admin-Einstellungen"
   },

@@ -208,7 +208,7 @@
     "common": {
       "actions": {
         "cancel": "Cancelar",
-        "saving": "Ahorro...",
+        "saving": "Guardando...",
         "updateProvider": "Proveedor de actualizaciones",
         "addProvider": "Agregar proveedor",
         "createProvider": "Crear proveedor",

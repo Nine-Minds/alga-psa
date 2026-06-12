@@ -12,7 +12,7 @@
       "save": "Ratować",
       "saveChanges": "Zapisz zmiany",
       "saveChangesDirty": "Zapisz zmiany *",
-      "saving": "Oszczędność..."
+      "saving": "Zapisywanie..."
     },
     "errors": {
       "errorWithMessage": "Błąd: {{message}}"
@@ -212,7 +212,7 @@
     "actions": {
       "cancel": "Anulować",
       "createPreset": "Utwórz ustawienie wstępne linii kontraktu",
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "updatePreset": "Zaktualizuj ustawienie wstępne linii kontraktu"
     },
     "basics": {

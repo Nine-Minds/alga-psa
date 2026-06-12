@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "11111",
       "selectAsset": "11111 {{name}} 11111",
-      "selectedAssets": "11111 {{count}} 11111 {{suffix}} 11111",
+      "selectedAssets_one": "11111 {{count}} 11111",
+      "selectedAssets_other": "11111 {{count}} 11111",
       "clearSelection": "11111",
       "bulkActionsComingSoon": "11111"
     },
@@ -384,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "11111",
-      "minutesAgo": "11111 {{count}} 11111 {{suffix}} 11111",
-      "hoursAgo": "11111 {{count}} 11111 {{suffix}} 11111",
-      "daysAgo": "11111 {{count}} 11111 {{suffix}} 11111"
+      "minutesAgo_one": "11111 {{count}} 11111",
+      "minutesAgo_other": "11111 {{count}} 11111",
+      "hoursAgo_one": "11111 {{count}} 11111",
+      "hoursAgo_other": "11111 {{count}} 11111",
+      "daysAgo_one": "11111 {{count}} 11111",
+      "daysAgo_other": "11111 {{count}} 11111"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +755,8 @@
     "actions": {
       "addAsset": "11111",
       "showLess": "11111",
-      "moreAssets": "11111 {{count}} 11111 {{suffix}} 11111"
+      "moreAssets_one": "11111 {{count}} 11111",
+      "moreAssets_other": "11111 {{count}} 11111"
     },
     "errors": {
       "loadAvailableAssets": "11111",
@@ -763,8 +768,10 @@
       "removeFailed": "11111"
     },
     "success": {
-      "associated": "11111 {{count}} 11111 {{suffix}} 11111",
-      "associatedPartial": "11111 {{count}} 11111 {{suffix}} 11111 {{failed}} 11111",
+      "associated_one": "11111 {{count}} 11111",
+      "associated_other": "11111 {{count}} 11111",
+      "associatedPartial_one": "11111 {{count}} 11111 {{failed}} 11111",
+      "associatedPartial_other": "11111 {{count}} 11111 {{failed}} 11111",
       "removed": "11111"
     },
     "empty": {
@@ -787,7 +794,8 @@
         "placeholder": "11111"
       },
       "actions": {
-        "addAssets": "11111 {{suffix}} 11111"
+        "addAssets_one": "11111",
+        "addAssets_other": "11111"
       }
     },
     "table": {
@@ -1187,13 +1195,19 @@
       "actions": "11111"
     },
     "frequency": {
-      "every": "11111 {{count}} 11111 {{frequency}} 11111 {{suffix}} 11111",
+      "every_one": "11111 {{frequency}} 11111",
+      "every_other": "11111 {{count}} 11111 {{frequency}} 11111",
       "units": {
-        "daily": "11111",
-        "weekly": "11111",
-        "monthly": "11111",
-        "quarterly": "11111",
-        "yearly": "11111"
+        "daily_one": "11111",
+        "daily_other": "11111",
+        "weekly_one": "11111",
+        "weekly_other": "11111",
+        "monthly_one": "11111",
+        "monthly_other": "11111",
+        "quarterly_one": "11111",
+        "quarterly_other": "11111",
+        "yearly_one": "11111",
+        "yearly_other": "11111"
       }
     },
     "status": {

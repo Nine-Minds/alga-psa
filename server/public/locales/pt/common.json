@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reaction",
+    "ariaSummary_other": "{{emoji}} {{count}} reactions",
+    "ariaYouReacted": ", you reacted"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
+    "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
+    "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
+    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
+    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
+    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
+    "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
+    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -987,7 +1006,8 @@
       "revoke": "Revoke",
       "revoking": "Revoking...",
       "loggingOut": "Logging out...",
-      "logoutFromOther": "Logout from {{count}} other device{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Logout from {{count}} other device",
+      "logoutFromOther_other": "Logout from {{count}} other devices"
     },
     "confirmations": {
       "logoutCurrent": "This will log you out of your current session. Are you sure?",

@@ -1,4 +1,35 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reakcja",
+    "ariaSummary_few": "{{emoji}} {{count}} reakcje",
+    "ariaSummary_many": "{{emoji}} {{count}} reakcji",
+    "ariaSummary_other": "{{emoji}} {{count}} reakcji",
+    "ariaYouReacted": ", w tym Twoja reakcja"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Wygasa za {{count}} dzień, dnia {{date}}",
+    "expiresInDaysOn_few": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiresInDaysOn_many": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiresInDaysOn_other": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiringForClient_one": "{{count}} kredyt klienta {{clientName}} wkrótce wygaśnie",
+    "expiringForClient_few": "{{count}} kredyty klienta {{clientName}} wkrótce wygasną",
+    "expiringForClient_many": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie",
+    "expiringForClient_other": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Okres próbny Enterprise wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_few": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_many": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_other": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialDaysRemaining_one": "Okres próbny Enterprise aktywny — pozostał {{count}} dzień.",
+    "trialDaysRemaining_few": "Okres próbny Enterprise aktywny — pozostały {{count}} dni.",
+    "trialDaysRemaining_many": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "trialDaysRemaining_other": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "licenseExpiresIn_one": "Licencja wygasa za {{count}} dzień. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_few": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_many": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_other": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi."
+  },
   "nav": {
     "dashboard": "Panel",
     "tickets": "Zgłoszenia",
@@ -1001,7 +1032,10 @@
       "revoke": "Unieważnij",
       "revoking": "Unieważnianie...",
       "loggingOut": "Wylogowywanie...",
-      "logoutFromOther": "Wyloguj z {{count}} innych urządzeń{{count, plural, one {} other {}}}"
+      "logoutFromOther_one": "Wyloguj z {{count}} innego urządzenia",
+      "logoutFromOther_few": "Wyloguj z {{count}} innych urządzeń",
+      "logoutFromOther_many": "Wyloguj z {{count}} innych urządzeń",
+      "logoutFromOther_other": "Wyloguj z {{count}} innych urządzeń"
     },
     "confirmations": {
       "logoutCurrent": "Spowoduje to wylogowanie z bieżącej sesji. Czy na pewno?",

@@ -788,25 +788,22 @@ function formatRelative(value: string, t: TranslationFn) {
   }
   if (minutes < 60) {
     return t('assetDetailDrawer.relative.minutesAgo', {
-      defaultValue: '{{count}} minute{{suffix}} ago',
-      count: minutes,
-      suffix: minutes === 1 ? '' : 's'
+      defaultValue: '{{count}} minutes ago',
+      count: minutes
     });
   }
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     return t('assetDetailDrawer.relative.hoursAgo', {
-      defaultValue: '{{count}} hour{{suffix}} ago',
-      count: hours,
-      suffix: hours === 1 ? '' : 's'
+      defaultValue: '{{count}} hours ago',
+      count: hours
     });
   }
   const days = Math.floor(hours / 24);
   if (days < 7) {
     return t('assetDetailDrawer.relative.daysAgo', {
-      defaultValue: '{{count}} day{{suffix}} ago',
-      count: days,
-      suffix: days === 1 ? '' : 's'
+      defaultValue: '{{count}} days ago',
+      count: days
     });
   }
   return date.toLocaleDateString();

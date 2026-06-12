@@ -346,7 +346,7 @@
         }
       },
       "actions": {
-        "save": "Ahorre horas de usuario"
+        "save": "Guardar horas de usuario"
       },
       "feedback": {
         "selectUserError": "Por favor seleccione un usuario",

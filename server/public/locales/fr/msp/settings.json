@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} modification non enregistrée",
+    "unsavedChanges_other": "{{count}} modifications non enregistrées"
+  },
   "page": {
     "title": "Paramètres d'administration"
   },

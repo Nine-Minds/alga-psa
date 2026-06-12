@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} cambio sin guardar",
+    "unsavedChanges_other": "{{count}} cambios sin guardar"
+  },
   "page": {
     "title": "Configuración de administración"
   },

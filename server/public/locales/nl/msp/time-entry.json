@@ -368,6 +368,10 @@
     "active": "Actief"
   },
   "intervals": {
+    "createdFromNote_one": "Gemaakt op basis van {{count}} interval",
+    "createdFromNote_other": "Gemaakt op basis van {{count}} intervallen",
+    "selectedCount_one": "{{count}} interval geselecteerd",
+    "selectedCount_other": "{{count}} intervallen geselecteerd",
     "title": "Tickettijdsintervallen",
     "hideShortIntervals": "Verberg intervallen van minder dan 1 minuut",
     "totalTime": "Totale tijd: {{value}}",

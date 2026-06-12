@@ -438,6 +438,8 @@
       "disabled": "Disattivato"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} notifica non letta",
+      "unreadCount_other": "{{count}} notifiche non lette",
       "title": "Impostazioni notifiche",
       "email": "Notifiche email",
       "ticketUpdates": "Aggiornamenti ticket",
@@ -576,7 +578,7 @@
       "description": "Gestisci a quali board dei ticket può accedere ciascun contatto del portale cliente.",
       "nameLabel": "Nome",
       "descriptionLabel": "Descrizione",
-      "boardLabel": "Board",
+      "boardLabel": "Bacheche",
       "noBoards": "Nessun board disponibile",
       "loadError": "Impossibile caricare i gruppi di visibilità",
       "empty": "Ancora nessun gruppo di visibilità.",

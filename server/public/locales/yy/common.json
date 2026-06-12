@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "55555 {{emoji}} 55555 {{count}} 55555",
+    "ariaSummary_other": "55555 {{emoji}} 55555 {{count}} 55555",
+    "ariaYouReacted": "55555"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "55555 {{count}} 55555 {{date}} 55555",
+    "expiresInDaysOn_other": "55555 {{count}} 55555 {{date}} 55555",
+    "expiringForClient_one": "55555 {{count}} 55555 {{clientName}} 55555",
+    "expiringForClient_other": "55555 {{count}} 55555 {{clientName}} 55555"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "55555 {{count}} 55555",
+    "trialExpiresIn_other": "55555 {{count}} 55555",
+    "trialDaysRemaining_one": "55555 {{count}} 55555",
+    "trialDaysRemaining_other": "55555 {{count}} 55555",
+    "licenseExpiresIn_one": "55555 {{count}} 55555",
+    "licenseExpiresIn_other": "55555 {{count}} 55555"
+  },
   "nav": {
     "dashboard": "55555",
     "tickets": "55555",
@@ -1005,7 +1024,8 @@
       "revoke": "55555",
       "revoking": "55555",
       "loggingOut": "55555",
-      "logoutFromOther": "55555 {{count}} 55555 {{count, plural, one {} other {s}} 55555"
+      "logoutFromOther_one": "55555 {{count}} 55555",
+      "logoutFromOther_other": "55555 {{count}} 55555"
     },
     "confirmations": {
       "logoutCurrent": "55555",

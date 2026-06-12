@@ -368,6 +368,14 @@
     "active": "Aktywny"
   },
   "intervals": {
+    "createdFromNote_one": "Utworzono z {{count}} interwału",
+    "createdFromNote_few": "Utworzono z {{count}} interwałów",
+    "createdFromNote_many": "Utworzono z {{count}} interwałów",
+    "createdFromNote_other": "Utworzono z {{count}} interwałów",
+    "selectedCount_one": "Wybrano {{count}} interwał",
+    "selectedCount_few": "Wybrano {{count}} interwały",
+    "selectedCount_many": "Wybrano {{count}} interwałów",
+    "selectedCount_other": "Wybrano {{count}} interwałów",
     "title": "Przedziały czasowe zgłoszeń",
     "hideShortIntervals": "Ukryj interwały poniżej 1 minuty",
     "totalTime": "Całkowity czas: {{value}}",

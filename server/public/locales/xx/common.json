@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "11111 {{emoji}} 11111 {{count}} 11111",
+    "ariaSummary_other": "11111 {{emoji}} 11111 {{count}} 11111",
+    "ariaYouReacted": "11111"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "11111 {{count}} 11111 {{date}} 11111",
+    "expiresInDaysOn_other": "11111 {{count}} 11111 {{date}} 11111",
+    "expiringForClient_one": "11111 {{count}} 11111 {{clientName}} 11111",
+    "expiringForClient_other": "11111 {{count}} 11111 {{clientName}} 11111"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "11111 {{count}} 11111",
+    "trialExpiresIn_other": "11111 {{count}} 11111",
+    "trialDaysRemaining_one": "11111 {{count}} 11111",
+    "trialDaysRemaining_other": "11111 {{count}} 11111",
+    "licenseExpiresIn_one": "11111 {{count}} 11111",
+    "licenseExpiresIn_other": "11111 {{count}} 11111"
+  },
   "nav": {
     "dashboard": "11111",
     "tickets": "11111",
@@ -1005,7 +1024,8 @@
       "revoke": "11111",
       "revoking": "11111",
       "loggingOut": "11111",
-      "logoutFromOther": "11111 {{count}} 11111 {{count, plural, one {} other {s}} 11111"
+      "logoutFromOther_one": "11111 {{count}} 11111",
+      "logoutFromOther_other": "11111 {{count}} 11111"
     },
     "confirmations": {
       "logoutCurrent": "11111",

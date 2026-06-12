@@ -65,7 +65,10 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Ostatnie użycie typu telefonu",
-      "message": "Niestandardowy typ telefonu{{suffix}} nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu{{definitionSuffix}} czy zachować ją na przyszłość?",
+      "message_one": "Niestandardowy typ telefonu nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu czy zachować ją na przyszłość?",
+      "message_few": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
+      "message_many": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
+      "message_other": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
       "deleteType": "Usuń typ",
       "keepType": "Zachowaj typ"
     },
@@ -313,6 +316,10 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tablica",
+    "boardCount_few": "{{count}} tablice",
+    "boardCount_many": "{{count}} tablic",
+    "boardCount_other": "{{count}} tablic",
     "title": "Dostęp do portalu",
     "description": "Zarządzanie dostępem kontaktu do portalu klienta, w tym zaproszeniami i aktualizacją ról",
     "loadingDescription": "Ładowanie informacji o portalu...",

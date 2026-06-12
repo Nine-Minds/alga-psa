@@ -368,6 +368,10 @@
     "active": "Actif"
   },
   "intervals": {
+    "createdFromNote_one": "Créé à partir de {{count}} intervalle",
+    "createdFromNote_other": "Créé à partir de {{count}} intervalles",
+    "selectedCount_one": "{{count}} intervalle sélectionné",
+    "selectedCount_other": "{{count}} intervalles sélectionnés",
     "title": "Intervalles de temps des tickets",
     "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
     "totalTime": "Durée totale: {{value}}",

@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "Diensttyp erfolgreich importiert!",
           "titleOther": "Diensttypen erfolgreich importiert!",
-          "description": "{{count}} Typ{{suffix}} zu Ihrem Katalog hinzugefügt.",
+          "description_one": "{{count}} Typ zu Ihrem Katalog hinzugefügt.",
+          "description_other": "{{count}} Typen zu Ihrem Katalog hinzugefügt.",
           "skipped": "{{count}} übersprungen."
         },
         "actions": {

@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reactie",
+    "ariaSummary_other": "{{emoji}} {{count}} reacties",
+    "ariaYouReacted": ", jij hebt gereageerd"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Verloopt over {{count}} dag, op {{date}}",
+    "expiresInDaysOn_other": "Verloopt over {{count}} dagen, op {{date}}",
+    "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
+    "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "De Enterprise-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Enterprise-functies te behouden.",
+    "trialExpiresIn_other": "De Enterprise-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Enterprise-functies te behouden.",
+    "trialDaysRemaining_one": "Enterprise-proefperiode actief — nog {{count}} dag.",
+    "trialDaysRemaining_other": "Enterprise-proefperiode actief — nog {{count}} dagen.",
+    "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -939,7 +958,8 @@
       "revoke": "Intrekken",
       "revoking": "Intrekken...",
       "loggingOut": "Uitloggen...",
-      "logoutFromOther": "Uitloggen van {{count}} ander apparaat{{count, plural, one {} other {en}}}"
+      "logoutFromOther_one": "Uitloggen van {{count}} ander apparaat",
+      "logoutFromOther_other": "Uitloggen van {{count}} andere apparaten"
     },
     "confirmations": {
       "logoutCurrent": "Dit zal u uitloggen van uw huidige sessie. Weet u het zeker?",

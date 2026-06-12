@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} dossier",
+    "folderCount_other": "{{count}} dossiers"
+  },
   "title": "Documents",
   "noDocuments": "Aucun document joint",
   "upload": "Téléverser un document",

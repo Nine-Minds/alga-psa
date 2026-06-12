@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Last Phone Type Usage",
-      "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
+      "message_one": "The following custom phone type is no longer used by any contact: {{labels}}. Delete the type definition, or keep it for future use?",
+      "message_other": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?",
       "deleteType": "Delete Type",
       "keepType": "Keep Type"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} board",
+    "boardCount_other": "{{count}} boards",
     "title": "Portal Access",
     "description": "Client portal access management for a contact, including invitations and role updates",
     "loadingDescription": "Loading portal information...",

@@ -564,9 +564,8 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   </p>
                   <p className="text-sm mt-1">
                     {t('billingSetupStep.serviceTypes.import.success.description', {
-                      defaultValue: '{{count}} type{{suffix}} added to your catalog.',
-                      count: importResult.imported,
-                      suffix: importResult.imported !== 1 ? 's' : ''
+                      defaultValue: '{{count}} types added to your catalog.',
+                      count: importResult.imported
                     })}
                     {importResult.skipped > 0 && ` ${t('billingSetupStep.serviceTypes.import.success.skipped', {
                       defaultValue: '{{count}} skipped.',

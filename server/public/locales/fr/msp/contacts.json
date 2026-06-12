@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Dernière utilisation du type de téléphone",
-      "message": "Le type de téléphone personnalisé suivant{{suffix}} n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type{{definitionSuffix}} ou le conserver pour une utilisation future ?",
+      "message_one": "Le type de téléphone personnalisé suivant n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type ou la conserver pour une utilisation future ?",
+      "message_other": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
       "keepType": "Conserver le type"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tableau",
+    "boardCount_other": "{{count}} tableaux",
     "title": "Accès au portail",
     "description": "Gestion de l’accès au portail client pour un contact, y compris les invitations et les mises à jour de rôles",
     "loadingDescription": "Chargement des informations du portail...",

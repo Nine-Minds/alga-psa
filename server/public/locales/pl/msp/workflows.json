@@ -1479,6 +1479,10 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} krok)",
+    "stepCount_few": "({{count}} kroki)",
+    "stepCount_many": "({{count}} kroków)",
+    "stepCount_other": "({{count}} kroków)",
     "start": "Początek",
     "insertStepHere": "Wstaw tutaj krok",
     "emptyDisabled": "Brak kroków.",

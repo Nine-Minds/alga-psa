@@ -112,7 +112,7 @@
       },
       "actions": {
         "save": "Ratować",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "updated": "Ustawienia automatyzacji odnawiania zostały zaktualizowane."
@@ -168,7 +168,7 @@
       "actions": {
         "cancel": "Anulować",
         "save": "Zapisz ustawienia",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "saved": "Ustawienia źródła podatku zostały zapisane pomyślnie."
@@ -205,7 +205,7 @@
         "deactivate": "Dezaktywować",
         "cancel": "Anulować",
         "save": "Zapisz zmiany",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "created": "Region podatkowy został pomyślnie utworzony.",
@@ -270,7 +270,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -340,7 +340,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -392,7 +392,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -934,7 +934,7 @@
       "actions": {
         "cancel": "Anulować",
         "save": "Zapisz status zwolnienia z podatku",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       }
     },
     "advanced": {

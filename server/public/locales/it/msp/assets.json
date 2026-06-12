@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Seleziona tutte le risorse visibili",
       "selectAsset": "Seleziona risorsa {{name}}",
-      "selectedAssets": "{{count}} risorsa{{suffix}} selezionata",
+      "selectedAssets_one": "{{count}} risorsa selezionata",
+      "selectedAssets_other": "{{count}} risorse selezionate",
       "clearSelection": "Cancella selezione",
       "bulkActionsComingSoon": "Azioni collettive in arrivo"
     },
@@ -384,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "pochi istanti fa",
-      "minutesAgo": "{{count}} minuto{{suffix}} fa",
-      "hoursAgo": "{{count}} ora{{suffix}} fa",
-      "daysAgo": "{{count}} giorno{{suffix}} fa"
+      "minutesAgo_one": "{{count}} minuto fa",
+      "minutesAgo_other": "{{count}} minuti fa",
+      "hoursAgo_one": "{{count}} ora fa",
+      "hoursAgo_other": "{{count}} ore fa",
+      "daysAgo_one": "{{count}} giorno fa",
+      "daysAgo_other": "{{count}} giorni fa"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +755,8 @@
     "actions": {
       "addAsset": "Aggiungi risorsa",
       "showLess": "Mostra meno",
-      "moreAssets": "{{count}} altra risorsa{{suffix}}"
+      "moreAssets_one": "{{count}} altra risorsa",
+      "moreAssets_other": "{{count}} altre risorse"
     },
     "errors": {
       "loadAvailableAssets": "Impossibile caricare le risorse disponibili",
@@ -763,8 +768,10 @@
       "removeFailed": "Impossibile rimuovere l'associazione della risorsa"
     },
     "success": {
-      "associated": "{{count}} asset{{suffix}} associato correttamente",
-      "associatedPartial": "{{count}} asset{{suffix}} associato correttamente, {{failed}} non riuscito (potrebbe essere già associato)",
+      "associated_one": "{{count}} risorsa associata correttamente",
+      "associated_other": "{{count}} risorse associate correttamente",
+      "associatedPartial_one": "{{count}} risorsa associata correttamente, {{failed}} non riuscita (forse già associata)",
+      "associatedPartial_other": "{{count}} risorse associate correttamente, {{failed}} non riuscite (forse già associate)",
       "removed": "Associazione della risorsa rimossa"
     },
     "empty": {
@@ -787,7 +794,8 @@
         "placeholder": "Tipo..."
       },
       "actions": {
-        "addAssets": "Aggiungi risorsa{{suffix}}"
+        "addAssets_one": "Aggiungi risorsa",
+        "addAssets_other": "Aggiungi risorse"
       }
     },
     "table": {
@@ -829,7 +837,7 @@
     "fields": {
       "title": "Titolo",
       "description": "Descrizione",
-      "board": "Asse",
+      "board": "Bacheca",
       "status": "Stato",
       "priority": "Priorità"
     },
@@ -964,7 +972,7 @@
       "justNow": "Proprio adesso",
       "minutesAgo": "{{count}}m fa",
       "hoursAgo": "{{count}}h fa",
-      "daysAgo": "{{count}}d fa"
+      "daysAgo": "{{count}}g fa"
     }
   },
   "assetInfoPanel": {
@@ -1187,13 +1195,19 @@
       "actions": "Azioni"
     },
     "frequency": {
-      "every": "Ogni {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Ogni {{frequency}}",
+      "every_other": "Ogni {{count}} {{frequency}}",
       "units": {
-        "daily": "giorno",
-        "weekly": "settimana",
-        "monthly": "mese",
-        "quarterly": "trimestre",
-        "yearly": "anno"
+        "daily_one": "giorno",
+        "daily_other": "giorni",
+        "weekly_one": "settimana",
+        "weekly_other": "settimane",
+        "monthly_one": "mese",
+        "monthly_other": "mesi",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestri",
+        "yearly_one": "anno",
+        "yearly_other": "anni"
       }
     },
     "status": {
@@ -1285,7 +1299,7 @@
     },
     "table": {
       "ticketId": "Identificativo del ticket",
-      "subject": "Soggetto",
+      "subject": "Oggetto",
       "status": "Stato",
       "priority": "Priorità",
       "dateLinked": "Data collegata"

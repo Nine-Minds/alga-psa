@@ -350,7 +350,7 @@
       },
       "feedback": {
         "selectUserError": "Veuillez sélectionner un utilisateur",
-        "saveSuccess": "Heures utilisateur économisées",
+        "saveSuccess": "Heures des utilisateurs enregistrées",
         "saveError": "Échec de l'enregistrement des heures utilisateur",
         "deleteSuccess": "Disponibilité de l'utilisateur supprimée",
         "deleteError": "Échec de la suppression de la disponibilité de l'utilisateur"

@@ -101,7 +101,10 @@
     "selection": {
       "selectAllVisibleAssets": "Wybierz wszystkie widoczne zasoby",
       "selectAsset": "Wybierz zasób {{name}}",
-      "selectedAssets": "Wybrano {{count}} zasób{{suffix}}",
+      "selectedAssets_one": "Wybrano {{count}} zasób",
+      "selectedAssets_few": "Wybrano {{count}} zasoby",
+      "selectedAssets_many": "Wybrano {{count}} zasobów",
+      "selectedAssets_other": "Wybrano {{count}} zasobów",
       "clearSelection": "Wyczyść wybór",
       "bulkActionsComingSoon": "Działania zbiorcze już wkrótce"
     },
@@ -384,9 +387,18 @@
     },
     "relative": {
       "momentsAgo": "chwilę temu",
-      "minutesAgo": "{{count}} min{{suffix}} temu",
-      "hoursAgo": "{{count}} godz{{suffix}} temu",
-      "daysAgo": "{{count}} dni{{suffix}} temu"
+      "minutesAgo_one": "{{count}} minutę temu",
+      "minutesAgo_few": "{{count}} minuty temu",
+      "minutesAgo_many": "{{count}} minut temu",
+      "minutesAgo_other": "{{count}} minuty temu",
+      "hoursAgo_one": "{{count}} godzinę temu",
+      "hoursAgo_few": "{{count}} godziny temu",
+      "hoursAgo_many": "{{count}} godzin temu",
+      "hoursAgo_other": "{{count}} godziny temu",
+      "daysAgo_one": "{{count}} dzień temu",
+      "daysAgo_few": "{{count}} dni temu",
+      "daysAgo_many": "{{count}} dni temu",
+      "daysAgo_other": "{{count}} dni temu"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +763,10 @@
     "actions": {
       "addAsset": "Dodaj zasób",
       "showLess": "Pokaż mniej",
-      "moreAssets": "{{count}} więcej zasobów{{suffix}}"
+      "moreAssets_one": "Jeszcze {{count}} zasób",
+      "moreAssets_few": "Jeszcze {{count}} zasoby",
+      "moreAssets_many": "Jeszcze {{count}} zasobów",
+      "moreAssets_other": "Jeszcze {{count}} zasobów"
     },
     "errors": {
       "loadAvailableAssets": "Nie udało się załadować dostępnych zasobów",
@@ -763,8 +778,14 @@
       "removeFailed": "Nie udało się usunąć powiązania z zasobami"
     },
     "success": {
-      "associated": "{{count}} zasób{{suffix}} powiązano pomyślnie",
-      "associatedPartial": "{{count}} zasób{{suffix}} powiązano pomyślnie, {{failed}} nie powiodło się (może już zostać powiązany)",
+      "associated_one": "Pomyślnie powiązano {{count}} zasób",
+      "associated_few": "Pomyślnie powiązano {{count}} zasoby",
+      "associated_many": "Pomyślnie powiązano {{count}} zasobów",
+      "associated_other": "Pomyślnie powiązano {{count}} zasobów",
+      "associatedPartial_one": "Pomyślnie powiązano {{count}} zasób, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_few": "Pomyślnie powiązano {{count}} zasoby, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_many": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_other": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
       "removed": "Usunięto powiązanie z zasobami"
     },
     "empty": {
@@ -787,7 +808,10 @@
         "placeholder": "Typ..."
       },
       "actions": {
-        "addAssets": "Dodaj zasób{{suffix}}"
+        "addAssets_one": "Dodaj zasób",
+        "addAssets_few": "Dodaj zasoby",
+        "addAssets_many": "Dodaj zasoby",
+        "addAssets_other": "Dodaj zasoby"
       }
     },
     "table": {
@@ -1187,13 +1211,31 @@
       "actions": "Działania"
     },
     "frequency": {
-      "every": "Co {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Co {{frequency}}",
+      "every_few": "Co {{count}} {{frequency}}",
+      "every_many": "Co {{count}} {{frequency}}",
+      "every_other": "Co {{count}} {{frequency}}",
       "units": {
-        "daily": "dzień",
-        "weekly": "tydzień",
-        "monthly": "miesiąc",
-        "quarterly": "kwartał",
-        "yearly": "rok"
+        "daily_one": "dzień",
+        "daily_few": "dni",
+        "daily_many": "dni",
+        "daily_other": "dni",
+        "weekly_one": "tydzień",
+        "weekly_few": "tygodnie",
+        "weekly_many": "tygodni",
+        "weekly_other": "tygodni",
+        "monthly_one": "miesiąc",
+        "monthly_few": "miesiące",
+        "monthly_many": "miesięcy",
+        "monthly_other": "miesięcy",
+        "quarterly_one": "kwartał",
+        "quarterly_few": "kwartały",
+        "quarterly_many": "kwartałów",
+        "quarterly_other": "kwartałów",
+        "yearly_one": "rok",
+        "yearly_few": "lata",
+        "yearly_many": "lat",
+        "yearly_other": "lat"
       }
     },
     "status": {

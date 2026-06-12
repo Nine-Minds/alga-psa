@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Zuletzt verwendeter Telefontyp",
-      "message": "Der folgende benutzerdefinierte Telefontyp{{suffix}} wird von keinem Kontakt mehr verwendet: {{labels}}. Die Typdefinition löschen{{definitionSuffix}} oder für spätere Verwendung behalten?",
+      "message_one": "Der folgende benutzerdefinierte Telefontyp wird von keinem Kontakt mehr verwendet: {{labels}}. Typdefinition löschen oder für spätere Verwendung behalten?",
+      "message_other": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
       "keepType": "Typ behalten"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} Board",
+    "boardCount_other": "{{count}} Boards",
     "title": "Portalzugriff",
     "description": "Verwaltung des Kundenportalzugriffs für einen Kontakt, einschließlich Einladungen und Rollenaktualisierungen",
     "loadingDescription": "Portalinformationen werden geladen...",

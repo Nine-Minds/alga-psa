@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Sélectionnez tous les éléments visibles",
       "selectAsset": "Sélectionnez l'élément {{name}}",
-      "selectedAssets": "{{count}} élément{{suffix}} sélectionné",
+      "selectedAssets_one": "{{count}} élément sélectionné",
+      "selectedAssets_other": "{{count}} éléments sélectionnés",
       "clearSelection": "Effacer la sélection",
       "bulkActionsComingSoon": "Actions groupées à venir"
     },
@@ -384,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "il y a quelques instants",
-      "minutesAgo": "Il y a {{count}} minute{{suffix}}",
-      "hoursAgo": "Il y a {{count}} heure{{suffix}}",
-      "daysAgo": "Il y a {{count}} jour{{suffix}}"
+      "minutesAgo_one": "Il y a {{count}} minute",
+      "minutesAgo_other": "Il y a {{count}} minutes",
+      "hoursAgo_one": "Il y a {{count}} heure",
+      "hoursAgo_other": "Il y a {{count}} heures",
+      "daysAgo_one": "Il y a {{count}} jour",
+      "daysAgo_other": "Il y a {{count}} jours"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +755,8 @@
     "actions": {
       "addAsset": "Ajouter un actif",
       "showLess": "Afficher moins",
-      "moreAssets": "{{count}} plus d'actif{{suffix}}"
+      "moreAssets_one": "{{count}} actif de plus",
+      "moreAssets_other": "{{count}} actifs de plus"
     },
     "errors": {
       "loadAvailableAssets": "Échec du chargement des ressources disponibles",
@@ -763,8 +768,10 @@
       "removeFailed": "Échec de la suppression de l'association d'éléments"
     },
     "success": {
-      "associated": "{{count}} actif{{suffix}} associé avec succès",
-      "associatedPartial": "{{count}} actif{{suffix}} associé avec succès, {{failed}} a échoué (peut-être déjà associé)",
+      "associated_one": "{{count}} actif associé avec succès",
+      "associated_other": "{{count}} actifs associés avec succès",
+      "associatedPartial_one": "{{count}} actif associé avec succès, {{failed}} en échec (peut-être déjà associé)",
+      "associatedPartial_other": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
       "removed": "Association d'éléments supprimée"
     },
     "empty": {
@@ -787,7 +794,8 @@
         "placeholder": "Taper..."
       },
       "actions": {
-        "addAssets": "Ajouter un actif{{suffix}}"
+        "addAssets_one": "Ajouter un actif",
+        "addAssets_other": "Ajouter des actifs"
       }
     },
     "table": {
@@ -829,7 +837,7 @@
     "fields": {
       "title": "Titre",
       "description": "Description",
-      "board": "Conseil",
+      "board": "Tableau",
       "status": "Statut",
       "priority": "Priorité"
     },
@@ -962,9 +970,9 @@
     },
     "relative": {
       "justNow": "Tout à l' heure",
-      "minutesAgo": "il y a {{count}} mois",
+      "minutesAgo": "il y a {{count}} min",
       "hoursAgo": "Il y a {{count}}h",
-      "daysAgo": "Il y a {{count}}d"
+      "daysAgo": "Il y a {{count}} j"
     }
   },
   "assetInfoPanel": {
@@ -1187,13 +1195,19 @@
       "actions": "Actes"
     },
     "frequency": {
-      "every": "Tous les {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Chaque {{frequency}}",
+      "every_other": "Tous les {{count}} {{frequency}}",
       "units": {
-        "daily": "jour",
-        "weekly": "semaine",
-        "monthly": "mois",
-        "quarterly": "quart",
-        "yearly": "année"
+        "daily_one": "jour",
+        "daily_other": "jours",
+        "weekly_one": "semaine",
+        "weekly_other": "semaines",
+        "monthly_one": "mois",
+        "monthly_other": "mois",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestres",
+        "yearly_one": "année",
+        "yearly_other": "années"
       }
     },
     "status": {

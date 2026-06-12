@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import {
@@ -50,6 +51,7 @@ export function useTicketRichTextUploadSession({
   deleteDocumentFn,
   toastApi = toast,
 }: UseTicketRichTextUploadSessionOptions) {
+  const { t } = useTranslation('features/tickets');
   const [draftClipboardImages, setDraftClipboardImages] = useState<TicketRichTextDraftClipboardImage[]>(
     []
   );
@@ -265,11 +267,11 @@ export function useTicketRichTextUploadSession({
       });
 
       if (deletedCount > 0) {
-        toastApi.success(`Deleted ${deletedCount} pasted image${deletedCount === 1 ? '' : 's'}.`);
+        toastApi.success(t('messages.pastedImagesDeleted', { defaultValue: 'Deleted {{count}} pasted images.', count: deletedCount }));
         await refreshDocuments();
       }
       if (failedCount > 0) {
-        toastApi.error(`Could not delete ${failedCount} pasted image${failedCount === 1 ? '' : 's'}.`);
+        toastApi.error(t('messages.pastedImagesDeleteFailed', { defaultValue: 'Could not delete {{count}} pasted images.', count: failedCount }));
       }
 
       setShowDraftCancelDialog(false);

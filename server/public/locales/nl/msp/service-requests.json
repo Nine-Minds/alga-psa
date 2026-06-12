@@ -103,7 +103,7 @@
       "providerDisplay": "{{displayName}} ({{executionMode}})",
       "ticketRouting": {
         "title": "Configuratie ticketrouting",
-        "board": "Board",
+        "board": "Bord",
         "boardPlaceholder": "Board selecteren",
         "status": "Status",
         "statusPlaceholder": "Status selecteren",

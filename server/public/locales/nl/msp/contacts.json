@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Laatste gebruik van telefoonsoort",
-      "message": "De volgende aangepaste telefoonsoort{{suffix}} wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen{{definitionSuffix}} of behouden voor toekomstig gebruik?",
+      "message_one": "De volgende aangepaste telefoonsoort wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen of behouden voor toekomstig gebruik?",
+      "message_other": "De volgende aangepaste telefoonsoorten worden niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinities verwijderen of behouden voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
       "keepType": "Soort behouden"
     },
@@ -313,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} bord",
+    "boardCount_other": "{{count}} borden",
     "title": "Portaaltoegang",
     "description": "Beheer van toegang tot het klantportaal voor een contact, inclusief uitnodigingen en rolupdates",
     "loadingDescription": "Portaalinformatie laden...",

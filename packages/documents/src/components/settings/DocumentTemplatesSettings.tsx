@@ -315,7 +315,7 @@ export default function DocumentTemplatesSettings() {
                     {ENTITY_TYPE_LABELS[section.entityType] || section.entityType}
                   </Badge>
                   <span className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))]">
-                    {section.folders.length} folder{section.folders.length !== 1 ? 's' : ''}
+                    {t('templatesSettings.folderCount', { defaultValue: '{{count}} folders', count: section.folders.length })}
                   </span>
                   {section.isDirty && (
                     <span className="text-xs text-amber-600 font-medium">unsaved</span>

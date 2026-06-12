@@ -103,7 +103,7 @@
       "providerDisplay": "{{displayName}} ({{executionMode}})",
       "ticketRouting": {
         "title": "Configurazione dell'instradamento dei ticket",
-        "board": "Board",
+        "board": "Bacheca",
         "boardPlaceholder": "Seleziona Board",
         "status": "Stato",
         "statusPlaceholder": "Seleziona stato",

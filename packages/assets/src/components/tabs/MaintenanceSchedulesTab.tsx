@@ -131,12 +131,12 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         </TableCell>
                         <TableCell className="text-gray-500">
                           {t('maintenanceSchedulesTab.frequency.every', {
-                            defaultValue: 'Every {{count}} {{frequency}}{{suffix}}',
+                            defaultValue: 'Every {{count}} {{frequency}}',
                             count: schedule.frequency_interval,
                             frequency: t(`maintenanceSchedulesTab.frequency.units.${schedule.frequency}`, {
+                              count: schedule.frequency_interval,
                               defaultValue: schedule.frequency
-                            }),
-                            suffix: schedule.frequency_interval > 1 ? 's' : ''
+                            })
                           })}
                         </TableCell>
                         <TableCell className="text-gray-900">

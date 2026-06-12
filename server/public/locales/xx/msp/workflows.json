@@ -1357,6 +1357,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "11111 {{count}} 11111",
+    "stepCount_other": "11111 {{count}} 11111",
     "start": "11111",
     "insertStepHere": "11111",
     "emptyDisabled": "11111",

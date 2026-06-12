@@ -235,7 +235,7 @@
     },
     "actions": {
       "cancel": "Anuluj",
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "save": "Zapisz konfigurację"
     },
     "title": "Konfiguracja usługi",
@@ -347,7 +347,7 @@
       "unlimited": "Nieograniczony"
     },
     "actions": {
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "addTier": "Dodaj poziom",
       "save": "Zapisz poziomy stawek"
     },
@@ -382,7 +382,7 @@
       "save": "Nie udało się zapisać ustawień podatkowych"
     },
     "actions": {
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "save": "Zapisz ustawienia podatkowe"
     },
     "title": "Ustawienia podatkowe",

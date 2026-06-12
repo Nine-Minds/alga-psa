@@ -1144,10 +1144,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           })}
           message={t('contactsPage.lastPhoneTypeUsage.message', {
             defaultValue:
-              'The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?',
-            suffix: lastUsagePhoneTypes.length > 1 ? 's are' : ' is',
-            labels: lastUsagePhoneTypes.map(type => `"${type.label}"`).join(', '),
-            definitionSuffix: lastUsagePhoneTypes.length > 1 ? 's' : ''
+              'The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?',
+            count: lastUsagePhoneTypes.length,
+            labels: lastUsagePhoneTypes.map(type => `"${type.label}"`).join(', ')
           })}
           confirmLabel={t('contactsPage.lastPhoneTypeUsage.deleteType', {
             defaultValue: 'Delete Type'

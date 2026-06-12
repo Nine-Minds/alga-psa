@@ -368,6 +368,10 @@
     "active": "Active"
   },
   "intervals": {
+    "createdFromNote_one": "Created from {{count}} interval",
+    "createdFromNote_other": "Created from {{count}} intervals",
+    "selectedCount_one": "{{count}} interval selected",
+    "selectedCount_other": "{{count}} intervals selected",
     "title": "Ticket Time Intervals",
     "hideShortIntervals": "Hide intervals under 1 minute",
     "totalTime": "Total time: {{value}}",

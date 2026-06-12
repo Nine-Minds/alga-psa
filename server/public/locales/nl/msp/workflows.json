@@ -1479,6 +1479,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} stap)",
+    "stepCount_other": "({{count}} stappen)",
     "start": "Start",
     "insertStepHere": "Stap hier invoegen",
     "emptyDisabled": "Nog geen stappen.",

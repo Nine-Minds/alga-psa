@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Selecteer alle zichtbare assets",
       "selectAsset": "Selecteer item {{name}}",
-      "selectedAssets": "{{count}} item{{suffix}} geselecteerd",
+      "selectedAssets_one": "{{count}} item geselecteerd",
+      "selectedAssets_other": "{{count}} items geselecteerd",
       "clearSelection": "Duidelijke selectie",
       "bulkActionsComingSoon": "Bulkacties binnenkort beschikbaar"
     },
@@ -384,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "momenten geleden",
-      "minutesAgo": "{{count}} minuut{{suffix}} geleden",
-      "hoursAgo": "{{count}} uur{{suffix}} geleden",
-      "daysAgo": "{{count}} dag{{suffix}} geleden"
+      "minutesAgo_one": "{{count}} minuut geleden",
+      "minutesAgo_other": "{{count}} minuten geleden",
+      "hoursAgo_one": "{{count}} uur geleden",
+      "hoursAgo_other": "{{count}} uur geleden",
+      "daysAgo_one": "{{count}} dag geleden",
+      "daysAgo_other": "{{count}} dagen geleden"
     }
   },
   "assetDetailHeader": {
@@ -751,7 +755,8 @@
     "actions": {
       "addAsset": "Voeg item toe",
       "showLess": "Laat minder zien",
-      "moreAssets": "{{count}} meer activa{{suffix}}"
+      "moreAssets_one": "Nog {{count}} item",
+      "moreAssets_other": "Nog {{count}} items"
     },
     "errors": {
       "loadAvailableAssets": "Kan beschikbare middelen niet laden",
@@ -763,8 +768,10 @@
       "removeFailed": "Kan itemkoppeling niet verwijderen"
     },
     "success": {
-      "associated": "{{count}} item{{suffix}} is succesvol gekoppeld",
-      "associatedPartial": "{{count}} asset{{suffix}} succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associated_one": "{{count}} item is succesvol gekoppeld",
+      "associated_other": "{{count}} items zijn succesvol gekoppeld",
+      "associatedPartial_one": "{{count}} item succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associatedPartial_other": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
       "removed": "Itemkoppeling verwijderd"
     },
     "empty": {
@@ -787,7 +794,8 @@
         "placeholder": "Type…"
       },
       "actions": {
-        "addAssets": "Item toevoegen{{suffix}}"
+        "addAssets_one": "Item toevoegen",
+        "addAssets_other": "Items toevoegen"
       }
     },
     "table": {
@@ -1187,13 +1195,19 @@
       "actions": "Acties"
     },
     "frequency": {
-      "every": "Elke {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Elke {{frequency}}",
+      "every_other": "Elke {{count}} {{frequency}}",
       "units": {
-        "daily": "dag",
-        "weekly": "week",
-        "monthly": "maand",
-        "quarterly": "kwartaal",
-        "yearly": "jaar"
+        "daily_one": "dag",
+        "daily_other": "dagen",
+        "weekly_one": "week",
+        "weekly_other": "weken",
+        "monthly_one": "maand",
+        "monthly_other": "maanden",
+        "quarterly_one": "kwartaal",
+        "quarterly_other": "kwartalen",
+        "yearly_one": "jaar",
+        "yearly_other": "jaren"
       }
     },
     "status": {

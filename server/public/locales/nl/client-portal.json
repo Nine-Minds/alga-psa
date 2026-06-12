@@ -438,6 +438,8 @@
       "disabled": "Uitgeschakeld"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} ongelezen melding",
+      "unreadCount_other": "{{count}} ongelezen meldingen",
       "title": "Notificatie-instellingen",
       "email": "E-mailmeldingen",
       "ticketUpdates": "Ticketupdates",
@@ -576,7 +578,7 @@
       "description": "Beheer tot welke ticket-boards elke klantportaalcontactpersoon toegang heeft.",
       "nameLabel": "Naam",
       "descriptionLabel": "Beschrijving",
-      "boardLabel": "Boards",
+      "boardLabel": "Borden",
       "noBoards": "Geen boards beschikbaar",
       "loadError": "Kan zichtbaarheidsgroepen niet laden",
       "empty": "Nog geen zichtbaarheidsgroepen.",

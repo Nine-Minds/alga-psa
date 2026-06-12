@@ -69,7 +69,7 @@
     "states": {
       "generating": "Genereren...",
       "loading": "Laden...",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "sending": "Verzenden..."
     }
   },

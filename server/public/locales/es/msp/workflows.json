@@ -1479,6 +1479,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} paso)",
+    "stepCount_other": "({{count}} pasos)",
     "start": "Inicio",
     "insertStepHere": "Insertar paso aquí",
     "emptyDisabled": "Aún no hay pasos.",

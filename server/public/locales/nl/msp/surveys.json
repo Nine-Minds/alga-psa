@@ -121,7 +121,7 @@
       },
       "conditions": {
         "unrestricted": "Van toepassing op elk ticket en project",
-        "boards": "Boards",
+        "boards": "Borden",
         "statuses": "Statussen",
         "priorities": "Prioriteiten",
         "any": "Alle"
@@ -149,7 +149,7 @@
       "labels": {
         "template": "Enquêtesjabloon",
         "triggerType": "Triggertype",
-        "boardIds": "Boards",
+        "boardIds": "Borden",
         "statusIds": "Statussen",
         "priorities": "Prioriteiten",
         "enabled": "Trigger ingeschakeld"

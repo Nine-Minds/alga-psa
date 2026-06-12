@@ -2316,8 +2316,11 @@ const handleClose = () => {
     const deleteDialogImageCount = commentToDelete?.imageDocuments.length ?? 0;
     const deleteDialogHasImages = deleteDialogImageCount > 0;
     const deleteDialogMessage = deleteDialogHasImages
-        ? `This comment includes ${deleteDialogImageCount} pasted image${deleteDialogImageCount === 1 ? '' : 's'} that were uploaded as ticket documents. Delete the comment only, or also delete the pasted image${deleteDialogImageCount === 1 ? '' : 's'} permanently?`
-        : 'Are you sure you want to delete this comment? This action cannot be undone.';
+        ? t('messages.deleteCommentWithImages', {
+            defaultValue: 'This comment includes {{count}} pasted images that were uploaded as ticket documents. Delete the comment only, or also delete the pasted images permanently?',
+            count: deleteDialogImageCount,
+          })
+        : t('messages.deleteCommentConfirm', 'Are you sure you want to delete this comment? This action cannot be undone.');
 
     // Function to open ticket in a new window
     const openTicketInNewWindow = useCallback(() => {
