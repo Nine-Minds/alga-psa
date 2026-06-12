@@ -49,6 +49,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 type ManagedTicketStatus = {
@@ -190,6 +191,10 @@ const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, s
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
   const { isAlgaDesk } = useProduct();
+  // Dark-release gate for the auto-close rules UI. Off by default (PostHog
+  // returns false for an unknown flag); UI-only — the auto-close engine and
+  // server actions stay live regardless.
+  const { enabled: autoCloseRulesUiEnabled } = useFeatureFlag('ticket-auto-close-rules');
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -635,7 +640,7 @@ const BoardsSettings: React.FC = () => {
         return;
       }
 
-      if (editingBoard) {
+      if (editingBoard && autoCloseRulesUiEnabled) {
         for (const rule of autoCloseRulesForm) {
           if (!rule.trigger_status_id || !rule.close_to_status_id) {
             setDialogError(t('ticketing.boards.closeRules.messages.autoCloseStatusRequired'));
@@ -680,21 +685,23 @@ const BoardsSettings: React.FC = () => {
 
         await upsertBoardCloseRules(editingBoard.board_id!, closeRulesForm);
 
-        for (const ruleId of removedAutoCloseRuleIds) {
-          await deleteBoardAutoCloseRule(ruleId);
-        }
-        for (const rule of autoCloseRulesForm) {
-          const payload = {
-            trigger_status_id: rule.trigger_status_id,
-            inactivity_days: rule.inactivity_days,
-            warning_days_before: rule.warning_days_before,
-            close_to_status_id: rule.close_to_status_id,
-            is_enabled: rule.is_enabled,
-          };
-          if (rule.rule_id) {
-            await updateBoardAutoCloseRule(rule.rule_id, payload);
-          } else {
-            await createBoardAutoCloseRule(editingBoard.board_id!, payload);
+        if (autoCloseRulesUiEnabled) {
+          for (const ruleId of removedAutoCloseRuleIds) {
+            await deleteBoardAutoCloseRule(ruleId);
+          }
+          for (const rule of autoCloseRulesForm) {
+            const payload = {
+              trigger_status_id: rule.trigger_status_id,
+              inactivity_days: rule.inactivity_days,
+              warning_days_before: rule.warning_days_before,
+              close_to_status_id: rule.close_to_status_id,
+              is_enabled: rule.is_enabled,
+            };
+            if (rule.rule_id) {
+              await updateBoardAutoCloseRule(rule.rule_id, payload);
+            } else {
+              await createBoardAutoCloseRule(editingBoard.board_id!, payload);
+            }
           }
         }
 
@@ -1418,7 +1425,7 @@ const BoardsSettings: React.FC = () => {
               </div>
             )}
 
-            {editingBoard && (
+            {editingBoard && autoCloseRulesUiEnabled && (
               <div className="space-y-3 rounded-md border border-gray-200 p-3">
                 <div className="flex items-center justify-between">
                   <div>
