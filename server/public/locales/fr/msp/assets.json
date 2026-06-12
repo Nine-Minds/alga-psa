@@ -1024,6 +1024,10 @@
     "empty": "Aucune donnée matérielle disponible",
     "emptyStorage": "Aucun lecteur de stockage détecté"
   },
+  "huduDocumentationCard": {
+    "title": "Documentation Hudu",
+    "syncedAt": "Dernière synchronisation depuis Hudu : {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitalités et connectivité",
     "description": "Panneau RMM Vitals pour les détails sur le rythme cardiaque, la surveillance et l'état des points finaux",

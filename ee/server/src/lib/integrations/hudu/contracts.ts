@@ -40,6 +40,14 @@ export interface HuduCompany {
   updated_at?: string | null;
 }
 
+/** Hudu Asset custom field (live shape; ordered by `position`). */
+export interface HuduAssetField {
+  id?: number;
+  label: string;
+  value: unknown;
+  position?: number;
+}
+
 /** Hudu Asset (server/workstation/device/etc.). */
 export interface HuduAsset {
   id: number;
@@ -47,6 +55,9 @@ export interface HuduAsset {
   name: string;
   /** Asset layout / template name. */
   asset_type?: string | null;
+  asset_layout_id: number;
+  /** Per-layout custom fields (the asset's real documentation, incl. Notes). */
+  fields?: HuduAssetField[];
   primary_serial?: string | null;
   primary_model?: string | null;
   primary_mail?: string | null;

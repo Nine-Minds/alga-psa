@@ -4,6 +4,7 @@ import { HardwareSpecsPanel } from './panels/HardwareSpecsPanel';
 import { SecurityPatchingPanel } from './panels/SecurityPatchingPanel';
 import { AssetInfoPanel } from './panels/AssetInfoPanel';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
+import { HuduDocumentationCard } from './panels/HuduDocumentationCard';
 import type { Asset, AssetFact, RmmCachedData, AssetSummaryMetrics } from '@alga-psa/types';
 
 interface AssetDashboardGridProps {
@@ -55,9 +56,10 @@ export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
           asset={asset} 
           isLoading={isLoading} 
         />
-        <AssetNotesPanel 
-          assetId={asset.asset_id} 
+        <AssetNotesPanel
+          assetId={asset.asset_id}
         />
+        <HuduDocumentationCard asset={asset} />
       </div>
     </div>
   );

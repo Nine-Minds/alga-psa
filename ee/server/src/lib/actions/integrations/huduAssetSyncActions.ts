@@ -6,9 +6,11 @@
  * Sibling of huduAssetMappingActions.ts (same guard chain, asset RBAC, here
  * `update`). Sync force-refreshes the mapped company's Hudu assets through
  * the Phase 1 fetch and pull-updates ONLY the synced fields (`name`,
- * `serial_number`) on mapped Alga assets — never `asset_type` or any other
- * field, never deletes assets or mappings. Archived/missing Hudu assets flag
- * the mapping `stale`; reappearance clears the flag.
+ * `serial_number`) plus the Hudu attributes namespace (F253: hudu_fields /
+ * hudu_synced_at, jsonb-merged) on mapped Alga assets — never `asset_type`
+ * or any other field, never deletes assets or mappings. Archived/missing
+ * Hudu assets flag the mapping `stale` (attributes untouched); reappearance
+ * clears the flag.
  */
 
 import logger from '@alga-psa/core/logger';
@@ -29,6 +31,11 @@ import {
   setHuduAssetMappingStale,
   touchHuduAssetMappingsSynced,
 } from '../../integrations/hudu/assetMapping';
+import {
+  buildHuduFieldsAttribute,
+  huduFieldsChanged,
+  writeHuduAssetAttributes,
+} from '../../integrations/hudu/assetAttributes';
 
 export interface SyncHuduClientAssetsInput {
   clientId: string;
@@ -78,11 +85,14 @@ async function listMappedAssets(
   knex: Knex,
   tenant: string,
   assetIds: string[]
-): Promise<Array<{ asset_id: string; name: string; serial_number: string | null }>> {
+): Promise<Array<{ asset_id: string; name: string; serial_number: string | null; attributes: Record<string, unknown> | null }>> {
   if (assetIds.length === 0) {
     return [];
   }
-  return knex('assets').where({ tenant }).whereIn('asset_id', assetIds).select('asset_id', 'name', 'serial_number');
+  return knex('assets')
+    .where({ tenant })
+    .whereIn('asset_id', assetIds)
+    .select('asset_id', 'name', 'serial_number', 'attributes');
 }
 
 /** The only fields sync ever writes (FR7/F220: Hudu wins on these alone). */
@@ -142,6 +152,7 @@ export const syncHuduClientAssets = withHuduAssetAccess(
       let updated = 0;
       let unchanged = 0;
       let stale = 0;
+      const syncedAt = new Date().toISOString();
 
       for (const mapping of mappingRows) {
         const huduAsset = huduAssetById.get(mapping.external_entity_id);
@@ -155,9 +166,22 @@ export const syncHuduClientAssets = withHuduAssetAccess(
           continue;
         }
 
-        const changes = syncedFieldChanges(huduAsset, algaAssetById.get(mapping.alga_entity_id));
-        if (Object.keys(changes).length > 0) {
+        const algaAsset = algaAssetById.get(mapping.alga_entity_id);
+        const changes = syncedFieldChanges(huduAsset, algaAsset);
+        let rowChanged = Object.keys(changes).length > 0;
+        if (rowChanged) {
           await updateAsset(mapping.alga_entity_id, changes);
+        }
+        // F253: the Hudu namespace is always Hudu-won — refreshed on every
+        // mapped live asset via jsonb merge (sibling attributes keys survive).
+        if (algaAsset) {
+          const nextFields = buildHuduFieldsAttribute(huduAsset.fields);
+          if (huduFieldsChanged(algaAsset.attributes?.hudu_fields, nextFields)) {
+            rowChanged = true;
+          }
+          await writeHuduAssetAttributes(knex, tenant, mapping.alga_entity_id, nextFields, syncedAt);
+        }
+        if (rowChanged) {
           updated += 1;
         } else {
           unchanged += 1;
@@ -167,7 +191,6 @@ export const syncHuduClientAssets = withHuduAssetAccess(
         }
       }
 
-      const syncedAt = new Date().toISOString();
       await touchHuduAssetMappingsSynced(knex, tenant, mappingRows.map((m) => m.id), syncedAt);
 
       logger.info('[HuduAssetSyncActions] sync completed', {

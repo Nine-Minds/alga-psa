@@ -1,15 +1,19 @@
 /**
  * T218–T223 — Hudu asset import actions (single + bulk).
+ * T251/T252 — HuduAsset contract fields[] + the attributes namespace write.
  *
  * Unit-mocked like huduAssetMappingActions.test.ts: auth, flag, tiers, knex,
  * the Phase 1 fetch (huduDataActions), createAsset/deleteAsset and the
  * mapping-row writes are fakes; the matcher (assetMatching), the layout-type
- * resolver and the import helpers (assetImport) stay REAL.
+ * resolver and the import/attributes helpers (assetImport, assetAttributes)
+ * stay REAL.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deriveHuduAssetTag, huduImportAssetStatus } from '../../lib/integrations/hudu/assetImport';
+import { buildHuduFieldsAttribute } from '../../lib/integrations/hudu/assetAttributes';
+import type { HuduAsset } from '../../lib/integrations/hudu/contracts';
 
 const TENANT = 'tenant-hudu-import-1';
 const CLIENT_1 = '11111111-1111-1111-1111-111111111111';
@@ -25,6 +29,12 @@ const assertAddOnAccessMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 let assetsRows: Array<{ asset_id: string; asset_name: string; serial_number: string | null }> = [];
 let takenAssetTags: string[] = [];
+let attributeUpdates: Array<{
+  table: string;
+  where: Record<string, unknown> | undefined;
+  payload: Record<string, any>;
+}> = [];
+let attributesUpdateError: Error | null = null;
 const knexCallableMock = vi.fn((_table: string) => {
   let whereArg: Record<string, unknown> | undefined;
   const qb: Record<string, any> = {};
@@ -39,8 +49,17 @@ const knexCallableMock = vi.fn((_table: string) => {
       ? { asset_id: 'asset-owning-tag' }
       : undefined
   );
+  // writeHuduAssetAttributes: where({ tenant, asset_id }).update({ attributes: raw })
+  qb.update = vi.fn(async (payload: Record<string, any>) => {
+    if (attributesUpdateError) {
+      throw attributesUpdateError;
+    }
+    attributeUpdates.push({ table: _table, where: whereArg, payload });
+    return 1;
+  });
   return qb;
 });
+(knexCallableMock as any).raw = vi.fn((sql: string, bindings?: unknown) => ({ sql, bindings }));
 
 const getHuduCompanyAssetsMock = vi.fn();
 const createAssetMock = vi.fn();
@@ -112,6 +131,12 @@ function huduItems() {
       url: '/a/1',
       archived: false,
       hudu_url: 'https://hudu.example.com/a/1',
+      // Deliberately out of position order — import must sort.
+      fields: [
+        { id: 13, label: 'Notes', value: 'Dock on desk', position: 3 },
+        { id: 11, label: 'Hostname', value: 'EC-WS-001', position: 1 },
+        { id: 12, label: 'Warranty Expiry', value: '2027-01-31', position: 2 },
+      ],
     },
     {
       id: 2,
@@ -160,6 +185,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   assetsRows = [];
   takenAssetTags = [];
+  attributeUpdates = [];
+  attributesUpdateError = null;
 
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
@@ -482,5 +509,86 @@ describe('T223: bulk rate-limit stop', () => {
       partial: { created: 0, failed: [] },
     });
     expect(createAssetMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// T251 — HuduAsset contract carries asset_layout_id + fields[] (live shape)
+// ============================================================================
+
+describe('T251: HuduAsset contract', () => {
+  it('a live-shape fixture satisfies the contract and projects position-ordered label/value pairs', () => {
+    const asset: HuduAsset = {
+      id: 1,
+      company_id: 55,
+      name: 'EC-WS-001',
+      asset_type: 'Computer Assets',
+      asset_layout_id: 7,
+      primary_serial: 'SN-EC-1001',
+      fields: [
+        { id: 12, label: 'Warranty Expiry', value: '2027-01-31', position: 2 },
+        { id: 11, label: 'Hostname', value: 'EC-WS-001', position: 1 },
+        { label: 'Position-less', value: null },
+      ],
+    };
+
+    expect(asset.asset_layout_id).toBe(7);
+    expect(buildHuduFieldsAttribute(asset.fields)).toEqual([
+      { label: 'Position-less', value: null },
+      { label: 'Hostname', value: 'EC-WS-001' },
+      { label: 'Warranty Expiry', value: '2027-01-31' },
+    ]);
+    expect(buildHuduFieldsAttribute(undefined)).toEqual([]);
+  });
+});
+
+// ============================================================================
+// T252 — import writes the Hudu attributes namespace
+// ============================================================================
+
+describe('T252: import attributes write', () => {
+  it('jsonb-merges position-ordered hudu_fields + hudu_synced_at onto the created asset', async () => {
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+    expect(result).toMatchObject({ success: true });
+
+    expect(attributeUpdates).toHaveLength(1);
+    expect(attributeUpdates[0].table).toBe('assets');
+    expect(attributeUpdates[0].where).toEqual({ tenant: TENANT, asset_id: 'created-EC-WS-001' });
+
+    const raw = attributeUpdates[0].payload.attributes as { sql: string; bindings: string };
+    // Sibling-key preservation rides the jsonb merge (proven against the real
+    // DB in huduAssetSyncActions.test.ts's persistence block).
+    expect(raw.sql).toContain(`coalesce(attributes, '{}'::jsonb) ||`);
+    const merged = JSON.parse(raw.bindings);
+    expect(merged.hudu_fields).toEqual([
+      { label: 'Hostname', value: 'EC-WS-001' },
+      { label: 'Warranty Expiry', value: '2027-01-31' },
+      { label: 'Notes', value: 'Dock on desk' },
+    ]);
+    expect(new Date(merged.hudu_synced_at).toISOString()).toBe(merged.hudu_synced_at);
+  });
+
+  it('an asset without Hudu fields still gets the namespace with an empty hudu_fields', async () => {
+    const { importHuduAsset } = await importActions();
+
+    await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 2 });
+
+    expect(attributeUpdates).toHaveLength(1);
+    const merged = JSON.parse((attributeUpdates[0].payload.attributes as { bindings: string }).bindings);
+    expect(merged.hudu_fields).toEqual([]);
+    expect(typeof merged.hudu_synced_at).toBe('string');
+  });
+
+  it('a failed attributes write best-effort deletes the just-created asset (typed create_failed)', async () => {
+    attributesUpdateError = new Error('attributes write boom');
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    expect(result).toEqual({ success: false, error: 'attributes write boom', code: 'create_failed' });
+    expect(deleteAssetMock).toHaveBeenCalledWith('created-EC-WS-001', { suppressRevalidate: true });
+    expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
   });
 });

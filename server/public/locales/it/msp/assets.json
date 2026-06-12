@@ -1024,6 +1024,10 @@
     "empty": "Nessun dato hardware disponibile",
     "emptyStorage": "Nessuna unità di archiviazione rilevata"
   },
+  "huduDocumentationCard": {
+    "title": "Documentazione Hudu",
+    "syncedAt": "Ultima sincronizzazione da Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "Elementi vitali RMM e connettività",
     "description": "Pannello dei parametri vitali RMM per battito cardiaco, monitoraggio e dettagli sullo stato degli endpoint",

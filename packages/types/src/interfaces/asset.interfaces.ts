@@ -71,6 +71,8 @@ export interface Asset {
   last_rmm_sync_at?: string;
   // Notes document (BlockNote format, like company notes)
   notes_document_id?: string;
+  // Integration extras (namespaced jsonb, e.g. hudu_fields/hudu_synced_at)
+  attributes?: Record<string, unknown> | null;
   // Related data
   client?: AssetClientInfo;
   relationships?: AssetRelationship[];

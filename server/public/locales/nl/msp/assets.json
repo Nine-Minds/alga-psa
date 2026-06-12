@@ -1024,6 +1024,10 @@
     "empty": "Geen hardwaregegevens beschikbaar",
     "emptyStorage": "Geen opslagstations gedetecteerd"
   },
+  "huduDocumentationCard": {
+    "title": "Hudu-documentatie",
+    "syncedAt": "Laatst gesynchroniseerd vanuit Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectiviteit",
     "description": "RMM vitals-paneel voor details over hartslag, monitoring en eindpuntstatus",

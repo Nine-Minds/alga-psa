@@ -22,6 +22,7 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { createAsset, deleteAsset } from '@alga-psa/assets/actions/assetActions';
 import { getHuduCompanyAssets } from './huduDataActions';
+import type { HuduLinkedItem } from './huduDataActions';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import {
@@ -38,9 +39,10 @@ import {
 } from '../../integrations/hudu/assetMapping';
 import type { HuduAssetMappingWriteResult } from '../../integrations/hudu/assetMapping';
 import { deriveHuduAssetTag, huduImportAssetStatus } from '../../integrations/hudu/assetImport';
-
-/** Hudu asset rows carry the layout id at runtime (not in the Phase 1 contract). */
-type HuduAssetListItem = HuduAsset & { asset_layout_id?: number | null; hudu_url?: string | null };
+import {
+  buildHuduFieldsAttribute,
+  writeHuduAssetAttributes,
+} from '../../integrations/hudu/assetAttributes';
 
 export type HuduAssetImportErrorCode =
   | 'client_not_mapped'
@@ -170,7 +172,7 @@ async function importHuduAssetCore(
     return fetchFailure(assetsResult);
   }
 
-  const huduAsset = (assetsResult.items as HuduAssetListItem[]).find(
+  const huduAsset = (assetsResult.items as Array<HuduLinkedItem<HuduAsset>>).find(
     (a) => String(a.id) === String(huduAssetId)
   );
   if (!huduAsset) {
@@ -201,7 +203,10 @@ async function importHuduAssetCore(
   });
   const status = huduImportAssetStatus();
 
-  let createdAssetId: string;
+  // CreateAssetRequest carries no attributes param, so the Hudu namespace is
+  // written via a jsonb-merge update right after createAsset (NinjaOne writes
+  // its extras through direct knex writes the same way).
+  let createdAssetId: string | undefined;
   try {
     const created = await createAsset({
       asset_type: assetType,
@@ -212,7 +217,17 @@ async function importHuduAssetCore(
       serial_number: huduAsset.primary_serial ?? undefined,
     });
     createdAssetId = created.asset_id;
+    await writeHuduAssetAttributes(
+      knex,
+      tenant,
+      createdAssetId,
+      buildHuduFieldsAttribute(huduAsset.fields),
+      new Date().toISOString()
+    );
   } catch (error) {
+    if (createdAssetId) {
+      await cleanUpOrphanAsset(createdAssetId);
+    }
     return { success: false, error: toErrorMessage(error), code: 'create_failed' };
   }
 
@@ -305,7 +320,7 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
         return { ...failure, partial: summary };
       }
 
-      const huduAssets = assetsResult.items as HuduAssetListItem[];
+      const huduAssets = assetsResult.items as Array<HuduLinkedItem<HuduAsset>>;
       const { knex } = await createTenantKnex(tenant);
 
       const mappingRows = await getHuduAssetMappingRows(knex, tenant, {

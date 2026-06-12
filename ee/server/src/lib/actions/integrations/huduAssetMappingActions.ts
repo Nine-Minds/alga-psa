@@ -23,7 +23,7 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { getHuduCompanyAssets } from './huduDataActions';
-import type { HuduCompanyFetchOptions } from './huduDataActions';
+import type { HuduCompanyFetchOptions, HuduLinkedItem } from './huduDataActions';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import { resolveHuduCompanyIdForClient as resolveHuduCompanyIdForClientRow } from '../../integrations/hudu/companyMapping';
@@ -44,9 +44,6 @@ import type {
 export type HuduAssetMappingActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string; code?: HuduAssetMappingErrorCode };
-
-/** Hudu asset rows carry the layout id at runtime (not in the Phase 1 contract). */
-type HuduAssetListItem = HuduAsset & { asset_layout_id?: number | null; hudu_url?: string | null };
 
 export interface HuduAssetMappingView {
   hudu_asset_id: number;
@@ -150,7 +147,7 @@ export const getHuduAssetMappings = withHuduAssetAccess(
         };
       }
 
-      const huduAssets = assetsResult.items as HuduAssetListItem[];
+      const huduAssets = assetsResult.items as Array<HuduLinkedItem<HuduAsset>>;
       const { knex } = await createTenantKnex(tenant);
 
       const mappingRows = await getHuduAssetMappingRows(knex, tenant, {
@@ -231,7 +228,7 @@ export const setHuduAssetMapping = withHuduAssetAccess(
 
       let metadata = input.metadata;
       if (!metadata?.hudu_asset_name) {
-        const cached = getCachedHuduList<HuduAssetListItem>(tenant, huduCompanyId, 'assets')?.items.find(
+        const cached = getCachedHuduList<HuduAsset>(tenant, huduCompanyId, 'assets')?.items.find(
           (a) => String(a.id) === String(input.huduAssetId)
         );
         if (cached) {

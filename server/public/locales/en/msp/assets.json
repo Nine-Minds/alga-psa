@@ -1024,6 +1024,10 @@
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"
   },
+  "huduDocumentationCard": {
+    "title": "Hudu Documentation",
+    "syncedAt": "Last synced from Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitals & Connectivity",
     "description": "RMM vitals panel for heartbeat, monitoring, and endpoint health details",

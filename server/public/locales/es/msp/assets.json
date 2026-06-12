@@ -1024,6 +1024,10 @@
     "empty": "No hay datos de hardware disponibles",
     "emptyStorage": "No se detectaron unidades de almacenamiento"
   },
+  "huduDocumentationCard": {
+    "title": "Documentación de Hudu",
+    "syncedAt": "Última sincronización desde Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitales y conectividad",
     "description": "RMM panel de signos vitales para detalles de latidos, monitoreo y estado del endpoint",

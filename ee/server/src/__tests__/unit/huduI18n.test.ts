@@ -4,12 +4,14 @@
  * Two halves:
  * 1. Key resolution — every `t('integrations.hudu…' / 'integrations.categories.
  *    itDocumentation…' / 'integrations.items.hudu…' / 'clientDetails.hudu…' /
- *    'documents.huduTab…')` key used by the Hudu components (plus the two
- *    ClientDetails tab labels, the IntegrationsSettingsPage category/item
- *    entries, and the two DocumentsPage tab labels) must resolve to a
+ *    'documents.huduTab…' / 'huduDocumentationCard…')` key used by the Hudu
+ *    components (plus the two ClientDetails tab labels, the
+ *    IntegrationsSettingsPage category/item entries, the two DocumentsPage tab
+ *    labels, and the CE-resident HuduDocumentationCard) must resolve to a
  *    non-empty string in the matching en locale JSON for its namespace:
  *    msp/integrations → msp/integrations.json, msp/clients → msp/clients.json,
- *    msp/settings → msp/settings.json, common → common.json.
+ *    msp/settings → msp/settings.json, msp/assets → msp/assets.json,
+ *    common → common.json.
  * 2. Hardcoded-string sweep — no literal user-facing text nodes in the Hudu
  *    component JSX (everything must go through t(key, { defaultValue })).
  *
@@ -44,6 +46,8 @@ import clientDetailsSource from '@alga-psa/clients/components/clients/ClientDeta
 import integrationsSettingsPageSource from '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage.tsx?raw';
 // @ts-expect-error Vite raw import (static source scan).
 import documentsPageSource from '@alga-psa/documents/components/DocumentsPage.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import huduDocumentationCardSource from '@alga-psa/assets/components/panels/HuduDocumentationCard.tsx?raw';
 
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
@@ -57,6 +61,7 @@ const locales = {
   'msp/integrations': readLocale('msp/integrations.json'),
   'msp/clients': readLocale('msp/clients.json'),
   'msp/settings': readLocale('msp/settings.json'),
+  'msp/assets': readLocale('msp/assets.json'),
   common: readLocale('common.json'),
 } as const;
 
@@ -64,7 +69,7 @@ type Namespace = keyof typeof locales;
 
 /** Only the Hudu-owned key families are this test's concern. */
 const HUDU_KEY_PATTERN =
-  /^(integrations\.hudu\.|integrations\.categories\.itDocumentation\.|integrations\.items\.hudu\.|clientDetails\.hudu|documents\.huduTab\.)/;
+  /^(integrations\.hudu\.|integrations\.categories\.itDocumentation\.|integrations\.items\.hudu\.|clientDetails\.hudu|documents\.huduTab\.|huduDocumentationCard\.)/;
 
 /** All `t('…')` first-argument string literals in a source. */
 function collectTranslationKeys(source: string): string[] {
@@ -177,6 +182,14 @@ const keySources: ScannedSource[] = [
     minKeys: 2,
     sweep: false,
   },
+  {
+    // CE-resident card (packages/assets), Hudu-owned strings (T256/F255).
+    label: 'HuduDocumentationCard.tsx',
+    source: huduDocumentationCardSource as string,
+    namespace: 'msp/assets',
+    minKeys: 2,
+    sweep: true,
+  },
 ];
 
 describe('T100: every Hudu translation key resolves in the en locale', () => {
@@ -210,6 +223,7 @@ const NAMESPACE_FILES: Record<Namespace, string> = {
   'msp/integrations': 'msp/integrations.json',
   'msp/clients': 'msp/clients.json',
   'msp/settings': 'msp/settings.json',
+  'msp/assets': 'msp/assets.json',
   common: 'common.json',
 };
 

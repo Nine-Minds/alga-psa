@@ -1024,6 +1024,10 @@
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
   },
+  "huduDocumentationCard": {
+    "title": "Hudu-Dokumentation",
+    "syncedAt": "Zuletzt aus Hudu synchronisiert: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "RMM Vitalwerte und Konnektivität",
     "description": "RMM Vitalwerte-Panel für Herzschlag-, Überwachungs- und Endpunkt-Gesundheitsdetails",

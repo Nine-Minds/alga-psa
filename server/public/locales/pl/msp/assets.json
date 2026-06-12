@@ -1040,6 +1040,10 @@
     "empty": "Brak dostępnych danych sprzętowych",
     "emptyStorage": "Nie wykryto dysków pamięci masowej"
   },
+  "huduDocumentationCard": {
+    "title": "Dokumentacja Hudu",
+    "syncedAt": "Ostatnia synchronizacja z Hudu: {{value}}"
+  },
   "rmmVitalsPanel": {
     "title": "Parametry RMM i łączność",
     "description": "Panel RMM Vitals zawierający informacje o pulsie, monitorowaniu i stanie punktów końcowych",

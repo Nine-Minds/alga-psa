@@ -1,11 +1,13 @@
 /**
  * T224–T229 — Hudu manual pull-sync (syncHuduClientAssets) + sync helpers.
+ * T253/T254 — hudu_fields refresh on mapped live assets; stale untouched.
  *
- * Helper persistence (stale metadata merge, last_synced_at stamping) runs
- * against the REAL local dev DB exactly like huduAssetMappingActions.test.ts
- * (shared advisory lock, importActual). The action layer is unit-mocked like
- * the sibling: auth, flag, tiers, knex, huduDataActions, updateAsset and the
- * mapping-row functions are fakes.
+ * Helper persistence (stale metadata merge, last_synced_at stamping, and the
+ * assets.attributes jsonb merge) runs against the REAL local dev DB exactly
+ * like huduAssetMappingActions.test.ts (shared advisory lock, importActual).
+ * The action layer is unit-mocked like the sibling: auth, flag, tiers, knex,
+ * huduDataActions, updateAsset and the mapping-row functions are fakes; the
+ * attributes helpers (assetAttributes) stay REAL.
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +18,7 @@ import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
 import { HUDU_MAPPING_TABLE } from '../../lib/integrations/hudu/contracts';
+import { writeHuduAssetAttributes } from '../../lib/integrations/hudu/assetAttributes';
 
 const TENANT = 'tenant-hudu-sync-1';
 const CLIENT_1 = '11111111-1111-1111-1111-111111111111';
@@ -32,17 +35,39 @@ const assertTierAccessMock = vi.fn();
 const assertAddOnAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
-let assetsRows: Array<{ asset_id: string; name: string; serial_number: string | null }> = [];
+let assetsRows: Array<{
+  asset_id: string;
+  name: string;
+  serial_number: string | null;
+  attributes?: Record<string, unknown> | null;
+}> = [];
 const delMock = vi.fn();
+let attributeUpdates: Array<{
+  table: string;
+  where: Record<string, unknown> | undefined;
+  payload: Record<string, any>;
+}> = [];
 const knexCallableMock = vi.fn((_table: string) => {
+  let whereArg: Record<string, unknown> | undefined;
   const qb: Record<string, unknown> = {};
-  qb.where = vi.fn(() => qb);
+  qb.where = vi.fn((arg?: Record<string, unknown>) => {
+    if (arg && typeof arg === 'object') {
+      whereArg = arg;
+    }
+    return qb;
+  });
   qb.whereIn = vi.fn(() => qb);
   qb.select = vi.fn(async () => assetsRows);
   qb.del = delMock;
   qb.delete = delMock;
+  // writeHuduAssetAttributes: where({ tenant, asset_id }).update({ attributes: raw })
+  qb.update = vi.fn(async (payload: Record<string, any>) => {
+    attributeUpdates.push({ table: _table, where: whereArg, payload });
+    return 1;
+  });
   return qb;
 });
+(knexCallableMock as any).raw = vi.fn((sql: string, bindings?: unknown) => ({ sql, bindings }));
 
 const getHuduCompanyAssetsMock = vi.fn();
 const updateAssetMock = vi.fn();
@@ -136,6 +161,7 @@ function expectNoSyncWritesBeyond(expected: { updateCalls?: number; staleCalls?:
 beforeEach(() => {
   vi.clearAllMocks();
   assetsRows = [];
+  attributeUpdates = [];
 
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
@@ -280,6 +306,53 @@ describe('hudu asset sync helpers — DB persistence (T226/T227/T228 row layer)'
       /requires mappingId or huduAssetId/
     );
     expect(await db(HUDU_MAPPING_TABLE).where({ tenant: tenantId })).toHaveLength(2);
+  });
+
+  it('T252/T253 row layer: writeHuduAssetAttributes jsonb-merges the Hudu namespace, preserving sibling keys', async () => {
+    const clientId = randomUUID();
+    await db('clients').insert({ tenant: tenantId, client_id: clientId, client_name: 'Hudu Attr Client' });
+    try {
+      const [asset] = await db('assets')
+        .insert({
+          tenant: tenantId,
+          client_id: clientId,
+          asset_type: 'workstation',
+          asset_tag: `hudu-attr-${clientId.slice(0, 8)}`,
+          name: 'EC-WS-001',
+          status: 'active',
+          attributes: JSON.stringify({
+            acme_namespace: { keep: true },
+            hudu_fields: [{ label: 'Old', value: 'x' }],
+            hudu_synced_at: '2026-06-10T00:00:00.000Z',
+          }),
+        })
+        .returning('asset_id');
+
+      const at = '2026-06-12T10:00:00.000Z';
+      expect(
+        await writeHuduAssetAttributes(db, tenantId, asset.asset_id, [{ label: 'Hostname', value: 'EC-WS-001' }], at)
+      ).toBe(1);
+      let row = await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
+      // Sibling namespace survives; hudu_fields is replaced wholesale.
+      expect(row.attributes).toEqual({
+        acme_namespace: { keep: true },
+        hudu_fields: [{ label: 'Hostname', value: 'EC-WS-001' }],
+        hudu_synced_at: at,
+      });
+
+      // Null attributes coalesce to an object instead of erroring.
+      await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).update({ attributes: null });
+      const later = '2026-06-12T11:00:00.000Z';
+      expect(await writeHuduAssetAttributes(db, tenantId, asset.asset_id, [], later)).toBe(1);
+      row = await db('assets').where({ tenant: tenantId, asset_id: asset.asset_id }).first();
+      expect(row.attributes).toEqual({ hudu_fields: [], hudu_synced_at: later });
+
+      // Tenant scoping holds.
+      expect(await writeHuduAssetAttributes(db, randomUUID(), asset.asset_id, [], later)).toBe(0);
+    } finally {
+      await db('assets').where({ tenant: tenantId }).del().catch(() => undefined);
+      await db('clients').where({ tenant: tenantId }).del().catch(() => undefined);
+    }
   });
 
   it('T228: touchHuduAssetMappingsSynced stamps last_synced_at on the given rows only', async () => {
@@ -550,6 +623,138 @@ describe('T228: summary + last_synced_at stamping', () => {
       ['am-1', 'am-2', 'am-3'],
       (result as { syncedAt: string }).syncedAt
     );
+  });
+});
+
+// ============================================================================
+// T253 — hudu_fields refresh on mapped live assets (unit-mocked)
+// ============================================================================
+
+describe('T253: hudu_fields refresh', () => {
+  const HUDU_FIELDS_LIVE = [
+    // Deliberately out of position order — sync must sort.
+    { id: 13, label: 'Notes', value: 'Re-imaged 2026-06', position: 3 },
+    { id: 11, label: 'Hostname', value: 'EC-WS-001', position: 1 },
+    { id: 12, label: 'Warranty Expiry', value: '2027-01-31', position: 2 },
+  ];
+
+  it('a changed hudu_fields jsonb-merges the namespace and counts the row updated even with name/serial unchanged', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([
+        { id: 1, name: 'EC-WS-001', primary_serial: 'SN-EC-1001', archived: false, fields: HUDU_FIELDS_LIVE },
+      ])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      {
+        asset_id: ASSET_1,
+        name: 'EC-WS-001',
+        serial_number: 'SN-EC-1001',
+        attributes: {
+          acme_namespace: { keep: true },
+          hudu_fields: [{ label: 'Hostname', value: 'EC-WS-001' }],
+          hudu_synced_at: '2026-06-10T00:00:00.000Z',
+        },
+      },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, syncedAt: expect.any(String) });
+    expect(updateAssetMock).not.toHaveBeenCalled();
+
+    expect(attributeUpdates).toHaveLength(1);
+    expect(attributeUpdates[0].table).toBe('assets');
+    expect(attributeUpdates[0].where).toEqual({ tenant: TENANT, asset_id: ASSET_1 });
+    const raw = attributeUpdates[0].payload.attributes as { sql: string; bindings: string };
+    // The merge preserves sibling attributes keys (acme_namespace above) —
+    // proven against the real DB in the persistence block below.
+    expect(raw.sql).toContain(`coalesce(attributes, '{}'::jsonb) ||`);
+    expect(JSON.parse(raw.bindings)).toEqual({
+      hudu_fields: [
+        { label: 'Hostname', value: 'EC-WS-001' },
+        { label: 'Warranty Expiry', value: '2027-01-31' },
+        { label: 'Notes', value: 'Re-imaged 2026-06' },
+      ],
+      hudu_synced_at: (result as { syncedAt: string }).syncedAt,
+    });
+  });
+
+  it('unchanged hudu_fields still refresh hudu_synced_at but count the row unchanged', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([
+        { id: 1, name: 'EC-WS-001', primary_serial: 'SN-EC-1001', archived: false, fields: HUDU_FIELDS_LIVE },
+      ])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      {
+        asset_id: ASSET_1,
+        name: 'EC-WS-001',
+        serial_number: 'SN-EC-1001',
+        attributes: {
+          hudu_fields: [
+            { label: 'Hostname', value: 'EC-WS-001' },
+            { label: 'Warranty Expiry', value: '2027-01-31' },
+            { label: 'Notes', value: 'Re-imaged 2026-06' },
+          ],
+          hudu_synced_at: '2026-06-10T00:00:00.000Z',
+        },
+      },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, syncedAt: expect.any(String) });
+    expect(attributeUpdates).toHaveLength(1);
+    const merged = JSON.parse((attributeUpdates[0].payload.attributes as { bindings: string }).bindings);
+    expect(merged.hudu_synced_at).toBe((result as { syncedAt: string }).syncedAt);
+  });
+
+  it('name/serial AND field changes count the row once', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([
+        { id: 1, name: 'EC-WS-001-RENAMED', primary_serial: 'SN-EC-1001', archived: false, fields: HUDU_FIELDS_LIVE },
+      ])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [{ asset_id: ASSET_1, name: 'EC-WS-001', serial_number: 'SN-EC-1001', attributes: null }];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, syncedAt: expect.any(String) });
+    expect(updateAssetMock).toHaveBeenCalledWith(ASSET_1, { name: 'EC-WS-001-RENAMED' });
+    expect(attributeUpdates).toHaveLength(1);
+  });
+});
+
+// ============================================================================
+// T254 — stale/missing Hudu assets leave attributes untouched
+// ============================================================================
+
+describe('T254: stale/missing assets keep attributes untouched', () => {
+  it('archived and missing Hudu assets trigger no attributes write', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([{ id: 1, name: 'EC-WS-001', archived: true }]) // id 2 absent entirely
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([
+      mappingRow('am-1', ASSET_1, 1),
+      mappingRow('am-2', ASSET_2, 2),
+    ]);
+    assetsRows = [
+      { asset_id: ASSET_1, name: 'EC-WS-001', serial_number: null, attributes: { hudu_fields: [{ label: 'Old', value: 'x' }] } },
+      { asset_id: ASSET_2, name: 'EC-SRV-01', serial_number: null, attributes: { hudu_fields: [{ label: 'Old', value: 'y' }] } },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toMatchObject({ state: 'ok', stale: 2 });
+    expect(attributeUpdates).toHaveLength(0);
+    expectNoSyncWritesBeyond({ updateCalls: 0, staleCalls: 2 });
   });
 });
 
