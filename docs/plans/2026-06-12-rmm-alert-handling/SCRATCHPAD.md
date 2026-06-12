@@ -20,6 +20,7 @@ Working memory for the RMM alert handling effort. Approved design lives at
 - (2026-06-11) `rmm_organization_mappings.auto_create_tickets` is deprecated; rules with `organizationIds` conditions are the single source of truth.
 - (2026-06-12) Maintenance windows and alert polling added to scope (originally non-goals) for competitor parity. Windows suppress before rule matching; suppressed alerts are stored but produce no ticket/notification/workflow event. The reconciliation poller owns window-end processing of still-active suppressed alerts.
 - (2026-06-12) Polling is a per-integration Temporal schedule (Entra per-tenant pattern): default on, 15-minute default interval, 5–60 configurable, created on connect / removed on disconnect. Cycles upsert missed triggers and synthesize resets for stale active alerts, all through the same pipeline.
+- (2026-06-12) Testing strategy is 80/20: tests.json holds a 32-test automated core (logic permutations, idempotency, lifecycle, tenant isolation, one E2E per direction); UI, live RMM round-trips, Temporal schedule lifecycle, email, and migrations are manual flows in SMOKE_TESTS.md, each tied to a named business risk. The old 114-test list was consolidated, not expanded — table-driven tests absorb the per-permutation entries.
 
 ## Discoveries / Constraints
 

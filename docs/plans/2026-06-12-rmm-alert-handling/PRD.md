@@ -240,4 +240,6 @@ event name).
   condition still firing after its window ends becomes a ticket via the poller.
 - With webhooks disabled, a poll cycle turns RMM-active alerts into tickets per
   the rules and closes stale tickets whose alerts cleared in the RMM.
-- All features in `features.json` implemented; all tests in `tests.json` pass.
+- All features in `features.json` implemented; the automated core in
+  `tests.json` passes; the `SMOKE_TESTS.md` checklist has been executed against
+  a live stack.

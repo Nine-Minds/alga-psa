@@ -259,24 +259,16 @@ rule has `notifyUserIds`.
 
 ## Testing
 
-Unit: the rule-evaluation matrix (each condition type, catch-all, first-match
-ordering), dedup-key computation, the untouched-ticket check, and template
-rendering.
+80/20 split. An automated core targets the logic where permutations hide bugs
+and regressions are expensive: the rule-evaluation matrix, dedup, the
+untouched-ticket check, window matching (timezones, midnight-crossing
+recurrence, scope combinations), idempotency (webhook replay, webhook+poller
+overlap), lifecycle in both directions, tenant isolation and admin gating on
+CRUD, and one end-to-end webhook→ticket integration test per direction. The
+existing `alertProcessor` tests move to the new shared module.
 
-Integration (repo integration-testing patterns):
-
-- webhook triggered → ticket created
-- repeat triggered → comment + counter, no second ticket
-- reset → comment, plus both close-if-untouched branches
-- ticket close → outbound adapter called (and skipped when the rule opts out)
-- the same webhook delivered twice → no-op
-- a Tactical webhook through the same pipeline
-- alert during a matching window → suppressed, no ticket; outside the window →
-  normal processing
-- poll cycle: missed trigger upserted into a ticket, stale active alert reset,
-  expired-window suppressed alert processed
-- alert arriving via both webhook and poller → single ticket
-
-The existing `alertProcessor` tests move to the new shared module. Unit tests
-also cover window matching (one-off, weekly recurrence with timezone, scope
-combinations).
+Everything UI-, infra-, or delivery-shaped is a manual smoke pass instead:
+settings screens, live NinjaOne/Tactical round-trips, Temporal schedule
+lifecycle on connect/disconnect, email delivery, and migrations against a real
+stack. The risk-driven checklist lives at
+`docs/plans/2026-06-12-rmm-alert-handling/SMOKE_TESTS.md`.
