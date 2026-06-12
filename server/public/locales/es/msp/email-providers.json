@@ -223,7 +223,7 @@
       "ticketDefaults": {
         "title": "Valores predeterminados del ticket",
         "description": "Seleccione los valores predeterminados para aplicar a los tickets creados por correo electrónico",
-        "label": "Valores predeterminados de boletos entrantes",
+        "label": "Valores predeterminados de tickets entrantes",
         "placeholder": "Seleccionar valores predeterminados (opcional)",
         "empty": "No hay valores predeterminados disponibles"
       },

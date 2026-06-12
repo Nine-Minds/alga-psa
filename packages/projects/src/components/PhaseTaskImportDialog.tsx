@@ -1388,9 +1388,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                       <div>
                         <span className="font-medium text-gray-900">&quot;{agentInfo.agentName}&quot;</span>
                         <span className="ml-2 text-sm text-gray-500">
-                          {importT('taskCountLabel', '({{count}} task{{plural}})', {
+                          {importT('taskCountLabel', '({{count}} tasks)', {
                             count: agentInfo.taskCount,
-                            plural: agentInfo.taskCount === 1 ? '' : 's',
                           })}
                         </span>
                         {agentInfo.isPrimaryAgent && (
@@ -1543,9 +1542,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           {importT('inPhaseBadge', 'in {{phase}}', { phase: statusInfo.phaseName })}
                         </Badge>
                         <span className="ml-2 text-sm text-gray-500">
-                          {importT('taskCountLabel', '({{count}} task{{plural}})', {
+                          {importT('taskCountLabel', '({{count}} tasks)', {
                             count: statusInfo.taskCount,
-                            plural: statusInfo.taskCount === 1 ? '' : 's',
                           })}
                         </span>
                         <div className="text-sm text-gray-500 mt-1">

@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Biglietto",
+        "ticket": "Ticket",
         "projectTask": "Compito del progetto",
         "nonBillableCategory": "Categoria non fatturabile",
         "adHoc": "Inserimento ad hoc",
@@ -124,8 +124,8 @@
   "requests": {
     "errors": {
       "load": "Impossibile caricare le richieste di appuntamento",
-      "ticketNotFound": "Biglietto non trovato",
-      "loadTicket": "Impossibile caricare il biglietto",
+      "ticketNotFound": "Ticket non trovato",
+      "loadTicket": "Impossibile caricare il ticket",
       "assignTechnicianRequired": "Si prega di assegnare un tecnico",
       "approve": "Impossibile approvare la richiesta",
       "declineReasonRequired": "Si prega di fornire un motivo per rifiutare",
@@ -154,7 +154,7 @@
       "loading": "Caricamento richieste...",
       "empty": "Nessuna richiesta {{status}} trovata",
       "duration": "{{count}} minuti",
-      "ticketFallback": "Biglietto n.{{ticket}}",
+      "ticketFallback": "Ticket n.{{ticket}}",
       "fallbacks": {
         "publicRequest": "Richiesta pubblica"
       }
@@ -176,7 +176,7 @@
         "requestedTime": "Orario richiesto",
         "duration": "Durata",
         "status": "Stato",
-        "linkedTicket": "Biglietto collegato",
+        "linkedTicket": "Ticket collegato",
         "description": "Descrizione",
         "teamsMeeting": "Riunione Teams"
       },
@@ -190,7 +190,7 @@
         "assignedTechnician": "Assegna Tecnico *",
         "finalDateTime": "Data e ora finali",
         "internalNotes": "Note interne (facoltativo)",
-        "linkedTicket": "Link al biglietto (facoltativo)",
+        "linkedTicket": "Link al ticket (facoltativo)",
         "generateTeamsMeeting": "Genera link riunione Microsoft Teams"
       },
       "placeholders": {

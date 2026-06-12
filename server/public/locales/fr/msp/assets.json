@@ -71,7 +71,7 @@
       "hints": "Conseils"
     },
     "hint": {
-      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les billets et la recherche de clients arriveront ultérieurement.",
+      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les tickets et la recherche de clients arriveront ultérieurement.",
       "badge": "À venir"
     },
     "values": {
@@ -276,7 +276,7 @@
     "tabs": {
       "overview": "Aperçu",
       "maintenance": "Entretien",
-      "tickets": "Billets",
+      "tickets": "Tickets",
       "configuration": "Configuration",
       "documents": "Documents"
     },
@@ -326,7 +326,7 @@
       "linked": "Lié {{date}}",
       "client": "Client : {{name}}",
       "assignee": "Destinataire : {{name}}",
-      "openTicket": "Billet ouvert"
+      "openTicket": "Ticket ouvert"
     },
     "configuration": {
       "coreAttributes": "Attributs de base",
@@ -653,7 +653,7 @@
     "description": "Cartes métriques et cumuls pour les tickets, la maintenance, la disponibilité et les indicateurs de santé des actifs",
     "labels": {
       "healthStatus": "État de santé",
-      "openTickets": "Billets ouverts",
+      "openTickets": "Tickets ouverts",
       "securityStatus": "Statut de sécurité",
       "warranty": "Garantie"
     },
@@ -834,7 +834,7 @@
       "priority": "Priorité"
     },
     "placeholders": {
-      "title": "Entrez le titre du billet",
+      "title": "Entrez le titre du ticket",
       "description": "Décrivez le problème...",
       "loadingBoards": "Chargement des planches...",
       "selectBoard": "Sélectionnez le tableau...",
@@ -1284,7 +1284,7 @@
       "createTicket": "Créer un ticket"
     },
     "table": {
-      "ticketId": "Identifiant du billet",
+      "ticketId": "Identifiant du ticket",
       "subject": "Sujet",
       "status": "Statut",
       "priority": "Priorité",

@@ -1111,9 +1111,8 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(taskFormT('documentCleanupFailure', '{{count}} document{{plural}} could not be deleted and will remain in Documents', {
+        toast.error(taskFormT('documentCleanupFailure', '{{count}} documents could not be deleted and will remain in Documents', {
           count: failureCount,
-          plural: failureCount === 1 ? '' : 's',
         }));
       }
     } finally {
@@ -1145,9 +1144,8 @@ export default function TaskForm({
       }
 
       if (failureCount > 0) {
-        toast.error(taskFormT('ticketCleanupFailure', '{{count}} ticket{{plural}} could not be deleted', {
+        toast.error(taskFormT('ticketCleanupFailure', '{{count}} tickets could not be deleted', {
           count: failureCount,
-          plural: failureCount === 1 ? '' : 's',
         }));
       }
     } finally {
@@ -2229,10 +2227,8 @@ export default function TaskForm({
 
           return (
             <div>
-              <p>{taskFormT('documentsCleanupIntro', 'You have {{count}} document{{plural}} that {{wasWere}} {{cleanupType}}:', {
+              <p>{taskFormT('documentsCleanupIntro', 'You have {{count}} documents that were {{cleanupType}}:', {
                 count: docsToShow.length,
-                plural: docsToShow.length === 1 ? '' : 's',
-                wasWere: docsToShow.length === 1 ? 'was' : 'were',
                 cleanupType,
               })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
@@ -2272,9 +2268,8 @@ export default function TaskForm({
         message={(() => {
           return (
             <div>
-              <p>{taskFormT('createdTicketsIntro', 'You created {{count}} ticket{{plural}} during this session:', {
+              <p>{taskFormT('createdTicketsIntro', 'You created {{count}} tickets during this session:', {
                 count: sessionCreatedTickets.length,
-                plural: sessionCreatedTickets.length === 1 ? '' : 's',
               })}</p>
               <ul className="list-disc list-inside mt-2 text-sm">
                 {sessionCreatedTickets.slice(0, 5).map(ticket => (

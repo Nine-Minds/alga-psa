@@ -88,23 +88,23 @@
       "fields": {
         "dueDateAction": {
           "label": "Termin wykonania czynności",
-          "help": "Wybierz, czy daty odnowienia mają domyślnie tworzyć bilety, czy pozostać tylko w kolejce."
+          "help": "Wybierz, czy daty odnowienia mają domyślnie tworzyć zgłoszenia, czy pozostać tylko w kolejce."
         },
         "ticketBoard": {
-          "label": "Tablica biletów odnowieniowych",
+          "label": "Tablica zgłoszeń odnowieniowych",
           "placeholderLoading": "Ładowanie tablic...",
           "placeholderSelect": "Wybierz tablicę"
         },
         "ticketStatus": {
-          "label": "Stan biletu odnowienia",
+          "label": "Stan zgłoszenia odnowienia",
           "placeholderLoading": "Ładowanie statusów...",
           "placeholderSelect": "Wybierz stan",
           "placeholderSelectBoardFirst": "Najpierw wybierz deskę",
-          "help": "Statusy biletów odnowienia są ograniczone do wybranej tablicy."
+          "help": "Statusy zgłoszeń odnowienia są ograniczone do wybranej tablicy."
         }
       },
       "options": {
-        "createTicket": "Utwórz bilet",
+        "createTicket": "Utwórz zgłoszenie",
         "queueOnly": "Tylko kolejka"
       },
       "states": {
@@ -119,7 +119,7 @@
       },
       "errors": {
         "load": "Nie udało się wczytać ustawień automatyzacji odnawiania",
-        "loadStatuses": "Nie udało się załadować statusów biletów odnowienia",
+        "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
     }

@@ -88,10 +88,10 @@
       "fields": {
         "dueDateAction": {
           "label": "Azione della data di scadenza",
-          "help": "Scegli se le date di scadenza del rinnovo devono creare biglietti o rimanere solo in coda per impostazione predefinita."
+          "help": "Scegli se le date di scadenza del rinnovo devono creare ticket o rimanere solo in coda per impostazione predefinita."
         },
         "ticketBoard": {
-          "label": "Rinnovo biglietteria",
+          "label": "Bacheca ticket di rinnovo",
           "placeholderLoading": "Caricamento schede...",
           "placeholderSelect": "Seleziona scheda"
         },
@@ -104,7 +104,7 @@
         }
       },
       "options": {
-        "createTicket": "Crea biglietto",
+        "createTicket": "Crea ticket",
         "queueOnly": "Solo coda"
       },
       "states": {
@@ -119,7 +119,7 @@
       },
       "errors": {
         "load": "Impossibile caricare le impostazioni di automazione del rinnovo",
-        "loadStatuses": "Impossibile caricare gli stati dei biglietti di rinnovo",
+        "loadStatuses": "Impossibile caricare gli stati dei ticket di rinnovo",
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
     }

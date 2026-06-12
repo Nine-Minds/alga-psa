@@ -368,7 +368,7 @@
     "active": "Actif"
   },
   "intervals": {
-    "title": "Intervalles horaires des billets",
+    "title": "Intervalles de temps des tickets",
     "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
     "totalTime": "Durée totale: {{value}}",
     "selectedOne": "{{count}} intervalle sélectionné",
@@ -389,7 +389,7 @@
       "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
       "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
     },
-    "entryName": "Entrée de l'heure du billet",
+    "entryName": "Entrée de temps du ticket",
     "messages": {
       "cannotFindTimeSheet": "Impossible de créer une saisie de temps - impossible de trouver ou de créer une feuille de temps",
       "mergeFirst": "Veuillez fusionner les intervalles avant de créer une entrée de temps",

@@ -109,7 +109,7 @@
       "openActionsForAsset": "Azioni aperte per la risorsa {{name}}",
       "viewDetails": "Visualizza i dettagli",
       "editAsset": "Modifica risorsa",
-      "createTicket": "Crea biglietto",
+      "createTicket": "Crea ticket",
       "refreshData": "Aggiorna i dati"
     },
     "table": {
@@ -276,7 +276,7 @@
     "tabs": {
       "overview": "Panoramica",
       "maintenance": "Manutenzione",
-      "tickets": "Biglietti",
+      "tickets": "Ticket",
       "configuration": "Configurazione",
       "documents": "Documenti"
     },
@@ -322,11 +322,11 @@
       "noLogs": "I registri di manutenzione verranno visualizzati qui dopo la prima voce di servizio."
     },
     "tickets": {
-      "empty": "Nessun biglietto ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
+      "empty": "Nessun ticket ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
       "linked": "Collegato {{date}}",
       "client": "Cliente: {{name}}",
       "assignee": "Assegnatario: {{name}}",
-      "openTicket": "Biglietto aperto"
+      "openTicket": "Ticket aperto"
     },
     "configuration": {
       "coreAttributes": "Attributi fondamentali",
@@ -395,7 +395,7 @@
     "backToAssets": "Torna alle risorse",
     "assetTag": "Etichetta risorsa: {{tag}}",
     "actions": {
-      "createTicket": "Crea biglietto",
+      "createTicket": "Crea ticket",
       "menu": "Azioni",
       "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
@@ -653,7 +653,7 @@
     "description": "Schede metriche e rollup per ticket, manutenzione, tempi di attività e indicatori di stato delle risorse",
     "labels": {
       "healthStatus": "Stato di salute",
-      "openTickets": "Biglietti aperti",
+      "openTickets": "Ticket aperti",
       "securityStatus": "Stato di sicurezza",
       "warranty": "Garanzia"
     },
@@ -822,8 +822,8 @@
     },
     "defaultTitle": "Problema con {{name}}",
     "actions": {
-      "open": "Crea biglietto",
-      "create": "Crea biglietto",
+      "open": "Crea ticket",
+      "create": "Crea ticket",
       "creating": "Creazione..."
     },
     "fields": {
@@ -834,7 +834,7 @@
       "priority": "Priorità"
     },
     "placeholders": {
-      "title": "Inserisci il titolo del biglietto",
+      "title": "Inserisci il titolo del ticket",
       "description": "Descrivi il problema...",
       "loadingBoards": "Caricamento schede...",
       "selectBoard": "Seleziona scheda...",
@@ -849,10 +849,10 @@
       "loadBoards": "Impossibile caricare le schede",
       "loadStatuses": "Impossibile caricare gli stati",
       "requiredFields": "Inserisci titolo, consiglio, stato e priorità",
-      "createFailed": "Impossibile creare il biglietto"
+      "createFailed": "Impossibile creare il ticket"
     },
     "success": {
-      "created": "Biglietto creato con successo"
+      "created": "Ticket creato con successo"
     }
   },
   "deleteAssetButton": {
@@ -1281,16 +1281,16 @@
     "title": "Cronologia del servizio",
     "description": "Scheda Cronologia servizi che riepiloga la manutenzione e l'attività dei ticket per la risorsa",
     "actions": {
-      "createTicket": "Crea biglietto"
+      "createTicket": "Crea ticket"
     },
     "table": {
-      "ticketId": "Identificativo del biglietto",
+      "ticketId": "Identificativo del ticket",
       "subject": "Soggetto",
       "status": "Stato",
       "priority": "Priorità",
       "dateLinked": "Data collegata"
     },
-    "empty": "Nessun biglietto collegato a questa risorsa.",
+    "empty": "Nessun ticket collegato a questa risorsa.",
     "clientFallback": "Cliente sconosciuto"
   },
   "softwareInventoryTab": {

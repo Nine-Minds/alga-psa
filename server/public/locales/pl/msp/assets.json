@@ -63,7 +63,7 @@
         "description": "Usuń wszystkie aktywne filtry i wyszukiwane hasła"
       }
     },
-    "searchPlaceholder": "Szukaj zasobów, klientów, biletów…",
+    "searchPlaceholder": "Szukaj zasobów, klientów, zgłoszeń…",
     "empty": "Brak dopasowań. Spróbuj innego słowa kluczowego.",
     "groups": {
       "quickActions": "Szybkie działania",
@@ -71,7 +71,7 @@
       "hints": "Wskazówki"
     },
     "hint": {
-      "body": "Pisz dalej, aby przeszukać pełną listę zasobów. Bilety i wyszukiwanie klientów pojawią się później.",
+      "body": "Pisz dalej, aby przeszukać pełną listę zasobów. Zgłoszenia i wyszukiwanie klientów pojawią się później.",
       "badge": "Już wkrótce"
     },
     "values": {
@@ -109,7 +109,7 @@
       "openActionsForAsset": "Otwórz działania dla zasobu {{name}}",
       "viewDetails": "Zobacz szczegóły",
       "editAsset": "Edytuj zasób",
-      "createTicket": "Utwórz bilet",
+      "createTicket": "Utwórz zgłoszenie",
       "refreshData": "Odśwież dane"
     },
     "table": {
@@ -276,7 +276,7 @@
     "tabs": {
       "overview": "Przegląd",
       "maintenance": "Konserwacja",
-      "tickets": "Bilety",
+      "tickets": "Zgłoszenia",
       "configuration": "Konfiguracja",
       "documents": "Dokumenty"
     },
@@ -322,11 +322,11 @@
       "noLogs": "Dzienniki konserwacji pojawią się tutaj po pierwszym wpisie serwisowym."
     },
     "tickets": {
-      "empty": "Żadne bilety nie są jeszcze powiązane z tym zasobem. Użyj szybkiej akcji, aby ją utworzyć.",
+      "empty": "Żadne zgłoszenia nie są jeszcze powiązane z tym zasobem. Użyj szybkiej akcji, aby je utworzyć.",
       "linked": "Połączono {{date}}",
       "client": "Klient: {{name}}",
       "assignee": "Osoba przypisana: {{name}}",
-      "openTicket": "Otwórz bilet"
+      "openTicket": "Otwórz zgłoszenie"
     },
     "configuration": {
       "coreAttributes": "Podstawowe atrybuty",
@@ -395,7 +395,7 @@
     "backToAssets": "Powrót do zasobów",
     "assetTag": "Etykieta zasobu: {{tag}}",
     "actions": {
-      "createTicket": "Utwórz bilet",
+      "createTicket": "Utwórz zgłoszenie",
       "menu": "Działania",
       "refreshing": "Odświeżanie...",
       "refreshData": "Odśwież dane",
@@ -653,7 +653,7 @@
     "description": "Karty metryk i zestawienia wskaźników dotyczące zgłoszeń, konserwacji, czasu pracy i stanu zasobów",
     "labels": {
       "healthStatus": "Stan zdrowia",
-      "openTickets": "Bilety otwarte",
+      "openTickets": "Otwarte zgłoszenia",
       "securityStatus": "Stan zabezpieczeń",
       "warranty": "Gwarancja"
     },
@@ -768,7 +768,7 @@
       "removed": "Usunięto powiązanie z zasobami"
     },
     "empty": {
-      "noneAssociated": "Żadne zasoby nie są powiązane z tym biletem.",
+      "noneAssociated": "Żadne zasoby nie są powiązane z tym zgłoszeniem.",
       "unknownAsset": "Nieznany zasób"
     },
     "dialog": {
@@ -814,16 +814,16 @@
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Utwórz bilet z zasobu",
-    "description": "Proces tworzenia biletów uruchamiany z zasobu z wyborem tablicy, statusu i kategorii",
+    "title": "Utwórz zgłoszenie z zasobu",
+    "description": "Proces tworzenia zgłoszeń uruchamiany z zasobu z wyborem tablicy, statusu i kategorii",
     "register": {
-      "label": "Utwórz bilet z zasobu",
-      "title": "Utwórz bilet z zasobu"
+      "label": "Utwórz zgłoszenie z zasobu",
+      "title": "Utwórz zgłoszenie z zasobu"
     },
     "defaultTitle": "Problem z {{name}}",
     "actions": {
-      "open": "Utwórz bilet",
-      "create": "Utwórz bilet",
+      "open": "Utwórz zgłoszenie",
+      "create": "Utwórz zgłoszenie",
       "creating": "Tworzenie..."
     },
     "fields": {
@@ -834,7 +834,7 @@
       "priority": "Priorytet"
     },
     "placeholders": {
-      "title": "Wpisz tytuł biletu",
+      "title": "Wpisz tytuł zgłoszenia",
       "description": "Opisz problem...",
       "loadingBoards": "Ładowanie tablic...",
       "selectBoard": "Wybierz tablicę...",
@@ -849,10 +849,10 @@
       "loadBoards": "Nie udało się załadować tablic",
       "loadStatuses": "Nie udało się załadować statusów",
       "requiredFields": "Podaj tytuł, tablicę, status i priorytet",
-      "createFailed": "Nie udało się utworzyć biletu"
+      "createFailed": "Nie udało się utworzyć zgłoszenia"
     },
     "success": {
-      "created": "Utworzono bilet"
+      "created": "Utworzono zgłoszenie"
     }
   },
   "deleteAssetButton": {
@@ -1281,16 +1281,16 @@
     "title": "Historia serwisowa",
     "description": "Karta historii usług podsumowująca czynności konserwacyjne i zgłoszenia dotyczące zasobu",
     "actions": {
-      "createTicket": "Utwórz bilet"
+      "createTicket": "Utwórz zgłoszenie"
     },
     "table": {
-      "ticketId": "Identyfikator biletu",
+      "ticketId": "Identyfikator zgłoszenia",
       "subject": "Temat",
       "status": "Status",
       "priority": "Priorytet",
       "dateLinked": "Data połączona"
     },
-    "empty": "Brak biletów powiązanych z tym zasobem.",
+    "empty": "Brak zgłoszeń powiązanych z tym zasobem.",
     "clientFallback": "Nieznany klient"
   },
   "softwareInventoryTab": {

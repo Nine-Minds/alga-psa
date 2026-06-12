@@ -173,7 +173,7 @@
       "lastSync": "Ostatnia synchronizacja",
       "created": "Utworzono",
       "subscription": "Subskrypcja",
-      "defaults": "Domyślne ustawienia biletów",
+      "defaults": "Domyślne ustawienia zgłoszeń",
       "error": "Błąd:"
     },
     "values": {
@@ -192,7 +192,7 @@
       "labels": "Etykiety: {{filters}}"
     },
     "warnings": {
-      "inboundDefaults": "Wymagane są domyślne ustawienia biletów przychodzących, a e-maile nie będą przetwarzane, dopóki jeden nie zostanie wybrany."
+      "inboundDefaults": "Wymagane są domyślne ustawienia zgłoszeń przychodzących, a e-maile nie będą przetwarzane, dopóki nie zostaną one wybrane."
     },
     "defaults": {
       "placeholder": "Wybierz ustawienia domyślne...",
@@ -200,7 +200,7 @@
     },
     "empty": {
       "title": "Nie skonfigurowano dostawców poczty e-mail",
-      "description": "Dodaj dostawcę poczty e-mail, aby rozpocząć odbieranie i przetwarzanie przychodzących wiadomości e-mail jako biletów.",
+      "description": "Dodaj dostawcę poczty e-mail, aby rozpocząć odbieranie i przetwarzanie przychodzących wiadomości e-mail jako zgłoszeń.",
       "action": "Dodaj dostawcę poczty e-mail"
     }
   },
@@ -221,9 +221,9 @@
         "fixHighlightedFields": "Popraw wyróżnione pola i spróbuj ponownie."
       },
       "ticketDefaults": {
-        "title": "Domyślne ustawienia biletów",
-        "description": "Wybierz wartości domyślne, które mają zostać zastosowane do biletów tworzonych e-mailem",
-        "label": "Domyślne ustawienia biletów przychodzących",
+        "title": "Domyślne ustawienia zgłoszeń",
+        "description": "Wybierz wartości domyślne, które mają zostać zastosowane do zgłoszeń tworzonych e-mailem",
+        "label": "Domyślne ustawienia zgłoszeń przychodzących",
         "placeholder": "Wybierz ustawienia domyślne (opcjonalnie)",
         "empty": "Brak dostępnych ustawień domyślnych"
       },
@@ -391,7 +391,7 @@
         "title": "Ustawienia przetwarzania",
         "description": "Wybierz foldery i zachowanie przetwarzania.",
         "folderFilters": "Filtry folderów",
-        "folderFiltersPlaceholder": "Skrzynka odbiorcza, wsparcie, bilety",
+        "folderFiltersPlaceholder": "Skrzynka odbiorcza, wsparcie, zgłoszenia",
         "active": "Aktywny"
       }
     }
@@ -670,11 +670,11 @@
       "enteredBy": {
         "label": "Wprowadzony przez",
         "placeholder": "Systemowe (null)",
-        "help": "Używane tylko wtedy, gdy nie możemy dopasować kontaktu lub klienta. Bilety systemowe będą wyświetlać „System” jako twórcę."
+        "help": "Używane tylko wtedy, gdy nie możemy dopasować kontaktu lub klienta. Zgłoszenia systemowe będą wyświetlać „System” jako twórcę."
       }
     },
     "section": {
-      "ticketDefaults": "Domyślne ustawienia biletów"
+      "ticketDefaults": "Domyślne ustawienia zgłoszeń"
     },
     "optionSuffix": {
       "default": "(Domyślny)"

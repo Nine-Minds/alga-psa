@@ -289,7 +289,7 @@
       "failedInteraction": "Nie udało się wczytać szczegółów interakcji",
       "interactionNotFound": "Nie znaleziono interakcji",
       "noUserSession": "Nie znaleziono sesji użytkownika",
-      "failedTicket": "Nie udało się załadować biletu",
+      "failedTicket": "Nie udało się załadować zgłoszenia",
       "failedTask": "Nie udało się załadować zadania",
       "failedTaskPhase": "Nie udało się załadować fazy zadania",
       "failedTaskProjectMetadata": "Nie udało się załadować metadanych projektu zadania",
@@ -368,7 +368,7 @@
     "active": "Aktywny"
   },
   "intervals": {
-    "title": "Przedziały czasowe biletów",
+    "title": "Przedziały czasowe zgłoszeń",
     "hideShortIntervals": "Ukryj interwały poniżej 1 minuty",
     "totalTime": "Całkowity czas: {{value}}",
     "selectedOne": "Wybrano {{count}} interwał",
@@ -386,15 +386,15 @@
     "states": {
       "loading": "Interwały ładowania...",
       "noIntervalsThisPeriod": "Nie znaleziono interwałów dla tego okresu",
-      "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego biletu",
+      "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego zgłoszenia",
       "noIntervalsLongerThanMinute": "Nie znaleziono interwałów dłuższych niż 1 minuta"
     },
-    "entryName": "Wejście w godzinach biletu",
+    "entryName": "Wpis czasu zgłoszenia",
     "messages": {
       "cannotFindTimeSheet": "Nie można utworzyć wpisu czasu — nie można znaleźć ani utworzyć arkusza czasu pracy",
       "mergeFirst": "Przed utworzeniem wpisu czasu należy najpierw połączyć przedziały",
-      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego biletu",
-      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego biletu",
+      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego zgłoszenia",
+      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego zgłoszenia",
       "mergeSuccess": "Przedziały zostały pomyślnie połączone",
       "failedMerge": "Nie udało się scalić interwałów",
       "noActivePeriod": "Nie znaleziono aktywnego okresu",
@@ -427,7 +427,7 @@
     "workItemDeleted": "Element pracy usunięty pomyślnie"
   },
   "bundleNotice": {
-    "withNumber": "Ten bilet jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na bilecie głównym.",
-    "withoutNumber": "Ten bilet jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na bilecie głównym."
+    "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",
+    "withoutNumber": "To zgłoszenie jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym."
   }
 }

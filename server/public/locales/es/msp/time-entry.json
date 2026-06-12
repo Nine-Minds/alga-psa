@@ -289,7 +289,7 @@
       "failedInteraction": "No se pudieron cargar los detalles de la interacción",
       "interactionNotFound": "Interacción no encontrada",
       "noUserSession": "No se encontró una sesión de usuario",
-      "failedTicket": "No se pudo cargar el boleto",
+      "failedTicket": "No se pudo cargar el ticket",
       "failedTask": "No se pudo cargar la tarea",
       "failedTaskPhase": "No se pudo cargar la fase de tarea",
       "failedTaskProjectMetadata": "No se pudieron cargar los metadatos del proyecto de tarea",
@@ -368,7 +368,7 @@
     "active": "Activo"
   },
   "intervals": {
-    "title": "Intervalos de tiempo del boleto",
+    "title": "Intervalos de tiempo del ticket",
     "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
     "totalTime": "Tiempo total: {{value}}",
     "selectedOne": "{{count}} intervalo seleccionado",
@@ -389,7 +389,7 @@
       "noIntervalsThisTicket": "No se encontraron intervalos para este ticket",
       "noIntervalsLongerThanMinute": "No se encontraron intervalos superiores a 1 minuto"
     },
-    "entryName": "Entrada de hora del billete",
+    "entryName": "Entrada de tiempo del ticket",
     "messages": {
       "cannotFindTimeSheet": "No se puede crear una entrada de horas: no se pudo encontrar ni crear una hoja de horas",
       "mergeFirst": "Primero combine los intervalos antes de crear una entrada de tiempo.",

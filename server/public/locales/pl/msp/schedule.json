@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Bilet",
+        "ticket": "Zgłoszenie",
         "projectTask": "Zadanie projektowe",
         "nonBillableCategory": "Kategoria niepodlegająca rozliczeniu",
         "adHoc": "Wpis ad hoc",
@@ -124,8 +124,8 @@
   "requests": {
     "errors": {
       "load": "Nie udało się załadować próśb o spotkanie",
-      "ticketNotFound": "Nie znaleziono biletu",
-      "loadTicket": "Nie udało się załadować biletu",
+      "ticketNotFound": "Nie znaleziono zgłoszenia",
+      "loadTicket": "Nie udało się załadować zgłoszenia",
       "assignTechnicianRequired": "Proszę przypisać technika",
       "approve": "Nie udało się zatwierdzić prośby",
       "declineReasonRequired": "Podaj powód odrzucenia",
@@ -154,7 +154,7 @@
       "loading": "Ładowanie żądań...",
       "empty": "Nie znaleziono żądań {{status}}",
       "duration": "{{count}} minut",
-      "ticketFallback": "Bilet #{{ticket}}",
+      "ticketFallback": "Zgłoszenie #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Żądanie publiczne"
       }
@@ -176,7 +176,7 @@
         "requestedTime": "Żądany czas",
         "duration": "Czas trwania",
         "status": "Status",
-        "linkedTicket": "Połączony bilet",
+        "linkedTicket": "Połączone zgłoszenie",
         "description": "Opis",
         "teamsMeeting": "Spotkanie Teams"
       },
@@ -190,13 +190,13 @@
         "assignedTechnician": "Przypisz technika *",
         "finalDateTime": "Ostateczna data i godzina",
         "internalNotes": "Notatki wewnętrzne (opcjonalnie)",
-        "linkedTicket": "Link do biletu (opcjonalnie)",
+        "linkedTicket": "Link do zgłoszenia (opcjonalnie)",
         "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Wybierz technika",
         "internalNotes": "Dodaj wszelkie notatki wewnętrzne...",
-        "linkedTicket": "Wprowadź identyfikator biletu, aby połączyć..."
+        "linkedTicket": "Wprowadź identyfikator zgłoszenia, aby połączyć..."
       },
       "actions": {
         "approve": "Zatwierdź",

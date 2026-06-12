@@ -276,7 +276,7 @@
     "tabs": {
       "overview": "Overzicht",
       "maintenance": "Onderhoud",
-      "tickets": "Kaartjes",
+      "tickets": "Tickets",
       "configuration": "Configuratie",
       "documents": "Documenten"
     },
@@ -653,7 +653,7 @@
     "description": "Metrische kaarten en rollups voor tickets, onderhoud, uptime en indicatoren voor de status van bedrijfsmiddelen",
     "labels": {
       "healthStatus": "Gezondheidsstatus",
-      "openTickets": "Kaartjes openen",
+      "openTickets": "Openstaande tickets",
       "securityStatus": "Beveiligingsstatus",
       "warranty": "Garantie"
     },
