@@ -3,6 +3,7 @@ import {
   isWorkflowRuntimeV2Initialized,
 } from '../../../../../shared/workflow/runtime/init';
 import { registerNinjaOneWorkflowModule } from './actions/registerNinjaOneWorkflowActions';
+import { registerTacticalRmmWorkflowModule } from './actions/registerTacticalRmmWorkflowActions';
 
 export * from '../../../../../shared/workflow/runtime';
 export * from './integrationModules';
@@ -44,6 +45,7 @@ export { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../../../../../shared/workfl
 export function initializeWorkflowRuntimeV2(): void {
   initializeSharedWorkflowRuntimeV2();
   registerNinjaOneWorkflowModule();
+  registerTacticalRmmWorkflowModule();
 }
 
 export { isWorkflowRuntimeV2Initialized };
