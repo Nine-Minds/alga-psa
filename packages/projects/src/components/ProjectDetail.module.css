@@ -387,6 +387,16 @@
   flex-shrink: 0; /* Prevent columns from shrinking */
 }
 
+.revealedHiddenColumn {
+  border-style: dashed !important;
+  opacity: 0.78;
+}
+
+.revealedHiddenHeader {
+  filter: saturate(0.45);
+  opacity: 0.82;
+}
+
 .kanbanTasks {
   padding: 8px;
   flex: 1 0 auto; /* Grow to fill stretched columns, but never shrink below content */

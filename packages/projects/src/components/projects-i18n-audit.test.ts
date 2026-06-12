@@ -44,6 +44,8 @@ describe('T002: static i18n wiring audit', () => {
     'PrefillFromTicketDialog.tsx',
     'TaskListView.tsx',
     'TaskCard.tsx',
+    'StatusColumn.tsx',
+    'ProjectPage.tsx',
     'PhaseQuickAdd.tsx',
     // Sub-batch B: project-templates
     'project-templates/TemplateEditor.tsx',
@@ -120,13 +122,10 @@ describe('T002: static i18n wiring audit', () => {
 
 describe('T002: confirmed zero-string components', () => {
   const zeroStringFiles = [
-    'StatusColumn.tsx',
     'KanbanBoard.tsx',
-    'ProjectPage.tsx',
     'KanbanZoomControl.tsx',
     'DonutChart.tsx',
     'TaskQuickAdd.tsx',
-    'TaskEdit.tsx',
     'HoursProgressBar.tsx',
     'settings/projects/TaskPrioritySettings.tsx',
   ];
