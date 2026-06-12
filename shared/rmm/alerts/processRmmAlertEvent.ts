@@ -212,7 +212,9 @@ async function processTriggered(
       .andWhereNot('a.alert_id', alertId)
       .whereNotNull('a.ticket_id')
       .andWhere('s.is_closed', false)
-      .orderBy('a.created_at', 'desc')
+      // Oldest sibling = the row that created the ticket; it carries the
+      // authoritative occurrence_count (newer siblings are absorbed copies).
+      .orderBy('a.created_at', 'asc')
       .first('a.alert_id as sibling_alert_id', 'a.ticket_id', 'a.occurrence_count');
 
     if (sibling?.ticket_id) {
@@ -322,7 +324,7 @@ async function processReset(
           `Alert resolved in ${providerLabel(event.provider)}.\nExternal alert ID: ${event.externalAlertId}`
         );
         if (await isTicketUntouched(trx, event.tenantId, existing.ticket_id)) {
-          const statusId = await resolveCloseStatusId(trx, event.tenantId, actions);
+          const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
             await trx('tickets')
               .where({ tenant: event.tenantId, ticket_id: existing.ticket_id })
@@ -395,11 +397,24 @@ function safeJsonParse(value: string): unknown {
 async function resolveCloseStatusId(
   trx: Knex.Transaction,
   tenantId: string,
-  actions: RmmAlertRuleActions
+  actions: RmmAlertRuleActions,
+  ticketId: string
 ): Promise<string | null> {
   if (actions.autoResolveStatusId) return actions.autoResolveStatusId;
+  // Statuses are board-scoped (statuses.status_type/board_id); prefer the
+  // ticket's own board, falling back to any closed ticket status.
+  const ticket = await trx('tickets')
+    .where({ tenant: tenantId, ticket_id: ticketId })
+    .first('board_id');
+  const closedOnBoard = ticket?.board_id
+    ? await trx('statuses')
+        .where({ tenant: tenantId, status_type: 'ticket', is_closed: true, board_id: ticket.board_id })
+        .orderBy('order_number', 'asc')
+        .first('status_id')
+    : null;
+  if (closedOnBoard?.status_id) return closedOnBoard.status_id;
   const closed = await trx('statuses')
-    .where({ tenant: tenantId, item_type: 'ticket', is_closed: true })
+    .where({ tenant: tenantId, status_type: 'ticket', is_closed: true })
     .orderBy('order_number', 'asc')
     .first('status_id');
   return closed?.status_id ?? null;

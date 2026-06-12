@@ -173,11 +173,15 @@ export class PgBossJobRunner implements IJobRunner {
             jobScheduledAt
           });
 
-          // Update status to completed
+          // Update status to completed. For cron-driven recurring jobs the
+          // record represents the schedule (one row per schedule, not per
+          // run), so return it to queued — leaving it completed would make
+          // consumers that diff against the jobs table (e.g. the RMM polling
+          // reconciler) believe the schedule no longer exists.
           if (jobData.jobServiceId) {
             await this.jobService.updateJobStatus(
               jobData.jobServiceId,
-              JobStatus.Completed,
+              (jobData as { jobRecurring?: boolean }).jobRecurring ? JobStatus.Queued : JobStatus.Completed,
               { tenantId: jobData.tenantId }
             );
           }
@@ -361,7 +365,9 @@ export class PgBossJobRunner implements IJobRunner {
         await this.boss.schedule(
           queueName,
           interval,
-          { ...data, jobServiceId: jobRecord.jobId },
+          // jobRecurring tells the worker wrapper the record is a schedule
+          // marker: run completions return it to queued instead of completed.
+          { ...data, jobServiceId: jobRecord.jobId, jobRecurring: true },
           {
             retryLimit: 3,
             retryBackoff: true,
@@ -437,20 +443,22 @@ export class PgBossJobRunner implements IJobRunner {
         return false;
       }
 
-      // If job is already completed or failed, cannot cancel
-      if (
-        job.status === JobStatus.Completed ||
-        job.status === JobStatus.Failed
-      ) {
-        logger.warn(`Cannot cancel job in status: ${job.status}`);
-        return false;
-      }
-
       const metadata = job.metadata
         ? typeof job.metadata === 'string'
           ? JSON.parse(job.metadata)
           : job.metadata
         : {};
+
+      // If job is already completed or failed, cannot cancel. Recurring
+      // records are exempt: they represent the schedule itself, which stays
+      // cancellable no matter what the last run did.
+      if (
+        !metadata?.recurring &&
+        (job.status === JobStatus.Completed || job.status === JobStatus.Failed)
+      ) {
+        logger.warn(`Cannot cancel job in status: ${job.status}`);
+        return false;
+      }
 
       // For cron schedules, external_id is the schedule name and must be removed via unschedule().
       if (metadata?.recurring && typeof job.external_id === 'string' && job.external_id) {
@@ -461,6 +469,13 @@ export class PgBossJobRunner implements IJobRunner {
           } catch {
             // Best-effort queue cleanup; ignore failures.
           }
+          // Clear the schedule pointer so repeat cancels (and reconcilers
+          // scanning for live schedules) see this record as already torn down.
+          await runWithTenant(tenantId, async () => {
+            await knex('jobs')
+              .where({ job_id: jobId, tenant: tenantId })
+              .update({ external_id: null });
+          });
         } catch (e) {
           logger.warn('Failed to unschedule recurring job', { jobId, tenantId, error: e });
         }

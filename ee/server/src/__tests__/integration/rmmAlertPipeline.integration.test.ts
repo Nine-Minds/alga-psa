@@ -121,12 +121,15 @@ beforeAll(async () => {
     ...((await hasColumn('statuses', 'item_type')) ? { item_type: 'ticket' } : {}),
     ...((await hasColumn('statuses', 'status_type')) ? { status_type: 'ticket' } : {}),
   };
+  // Statuses are board-scoped (the pipeline resolves defaults per board); the
+  // shared ids live on the rule-routed board, the default board gets its own.
   await db('statuses').insert([
     {
       tenant: tenantId,
       status_id: statusOpenId,
       name: 'Open',
       ...statusItemType,
+      board_id: boardId,
       is_closed: false,
       is_default: true,
       order_number: 10,
@@ -137,6 +140,29 @@ beforeAll(async () => {
       status_id: statusClosedId,
       name: 'Closed',
       ...statusItemType,
+      board_id: boardId,
+      is_closed: true,
+      is_default: false,
+      order_number: 20,
+      created_by: userId,
+    },
+    {
+      tenant: tenantId,
+      status_id: uuidv4(),
+      name: 'Open',
+      ...statusItemType,
+      board_id: defaultBoardId,
+      is_closed: false,
+      is_default: true,
+      order_number: 10,
+      created_by: userId,
+    },
+    {
+      tenant: tenantId,
+      status_id: uuidv4(),
+      name: 'Closed',
+      ...statusItemType,
+      board_id: defaultBoardId,
       is_closed: true,
       is_default: false,
       order_number: 20,

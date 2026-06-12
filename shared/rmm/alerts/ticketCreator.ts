@@ -7,6 +7,7 @@
  */
 
 import type { Knex } from 'knex';
+import { TicketModel } from '../../models/ticketModel';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -38,10 +39,11 @@ export async function createTicketForAlert(
     throw new Error('No board available for alert ticket (no rule boardId and no default board)');
   }
 
-  const defaultStatus = await trx('statuses')
-    .where({ tenant: tenantId, item_type: 'ticket', is_default: true })
-    .first('status_id');
-  if (!defaultStatus) {
+  // Status resolution is board-scoped (statuses.status_type/board_id) — reuse
+  // the canonical lookup so alert tickets land in the same opening status as
+  // manually created ones.
+  const defaultStatusId = await TicketModel.getDefaultStatusId(tenantId, trx, boardId);
+  if (!defaultStatusId) {
     throw new Error('No default ticket status configured for tenant');
   }
 
@@ -59,7 +61,7 @@ export async function createTicketForAlert(
       ticket_number: ticketNumber,
       title,
       client_id: params.clientId,
-      status_id: defaultStatus.status_id,
+      status_id: defaultStatusId,
       priority_id: priorityId ?? null,
       board_id: boardId,
       assigned_to: actions.assignToUserId ?? null,
@@ -172,12 +174,20 @@ async function resolvePriorityForSeverity(
   severity: NormalizedRmmAlertSeverity
 ): Promise<string | null> {
   const candidates = SEVERITY_PRIORITY_NAMES[severity] ?? [];
-  for (const name of candidates) {
-    const priority = await trx('priorities')
-      .where({ tenant: tenantId })
-      .whereRaw('LOWER(priority_name) = ?', [name])
-      .first('priority_id');
-    if (priority) return priority.priority_id;
+  // Tenants rarely use the bare names ("P1 - Critical" is typical), so fall
+  // back to a substring match after the exact pass.
+  for (const exact of [true, false]) {
+    for (const name of candidates) {
+      const priority = await trx('priorities')
+        .where({ tenant: tenantId })
+        .whereRaw(
+          exact ? 'LOWER(priority_name) = ?' : 'LOWER(priority_name) LIKE ?',
+          [exact ? name : `%${name}%`]
+        )
+        .orderBy('order_number', 'asc')
+        .first('priority_id');
+      if (priority) return priority.priority_id;
+    }
   }
   return null;
 }

@@ -80,3 +80,53 @@ Verification caveats for smoke testing: NinjaOne webhook external ids are activi
 - FR-11 scheduler choice: the design says Temporal (Entra pattern), but Huntress's incident poller uses pg-boss (server-side, CE-compatible — Tactical is a CE provider and CE deployments may not run Temporal workers). Decide at FR-11; pg-boss looks like the better precedent. Flag the deviation to Robert either way.
 - Huntress provider registry flags are stale (deviceSync/events false despite reality) — out of scope here, but worth a drive-by fix or follow-up.
 - Reconciliation poller and `resolveAlert` semantics: a poller-synthesized reset should be distinguishable in the ticket comment ("alert no longer active in RMM" vs. "alert reset received").
+
+## Smoke run (2026-06-12) — all 8 runbook flows PASS after fixes
+
+Executed /tmp/rmm-alert-smoke-tests.md end-to-end (algadev, local-test stack,
+EE + JOB_RUNNER_TYPE=pgboss). Bugs found and fixed on this branch:
+
+- **statuses.item_type drift (4 call sites)**: main's board-scoped statuses
+  migration left `item_type` NULL; live data uses `status_type` + `board_id`.
+  Fixed ticketCreator (now delegates to `TicketModel.getDefaultStatusId`),
+  `resolveCloseStatusId`, `untouched.ts`, the rule-form `closedStatuses`
+  query, and the Huntress ticket creator. Symptoms: webhook 500 on first
+  trigger; auto-close never closed; untouched check ignored status moves.
+- **Dedup primary selection**: sibling lookup ordered `created_at desc`,
+  bumping the newest absorbed row instead of the ticket-owning primary.
+  Now `asc`; occurrence counts and "occurrence N" comments track the primary.
+- **Severity→priority**: exact-name match missed "P1 - Critical"-style
+  names; added substring fallback pass.
+- **Polling settings first save was a no-op**: `jsonb_set` can't create the
+  `alertPolling` parent key; now merges `jsonb_build_object` into the parent.
+- **Reconciler tick never recurred**: legacy `IJobScheduler.scheduleRecurringJob`
+  is a one-shot delayed send (cron coerced to '24 hours', singletonHours 24,
+  no re-fire). The tick is now a process-local 5-min `setInterval` in
+  initializeApp (+ boot pass); reconcile is idempotent so multi-replica
+  ticks are safe.
+- **PgBossJobRunner recurring-record lifecycle**: every cron fire flipped the
+  schedule's jobs row to `completed` (runs share `jobServiceId`), so the
+  reconciler saw "no job" → recreated rows while enabled and leaked the
+  pgboss schedule on disable. Fires now carry `jobRecurring: true` and the
+  worker returns recurring rows to `queued`; `cancelJob` exempts recurring
+  records from the completed/failed guard, unschedules, and nulls
+  `external_id` (the live-schedule pointer the reconciler now also filters
+  on). Ineligible-branch cancels via newest record of any status.
+- **Rule dialog stale patternError**: dialog component stays mounted; a
+  cancelled invalid-regex edit blocked the next Add rule. Reset on `isOpen`.
+- **Button ids**: 14 missing required `id` props in RmmAlertAutomationSettings.
+- **Integration test seed**: statuses now board-scoped; 20/20 green again.
+
+Environment notes for future smoke runs: `DB_NAME_SERVER` is required by
+`migrate:ee` (else knex hits the default `postgres` DB — an accidental full
+migration run was left there; safe to drop that DB's public schema);
+Tactical row needs `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=tactical-rmm-integration:true`;
+EE without Temporal needs `JOB_RUNNER_TYPE=pgboss`; seed tenant had no
+closed ticket status (marked "Enchanted Closure" is_closed=true); Test
+Connection (GET /api/beta/v1/client/) is what activates the integration.
+Tactical backfill button label is "Sync Alerts".
+
+Validation: rmmalerts unit 40/40; tactical unit 36/37 (1 pre-existing main
+failure); rmmAlertPipeline integration 20/20; tsc clean on touched packages.
+Flow 6 observed live: interval change converged ~3 min, disable unscheduled,
+pre-fix leaked schedule self-healed on first tick.

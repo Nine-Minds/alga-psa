@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { TicketModel } from '../../models/ticketModel';
 
 /**
  * A ticket is "untouched" when no human has worked it: no human-authored
@@ -15,13 +16,17 @@ export async function isTicketUntouched(
 ): Promise<boolean> {
   const ticket = await trx('tickets')
     .where({ tenant: tenantId, ticket_id: ticketId })
-    .first('status_id');
+    .first('status_id', 'board_id');
   if (!ticket) return false;
 
-  const defaultStatus = await trx('statuses')
-    .where({ tenant: tenantId, item_type: 'ticket', is_default: true })
-    .first('status_id');
-  if (defaultStatus && ticket.status_id !== defaultStatus.status_id) {
+  // Statuses are board-scoped; compare against the same default the ticket
+  // was created with (see ticketCreator.ts).
+  const defaultStatusId = await TicketModel.getDefaultStatusId(
+    tenantId,
+    trx as Knex.Transaction,
+    ticket.board_id
+  );
+  if (defaultStatusId && ticket.status_id !== defaultStatusId) {
     return false;
   }
 

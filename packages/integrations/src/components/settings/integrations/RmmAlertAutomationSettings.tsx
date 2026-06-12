@@ -433,6 +433,12 @@ function RuleEditorDialog({
 }: RuleEditorDialogProps) {
   const [patternError, setPatternError] = React.useState('');
 
+  // The dialog stays mounted across open/close; clear session-local
+  // validation state so a cancelled edit can't block the next rule.
+  React.useEffect(() => {
+    if (isOpen) setPatternError('');
+  }, [isOpen]);
+
   const validatePattern = (val: string) => {
     if (val && !isValidRegex(val)) {
       setPatternError('Invalid regular expression');
@@ -481,10 +487,11 @@ function RuleEditorDialog({
 
   const footer = (
     <div className="flex justify-end gap-2">
-      <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+      <Button id="rule-editor-cancel" type="button" variant="outline" onClick={onClose} disabled={saving}>
         Cancel
       </Button>
       <Button
+        id="rule-editor-save"
         type="button"
         onClick={onSave}
         disabled={!canSave}
@@ -857,10 +864,10 @@ function WindowEditorDialog({
 
   const footer = (
     <div className="flex justify-end gap-2">
-      <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+      <Button id="window-editor-cancel" type="button" variant="outline" onClick={onClose} disabled={saving}>
         Cancel
       </Button>
-      <Button type="button" onClick={onSave} disabled={!canSave}>
+      <Button id="window-editor-save" type="button" onClick={onSave} disabled={!canSave}>
         {saving ? (
           <>
             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -1397,6 +1404,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                   {/* Reorder */}
                   <div className="flex flex-col gap-0.5">
                     <Button
+                      id={`rule-move-up-${rule.rule_id}`}
                       type="button"
                       variant="ghost"
                       size="sm"
@@ -1408,6 +1416,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                       <ChevronUp className="h-4 w-4" />
                     </Button>
                     <Button
+                      id={`rule-move-down-${rule.rule_id}`}
                       type="button"
                       variant="ghost"
                       size="sm"
@@ -1448,6 +1457,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
                     <Button
+                      id={`rule-edit-${rule.rule_id}`}
                       type="button"
                       variant="ghost"
                       size="sm"
@@ -1460,6 +1470,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                     {deleteConfirmRuleId === rule.rule_id ? (
                       <div className="flex items-center gap-1">
                         <Button
+                          id={`rule-delete-confirm-${rule.rule_id}`}
                           type="button"
                           variant="destructive"
                           size="sm"
@@ -1469,6 +1480,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                           {deletingRule ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Confirm'}
                         </Button>
                         <Button
+                          id={`rule-delete-cancel-${rule.rule_id}`}
                           type="button"
                           variant="outline"
                           size="sm"
@@ -1480,6 +1492,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                       </div>
                     ) : (
                       <Button
+                        id={`rule-delete-${rule.rule_id}`}
                         type="button"
                         variant="ghost"
                         size="sm"
@@ -1547,6 +1560,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
 
                   <div className="flex items-center gap-1 shrink-0">
                     <Button
+                      id={`window-edit-${w.window_id}`}
                       type="button"
                       variant="ghost"
                       size="sm"
@@ -1558,6 +1572,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                     {deleteConfirmWindowId === w.window_id ? (
                       <div className="flex items-center gap-1">
                         <Button
+                          id={`window-delete-confirm-${w.window_id}`}
                           type="button"
                           variant="destructive"
                           size="sm"
@@ -1567,6 +1582,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                           {deletingWindow ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Confirm'}
                         </Button>
                         <Button
+                          id={`window-delete-cancel-${w.window_id}`}
                           type="button"
                           variant="outline"
                           size="sm"
@@ -1578,6 +1594,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
                       </div>
                     ) : (
                       <Button
+                        id={`window-delete-${w.window_id}`}
                         type="button"
                         variant="ghost"
                         size="sm"

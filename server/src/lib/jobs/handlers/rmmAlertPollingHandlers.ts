@@ -178,15 +178,21 @@ interface ExistingRecurringJob {
 async function findExistingRecurringJob(
   adminKnex: Awaited<ReturnType<typeof getAdminConnection>>,
   tenantId: string,
-  singletonKey: string
+  singletonKey: string,
+  options?: { anyStatus?: boolean }
 ): Promise<ExistingRecurringJob | null> {
-  const row = await adminKnex('jobs')
+  const query = adminKnex('jobs')
     .where({ tenant: tenantId })
     .whereRaw(`metadata->>'singletonKey' = ?`, [singletonKey])
     .whereRaw(`metadata->>'recurring' = 'true'`)
-    .whereNotIn('status', ['failed', 'completed'])
+    // external_id is the live schedule pointer; cancelJob nulls it on teardown.
+    .whereNotNull('external_id')
     .orderBy('created_at', 'desc')
     .first('job_id', 'tenant', adminKnex.raw(`metadata->>'interval' as interval`));
+  if (!options?.anyStatus) {
+    query.whereNotIn('status', ['failed', 'completed']);
+  }
+  const row = await query;
   return (row as ExistingRecurringJob | undefined) ?? null;
 }
 
@@ -224,9 +230,14 @@ export async function reconcileRmmPollingSchedules(
       const existing = await findExistingRecurringJob(adminKnex, tenantId, singletonKey);
 
       if (!eligible) {
-        if (existing) {
-          await runner.cancelJob(existing.job_id, tenantId);
-          cancelled += 1;
+        // Cancel via the newest record of ANY status: a failed last run must
+        // not strand the underlying schedule (cancelJob unschedules
+        // recurring records regardless of run status; repeat cancels no-op).
+        const candidate =
+          existing ?? (await findExistingRecurringJob(adminKnex, tenantId, singletonKey, { anyStatus: true }));
+        if (candidate) {
+          const didCancel = await runner.cancelJob(candidate.job_id, tenantId);
+          if (didCancel) cancelled += 1;
         }
         continue;
       }

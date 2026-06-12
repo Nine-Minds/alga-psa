@@ -610,22 +610,31 @@ async function initializeJobScheduler(storageService: StorageService) {
   // jobs converged with rmm_integrations state (connects, disconnects,
   // interval changes) without operator intervention; see
   // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
+  //
+  // The tick is a process-local timer, not a persisted job: the legacy
+  // scheduler's scheduleRecurringJob is a one-shot delayed send (it never
+  // re-fires after completion), and the loop is cheap and idempotent — the
+  // runner-side schedule creation is an upsert, so concurrent ticks from
+  // multiple replicas are safe.
   try {
-    const RECONCILER_JOB = 'rmm-polling-schedule-reconciler';
-    jobScheduler.registerJobHandler(RECONCILER_JOB, async () => {
-      const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
-      const runner = await initializeJobRunner();
-      await reconcileRmmPollingSchedules(runner);
-    });
-    const existingReconciler = await jobScheduler.getJobs({ jobName: RECONCILER_JOB });
-    if (existingReconciler.length === 0) {
-      await jobScheduler.scheduleRecurringJob(RECONCILER_JOB, '5 minutes', { tenantId: 'system' });
+    const RECONCILER_INTERVAL_MS = 5 * 60 * 1000;
+    const tick = async () => {
+      try {
+        const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+        const runner = await initializeJobRunner();
+        await reconcileRmmPollingSchedules(runner);
+      } catch (error) {
+        logger.error('[RmmPollingReconciler] tick failed:', error);
+      }
+    };
+    const globalScope = globalThis as { __rmmPollingReconcilerTimer?: NodeJS.Timeout };
+    if (!globalScope.__rmmPollingReconcilerTimer) {
+      globalScope.__rmmPollingReconcilerTimer = setInterval(() => void tick(), RECONCILER_INTERVAL_MS);
+      globalScope.__rmmPollingReconcilerTimer.unref?.();
     }
 
     // One pass at boot so fresh deployments don't wait for the first tick.
-    const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
-    const runner = await initializeJobRunner();
-    await reconcileRmmPollingSchedules(runner);
+    await tick();
   } catch (error) {
     logger.error('Failed to set up RMM polling schedule reconciler:', error);
   }

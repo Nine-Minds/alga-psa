@@ -297,7 +297,7 @@ export const getRmmAlertRuleFormOptions = withAuth(
       knex('boards').where({ tenant }).select('board_id', 'board_name').orderBy('board_name'),
       knex('priorities').where({ tenant }).select('priority_id', 'priority_name').orderBy('priority_name'),
       knex('statuses')
-        .where({ tenant, item_type: 'ticket', is_closed: true })
+        .where({ tenant, status_type: 'ticket', is_closed: true })
         .select('status_id', 'name')
         .orderBy('order_number'),
       knex('users')
@@ -363,10 +363,15 @@ export const updateRmmAlertPollingSettings = withAuth(
     const updated = await knex('rmm_integrations')
       .where({ tenant, integration_id: input.integrationId })
       .update({
+        // jsonb_set cannot create the intermediate alertPolling object, so
+        // merge into it explicitly (first save would otherwise be a no-op).
         settings: knex.raw(
           `jsonb_set(
-             jsonb_set(COALESCE(settings, '{}'::jsonb), '{alertPolling,enabled}', to_jsonb(?::boolean), true),
-             '{alertPolling,intervalMinutes}', to_jsonb(?::int), true
+             COALESCE(settings, '{}'::jsonb),
+             '{alertPolling}',
+             COALESCE(settings->'alertPolling', '{}'::jsonb)
+               || jsonb_build_object('enabled', ?::boolean, 'intervalMinutes', ?::int),
+             true
            )`,
           [input.enabled, intervalMinutes]
         ),
