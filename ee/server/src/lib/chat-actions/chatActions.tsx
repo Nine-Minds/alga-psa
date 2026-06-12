@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { IChat } from '../../interfaces/chat.interface';
 import { IMessage } from '../../interfaces/message.interface';
@@ -76,7 +76,12 @@ export async function createNewChatAction(data: Omit<IChat, 'tenant'>) {
   }
 
   try {
-    const conversation = await Chat.insert(chatPayload as IChat);
+    const user = await getCurrentUser();
+    const tenant = user?.tenant;
+    if (!tenant) {
+      throw new Error('Missing tenant for chat persistence');
+    }
+    const conversation = await runWithTenant(tenant, () => Chat.insert(chatPayload as IChat));
     return { _id: conversation.id, persisted: true };
   } catch (error) {
     if (isMissingRelationError(error)) {
@@ -97,28 +102,37 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
   }
 
   try {
-    const message = await Message.insert(data);
-    if (data.chat_id) {
-      try {
-        const { knex } = await createTenantKnex();
-        await knex<IChat>('chats')
-          .where({ id: data.chat_id })
-          .update({ updated_at: knex.fn.now() });
-      } catch (touchError) {
-        if (
-          typeof touchError === 'object' &&
-          touchError !== null &&
-          'code' in touchError &&
-          (touchError as { code?: string }).code === '42703'
-        ) {
-          console.warn(
-            '[chatActions] chats.updated_at column missing; skipping chat recency update.',
-          );
-        } else {
-          throw touchError;
+    const user = await getCurrentUser();
+    const tenant = user?.tenant;
+    if (!tenant) {
+      throw new Error('Missing tenant for chat persistence');
+    }
+
+    const message = await runWithTenant(tenant, async () => {
+      const inserted = await Message.insert(data);
+      if (data.chat_id) {
+        try {
+          const { knex } = await createTenantKnex();
+          await knex<IChat>('chats')
+            .where({ id: data.chat_id })
+            .update({ updated_at: knex.fn.now() });
+        } catch (touchError) {
+          if (
+            typeof touchError === 'object' &&
+            touchError !== null &&
+            'code' in touchError &&
+            (touchError as { code?: string }).code === '42703'
+          ) {
+            console.warn(
+              '[chatActions] chats.updated_at column missing; skipping chat recency update.',
+            );
+          } else {
+            throw touchError;
+          }
         }
       }
-    }
+      return inserted;
+    });
     return { _id: message.id, persisted: true };
   } catch (error) {
     if (isMissingRelationError(error)) {

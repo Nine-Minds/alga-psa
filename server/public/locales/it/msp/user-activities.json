@@ -28,7 +28,8 @@
       "noDueDate": "Nessuna data di scadenza",
       "emDash": "—",
       "unread": "Non letto",
-      "recurringEvent": "Evento ricorrente"
+      "recurringEvent": "Evento ricorrente",
+      "adHocBadge": "Ad hoc"
     },
     "actions": {
       "refresh": "Aggiorna",
@@ -43,7 +44,8 @@
       "noMatching": "Nessuna attività corrisponde ai filtri"
     },
     "errors": {
-      "loadFailed": "Impossibile caricare le attività. Riprovi più tardi."
+      "loadFailed": "Impossibile caricare le attività. Riprovi più tardi.",
+      "addAdHocFailed": "Impossibile aggiungere l'elemento ad hoc. Riprova."
     },
     "activityTypes": {
       "schedule": "Pianificazione",
@@ -54,6 +56,24 @@
       "notification": "Notifica",
       "unknown": "Sconosciuto",
       "activity": "Attività"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle attività."
+      }
+    },
+    "adHoc": {
+      "addPlaceholder": "Aggiungi attività",
+      "addButton": "Aggiungi",
+      "markDone": "Segna come completato",
+      "markNotDone": "Segna come non completato",
+      "convertToTicket": "Converti in ticket",
+      "convertToTask": "Converti in attività di progetto"
+    },
+    "viewingUser": {
+      "label": "Visualizzazione:",
+      "me": "Le mie attività"
     }
   },
   "card": {
@@ -411,11 +431,27 @@
       "allProjects": "Tutti i progetti",
       "allPriorities": "Tutte le priorità",
       "selectPriority": "Selezioni la priorità...",
-      "search": "Cerca attività..."
+      "search": "Cerca attività...",
+      "searchBoards": "Cerca board...",
+      "searchStatuses": "Cerca stati...",
+      "searchProjects": "Cerca progetti..."
     },
     "actions": {
       "reset": "Reimposta"
     },
-    "statusClosedSuffix": " (chiuso)"
+    "statusClosedSuffix": " (chiuso)",
+    "summary": {
+      "boards_one": "{{count}} board",
+      "boards_other": "{{count}} board",
+      "statuses_one": "{{count}} stato",
+      "statuses_other": "{{count}} stati",
+      "projects_one": "{{count}} progetto",
+      "projects_other": "{{count}} progetti",
+      "phases_one": "{{count}} fase",
+      "phases_other": "{{count}} fasi",
+      "excludingName": "escl. {{name}}",
+      "excludingCount_one": "escl. {{count}}",
+      "excludingCount_other": "escl. {{count}}"
+    }
   }
 }

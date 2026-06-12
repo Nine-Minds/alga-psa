@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Static import keeps the (expensive) ticketActions module evaluation in the
+// collection phase instead of counting against the 5s timeout of whichever
+// test happens to run first. vi.mock factories below are hoisted above this
+// import by vitest.
+import { getTicketById, getTicketsForList } from './ticketActions';
+
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
 
@@ -11,6 +17,10 @@ const getClientContactVisibilityContextMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) =>
+    action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -277,9 +287,16 @@ function buildTrx(params: {
     }
 
     if (table === 'ticket_resources') {
-      return {
-        where: vi.fn().mockResolvedValue([]),
+      // Chainable + awaitable builder: supports the legacy `await trx(...).where(...)`
+      // shape and the newer `.where().whereIn().whereNotNull().select()` chain.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
+        whereNotNull: vi.fn(() => builder),
+        select: vi.fn(async () => []),
+        then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
       };
+      return builder;
     }
 
     throw new Error(`Unexpected table: ${table}`);
@@ -336,8 +353,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
         )
     );
 
-    const { getTicketById, getTicketsForList } = await import('./ticketActions');
-
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
@@ -382,8 +397,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
         )
     );
 
-    const { getTicketById, getTicketsForList } = await import('./ticketActions');
-
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
@@ -425,7 +438,6 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
       async (_db: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(trx)
     );
 
-    const { getTicketsForList } = await import('./ticketActions');
     const {
       BuiltinAuthorizationKernelProvider,
       BundleAuthorizationKernelProvider,

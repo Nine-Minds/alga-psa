@@ -144,6 +144,11 @@ describe('resolveTeamsTabDestination', () => {
       projectId: 'project-44',
       taskId: 'task-88',
     });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/projects/project-44/tasks/task-88')).toEqual({
+      type: 'project_task',
+      projectId: 'project-44',
+      taskId: 'task-88',
+    });
     expect(resolveTeamsTabDestinationFromPsaUrl('/msp/time-sheet-approvals?approvalId=approval-2')).toEqual({
       type: 'approval',
       approvalId: 'approval-2',

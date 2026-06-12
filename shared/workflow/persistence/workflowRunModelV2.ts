@@ -4,7 +4,9 @@ export type WorkflowRunRecord = {
   run_id: string;
   workflow_id: string;
   workflow_version: number;
-  tenant_id?: string | null;
+  // uuid Citus distribution column. The legacy `tenant_id` column is being phased
+  // out (dropped in the cleanup migration) and is not referenced here.
+  tenant?: string | null;
   status: string;
   node_path?: string | null;
   trigger_type?: 'event' | 'schedule' | 'recurring' | null;
@@ -44,9 +46,12 @@ const WorkflowRunModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, runId: string, data: Partial<WorkflowRunRecord>): Promise<WorkflowRunRecord> => {
-    const [record] = await knex<WorkflowRunRecord>('workflow_runs')
-      .where({ run_id: runId })
+  // `tenant` is optional during the transition: when supplied the query prunes to
+  // a single Citus shard; when omitted it falls back to a (multi-shard) run_id scan.
+  update: async (knex: Knex, runId: string, data: Partial<WorkflowRunRecord>, tenant?: string | null): Promise<WorkflowRunRecord> => {
+    const query = knex<WorkflowRunRecord>('workflow_runs').where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
+    const [record] = await query
       .update({
         ...data,
         updated_at: new Date().toISOString()
@@ -55,17 +60,17 @@ const WorkflowRunModelV2 = {
     return record;
   },
 
-  getById: async (knex: Knex, runId: string): Promise<WorkflowRunRecord | null> => {
-    const record = await knex<WorkflowRunRecord>('workflow_runs')
-      .where({ run_id: runId })
-      .first();
+  getById: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowRunRecord | null> => {
+    const query = knex<WorkflowRunRecord>('workflow_runs').where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
+    const record = await query.first();
     return record || null;
   },
 
-  getByTriggerFireKey: async (knex: Knex, fireKey: string): Promise<WorkflowRunRecord | null> => {
-    const record = await knex<WorkflowRunRecord>('workflow_runs')
-      .where({ trigger_fire_key: fireKey })
-      .first();
+  getByTriggerFireKey: async (knex: Knex, fireKey: string, tenant?: string | null): Promise<WorkflowRunRecord | null> => {
+    const query = knex<WorkflowRunRecord>('workflow_runs').where({ trigger_fire_key: fireKey });
+    if (tenant) query.andWhere({ tenant });
+    const record = await query.first();
     return record || null;
   },
 

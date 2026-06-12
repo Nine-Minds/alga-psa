@@ -5,7 +5,6 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { Button } from '@alga-psa/ui/components/Button';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboarding/components';
@@ -25,12 +24,12 @@ import {
   HeartPulse,
   ClipboardList,
   Calendar,
-  RotateCcw,
 } from 'lucide-react';
 
 interface DashboardContainerProps {
   onboardingSection?: React.ReactNode;
   initialMobileAppCardDismissed?: boolean;
+  selfHost?: boolean;
 }
 
 interface FeatureCardProps {
@@ -144,7 +143,7 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
   );
 };
 
-const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false }: DashboardContainerProps) => {
+const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false, selfHost = false }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
   const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
@@ -288,34 +287,8 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
                 </div>
               </div>
 
-              {!mobileDismissed ? (
-                <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} />
-              ) : !isEnterprise ? (
-                <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
-                      {t('mobileApp.hidden.title', { defaultValue: 'Hidden mobile app card' })}
-                    </p>
-                    <p className="text-xs text-[rgb(var(--color-text-500))]">
-                      {t('mobileApp.hidden.subtitle', { defaultValue: 'Restore it if you need it later.' })}
-                    </p>
-                  </div>
-                  <div className="mt-3">
-                    <Button
-                      id="restore-dashboard-mobile-app-card"
-                      variant="outline"
-                      size="xs"
-                      className="gap-1.5"
-                      onClick={handleRestoreMobileApp}
-                      disabled={isMobilePending}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      {isMobilePending
-                        ? t('mobileApp.restoring', { defaultValue: 'Restoring...' })
-                        : t('mobileApp.restore', { defaultValue: 'Get the mobile app' })}
-                    </Button>
-                  </div>
-                </div>
+              {isEnterprise && !mobileDismissed ? (
+                <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} selfHost={selfHost} />
               ) : null}
 
               <div className="rounded-lg border border-dashed border-[rgb(var(--color-border-200))] bg-white p-4">

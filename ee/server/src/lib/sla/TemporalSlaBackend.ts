@@ -82,8 +82,10 @@ export class TemporalSlaBackend implements ISlaBackend {
     await handle.signal(signalName, { met });
   }
 
-  async cancelSla(ticketId: string): Promise<void> {
-    const handle = await this.getHandle(ticketId);
+  async cancelSla(tenantId: string, ticketId: string): Promise<void> {
+    const client = await this.getClient();
+    const workflowId = this.getWorkflowId(tenantId, ticketId);
+    const handle = client.workflow.getHandle(workflowId);
     await handle.signal('cancel');
   }
 

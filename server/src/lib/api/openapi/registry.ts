@@ -6,6 +6,7 @@ import {
   DocumentBuildOptions,
   RegistryMetadata,
 } from './types';
+import { getApiMetadataProducts } from '../../productSurfaceRegistry';
 
 type OpenApiBodyContent = Record<string, { schema: ZodTypeAny; description?: string }>;
 
@@ -50,6 +51,7 @@ export class ApiOpenApiRegistry {
     const request = this.buildRequest(route);
     const responses = this.buildResponses(route.responses);
     const extensions = this.buildExtensions(route);
+    const productAvailability = this.buildProductAvailability(route);
 
     const pathConfig = {
       method: route.method,
@@ -63,6 +65,7 @@ export class ApiOpenApiRegistry {
       request,
       responses,
       extensions,
+      'x-alga-products': productAvailability,
     };
 
     this.registry.registerPath(pathConfig as any);
@@ -80,6 +83,7 @@ export class ApiOpenApiRegistry {
     const request = this.buildRequest(route);
     const responses = this.buildResponses(route.responses);
     const extensions = this.buildExtensions(route);
+    const productAvailability = this.buildProductAvailability(route);
 
     const config = {
       method: route.method,
@@ -93,6 +97,7 @@ export class ApiOpenApiRegistry {
       request,
       responses,
       extensions,
+      'x-alga-products': productAvailability,
     };
 
     this.registry.registerWebhook(config as any);
@@ -206,6 +211,10 @@ export class ApiOpenApiRegistry {
       extensions['x-edition'] = route.edition.toUpperCase();
     }
     return Object.keys(extensions).length ? extensions : undefined;
+  }
+
+  private buildProductAvailability(route: ApiRouteSpec) {
+    return route.extensions?.['x-alga-products'] ?? getApiMetadataProducts(route.path);
   }
 
   private shouldIncludeRoute(route: ApiRouteSpec): boolean {

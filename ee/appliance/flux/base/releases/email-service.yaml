@@ -20,14 +20,15 @@ spec:
       retries: 0
   chart:
     spec:
-      chart: ./ee/helm/email-service
+      chart: email-service
+      version: 0.1.0
       interval: 10m
       reconcileStrategy: Revision
       sourceRef:
-        kind: GitRepository
-        name: alga-appliance
+        kind: HelmRepository
+        name: alga-charts
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-email-service
-      valuesKey: email-service.talos-single-node.yaml
+      valuesKey: email-service.single-node.yaml

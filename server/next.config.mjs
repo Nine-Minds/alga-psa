@@ -2,9 +2,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
+import os from 'os';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const parsePositiveInt = (value) => {
   if (value == null) return undefined;
@@ -100,6 +102,7 @@ class EditionBuildDiagnosticsPlugin {
     this.options = {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
+        '@product/mcp/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -164,7 +167,16 @@ class EditionBuildDiagnosticsPlugin {
 }
 
 const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
-const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS);
+// Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
+// pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
+// 32-core box), each loading the full app bundle (~290 MB) — the dominant build
+// memory peak. Capping to a small number collapses that peak onto the (fixed,
+// ~4-process) turbopack compilation floor with no wall-clock cost (static-gen is
+// ~0.1s; compilation, the bulk of the build, is turbopack/Rust and unaffected by
+// this count). Measured: 31→8 workers cut peak ~13.3→~10 GB and was *faster*.
+// Capped at available cores so small CI runners aren't oversubscribed.
+const hostParallelism = (os.availableParallelism?.() ?? os.cpus().length) || 8;
+const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, hostParallelism);
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
@@ -187,6 +199,11 @@ const nextConfig = {
       '@alga-psa/ui/': '../packages/ui/src/',
       '@alga-psa/clients': '../packages/clients/src',
       '@alga-psa/clients/': '../packages/clients/src/',
+      // NB: tried switching bare-name aliases to ../packages/<pkg>/dist when
+      // USE_PREBUILT=true. tsup bundles each package into a single
+      // dist/index.js and downstream consumers import many sub-paths
+      // (e.g. @alga-psa/ui/components/Button) which the dist doesn't expose.
+      // Result: module-not-found across the build. Keep src/ aliases.
       '@alga-psa/auth': '../packages/auth/src',
       '@alga-psa/auth/': '../packages/auth/src/',
       '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
@@ -230,11 +247,14 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
+      '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
+      '@alga-psa/agent-tooling/': '../packages/agent-tooling/src/',
       // Documents package
       '@alga-psa/documents': '../packages/documents/src',
       '@alga-psa/documents/': '../packages/documents/src/',
@@ -350,6 +370,9 @@ const nextConfig = {
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
         : '@product/chat/oss/entry',
+      '@product/mcp/entry': isEE
+        ? '@product/mcp/ee/entry'
+        : '@product/mcp/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -374,6 +397,16 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : './src/empty/workflows/entry',
+      // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
+      // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
+      '@alga-psa/user-activities/server/workflow-tasks': isEE
+        ? '../ee/server/src/user-activities/workflowTasks.server'
+        : '../packages/user-activities/src/server/workflow-tasks',
+      '@alga-psa/user-activities/client/workflow-tasks': isEE
+        ? '../ee/server/src/user-activities/workflowTasks.client'
+        : '../packages/user-activities/src/client/workflow-tasks',
+      '@alga-psa/user-activities': '../packages/user-activities/src',
+      '@alga-psa/user-activities/': '../packages/user-activities/src/',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -399,6 +432,10 @@ const nextConfig = {
     },
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
+  // Skip TS at build time — `tsc --noEmit` runs separately as `npm run typecheck`.
+  // Next 16 dropped the in-config `eslint` knob; lint is now run via `npm run lint`
+  // outside the build, so no equivalent setting needed.
+  typescript: { ignoreBuildErrors: true },
   transpilePackages: [
     '@blocknote/core',
     '@blocknote/react',
@@ -406,6 +443,7 @@ const nextConfig = {
     '@emoji-mart/data',
     '@alga-psa/ui',
     '@alga-psa/scheduling',
+    '@alga-psa/agent-tooling',
     '@alga-psa/users',
     '@alga-psa/email',
     '@alga-psa/teams',
@@ -418,8 +456,10 @@ const nextConfig = {
     '@alga-psa/billing',
     '@alga-psa/msp-composition',
     '@alga-psa/user-composition',
+    '@alga-psa/user-activities',
     '@alga-psa/projects',
     '@alga-psa/surveys',
+    '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
     '@product/extensions',
     '@product/settings-extensions',
@@ -429,6 +469,9 @@ const nextConfig = {
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
     '@alga-psa/product-extension-initialization'
+    // Tried trimming this list to only @blocknote/* under turbopack — it
+    // regressed cold builds by +21 s. transpilePackages stays as a hint
+    // that turbopack actually uses for fast-path resolution.
   ],
   // Rewrites required for PostHog
   async rewrites() {
@@ -450,8 +493,22 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
-    // Enable webpack cache for faster builds
-    config.cache = true;
+    // Filesystem cache: persists across builds (even after `rm -rf .next`)
+    // so the second cold build reuses module compilation work. Stored under
+    // node_modules/.cache/webpack so it survives `.next` clears.
+    config.cache = {
+      type: 'filesystem',
+      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+      buildDependencies: {
+        config: [__filename],
+      },
+      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
+      // every file (huge in this monorepo).
+      managedPaths: [
+        path.resolve(__dirname, 'node_modules'),
+        path.resolve(__dirname, '../node_modules'),
+      ],
+    };
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -490,6 +547,9 @@ const nextConfig = {
       '@alga-psa/types': prebuiltDirAbs('types'),
       '@alga-psa/types/': `${prebuiltDirAbs('types')}/`,
       '@alga-psa/core': prebuiltDirAbs('core'),
+      '@alga-psa/core/rateLimit': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
+        : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -505,6 +565,8 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/agent-tooling': path.join(__dirname, '../packages/agent-tooling/src'),
+      '@alga-psa/agent-tooling/': `${path.join(__dirname, '../packages/agent-tooling/src')}/`,
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
@@ -541,6 +603,17 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
+      // MCP seam (.ts entries). The bare specifier must be aliased here for the
+      // webpack build — without it, '@product/mcp/entry' falls through to the
+      // package exports field (which only lists ./ee/entry and ./oss/entry) and
+      // fails to resolve. Mirrors the extensions seam above.
+      '@product/mcp/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-mcp/oss/entry.ts');
+        const selectedPath = isEE ? eePath : ossPath;
+        console.log(`[WEBPACK ALIAS DEBUG] @product/mcp/entry -> ${selectedPath} (isEE: ${isEE})`);
+        return selectedPath;
+      })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
@@ -572,6 +645,16 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, 'src/empty/workflows/entry.tsx'),
+      // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
+      '@alga-psa/user-activities/server/workflow-tasks': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
+        : path.join(__dirname, '../packages/user-activities/src/server/workflow-tasks.ts'),
+      '@alga-psa/user-activities/client/workflow-tasks': isEE
+        ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx')
+        : path.join(__dirname, '../packages/user-activities/src/client/workflow-tasks.tsx'),
+      // Base package alias (subpaths like /actions and /components resolve via prefix).
+      // Must come AFTER the workflow-tasks seams so the EE seam wins for those specifiers.
+      '@alga-psa/user-activities': path.join(__dirname, '../packages/user-activities/src'),
       '@product/billing/entry': isEE
         ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
         : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
@@ -616,6 +699,10 @@ const nextConfig = {
       const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
       config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
       config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
+
+      const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
+      const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
+      config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
       const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
       const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');
@@ -876,6 +963,17 @@ const nextConfig = {
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );
+        // The MCP seam has no tsconfig `paths` entry (unlike chat/extensions),
+        // so in CE the bare `@product/mcp/entry` specifier falls through to the
+        // package `exports` and lands on ./ee/entry (the EE impl, which imports
+        // @ee/lib/mcp/* with no CE stub) — beating resolve.alias. Force it to the
+        // CE stub before resolution so no EE governance code enters the CE build.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -892,11 +990,22 @@ const nextConfig = {
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
+        const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
         const authSsoButtonsEeEntry = path.join(
           __dirname,
           '../ee/server/src/components/auth/SsoProviderButtons.tsx',
         );
         config.plugins = config.plugins || [];
+        // Force the MCP seam to the EE implementation before resolution, so the
+        // tsconfig `paths` CE default (@product/mcp/entry -> oss) can't win via
+        // JsConfigPathsPlugin and produce a hybrid EE build. Mirrors the CE force.
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]mcp[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';
@@ -907,6 +1016,17 @@ const nextConfig = {
             // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
             if (req === '@alga-psa/workflows/entry') {
               resource.request = workflowsEeEntry;
+              return;
+            }
+            // user-activities workflow-task seam: it's a real package export, so without
+            // this an EE build could resolve it to the in-package CE default via the
+            // exports map before the webpack alias wins. Force the EE implementations.
+            if (req === '@alga-psa/user-activities/server/workflow-tasks') {
+              resource.request = userActivitiesWorkflowTasksServerEe;
+              return;
+            }
+            if (req === '@alga-psa/user-activities/client/workflow-tasks') {
+              resource.request = userActivitiesWorkflowTasksClientEe;
               return;
             }
             // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
@@ -1024,6 +1144,14 @@ const nextConfig = {
 
     return config;
   },
+  // Explicitly disable production browser source maps (default but be explicit).
+  // Eliminates source-map emit work for every client chunk.
+  productionBrowserSourceMaps: false,
+  // SWC compiler: strip console.* in production output (excluding error/warn).
+  // Cuts bytes; minify pass also has less to walk.
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
   experimental: {
     // We alias certain EE-only modules directly into `../ee/server/src/**` (outside this Next.js app root).
     // Ensure Next is allowed to import/compile source files from outside `server/`.
@@ -1034,9 +1162,20 @@ const nextConfig = {
     // Increase middleware body size limit for extension installs
     proxyClientMaxBodySize: '100mb',
     // Next build "Collecting page data" uses a worker pool sized from this value.
-    // In large repos, the default (often == host CPU count) can cause OOMs in CI.
-    ...(buildCpus ? { cpus: buildCpus } : {}),
+    // Default-capped (see buildCpus above) to bound peak memory; override with
+    // NEXT_BUILD_CPUS. In large repos the uncapped default (== host CPU count)
+    // OOMs in CI.
+    cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Disable server source maps (RSC + server actions). Build-only — does
+    // not affect production error traces from Sentry or similar tools.
+    serverSourceMaps: false,
+    // Tried turbopackPersistentCaching — Next 16.2 only supports
+    // turbopackFileSystemCacheForDev (dev mode), not production builds.
+    // Revisit when Next exposes persistent build cache.
+    // Tried optimizePackageImports (broad list, then just lucide-react) —
+    // both regressed cold builds by 20 s and 480 s respectively in this
+    // monorepo's webpack+SWC setup. Leaving it off.
   },
   // Externalize Node.js-only packages with native dependencies from server bundles.
   // This prevents Turbopack from bundling them with mangled names.
@@ -1053,6 +1192,75 @@ const nextConfig = {
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
     'expo-server-sdk',
+    // Heavy Node-only deps — runtime requires `require()`, no need to bundle.
+    'knex',
+    'pg',
+    'pg-boss',
+    'pg-pool',
+    'pg-cursor',
+    'pg-protocol',
+    'redis',
+    'ioredis',
+    'stripe',
+    'openai',
+    '@google-cloud/aiplatform',
+    '@google-cloud/vertexai',
+    'handlebars',
+    'jsdom',
+    'monaco-editor',
+    '@js-temporal/polyfill',
+    'pdfkit',
+    'sharp',
+    // Round 2: more Node-only deps
+    'axios',
+    'dotenv',
+    'jsonwebtoken',
+    'rate-limiter-flexible',
+    '@temporalio/client',
+    '@temporalio/common',
+    '@temporalio/worker',
+    'winston',
+    'pino',
+    'parsimmon',
+    'ajv',
+    '@aws-sdk/client-s3',
+    '@aws-sdk/client-sts',
+    '@aws-sdk/credential-providers',
+    'xlsx',
+    'archiver',
+    'unzipper',
+    '@grpc/grpc-js',
+    '@huggingface/inference',
+    'google-auth-library',
+    'googleapis',
+    '@azure/identity',
+    '@azure/msal-node',
+    '@microsoft/microsoft-graph-client',
+    // Round 3: more server-only/heavy libs
+    'posthog-node',
+    'bcryptjs',
+    'speakeasy',
+    'qrcode',
+    'pdf-lib',
+    'pdf2pic',
+    'marked',
+    '@faker-js/faker',
+    'moment',
+    'tinycolor2',
+    // Round 4 (memory campaign 2026-06-04): more server-only deps confirmed
+    // imported in the app graph but not used in client components. Keeps them
+    // out of the Turbopack server bundle that every static-gen worker loads.
+    'nodemailer',
+    'imapflow',
+    'express',
+    'fluent-ffmpeg',
+    'tar',
+    'node-vault',
+    '@nestjs/common',
+    '@asteasolutions/zod-to-openapi',
+    'formdata-node',
+    '@aws-sdk/s3-request-presigner',
+    'winston-daily-rotate-file',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

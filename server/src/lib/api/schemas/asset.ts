@@ -23,6 +23,7 @@ export const createAssetSchema = z.object({
   asset_tag: z.string().min(1, 'Asset tag is required').max(255),
   name: z.string().min(1, 'Asset name is required').max(255),
   status: z.string().min(1, 'Status is required'),
+  location_id: uuidSchema.nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
@@ -112,6 +113,7 @@ export const assetFilterSchema = baseFilterSchema.extend({
   asset_tag: z.string().optional(),
   name: z.string().optional(),
   client_id: uuidSchema.optional(),
+  location_id: uuidSchema.optional(),
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
@@ -136,6 +138,7 @@ export const assetResponseSchema = z.object({
   asset_tag: z.string(),
   name: z.string(),
   status: z.string(),
+  location_id: uuidSchema.nullable().optional(),
   location: z.string().nullable(),
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
@@ -197,6 +200,13 @@ export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
 export const createAssetRelationshipSchema = z.object({
   related_asset_id: uuidSchema,
   relationship_type: z.string().min(1, 'Relationship type is required')
+});
+
+// Link a ticket to an asset (POST /api/v1/assets/{id}/tickets).
+export const linkAssetTicketSchema = z.object({
+  ticket_id: uuidSchema,
+  relationship_type: z.string().min(1).optional(),
+  notes: z.string().optional()
 });
 
 export const assetRelationshipResponseSchema = z.object({
@@ -360,10 +370,7 @@ export const assetSearchSchema = z.object({
 
 // Asset export schema
 export const assetExportQuerySchema = z.object({
-  format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_extension_data: booleanTransform.optional().default('false'),
-  include_maintenance: booleanTransform.optional().default('false'),
-  include_documents: booleanTransform.optional().default('false'),
+  format: z.enum(['csv', 'json']).optional().default('csv'),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   client_ids: z.array(uuidSchema).optional(),

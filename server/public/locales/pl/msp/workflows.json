@@ -27,6 +27,7 @@
     "close": "Zamknij"
   },
   "runList": {
+    "shareTooltip": "Drukuj i eksportuj",
     "quickRanges": {
       "last24h": "Ostatnie 24 godz.",
       "last7d": "Ostatnie 7 dni"
@@ -56,7 +57,6 @@
       "runNow": "Uruchom teraz",
       "exportCsv": "Eksportuj CSV",
       "refresh": "Odśwież",
-      "resumeSelected": "Wznów zaznaczone ({{count}})",
       "cancelSelected": "Anuluj zaznaczone ({{count}})",
       "clearSelection": "Wyczyść zaznaczenie",
       "details": "Szczegóły",
@@ -84,14 +84,10 @@
       "empty": "Żadne uruchomienia przepływu pracy nie pasują do bieżących filtrów."
     },
     "bulk": {
-      "resumeTitle": "Wznów zaznaczone uruchomienia",
-      "resumeMessage": "Wznowić {{count}} zaznaczonych uruchomień?",
       "cancelTitle": "Anuluj zaznaczone uruchomienia",
       "cancelMessage": "Anulować {{count}} zaznaczonych uruchomień? Operacji nie można cofnąć.",
       "reasonLabel": "Powód",
-      "resumeReasonPlaceholder": "Proszę podać powód wznowienia",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
-      "resumeConfirm": "Wznów uruchomienia",
       "cancelConfirm": "Anuluj uruchomienia"
     },
     "toasts": {
@@ -105,12 +101,29 @@
       "selectRunsForBulkAction": "Proszę zaznaczyć uruchomienia, aby wykonać tę akcję.",
       "bulkReasonTooShort": "Powód musi mieć co najmniej 3 znaki.",
       "noEligibleRuns": "Żadne z zaznaczonych uruchomień nie kwalifikuje się do tej akcji.",
-      "bulkResumeFailedCount": "Nie udało się wznowić {{count}} uruchomień.",
       "bulkCancelFailedCount": "Nie udało się anulować {{count}} uruchomień.",
-      "bulkResumeSuccessCount": "Wznowiono {{count}} uruchomień.",
       "bulkCancelSuccessCount": "Anulowano {{count}} uruchomień.",
       "bulkSkippedIneligibleCount": "Pominięto {{count}} niekwalifikujących się uruchomień.",
       "bulkActionFailed": "Akcja zbiorcza nie powiodła się"
+    },
+    "print": {
+      "title": "Uruchomienia workflow",
+      "selectedTitle": "Wybrane uruchomienia workflow",
+      "subtitle": "{{count}} uruchomień",
+      "noRuns": "Brak uruchomień workflow do wydruku",
+      "columns": {
+        "run": "Uruchomienie",
+        "workflow": "Workflow",
+        "version": "Wersja",
+        "status": "Status",
+        "started": "Rozpoczęto",
+        "updated": "Zaktualizowano",
+        "duration": "Czas trwania"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania uruchomień workflow."
+      }
     }
   },
   "runDetails": {
@@ -123,12 +136,9 @@
       "triggerLabel": "Wyzwalacz:"
     },
     "actions": {
-      "resume": "Wznów",
       "cancel": "Anuluj",
       "export": "Eksportuj",
-      "retry": "Ponów",
       "replay": "Powtórz",
-      "requeueEvent": "Ponownie zakolejkuj zdarzenie",
       "close": "Zamknij",
       "view": "Zobacz",
       "apply": "Zastosuj",
@@ -247,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Powód",
-      "resumeTitle": "Wznów uruchomienie przepływu pracy",
-      "resumeMessage": "Wznowić teraz to uruchomienie przepływu pracy?",
-      "resumeReasonPlaceholder": "Proszę podać powód wznowienia",
       "cancelTitle": "Anuluj uruchomienie przepływu pracy",
       "cancelMessage": "Anulować to uruchomienie przepływu pracy? Operacji nie można cofnąć.",
       "cancelReasonPlaceholder": "Proszę podać powód anulowania",
       "cancelConfirm": "Anuluj uruchomienie",
-      "retryTitle": "Ponów uruchomienie przepływu pracy",
-      "retryMessage": "Ponowić to uruchomienie od ostatniego kroku, który się nie powiódł?",
-      "retryReasonPlaceholder": "Proszę podać powód ponownej próby",
-      "retryConfirm": "Ponów uruchomienie",
       "replayTitle": "Powtórz uruchomienie przepływu pracy",
       "replayMessage": "Powtórz to uruchomienie z nowym ładunkiem.",
       "replayReasonPlaceholder": "Proszę podać powód powtórzenia",
       "payloadLabel": "Ładunek (JSON)",
-      "replayConfirm": "Powtórz uruchomienie",
-      "requeueTitle": "Ponownie zakolejkuj oczekiwanie na zdarzenie",
-      "requeueMessage": "Ponownie zakolejkować najnowsze oczekiwanie na zdarzenie dla tego uruchomienia?",
-      "requeueReasonPlaceholder": "Proszę podać powód ponownego kolejkowania",
-      "requeueConfirm": "Ponownie zakolejkuj oczekiwanie"
+      "replayConfirm": "Powtórz uruchomienie"
     },
     "toasts": {
       "loadRunDetailsFailed": "Nie udało się wczytać szczegółów uruchomienia",
@@ -275,21 +274,19 @@
       "logExportReady": "Eksport dziennika gotowy",
       "exportLogsFailed": "Nie udało się wyeksportować dzienników",
       "reasonTooShort": "Powód musi mieć co najmniej 3 znaki.",
-      "runResumed": "Uruchomienie wznowione",
-      "resumeRunFailed": "Nie udało się wznowić uruchomienia",
       "runCanceled": "Uruchomienie anulowane",
       "cancelRunFailed": "Nie udało się anulować uruchomienia",
       "runExportReady": "Eksport uruchomienia gotowy",
       "exportRunFailed": "Nie udało się wyeksportować uruchomienia",
-      "runRetryStarted": "Rozpoczęto ponowną próbę uruchomienia",
-      "retryRunFailed": "Nie udało się ponowić uruchomienia",
       "replayPayloadInvalid": "Ładunek powtórzenia musi być prawidłowym JSON.",
       "runReplayStarted": "Rozpoczęto powtórzenie uruchomienia",
       "replayRunFailed": "Nie udało się powtórzyć uruchomienia",
-      "eventWaitRequeued": "Oczekiwanie na zdarzenie ponownie zakolejkowane",
-      "requeueEventWaitFailed": "Nie udało się ponownie zakolejkować oczekiwania na zdarzenie",
       "auditExportReady": "Eksport audytu gotowy",
       "exportAuditLogsFailed": "Nie udało się wyeksportować dzienników audytu"
+    },
+    "queuedWarning": {
+      "title": "W kolejce — oczekiwanie na proces roboczy przepływu pracy",
+      "description": "To uruchomienie rozpoczęło się ponad minutę temu, ale nie wykonano jeszcze żadnego kroku. Sprawdź, czy usługa procesu roboczego przepływu pracy działa i jest połączona z Temporal."
     }
   },
   "runDialog": {
@@ -767,6 +764,50 @@
       "ai.infer": {
         "label": "Wywnioskuj strukturalne wyjście",
         "description": "Wygeneruj strukturalne dane przepływu pracy z podpowiedzi przy użyciu skonfigurowanego dostawcy AI."
+      },
+      "store.get": {
+        "label": "Pobierz zapisaną wartość",
+        "description": "Odczytaj utrwalony wpis klucz/wartość przepływu pracy."
+      },
+      "store.set": {
+        "label": "Ustaw zapisaną wartość",
+        "description": "Utrwal wpis klucz/wartość przepływu pracy."
+      },
+      "store.delete": {
+        "label": "Usuń zapisaną wartość",
+        "description": "Usuń utrwalony wpis klucz/wartość przepływu pracy."
+      },
+      "store.increment": {
+        "label": "Zwiększ zapisaną liczbę",
+        "description": "Atomowo zwiększ utrwaloną liczbę przepływu pracy."
+      },
+      "store.list": {
+        "label": "Wyświetl zapisane wartości",
+        "description": "Wyświetl utrwalone wpisy klucz/wartość przepływu pracy w przestrzeni nazw."
+      },
+      "store.list_namespaces": {
+        "label": "Wyświetl przestrzenie nazw magazynu",
+        "description": "Wyświetl przestrzenie nazw magazynu danych przepływu pracy używane przez tego dzierżawcę."
+      },
+      "links.upsert": {
+        "label": "Utwórz lub zaktualizuj powiązanie encji",
+        "description": "Utwórz lub zaktualizuj utrwalone powiązanie między dwiema encjami przepływu pracy."
+      },
+      "links.lookup": {
+        "label": "Wyszukaj powiązania encji",
+        "description": "Znajdź utrwalone powiązania encji według encji źródłowej i kierunku."
+      },
+      "links.delete": {
+        "label": "Usuń powiązania encji",
+        "description": "Usuń utrwalone powiązania encji według strony i opcjonalnej relacji."
+      },
+      "links.list": {
+        "label": "Wyświetl powiązania encji",
+        "description": "Wyświetl utrwalone powiązania encji w przestrzeni nazw."
+      },
+      "links.list_namespaces": {
+        "label": "Wyświetl przestrzenie nazw powiązań",
+        "description": "Wyświetl przestrzenie nazw powiązań encji przepływu pracy używane przez tego dzierżawcę."
       }
     },
     "validation": {
@@ -911,6 +952,10 @@
         "ai": {
           "label": "AI",
           "description": "Akcje AI"
+        },
+        "data-store": {
+          "label": "Magazyn danych",
+          "description": "Odczytuj i zapisuj trwały stan przepływu pracy między uruchomieniami."
         }
       }
     },
@@ -1383,7 +1428,16 @@
       "openEditor": "Otwórz edytor",
       "apply": "Zastosuj",
       "cancel": "Anuluj"
-    }
+    },
+    "askAi": {
+      "ariaLabel": "Poproś AI o pomoc dotyczącą transformacji",
+      "title": "Zapytaj AI",
+      "shortcutHint": "Otwórz Quick Ask, aby uzyskać pomoc dotyczącą transformacji"
+    },
+    "softEnumPlaceholder": "Wybierz lub wprowadź wartość",
+    "softEnumSearchPlaceholder": "Wyszukaj lub wprowadź wartość niestandardową",
+    "softEnumNoResults": "Brak sugestii",
+    "softEnumUseCustom": "Użyj „{{value}}”"
   },
   "schemaReference": {
     "selectAction": "Proszę wybrać akcję, aby zobaczyć jej schemat wejścia/wyjścia",
@@ -1959,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Konkretna data i godzina",
       "expression": "Zaawansowane wyrażenie"
+    },
+    "workflowEntityType": {
+      "project_task": "Zadanie projektu",
+      "ticket": "Zgłoszenie",
+      "contact": "Kontakt",
+      "client": "Klient",
+      "project": "Projekt",
+      "appointment": "Spotkanie",
+      "quote": "Oferta"
+    },
+    "workflowLinkRelation": {
+      "related": "Powiązane",
+      "mirrors": "Odzwierciedla",
+      "maps_to": "Mapuje na",
+      "blocks": "Blokuje",
+      "duplicate_of": "Duplikat",
+      "synced_with": "Zsynchronizowane z"
     }
   },
   "automation": {
@@ -2347,13 +2418,7 @@
     }
   },
   "automationGate": {
-    "loading": "Ładowanie automatyzacji przepływów pracy...",
-    "featureName": "Automatyzacja przepływów pracy",
-    "notEnabled": "Ta funkcja jest eksperymentalna i nie jest włączona dla Twojego najemcy.",
-    "experimental": "Eksperymentalna",
-    "enableHint": "Włącz automatyzację przepływów pracy w ustawieniach, aby uzyskać dostęp.",
-    "goToExperimental": "Przejdź do funkcji eksperymentalnych",
-    "openSettings": "Otwórz ustawienia"
+    "loading": "Ładowanie automatyzacji przepływów pracy..."
   },
   "flow": {
     "designer": {

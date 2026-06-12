@@ -6,7 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
-import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
+import type { IInvoiceAnnotation, IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
 import {
@@ -15,17 +15,29 @@ import {
   getResolvedInvoiceTemplateId,
   type InvoicePurchaseOrderSummary
 } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
+import CreditApplicationUI from '../CreditApplicationUI';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
+import { InvoiceSyncBadge, qboInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
+import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  queueInvoiceSync,
+  runAccountingSyncNow,
+  resolveAccountingDriftReExport,
+  resolveAccountingDriftAccept,
+} from '../../../actions/accountingSyncActions';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -42,6 +54,12 @@ interface InvoicePreviewPanelProps {
   isFinalized: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
+  /** Client owning the invoice; enables the manual Apply Credit action. */
+  clientId?: string | null;
+  /** Invoice total in minor units; caps the manual credit application. */
+  invoiceTotal?: number;
+  /** Called after a credit is applied so the parent can refresh its list. */
+  onCreditApplied?: () => Promise<void> | void;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -58,7 +76,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onDraftInvoiceUpdated,
   isFinalized,
   creditApplied = 0,
-  draftInvoiceSummary = null
+  draftInvoiceSummary = null,
+  clientId = null,
+  invoiceTotal = 0,
+  onCreditApplied
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
@@ -71,9 +92,23 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
+  const [invoiceAnnotations, setInvoiceAnnotations] = useState<IInvoiceAnnotation[]>([]);
   const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
   const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
+  const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
+  const [syncActionLoading, setSyncActionLoading] = useState(false);
+  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidError, setVoidError] = useState<string | null>(null);
+  const [voidLoading, setVoidLoading] = useState(false);
+  const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // QBO sync status for this invoice
+  const syncIds = invoiceId ? [invoiceId] : [];
+  const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
+  const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -207,6 +242,60 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     };
   }, [invoiceId]);
 
+  useEffect(() => {
+    if (!detailedInvoiceData || typeof window === 'undefined') {
+      return;
+    }
+
+    const anchorId = window.location.hash.slice(1);
+    if (!anchorId.startsWith('item-') && !anchorId.startsWith('annotation-')) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(anchorId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedAnchor(anchorId);
+    });
+    const timeout = window.setTimeout(() => setHighlightedAnchor(null), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [detailedInvoiceData, invoiceAnnotations]);
+
+  useEffect(() => {
+    if (!invoiceId || typeof window === 'undefined') {
+      setInvoiceAnnotations([]);
+      return;
+    }
+
+    const anchorId = window.location.hash.slice(1);
+    if (!anchorId.startsWith('annotation-')) {
+      setInvoiceAnnotations([]);
+      return;
+    }
+
+    let isMounted = true;
+    getInvoiceAnnotations(invoiceId)
+      .then((annotations) => {
+        if (isMounted) {
+          setInvoiceAnnotations(annotations);
+        }
+      })
+      .catch((annotationError) => {
+        console.error(`Error fetching annotations for invoice ${invoiceId}:`, annotationError);
+        if (isMounted) {
+          setInvoiceAnnotations([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [invoiceId]);
+
   const handleAction = async (action: () => Promise<void>, actionLabel: string) => {
     setIsActionLoading(true);
     setError(null);
@@ -239,6 +328,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
     setPreviewRefreshCounter((current) => current + 1);
     await onDraftInvoiceUpdated?.(updated);
+  };
+
+  const handleVoidConfirm = async () => {
+    if (!invoiceId) return;
+    setVoidError(null);
+    setVoidLoading(true);
+    try {
+      await voidInvoice(invoiceId, voidReason);
+      setVoidDialogOpen(false);
+      setVoidReason('');
+      setPreviewRefreshCounter((c) => c + 1);
+    } catch (err) {
+      setVoidError(err instanceof Error ? err.message : 'Failed to void invoice.');
+    } finally {
+      setVoidLoading(false);
+    }
   };
 
   // Calculate scale based on container width
@@ -279,7 +384,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <h3 className="text-lg font-semibold">
               {t('invoicePreview.title', { defaultValue: 'Invoice Preview' })}
             </h3>
-            <InvoiceTaxSourceBadge taxSource={taxSource} />
+            <div className="flex items-center gap-2">
+              <InvoiceTaxSourceBadge taxSource={taxSource} />
+              {!syncHidden && syncStatus && (
+                <InvoiceSyncBadge status={syncStatus} environment={syncStatus.environment} />
+              )}
+            </div>
           </div>
           <CustomSelect
             options={templates.map((template) => ({
@@ -309,6 +419,104 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           <Alert variant="destructive" className="mb-4">
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
+        )}
+
+        {syncActionFeedback && (
+          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : 'destructive'} className="mb-4">
+            <AlertDescription className="text-sm">{syncActionFeedback.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {!syncHidden && invoiceId && syncStatus && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              id="invoice-sync-now-button"
+              variant="outline"
+              size="sm"
+              disabled={syncActionLoading}
+              onClick={async () => {
+                if (!invoiceId) return;
+                setSyncActionLoading(true);
+                setSyncActionFeedback(null);
+                try {
+                  await queueInvoiceSync(invoiceId);
+                  await runAccountingSyncNow();
+                  setSyncActionFeedback({ type: 'success', message: 'Invoice queued for QuickBooks sync.' });
+                } catch (err) {
+                  setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
+                } finally {
+                  setSyncActionLoading(false);
+                }
+              }}
+            >
+              {t('invoicePreview.actions.syncNow', { defaultValue: 'Sync to QuickBooks' })}
+            </Button>
+
+            {syncStatus.state === 'drift' && (
+              <>
+                <Button
+                  id="invoice-drift-reexport-button"
+                  variant="outline"
+                  size="sm"
+                  disabled={syncActionLoading}
+                  onClick={async () => {
+                    if (!invoiceId) return;
+                    setSyncActionLoading(true);
+                    setSyncActionFeedback(null);
+                    try {
+                      await resolveAccountingDriftReExport(invoiceId);
+                      setSyncActionFeedback({ type: 'success', message: 'Re-export to QuickBooks queued.' });
+                    } catch (err) {
+                      setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Re-export failed.' });
+                    } finally {
+                      setSyncActionLoading(false);
+                    }
+                  }}
+                >
+                  {t('invoicePreview.actions.driftReexport', { defaultValue: 'Re-export to QuickBooks' })}
+                </Button>
+
+                <Button
+                  id="invoice-drift-accept-button"
+                  variant="outline"
+                  size="sm"
+                  disabled={syncActionLoading}
+                  onClick={async () => {
+                    if (!invoiceId) return;
+                    setSyncActionLoading(true);
+                    setSyncActionFeedback(null);
+                    try {
+                      await resolveAccountingDriftAccept(invoiceId);
+                      setSyncActionFeedback({ type: 'success', message: 'QuickBooks version accepted.' });
+                    } catch (err) {
+                      setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Accept failed.' });
+                    } finally {
+                      setSyncActionLoading(false);
+                    }
+                  }}
+                >
+                  {t('invoicePreview.actions.driftAccept', { defaultValue: 'Accept QuickBooks Version' })}
+                </Button>
+              </>
+            )}
+
+            {syncStatus.state === 'synced' && syncStatus.externalId && (
+              <Button
+                id="invoice-view-in-qbo-button"
+                variant="outline"
+                size="sm"
+                asChild
+              >
+                <a
+                  href={qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
+                </a>
+              </Button>
+            )}
+          </div>
         )}
 
         {sourceQuote ? (
@@ -431,9 +639,142 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   })}
                 </Button>
               )}
+
+              {isFinalized && clientId && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+                <Button
+                  id="invoice-apply-credit-button"
+                  variant="secondary"
+                  onClick={() => setApplyCreditOpen(true)}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  {t('invoicePreview.actions.applyCredit', { defaultValue: 'Apply Credit' })}
+                </Button>
+              )}
+
+              {isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+                <Button
+                  id="invoice-void-button"
+                  variant="destructive"
+                  onClick={() => {
+                    setVoidReason('');
+                    setVoidError(null);
+                    setVoidDialogOpen(true);
+                  }}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  {t('invoicePreview.actions.voidInvoice', { defaultValue: 'Void Invoice' })}
+                </Button>
+              )}
             </div>
 
+            {clientId && (
+              <Dialog
+                id="apply-credit-dialog"
+                isOpen={applyCreditOpen}
+                onClose={() => setApplyCreditOpen(false)}
+                title={t('invoicePreview.applyCreditDialog.title', { defaultValue: 'Apply Credit' })}
+              >
+                <CreditApplicationUI
+                  clientId={clientId}
+                  invoiceId={invoiceId ?? undefined}
+                  invoiceAmount={Math.max((invoiceTotal ?? 0) - creditApplied, 0)}
+                  onApplyCredit={async () => {
+                    setApplyCreditOpen(false);
+                    setPreviewRefreshCounter((prev) => prev + 1);
+                    await onCreditApplied?.();
+                  }}
+                  onCancel={() => setApplyCreditOpen(false)}
+                />
+              </Dialog>
+            )}
+
+            <Dialog
+              id="void-invoice-dialog"
+              isOpen={voidDialogOpen}
+              onClose={() => setVoidDialogOpen(false)}
+              title={t('invoicePreview.voidDialog.title', { defaultValue: 'Void Invoice' })}
+            >
+              <div className="space-y-4 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('invoicePreview.voidDialog.description', {
+                    defaultValue: 'Voiding this invoice is permanent. Please provide a reason.',
+                  })}
+                </p>
+                <textarea
+                  className="w-full rounded border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  rows={3}
+                  placeholder={t('invoicePreview.voidDialog.reasonPlaceholder', { defaultValue: 'Reason for voiding...' })}
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  disabled={voidLoading}
+                />
+                {voidError && (
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-sm">{voidError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    id="void-invoice-cancel-button"
+                    variant="outline"
+                    onClick={() => setVoidDialogOpen(false)}
+                    disabled={voidLoading}
+                  >
+                    {t('invoicePreview.voidDialog.cancel', { defaultValue: 'Cancel' })}
+                  </Button>
+                  <Button
+                    id="void-invoice-confirm-button"
+                    variant="destructive"
+                    onClick={handleVoidConfirm}
+                    disabled={voidLoading || !voidReason.trim()}
+                  >
+                    {voidLoading
+                      ? t('invoicePreview.voidDialog.voiding', { defaultValue: 'Voiding...' })
+                      : t('invoicePreview.voidDialog.confirm', { defaultValue: 'Void Invoice' })}
+                  </Button>
+                </div>
+              </div>
+            </Dialog>
+
             <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
+              <div className="space-y-1">
+                {detailedInvoiceData.items.map((item) => {
+                  const anchorId = `item-${item.id}`;
+                  const isHighlighted = highlightedAnchor === anchorId;
+                  return (
+                    <div
+                      key={anchorId}
+                      id={anchorId}
+                      className={`scroll-mt-24 rounded px-2 py-1 text-xs ${
+                        isHighlighted
+                          ? 'search-highlight mb-2 border border-yellow-400 bg-yellow-50 text-yellow-900'
+                          : 'sr-only'
+                      }`}
+                    >
+                      {item.description}
+                    </div>
+                  );
+                })}
+                {invoiceAnnotations.map((annotation) => {
+                  const anchorId = `annotation-${annotation.annotation_id}`;
+                  const isHighlighted = highlightedAnchor === anchorId;
+                  return (
+                    <div
+                      key={anchorId}
+                      id={anchorId}
+                      className={`scroll-mt-24 rounded px-2 py-1 text-xs ${
+                        isHighlighted
+                          ? 'search-highlight mb-2 border border-yellow-400 bg-yellow-50 text-yellow-900'
+                          : 'sr-only'
+                      }`}
+                    >
+                      {annotation.content}
+                    </div>
+                  );
+                })}
+              </div>
               <div
                 style={{
                   zoom: scale,

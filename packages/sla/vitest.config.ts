@@ -12,6 +12,11 @@ export default defineConfig({
     alias: {
       '@alga-psa/types': path.resolve(__dirname, '../types/src'),
       '@alga-psa/notifications/notifications/email': path.resolve(__dirname, '../notifications/src/notifications/email'),
+      '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions': path.resolve(
+        __dirname,
+        '../notifications/src/actions/internal-notification-actions/internalNotificationActions'
+      ),
+      '@alga-psa/email': path.resolve(__dirname, '../email/src'),
     },
   },
 });

@@ -169,6 +169,7 @@ export interface CreateExportBatchInput {
   filters?: Record<string, unknown> | null;
   created_by?: Nullable<string>;
   notes?: Nullable<string>;
+  origin?: 'manual' | 'scheduled';
 }
 
 export interface UpdateExportBatchStatusInput {

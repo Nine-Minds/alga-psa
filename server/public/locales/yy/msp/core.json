@@ -36,6 +36,7 @@
       "invoiceLayouts": "55555",
       "billingCycles": "55555",
       "servicePeriods": "55555",
+      "serviceTypes": "55555",
       "serviceCatalog": "55555",
       "products": "55555",
       "taxRates": "55555",
@@ -110,6 +111,11 @@
     "profile": "55555",
     "account": "55555",
     "signOut": "55555",
+    "quickAsk": {
+      "ariaLabel": "55555",
+      "title": "55555",
+      "shortcutHint": "55555"
+    },
     "quickCreate": {
       "ariaLabel": "55555",
       "title": "55555",
@@ -230,5 +236,96 @@
         "loadFailed": "55555"
       }
     }
+  },
+  "search": {
+    "placeholder": "55555",
+    "shortcutHint": "55555",
+    "loading": "55555",
+    "pageTitle": "55555",
+    "helperText": "55555",
+    "resultSummary": "55555 {{count}} 55555 {{query}} 55555",
+    "resultsRegionLabel": "55555",
+    "filtersLabel": "55555",
+    "sortLabel": "55555",
+    "paginationLabel": "55555",
+    "seeAllResults": "55555 {{count}} 55555",
+    "noResults": "55555 {{query}} 55555",
+    "emptyBroadenQuery": "55555",
+    "emptyRemoveFilter": "55555",
+    "error": "55555",
+    "filters": {
+      "all": "55555",
+      "client": "55555",
+      "contact": "55555",
+      "user": "55555",
+      "ticket": "55555",
+      "ticket_comment": "55555",
+      "project": "55555",
+      "project_phase": "55555",
+      "project_task": "55555",
+      "project_task_comment": "55555",
+      "asset": "55555",
+      "invoice": "55555",
+      "invoice_item": "55555",
+      "invoice_annotation": "55555",
+      "contract": "55555",
+      "client_contract": "55555",
+      "document": "55555",
+      "kb_article": "55555",
+      "service_catalog": "55555",
+      "service_request_submission": "55555",
+      "service_request_definition": "55555",
+      "workflow_task": "55555",
+      "interaction": "55555",
+      "schedule_entry": "55555",
+      "time_entry": "55555",
+      "board": "55555",
+      "category": "55555",
+      "tag": "55555",
+      "status": "55555"
+    },
+    "groups": {
+      "client": "55555",
+      "contact": "55555",
+      "user": "55555",
+      "ticket": "55555",
+      "ticket_comment": "55555",
+      "project": "55555",
+      "project_phase": "55555",
+      "project_task": "55555",
+      "project_task_comment": "55555",
+      "asset": "55555",
+      "invoice": "55555",
+      "invoice_item": "55555",
+      "invoice_annotation": "55555",
+      "contract": "55555",
+      "client_contract": "55555",
+      "document": "55555",
+      "kb_article": "55555",
+      "service_catalog": "55555",
+      "service_request_submission": "55555",
+      "service_request_definition": "55555",
+      "workflow_task": "55555",
+      "interaction": "55555",
+      "schedule_entry": "55555",
+      "time_entry": "55555",
+      "board": "55555",
+      "category": "55555",
+      "tag": "55555",
+      "status": "55555"
+    },
+    "sort": {
+      "relevance": "55555",
+      "recent": "55555"
+    },
+    "pagination": {
+      "previous": "55555",
+      "next": "55555"
+    }
+  },
+  "onboardingRedirect": {
+    "title": "55555",
+    "description": "55555",
+    "action": "55555"
   }
 }

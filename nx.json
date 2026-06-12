@@ -60,10 +60,11 @@
     },
     "next:dev": {},
     "test": {
-      "dependsOn": [
-        "build"
-      ],
-      "cache": true
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default"
+      ]
     },
     "lint": {
       "cache": true
@@ -93,7 +94,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     },
     {
@@ -108,7 +110,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     },
     {
@@ -127,7 +130,8 @@
         "setup/**",
         "pgbouncer/**",
         "redis/**",
-        "docker/**"
+        "docker/**",
+        "ee/appliance/**"
       ]
     }
   ],

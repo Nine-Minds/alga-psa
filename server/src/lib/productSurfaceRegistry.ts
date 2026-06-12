@@ -1,4 +1,4 @@
-import type { ProductCode } from '@alga-psa/types';
+import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
 
 export type ProductRouteBehavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 export type ProductApiBehavior = 'allowed' | 'denied';
@@ -26,6 +26,7 @@ export const PRODUCT_CAPABILITIES = {
     'clients',
     'contacts',
     'knowledge_base',
+    'reports',
     'settings',
     'client_portal',
     'email_to_ticket',
@@ -51,7 +52,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/settings', '/msp/profile', '/msp/security-settings'],
+    staticPrefixes: ['/msp/tickets', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -71,7 +72,6 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/workflow-control',
       '/msp/surveys',
       '/msp/extensions',
-      '/msp/reports',
       '/msp/service-requests',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
@@ -113,6 +113,7 @@ export const API_RULES: readonly ApiRule[] = [
     dynamicPatterns: [
       /^\/api\/v1\/tickets\/[^/]+\/time-entries(?:\/.*)?$/,
       /^\/api\/v1\/tickets\/[^/]+\/materials(?:\/.*)?$/,
+      /^\/api\/v1\/tickets\/[^/]+\/assets(?:\/.*)?$/,
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: true, algadesk: false },
@@ -129,6 +130,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/statuses',
       '/api/v1/priorities',
       '/api/v1/tags',
+      '/api/v1/knowledge-base',
       '/api/v1/kb-articles',
       '/api/v1/email',
       '/api/email/oauth',
@@ -234,6 +236,10 @@ export function isApiVisibleInMetadata(productCode: ProductCode, path: string): 
   return matched.visibleInMetadataByProduct[productCode];
 }
 
+export function getApiMetadataProducts(path: string): ProductCode[] {
+  return PRODUCT_CODES.filter((productCode) => isApiVisibleInMetadata(productCode, path));
+}
+
 type MenuLikeItem = { href?: string; subItems?: MenuLikeItem[] };
 type MenuLikeSection<T extends MenuLikeItem> = { items: T[] };
 
@@ -241,7 +247,7 @@ function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
   if (productCode === 'algadesk' && href.startsWith('/msp/settings?tab=')) {
     const tab = new URLSearchParams(href.split('?')[1]).get('tab');
-    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'knowledge-base', 'email', 'client-portal']);
+    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'email', 'client-portal']);
     return tab ? allowedTabs.has(tab) : false;
   }
   if (href.startsWith('/msp/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';

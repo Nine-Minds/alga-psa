@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { ApiMetadataController } from '../../../lib/api/controllers/ApiMetadataController';
+import { MetadataService } from '../../../lib/api/services/MetadataService';
 
 describe('ApiMetadataController product filtering contract', () => {
   it('filters endpoints and openapi payloads for AlgaDesk while preserving allowed API surfaces', async () => {
@@ -56,5 +57,53 @@ describe('ApiMetadataController product filtering contract', () => {
     const openApiBody = await openApiRes.json();
     expect(openApiRes.status).toBe(200);
     expect(Object.keys(openApiBody.paths)).toEqual(['/api/v1/tickets']);
+  });
+});
+
+describe('MetadataService product OpenAPI metadata', () => {
+  it('adds direct x-alga-products metadata to live OpenAPI operations', async () => {
+    const service = new MetadataService({} as any, {} as any);
+    vi.spyOn(service as any, 'discoverEndpoints').mockResolvedValue([
+      {
+        path: '/api/v1/tickets',
+        method: 'GET',
+        summary: 'tickets',
+        description: 'tickets',
+        tags: ['Tickets'],
+        operationId: 'getTickets',
+        requiresAuth: true,
+        permissions: [],
+      },
+      {
+        path: '/api/v1/projects',
+        method: 'GET',
+        summary: 'projects',
+        description: 'projects',
+        tags: ['Projects'],
+        operationId: 'getProjects',
+        requiresAuth: true,
+        permissions: [],
+      },
+      {
+        path: '/api/v1/tickets/{id}/time-entries',
+        method: 'GET',
+        summary: 'ticket time entries',
+        description: 'ticket time entries',
+        tags: ['Tickets'],
+        operationId: 'getTicketTimeEntries',
+        requiresAuth: true,
+        permissions: [],
+      },
+    ]);
+    vi.spyOn(service as any, 'discoverSchemas').mockResolvedValue([]);
+
+    const spec = await service.generateOpenApiSpec(
+      { format: 'json', includeExamples: false, includeSchemas: false },
+      'tenant-a',
+    );
+
+    expect(spec.data.paths['/api/v1/tickets'].get['x-alga-products']).toEqual(['psa', 'algadesk']);
+    expect(spec.data.paths['/api/v1/projects'].get['x-alga-products']).toEqual(['psa']);
+    expect(spec.data.paths['/api/v1/tickets/{id}/time-entries'].get['x-alga-products']).toEqual(['psa']);
   });
 });

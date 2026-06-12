@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   renderTicketDescriptionHtml,
   renderTicketRichTextHtml,
@@ -12,6 +12,10 @@ function readHelperSource(): string {
 }
 
 describe('ticketRichRender helper', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('derives HTML for serialized BlockNote JSON using the shared formatting package', () => {
     const source = readHelperSource();
     expect(source).toContain("import { convertBlockContentToHTML } from '@alga-psa/formatting';");
@@ -53,11 +57,14 @@ describe('ticketRichRender helper', () => {
     expect(html).toBe('<p>Hello from ProseMirror</p>');
   });
 
-  it('derives description HTML from ticket attributes for mobile detail responses', () => {
+  it('derives description HTML from ticket attributes for mobile detail responses without parsing plain text as JSON', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const html = renderTicketDescriptionHtml({
       description: 'Legacy plain text description',
     });
 
     expect(html).toBe('<p>Legacy plain text description</p>');
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 });

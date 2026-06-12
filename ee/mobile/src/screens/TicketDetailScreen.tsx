@@ -31,6 +31,7 @@ import { useTimeEntry } from "../features/ticketDetail/hooks/useTimeEntry";
 import { useTicketAssignment } from "../features/ticketDetail/hooks/useTicketAssignment";
 import { useTicketTitle } from "../features/ticketDetail/hooks/useTicketTitle";
 import { useTicketContact } from "../features/ticketDetail/hooks/useTicketContact";
+import { useTicketTags } from "../features/ticketDetail/hooks/useTicketTags";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
 
 // Components
@@ -43,6 +44,8 @@ import { PriorityPickerModal } from "../features/ticketDetail/components/Priorit
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
+import { TagsSection } from "../features/ticketDetail/components/TagsSection";
+import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
@@ -186,6 +189,7 @@ export function TicketDetailBody({
   });
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
   const contactHook = useTicketContact({ ...deps, fetchTicket });
+  const tagsHook = useTicketTags(deps);
   const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
   const qaHook = useTicketQa({
     qaScenario,
@@ -467,6 +471,17 @@ export function TicketDetailBody({
         )}
 
         <View style={{ marginTop: spacing.lg }}>
+          <TagsSection
+            tags={tagsHook.tags}
+            loading={tagsHook.tagsLoading}
+            hidden={tagsHook.tagsHidden}
+            error={tagsHook.tagsError}
+            actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
+            updating={tagsHook.tagUpdating}
+            onAddPress={tagsHook.openTagPicker}
+            onRemoveTag={(tag) => { void tagsHook.removeTag(tag); }}
+          />
+          <View style={{ height: spacing.sm }} />
           <KeyValue
             label={t("detail.contact")}
             value={renderEntityValue(
@@ -602,6 +617,7 @@ export function TicketDetailBody({
             baseUrl={config.ok ? config.baseUrl : null}
             ticketId={ticketId}
             onCommentUpdated={() => void fetchComments()}
+            onSubmitReply={commentDraftHook.submitReply}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
@@ -736,6 +752,17 @@ export function TicketDetailBody({
         client={client}
         apiKey={session?.accessToken ?? ""}
         baseUrl={config.ok ? config.baseUrl : null}
+      />
+
+      <TagPickerModal
+        visible={tagsHook.tagPickerOpen}
+        updating={tagsHook.tagUpdating}
+        updateError={tagsHook.tagActionError}
+        appliedTagTexts={tagsHook.tags.map((tag) => tag.tag_text)}
+        onSelect={(tagText) => { void tagsHook.selectTag(tagText); }}
+        onClose={tagsHook.closeTagPicker}
+        client={client}
+        apiKey={session?.accessToken ?? ""}
       />
 
       <ContactPickerModal

@@ -9,6 +9,8 @@ import { IUserWithRoles, IUser } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -837,7 +839,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   return (
     <ReflectionContainer id={id} label={t('contactDetails.title', { defaultValue: 'Contact Details' })}>
-      <div className="flex items-center space-x-5 mb-4 pt-2">
+      <div className="flex items-center gap-5 mb-4 pt-2">
         {!quickView && (
           <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
             {isInDrawer
@@ -874,7 +876,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           </Button>
         )}
 
-        <div className="flex items-center gap-2 mr-8">
+        <div className="flex items-center gap-2 ml-auto mr-8" data-print-hide>
+          <PrintButton
+            id={`${id}-print-button`}
+            variant="outline"
+            size="sm"
+          />
           <Button
             id={`${id}-delete-contact-button`}
             onClick={handleDeleteContact}
@@ -889,7 +896,46 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       </div>
 
       {/* Content Area */}
-      <div>
+      <div data-print-region data-print-title={editedContact.full_name}>
+        <div className="app-print-section">
+          <PrintableDetailHeader
+            title={editedContact.full_name}
+            subtitle={[editedContact.role, editedContact.client_id ? getClientName(editedContact.client_id) : undefined]
+              .filter(Boolean)
+              .join(' — ')}
+            fields={[
+              {
+                label: t('contactDetails.fields.email', { defaultValue: 'Email' }),
+                value: editedContact.email,
+              },
+              {
+                label: t('contactDetails.fields.phone', { defaultValue: 'Phone' }),
+                value: editedContact.phone_numbers
+                  ?.map((p) => p.phone_number)
+                  .filter(Boolean)
+                  .join(', '),
+              },
+              {
+                label: t('contactDetails.fields.role', { defaultValue: 'Role' }),
+                value: editedContact.role,
+              },
+              {
+                label: t('contactDetails.fields.client', { defaultValue: 'Client' }),
+                value: editedContact.client_id ? getClientName(editedContact.client_id) : undefined,
+              },
+              {
+                label: t('contactDetails.fields.status', { defaultValue: 'Status' }),
+                value: editedContact.is_inactive
+                  ? t('common.states.inactive', { defaultValue: 'Inactive' })
+                  : t('common.states.active', { defaultValue: 'Active' }),
+              },
+              {
+                label: t('contactDetails.fields.notes', { defaultValue: 'Notes' }),
+                value: editedContact.notes,
+              },
+            ] satisfies PrintableDetailField[]}
+          />
+        </div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={searchParams?.get('tab')?.toLowerCase() || 'details'}

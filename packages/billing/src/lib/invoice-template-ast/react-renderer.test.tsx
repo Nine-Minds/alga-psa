@@ -112,6 +112,58 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
+  it('applies labelStyle to field and totals labels', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number',
+            type: 'field',
+            label: 'Invoice #',
+            labelStyle: { inline: { fontWeight: 700, color: '#123456' } },
+            binding: { bindingId: 'invoiceNumber' },
+          },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [
+              {
+                id: 'grandTotal',
+                label: 'Grand Total',
+                labelStyle: { inline: { fontSize: '16px', fontStyle: 'italic' } },
+                value: { type: 'literal', value: 330 },
+                format: 'currency',
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Invoice #:');
+    expect(rendered.html).toContain('font-weight:700');
+    expect(rendered.html).toContain('color:#123456');
+    expect(rendered.html).toContain('Grand Total');
+    expect(rendered.html).toContain('font-size:16px');
+    expect(rendered.html).toContain('font-style:italic');
+  });
+
   it('renders multiline address fields with preserved line breaks', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

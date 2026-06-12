@@ -59,12 +59,14 @@ import {
 import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
+  clientDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
   clientUpdatedEventPayloadSchema,
   contactArchivedEventPayloadSchema,
   contactCreatedEventPayloadSchema,
+  contactDeletedEventPayloadSchema,
   contactMergedEventPayloadSchema,
   contactPrimarySetEventPayloadSchema,
   contactUpdatedEventPayloadSchema,
@@ -83,7 +85,9 @@ import {
   documentSignatureExpiredEventPayloadSchema,
   documentSignatureRequestedEventPayloadSchema,
   documentSignedEventPayloadSchema,
+  documentUpdatedEventPayloadSchema,
   documentUploadedEventPayloadSchema,
+  kbArticleEventPayloadSchema,
 } from './domain/documentEventSchemas';
 import {
   csatAlertTriggeredEventPayloadSchema,
@@ -163,6 +167,7 @@ export const EVENT_TYPES = [
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
   'TICKET_COMMENT_UPDATED',
+  'TICKET_COMMENT_DELETED',
   'TICKET_DELETED',
   'TICKET_RESPONSE_STATE_CHANGED',
 
@@ -218,11 +223,20 @@ export const EVENT_TYPES = [
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
   'PROJECT_CLOSED',
+  'PROJECT_DELETED',
   'PROJECT_ASSIGNED',
+  'PROJECT_PHASE_CREATED',
+  'PROJECT_PHASE_UPDATED',
+  'PROJECT_PHASE_DELETED',
+  'PROJECT_TASK_UPDATED',
+  'PROJECT_TASK_DELETED',
   'PROJECT_TASK_ASSIGNED',
   'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
   'TASK_COMMENT_ADDED',
   'TASK_COMMENT_UPDATED',
+  'PROJECT_TASK_COMMENT_CREATED',
+  'PROJECT_TASK_COMMENT_UPDATED',
+  'PROJECT_TASK_COMMENT_DELETED',
 
   // Projects (domain expansion)
   'PROJECT_STATUS_CHANGED',
@@ -236,12 +250,25 @@ export const EVENT_TYPES = [
   'PROJECT_APPROVAL_REJECTED',
 
   // Time entries (legacy)
+  'TIME_ENTRY_CREATED',
+  'TIME_ENTRY_UPDATED',
+  'TIME_ENTRY_DELETED',
   'TIME_ENTRY_SUBMITTED',
   'TIME_ENTRY_APPROVED',
+  'TIME_ENTRY_CHANGES_REQUESTED',
 
   // Billing (existing + legacy)
+  'INVOICE_CREATED',
+  'INVOICE_UPDATED',
+  'INVOICE_DELETED',
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
+  'INVOICE_ITEM_CREATED',
+  'INVOICE_ITEM_UPDATED',
+  'INVOICE_ITEM_DELETED',
+  'INVOICE_ANNOTATION_CREATED',
+  'INVOICE_ANNOTATION_UPDATED',
+  'INVOICE_ANNOTATION_DELETED',
 
   // Billing (domain expansion)
   'INVOICE_SENT',
@@ -258,8 +285,12 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
+  'CONTRACT_DELETED',
   'CONTRACT_STATUS_CHANGED',
   'CONTRACT_RENEWAL_UPCOMING',
+  'CLIENT_CONTRACT_CREATED',
+  'CLIENT_CONTRACT_UPDATED',
+  'CLIENT_CONTRACT_DELETED',
   'RECURRING_BILLING_RUN_STARTED',
   'RECURRING_BILLING_RUN_COMPLETED',
   'RECURRING_BILLING_RUN_FAILED',
@@ -271,20 +302,42 @@ export const EVENT_TYPES = [
   'CLIENT_OWNER_ASSIGNED',
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
+  'CLIENT_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
   'CONTACT_ARCHIVED',
+  'CONTACT_DELETED',
   'CONTACT_MERGED',
   'INTERACTION_LOGGED',
+  'INTERACTION_CREATED',
+  'INTERACTION_UPDATED',
+  'INTERACTION_DELETED',
   'NOTE_CREATED',
   'TAG_DEFINITION_CREATED',
   'TAG_DEFINITION_UPDATED',
+  'TAG_DEFINITION_DELETED',
   'TAG_APPLIED',
   'TAG_REMOVED',
+  'BOARD_CREATED',
+  'BOARD_UPDATED',
+  'BOARD_DELETED',
+  'CATEGORY_CREATED',
+  'CATEGORY_UPDATED',
+  'CATEGORY_DELETED',
+  'STATUS_CREATED',
+  'STATUS_UPDATED',
+  'STATUS_DELETED',
+
+  // Users
+  'USER_CREATED',
+  'USER_UPDATED',
+  'USER_DELETED',
+  'USER_ROLES_UPDATED',
 
   // Documents (domain expansion)
   'DOCUMENT_UPLOADED',
+  'DOCUMENT_UPDATED',
   'DOCUMENT_DELETED',
   'DOCUMENT_ASSOCIATED',
   'DOCUMENT_DETACHED',
@@ -292,6 +345,22 @@ export const EVENT_TYPES = [
   'DOCUMENT_SIGNATURE_REQUESTED',
   'DOCUMENT_SIGNED',
   'DOCUMENT_SIGNATURE_EXPIRED',
+  'KB_ARTICLE_CREATED',
+  'KB_ARTICLE_UPDATED',
+  'KB_ARTICLE_DELETED',
+  'SERVICE_CATALOG_CREATED',
+  'SERVICE_CATALOG_UPDATED',
+  'SERVICE_CATALOG_DELETED',
+  'SERVICE_REQUEST_SUBMISSION_CREATED',
+  'SERVICE_REQUEST_SUBMISSION_UPDATED',
+  'SERVICE_REQUEST_SUBMISSION_DELETED',
+  'SERVICE_REQUEST_DEFINITION_CREATED',
+  'SERVICE_REQUEST_DEFINITION_UPDATED',
+  'SERVICE_REQUEST_DEFINITION_DELETED',
+  'WORKFLOW_TASK_CREATED',
+  'WORKFLOW_TASK_UPDATED',
+  'WORKFLOW_TASK_DELETED',
+  'WORKFLOW_TASK_ASSIGNMENT_CHANGED',
 
   // Email providers + inbound email (already present)
   'INBOUND_EMAIL_RECEIVED',
@@ -350,6 +419,7 @@ export const EVENT_TYPES = [
   // Assets + media (domain expansion)
   'ASSET_CREATED',
   'ASSET_UPDATED',
+  'ASSET_DELETED',
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
@@ -431,6 +501,14 @@ export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
   }),
 });
 
+export const ProjectPhaseEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  phaseId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
 // Project task event payload schema
 export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
@@ -449,6 +527,17 @@ export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend(
   primaryAgentId: z.string().uuid(),      // Existing primary agent
   additionalAgentId: z.string().uuid(),   // New additional agent
   assignedByUserId: z.string().uuid(),    // Who performed the action
+});
+
+export const ProjectTaskSearchEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  taskId: z.string().uuid(),
+  // Optional: the task's (destination) phase. Carried so webhook/workflow
+  // consumers can react to phase moves without re-querying.
+  phaseId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+  changes: z.record(z.unknown()).optional(),
 });
 
 // Task comment event payload schemas
@@ -473,6 +562,24 @@ export const TaskCommentUpdatedPayloadSchema = BasePayloadSchema.extend({
   isUpdate: z.boolean().optional(), // Always true for UPDATED
 });
 
+export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
+  taskId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  taskCommentId: z.string().uuid(),
+  taskName: z.string().optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+// Ticket comment delete event payload schema.
+// commentId is top-level so the search index subscriber's extractObjectId can resolve it.
+export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  commentId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  isInternal: z.boolean().optional(),
+});
+
 // Ticket comment update event payload schema
 export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend({
   oldComment: z.object({
@@ -492,9 +599,14 @@ export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend
 // Time entry event payload schema
 export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
   timeEntryId: z.string().uuid(),
-  userId: z.string().uuid(),
-  workItemId: z.string().uuid(),
-  workItemType: z.enum(['TICKET', 'PROJECT_TASK']),
+  userId: z.string().uuid().optional(),
+  workItemId: z.string().nullable().optional(),
+  workItemType: z.string().nullable().optional(),
+  approvedBy: z.string().uuid().optional(),
+  requestedBy: z.string().uuid().optional(),
+  reason: z.string().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
 });
 
 // Invoice event payload schema
@@ -505,11 +617,115 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   amount: z.number(),
 });
 
+export const InvoiceSearchEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InvoiceItemEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InvoiceAnnotationEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  annotationId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ContractSearchEventPayloadSchema = BasePayloadSchema.extend({
+  contractId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ClientContractEventPayloadSchema = BasePayloadSchema.extend({
+  clientContractId: z.string().uuid(),
+  contractId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
+  assetId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceCatalogEventPayloadSchema = BasePayloadSchema.extend({
+  serviceId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  itemKind: z.enum(['service', 'product']).optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceRequestSubmissionEventPayloadSchema = BasePayloadSchema.extend({
+  submissionId: z.string().uuid(),
+  definitionId: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  requesterUserId: z.string().uuid().optional(),
+  executionStatus: z.string().optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceRequestDefinitionEventPayloadSchema = BasePayloadSchema.extend({
+  definitionId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  lifecycleState: z.string().optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const WorkflowTaskEventPayloadSchema = BasePayloadSchema.extend({
+  taskId: z.string().min(1),
+  userId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  assignedUserIds: z.array(z.string().uuid()).optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InteractionEventPayloadSchema = BasePayloadSchema.extend({
+  interactionId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
 // Client event payload schema
 export const ClientEventPayloadSchema = BasePayloadSchema.extend({
   clientId: z.string().uuid(),
   userId: z.string().uuid().optional(), // User might not always be available for system-triggered events
   changes: z.record(z.unknown()).optional(), // Details of what changed
+});
+
+export const UserEventPayloadSchema = BasePayloadSchema.extend({
+  userId: z.string().uuid(),
+  userType: z.enum(['internal', 'client']).optional(),
+  email: z.string().email().optional(),
+  changedFields: z.array(z.string()).optional(),
+  roleIds: z.array(z.string().uuid()).optional(),
+  actorUserId: z.string().uuid().optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().optional(),
 });
 
 // Custom event payload schema for test events
@@ -589,6 +805,38 @@ export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
   changes: z.record(z.unknown()).optional(),
 });
 
+export const BoardEventPayloadSchema = BasePayloadSchema.extend({
+  boardId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const CategoryEventPayloadSchema = BasePayloadSchema.extend({
+  categoryId: z.string().uuid(),
+  boardId: z.string().uuid().nullable().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+// Status reference-data event payload. statusId is top-level so the search
+// index subscriber's extractObjectId can resolve it on every STATUS_* event.
+export const StatusEventPayloadSchema = BasePayloadSchema.extend({
+  statusId: z.string().uuid(),
+  statusType: z.enum(['ticket', 'project', 'project_task', 'interaction']).optional(),
+  boardId: z.string().uuid().nullable().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const TagDefinitionDeletedPayloadSchema = BasePayloadSchema.extend({
+  tagId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
 // Calendar sync event payload schema
 export const CalendarSyncEventPayloadSchema = BasePayloadSchema.extend({
   calendarProviderId: z.string().uuid(),
@@ -651,9 +899,9 @@ export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend(
 
 export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   appointmentRequestId: z.string().uuid(),
-  clientId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  clientUserId: z.string().uuid().optional(),
+  clientId: z.string().uuid().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
+  clientUserId: z.string().uuid().nullable().optional(),
   serviceId: z.string().uuid(),
   serviceName: z.string(),
   requestedDate: z.string(),
@@ -773,6 +1021,9 @@ const ProjectTaskAssignedPayloadSchema = z.union([
 ]);
 const InvoiceGeneratedPayloadSchema = z.union([InvoiceEventPayloadSchema, invoiceGeneratedEventPayloadSchema]);
 const InvoiceFinalizedPayloadSchema = z.union([InvoiceEventPayloadSchema, invoiceFinalizedEventPayloadSchema]);
+const ContractCreatedPayloadSchema = z.union([contractCreatedEventPayloadSchema, ContractSearchEventPayloadSchema]);
+const ContractUpdatedPayloadSchema = z.union([contractUpdatedEventPayloadSchema, ContractSearchEventPayloadSchema]);
+const ContractStatusChangedPayloadSchema = z.union([contractStatusChangedEventPayloadSchema, ContractSearchEventPayloadSchema]);
 const InboundEmailReceivedPayloadSchema = z.union([
   InboundEmailEventPayloadSchema,
   inboundEmailReceivedEventPayloadSchema,
@@ -789,6 +1040,7 @@ export const EventPayloadSchemas = {
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
+  TICKET_COMMENT_DELETED: TicketCommentDeletedPayloadSchema,
   TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchemaV2,
 
   // Tickets (domain expansion)
@@ -843,11 +1095,20 @@ export const EventPayloadSchemas = {
   PROJECT_CREATED: ProjectCreatedPayloadSchema,
   PROJECT_UPDATED: ProjectUpdatedPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
+  PROJECT_DELETED: ProjectEventPayloadSchema,
   PROJECT_ASSIGNED: ProjectEventPayloadSchema,
+  PROJECT_PHASE_CREATED: ProjectPhaseEventPayloadSchema,
+  PROJECT_PHASE_UPDATED: ProjectPhaseEventPayloadSchema,
+  PROJECT_PHASE_DELETED: ProjectPhaseEventPayloadSchema,
+  PROJECT_TASK_UPDATED: ProjectTaskSearchEventPayloadSchema,
+  PROJECT_TASK_DELETED: ProjectTaskSearchEventPayloadSchema,
   PROJECT_TASK_ASSIGNED: ProjectTaskAssignedPayloadSchema,
   PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TASK_COMMENT_ADDED: TaskCommentAddedPayloadSchema,
   TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
+  PROJECT_TASK_COMMENT_CREATED: TaskCommentAddedPayloadSchema,
+  PROJECT_TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
+  PROJECT_TASK_COMMENT_DELETED: TaskCommentDeletedPayloadSchema,
 
   // Projects (domain expansion)
   PROJECT_STATUS_CHANGED: projectStatusChangedEventPayloadSchema,
@@ -861,12 +1122,25 @@ export const EventPayloadSchemas = {
   PROJECT_APPROVAL_REJECTED: projectApprovalRejectedEventPayloadSchema,
 
   // Time entries (legacy)
+  TIME_ENTRY_CREATED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_UPDATED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_DELETED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_SUBMITTED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_CHANGES_REQUESTED: TimeEntryEventPayloadSchema,
 
   // Billing (existing + legacy)
+  INVOICE_CREATED: InvoiceSearchEventPayloadSchema,
+  INVOICE_UPDATED: InvoiceSearchEventPayloadSchema,
+  INVOICE_DELETED: InvoiceSearchEventPayloadSchema,
   INVOICE_GENERATED: InvoiceGeneratedPayloadSchema,
   INVOICE_FINALIZED: InvoiceFinalizedPayloadSchema,
+  INVOICE_ITEM_CREATED: InvoiceItemEventPayloadSchema,
+  INVOICE_ITEM_UPDATED: InvoiceItemEventPayloadSchema,
+  INVOICE_ITEM_DELETED: InvoiceItemEventPayloadSchema,
+  INVOICE_ANNOTATION_CREATED: InvoiceAnnotationEventPayloadSchema,
+  INVOICE_ANNOTATION_UPDATED: InvoiceAnnotationEventPayloadSchema,
+  INVOICE_ANNOTATION_DELETED: InvoiceAnnotationEventPayloadSchema,
 
   // Billing (domain expansion)
   INVOICE_SENT: invoiceSentEventPayloadSchema,
@@ -881,10 +1155,14 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_CREATED: creditNoteCreatedEventPayloadSchema,
   CREDIT_NOTE_APPLIED: creditNoteAppliedEventPayloadSchema,
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
-  CONTRACT_CREATED: contractCreatedEventPayloadSchema,
-  CONTRACT_UPDATED: contractUpdatedEventPayloadSchema,
-  CONTRACT_STATUS_CHANGED: contractStatusChangedEventPayloadSchema,
+  CONTRACT_CREATED: ContractCreatedPayloadSchema,
+  CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
+  CONTRACT_DELETED: ContractSearchEventPayloadSchema,
+  CONTRACT_STATUS_CHANGED: ContractStatusChangedPayloadSchema,
   CONTRACT_RENEWAL_UPCOMING: contractRenewalUpcomingEventPayloadSchema,
+  CLIENT_CONTRACT_CREATED: ClientContractEventPayloadSchema,
+  CLIENT_CONTRACT_UPDATED: ClientContractEventPayloadSchema,
+  CLIENT_CONTRACT_DELETED: ClientContractEventPayloadSchema,
   RECURRING_BILLING_RUN_STARTED: recurringBillingRunStartedEventPayloadSchema,
   RECURRING_BILLING_RUN_COMPLETED: recurringBillingRunCompletedEventPayloadSchema,
   RECURRING_BILLING_RUN_FAILED: recurringBillingRunFailedEventPayloadSchema,
@@ -896,20 +1174,42 @@ export const EventPayloadSchemas = {
   CLIENT_OWNER_ASSIGNED: clientOwnerAssignedEventPayloadSchema,
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
+  CLIENT_DELETED: clientDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
   CONTACT_ARCHIVED: contactArchivedEventPayloadSchema,
+  CONTACT_DELETED: contactDeletedEventPayloadSchema,
   CONTACT_MERGED: contactMergedEventPayloadSchema,
   INTERACTION_LOGGED: interactionLoggedEventPayloadSchema,
+  INTERACTION_CREATED: InteractionEventPayloadSchema,
+  INTERACTION_UPDATED: InteractionEventPayloadSchema,
+  INTERACTION_DELETED: InteractionEventPayloadSchema,
   NOTE_CREATED: noteCreatedEventPayloadSchema,
   TAG_DEFINITION_CREATED: tagDefinitionCreatedEventPayloadSchema,
   TAG_DEFINITION_UPDATED: tagDefinitionUpdatedEventPayloadSchema,
+  TAG_DEFINITION_DELETED: TagDefinitionDeletedPayloadSchema,
   TAG_APPLIED: tagAppliedEventPayloadSchema,
   TAG_REMOVED: tagRemovedEventPayloadSchema,
+  BOARD_CREATED: BoardEventPayloadSchema,
+  BOARD_UPDATED: BoardEventPayloadSchema,
+  BOARD_DELETED: BoardEventPayloadSchema,
+  CATEGORY_CREATED: CategoryEventPayloadSchema,
+  CATEGORY_UPDATED: CategoryEventPayloadSchema,
+  CATEGORY_DELETED: CategoryEventPayloadSchema,
+  STATUS_CREATED: StatusEventPayloadSchema,
+  STATUS_UPDATED: StatusEventPayloadSchema,
+  STATUS_DELETED: StatusEventPayloadSchema,
+
+  // Users
+  USER_CREATED: UserEventPayloadSchema,
+  USER_UPDATED: UserEventPayloadSchema,
+  USER_DELETED: UserEventPayloadSchema,
+  USER_ROLES_UPDATED: UserEventPayloadSchema,
 
   // Documents (domain expansion)
   DOCUMENT_UPLOADED: documentUploadedEventPayloadSchema,
+  DOCUMENT_UPDATED: documentUpdatedEventPayloadSchema,
   DOCUMENT_DELETED: documentDeletedEventPayloadSchema,
   DOCUMENT_ASSOCIATED: documentAssociatedEventPayloadSchema,
   DOCUMENT_DETACHED: documentDetachedEventPayloadSchema,
@@ -917,6 +1217,22 @@ export const EventPayloadSchemas = {
   DOCUMENT_SIGNATURE_REQUESTED: documentSignatureRequestedEventPayloadSchema,
   DOCUMENT_SIGNED: documentSignedEventPayloadSchema,
   DOCUMENT_SIGNATURE_EXPIRED: documentSignatureExpiredEventPayloadSchema,
+  KB_ARTICLE_CREATED: kbArticleEventPayloadSchema,
+  KB_ARTICLE_UPDATED: kbArticleEventPayloadSchema,
+  KB_ARTICLE_DELETED: kbArticleEventPayloadSchema,
+  SERVICE_CATALOG_CREATED: ServiceCatalogEventPayloadSchema,
+  SERVICE_CATALOG_UPDATED: ServiceCatalogEventPayloadSchema,
+  SERVICE_CATALOG_DELETED: ServiceCatalogEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_CREATED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_UPDATED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_DELETED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_CREATED: ServiceRequestDefinitionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_UPDATED: ServiceRequestDefinitionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_DELETED: ServiceRequestDefinitionEventPayloadSchema,
+  WORKFLOW_TASK_CREATED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_UPDATED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_DELETED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_ASSIGNMENT_CHANGED: WorkflowTaskEventPayloadSchema,
 
   // Email providers + inbound email (already present)
   INBOUND_EMAIL_RECEIVED: InboundEmailReceivedPayloadSchema,
@@ -976,6 +1292,7 @@ export const EventPayloadSchemas = {
   // Assets + media (domain expansion)
   ASSET_CREATED: assetCreatedEventPayloadSchema,
   ASSET_UPDATED: assetUpdatedEventPayloadSchema,
+  ASSET_DELETED: AssetDeletedPayloadSchema,
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,
@@ -1029,6 +1346,7 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type TicketCommentUpdatedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_UPDATED>;
+export type TicketCommentDeletedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_DELETED>;
 export type TicketResponseStateChangedEvent = z.infer<typeof EventSchemas.TICKET_RESPONSE_STATE_CHANGED>;
 export type ProjectCreatedEvent = z.infer<typeof EventSchemas.PROJECT_CREATED>;
 export type ProjectUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_UPDATED>;
@@ -1036,10 +1354,16 @@ export type ProjectClosedEvent = z.infer<typeof EventSchemas.PROJECT_CLOSED>;
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
+export type ProjectTaskUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_UPDATED>;
 export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADDED>;
 export type TaskCommentUpdatedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_UPDATED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;
 export type TimeEntryApprovedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_APPROVED>;
+export type TimeEntryCreatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CREATED>;
+export type TimeEntryUpdatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_UPDATED>;
+export type TimeEntryDeletedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_DELETED>;
+export type TimeEntryChangesRequestedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CHANGES_REQUESTED>;
+export type TagDefinitionDeletedEvent = z.infer<typeof EventSchemas.TAG_DEFINITION_DELETED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
@@ -1049,6 +1373,15 @@ export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
 export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
 export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type BoardCreatedEvent = z.infer<typeof EventSchemas.BOARD_CREATED>;
+export type BoardUpdatedEvent = z.infer<typeof EventSchemas.BOARD_UPDATED>;
+export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;
+export type CategoryCreatedEvent = z.infer<typeof EventSchemas.CATEGORY_CREATED>;
+export type CategoryUpdatedEvent = z.infer<typeof EventSchemas.CATEGORY_UPDATED>;
+export type CategoryDeletedEvent = z.infer<typeof EventSchemas.CATEGORY_DELETED>;
+export type StatusCreatedEvent = z.infer<typeof EventSchemas.STATUS_CREATED>;
+export type StatusUpdatedEvent = z.infer<typeof EventSchemas.STATUS_UPDATED>;
+export type StatusDeletedEvent = z.infer<typeof EventSchemas.STATUS_DELETED>;
 export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_STARTED>;
 export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;

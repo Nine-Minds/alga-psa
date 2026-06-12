@@ -14,6 +14,10 @@
       "import": "./src/scheduling/index.ts",
       "types": "./src/scheduling/index.ts"
     },
+    "./scheduling/appointmentApprovers": {
+      "import": "./src/scheduling/appointmentApprovers.ts",
+      "types": "./src/scheduling/appointmentApprovers.ts"
+    },
     "./scheduling/*": {
       "import": "./src/scheduling/*.tsx",
       "types": "./src/scheduling/*.tsx"
@@ -78,9 +82,13 @@
       "import": "./src/workflows/*.tsx",
       "types": "./src/workflows/*.tsx"
     },
-    "./workflows/registerScheduleEntryIntegration": {
-      "import": "./src/workflows/registerScheduleEntryIntegration.ts",
-      "types": "./src/workflows/registerScheduleEntryIntegration.ts"
+    "./reports/*": {
+      "import": "./src/reports/*.tsx",
+      "types": "./src/reports/*.tsx"
+    },
+    "./user-activities": {
+      "import": "./src/user-activities/index.ts",
+      "types": "./src/user-activities/index.ts"
     }
   },
   "dependencies": {
@@ -93,6 +101,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
+    "@alga-psa/reporting": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/sla": "*",
     "@alga-psa/surveys": "*",
@@ -100,6 +109,7 @@
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
+    "@alga-psa/user-activities": "*",
     "@alga-psa/user-composition": "*"
   }
 }

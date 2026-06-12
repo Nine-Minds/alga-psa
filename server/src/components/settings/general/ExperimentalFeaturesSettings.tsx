@@ -11,7 +11,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-type ExperimentalFeatureKey = 'aiAssistant' | 'workflowAutomation';
+type ExperimentalFeatureKey = 'aiAssistant';
 
 type ExperimentalFeatureDefinition = {
   key: ExperimentalFeatureKey;
@@ -23,7 +23,6 @@ type ExperimentalFeatureState = Record<ExperimentalFeatureKey, boolean>;
 
 const defaultExperimentalFeatureState: ExperimentalFeatureState = {
   aiAssistant: false,
-  workflowAutomation: false,
 };
 
 export default function ExperimentalFeaturesSettings(): React.JSX.Element {
@@ -34,11 +33,6 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       key: 'aiAssistant',
       name: t('experimentalFeatures.features.aiAssistant.name'),
       description: t('experimentalFeatures.features.aiAssistant.description'),
-    },
-    {
-      key: 'workflowAutomation',
-      name: t('experimentalFeatures.features.workflowAutomation.name'),
-      description: t('experimentalFeatures.features.workflowAutomation.description'),
     },
   ], [t]);
   const [features, setFeatures] = useState<ExperimentalFeatureState>(defaultExperimentalFeatureState);
@@ -56,7 +50,6 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       const [saved, aiAllowed] = await Promise.all([getExperimentalFeatures(), canEnableAiAssistant()]);
       const loaded: ExperimentalFeatureState = {
         aiAssistant: saved.aiAssistant === true,
-        workflowAutomation: saved.workflowAutomation === true,
       };
       setFeatures(loaded);
       setSavedFeatures(loaded);

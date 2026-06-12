@@ -22,4 +22,12 @@ describe('temporal worker registration', () => {
   it('exports proactive NinjaOne token refresh activity from activities index', () => {
     expect(activities.proactiveNinjaOneTokenRefreshActivity).toBeDefined();
   });
+
+  it('exports applianceCheckInWorkflow from workflow index', () => {
+    expect(workflows.applianceCheckInWorkflow).toBeDefined();
+  });
+
+  it('exports applianceLicenseCheckInActivity from activities index', () => {
+    expect(activities.applianceLicenseCheckInActivity).toBeDefined();
+  });
 });

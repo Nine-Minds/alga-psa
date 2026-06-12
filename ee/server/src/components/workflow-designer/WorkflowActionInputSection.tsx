@@ -9,6 +9,7 @@ import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 export const WorkflowActionInputSection: React.FC<{
   stepId: string;
+  actionId?: string;
   inputMapping: InputMapping;
   onInputMappingChange: (mapping: InputMapping) => void;
   targetFields: ActionInputField[];
@@ -20,6 +21,7 @@ export const WorkflowActionInputSection: React.FC<{
   disabled?: boolean;
 }> = ({
   stepId,
+  actionId,
   inputMapping,
   onInputMappingChange,
   targetFields,
@@ -46,6 +48,7 @@ export const WorkflowActionInputSection: React.FC<{
       dataContext={dataContext}
       fieldOptions={fieldOptions}
       stepId={stepId}
+      actionId={actionId}
       disabled={disabled}
     />
   </div>

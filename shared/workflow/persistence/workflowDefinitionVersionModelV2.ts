@@ -3,6 +3,8 @@ import { Knex } from 'knex';
 export type WorkflowDefinitionVersionRecord = {
   version_id: string;
   workflow_id: string;
+  // uuid Citus distribution column (backfilled from the parent definition).
+  tenant?: string | null;
   version: number;
   definition_json: Record<string, unknown>;
   payload_schema_json?: Record<string, unknown> | null;

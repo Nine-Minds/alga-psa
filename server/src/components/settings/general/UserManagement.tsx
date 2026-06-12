@@ -30,6 +30,14 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   PASSWORD_TOO_SHORT: 'users.messages.error.passwordTooShort',
   CREATE_USER_FAILED: 'users.messages.error.createClientPortalUser'
 };
+
+// Catch-all codes whose localized message is generic ("Failed to send
+// invitation"). When the server attached a specific reason, show that instead
+// of masking it with the generic translation.
+const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
+  'INVITATION_FAILED',
+  'CREATE_USER_FAILED'
+]);
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
@@ -45,7 +53,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
+import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -61,6 +69,9 @@ const UserManagement = (): React.JSX.Element => {
     defaultKey: string
   ): string => {
     if (result.errorCode) {
+      if (GENERIC_PORTAL_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
+        return result.error;
+      }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
         return t(key, { defaultValue: result.error ?? undefined });
@@ -748,9 +759,13 @@ const fetchContacts = async (): Promise<void> => {
                           clientId: c.client_id || ''
                         });
 
-                        // Check if contact has email when sending invitation
-                        if (!newUser.password && (!c.email || c.email.trim() === '')) {
-                          setContactValidationError(t('users.messages.error.contactMissingEmail', { name: c.full_name }));
+                        // Check if contact has a usable email when sending invitation
+                        if (!newUser.password) {
+                          if (!c.email || c.email.trim() === '') {
+                            setContactValidationError(t('users.messages.error.contactMissingEmail', { name: c.full_name }));
+                          } else if (!isValidEmail(c.email.trim())) {
+                            setContactValidationError(t('users.messages.error.contactInvalidEmail'));
+                          }
                         }
                       }
                     } else {

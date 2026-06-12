@@ -61,6 +61,10 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
 describe('resolveClientBillingCurrency — fallback chain', () => {
   beforeEach(() => {
     vi.clearAllMocks();

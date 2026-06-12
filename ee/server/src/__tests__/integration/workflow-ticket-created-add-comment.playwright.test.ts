@@ -64,6 +64,7 @@ async function getTenantTicketDefaults(
 }> {
   const tenantId = opts.tenantId;
   const createdByUserId = opts.createdByUserId;
+  const statusColumns = await db('statuses').columnInfo();
 
   const ensureDefaultBoard = async (): Promise<string> => {
     const board = await db('boards')
@@ -91,9 +92,21 @@ async function getTenantTicketDefaults(
     return boardId;
   };
 
-  const ensureDefaultTicketStatus = async (): Promise<string> => {
+  const ensureDefaultTicketStatus = async (boardId: string): Promise<string> => {
+    const scopeTicketStatuses = (query: Knex.QueryBuilder) => {
+      query.where({ tenant: tenantId });
+
+      if (Object.prototype.hasOwnProperty.call(statusColumns, 'board_id')) {
+        query.andWhere({ board_id: boardId });
+      }
+
+      query.andWhere(function whereTicketStatus(this: Knex.QueryBuilder) {
+        this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+      });
+    };
+
     const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
+      .modify(scopeTicketStatuses)
       .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'order_number', order: 'asc' }])
       .first(['status_id', 'is_default']);
 
@@ -119,6 +132,7 @@ async function getTenantTicketDefaults(
         statuses.map((s) => ({
           status_id: uuidv4(),
           tenant: tenantId,
+          ...(Object.prototype.hasOwnProperty.call(statusColumns, 'board_id') ? { board_id: boardId } : {}),
           name: s.name,
           status_type: 'ticket',
           item_type: 'ticket',
@@ -175,7 +189,7 @@ async function getTenantTicketDefaults(
   };
 
   const boardId = await ensureDefaultBoard();
-  const statusId = await ensureDefaultTicketStatus();
+  const statusId = await ensureDefaultTicketStatus(boardId);
   const priorityId = await ensureDefaultTicketPriority();
 
   return { boardId, statusId, priorityId };
@@ -228,9 +242,25 @@ async function createApiKeyForTenant(
 
 async function addActionStepFromPalette(page: Page, workflowPage: WorkflowDesignerPage, actionId: string, paletteSearch: string): Promise<string> {
   const existingStepIds = await getStepIds(page);
+  const groupKeyMap: Record<string, string> = {
+    tickets: 'ticket',
+    contacts: 'contact',
+    clients: 'client',
+    email: 'communication',
+    scheduling: 'scheduling',
+    projects: 'project',
+    time: 'time',
+    crm: 'crm',
+  };
+  const namespace = actionId.split('.')[0] ?? '';
+  const groupKey = groupKeyMap[namespace];
 
   await workflowPage.searchPalette(paletteSearch);
-  const paletteItem = page.getByTestId(`palette-item-action:${actionId}`);
+  if (!groupKey) {
+    throw new Error(`No grouped palette key is configured for action ${actionId}`);
+  }
+
+  const paletteItem = workflowPage.addButtonFor(groupKey);
   await expect(paletteItem).toBeVisible({ timeout: 60_000 });
   await paletteItem.click();
 
@@ -248,21 +278,36 @@ async function addActionStepFromPalette(page: Page, workflowPage: WorkflowDesign
   }
 
   await workflowPage.stepSelectButton(newStepId).click();
+  const actionLabelOverrides: Record<string, string> = {
+    'tickets.add_comment': 'Add Ticket Comment',
+  };
+  const inferredActionLabel = actionId
+    .split('.')
+    .at(-1)
+    ?.split('_')
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(' ');
+  const actionLabel = actionLabelOverrides[actionId] ?? inferredActionLabel;
+  if (!actionLabel) {
+    throw new Error(`Unable to infer grouped action label for ${actionId}`);
+  }
+
+  const actionSelect = page.locator(`#workflow-step-action-select-${newStepId}[role="combobox"]`);
+  await expect(actionSelect).toBeVisible({ timeout: 60_000 });
+  await actionSelect.click();
+  await page.getByRole('option', { name: new RegExp(`^${actionLabel}$`, 'i') }).click();
+
+  await expect(page.locator(`#workflow-step-action-required-${newStepId}`)).toHaveCount(0, {
+    timeout: 30_000,
+  });
   return newStepId;
 }
 
-async function setMonacoExpression(page: Page, ariaLabel: string, expression: string): Promise<void> {
-  // Monaco's "textarea.inputarea" does not reliably carry our aria-label; use the labeled wrapper and force focus.
-  const editor = page.getByLabel(new RegExp(ariaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).first();
-  await expect(editor).toBeVisible({ timeout: 30_000 });
-  await editor.scrollIntoViewIfNeeded();
-  await editor.click({ force: true });
-
-  const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-  await page.keyboard.press(selectAll);
-  await page.keyboard.type(expression);
-  // Blur to ensure change handlers run.
-  await page.keyboard.press('Tab');
+async function selectCustomSelectOption(page: Page, selectId: string, optionName: RegExp | string): Promise<void> {
+  const select = page.locator(`#${selectId}[role="combobox"]`);
+  await expect(select).toBeVisible({ timeout: 30_000 });
+  await select.click();
+  await page.getByRole('option', { name: optionName }).click();
 }
 
 test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async ({ page }) => {
@@ -299,20 +344,27 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     const stepId = await addActionStepFromPalette(page, workflowPage, 'tickets.add_comment', 'tickets.add_comment');
 
     // Map inputs: ticket_id ← payload.ticketId, body ← literal
-    await page.locator(`#add-mapping-${stepId}-ticket_id`).click();
-    await setMonacoExpression(page, 'Expression for ticket_id', 'payload.ticketId');
+    await page
+      .getByRole('option', { name: /ticket_id/i })
+      .getByRole('button', { name: /^Fill$/i })
+      .click();
+    await selectCustomSelectOption(page, `mapping-${stepId}-ticket_id-reference-scope`, /^Payload$/i);
+    await selectCustomSelectOption(page, `mapping-${stepId}-ticket_id-reference-field`, /^ticketId$/i);
 
-    await page.locator(`#add-mapping-${stepId}-body`).click();
-    // Switch body mapping to literal and set message.
-    const bodyTypeSelect = page.locator(`#mapping-${stepId}-body-type [role="combobox"]`).first();
-    await expect(bodyTypeSelect).toBeVisible({ timeout: 30_000 });
-    await bodyTypeSelect.click();
-    await page.getByRole('option', { name: /^Literal$/ }).click();
+    await page
+      .getByRole('option', { name: /body/i })
+      .getByRole('button', { name: /^Fill$/i })
+      .click();
+    await selectCustomSelectOption(page, `mapping-${stepId}-body-source-mode`, /^Fixed value$/i);
     await page.locator(`#mapping-${stepId}-body-literal-str`).fill(commentBody);
 
     await workflowPage.saveDraft();
 
-    const workflowIdFromUrl = new URL(page.url()).searchParams.get('workflowId');
+    const workflowUrl = new URL(page.url());
+    const workflowIdFromUrl =
+      workflowUrl.searchParams.get('workflowId') ??
+      workflowUrl.pathname.match(/\/msp\/workflow-editor\/([0-9a-fA-F-]{36})$/)?.[1] ??
+      null;
     expect(workflowIdFromUrl).toBeTruthy();
     const workflowId = workflowIdFromUrl as string;
 
@@ -373,7 +425,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     const eventRecord = await waitForCondition(
       async () => {
         const row = await db('workflow_runtime_events')
-          .where({ tenant_id: tenantId, event_name: 'TICKET_CREATED' })
+          .where({ tenant: tenantId, event_name: 'TICKET_CREATED' })
           .andWhereRaw(`payload->>'ticketId' = ?`, [ticketId])
           .orderBy('created_at', 'desc')
           .first(['event_id', 'matched_run_id']);
@@ -391,7 +443,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
         if (direct?.matched_run_id) return direct.matched_run_id as string;
 
         const run = await db('workflow_runs')
-          .where({ tenant_id: tenantId, workflow_id: workflowId, event_type: 'TICKET_CREATED' })
+          .where({ tenant: tenantId, workflow_id: workflowId, event_type: 'TICKET_CREATED' })
           .orderBy('started_at', 'desc')
           .first(['run_id']);
         return run?.run_id ? (run.run_id as string) : null;

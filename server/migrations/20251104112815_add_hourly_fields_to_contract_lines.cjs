@@ -5,7 +5,29 @@
  * Adding them to contract_lines to make them contract-line-level settings (same for all services).
  */
 
+const isCitusEnabled = async (knex) => {
+  const { rows } = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  return rows.length > 0;
+};
+
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  if (!(await isCitusEnabled(knex))) return;
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  if (rows.length > 0) return;
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+};
+
 exports.up = async function(knex) {
+  // The backfill below joins contract_lines (distributed since
+  // 20251028090000 on fresh Citus chains) with the service config tables;
+  // Citus cannot join distributed and local tables, so distribute them
+  // first. No-op on plain Postgres and on clusters that already have them.
+  await ensureDistributed(knex, 'contract_line_service_configuration', 'tenant');
+  await ensureDistributed(knex, 'contract_line_service_hourly_configs', 'tenant');
+
   // Add columns to contract_lines table
   await knex.schema.table('contract_lines', (table) => {
     table.integer('minimum_billable_time').defaultTo(15);

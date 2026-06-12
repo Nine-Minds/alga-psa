@@ -3,6 +3,9 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  // Guarded: with transaction:false a failure after this CREATE (e.g. in the
+  // Citus distribution below) leaves the table behind on retry.
+  if (!(await knex.schema.hasTable('asset_facts'))) {
   await knex.schema.createTable('asset_facts', (table) => {
     table.uuid('tenant').notNullable().references('tenant').inTable('tenants');
     table.uuid('asset_fact_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -29,6 +32,7 @@ exports.up = async function(knex) {
     table.index(['tenant', 'asset_id'], 'asset_facts_tenant_asset_idx');
     table.unique(['tenant', 'asset_id', 'source_type', 'namespace', 'fact_key'], 'asset_facts_tenant_asset_fact_current_uk');
   });
+  }
 
   const citusEnabled = await knex.raw(`
     SELECT EXISTS (
@@ -39,6 +43,19 @@ exports.up = async function(knex) {
   `);
 
   if (citusEnabled.rows?.[0]?.enabled) {
+    // asset_facts colocates with assets, which fresh Citus chains never
+    // distributed. No-op on clusters that already have it.
+    const assetsDistributed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = 'assets'::regclass
+      ) AS is_distributed;
+    `);
+    if (!assetsDistributed.rows?.[0]?.is_distributed) {
+      await knex.raw("SELECT create_distributed_table('assets', 'tenant')");
+    }
+
     const alreadyDistributed = await knex.raw(`
       SELECT EXISTS (
         SELECT 1

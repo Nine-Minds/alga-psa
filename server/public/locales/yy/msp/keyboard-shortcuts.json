@@ -1,0 +1,366 @@
+{
+  "settings": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "capturePrompt": "55555",
+    "columns": {
+      "action": "55555",
+      "scope": "55555",
+      "default": "55555",
+      "effective": "55555",
+      "enabled": "55555",
+      "reset": "55555"
+    },
+    "actions": {
+      "resetAll": "55555",
+      "replace": "55555",
+      "copyCheatsheet": "55555",
+      "printCheatsheet": "55555"
+    },
+    "messages": {
+      "bindingUpdated": "55555",
+      "enabledUpdated": "55555",
+      "resetOne": "55555",
+      "resetAll": "55555",
+      "cheatsheetCopied": "55555"
+    },
+    "errors": {
+      "saveFailed": "55555",
+      "copyFailed": "55555",
+      "printFailed": "55555"
+    },
+    "resetAll": {
+      "title": "55555",
+      "message": "55555"
+    },
+    "conflict": {
+      "title": "55555",
+      "message": "55555 {{binding}} 55555 {{action}} 55555"
+    },
+    "advisory": {
+      "hostileCombo": "55555 {{binding}} 55555 {{action}} 55555"
+    }
+  },
+  "help": {
+    "title": "55555",
+    "close": "55555",
+    "custom": "55555"
+  },
+  "commandPalette": {
+    "title": "55555",
+    "placeholder": "55555",
+    "placeholderFulltext": "55555",
+    "loading": "55555",
+    "resultCount": "55555 {{count}} 55555",
+    "seeAll": "55555",
+    "fulltextHint": "55555",
+    "fulltextInlineHelp": "55555",
+    "modes": {
+      "ariaLabel": "55555",
+      "navigation": "55555",
+      "fulltext": "55555"
+    },
+    "syntax": {
+      "title": "55555",
+      "summary": "55555",
+      "inlineHelp": "55555"
+    },
+    "types": {
+      "nav": "55555",
+      "action": "55555",
+      "record": "55555",
+      "help": "55555"
+    }
+  },
+  "groups": {
+    "global": "55555",
+    "ai": "55555",
+    "page": "55555",
+    "selection": "55555",
+    "navigation": "55555",
+    "assets": "55555",
+    "dialog": "55555",
+    "panel": "55555",
+    "record": "55555",
+    "editor": "55555",
+    "scroll": "55555"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "commandPalette": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "toggleChat": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "openShortcuts": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "quickCreate": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "page": {
+      "create": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "save": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "next": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "open": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goAssets": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goClients": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goDashboard": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goProjects": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goBilling": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goSettings": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goSearch": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goHelp": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "backToParent": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "submit": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "historyForward": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "next": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "addTime": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "redo": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "save": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "deleteSelection": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "cancel": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveUp": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveDown": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveLeft": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveRight": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "halfUp": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "fullDown": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "fullUp": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "top": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "bottom": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "previousRow": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "toggleRow": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "visualRange": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "openRow": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "play": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "showNewTab": {
+        "label": "55555",
+        "description": "55555"
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "55555",
+      "ctrl": "55555",
+      "alt": "55555",
+      "shift": "55555"
+    },
+    "keys": {
+      "space": "55555"
+    },
+    "aria": {
+      "control": "55555",
+      "meta": "55555",
+      "alt": "55555",
+      "shift": "55555"
+    }
+  }
+}

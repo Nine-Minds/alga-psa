@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
@@ -14,6 +15,7 @@ import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
+import { TicketLiveProvider } from './TicketLiveProvider';
 
 interface TicketDetailsContainerProps {
   ticketData: {
@@ -106,6 +108,7 @@ export default function TicketDetailsContainer({
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
+  const liveTicketUpdatesFlag = useFeatureFlag('live-ticket-updates', { defaultValue: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Local comments state to avoid mutating ticketData directly
@@ -196,7 +199,12 @@ export default function TicketDetailsContainer({
     });
   }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
 
-  const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
+  const handleAddComment = async (
+    content: string,
+    isInternal: boolean,
+    isResolution: boolean,
+    closesTicket: boolean = false
+  ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
       return;
@@ -208,7 +216,8 @@ export default function TicketDetailsContainer({
         ticketData.ticket.ticket_id,
         content,
         isInternal,
-        isResolution
+        isResolution,
+        closesTicket
       );
 
       setComments(prev => [...prev, newComment]);
@@ -233,56 +242,85 @@ export default function TicketDetailsContainer({
     });
   };
 
+  const liveCurrentUser = session?.user?.id
+    ? {
+        userId: session.user.id,
+        displayName: ticketData.userMap?.[session.user.id]
+          ? `${ticketData.userMap[session.user.id]?.first_name ?? ''} ${ticketData.userMap[session.user.id]?.last_name ?? ''}`.trim()
+          : (session.user.name ?? 'User'),
+        avatarUrl: ticketData.userMap?.[session.user.id]?.avatarUrl ?? null,
+      }
+    : null;
+
+  const shouldEnableTicketLiveUpdates =
+    liveTicketUpdatesFlag.enabled &&
+    !liveTicketUpdatesFlag.loading &&
+    Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
+
+  const ticketDetailsContent = (
+    <TicketDetails
+      initialTicket={ticketData.ticket}
+      initialBundle={ticketData.bundle}
+      aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
+      onClose={() => router.back()}
+      initialComments={comments}
+      initialDocuments={ticketData.documents}
+      initialClient={ticketData.client}
+      initialContacts={ticketData.contacts}
+      initialContactInfo={ticketData.contactInfo}
+      initialCreatedByUser={ticketData.createdByUser}
+      initialBoard={ticketData.board}
+      initialAdditionalAgents={ticketData.additionalAgents}
+      initialAvailableAgents={ticketData.availableAgents}
+      initialUserMap={ticketData.userMap}
+      initialContactMap={ticketData.contactMap || {}}
+      statusOptions={ticketData.options.status}
+      agentOptions={ticketData.options.agent}
+      boardOptions={ticketData.options.board}
+      priorityOptions={ticketData.options.priority}
+      initialCategories={ticketData.categories}
+      initialClients={ticketData.clients}
+      initialLocations={ticketData.locations}
+      initialAgentSchedules={ticketData.agentSchedules}
+      onTicketUpdate={handleTicketUpdate}
+      onBatchTicketUpdate={handleBatchTicketUpdate}
+      onAddComment={handleAddComment}
+      onUpdateDescription={handleUpdateDescription}
+      isSubmitting={isSubmitting}
+      surveySummaryCard={surveySummaryCard}
+      associatedAssets={associatedAssets}
+      renderContactDetails={renderContactDetails}
+      renderCreateProjectTask={renderCreateProjectTask}
+      renderClientDetails={renderClientDetails}
+      renderIntervalManagement={renderIntervalManagement}
+      hideSlaStatus={hideSlaStatus}
+      hideTimeEntry={hideTimeEntry}
+      hideMaterials={hideMaterials}
+      uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+      deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+      resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+      disableAttachmentFolderSelection={disableAttachmentFolderSelection}
+      disableAttachmentSharing={disableAttachmentSharing}
+      disableAttachmentLinking={disableAttachmentLinking}
+      disableAgentSchedule={disableAgentSchedule}
+    />
+  );
+
   return (
     <UnsavedChangesProvider>
       <div className="bg-gray-100 dark:bg-gray-900 min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-        <TicketDetails
-          initialTicket={ticketData.ticket}
-            initialBundle={ticketData.bundle}
-            aggregatedChildClientComments={ticketData.aggregatedChildClientComments || []}
-            onClose={() => router.back()}
-            initialComments={comments}
-            initialDocuments={ticketData.documents}
-            initialClient={ticketData.client}
-            initialContacts={ticketData.contacts}
-            initialContactInfo={ticketData.contactInfo}
-            initialCreatedByUser={ticketData.createdByUser}
-            initialBoard={ticketData.board}
-            initialAdditionalAgents={ticketData.additionalAgents}
-            initialAvailableAgents={ticketData.availableAgents}
-            initialUserMap={ticketData.userMap}
-            initialContactMap={ticketData.contactMap || {}}
-            statusOptions={ticketData.options.status}
-            agentOptions={ticketData.options.agent}
-            boardOptions={ticketData.options.board}
-            priorityOptions={ticketData.options.priority}
-            initialCategories={ticketData.categories}
-            initialClients={ticketData.clients}
-            initialLocations={ticketData.locations}
-            initialAgentSchedules={ticketData.agentSchedules}
-            onTicketUpdate={handleTicketUpdate}
-            onBatchTicketUpdate={handleBatchTicketUpdate}
-            onAddComment={handleAddComment}
-            onUpdateDescription={handleUpdateDescription}
-            isSubmitting={isSubmitting}
-          surveySummaryCard={surveySummaryCard}
-          associatedAssets={associatedAssets}
-            renderContactDetails={renderContactDetails}
-          renderCreateProjectTask={renderCreateProjectTask}
-            renderClientDetails={renderClientDetails}
-            renderIntervalManagement={renderIntervalManagement}
-            hideSlaStatus={hideSlaStatus}
-            hideTimeEntry={hideTimeEntry}
-            hideMaterials={hideMaterials}
-            uploadTicketAttachmentAction={uploadTicketAttachmentAction}
-            deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
-            resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
-            disableAttachmentFolderSelection={disableAttachmentFolderSelection}
-            disableAttachmentSharing={disableAttachmentSharing}
-            disableAttachmentLinking={disableAttachmentLinking}
-            disableAgentSchedule={disableAgentSchedule}
-        />
+          {shouldEnableTicketLiveUpdates && liveCurrentUser ? (
+            <TicketLiveProvider
+              tenantId={ticketData.ticket.tenant}
+              ticketId={ticketData.ticket.ticket_id}
+              currentUser={liveCurrentUser}
+            >
+              {ticketDetailsContent}
+            </TicketLiveProvider>
+          ) : (
+            ticketDetailsContent
+          )}
         </Suspense>
       </div>
     </UnsavedChangesProvider>

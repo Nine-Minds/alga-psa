@@ -55,8 +55,26 @@ jobs:
             echo "NX_HEAD=${{ github.sha }}" >> $GITHUB_ENV
           fi
 
-      - name: Nx affected typecheck
-        run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static
+      # ubuntu-latest runners have 16 GB RAM. The `server` (and `sebastian-ee`) app
+      # typechecks pull in the whole type graph and each need ~10-14 GB on their own,
+      # so they cannot share the runner with any other concurrent tsc. Running the full
+      # `nx affected` set in parallel let two heavy typechecks overlap and OOM-killed the
+      # runner ("received a shutdown signal" / "operation was canceled"), even though the
+      # typecheck itself had no errors. We split into two passes:
+      #   1. All libraries in parallel (capped heap × parallelism stays under 16 GB).
+      #   2. The heavy apps serially, each with the whole box to itself.
+      # Pass 2 re-evaluates `affected` but the libraries are instant Nx cache hits from
+      # pass 1, so it only does real work for the apps — and only when they are affected.
+      - name: Nx affected typecheck (libraries, parallel)
+        run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=2 --exclude=server,sebastian-ee
         env:
           NX_DAEMON: 'false'
-          NODE_OPTIONS: '--max-old-space-size=8192'
+          # 2 concurrent × 6 GB = 12 GB, leaving headroom for the runner.
+          NODE_OPTIONS: '--max-old-space-size=6144'
+
+      - name: Nx affected typecheck (apps, isolated & serial)
+        run: npx nx affected -t typecheck --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1
+        env:
+          NX_DAEMON: 'false'
+          # Each app runs alone with the whole box; 14 GB leaves headroom for the runner.
+          NODE_OPTIONS: '--max-old-space-size=14336'

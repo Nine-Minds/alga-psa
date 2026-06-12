@@ -74,6 +74,8 @@ export interface IDocumentUploadResponse {
 export interface DocumentFilters {
     type?: string;
     entityType?: string;
+    entityId?: string;
+    entityLabel?: string;
     uploadedBy?: string;
     searchTerm?: string;
     excludeEntityId?: string;

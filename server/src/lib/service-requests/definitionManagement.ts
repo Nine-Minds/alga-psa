@@ -6,6 +6,17 @@ import {
 } from './definitionLifecycle';
 import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
+import { isLicenseDistributionTenant } from '@alga-psa/licensing';
+
+/**
+ * Template provider whose templates author the in-app appliance-license purchase
+ * flow. Only the Nine Minds distribution tenant may create from it — otherwise a
+ * non-distribution tenant could stand up a purchase definition that runs real
+ * Stripe Checkout sessions against Nine Minds' account (price ids are
+ * instance-level env). Matches `licenseOrderTemplateProvider.key`.
+ */
+const DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY = 'appliance-license';
+import { publishServiceRequestDefinitionSearchEvent } from './searchEvents';
 
 export interface ServiceRequestDefinitionManagementRow {
   tenant: string;
@@ -170,16 +181,22 @@ export async function listServiceRequestDefinitionsForManagement(
     )) as ServiceRequestDefinitionManagementRow[];
 }
 
-export function listServiceRequestTemplateOptions(): ServiceRequestTemplateOption[] {
-  return listServiceRequestTemplateProviders().flatMap((provider) =>
-    provider.listTemplates().map((template) => ({
-      providerKey: provider.key,
-      providerDisplayName: provider.displayName,
-      templateId: template.id,
-      templateName: template.name,
-      templateDescription: template.description,
-    }))
-  );
+export function listServiceRequestTemplateOptions(tenant: string): ServiceRequestTemplateOption[] {
+  const allowDistributionOnly = isLicenseDistributionTenant(tenant);
+  return listServiceRequestTemplateProviders()
+    .filter(
+      (provider) =>
+        allowDistributionOnly || provider.key !== DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY
+    )
+    .flatMap((provider) =>
+      provider.listTemplates().map((template) => ({
+        providerKey: provider.key,
+        providerDisplayName: provider.displayName,
+        templateId: template.id,
+        templateName: template.name,
+        templateDescription: template.description,
+      }))
+    );
 }
 
 function findTemplateDefinition(
@@ -231,6 +248,17 @@ export async function createBlankServiceRequestDefinition({
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
 
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
+
   return created;
 }
 
@@ -241,6 +269,13 @@ export async function createServiceRequestDefinitionFromTemplate({
   templateId,
   createdBy = null,
 }: CreateDefinitionFromTemplateInput): Promise<ServiceRequestDefinitionManagementRow> {
+  if (
+    templateProviderKey === DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY &&
+    !isLicenseDistributionTenant(tenant)
+  ) {
+    throw new Error('This template is not available for this tenant');
+  }
+
   const template = findTemplateDefinition(templateProviderKey, templateId);
   const draft = template.buildDraft();
 
@@ -267,6 +302,17 @@ export async function createServiceRequestDefinitionFromTemplate({
       updated_by: createdBy,
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
 
   return created;
 }
@@ -311,6 +357,17 @@ export async function duplicateServiceRequestDefinition({
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
 
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    tenant,
+    created.definition_id,
+    {
+      userId: createdBy,
+      lifecycleState: created.lifecycle_state,
+      changedFields: ['name', 'description', 'form_schema'],
+    },
+  );
+
   return created;
 }
 
@@ -321,7 +378,7 @@ export async function saveServiceRequestDefinitionDraft({
   updatedBy = null,
   updates,
 }: SaveDraftDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
-  return knex.transaction(async (trx) => {
+  const saved = await knex.transaction(async (trx) => {
     const existing = (await trx('service_request_definitions')
       .where({ tenant, definition_id: definitionId })
       .first()) as ServiceRequestDefinitionSourceRow | undefined;
@@ -377,6 +434,19 @@ export async function saveServiceRequestDefinitionDraft({
 
     return saved;
   });
+
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: updatedBy,
+      lifecycleState: saved.lifecycle_state,
+      changedFields: Object.keys(updates),
+    },
+  );
+
+  return saved;
 }
 
 export async function searchServiceCatalogForLinking(
@@ -448,6 +518,16 @@ export async function archiveServiceRequestDefinitionFromManagement(
   archivedBy?: string | null
 ): Promise<void> {
   await archiveServiceRequestDefinition(knex, tenant, definitionId, archivedBy);
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: archivedBy,
+      lifecycleState: 'archived',
+      changedFields: ['lifecycle_state'],
+    },
+  );
 }
 
 export async function unarchiveServiceRequestDefinitionFromManagement(
@@ -457,4 +537,48 @@ export async function unarchiveServiceRequestDefinitionFromManagement(
   updatedBy?: string | null
 ): Promise<void> {
   await unarchiveServiceRequestDefinition(knex, tenant, definitionId, updatedBy);
+  await publishServiceRequestDefinitionSearchEvent(
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    tenant,
+    definitionId,
+    {
+      userId: updatedBy,
+      lifecycleState: 'draft',
+      changedFields: ['lifecycle_state', 'published_at'],
+    },
+  );
+}
+
+export async function deleteServiceRequestDefinitionFromManagement(
+  knex: Knex,
+  tenant: string,
+  definitionId: string,
+  deletedBy?: string | null
+): Promise<boolean> {
+  const existing = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .select('lifecycle_state')
+    .first<{ lifecycle_state: string }>();
+
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .delete();
+
+  if (deleted > 0) {
+    await publishServiceRequestDefinitionSearchEvent(
+      'SERVICE_REQUEST_DEFINITION_DELETED',
+      tenant,
+      definitionId,
+      {
+        userId: deletedBy,
+        lifecycleState: existing.lifecycle_state,
+      },
+    );
+  }
+
+  return deleted > 0;
 }

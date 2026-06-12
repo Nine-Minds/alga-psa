@@ -113,7 +113,13 @@ vi.mock('@alga-psa/ui/services', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string | Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    },
   }),
 }));
 
@@ -211,6 +217,7 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
 }));
 
 vi.mock('../../actions/clientLookupActions', () => ({
+  getClientLocations: vi.fn().mockResolvedValue([]),
   getContactByContactNameId: vi.fn().mockResolvedValue(null),
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientById: vi.fn().mockResolvedValue(null),

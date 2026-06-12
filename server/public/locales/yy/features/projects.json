@@ -103,6 +103,8 @@
       "created": "55555",
       "projectManager": "55555",
       "tags": "55555",
+      "priority": "55555",
+      "taskType": "55555",
       "actions": "55555"
     },
     "unknownUser": "55555"
@@ -240,7 +242,26 @@
     "dueLabel": "55555",
     "noDueDate": "55555",
     "hideTags": "55555",
-    "criticalPath": "55555"
+    "criticalPath": "55555",
+    "selectTaskAria": "55555 {{taskName}} 55555",
+    "bulkMoveSuccess": "55555 {{count}} 55555",
+    "bulkMovePartial": "55555 {{moved}} 55555 {{failed}} 55555",
+    "bulkDeleteSuccess": "55555 {{count}} 55555",
+    "bulkDeletePartial": "55555 {{deleted}} 55555 {{failed}} 55555",
+    "bulkAssignSuccess": "55555 {{count}} 55555",
+    "bulkAssignPartial": "55555 {{success}} 55555 {{failed}} 55555",
+    "bulkAssignTeamSuccess": "55555 {{count}} 55555",
+    "bulkAssignTeamPartial": "55555 {{success}} 55555 {{failed}} 55555",
+    "bulkTagsSuccess_one": "55555 {{count}} 55555",
+    "bulkTagsSuccess_other": "55555 {{count}} 55555",
+    "bulkTagsPartial": "55555",
+    "bulkTagsFailure": "55555",
+    "bulkDeleteTitle": "55555",
+    "bulkDeleteMessage": "55555 {{count}} 55555",
+    "bulkTasksMovedSuccess": "55555 {{count}} 55555",
+    "bulkTasksMovedToPhase": "55555 {{count}} 55555 {{phaseName}} 55555",
+    "moveTasksTitle": "55555",
+    "confirmMoveTasksMessage": "55555 {{count}} 55555 {{targetPhase}} 55555"
   },
   "taskForm": {
     "addTitle": "55555",
@@ -416,6 +437,7 @@
   },
   "taskTicketLinks": {
     "title": "55555",
+    "restrictedTooltip": "55555",
     "linkExistingTitle": "55555",
     "createTicket": "55555",
     "linkTicket": "55555",
@@ -519,7 +541,9 @@
       "tags": "55555",
       "createdAt": "55555",
       "updatedAt": "55555"
-    }
+    },
+    "exportSelected": "55555 {{count}} 55555",
+    "selectedTasksNotice": "55555 {{count}} 55555 {{plural}} 55555"
   },
   "import": {
     "title": "55555",
@@ -708,7 +732,24 @@
       "task": "55555",
       "tasks": "55555",
       "badgeCount": "55555 {{count}} 55555",
-      "badgeCount_other": "55555 {{count}} 55555"
+      "badgeCount_other": "55555 {{count}} 55555",
+      "restrictedTooltip": "55555"
+    },
+    "bulkMoveTask": {
+      "title": "55555",
+      "message": "55555 {{count}} 55555",
+      "confirm": "55555"
+    },
+    "bulkAssign": {
+      "title": "55555",
+      "message": "55555 {{count}} 55555",
+      "unassigned": "55555",
+      "assigning": "55555",
+      "confirm": "55555",
+      "teamReplaceNotice": "55555"
+    },
+    "convertAdHocToTask": {
+      "title": "55555"
     }
   },
   "filters": {
@@ -1268,7 +1309,8 @@
     "saveAsTemplate": "55555",
     "materials": "55555",
     "hoursUsageDescription": "55555",
-    "templateCreatedSuccess": "55555"
+    "templateCreatedSuccess": "55555",
+    "shareTooltip": "55555"
   },
   "comments": {
     "title": "55555",
@@ -1382,5 +1424,55 @@
     "unknownTask": "55555",
     "blocks": "55555"
   },
-  "columnsHidden": "55555"
+  "columnsHidden": "55555",
+  "projectPrint": {
+    "tasks": {
+      "title": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noTasks": "55555",
+      "emptyValue": "55555",
+      "hoursValue": "55555 {{actual}} 55555 {{estimated}} 55555",
+      "columns": {
+        "task": "55555",
+        "phase": "55555",
+        "status": "55555",
+        "assignee": "55555",
+        "dueDate": "55555",
+        "hours": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "fields": {
+        "phase": "55555",
+        "status": "55555",
+        "assignee": "55555",
+        "dueDate": "55555",
+        "estimatedHours": "55555",
+        "wbsCode": "55555",
+        "description": "55555"
+      },
+      "subtitleSelected": "55555 {{count}} 55555"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "55555 {{count}} 55555",
+    "move": "55555",
+    "assign": "55555",
+    "tags": "55555",
+    "delete": "55555",
+    "clear": "55555"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "submitting": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "failedHeading": "55555"
+    }
+  }
 }

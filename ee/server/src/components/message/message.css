@@ -289,6 +289,60 @@
   text-decoration: underline;
 }
 
+.message-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border: 1px solid rgba(var(--color-border-200), 0.95);
+  border-radius: 0.65rem;
+  border-spacing: 0;
+  border-collapse: separate;
+  background: rgba(var(--color-card), 0.7);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.message-content thead {
+  background: rgba(var(--color-primary-50), 0.9);
+}
+
+.message-content th,
+.message-content td {
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(var(--color-border-200), 0.75);
+}
+
+.message-content th {
+  color: rgb(var(--color-text-800));
+  font-size: 0.73rem;
+  font-weight: 750;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.message-content td {
+  color: rgb(var(--color-text-800));
+}
+
+.message-content tbody tr:nth-child(even) {
+  background: rgba(var(--color-border-50), 0.55);
+}
+
+.message-content tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.message-content th:first-child,
+.message-content td:first-child,
+.message-content th:last-child,
+.message-content td:last-child {
+  white-space: nowrap;
+}
+
 .message-bubble--user .message-content a {
   color: rgb(var(--color-primary-600));
   text-decoration: underline;
@@ -430,6 +484,139 @@
   font-size: 0.84rem;
   color: rgb(var(--color-text-600));
   margin: 0.2rem 0 0.1rem;
+  line-height: 1.45;
+}
+
+.function-card__details {
+  margin-top: 0.1rem;
+  border-top: 1px solid rgba(var(--color-border-200), 0.85);
+  padding-top: 0.45rem;
+}
+
+.function-card__details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: rgb(var(--color-primary-600));
+  font-size: 0.78rem;
+  font-weight: 650;
+  list-style: none;
+}
+
+.function-card__details summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.35rem;
+  transition: transform 120ms ease;
+}
+
+.function-card__details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.function-card__details summary::-webkit-details-marker {
+  display: none;
+}
+
+.function-card__bundle-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.05rem;
+}
+
+.function-card__bundle-chip,
+.function-card__bundle-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--color-border-200), 0.95);
+  background: rgba(var(--color-card), 0.72);
+  color: rgb(var(--color-text-600));
+  font-size: 0.73rem;
+}
+
+.function-card__bundle-chip span {
+  color: rgb(var(--color-primary-700));
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.function-card__bundle-more {
+  color: rgb(var(--color-text-500));
+  font-weight: 650;
+}
+
+.function-card__bundle-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.function-card__bundle-item {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(var(--color-border-200), 0.9);
+  border-radius: 0.55rem;
+  background: rgba(var(--color-card), 0.58);
+}
+
+.function-card__bundle-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.function-card__bundle-item-title {
+  color: rgb(var(--color-text-800));
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.function-card__detail-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0;
+}
+
+.function-card__detail-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.32fr) 1fr;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.function-card__detail-row dt {
+  color: rgb(var(--color-text-500));
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.function-card__detail-row dd {
+  min-width: 0;
+  margin: 0;
+  color: rgb(var(--color-text-700));
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.function-card__detail-row pre {
+  max-height: 13rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(var(--color-border-200), 0.9);
+  background: rgba(var(--color-card), 0.7);
+  color: rgb(var(--color-text-800));
+  font-size: 0.74rem;
   line-height: 1.45;
 }
 

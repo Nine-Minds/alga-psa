@@ -38,7 +38,7 @@ export class TemporalSlaBackend implements ISlaBackend {
     return this.unavailable();
   }
 
-  async cancelSla(_ticketId: string): Promise<void> {
+  async cancelSla(_tenantId: string, _ticketId: string): Promise<void> {
     return this.unavailable();
   }
 

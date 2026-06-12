@@ -48,6 +48,7 @@
       "servicePeriods": "55555",
       "usageTracking": "55555",
       "reports": "55555",
+      "serviceTypes": "55555",
       "serviceCatalog": "55555",
       "products": "55555"
     }
@@ -630,7 +631,8 @@
       "open": "55555",
       "execute": "55555",
       "createBatch": "55555",
-      "creating": "55555"
+      "creating": "55555",
+      "cancelBatch": "55555"
     },
     "states": {
       "loadingBatches": "55555",
@@ -664,8 +666,10 @@
         "created": "55555",
         "lines": "55555",
         "errors": "55555",
-        "delivered": "55555"
-      }
+        "delivered": "55555",
+        "notes": "55555"
+      },
+      "errorDetails": "55555"
     },
     "toast": {
       "created": "55555",
@@ -673,7 +677,9 @@
       "loadBatchesError": "55555",
       "loadDetailError": "55555",
       "createError": "55555",
-      "executeError": "55555"
+      "executeError": "55555",
+      "cancelled": "55555",
+      "cancelError": "55555"
     },
     "status": {
       "pending": "55555",

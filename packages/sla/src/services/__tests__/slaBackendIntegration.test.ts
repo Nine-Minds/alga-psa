@@ -5,17 +5,26 @@ function createAdvancedMockTrx() {
   const mockData: Record<string, any> = {};
 
   const createChain = (table: string) => {
+    const rows = () => {
+      const value = mockData[table];
+      if (value === undefined || value === null) return [];
+      return Array.isArray(value) ? value : [value];
+    };
     const chain: any = {
       where: vi.fn().mockImplementation(() => chain),
       select: vi.fn().mockImplementation(() => chain),
-      first: vi.fn().mockImplementation(() => Promise.resolve(mockData[table] || null)),
+      orderBy: vi.fn().mockImplementation(() => chain),
+      first: vi.fn().mockImplementation(() => Promise.resolve(rows()[0] ?? null)),
       update: vi.fn().mockImplementation(() => Promise.resolve(1)),
       insert: vi.fn().mockImplementation(() => Promise.resolve([1])),
+      // Awaiting the chain itself (e.g. `await trx(t).where(...)`) yields rows.
+      then: (resolve: any, reject: any) => Promise.resolve(rows()).then(resolve, reject),
     };
     return chain;
   };
 
   const trx = ((table: string) => createChain(table)) as any;
+  trx.raw = vi.fn(async () => ({ rows: [] }));
   trx.setData = (table: string, data: any) => {
     mockData[table] = data;
   };
@@ -23,6 +32,18 @@ function createAdvancedMockTrx() {
   return trx as Knex.Transaction & {
     setData: (table: string, data: any) => void;
   };
+}
+
+function seedPolicy(trx: ReturnType<typeof createAdvancedMockTrx>) {
+  trx.setData('clients', { sla_policy_id: 'policy-1' });
+  trx.setData('sla_policies', { sla_policy_id: 'policy-1', policy_name: 'Policy' });
+  trx.setData('sla_policy_targets', [{
+    sla_policy_id: 'policy-1',
+    priority_id: 'priority-1',
+    response_time_minutes: 60,
+    resolution_time_minutes: 120,
+    is_24x7: true,
+  }]);
 }
 
 describe('SLA backend integration', () => {
@@ -36,7 +57,7 @@ describe('SLA backend integration', () => {
     process.env.EDITION = originalEdition;
   });
 
-  it('EE ticket start triggers Temporal workflow', async () => {
+  it('EE ticket start triggers Temporal workflow after commit dispatch', async () => {
     process.env.EDITION = 'ee';
 
     const startSpy = vi.fn();
@@ -52,20 +73,13 @@ describe('SLA backend integration', () => {
     }));
 
     const { startSlaForTicket } = await import('../slaService');
+    const { dispatchSlaBackendActions } = await import('../slaBackendActions');
     const { SlaBackendFactory } = await import('../backends/SlaBackendFactory');
 
     const trx = createAdvancedMockTrx();
-    trx.setData('clients', { sla_policy_id: 'policy-1' });
-    trx.setData('sla_policies', { sla_policy_id: 'policy-1', policy_name: 'Policy' });
-    trx.setData('sla_policy_targets', [{
-      sla_policy_id: 'policy-1',
-      priority_id: 'priority-1',
-      response_time_minutes: 60,
-      resolution_time_minutes: 120,
-      is_24x7: true,
-    }]);
+    seedPolicy(trx);
 
-    await startSlaForTicket(
+    const result = await startSlaForTicket(
       trx,
       'tenant-1',
       'ticket-1',
@@ -75,11 +89,17 @@ describe('SLA backend integration', () => {
       new Date('2024-01-01T00:00:00Z')
     );
 
+    // No backend work inside the transaction; the action carries it instead.
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(result.backendActions).toHaveLength(1);
+
+    await dispatchSlaBackendActions(result.backendActions);
     expect(startSpy).toHaveBeenCalledTimes(1);
+
     SlaBackendFactory.getInstance().reset();
   });
 
-  it('CE ticket start does not construct Temporal backend', async () => {
+  it('CE dispatch does not construct Temporal backend', async () => {
     process.env.EDITION = 'ce';
 
     const constructorSpy = vi.fn();
@@ -92,20 +112,13 @@ describe('SLA backend integration', () => {
     }));
 
     const { startSlaForTicket } = await import('../slaService');
+    const { dispatchSlaBackendActions } = await import('../slaBackendActions');
     const { SlaBackendFactory } = await import('../backends/SlaBackendFactory');
 
     const trx = createAdvancedMockTrx();
-    trx.setData('clients', { sla_policy_id: 'policy-1' });
-    trx.setData('sla_policies', { sla_policy_id: 'policy-1', policy_name: 'Policy' });
-    trx.setData('sla_policy_targets', [{
-      sla_policy_id: 'policy-1',
-      priority_id: 'priority-1',
-      response_time_minutes: 60,
-      resolution_time_minutes: 120,
-      is_24x7: true,
-    }]);
+    seedPolicy(trx);
 
-    await startSlaForTicket(
+    const result = await startSlaForTicket(
       trx,
       'tenant-1',
       'ticket-2',
@@ -114,12 +127,13 @@ describe('SLA backend integration', () => {
       'priority-1',
       new Date('2024-01-01T00:00:00Z')
     );
+    await dispatchSlaBackendActions(result.backendActions);
 
     expect(constructorSpy).not.toHaveBeenCalled();
     SlaBackendFactory.getInstance().reset();
   });
 
-  it('EE falls back to PgBoss when Temporal unavailable', async () => {
+  it('EE dispatch falls back to PgBoss when Temporal unavailable', async () => {
     process.env.EDITION = 'ee';
 
     vi.doMock('@enterprise/lib/sla/TemporalSlaBackend', () => ({
@@ -131,38 +145,32 @@ describe('SLA backend integration', () => {
     }));
 
     const { startSlaForTicket } = await import('../slaService');
+    const { dispatchSlaBackendActions } = await import('../slaBackendActions');
     const { SlaBackendFactory } = await import('../backends/SlaBackendFactory');
 
     const trx = createAdvancedMockTrx();
-    trx.setData('clients', { sla_policy_id: 'policy-1' });
-    trx.setData('sla_policies', { sla_policy_id: 'policy-1', policy_name: 'Policy' });
-    trx.setData('sla_policy_targets', [{
-      sla_policy_id: 'policy-1',
-      priority_id: 'priority-1',
-      response_time_minutes: 60,
-      resolution_time_minutes: 120,
-      is_24x7: true,
-    }]);
+    seedPolicy(trx);
 
-    await expect(
-      startSlaForTicket(
-        trx,
-        'tenant-1',
-        'ticket-3',
-        'client-1',
-        'board-1',
-        'priority-1',
-        new Date('2024-01-01T00:00:00Z')
-      )
-    ).resolves.toBeDefined();
+    const result = await startSlaForTicket(
+      trx,
+      'tenant-1',
+      'ticket-3',
+      'client-1',
+      'board-1',
+      'priority-1',
+      new Date('2024-01-01T00:00:00Z')
+    );
+
+    await expect(dispatchSlaBackendActions(result.backendActions)).resolves.toBeUndefined();
 
     SlaBackendFactory.getInstance().reset();
   });
 
-  it('SLA policy change cancels old workflow and starts new one', async () => {
+  it('SLA policy change cancels old workflow and starts new one on dispatch', async () => {
     process.env.EDITION = 'ce';
 
     const { handlePolicyChange } = await import('../slaService');
+    const { dispatchSlaBackendActions } = await import('../slaBackendActions');
     const { SlaBackendFactory } = await import('../backends/SlaBackendFactory');
 
     const backendMock = {
@@ -205,9 +213,14 @@ describe('SLA backend integration', () => {
     trx.setData('business_hours_entries', []);
     trx.setData('holidays', []);
 
-    await handlePolicyChange(trx, 'tenant-1', 'ticket-1', 'policy-1');
+    const { backendActions } = await handlePolicyChange(trx, 'tenant-1', 'ticket-1', 'policy-1');
 
-    expect(backendMock.cancelSla).toHaveBeenCalledWith('ticket-1');
+    expect(backendMock.cancelSla).not.toHaveBeenCalled();
+    expect(backendActions.map(a => a.kind)).toEqual(['cancel', 'start']);
+
+    await dispatchSlaBackendActions(backendActions);
+
+    expect(backendMock.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
     expect(backendMock.startSlaTracking).toHaveBeenCalled();
   });
 });

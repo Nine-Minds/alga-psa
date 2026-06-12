@@ -82,12 +82,10 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/meta/sdk', summary: 'Generate SDK metadata payload', description: 'Generates SDK structure payload for selected language/format via generateSdk().', security: 'api-key' },
     { method: 'get', path: '/api/v1/meta/stats', summary: 'Get API stats metadata', description: 'Returns API usage stats for requested period via getStats().', security: 'api-key' },
 
-    { method: 'get', path: '/api/v1/test-auth', summary: 'Test API key auth', description: 'Debug endpoint wrapping withApiKeyAuth middleware; returns authenticated request context payload.', security: 'api-key' },
+    { method: 'get', path: '/api/v1/test-auth', summary: 'Test API key auth', description: 'Debug endpoint wrapping withApiKeyAuth middleware; returns only non-sensitive authenticated context identifiers.', security: 'api-key' },
 
     { method: 'get', path: '/api/v1/user/telemetry-decision', summary: 'Get telemetry decision', description: 'Returns telemetry enabled/disabled decision from environment for current session user.', security: 'mixed' },
-    { method: 'get', path: '/api/v1/user/telemetry-preferences', summary: 'Get telemetry preferences', description: 'Returns telemetry preference view controlled by environment variable; requires session user.', security: 'mixed' },
-    { method: 'post', path: '/api/v1/user/telemetry-preferences', summary: 'Set telemetry preferences (environment-controlled)', description: 'Endpoint acknowledges request but reports environment-controlled behavior rather than persisting user preference.', security: 'mixed' },
-    { method: 'delete', path: '/api/v1/user/telemetry-preferences', summary: 'Delete telemetry preferences (environment-controlled)', description: 'Endpoint acknowledges request but reports environment-controlled behavior rather than deleting stored preference.', security: 'mixed' },
+    { method: 'get', path: '/api/v1/user/telemetry-preferences', summary: 'Get telemetry preferences', description: 'Read-only. Returns the usage-stats telemetry state, which is controlled by the ALGA_USAGE_STATS environment variable (not per-user); requires session user. There are no write verbs because the preference cannot be changed through the API.', security: 'mixed' },
   ];
 
   function requestFor(def: Def) {

@@ -19,14 +19,15 @@ spec:
       retries: 0
   chart:
     spec:
-      chart: ./ee/helm/temporal
+      chart: temporal
+      version: 0.1.0
       interval: 10m
       reconcileStrategy: Revision
       sourceRef:
-        kind: GitRepository
-        name: alga-appliance
+        kind: HelmRepository
+        name: alga-charts
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-temporal
-      valuesKey: temporal.talos-single-node.yaml
+      valuesKey: temporal.single-node.yaml

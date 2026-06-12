@@ -308,7 +308,11 @@
       "finalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
       "bulkFinalizeFailed": "Échec de la finalisation des factures sélectionnées. Veuillez réessayer.",
       "pdfFailed": "Échec de la génération du PDF. Veuillez réessayer.",
-      "reverseFailed": "Échec de l'annulation des ébauches de facture(s). Veuillez réessayer."
+      "reverseFailed": "Échec de l'annulation des ébauches de facture(s). Veuillez réessayer.",
+      "bulkFinalizePendingTax_one": "{{count}} facture a été ignorée car elle est en attente de l'import de la taxe externe. Importez la taxe depuis votre système comptable, ou basculez-la en taxe interne, puis finalisez-la individuellement.",
+      "bulkFinalizePendingTax_other": "{{count}} factures ont été ignorées car elles sont en attente de l'import de la taxe externe. Importez la taxe depuis votre système comptable, ou basculez-les en taxe interne, puis finalisez-les individuellement.",
+      "bulkFinalizeSkipped_one": "{{count}} facture n'a pas pu être finalisée et a été ignorée.",
+      "bulkFinalizeSkipped_other": "{{count}} factures n'ont pas pu être finalisées et ont été ignorées."
     },
     "reverseDialog": {
       "title": "Contre-version de facture",
@@ -316,6 +320,12 @@
       "message_one": "L'annulation de ce brouillon de facture le supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "message_other": "L'annulation des factures provisoires {{count}} les supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "confirm": "Brouillon inversé",
+      "cancel": "Annuler"
+    },
+    "pendingTaxDialog": {
+      "title": "Facture en attente de la taxe externe",
+      "message": "Cette facture est configurée pour utiliser la taxe calculée par un système comptable externe, mais aucune taxe n'a encore été importée, elle ne peut donc pas être finalisée. Exportez-la vers votre système comptable (QuickBooks, Xero) et réimportez la taxe pour la finaliser avec la taxe externe — ou basculez cette facture en taxe interne maintenant pour qu'Alga calcule la taxe, puis finalisez-la.",
+      "confirm": "Basculer en taxe interne et finaliser",
       "cancel": "Annuler"
     }
   },

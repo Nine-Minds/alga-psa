@@ -11,6 +11,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import { readApproverIdsFromConfig } from '../../lib/appointmentApprovers';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { Calendar } from '@alga-psa/ui/components/Calendar';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -19,14 +21,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { ExternalLink, Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailabilitySettings,
-  getTeamsMeetingsTabState,
-  setDefaultMeetingOrganizer,
-  verifyMeetingOrganizer,
   createOrUpdateAvailabilitySetting,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
@@ -54,13 +53,6 @@ interface AvailabilitySettingsProps {
   onClose: () => void;
 }
 
-type OrganizerVerificationState =
-  | {
-      variant: 'success' | 'warning';
-      message: string;
-    }
-  | null;
-
 export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySettingsProps) {
   const { t } = useTranslation('msp/schedule');
   const [activeTab, setActiveTab] = useState('general');
@@ -68,7 +60,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const { data: session } = useSession();
 
   // Team management state
-  const [allUsers, setAllUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
+  const [allUsers, setAllUsers] = useState<IUser[]>([]);
+  const [allTeams, setAllTeams] = useState<ITeam[]>([]);
   const [managedTeams, setManagedTeams] = useState<ITeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [isManager, setIsManager] = useState(false);
@@ -76,7 +69,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // General settings state
   const [defaultAdvanceBookingDays, setDefaultAdvanceBookingDays] = useState('30');
   const [defaultMinimumNoticeHours, setDefaultMinimumNoticeHours] = useState('24');
-  const [defaultApproverId, setDefaultApproverId] = useState<string>('');
+  // Company-wide approvers (multiple users and/or teams)
+  const [approverUserIds, setApproverUserIds] = useState<string[]>([]);
+  const [approverTeamIds, setApproverTeamIds] = useState<string[]>([]);
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
   const [autoApprovalRequireAvailability, setAutoApprovalRequireAvailability] = useState(true);
   const [autoApprovalRequireContract, setAutoApprovalRequireContract] = useState(true);
@@ -91,7 +86,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [userBufferBefore, setUserBufferBefore] = useState('0');
   const [userBufferAfter, setUserBufferAfter] = useState('15');
   const [userAllowClientPreference, setUserAllowClientPreference] = useState(true);
-  const [userDefaultApproverId, setUserDefaultApproverId] = useState<string>('');
+  // Per-technician approver override (multiple users and/or teams)
+  const [userApproverUserIds, setUserApproverUserIds] = useState<string[]>([]);
+  const [userApproverTeamIds, setUserApproverTeamIds] = useState<string[]>([]);
   const [configuredUsers, setConfiguredUsers] = useState<Set<string>>(new Set());
 
   // Service rules state
@@ -101,11 +98,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
   // Exceptions state
   const [exceptions, setExceptions] = useState<IAvailabilityException[]>([]);
-  const [teamsMeetingsVisible, setTeamsMeetingsVisible] = useState(false);
-  const [defaultMeetingOrganizerUpn, setDefaultMeetingOrganizerUpn] = useState('');
-  const [isSavingMeetingOrganizer, setIsSavingMeetingOrganizer] = useState(false);
-  const [isVerifyingMeetingOrganizer, setIsVerifyingMeetingOrganizer] = useState(false);
-  const [meetingOrganizerVerification, setMeetingOrganizerVerification] = useState<OrganizerVerificationState>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [exceptionUserId, setExceptionUserId] = useState<string>('__company_wide__');
   const [exceptionReason, setExceptionReason] = useState('');
@@ -183,6 +175,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       let userManagedTeams: ITeam[] = [];
       if (session?.user?.id) {
         const teams = await getTeams();
+        setAllTeams(teams);
         userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
 
         if (userManagedTeams.length > 0) {
@@ -192,7 +185,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
 
       // Try to load all users (requires user:read permission)
-      let fetchedUsers: Omit<IUser, 'tenant'>[] = [];
+      let fetchedUsers: IUser[] = [];
       try {
         fetchedUsers = await getAllUsersBasic(false, 'internal');
         console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
@@ -201,7 +194,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
         // If user doesn't have permission to load all users, load team members from managed teams
         if (userManagedTeams.length > 0) {
-          const allMembers: Omit<IUser, 'tenant'>[] = [];
+          const allMembers: IUser[] = [];
           userManagedTeams.forEach(team => {
             if (team.members) {
               allMembers.push(...team.members);
@@ -254,12 +247,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       if (exceptionsResult.success && exceptionsResult.data) {
         setExceptions(exceptionsResult.data);
       }
-
-      const teamsMeetingsTabState = await getTeamsMeetingsTabState();
-      if (teamsMeetingsTabState.success && teamsMeetingsTabState.data) {
-        setTeamsMeetingsVisible(teamsMeetingsTabState.data.visible);
-        setDefaultMeetingOrganizerUpn(teamsMeetingsTabState.data.organizerUpn || '');
-      }
     } catch (error) {
       handleError(error, t('availabilitySettings.feedback.loadError', { defaultValue: 'Failed to load settings' }));
     } finally {
@@ -272,9 +259,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       if (setting.setting_type === 'general_settings') {
         if (setting.advance_booking_days) setDefaultAdvanceBookingDays(String(setting.advance_booking_days));
         if (setting.minimum_notice_hours) setDefaultMinimumNoticeHours(String(setting.minimum_notice_hours));
-        if (setting.config_json?.default_approver_id) {
-          setDefaultApproverId(setting.config_json.default_approver_id);
-        }
+        const generalApprovers = readApproverIdsFromConfig(setting.config_json);
+        setApproverUserIds(generalApprovers.userIds);
+        setApproverTeamIds(generalApprovers.teamIds);
         if (setting.config_json?.auto_approval_enabled !== undefined) {
           setAutoApprovalEnabled(setting.config_json.auto_approval_enabled);
         }
@@ -332,11 +319,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           } else {
             setUserAllowClientPreference(true);
           }
-          if (setting.config_json?.default_approver_id) {
-            setUserDefaultApproverId(setting.config_json.default_approver_id);
-          } else {
-            setUserDefaultApproverId('');
-          }
+          const userApprovers = readApproverIdsFromConfig(setting.config_json);
+          setUserApproverUserIds(userApprovers.userIds);
+          setUserApproverTeamIds(userApprovers.teamIds);
         }
       });
       setUserHours(hoursMap);
@@ -360,7 +345,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       setUserBufferBefore('0');
       setUserBufferAfter('15');
       setUserAllowClientPreference(true);
-      setUserDefaultApproverId('');
+      setUserApproverUserIds([]);
+      setUserApproverTeamIds([]);
     }
   };
 
@@ -436,7 +422,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         advance_booking_days: parseInt(defaultAdvanceBookingDays) || 30,
         minimum_notice_hours: parseInt(defaultMinimumNoticeHours) || 24,
         config_json: {
-          default_approver_id: defaultApproverId || undefined,
+          approver_user_ids: approverUserIds,
+          approver_team_ids: approverTeamIds,
           auto_approval_enabled: autoApprovalEnabled,
           auto_approval_criteria: {
             require_availability: autoApprovalRequireAvailability,
@@ -467,7 +454,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       // Build config_json, only including default_duration if it's set
       const configJson: any = {
         allow_client_preference: userAllowClientPreference,
-        default_approver_id: userDefaultApproverId || undefined
+        approver_user_ids: userApproverUserIds,
+        approver_team_ids: userApproverTeamIds
       };
 
       // Only include default_duration if user has explicitly set it
@@ -525,110 +513,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
     } catch (error) {
       handleError(error, t('availabilitySettings.serviceRules.feedback.saveError', { defaultValue: 'Failed to save service rules' }));
-    }
-  };
-
-  const getMeetingOrganizerVerificationMessage = (reason?: string) => {
-    switch (reason) {
-      case 'ee_disabled':
-        return t('availabilitySettings.teamsMeetings.verify.reasons.eeDisabled', {
-          defaultValue: 'Teams meeting verification is only available in Enterprise Edition.',
-        });
-      case 'not_configured':
-        return t('availabilitySettings.teamsMeetings.verify.reasons.notConfigured', {
-          defaultValue: 'Teams integration must be active before an organizer can be verified.',
-        });
-      case 'user_not_found':
-        return t('availabilitySettings.teamsMeetings.verify.reasons.userNotFound', {
-          defaultValue: 'Microsoft could not find a user for that organizer value.',
-        });
-      case 'policy_missing':
-        return t('availabilitySettings.teamsMeetings.verify.reasons.policyMissing', {
-          defaultValue: 'The Microsoft user exists, but the application access policy is not allowing meeting creation yet.',
-        });
-      default:
-        return t('availabilitySettings.teamsMeetings.verify.reasons.graphError', {
-          defaultValue: 'Microsoft Graph could not verify this organizer right now.',
-        });
-    }
-  };
-
-  const handleSaveMeetingOrganizer = async () => {
-    setIsSavingMeetingOrganizer(true);
-
-    try {
-      const result = await setDefaultMeetingOrganizer({
-        upn: defaultMeetingOrganizerUpn,
-      });
-
-      if (!result.success || !result.data) {
-        toast.error(result.error || t('availabilitySettings.teamsMeetings.feedback.saveError', {
-          defaultValue: 'Failed to save Teams meeting organizer',
-        }));
-        return;
-      }
-
-      setDefaultMeetingOrganizerUpn(result.data.organizerUpn || '');
-      setMeetingOrganizerVerification(null);
-      toast.success(t('availabilitySettings.teamsMeetings.feedback.saveSuccess', {
-        defaultValue: 'Teams meeting organizer saved',
-      }));
-    } catch (error) {
-      handleError(error, t('availabilitySettings.teamsMeetings.feedback.saveError', {
-        defaultValue: 'Failed to save Teams meeting organizer',
-      }));
-    } finally {
-      setIsSavingMeetingOrganizer(false);
-    }
-  };
-
-  const handleVerifyMeetingOrganizer = async () => {
-    setIsVerifyingMeetingOrganizer(true);
-
-    try {
-      const result = await verifyMeetingOrganizer({
-        upn: defaultMeetingOrganizerUpn,
-      });
-
-      if (!result.success || !result.data) {
-        toast.error(result.error || t('availabilitySettings.teamsMeetings.feedback.verifyError', {
-          defaultValue: 'Failed to verify Teams meeting organizer',
-        }));
-        return;
-      }
-
-      if (result.data.valid) {
-        const verifiedMessage = result.data.displayName
-          ? t('availabilitySettings.teamsMeetings.verify.validWithName', {
-              defaultValue: 'Verified Microsoft user: {{displayName}}.',
-              displayName: result.data.displayName,
-            })
-          : t('availabilitySettings.teamsMeetings.verify.valid', {
-              defaultValue: 'Microsoft organizer verified successfully.',
-            });
-
-        setMeetingOrganizerVerification({
-          variant: 'success',
-          message: verifiedMessage,
-        });
-        toast.success(t('availabilitySettings.teamsMeetings.feedback.verifySuccess', {
-          defaultValue: 'Teams meeting organizer verified',
-        }));
-        return;
-      }
-
-      const invalidMessage = getMeetingOrganizerVerificationMessage(result.data.reason);
-      setMeetingOrganizerVerification({
-        variant: 'warning',
-        message: invalidMessage,
-      });
-      toast.error(invalidMessage);
-    } catch (error) {
-      handleError(error, t('availabilitySettings.teamsMeetings.feedback.verifyError', {
-        defaultValue: 'Failed to verify Teams meeting organizer',
-      }));
-    } finally {
-      setIsVerifyingMeetingOrganizer(false);
     }
   };
 
@@ -900,11 +784,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             <TabsTrigger value="user-hours">{t('availabilitySettings.tabs.userHours', { defaultValue: 'User Hours' })}</TabsTrigger>
             <TabsTrigger value="service-rules">{t('availabilitySettings.tabs.serviceRules', { defaultValue: 'Service Rules' })}</TabsTrigger>
             <TabsTrigger value="exceptions">{t('availabilitySettings.tabs.exceptions', { defaultValue: 'Exceptions' })}</TabsTrigger>
-            {teamsMeetingsVisible && (
-              <TabsTrigger value="teams-meetings">
-                {t('availabilitySettings.tabs.teamsMeetings', { defaultValue: 'Teams Meetings' })}
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -977,19 +856,20 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </Alert>
 
             <div>
-              <Label htmlFor="general-default-approver">{t('availabilitySettings.general.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
+              <Label htmlFor="general-default-approver">{t('availabilitySettings.general.defaultApprover.label', { defaultValue: 'Approvers' })}</Label>
               <p className="text-xs text-gray-600 mb-2">
-                {t('availabilitySettings.general.defaultApprover.help', { defaultValue: 'Company-wide default approver for appointment requests that require manual approval. This can be overridden per technician in User Hours settings.' })}
+                {t('availabilitySettings.general.defaultApprover.help', { defaultValue: 'Company-wide approvers for appointment requests that require manual approval. Add multiple users and/or teams — everyone selected is notified and can approve. This can be overridden per technician in User Hours settings.' })}
               </p>
-              <CustomSelect
+              <MultiUserAndTeamPicker
                 id="general-default-approver"
-                options={allUsers.map(user => ({
-                  value: user.user_id,
-                  label: `${user.first_name} ${user.last_name}`
-                }))}
-                value={defaultApproverId || undefined}
-                onValueChange={setDefaultApproverId}
-                placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
+                users={allUsers}
+                values={approverUserIds}
+                onValuesChange={setApproverUserIds}
+                teams={allTeams}
+                teamValues={approverTeamIds}
+                onTeamValuesChange={setApproverTeamIds}
+                showSearch
+                placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select approvers' })}
               />
             </div>
 
@@ -1092,19 +972,18 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="user-default-approver">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.label', { defaultValue: 'Default Approver' })}</Label>
-                    <p className="text-xs text-gray-600 mb-2">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.help', { defaultValue: 'Who should review and approve appointment requests for this technician that require manual approval' })}</p>
-                    <CustomSelect
+                    <Label htmlFor="user-default-approver">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.label', { defaultValue: 'Approvers' })}</Label>
+                    <p className="text-xs text-gray-600 mb-2">{t('availabilitySettings.userHours.appointmentSettings.defaultApprover.help', { defaultValue: 'Who should review and approve appointment requests for this technician that require manual approval. Add multiple users and/or teams. Leave empty to use the company-wide approvers.' })}</p>
+                    <MultiUserAndTeamPicker
                       id="user-default-approver"
-                      options={allUsers
-                        .filter(u => u.user_id !== selectedUserId)
-                        .map(user => ({
-                          value: user.user_id,
-                          label: `${user.first_name} ${user.last_name}`
-                        }))}
-                      value={userDefaultApproverId || undefined}
-                      onValueChange={setUserDefaultApproverId}
-                      placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select an approver' })}
+                      users={allUsers.filter(u => u.user_id !== selectedUserId)}
+                      values={userApproverUserIds}
+                      onValuesChange={setUserApproverUserIds}
+                      teams={allTeams}
+                      teamValues={userApproverTeamIds}
+                      onTeamValuesChange={setUserApproverTeamIds}
+                      showSearch
+                      placeholder={t('availabilitySettings.common.defaultApprover.placeholder', { defaultValue: 'Select approvers' })}
                     />
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1456,179 +1335,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </div>
           </TabsContent>
 
-          {teamsMeetingsVisible && (
-            <TabsContent value="teams-meetings" className="space-y-4 mt-4">
-              <Alert variant="warning">
-                <AlertDescription className="space-y-3">
-                  <div className="font-medium">
-                    {t('availabilitySettings.teamsMeetings.prerequisites.title', {
-                      defaultValue: 'Azure prerequisites',
-                    })}
-                  </div>
-                  <div>
-                    {t('availabilitySettings.teamsMeetings.prerequisites.description', {
-                      defaultValue: 'Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.',
-                    })}
-                  </div>
-                  <details className="rounded-md border border-warning/30 bg-warning/5 p-3">
-                    <summary className="cursor-pointer select-none text-sm font-medium">
-                      {t('availabilitySettings.teamsMeetings.prerequisites.steps.toggle', {
-                        defaultValue: 'Show Azure setup steps',
-                      })}
-                    </summary>
-                    <div className="mt-3 space-y-4 text-sm">
-                      <section>
-                        <div className="font-semibold">
-                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.title', {
-                            defaultValue: '1. Grant Graph application permission',
-                          })}
-                        </div>
-                        <ol className="list-decimal list-inside space-y-1 mt-1">
-                          <li>
-                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item1', {
-                              defaultValue: 'Open Entra admin center → App registrations.',
-                            })}
-                          </li>
-                          <li>
-                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item2', {
-                              defaultValue: "Select the app used by this tenant's Teams integration.",
-                            })}
-                          </li>
-                          <li>
-                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item3', {
-                              defaultValue: 'API permissions → Add → Microsoft Graph → Application permissions.',
-                            })}
-                          </li>
-                          <li>
-                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item4', {
-                              defaultValue: 'Add OnlineMeetings.ReadWrite.All and grant admin consent.',
-                            })}
-                          </li>
-                        </ol>
-                      </section>
-                      <section>
-                        <div className="font-semibold">
-                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.title', {
-                            defaultValue: '2. Create an Application Access Policy',
-                          })}
-                        </div>
-                        <p className="mt-1">
-                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.intro', {
-                            defaultValue: 'App-only meeting creation must be explicitly allowed for the organizer account.',
-                          })}
-                        </p>
-                        <pre className="bg-gray-900 text-gray-100 rounded p-3 overflow-x-auto text-xs mt-2 whitespace-pre">{`Connect-MicrosoftTeams
-
-$appId = "<your-app-registration-client-id>"
-$organizerUpn = "scheduling@acme.com"
-$organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirectoryObjectId
-
-New-CsApplicationAccessPolicy \`
-  -Identity "Alga-Appointment-Meetings" \`
-  -AppIds $appId \`
-  -Description "Allow Alga PSA to create appointment meetings"
-
-Grant-CsApplicationAccessPolicy \`
-  -PolicyName "Alga-Appointment-Meetings" \`
-  -Identity $organizerObjectId`}</pre>
-                        <p className="text-xs mt-1 text-gray-600">
-                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.note', {
-                            defaultValue: 'Allow up to 30 minutes for policy propagation before clicking Verify.',
-                          })}
-                        </p>
-                      </section>
-                    </div>
-                  </details>
-                  <Button
-                    id="open-teams-meetings-runbook"
-                    type="button"
-                    variant="outline"
-                    className="w-fit"
-                    onClick={() => window.open('/docs/integrations/teams-meetings-setup.md', '_blank', 'noopener,noreferrer')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    {t('availabilitySettings.teamsMeetings.actions.openRunbook', {
-                      defaultValue: 'Open setup runbook',
-                    })}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {t('availabilitySettings.teamsMeetings.organizer.title', {
-                      defaultValue: 'Meeting organizer',
-                    })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="default-meeting-organizer-upn">
-                      {t('availabilitySettings.teamsMeetings.organizer.label', {
-                        defaultValue: 'Default meeting organizer Microsoft user object ID',
-                      })}
-                    </Label>
-                    <p className="text-xs text-gray-600 mb-2">
-                      {t('availabilitySettings.teamsMeetings.organizer.help', {
-                        defaultValue: 'Approved appointments create Teams meetings as this Microsoft user. Use the Entra object ID; UPNs can return 404 from Microsoft Graph onlineMeetings.',
-                      })}
-                    </p>
-                    <Input
-                      id="default-meeting-organizer-upn"
-                      value={defaultMeetingOrganizerUpn}
-                      onChange={(event) => {
-                        setDefaultMeetingOrganizerUpn(event.target.value);
-                        setMeetingOrganizerVerification(null);
-                      }}
-                      placeholder={t('availabilitySettings.teamsMeetings.organizer.placeholder', {
-                        defaultValue: '00000000-0000-0000-0000-000000000000',
-                      })}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      id="save-teams-meeting-organizer"
-                      onClick={handleSaveMeetingOrganizer}
-                      disabled={isSavingMeetingOrganizer}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {isSavingMeetingOrganizer
-                        ? t('availabilitySettings.teamsMeetings.actions.saving', {
-                            defaultValue: 'Saving...',
-                          })
-                        : t('availabilitySettings.teamsMeetings.actions.save', {
-                            defaultValue: 'Save',
-                          })}
-                    </Button>
-                    <Button
-                      id="verify-teams-meeting-organizer"
-                      variant="outline"
-                      onClick={handleVerifyMeetingOrganizer}
-                      disabled={isVerifyingMeetingOrganizer || !defaultMeetingOrganizerUpn.trim()}
-                    >
-                      {isVerifyingMeetingOrganizer
-                        ? t('availabilitySettings.teamsMeetings.actions.verifying', {
-                            defaultValue: 'Verifying...',
-                          })
-                        : t('availabilitySettings.teamsMeetings.actions.verify', {
-                            defaultValue: 'Verify',
-                          })}
-                    </Button>
-                  </div>
-
-                  {meetingOrganizerVerification && (
-                    <Alert variant={meetingOrganizerVerification.variant}>
-                      <AlertDescription>
-                        {meetingOrganizerVerification.message}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
         </Tabs>
         </div>
       )}

@@ -34,7 +34,7 @@ import {
   getVisibleMicrosoftConsumerTypes,
   isMicrosoftConsumerEnterpriseEdition,
 } from '../../../lib/microsoftConsumerVisibility';
-import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
+import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import {
   AlertTriangle,
   Archive,
@@ -301,7 +301,11 @@ function getGuidanceBlocks(
   return blocks;
 }
 
-export function MicrosoftIntegrationSettings() {
+interface MicrosoftIntegrationSettingsProps {
+  canUseTeams?: boolean;
+}
+
+export function MicrosoftIntegrationSettings({ canUseTeams = true }: MicrosoftIntegrationSettingsProps) {
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
@@ -335,7 +339,7 @@ export function MicrosoftIntegrationSettings() {
     isEnterpriseEdition,
     requireTenantContext: false,
   });
-  const showTeamsUi = teamsAvailability.enabled;
+  const showTeamsUi = canUseTeams && teamsAvailability.enabled;
   const consumerDescriptors = React.useMemo(
     () => getConsumerDescriptors(showTeamsUi, t),
     [showTeamsUi, t]

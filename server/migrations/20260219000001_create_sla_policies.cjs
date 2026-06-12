@@ -38,6 +38,16 @@ async function distributeIfCitus(knex, tableName) {
 }
 
 exports.up = async function(knex) {
+    // sla_policy_targets FKs priorities, status_sla_pause_config FKs
+    // statuses, and boards gains an FK to distributed sla_policies — on
+    // fresh Citus chains all three parents are still local and Citus
+    // refuses the FKs. Distribute them first (priorities before boards,
+    // which FKs it). No-op on plain Postgres and on clusters that already
+    // have them.
+    await distributeIfCitus(knex, 'priorities');
+    await distributeIfCitus(knex, 'boards');
+    await distributeIfCitus(knex, 'statuses');
+
     // Create sla_policies table
     if (!(await knex.schema.hasTable('sla_policies'))) {
         await knex.schema.createTable('sla_policies', (table) => {

@@ -34,7 +34,15 @@ function getHocuspocusUrl(): string {
 
 type YjsProviderOptions = {
   parameters?: Record<string, string>;
-  token?: string | null;
+  token?: string | (() => string) | (() => Promise<string>) | null;
+  connect?: boolean;
+  preserveConnection?: boolean;
+  delay?: number;
+  initialDelay?: number;
+  factor?: number;
+  maxAttempts?: number;
+  maxDelay?: number;
+  jitter?: boolean;
 };
 
 export const createYjsProvider = (roomName: string, options: YjsProviderOptions = {}) => {
@@ -45,7 +53,15 @@ export const createYjsProvider = (roomName: string, options: YjsProviderOptions 
     document: ydoc,
     parameters: options.parameters ?? {},
     token: options.token ?? null,
-  });
+    connect: options.connect ?? true,
+    preserveConnection: options.preserveConnection ?? true,
+    delay: options.delay,
+    initialDelay: options.initialDelay,
+    factor: options.factor,
+    maxAttempts: options.maxAttempts,
+    maxDelay: options.maxDelay,
+    jitter: options.jitter,
+  } as any);
 
   return { ydoc, provider };
 };

@@ -14,6 +14,7 @@ import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImport
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
@@ -23,11 +24,27 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData
 } from './handlers/calendarWebhookMaintenanceHandler';
+import {
+  renewTeamsMeetingArtifactSubscriptions,
+  processTeamsMeetingArtifactNotification,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
+} from './handlers/teamsMeetingArtifactWebhookHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
 } from './handlers/workflowQuotaResumeScanHandler';
+import {
+  SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+  searchVisibleUserReindexHandler,
+  SearchVisibleUserReindexJobData,
+} from './handlers/searchVisibleUserReindexHandler';
+import {
+  SEARCH_RECONCILE_JOB_NAME,
+  searchReconcileHandler,
+  SearchReconcileJobData,
+} from './handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -135,6 +152,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await handleReconcileBucketUsage(job);
     });
 
+    // Register auto-close tickets handler
+    jobScheduler.registerJobHandler<AutoCloseTicketsJobData>('auto-close-tickets', async (job: Job<AutoCloseTicketsJobData>) => {
+      await autoCloseTicketsHandler(job.data);
+    });
+
     // Register email webhook maintenance handler
     jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
       await emailWebhookMaintenanceHandler(job);
@@ -181,6 +203,22 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
+    if (isEnterpriseWorkflowEdition()) {
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+        'renew-teams-meeting-artifact-subscriptions',
+        async (job: Job<TeamsMeetingArtifactSubscriptionRenewalJobData>) => {
+          await renewTeamsMeetingArtifactSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingArtifactNotificationJobData>(
+        'process-teams-meeting-artifact-notification',
+        async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
+          await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+    }
+
     // Register SLA timer handler (CE only — EE uses Temporal workflows)
     if (process.env.EDITION !== 'enterprise') {
       jobScheduler.registerJobHandler<SlaTimerJobData>(
@@ -199,6 +237,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         }
       );
     }
+
+    jobScheduler.registerJobHandler<SearchVisibleUserReindexJobData>(
+      SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+      async (job: Job<SearchVisibleUserReindexJobData>) => {
+        await searchVisibleUserReindexHandler(job.data);
+      }
+    );
+
+    jobScheduler.registerJobHandler<SearchReconcileJobData>(
+      SEARCH_RECONCILE_JOB_NAME,
+      async (job: Job<SearchReconcileJobData>) => {
+        await searchReconcileHandler(job.data);
+      }
+    );
 
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
@@ -219,12 +271,16 @@ export type {
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
   EmailWebhookMaintenanceJobData,
   RenewalQueueProcessorJobData,
   SlaTimerJobData,
-  WorkflowQuotaResumeScanJobData
+  WorkflowQuotaResumeScanJobData,
+  SearchVisibleUserReindexJobData,
+  SearchReconcileJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -292,6 +348,17 @@ export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleImmediateJob(jobName, data);
+};
+
+export const scheduleSearchVisibleUserReindexJob = async (
+  tenantId: string,
+  userId: string,
+  batchSize: number = 500
+): Promise<string | null> => {
+  return await scheduleImmediateJob<SearchVisibleUserReindexJobData>(
+    SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+    { tenantId, userId, batchSize }
+  );
 };
 
 /**
@@ -368,6 +435,18 @@ export const scheduleReconcileBucketUsageJob = async (
   );
 };
 
+export const scheduleAutoCloseTicketsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/15 * * * *' // Default: every 15 minutes
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<AutoCloseTicketsJobData>(
+    'auto-close-tickets',
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleMicrosoftWebhookRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
@@ -387,6 +466,21 @@ export const scheduleGooglePubSubVerificationJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<GooglePubSubVerificationJobData>(
     'verify-google-calendar-pubsub',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
+  tenantId: string,
+  cronExpression: string = '*/30 * * * *'
+): Promise<string | null> => {
+  if (!isEnterpriseWorkflowEdition()) {
+    return null;
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
+    'renew-teams-meeting-artifact-subscriptions',
     cronExpression,
     { tenantId }
   );
@@ -508,5 +602,17 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
     'workflow-quota-resume-scan',
     cronExpression,
     { tenantId: 'system', batchSize }
+  );
+};
+
+export const scheduleSearchReconcileJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<SearchReconcileJobData>(
+    SEARCH_RECONCILE_JOB_NAME,
+    cronExpression,
+    { tenantId }
   );
 };

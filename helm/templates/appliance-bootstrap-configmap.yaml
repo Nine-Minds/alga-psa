@@ -162,6 +162,49 @@ data:
       PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
     }
 
+    require_initial_tenant_value() {
+      local name="$1"
+      eval "value=\${${name}:-}"
+      if [ -z "${value}" ]; then
+        log "ERROR: ${name} is required to create the initial appliance tenant"
+        log "ERROR: Reopen appliance setup and provide the initial company/admin fields."
+        exit 1
+      fi
+    }
+
+    ensure_initial_tenant() {
+      if check_seeds_status; then
+        log "Initial user already exists; skipping initial tenant creation"
+        return 0
+      fi
+
+      require_initial_tenant_value INITIAL_TENANT_NAME
+      require_initial_tenant_value INITIAL_ADMIN_FIRST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_LAST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_EMAIL
+      require_initial_tenant_value INITIAL_ADMIN_PASSWORD
+
+      log "Creating initial appliance tenant and admin user"
+      # INITIAL_TENANT_ID (set when an install code was redeemed) makes
+      # create-tenant adopt the registry-minted tenant id; empty => DB-generated.
+      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" INITIAL_TENANT_ID="${INITIAL_TENANT_ID:-}" npx tsx /app/server/scripts/create-tenant.ts \
+        --tenant "${INITIAL_TENANT_NAME}" \
+        --companyName "${INITIAL_TENANT_NAME}" \
+        --clientName "${INITIAL_TENANT_NAME}" \
+        --email "${INITIAL_ADMIN_EMAIL}" \
+        --firstName "${INITIAL_ADMIN_FIRST_NAME}" \
+        --lastName "${INITIAL_ADMIN_LAST_NAME}" \
+        --productCode psa
+      log "Initial appliance tenant and admin user created"
+    }
+
+    resolve_seeds_dir() {
+      if [ -n "${SEEDS_DIR:-}" ] && [ -d "${SEEDS_DIR}/psa" ] && ! find "${SEEDS_DIR}" -maxdepth 1 -name '*.cjs' -print -quit | grep -q .; then
+        SEEDS_DIR="${SEEDS_DIR}/psa"
+        export SEEDS_DIR
+      fi
+    }
+
     ensure_database() {
       local db_name="$1"
       psql_admin postgres -v db_name="${db_name}" <<'SQL'
@@ -270,16 +313,77 @@ data:
       log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
     fi
 
-    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
-      if check_seeds_status; then
-        log "Seeds already exist; skipping"
+    # Seed license_state from appliance-license-seed Secret (F082-F084).
+    # ALWAYS seeds a row on a self-hosted/appliance install (defaulting to an
+    # 'ee' 30-day trial when EDITION_CHOICE is absent). A missing/empty
+    # appliance-license-seed Secret previously left license_state empty, which
+    # silently bricks licensing: getLicenseStatus returns selfHostMode=false, so
+    # the in-app License page shows "only available for self-hosted" with NO
+    # airgap form (the form only renders once a row exists, so there is no UI
+    # path to apply a license) and addUser's seat check is skipped entirely.
+    # Idempotent: WHERE NOT EXISTS never resets an existing entitlement.
+    if [ -z "${EDITION_CHOICE:-}" ]; then
+      log "WARNING: EDITION_CHOICE unset (appliance-license-seed Secret missing/empty); defaulting license_state to an 'ee' trial so the License page and seat enforcement stay usable"
+    fi
+    {
+      pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+      pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+      pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+      pg_password="$(get_admin_password)"
+      edition_choice="${EDITION_CHOICE:-ee}"
+      license_token="${LICENSE_TOKEN:-}"
+      # Registry edition from an install-code redeem (essentials|pro|premium);
+      # empty on the manual editionChoice/licenseKey path.
+      install_edition="${INSTALL_EDITION:-}"
+      # Connected-appliance refresh fields (paid install-code redeem only).
+      appliance_id="${APPLIANCE_ID:-}"
+      check_in_url="${CHECK_IN_URL:-}"
+      appliance_credential="${APPLIANCE_CREDENTIAL:-}"
+      log "Seeding license_state (edition_choice=${edition_choice}${install_edition:+ install_edition=${install_edition}})"
+
+      # trial_started_at: NOW() only for an 'ee' install with no license AND not an
+      # explicit essentials registration (essentials should resolve to essentials
+      # tier, not auto-start a premium trial; the operator can start one later).
+      if [ "${edition_choice}" = "ee" ] && [ -z "${license_token}" ] && [ "${install_edition}" != "essentials" ]; then
+        trial_expr="NOW()"
       else
-        if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
-          log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
-          exit 1
+        trial_expr="NULL"
+      fi
+
+      # Build a SQL value (NULL if empty, else single-quoted + escaped).
+      sql_value() {
+        if [ -z "$1" ]; then
+          echo "NULL"
+        else
+          echo "'$(echo "$1" | sed "s/'/''/g")'"
         fi
-        log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
-        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      }
+      license_token_sql="$(sql_value "${license_token}")"
+      appliance_id_sql="$(sql_value "${appliance_id}")"
+      check_in_url_sql="$(sql_value "${check_in_url}")"
+      appliance_credential_sql="$(sql_value "${appliance_credential}")"
+
+      PGPASSWORD="${pg_password}" psql -v ON_ERROR_STOP=1 -h "${pg_admin_host}" -p "${pg_admin_port}" \
+        -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" <<SQL
+    INSERT INTO license_state (edition_choice, trial_started_at, license_token, appliance_id, check_in_url, appliance_credential, updated_at)
+    SELECT '${edition_choice}', ${trial_expr}, ${license_token_sql}, ${appliance_id_sql}, ${check_in_url_sql}, ${appliance_credential_sql}, NOW()
+    WHERE NOT EXISTS (SELECT 1 FROM license_state);
+    SQL
+      log "license_state seeded (edition_choice=${edition_choice})"
+    }
+
+    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+      ensure_initial_tenant
+      resolve_seeds_dir
+      if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
+        log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
+        exit 1
+      fi
+      log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
+      NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      if ! check_seeds_status; then
+        log "ERROR: Appliance bootstrap finished seed execution but no admin users exist"
+        exit 1
       fi
     else
       log "SETUP_RUN_SEEDS is disabled; skipping seeds"

@@ -3,6 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { generateBaseDocument } from '@/lib/api/openapi';
 
 describe('project task OpenAPI contracts', () => {
+  it('adds product availability metadata to OpenAPI operations', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ee',
+    });
+
+    expect(document.paths?.['/api/v1/tickets']?.get?.['x-alga-products']).toEqual(['psa', 'algadesk']);
+    expect(document.paths?.['/api/v1/projects']?.get?.['x-alga-products']).toEqual(['psa']);
+    expect(document.paths?.['/api/v1/tickets/{id}/time-entries']?.get?.['x-alga-products']).toEqual(['psa']);
+  });
+
   it('documents UUID path parameters for project task routes instead of placeholder backfill metadata', () => {
     const document = generateBaseDocument({
       title: 'Alga PSA API',

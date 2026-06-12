@@ -224,7 +224,7 @@ async function restorePreviousScheduleRegistration(
   const desired = buildRestoreDesiredSchedule(existing);
   if (!desired) return;
 
-  const restored = await scheduleDesiredWorkflow(existing.tenant_id, existing.workflow_id, existing.id, desired);
+  const restored = await scheduleDesiredWorkflow(existing.tenant, existing.workflow_id, existing.id, desired);
   await WorkflowScheduleStateModel.update(knex, existing.id, {
     job_id: restored?.jobId ?? null,
     runner_schedule_id: restored?.externalId ?? null,
@@ -245,7 +245,7 @@ async function persistScheduleCreate(
 ): Promise<WorkflowScheduleStateRecord> {
   return WorkflowScheduleStateModel.create(knex, {
     id: params.scheduleId,
-    tenant_id: params.tenantId,
+    tenant: params.tenantId,
     workflow_id: params.record.workflowId,
     workflow_version: params.record.desired.workflowVersion,
     name: params.record.name,
@@ -575,7 +575,7 @@ export async function syncWorkflowScheduleState(
     try {
       return await WorkflowScheduleStateModel.create(knex, {
         id: scheduleId,
-        tenant_id: params.tenantId,
+        tenant: params.tenantId,
         workflow_id: params.workflowId,
         workflow_version: params.desired.workflowVersion,
         name: LEGACY_INLINE_SCHEDULE_NAME,

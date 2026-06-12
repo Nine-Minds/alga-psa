@@ -1,4 +1,4 @@
-FROM node:20.19-alpine
+FROM node:20.19-alpine AS builder
 
 RUN apk add --no-cache \
     postgresql-client \
@@ -65,6 +65,26 @@ RUN npm run build
 
 COPY services/email-service/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# Trim build-time-only bulk in the builder so the runtime COPY captures the
+# already-trimmed tree (deleting after the COPY would not reclaim space).
+# server/ is type-imports-only at build; the email service never loads it.
+RUN rm -rf /app/server /app/node_modules/server \
+    && npm cache clean --force 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Runtime stage: clean image with only the runtime tree (drops intermediate
+# build layers + server/ source).
+# ---------------------------------------------------------------------------
+FROM node:20.19-alpine AS runtime
+
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    bash
+
+WORKDIR /app
+COPY --from=builder /app /app
 
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]

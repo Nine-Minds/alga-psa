@@ -2,7 +2,9 @@
 # Designed for Argo workflows and CI systems that build separately
 # Expects .next, dist, shared/dist to exist locally with EE features included
 
-FROM node:alpine
+# Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
+# and broke bundled Vault provider initialization in the blue deployment.
+FROM node:26.1.0-alpine
 RUN apk add --no-cache \
     bash \
     postgresql-client \
@@ -45,9 +47,11 @@ COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-# Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist/ ./shared/dist/
-COPY ./shared/package.json ./shared/package.json
+# Copy the shared workspace: pre-built dist AND source. The source is required so
+# the appliance tenant bootstrap (npx tsx server/scripts/create-tenant.ts) can
+# resolve createTenantComplete -> shared/utils/encryption -> shared/core/getSecret
+# at runtime; the webpack app uses shared/dist, but the tsx script reads the source.
+COPY ./shared/ ./shared/
 
 # Copy packages directory for webpack aliases
 COPY ./packages/ ./packages/
@@ -65,6 +69,10 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+# server/scripts holds runtime entrypoints invoked at boot, notably
+# create-tenant.ts which the appliance bootstrap runs to seed the initial
+# tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
+COPY ./server/scripts/ ./server/scripts/
 
 # Copy EE-specific files
 COPY ./ee/server/src /app/ee/server/src

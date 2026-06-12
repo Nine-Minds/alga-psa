@@ -1463,12 +1463,16 @@
     "heading": "Fixed Fee Services",
     "preview": {
       "labels": {
+        "alternateFrequency": "Alternate Billing Frequency:",
         "billingTiming": "Billing Timing:",
         "cadenceOwner": "Cadence Owner:",
         "invoiceWindow": "Invoice window:",
         "recurringRate": "Recurring Rate:",
         "service": "Service:",
         "services": "Services:"
+      },
+      "materializedPeriods": {
+        "tooltip": "A preview of the next few service periods and the invoice windows that would be generated for them based on the current settings. These help you sanity-check the cadence before saving — actual invoices are produced later by the billing run."
       },
       "title": "Recurring Preview Before Save"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Alternate Billing Frequency:",
+        "bucketsHeading": "Buckets:",
+        "includedHours": "Included Hours:",
         "minimumTime": "Minimum Time:",
+        "overageRate": "Overage Rate:",
+        "rollover": "Rollover:",
         "roundUp": "Round Up:",
+        "serviceFallback": "Service {{index}}",
         "services": "Services:"
       },
       "title": "Hourly Services Summary",
       "values": {
         "everyMinutes": "Every {{count}} minutes",
-        "minutes": "{{count}} minutes"
+        "hours": "{{count}} hours",
+        "minutes": "{{count}} minutes",
+        "overageRatePerHour": "{{rate}}/hour",
+        "rolloverDisabled": "Disabled",
+        "rolloverEnabled": "Enabled"
       }
     }
   },

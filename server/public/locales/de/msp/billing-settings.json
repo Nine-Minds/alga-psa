@@ -161,7 +161,8 @@
         "step3": "Die Steuer wird vom Buchhaltungssystem auf der Grundlage seiner Steuerregeln berechnet",
         "step4": "Steuerbeträge werden zurück in Alga PSA importiert",
         "step5": "Rechnungssummen werden mit der importierten Steuer aktualisiert",
-        "note": "Das verwendete Buchhaltungssystem wird automatisch ermittelt, je nachdem, in welches System Sie die Rechnung exportieren."
+        "note": "Das verwendete Buchhaltungssystem wird automatisch ermittelt, je nachdem, in welches System Sie die Rechnung exportieren.",
+        "warning": "Wichtig: Rechnungen für Kunden mit externer Steuer können erst abgeschlossen werden, wenn ihre Steuer aus Ihrem Buchhaltungssystem zurückimportiert wurde. Dies erfordert eine verbundene Buchhaltungsintegration (QuickBooks oder Xero) und den vorherigen Export der Rechnung dorthin. Andernfalls bleiben diese Rechnungen im Entwurf hängen – wechseln Sie eine einzelne Rechnung zurück zur internen Steuer, um sie in Alga abzuschließen."
       },
       "loading": "Einstellungen werden geladen...",
       "actions": {

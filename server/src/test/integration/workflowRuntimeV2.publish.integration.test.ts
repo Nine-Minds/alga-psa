@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
@@ -17,22 +17,17 @@ import {
   listWorkflowDesignerActionCatalogAction,
   getWorkflowSchemaAction,
   startWorkflowRunAction,
-  submitWorkflowEventAction,
   cancelWorkflowRunAction,
-  resumeWorkflowRunAction,
   replayWorkflowRunAction,
   getWorkflowRunAction,
   listWorkflowRunsAction,
-  listWorkflowRunTimelineEventsAction,
-  listWorkflowRunStepsAction,
-  listWorkflowEventsAction
+  listWorkflowRunStepsAction
 } from '@alga-psa/workflows/actions';
 import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
 import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
 import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
-import WorkflowRuntimeEventModelV2 from '@alga-psa/workflows/persistence/workflowRuntimeEventModelV2';
 import { WorkflowRuntimeV2, getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
@@ -40,8 +35,6 @@ import {
   actionCallStep,
   assignStep,
   stateSetStep,
-  eventWaitStep,
-  returnStep,
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
@@ -118,19 +111,6 @@ const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 let db: Knex;
 let tenantId: string;
 let userId: string;
-
-const actionRestores: Array<() => void> = [];
-
-function stubAction(actionId: string, version: number, handler: any) {
-  const registry = getActionRegistryV2();
-  const action = registry.get(actionId, version);
-  if (!action) throw new Error(`Missing action ${actionId}@${version}`);
-  const original = action.handler;
-  action.handler = handler;
-  actionRestores.push(() => {
-    action.handler = original;
-  });
-}
 
 async function createDraftWorkflow(params: { steps: any[]; payloadSchemaRef?: string; trigger?: any; name?: string }) {
   const definition = {
@@ -235,13 +215,6 @@ beforeEach(async () => {
   cancelWorkflowRuntimeV2TemporalRunMock.mockResolvedValue(undefined);
   await db('tenant_extension_install').delete().catch(() => undefined);
   await db('extension_registry').delete().catch(() => undefined);
-});
-
-afterEach(() => {
-  while (actionRestores.length > 0) {
-    const restore = actionRestores.pop();
-    if (restore) restore();
-  }
 });
 
 afterAll(async () => {
@@ -450,50 +423,6 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     });
     const record = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(db, workflowId, 1);
     expect((record?.definition_json as any)?.name).toBe('Test Workflow');
-  });
-
-  it('Runs remain pinned to their original published version when newer definitions are published before resume. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"pin-key"' } }),
-        assignStep('assign-1', { 'payload.definitionMarker': { $expr: '"v1"' } }),
-        returnStep('return-1')
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const waitingRecord = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(waitingRecord?.workflow_version).toBe(1);
-    expect(waitingRecord?.status).toBe('WAITING');
-
-    await publishWorkflow(workflowId, 2, {
-      id: workflowId,
-      version: 2,
-      name: 'Pinned version test v2',
-      payloadSchemaRef: TEST_SCHEMA_REF,
-      steps: [
-        eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"pin-key"' } }),
-        assignStep('assign-1', { 'payload.definitionMarker': { $expr: '"v2"' } }),
-        returnStep('return-1')
-      ]
-    });
-
-    const resumeResult = await submitWorkflowEventAction({
-      eventName: 'PING',
-      correlationKey: 'pin-key',
-      payload: {}
-    });
-    expect(resumeResult.status).toBe('resumed');
-    expect(resumeResult.runId).toBe(run.runId);
-
-    const finalRun = await WorkflowRunModelV2.getById(db, run.runId);
-    const stepHistory = await listWorkflowRunStepsAction({ runId: run.runId });
-    const latestSnapshot = stepHistory.snapshots[stepHistory.snapshots.length - 1];
-
-    expect(finalRun?.workflow_version).toBe(1);
-    expect(finalRun?.status).toBe('SUCCEEDED');
-    expect((latestSnapshot?.envelope_json as any)?.payload?.definitionMarker).toBe('v1');
   });
 
   it('Publish returns warnings without blocking when severity=warning. Mocks: non-target dependencies.', async () => {
@@ -795,7 +724,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(first).toEqual(second);
   });
 
-  it('Start run creates workflow_run with status RUNNING and initial nodePath. Mocks: non-target dependencies.', async () => {
+  it('Start run creates workflow_run with status RUNNING, engine temporal, and initial nodePath. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
     const runtime = new WorkflowRuntimeV2();
@@ -808,6 +737,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const run = await WorkflowRunModelV2.getById(db, runId);
     expect(run?.status).toBe('RUNNING');
     expect(run?.node_path).toBe('root.steps[0]');
+    expect(run?.engine).toBe('temporal');
   });
 
   it('Start run with explicit version uses that published version. Mocks: non-target dependencies.', async () => {
@@ -840,34 +770,27 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(run?.workflow_version).toBe(2);
   });
 
-  it('Start run launches a Temporal-backed workflow run instead of executing through the legacy DB runtime. Mocks: non-target dependencies.', async () => {
+  it('Start run launches a Temporal-backed workflow run and records the Temporal identifiers. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
 
-    const executeRunSpy = vi.spyOn(WorkflowRuntimeV2.prototype, 'executeRun');
-    executeRunSpy.mockClear();
-    try {
-      const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-      const run = await WorkflowRunModelV2.getById(db, runResult.runId);
+    const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const run = await WorkflowRunModelV2.getById(db, runResult.runId);
 
-      expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          runId: runResult.runId,
-          workflowId,
-          workflowVersion: 1,
-        })
-      );
-      expect(executeRunSpy).not.toHaveBeenCalled();
-      expect(run?.engine).toBe('temporal');
-      expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
-      expect(run?.temporal_run_id).toBe('temporal-run-replayed');
-      expect(run?.status).toBe('RUNNING');
-    } finally {
-      executeRunSpy.mockRestore();
-    }
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: runResult.runId,
+        workflowId,
+        workflowVersion: 1,
+      })
+    );
+    expect(run?.engine).toBe('temporal');
+    expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
+    expect(run?.temporal_run_id).toBe('temporal-run-replayed');
+    expect(run?.status).toBe('RUNNING');
   });
 
-  it('T045: no-trigger workflows still publish and run correctly after time-trigger support is added. Mocks: non-target dependencies.', async () => {
+  it('T045: no-trigger workflows still publish and launch correctly after time-trigger support is added. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
       name: 'No trigger regression'
@@ -880,7 +803,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const run = await WorkflowRunModelV2.getById(db, runResult.runId);
     expect(run?.workflow_id).toBe(workflowId);
     expect(run?.workflow_version).toBe(1);
-    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.status).toBe('RUNNING');
+    expect(run?.engine).toBe('temporal');
     expect(run?.trigger_type ?? null).toBeNull();
   });
 
@@ -947,307 +871,44 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       .rejects.toMatchObject({ status: 409 });
   });
 
-  it('Run execution inserts workflow_run_steps STARTED before step handler executes. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
-    });
-    await publishWorkflow(workflowId, 1);
-
-    stubAction('test.sideEffect', 1, async (_input: any, ctx: any) => {
-      const step = await WorkflowRunStepModelV2.getLatestByRunAndPath(db, ctx.runId, ctx.stepPath);
-      expect(step?.status).toBe('STARTED');
-      return { count: 1 };
-    });
-
-    await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-  });
-
-  it('Successful step updates workflow_run_steps to SUCCEEDED with duration and attempt count. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-    const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const steps = await WorkflowRunStepModelV2.listByRun(db, runResult.runId);
-    expect(steps[0].status).toBe('SUCCEEDED');
-    expect(steps[0].attempt).toBe(1);
-    expect(steps[0].duration_ms).toBeTypeOf('number');
-  });
-
-  it('Run completes with SUCCEEDED after last step executes. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-    const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const run = await WorkflowRunModelV2.getById(db, runResult.runId);
-    expect(run?.status).toBe('SUCCEEDED');
-  });
-
-  it('Unhandled error fails run with status FAILED. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {} })]
-    });
-    await publishWorkflow(workflowId, 1);
-    const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const run = await WorkflowRunModelV2.getById(db, result.runId);
-    expect(run?.status).toBe('FAILED');
-  });
-
-  it('Interpreter resumes from persisted nodePath after simulated crash. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        actionCallStep({ id: 'first', actionId: 'test.sideEffect', inputMapping: {} }),
-        actionCallStep({ id: 'second', actionId: 'test.sideEffect', inputMapping: {} })
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-    const runtime = new WorkflowRuntimeV2();
-    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
-    await WorkflowRunModelV2.update(db, runId, { node_path: 'root.steps[1]' });
-
-    let callCount = 0;
-    stubAction('test.sideEffect', 1, async () => {
-      callCount += 1;
-      return { count: callCount };
-    });
-
-    await runtime.executeRun(db, runId, 'worker');
-    expect(callCount).toBe(1);
-  });
-
-  it('Interpreter determinism: same inputs yield same outputs when time helpers are mocked. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [assignStep('assign-1', { 'payload.now': { $expr: 'nowIso()' } })] });
-    await publishWorkflow(workflowId, 1);
-    const fixed = '2025-01-01T00:00:00.000Z';
-    const dateSpy = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(fixed);
-
-    const runA = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const runB = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-
-    const snapshotsA = await listWorkflowRunStepsAction({ runId: runA.runId });
-    const snapshotsB = await listWorkflowRunStepsAction({ runId: runB.runId });
-    const lastA = snapshotsA.snapshots[snapshotsA.snapshots.length - 1] as any;
-    const lastB = snapshotsB.snapshots[snapshotsB.snapshots.length - 1] as any;
-    expect(lastA.envelope_json.payload.now).toBe(fixed);
-    expect(lastB.envelope_json.payload.now).toBe(fixed);
-
-    dateSpy.mockRestore();
-  });
-
-  it('control.return terminates the run immediately and skips remaining steps. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [returnStep('return-1'), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const steps = await WorkflowRunStepModelV2.listByRun(db, run.runId);
-    expect(steps).toHaveLength(1);
-  });
-
-  it('state.set updates env.meta.state and persists to run snapshot. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const result = await listWorkflowRunStepsAction({ runId: run.runId });
-    const snapshot = result.snapshots[0] as any;
-    expect(snapshot).toBeDefined();
-    expect(snapshot.envelope_json.meta.state).toBe('READY');
-  });
-
-  it('transform.assign writes to payload paths as defined by assign map. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [assignStep('assign-1', { 'payload.foo': { $expr: '"bar"' } })] });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
-    const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
-    expect((lastSnapshot.envelope_json as any).payload.foo).toBe('bar');
-  });
-
-  it('action.call validates input schema before handler invocation. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'find_contact_by_email', inputMapping: { email: 'not-an-email' } })]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const runRecord = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(runRecord?.status).toBe('FAILED');
-  });
-
-  it('action.call validates output schema before storing in payload. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
-    });
-    await publishWorkflow(workflowId, 1);
-    stubAction('test.echo', 1, async () => 'invalid-output');
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const record = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(record?.status).toBe('FAILED');
-  });
-
-  it('action.call saveAs stores output at specified payload path. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
-    const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
-    expect((lastSnapshot.envelope_json as any).payload.output.value).toBe('ok');
-  });
-
-  it('T041: ai.infer runtime output is still validated by the action output contract before persistence', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        {
-          id: 'ai-step',
-          type: 'action.call',
-          config: {
-            actionId: 'ai.infer',
-            version: 1,
-            inputMapping: {
-              prompt: 'Classify this ticket',
-            },
-            saveAs: 'payload.classification',
-            aiOutputSchemaMode: 'simple',
-            aiOutputSchema: {
-              type: 'object',
-              properties: {
-                category: { type: 'string' },
-              },
-              required: ['category'],
-              additionalProperties: false,
-            },
-          },
-        },
-      ],
-    });
-    await publishWorkflow(workflowId, 1);
-    stubAction('ai.infer', 1, async () => 'invalid-output');
-
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const record = await WorkflowRunModelV2.getById(db, run.runId);
-
-    expect(record?.status).toBe('FAILED');
-  });
-
-  it('T042: ai.infer outputs saved with saveAs are available to later steps through vars.<saveAs>', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        {
-          id: 'ai-step',
-          type: 'action.call',
-          config: {
-            actionId: 'ai.infer',
-            version: 1,
-            inputMapping: {
-              prompt: 'Classify this ticket',
-            },
-            saveAs: 'classificationResult',
-            aiOutputSchemaMode: 'simple',
-            aiOutputSchema: {
-              type: 'object',
-              properties: {
-                category: { type: 'string' },
-                next_action: {
-                  type: 'object',
-                  properties: {
-                    label: { type: 'string' },
-                  },
-                  required: ['label'],
-                  additionalProperties: false,
-                },
-              },
-              required: ['category'],
-              additionalProperties: false,
-            },
-          },
-        },
-        assignStep('assign-1', {
-          'payload.aiCategory': { $expr: 'vars.classificationResult.category' },
-          'payload.aiLabel': { $expr: 'vars.classificationResult.next_action.label' },
-        }),
-      ],
-    });
-    await publishWorkflow(workflowId, 1);
-    stubAction('ai.infer', 1, async () => ({
-      category: 'billing',
-      next_action: {
-        label: 'Escalate',
-      },
-    }));
-
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
-    const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
-
-    expect((lastSnapshot.envelope_json as any).payload.aiCategory).toBe('billing');
-    expect((lastSnapshot.envelope_json as any).payload.aiLabel).toBe('Escalate');
-  });
-
-  it('onError=continue records error and continues to next step. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {}, onError: { policy: 'continue' } }),
-        stateSetStep('state-1', 'DONE')
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const record = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(record?.status).toBe('SUCCEEDED');
-  });
-
-  it('onError=fail stops execution or enters enclosing tryCatch. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        {
-          id: 'try',
-          type: 'control.tryCatch',
-          try: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {} })],
-          catch: [stateSetStep('state-1', 'RECOVERED')]
-        }
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const record = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(record?.status).toBe('SUCCEEDED');
-  });
-
   it('Cancel run server action sets status CANCELED and releases waits (API delegates). Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })]
-    });
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    // Temporal owns wait creation now; seed the projection row a Temporal
+    // activity would have written for an in-flight event wait.
+    await WorkflowRunModelV2.update(db, run.runId, { status: 'WAITING' });
+    await WorkflowRunWaitModelV2.create(db, {
+      run_id: run.runId,
+      tenant: tenantId,
+      step_path: 'root.steps[0]',
+      wait_type: 'event',
+      key: 'key',
+      event_name: 'PING',
+      status: 'WAITING'
+    });
+
     await cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' });
+    expect(cancelWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({ runId: run.runId });
+
     const record = await WorkflowRunModelV2.getById(db, run.runId);
     const waits = await db('workflow_run_waits').where({ run_id: run.runId });
     expect(record?.status).toBe('CANCELED');
+    expect(waits.length).toBeGreaterThan(0);
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
   });
 
-  it('Resume run server action restarts WAITING runs with audit record (API delegates). Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })]
-    });
-    await publishWorkflow(workflowId, 1);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    await resumeWorkflowRunAction({ runId: run.runId, reason: 'test resume' });
-    const record = await WorkflowRunModelV2.getById(db, run.runId);
-    const events = await WorkflowRuntimeEventModelV2.list(db);
-    expect(record?.status).toBe('SUCCEEDED');
-    expect(events.some((event) => event.event_name === 'ADMIN_RESUME' && event.correlation_key === run.runId)).toBe(true);
-  });
-
-  it('Replay run server action creates a fresh Temporal-native run from original input instead of DB snapshot resume. Mocks: non-target dependencies.', async () => {
+  it('Replay run server action creates a fresh Temporal-native run from the original input when payload is omitted. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
     const originalRun = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { foo: 'original' } });
 
     await WorkflowRunModelV2.update(db, originalRun.runId, { node_path: 'root.steps[99]' });
+    startWorkflowRuntimeV2TemporalRunMock.mockClear();
 
     const replayResult = await replayWorkflowRunAction({
       runId: originalRun.runId,
-      reason: 'replay for test',
-      payload: {}
+      reason: 'replay for test'
     });
 
     expect(replayResult.ok).toBe(true);
@@ -1258,12 +919,34 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
     expect(replayRecord?.workflow_id).toBe(originalRecord?.workflow_id);
     expect(replayRecord?.workflow_version).toBe(originalRecord?.workflow_version);
+    // Omitted payload means "use the original run's input"; redacted Run
+    // Studio projections never become the replay payload.
+    expect(replayRecord?.input_json).toEqual({ foo: 'original' });
     expect(replayRecord?.input_json).toEqual(originalRecord?.input_json);
     expect(replayRecord?.node_path).toBe('root.steps[0]');
+    expect(replayRecord?.engine).toBe('temporal');
     expect((replayRecord?.trigger_metadata_json as any)?.replayOfRunId).toBe(originalRun.runId);
     expect(replayRecord?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
     expect(replayRecord?.temporal_run_id).toBe('temporal-run-replayed');
-    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalled();
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: replayResult.runId, workflowId })
+    );
+  });
+
+  it('Replay run server action overrides the original input when an explicit payload is provided. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    await publishWorkflow(workflowId, 1);
+    const originalRun = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { foo: 'original' } });
+
+    const replayResult = await replayWorkflowRunAction({
+      runId: originalRun.runId,
+      reason: 'replay with override',
+      payload: { foo: 'override' }
+    });
+
+    expect(replayResult.ok).toBe(true);
+    const replayRecord = await WorkflowRunModelV2.getById(db, replayResult.runId);
+    expect(replayRecord?.input_json).toEqual({ foo: 'override' });
   });
 
   it('Get run server action returns status, nodePath, and timestamps (API delegates). Mocks: non-target dependencies.', async () => {
@@ -1276,110 +959,39 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(record.started_at).toBeDefined();
   });
 
-  it('List run steps server action returns ordered step history with attempts (API delegates). Mocks: non-target dependencies.', async () => {
+  it('List run steps server action returns step projection rows with attempts (API delegates). Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    // Step rows are written by Temporal activities now; seed the projection
+    // row the interpreter would have produced.
+    await WorkflowRunStepModelV2.create(db, {
+      run_id: run.runId,
+      tenant: tenantId,
+      step_path: 'root.steps[0]',
+      definition_step_id: 'state-1',
+      status: 'SUCCEEDED',
+      attempt: 1,
+      duration_ms: 5,
+      completed_at: new Date().toISOString()
+    });
+
     const result = await listWorkflowRunStepsAction({ runId: run.runId });
     expect(result.steps.length).toBeGreaterThan(0);
     expect(result.steps[0].attempt).toBeDefined();
+    expect(result.steps[0].definition_step_id).toBe('state-1');
   });
 
-  it('List run steps server action includes links to snapshots where available. Mocks: non-target dependencies.', async () => {
+  it('Run list/detail APIs reflect the launched run projection. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const result = await listWorkflowRunStepsAction({ runId: run.runId });
-    expect(result.steps.some((step) => step.snapshot_id)).toBe(true);
-  });
-
-  it('Run list/detail/event APIs reflect run, step, wait, action, and event projection lifecycle data. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        actionCallStep({
-          id: 'action-1',
-          actionId: 'test.echo',
-          inputMapping: { value: 'hello-world' },
-          saveAs: 'echoResult'
-        }),
-        eventWaitStep('wait-1', {
-          eventName: 'PING',
-          correlationKeyExpr: { $expr: '"projection-key"' }
-        }),
-        returnStep('return-1')
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-
-    const waitingRun = await WorkflowRunModelV2.getById(db, run.runId);
-    const waitingWaits = await db('workflow_run_waits').where({ run_id: run.runId, status: 'WAITING' });
-    const waitingInvocations = await db('workflow_action_invocations').where({ run_id: run.runId });
-
-    expect(waitingRun?.status).toBe('WAITING');
-    expect(waitingWaits.length).toBeGreaterThan(0);
-    expect(waitingInvocations.length).toBeGreaterThan(0);
-
-    const eventResult = await submitWorkflowEventAction({
-      eventName: 'PING',
-      correlationKey: 'projection-key',
-      payload: { source: 't020' }
-    });
-
-    expect(eventResult.status).toBe('resumed');
-    expect(eventResult.runId).toBe(run.runId);
-
-    const runRecord = await WorkflowRunModelV2.getById(db, run.runId);
-    const stepRecords = await db('workflow_run_steps').where({ run_id: run.runId });
-    const waitRecords = await db('workflow_run_waits').where({ run_id: run.runId });
-    const invocationRecords = await db('workflow_action_invocations').where({ run_id: run.runId });
-    const runtimeEventRecord = await db('workflow_runtime_events').where({ event_id: eventResult.eventId }).first();
-
-    expect(runRecord?.status).toBe('SUCCEEDED');
-    expect(stepRecords.length).toBeGreaterThan(0);
-    expect(waitRecords.some((wait: any) => wait.wait_type === 'event' && wait.status === 'RESOLVED')).toBe(true);
-    expect(invocationRecords.some((invocation: any) => invocation.action_id === 'test.echo' && invocation.status === 'SUCCEEDED')).toBe(true);
-    expect(runtimeEventRecord).toBeDefined();
-    expect(runtimeEventRecord?.matched_run_id).toBe(run.runId);
 
     const runList = await listWorkflowRunsAction({ runId: run.runId, limit: 10, cursor: 0, sort: 'started_at:desc' });
-    expect(runList.runs.some((row: any) => row.run_id === run.runId && row.status === 'SUCCEEDED')).toBe(true);
+    expect(runList.runs.some((row: any) => row.run_id === run.runId && row.status === 'RUNNING')).toBe(true);
 
     const runDetail = await getWorkflowRunAction({ runId: run.runId });
-    expect(runDetail.status).toBe('SUCCEEDED');
-
-    const runSteps = await listWorkflowRunStepsAction({ runId: run.runId });
-    expect(runSteps.steps.length).toBeGreaterThan(0);
-    expect(runSteps.waits.some((wait: any) => wait.wait_type === 'event' && wait.status === 'RESOLVED')).toBe(true);
-    expect(runSteps.invocations.some((invocation: any) => invocation.action_id === 'test.echo' && invocation.status === 'SUCCEEDED')).toBe(true);
-
-    const timeline = await listWorkflowRunTimelineEventsAction({ runId: run.runId });
-    expect(timeline.events.some((event: any) => event.type === 'step')).toBe(true);
-    expect(timeline.events.some((event: any) => event.type === 'wait' && event.wait_type === 'event')).toBe(true);
-
-    const eventList = await listWorkflowEventsAction({ correlationKey: 'projection-key', limit: 10, cursor: 0 });
-    expect(eventList.events.some((event: any) => event.event_id === eventResult.eventId && event.status === 'matched')).toBe(true);
-  });
-
-  it('Lease prevents concurrent execution by two workers for the same run. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-    const runtime = new WorkflowRuntimeV2();
-    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
-    const first = await runtime.acquireRunnableRun(db, 'worker-a');
-    const second = await runtime.acquireRunnableRun(db, 'worker-b');
-    expect(first).toBe(runId);
-    expect(second).toBeNull();
-  });
-
-  it('Scheduler reclaims stale leases and re-queues runs. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-    const runtime = new WorkflowRuntimeV2();
-    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
-    await WorkflowRunModelV2.update(db, runId, { lease_owner: 'old', lease_expires_at: new Date(Date.now() - 1000).toISOString() });
-    const acquired = await runtime.acquireRunnableRun(db, 'worker-new');
-    expect(acquired).toBe(runId);
+    expect(runDetail.status).toBe('RUNNING');
+    expect(runDetail.engine).toBe('temporal');
   });
 });

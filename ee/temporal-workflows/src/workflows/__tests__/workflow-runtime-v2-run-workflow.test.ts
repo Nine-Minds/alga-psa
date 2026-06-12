@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import {
+  WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+  WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
+} from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 
 type RuntimeV2Activities = {
   loadWorkflowRuntimeV2PinnedDefinition: ReturnType<typeof vi.fn>;
@@ -21,26 +25,43 @@ type RuntimeV2Activities = {
 let mockActivities: RuntimeV2Activities;
 const workflowSignalHandlers = new Map<string, (payload: unknown) => void>();
 
-vi.mock('@temporalio/workflow', () => ({
-  continueAsNew: vi.fn(async () => undefined),
-  condition: vi.fn(async (predicate: () => boolean, timeoutMs?: number) => {
-    if (predicate()) {
-      return true;
+vi.mock('@temporalio/workflow', () => {
+  class ApplicationFailure extends Error {
+    type?: string | null;
+    nonRetryable?: boolean;
+    details?: unknown[];
+
+    static nonRetryable(message?: string | null, type?: string | null, ...details: unknown[]) {
+      const failure = new ApplicationFailure(message ?? '');
+      failure.type = type;
+      failure.nonRetryable = true;
+      failure.details = details;
+      return failure;
     }
-    if (timeoutMs === undefined) {
+  }
+
+  return {
+    ApplicationFailure,
+    continueAsNew: vi.fn(async () => undefined),
+    condition: vi.fn(async (predicate: () => boolean, timeoutMs?: number) => {
+      if (predicate()) {
+        return true;
+      }
+      if (timeoutMs === undefined) {
+        return false;
+      }
       return false;
-    }
-    return false;
-  }),
-  defineQuery: vi.fn((name: string) => name),
-  defineSignal: vi.fn((name: string) => name),
-  executeChild: vi.fn(async () => undefined),
-  proxyActivities: vi.fn(() => mockActivities),
-  setHandler: vi.fn((signalName: string, handler: (payload: unknown) => void) => {
-    workflowSignalHandlers.set(signalName, handler);
-  }),
-  sleep: vi.fn(async () => undefined),
-}));
+    }),
+    defineQuery: vi.fn((name: string) => name),
+    defineSignal: vi.fn((name: string) => name),
+    executeChild: vi.fn(async () => undefined),
+    proxyActivities: vi.fn(() => mockActivities),
+    setHandler: vi.fn((signalName: string, handler: (payload: unknown) => void) => {
+      workflowSignalHandlers.set(signalName, handler);
+    }),
+    sleep: vi.fn(async () => undefined),
+  };
+});
 
 const loadWorkflow = async () => {
   vi.resetModules();
@@ -1017,7 +1038,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
         },
       },
     })).rejects.toMatchObject({
-      category: 'InterpreterCorruption',
+      type: 'WorkflowRuntimeV2.InterpreterCorruption',
+      nonRetryable: true,
     });
 
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
@@ -1413,7 +1435,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       triggerType: null,
       executionKey: 'exec_10',
     })).rejects.toMatchObject({
-      category: 'ActionError',
+      type: 'WorkflowRuntimeV2.ActionError',
+      nonRetryable: true,
     });
 
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
@@ -1524,6 +1547,13 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       })
     );
     expect(executeChildMock).toHaveBeenCalledTimes(1);
+    expect(executeChildMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        workflowExecutionTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+        workflowRunTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
+      })
+    );
     expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledWith(
       expect.objectContaining({
         stepPath: 'root.steps[1]',
@@ -1593,7 +1623,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       triggerType: null,
       executionKey: 'exec_12',
     })).rejects.toMatchObject({
-      category: 'ChildWorkflowError',
+      type: 'WorkflowRuntimeV2.ChildWorkflowError',
+      nonRetryable: true,
     });
   });
 
@@ -2268,7 +2299,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       triggerType: null,
       executionKey: 'exec_18',
     })).rejects.toMatchObject({
-      category: 'TimeoutError',
+      type: 'WorkflowRuntimeV2.TimeoutError',
+      nonRetryable: true,
     });
 
     expect(mockActivities.projectWorkflowRuntimeV2EventWaitResolved).toHaveBeenCalledWith(
@@ -2327,6 +2359,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       eventName: 'HUMAN_TASK_COMPLETED',
     });
 
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
     const temporalWorkflow = await import('@temporalio/workflow');
     const conditionMock = vi.mocked(temporalWorkflow.condition);
     conditionMock.mockImplementationOnce(async (predicate: () => boolean) => {
@@ -2341,7 +2374,6 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       return predicate();
     });
 
-    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
     await workflowRuntimeV2RunWorkflow({
       runId: 'run_19',
       tenantId: 'tenant_1',
@@ -2446,7 +2478,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       triggerType: null,
       executionKey: 'exec_20',
     })).rejects.toMatchObject({
-      category: 'ValidationError',
+      type: 'WorkflowRuntimeV2.ValidationError',
+      nonRetryable: true,
     });
   });
 

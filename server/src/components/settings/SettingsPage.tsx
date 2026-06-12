@@ -5,7 +5,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical, BookOpen } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
@@ -17,7 +17,6 @@ import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSk
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import Link from 'next/link';
 
 function TicketingSettingsLoading() {
   const { t } = useTranslation('msp/settings');
@@ -51,13 +50,15 @@ const ExperimentalFeaturesSettings = dynamic(() => import('./general/Experimenta
 });
 import InteractionSettings from './general/InteractionSettings';
 import { TimeEntrySettings } from '@alga-psa/scheduling/components';
-import { BillingSettings, TaxDelegationNudge } from '@alga-psa/billing/components'; // Import the new component
+import { BillingSettings, TaxDelegationNudge, QboSyncHealthPanel, QboOnboardingWizardEntry } from '@alga-psa/billing/components';
 import NotificationsTab from './general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
+import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
@@ -66,7 +67,7 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 
 import { SecretsManagement } from './secrets';
 import { useTier, useTierFeature } from '@/context/TierContext';
-import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
+import { ADD_ONS, TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { getAllowedSettingsTabIds } from '@/lib/settingsProductTabs';
 
@@ -99,10 +100,15 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
+  // Dark-release gate for the remote MCP server admin UI. Off by default
+  // everywhere (PostHog returns false for an unknown flag, and it resolves false
+  // when PostHog is unavailable); Nine Minds enables it per-tenant in PostHog.
+  // UI-only: the /api/mcp + /api/v1/mcp endpoints stay live regardless.
+  const { enabled: mcpServerUiEnabled } = useFeatureFlag('mcp-server');
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
-  const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
-  const { hasFeature } = useTier();
+  const { hasFeature, hasAddOn } = useTier();
+  const canUseEntraSync = hasAddOn(ADD_ONS.ENTERPRISE);
+  const canUseTeams = hasAddOn(ADD_ONS.TEAMS);
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
   const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);
@@ -188,28 +194,6 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         <Suspense fallback={<SettingsTabSkeleton title={t('tabs.ticketingSettings')} description={t('tabs.loadingTicketing')} />}>
           <TicketingSettings />
         </Suspense>
-      ),
-    },
-    {
-      id: 'knowledge-base',
-      label: t('tabs.knowledgeBase', { defaultValue: 'Knowledge Base' }),
-      icon: BookOpen,
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('tabs.knowledgeBase', { defaultValue: 'Knowledge Base' })}</CardTitle>
-            <CardDescription>
-              {t('knowledgeBase.description', {
-                defaultValue: 'Manage knowledge base content and publishing workflow from the MSP knowledge base area.',
-              })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/msp/knowledge-base" className="text-sm text-[rgb(var(--color-primary-600))] hover:underline">
-              {t('knowledgeBase.open', { defaultValue: 'Open Knowledge Base' })}
-            </Link>
-          </CardContent>
-        </Card>
       ),
     },
     {
@@ -316,7 +300,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <>
           <TaxDelegationNudge />
-          <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />
+          <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} qboSyncHealthSlot={<QboSyncHealthPanel />} qboOnboardingSlot={<QboOnboardingWizardEntry />} />
         </>
       ),
     }
@@ -333,15 +317,26 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     content: <ExtensionManagement />,
   };
 
+  // MCP server governance (Enterprise only).
+  const mcpTab: SettingsTabContent = {
+    id: 'mcp-server',
+    label: 'MCP Server',
+    icon: Settings,
+    content: <McpServerSettings />,
+  };
+
   // Create a map of tab content by label for easy lookup
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
+    if (isEEAvailable && mcpServerUiEnabled) {
+      tabs.push(mcpTab);
+    }
     if (!isAlgaDesk) {
       return tabs;
     }
 
     return tabs.filter((tab) => allowedTabIds.has(tab.id));
-  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgaDesk]);
+  }, [allowedTabIds, baseTabContent, extensionsTab, mcpTab, isEEAvailable, mcpServerUiEnabled, isAlgaDesk]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

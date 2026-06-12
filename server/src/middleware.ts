@@ -66,6 +66,7 @@ const apiKeySkipPaths = [
   '/api/teams/auth/',
   '/api/teams/bot/',
   '/api/teams/message-extension/',
+  '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
   '/api/teams/package/download',
   '/api/client-portal/domain-session',
   // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
@@ -79,10 +80,16 @@ const apiKeySkipPaths = [
   '/api/integrations/ninjaone/callback',
   '/api/integrations/xero/connect',
   '/api/integrations/xero/callback',
+  '/api/integrations/qbo/connect',
+  '/api/integrations/qbo/callback',
   // Entra integration API routes use session auth via requireEntraUiFlagEnabled
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // Remote MCP server authenticates in-route (Alga API key OR IdP-delegated Bearer token)
+  '/api/mcp',
+  // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
+  '/api/v1/mcp/',
   // Workflow definition/run APIs are session-authenticated for MSP workflow UI tooling.
   '/api/workflow-definitions',
   '/api/workflow-definitions/',
@@ -94,6 +101,18 @@ const apiKeySkipPaths = [
   '/api/webhooks/stripe',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
+  // Server-to-server webhooks from nm-store. Authenticated via HMAC
+  // x-webhook-signature using ALGA_WEBHOOK_SECRET (verified in route handlers).
+  '/api/billing/check-tenant',
+  '/api/billing/licence-count',
+  '/api/billing/licence-usage/',
+  // Reactivation / win-back HMAC endpoints (server-to-server from nm-store and
+  // the temporal worker; each verifies ALGA_WEBHOOK_SECRET in its route handler).
+  '/api/billing/request-reactivation',
+  '/api/billing/complete-reactivation',
+  '/api/billing/reactivation-token',          // startsWith also covers /reactivation-token/session
+  '/api/billing/reactivation-password-reset',
+  '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth
   '/api/ext/',  // Extension API routes handle their own auth
@@ -109,6 +128,7 @@ const apiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
 }
 

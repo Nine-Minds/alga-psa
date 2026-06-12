@@ -30,6 +30,16 @@ async function distributeIfCitus(knex, tableName) {
 }
 
 exports.up = async function(knex) {
+  // sla_notifications_sent FKs tickets; on fresh Citus chains tickets and
+  // its remaining local FK parents (categories/impacts/severities/urgencies)
+  // were never distributed. Distribute parents first, then tickets. No-op on
+  // plain Postgres and on clusters that already have them.
+  await distributeIfCitus(knex, 'categories');
+  await distributeIfCitus(knex, 'impacts');
+  await distributeIfCitus(knex, 'severities');
+  await distributeIfCitus(knex, 'urgencies');
+  await distributeIfCitus(knex, 'tickets');
+
   // 1. Add manager_user_id to boards table
   if (!(await knex.schema.hasColumn('boards', 'manager_user_id'))) {
     await knex.schema.alterTable('boards', (table) => {

@@ -122,4 +122,3 @@ const DocumentForm = ({ onSubmit }) => {
         </form>);
 };
 export default DocumentForm;
-//# sourceMappingURL=DocumentForm.jsx.map

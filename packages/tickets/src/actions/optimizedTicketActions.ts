@@ -16,7 +16,7 @@ import type {
   IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
@@ -41,6 +41,18 @@ import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  buildCuratedTicketDiffWithLabels,
+  hasCuratedChanges,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
+import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
+import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
@@ -53,6 +65,7 @@ import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -67,8 +80,27 @@ function getEmailEventChannel(): string {
   return EMAIL_EVENT_CHANNEL;
 }
 
+const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
+
+function formatLiveUpdateDisplayName(user: Pick<IUserWithRoles, 'first_name' | 'last_name' | 'username'>): string {
+  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Unknown User';
+}
+
+function toIsoTimestamp(value: unknown, fallback: string): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+
+  return fallback;
 }
 
 async function resolveAuthorizationSubjectForUser(
@@ -276,8 +308,8 @@ async function updateTicketResponseStateFromComment(
       .where({ ticket_id: ticketId, tenant })
       .update({ response_state: newState });
 
-    try {
-      await publishEvent({
+    registerAfterCommit(trx, () =>
+      publishEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
@@ -287,10 +319,9 @@ async function updateTicketResponseStateFromComment(
           newState,
           trigger: 'comment',
         },
-      });
-    } catch (eventError) {
-      console.error('[updateTicketResponseStateFromComment] Failed to publish event:', eventError);
-    }
+      }),
+      `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
+    );
   }
 
   return { previousState, newState };
@@ -932,7 +963,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 async function buildTicketListBaseQuery(
   trx: Knex.Transaction,
   tenant: string,
-  user: { user_id: string },
+  user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
@@ -983,9 +1014,24 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereNull('t.master_ticket_id');
     }
 
-    // Apply filters to base query
-    if (validatedFilters.boardId) {
-      baseQuery = baseQuery.where('t.board_id', validatedFilters.boardId);
+    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
+    // legacy single `boardId`. An explicit board selection takes precedence over the
+    // active/inactive status restriction (the user has positively chosen boards).
+    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
+      ? validatedFilters.boardIds
+      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
+    const includeNoBoard = includeBoardIds.includes('no-board');
+    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
+    if (includeBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoBoard && includeRealBoardIds.length > 0) {
+          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
+        } else if (includeNoBoard) {
+          this.whereNull('t.board_id');
+        } else {
+          this.whereIn('t.board_id', includeRealBoardIds);
+        }
+      });
     } else if (validatedFilters.boardFilterState !== 'all') {
       const boardSubquery = trx('boards')
         .select('board_id')
@@ -993,6 +1039,19 @@ async function buildTicketListBaseQuery(
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
       baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
+    }
+
+    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
+    // sentinel excludes tickets that have no board.
+    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
+    if (excludeBoardIds.includes('no-board')) {
+      baseQuery = baseQuery.whereNotNull('t.board_id');
+    }
+    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
+    if (excludeRealBoardIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
+      });
     }
 
     if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
@@ -1013,12 +1072,50 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId) {
-      if (validatedFilters.categoryId === 'no-category') {
-        baseQuery = baseQuery.whereNull('t.category_id');
-      } else if (validatedFilters.categoryId !== 'all') {
-        baseQuery = baseQuery.where('t.category_id', validatedFilters.categoryId);
-      }
+    // Category include filter. A ticket "has" a category if either its
+    // category_id (parent) or subcategory_id (child) matches the selection, so
+    // selecting a parent matches its subcategorized tickets and selecting a
+    // subcategory matches tickets that reference it via subcategory_id.
+    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
+    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
+      ? validatedFilters.categoryIds
+      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
+          ? [validatedFilters.categoryId]
+          : []);
+    const includeNoCategory = includeCategoryIds.includes('no-category');
+    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (includeNoCategory || includeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        if (includeNoCategory && includeRealCategoryIds.length > 0) {
+          this.whereNull('t.category_id').orWhere(function () {
+            this.whereIn('t.category_id', includeRealCategoryIds)
+              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+          });
+        } else if (includeNoCategory) {
+          this.whereNull('t.category_id');
+        } else {
+          this.whereIn('t.category_id', includeRealCategoryIds)
+            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
+        }
+      });
+    }
+
+    // Category exclude filter. Excludes any ticket whose parent or subcategory is
+    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
+    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
+    const excludeNoCategory = excludeCategoryIds.includes('no-category');
+    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
+    if (excludeNoCategory) {
+      baseQuery = baseQuery.whereNotNull('t.category_id');
+    }
+    if (excludeRealCategoryIds.length > 0) {
+      baseQuery = baseQuery.where(function () {
+        this.where(function () {
+          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
+        }).andWhere(function () {
+          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
+        });
+      });
     }
 
     if (validatedFilters.clientId) {
@@ -1055,26 +1152,7 @@ async function buildTicketListBaseQuery(
       }
     }
 
-    if (validatedFilters.searchQuery) {
-      const searchTerm = `%${validatedFilters.searchQuery}%`;
-      baseQuery = baseQuery.where(function(this: any) {
-        this.where('t.title', 'ilike', searchTerm)
-          .orWhere('t.ticket_number', 'ilike', searchTerm);
-
-        if (validatedFilters.bundleView === 'bundled') {
-          this.orWhereExists(function(this: any) {
-            this.select('*')
-              .from('tickets as tc')
-              .whereRaw('tc.tenant = t.tenant')
-              .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-              .andWhere(function(this: any) {
-                this.where('tc.title', 'ilike', searchTerm)
-                  .orWhere('tc.ticket_number', 'ilike', searchTerm);
-              });
-          });
-        }
-      });
-    }
+    baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
 
     // Apply tag filter if provided
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
@@ -1248,6 +1326,188 @@ async function buildTicketListBaseQuery(
     // Knex query builders have .then(), so returning one from an async function
     // would execute the query instead of returning the builder.
     return { builder: baseQuery };
+}
+
+function buildTicketListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function applyTicketListIndexedSearchFilter(
+  trx: Knex.Transaction,
+  baseQuery: Knex.QueryBuilder,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  validatedFilters: ITicketListFilters
+): Knex.QueryBuilder {
+  const rawSearch = validatedFilters.searchQuery?.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return baseQuery;
+  }
+
+  const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const includeBundledChildren = validatedFilters.bundleView === 'bundled';
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const ilikePattern = `%${rawSearch}%`;
+
+  // Citus cannot push down an OR that mixes correlated EXISTS against two different
+  // distributed tables (app_search_index vs tickets). Rewrite as UNION ALL of
+  // single-table legs joined back on the distribution column (tenant) plus ticket_id;
+  // each leg is independently pushdown-safe and the outer join is co-located.
+  const legA = `
+        SELECT
+          CASE WHEN si.object_type = 'ticket_comment' THEN si.parent_id::uuid
+               ELSE si.object_id::uuid END AS ticket_id,
+          si.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+  `;
+  const legABindings: Knex.RawBinding[] = [
+    rawSearch,
+    prefixTsquery,
+    prefixTsquery,
+    rawSearch,
+    identifier,
+    tenant,
+    ['ticket', 'ticket_comment'],
+    ['ticket:read'],
+    user.user_id,
+    isInternalUser,
+    user.user_id,
+    ...clientScopeBindings,
+  ];
+
+  const legB = `
+        SELECT t2.ticket_id, t2.tenant
+        FROM tickets t2
+        WHERE t2.tenant = ?::uuid
+          AND (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
+  `;
+  const legBBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern];
+
+  // Leg A also surfaces bundled-child matches under the master when bundleView='bundled':
+  // a search-index hit on a child ticket (or its comment) maps to the master ticket id.
+  let legD = '';
+  const legDBindings: Knex.RawBinding[] = [];
+  if (includeBundledChildren) {
+    legD = `
+        UNION ALL
+        SELECT child.master_ticket_id AS ticket_id, child.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        JOIN tickets child
+          ON child.tenant = si.tenant
+         AND child.master_ticket_id IS NOT NULL
+         AND (
+           (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
+           OR (si.object_type = 'ticket_comment' AND child.ticket_id::text = si.parent_id)
+         )
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+
+        UNION ALL
+        SELECT tc.master_ticket_id AS ticket_id, tc.tenant
+        FROM tickets tc
+        WHERE tc.tenant = ?::uuid
+          AND tc.master_ticket_id IS NOT NULL
+          AND (tc.title ILIKE ? OR tc.ticket_number ILIKE ?)
+    `;
+    legDBindings.push(
+      rawSearch,
+      prefixTsquery,
+      prefixTsquery,
+      rawSearch,
+      identifier,
+      tenant,
+      ['ticket', 'ticket_comment'],
+      ['ticket:read'],
+      user.user_id,
+      isInternalUser,
+      user.user_id,
+      ...clientScopeBindings,
+      tenant,
+      ilikePattern,
+      ilikePattern,
+    );
+  }
+
+  const unionSql = `
+    INNER JOIN (
+      SELECT DISTINCT ticket_id, tenant FROM (
+        ${legA}
+        UNION ALL
+        ${legB}
+        ${legD}
+      ) u
+    ) as sm ON sm.ticket_id = t.ticket_id AND sm.tenant = t.tenant
+  `;
+
+  return baseQuery.joinRaw(unionSql, [
+    ...legABindings,
+    ...legBBindings,
+    ...legDBindings,
+  ] as unknown as Knex.Value[]);
 }
 
 /**
@@ -1609,6 +1869,54 @@ export const getAllMatchingTicketIds = withAuth(async (
 });
 
 /**
+ * Resolve the board for a specific set of ticket ids, scoped to what the caller is
+ * authorized to see. Used by the list's bulk action bar to determine whether a
+ * selection that spans off-page rows (paginate-then-select or select-all-matching)
+ * shares a single board, so the Status action can stay enabled. Tickets the caller
+ * can't access are simply omitted from the result.
+ */
+export const getTicketBoardIds = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ ticket_id: string; board_id: string | null }>> => {
+  const uniqueIds = Array.from(
+    new Set(ticketIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
+  );
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
+
+    const rows = await trx('tickets as t')
+      .where('t.tenant', tenant)
+      .whereIn('t.ticket_id', uniqueIds)
+      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
+
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+    return authorizedRows
+      .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
+        typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
+      .map((row) => ({
+        ticket_id: row.ticket_id,
+        board_id: row.board_id ?? null,
+      }));
+  });
+});
+
+/**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
@@ -1758,14 +2066,36 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Update ticket with proper caching
  */
-export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
-  const {knex: db} = await createTenantKnex();
+/**
+ * Core ticket-update logic, executed inside a caller-provided transaction.
+ *
+ * Intentionally does NOT check permissions — callers must authorize first. The public
+ * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
+ * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ */
+export interface UpdateTicketInTransactionOptions {
+  /** Close despite unmet close rules; honored only with ticket:close_override. */
+  overrideCloseRules?: boolean;
+  overrideCloseRulesReason?: string | null;
+  /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
+  bypassCloseRules?: { source: CloseRuleBypassSource };
+  /**
+   * Attribute the change to the system rather than `user` (auto-close engine):
+   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
+   * system-sourced. `user` is still required for the call signature but is not
+   * referenced for attribution.
+   */
+  systemActor?: boolean;
+}
 
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
-    }
-
+export async function updateTicketInTransaction(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  id: string,
+  data: Partial<ITicket>,
+  options?: UpdateTicketInTransactionOptions,
+): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
@@ -1830,6 +2160,7 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
+    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
     const isBoardChange =
       'board_id' in updateData &&
       !!updateData.board_id &&
@@ -1882,7 +2213,45 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         tenant: tenant
       })
       .first();
-    
+
+    const isSystemActor = options?.systemActor === true;
+
+    // Pre-close validation gates: when this update flips the ticket from an
+    // open to a closed status, enforce the board's close rules before any
+    // writes. Throws TicketCloseValidationError (aborting the transaction)
+    // unless gates pass, a permissioned override applies, or the caller is an
+    // exempt automation path (bypassCloseRules).
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const nextStatus = await trx('statuses')
+        .where({ status_id: updateData.status_id, tenant: tenant })
+        .first();
+      if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+        const merged = { ...currentTicket, ...updateData };
+        await enforceTicketCloseRules(trx, tenant, {
+          ticket: {
+            ticket_id: id,
+            board_id: merged.board_id ?? null,
+            category_id: merged.category_id ?? null,
+            subcategory_id: merged.subcategory_id ?? null,
+            priority_id: merged.priority_id ?? null,
+            assigned_to: merged.assigned_to ?? null,
+          },
+          override: options?.overrideCloseRules
+            ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
+            : undefined,
+          bypass: options?.bypassCloseRules,
+          actor: isSystemActor
+            ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+            : {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+          source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        });
+      }
+    }
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -1970,7 +2339,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     const occurredAt = new Date().toISOString();
     const workflowCtx = {
       tenantId: tenant,
-      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      actor: isSystemActor
+        ? { actorType: 'SYSTEM' as const }
+        : { actorType: 'USER' as const, actorUserId: user.user_id },
       occurredAt,
     };
 
@@ -2078,13 +2449,16 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       updatedTicket.is_closed = nextIsClosed;
     }
 
-    // Record closed_at / closed_by when transitioning to/from closed status
+    // Record closed_at / closed_by when transitioning to/from closed status.
+    // System closes (auto-close engine) leave closed_by null — attribution
+    // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      const closedBy = isSystemActor ? null : user.user_id;
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
-        .update({ closed_at: occurredAt, closed_by: user.user_id });
+        .update({ closed_at: occurredAt, closed_by: closedBy });
       updatedTicket.closed_at = occurredAt;
-      updatedTicket.closed_by = user.user_id;
+      updatedTicket.closed_by = closedBy;
     } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
       await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
@@ -2093,23 +2467,60 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       updatedTicket.closed_by = null;
     }
 
-    // Publish appropriate event based on the update
+    // Auto-apply checklist templates when the ticket's targeting attributes
+    // (board/category/subcategory/priority) changed. Idempotent per template.
+    const checklistTargetingChanged =
+      (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) ||
+      (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) ||
+      (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) ||
+      (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id);
+    if (checklistTargetingChanged) {
+      try {
+        await applyMatchingChecklistTemplates(trx, tenant, {
+          ticket_id: id,
+          board_id: updatedTicket.board_id,
+          category_id: updatedTicket.category_id,
+          subcategory_id: updatedTicket.subcategory_id,
+          priority_id: updatedTicket.priority_id,
+        }, isSystemActor
+          ? undefined
+          : {
+              actor: {
+                actorType: TICKET_ACTIVITY_ACTOR.USER,
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              source: TICKET_ACTIVITY_SOURCE.UI,
+            });
+      } catch (error) {
+        console.error('Failed to auto-apply checklist templates:', error);
+      }
+    }
+
+    // Publish appropriate event based on the update — after the save
+    // transaction commits, so subscribers never contend with our row locks.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      // Ticket was closed
-      await publishWorkflowEvent({
-        eventType: 'TICKET_CLOSED',
-        payload: {
-          ticketId: id,
-          userId: user.user_id,
-          closedByUserId: user.user_id,
-          closedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Closed',
-        fromState: currentTicket.status_id,
-        toState: updatedTicket.status_id,
-      });
+      // Ticket was closed. System closes (auto-close engine) omit user
+      // attribution — the v2 ticketClosedEventPayloadSchema treats
+      // closedByUserId as optional.
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_CLOSED',
+          payload: {
+            ticketId: id,
+            ...(isSystemActor
+              ? {}
+              : { userId: user.user_id, closedByUserId: user.user_id }),
+            closedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Closed',
+          fromState: currentTicket.status_id,
+          toState: updatedTicket.status_id,
+        }),
+        `TICKET_CLOSED ticket=${id}`
+      );
 
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
@@ -2119,50 +2530,132 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         closedAt: occurredAt,
       });
       if (slaCompletionEvent) {
-        await publishWorkflowEvent({
-          eventType: slaCompletionEvent.eventType,
-          payload: slaCompletionEvent.payload,
-          ctx: workflowCtx,
-          idempotencyKey: slaCompletionEvent.idempotencyKey,
-        });
+        registerAfterCommit(trx, () =>
+          publishWorkflowEvent({
+            eventType: slaCompletionEvent.eventType,
+            payload: slaCompletionEvent.payload,
+            ctx: workflowCtx,
+            idempotencyKey: slaCompletionEvent.idempotencyKey,
+          }),
+          `${slaCompletionEvent.eventType} ticket=${id}`
+        );
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          ticketId: id,
-          userId: updateData.assigned_to, // Legacy: assigned user
-          assignedByUserId: user.user_id,
-          previousAssigneeId: currentTicket.assigned_to ?? undefined,
-          previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-          newAssigneeId: updateData.assigned_to,
-          newAssigneeType: 'user',
-          assignedAt: occurredAt,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Assigned',
-      });
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            ticketId: id,
+            userId: updateData.assigned_to, // Legacy: assigned user
+            assignedByUserId: user.user_id,
+            previousAssigneeId: currentTicket.assigned_to ?? undefined,
+            previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
+            newAssigneeId: updateData.assigned_to,
+            newAssigneeType: 'user',
+            assignedAt: occurredAt,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Assigned',
+        }),
+        `TICKET_ASSIGNED ticket=${id}`
+      );
     } else {
       // Regular update
-      await publishWorkflowEvent({
-        eventType: 'TICKET_UPDATED',
-        payload: {
+      registerAfterCommit(trx, () =>
+        publishWorkflowEvent({
+          eventType: 'TICKET_UPDATED',
+          payload: {
+            ticketId: id,
+            userId: user.user_id,
+            updatedByUserId: user.user_id,
+            changes: structuredChanges,
+          },
+          ctx: workflowCtx,
+          eventName: 'Ticket Updated',
+        }),
+        `TICKET_UPDATED ticket=${id}`
+      );
+    }
+
+    // System closes (auto-close engine) skip the live UI update entirely.
+    if (!isSystemActor) {
+      registerAfterCommit(trx, () =>
+        publishTicketUpdate({
+          tenantId: tenant,
           ticketId: id,
+          updatedFields,
+          updatedBy: {
+            userId: user.user_id,
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
+        }),
+        `ticket-live-update ticket=${id}`
+      );
+    }
+
+    // Write a unified activity-timeline row for this update. We pick the
+    // most specific event type so the UI can render a tight, human-readable
+    // line ("Morgan changed status from New to In Progress") rather than a
+    // generic "ticket updated" entry. The curated diff includes resolved
+    // labels for IDs where possible.
+    const actorInfo = isSystemActor
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
           userId: user.user_id,
-          updatedByUserId: user.user_id,
-          changes: structuredChanges,
-        },
-        ctx: workflowCtx,
-        eventName: 'Ticket Updated',
+          displayName: formatLiveUpdateDisplayName(user),
+        };
+    const curated = await buildCuratedTicketDiffWithLabels(
+      trx,
+      tenant,
+      currentTicket,
+      { ...updateData, closed_at: updatedTicket.closed_at, closed_by: updatedTicket.closed_by },
+    );
+
+    if (hasCuratedChanges(curated)) {
+      const changedKeys = Object.keys(curated);
+      let activityEventType: string = TICKET_ACTIVITY_EVENT.UPDATED;
+      if (newStatus?.is_closed && !oldStatus?.is_closed) {
+        activityEventType = TICKET_ACTIVITY_EVENT.CLOSED;
+      } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+        activityEventType = TICKET_ACTIVITY_EVENT.REOPENED;
+      } else if (changedKeys.length === 1) {
+        if (changedKeys[0] === 'status_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.STATUS_CHANGED;
+        } else if (changedKeys[0] === 'priority_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.PRIORITY_CHANGED;
+        } else if (changedKeys[0] === 'assigned_to') {
+          activityEventType =
+            updateData.assigned_to == null
+              ? TICKET_ACTIVITY_EVENT.UNASSIGNED
+              : TICKET_ACTIVITY_EVENT.ASSIGNED;
+        } else if (changedKeys[0] === 'board_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.BOARD_MOVED;
+        } else if (changedKeys[0] === 'response_state') {
+          activityEventType = TICKET_ACTIVITY_EVENT.RESPONSE_STATE_CHANGED;
+        }
+      }
+
+      await writeTicketActivity(trx, {
+        tenant,
+        ticketId: id,
+        eventType: activityEventType,
+        entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+        entityId: id,
+        actor: actorInfo,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        occurredAt,
+        changes: curated,
       });
     }
 
     // Publish response state change event if response_state was explicitly changed
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
-      try {
-        await publishEvent({
+      registerAfterCommit(trx, () =>
+        publishEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: {
             tenantId: tenant,
@@ -2172,10 +2665,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
             newState: updateData.response_state || null,
             trigger: 'manual',
           },
-        });
-      } catch (error) {
-        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
-      }
+        }),
+        `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
+      );
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
@@ -2184,19 +2676,47 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       .first();
 
     if (bundleSettings?.mode === 'sync_updates') {
-      const propagate: Record<string, any> = {};
+      const propagateFields: Record<string, any> = {};
       for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
         if (Object.prototype.hasOwnProperty.call(updateData, key)) {
-          propagate[key] = (updateData as any)[key];
+          propagateFields[key] = (updateData as any)[key];
         }
       }
 
-      if (Object.keys(propagate).length > 0) {
+      if (Object.keys(propagateFields).length > 0) {
+        const childTickets = await trx('tickets')
+          .where({ tenant, master_ticket_id: id })
+          .select(['ticket_id', ...Object.keys(propagateFields)]);
+
+        const childPublishes = childTickets
+          .map((childTicket: Record<string, unknown>) => ({
+            ticketId: childTicket.ticket_id as string,
+            updatedFields: diffTicketFields(childTicket, propagateFields),
+          }))
+          .filter((childPublish) => childPublish.updatedFields.length > 0);
+
+        const propagate: Record<string, any> = { ...propagateFields };
         propagate.updated_by = user.user_id;
         propagate.updated_at = new Date().toISOString();
         await trx('tickets')
           .where({ tenant, master_ticket_id: id })
           .update(propagate);
+
+        for (const childPublish of childPublishes) {
+          registerAfterCommit(trx, () =>
+            publishTicketUpdate({
+              tenantId: tenant,
+              ticketId: childPublish.ticketId,
+              updatedFields: childPublish.updatedFields,
+              updatedBy: {
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
+              updatedAt: propagate.updated_at,
+            }),
+            `ticket-live-update ticket=${childPublish.ticketId}`
+          );
+        }
       }
     }
 
@@ -2212,6 +2732,23 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       }
       throw new Error('Failed to update ticket');
     }
+}
+
+export const updateTicketWithCache = withAuth(async (
+  user,
+  { tenant },
+  id: string,
+  data: Partial<ITicket>,
+  options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
+) => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot update ticket');
+    }
+
+    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
   });
 });
 
@@ -2233,7 +2770,8 @@ export const addTicketCommentWithCache = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean,
-  isResolution: boolean
+  isResolution: boolean,
+  closesTicket: boolean = false
 ): Promise<IComment> => {
   const {knex: db} = await createTenantKnex();
 
@@ -2273,17 +2811,49 @@ export const addTicketCommentWithCache = withAuth(async (
       markdownContent = "[Error converting content to markdown]";
     }
     
-    // Insert comment with markdown_content
+    // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
+    // create the thread row first using IDs generated up-front.
+    const idsResult = await trx.raw(
+      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+    );
+    const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
+    if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+      throw new Error('Failed to generate comment/thread identifiers');
+    }
+    const newCommentId = generatedIds.comment_id;
+    const threadId = generatedIds.thread_id;
+    const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
+    const nowIso = new Date().toISOString();
+
+    await trx('comment_threads').insert({
+      tenant,
+      thread_id: threadId,
+      ticket_id: ticketId,
+      project_task_id: null,
+      root_comment_id: newCommentId,
+      is_internal: effectiveIsInternal,
+      reply_count: 0,
+      last_activity_at: nowIso,
+      created_at: nowIso,
+      created_by: user.user_id || null,
+    });
+
     const [newComment] = await trx('comments').insert({
       tenant,
+      comment_id: newCommentId,
+      thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
       author_type: authorType,
       note: content,
-      is_internal: authorType === 'internal' ? isInternal : false,
+      is_internal: effectiveIsInternal,
       is_resolution: isResolution,
-      markdown_content: markdownContent, // Add markdown content
-      created_at: new Date().toISOString()
+      markdown_content: markdownContent,
+      created_at: nowIso,
+      // The email subscriber reads metadata.closes_ticket and skips the
+      // comment-added email so the close email is the single source of
+      // truth when the UI is closing the ticket immediately after.
+      ...(closesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
     // Update ticket response state based on comment visibility and author (F005-F008)
@@ -2295,6 +2865,14 @@ export const addTicketCommentWithCache = withAuth(async (
       authorType === 'internal' ? isInternal : false,
       user.user_id ?? null
     );
+
+    // Bundle child→master reopen: a public reply on a bundled child can
+    // reopen the closed master when reopen_on_child_reply is set. This
+    // mirrors the wiring in commentActions.createComment so the optimized
+    // MSP-side comment path doesn't silently skip the reopen.
+    if (!isInternal) {
+      await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
+    }
 
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
     if (!isInternal) {
@@ -2309,64 +2887,88 @@ export const addTicketCommentWithCache = withAuth(async (
 
         const now = new Date().toISOString();
         for (const child of children) {
-          await trx.raw(
-            `
-            WITH existing AS (
-              SELECT 1
-              FROM ticket_bundle_mirrors
-              WHERE tenant = ?
-                AND source_comment_id = ?
-                AND child_ticket_id = ?
-              LIMIT 1
-            ),
-            ins_comment AS (
-              INSERT INTO comments (
-                tenant,
-                ticket_id,
-                user_id,
-                author_type,
-                note,
-                is_internal,
-                is_resolution,
-                is_system_generated,
-                markdown_content,
-                created_at
-              )
-              SELECT ?, ?, NULL, 'unknown', ?, false, ?, true, ?, ?
-              WHERE NOT EXISTS (SELECT 1 FROM existing)
-              RETURNING comment_id
-            )
-            INSERT INTO ticket_bundle_mirrors (tenant, source_comment_id, child_ticket_id, child_comment_id)
-            SELECT ?, ?, ?, comment_id
-            FROM ins_comment
-            ON CONFLICT DO NOTHING;
-            `,
-            [
-              tenant, newComment.comment_id, child.ticket_id,
-              tenant, child.ticket_id, content, isResolution, markdownContent, now,
-              tenant, newComment.comment_id, child.ticket_id
-            ]
+          const existingMirror = await trx('ticket_bundle_mirrors')
+            .where({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+            })
+            .first();
+
+          if (existingMirror) {
+            continue;
+          }
+
+          const childIds = await trx.raw(
+            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
           );
+          const childGenerated = childIds.rows?.[0] as
+            | { comment_id: string; thread_id: string }
+            | undefined;
+          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
+            throw new Error('Failed to generate mirrored comment/thread identifiers');
+          }
+
+          await trx('comment_threads').insert({
+            tenant,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            project_task_id: null,
+            root_comment_id: childGenerated.comment_id,
+            is_internal: false,
+            reply_count: 0,
+            last_activity_at: now,
+            created_at: now,
+            created_by: null,
+          });
+
+          await trx('comments').insert({
+            tenant,
+            comment_id: childGenerated.comment_id,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            user_id: null,
+            author_type: 'unknown',
+            note: content,
+            is_internal: false,
+            is_resolution: isResolution,
+            is_system_generated: true,
+            markdown_content: markdownContent,
+            created_at: now,
+          });
+
+          await trx('ticket_bundle_mirrors')
+            .insert({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+              child_comment_id: childGenerated.comment_id,
+            })
+            .onConflict()
+            .ignore();
         }
       }
     }
 
-    // Publish comment added event
-    await publishEvent({
-      eventType: 'TICKET_COMMENT_ADDED',
-      payload: {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: user.user_id,
-        comment: {
-          id: newComment.comment_id,
-          content: content,
-          author: `${user.first_name} ${user.last_name}`,
-          isInternal,
-          authorType,
+    // Publish comment added event after the comment transaction commits.
+    registerAfterCommit(trx, () =>
+      publishEvent({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: user.user_id,
+          comment: {
+            id: newComment.comment_id,
+            content: content,
+            author: `${user.first_name} ${user.last_name}`,
+            isInternal,
+            authorType,
+          }
         }
-      }
-    });
+      }),
+      `TICKET_COMMENT_ADDED ticket=${ticketId}`
+    );
 
     // Publish workflow v2 ticket message events (additive).
     try {
@@ -2388,12 +2990,54 @@ export const addTicketCommentWithCache = withAuth(async (
       });
 
       for (const ev of events) {
-        await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+        registerAfterCommit(
+          trx,
+          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+          `${ev.eventType} ticket=${ticketId}`
+        );
       }
     } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
+      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
     }
-    
+
+    registerAfterCommit(trx, () =>
+      publishTicketUpdate({
+        tenantId: tenant,
+        ticketId,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+      }),
+      `ticket-live-update ticket=${ticketId}`
+    );
+
+    // Activity-timeline row for the MSP-side "add comment" flow. This path
+    // is hit by the ticket detail UI, so source is always 'ui'. Internal
+    // notes get a distinct event type for clearer rendering.
+    await writeTicketActivity(trx, {
+      tenant,
+      ticketId,
+      eventType: isInternal
+        ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
+        : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
+      entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+      entityId: newComment.comment_id,
+      actor: {
+        actorType: TICKET_ACTIVITY_ACTOR.USER,
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+      details: {
+        is_internal: !!isInternal,
+        is_resolution: !!isResolution,
+      },
+    });
+
     // Track comment analytics
     captureAnalytics('ticket_comment_added', {
       is_internal: isInternal,
@@ -2422,9 +3066,10 @@ export async function addTicketCommentWithCacheForCurrentUser(
   ticketId: string,
   content: string,
   isInternal: boolean,
-  isResolution: boolean
+  isResolution: boolean,
+  closesTicket: boolean = false
 ): Promise<IComment> {
-  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution);
+  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, closesTicket);
 }
 
 /**

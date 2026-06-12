@@ -1,0 +1,120 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: transform.parse_json parses representative JSON object, array, primitive, and null string inputs and returns value plus detected type.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: transform.parse_json passes through literal object and array inputs without changing their structure.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: transform.parse_json fails invalid JSON strings with an actionable parse error.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F016"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: transform.query_json extracts nested fields and builds a new object from source using JSONata.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F010"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: transform.query_json can reference workflow expression context such as payload or vars alongside source.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: transform.query_json rejects disallowed functions and surfaces expression validation errors.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F016"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: transform.query_json enforces JSON-serializable output and max output size protections through the existing expression safety path.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F015"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: transform.stringify_json serializes structured values to compact and pretty JSON text if stringify is included.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Catalog/runtime metadata: new JSON Transform actions are registered as sideEffectful false, engine-idempotent, and grouped under Transform with schemas.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Runtime node integration: action.call can save parse/query output with saveAs and a later step can reference the saved value in an input mapping expression.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F024"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Chat prompt/context unit: Quick Ask prompt guidance includes JSON Transform action names, JSONata examples, saveAs guidance, and states that runtime execution is deterministic without AI.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Entitlement/UI unit, if Ask AI trigger is included: trigger is hidden without AI feature/add-on access and opens/seeds existing Quick Ask when access exists.",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Security/documentation check: implementation documents or guards the risk of saving parsed secret-derived JSON into workflow state.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  }
+]

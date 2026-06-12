@@ -22,15 +22,21 @@ describe('Package metadata and credential', () => {
   });
 
   it('T002: build emits compiled node and credential artifacts without TS compile errors', () => {
+    // Cold CI builds exceed vitest's default 5s timeout, and because execSync
+    // is synchronous vitest can't preempt it — a hung child held the CI job
+    // open for hours. Kill the build at the child level and give the test a
+    // realistic budget.
     execSync('npm run build', {
       cwd: packageRoot,
       stdio: 'pipe',
+      timeout: 120_000,
+      killSignal: 'SIGKILL',
     });
 
     expect(existsSync(path.join(packageRoot, 'dist/nodes/AlgaPsa/AlgaPsa.node.js'))).toBe(true);
     expect(existsSync(path.join(packageRoot, 'dist/nodes/AlgaPsa/avatar-purple.png'))).toBe(true);
     expect(existsSync(path.join(packageRoot, 'dist/credentials/AlgaPsaApi.credentials.js'))).toBe(true);
-  });
+  }, 180_000);
 
   it('T003: credential definition exposes exactly baseUrl and secret apiKey fields', () => {
     const credential = new AlgaPsaApi();

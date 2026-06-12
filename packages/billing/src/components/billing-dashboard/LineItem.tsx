@@ -71,6 +71,8 @@ export const LineItem: React.FC<LineItemProps> = ({
       ? (Math.abs(item.rate) / 100).toFixed(2)
       : "0.00"
   );
+  const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
+  const itemDomId = item.item_id ? `item-${item.item_id}` : `item-${index}`;
 
   // Reset edit state when item changes
   useEffect(() => {
@@ -86,6 +88,29 @@ export const LineItem: React.FC<LineItemProps> = ({
       setDiscountAmountInput((Math.abs(item.rate) / 100).toFixed(2));
     }
   }, [item]);
+
+  useEffect(() => {
+    if (!item.item_id || typeof window === 'undefined') {
+      return;
+    }
+
+    const expectedHash = `#item-${item.item_id}`;
+    if (window.location.hash !== expectedHash) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(itemDomId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setIsSearchHighlighted(true);
+    });
+    const timeout = window.setTimeout(() => setIsSearchHighlighted(false), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [item.item_id, itemDomId]);
 
   const selectedService = serviceOptions.find(s => s.value === editState.service_id) as ServiceOption | undefined;
   
@@ -202,10 +227,13 @@ export const LineItem: React.FC<LineItemProps> = ({
   if (!isExpanded) {
     return (
       <div
+        id={itemDomId}
         onClick={onToggleExpand}
         className={`p-3 border rounded-lg mb-2 cursor-pointer hover:bg-muted flex justify-between items-center ${
           editState.isRemoved ? 'opacity-50 bg-muted' : ''
-        } ${editState.is_discount ? 'border-primary/30 bg-primary/10' : ''}`}
+        } ${editState.is_discount ? 'border-primary/30 bg-primary/10' : ''} ${
+          isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
+        }`}
       >
         <div className="flex-1">
           {editState.is_discount ? (
@@ -269,9 +297,11 @@ export const LineItem: React.FC<LineItemProps> = ({
   }
 
   return (
-    <div className={`p-4 border rounded-lg space-y-3 mb-2 ${
+    <div id={itemDomId} className={`p-4 border rounded-lg space-y-3 mb-2 ${
       editState.isRemoved ? 'opacity-50 bg-muted' : ''
-    } ${editState.is_discount ? 'border-blue-200 bg-blue-50' : ''}`}>
+    } ${editState.is_discount ? 'border-blue-200 bg-blue-50' : ''} ${
+      isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
+    }`}>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">

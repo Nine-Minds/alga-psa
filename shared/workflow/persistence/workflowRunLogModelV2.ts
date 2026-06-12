@@ -3,7 +3,9 @@ import { Knex } from 'knex';
 export type WorkflowRunLogRecord = {
   log_id: string;
   run_id: string;
-  tenant_id?: string | null;
+  // uuid Citus distribution column. The legacy `tenant_id` column is being phased
+  // out (dropped in the cleanup migration) and is not referenced here.
+  tenant?: string | null;
   step_id?: string | null;
   step_path?: string | null;
   level: string;
@@ -36,13 +38,15 @@ const WorkflowRunLogModelV2 = {
   listByRun: async (
     knex: Knex,
     runId: string,
-    filters: WorkflowRunLogFilters = {}
+    filters: WorkflowRunLogFilters = {},
+    tenant?: string | null
   ): Promise<{ logs: WorkflowRunLogRecord[]; nextCursor: number | null }> => {
     const limit = filters.limit ?? 100;
     const cursor = filters.cursor ?? 0;
 
     const query = knex<WorkflowRunLogRecord>('workflow_run_logs')
       .where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
 
     if (filters.level?.length) {
       query.whereIn('level', filters.level);

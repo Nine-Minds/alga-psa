@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -19,9 +22,13 @@ const hoisted = vi.hoisted(() => {
     allowed_actions: string[];
     app_id?: string | null;
     bot_id?: string | null;
-    package_metadata?: Record<string, unknown> | null;
-    last_error: string | null;
-    created_by: string | null;
+	    package_metadata?: Record<string, unknown> | null;
+	    last_error: string | null;
+	    default_meeting_organizer_upn?: string | null;
+	    default_meeting_organizer_object_id?: string | null;
+	    download_recordings?: boolean | null;
+	    expose_recordings_in_portal?: boolean | null;
+	    created_by: string | null;
     updated_by: string | null;
     created_at: string | Date;
     updated_at: string | Date;
@@ -43,6 +50,7 @@ const hoisted = vi.hoisted(() => {
     tenantSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
+    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
   };
 
@@ -63,6 +71,9 @@ const hoisted = vi.hoisted(() => {
       if (table === 'microsoft_profile_consumer_bindings') {
         return state.microsoftConsumerBindings;
       }
+      if (table === 'tenant_addons') {
+        return state.tenantAddOns;
+      }
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -71,6 +82,12 @@ const hoisted = vi.hoisted(() => {
     return {
       where(conditions: Record<string, unknown>) {
         filters.push(conditions);
+        return this;
+      },
+      andWhere(callback: (builder: any) => void) {
+        callback({
+          whereNull: () => ({ orWhere: () => undefined }),
+        });
         return this;
       },
       async first() {
@@ -103,16 +120,24 @@ const hoisted = vi.hoisted(() => {
     now: vi.fn(() => 'now()'),
   };
 
-  return {
-    state,
-    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
-    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
-    knexMock,
-  };
-});
+	  return {
+	    state,
+	    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+	    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
+	    fetchMock: vi.fn(),
+	    knexMock,
+	  };
+	});
 
-const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
-const { hasPermissionMock, isFeatureFlagEnabledMock, knexMock } = hoisted;
+const { microsoftProfiles, teamsIntegrations, tenantAddOns, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
+const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoisted;
+
+const DEFAULT_MEETING_SETTINGS = {
+  defaultMeetingOrganizerUpn: null,
+  defaultMeetingOrganizerObjectId: null,
+  downloadRecordings: false,
+  exposeRecordingsInPortal: false,
+};
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -137,6 +162,13 @@ vi.mock('@alga-psa/core', async () => {
   };
 });
 
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getTenantSecret: async (tenant: string, secretRef: string) =>
+      tenantSecrets.get(`${tenant}:${secretRef}`) || null,
+  }),
+}));
+
 vi.mock('./providerReadiness', () => ({
   getMicrosoftProfileReadiness: vi.fn(async (tenant: string, config: any) => {
     const secret = tenantSecrets.get(`${tenant}:${config.clientSecretRef}`) || null;
@@ -154,7 +186,9 @@ vi.mock('./providerReadiness', () => ({
 import {
   getTeamsIntegrationExecutionState,
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
   saveTeamsIntegrationSettings,
+  sendTeamsTestMessage,
 } from './teamsActions';
 
 function addMicrosoftProfile({
@@ -191,12 +225,24 @@ describe('Teams integration actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
+    tenantAddOns.length = 0;
+    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
     isFeatureFlagEnabledMock.mockClear();
     isFeatureFlagEnabledMock.mockResolvedValue(true);
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ access_token: 'graph-token' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      writable: true,
+      value: fetchMock,
+    });
   });
 
   afterEach(() => {
@@ -220,6 +266,17 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
+  it('returns an add-on required result when the tenant lacks the Teams add-on', async () => {
+    tenantAddOns.length = 0;
+
+    const result = await getTeamsIntegrationStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration requires the Teams add-on.',
+    });
+  });
+
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-2',
@@ -229,6 +286,7 @@ describe('Teams integration actions', () => {
       secretRef: 'tenant-two-secret-ref',
     });
     tenantSecrets.set('tenant-2:tenant-two-secret-ref', 'tenant-two-secret');
+    tenantAddOns.push({ tenant: 'tenant-2', addon_key: 'teams', expires_at: null });
 
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     await saveTeamsIntegrationSettings({
@@ -247,11 +305,12 @@ describe('Teams integration actions', () => {
         notificationCategories: ['assignment', 'customer_reply', 'approval_request', 'escalation', 'sla_risk'],
         allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
         appId: null,
-        botId: null,
-        packageMetadata: null,
-        lastError: null,
-      },
-    });
+	        botId: null,
+	        packageMetadata: null,
+	        lastError: null,
+	        ...DEFAULT_MEETING_SETTINGS,
+	      },
+	    });
 
     expect(teamsIntegrations.filter((row) => row.tenant === 'tenant-1')).toHaveLength(0);
     expect(teamsIntegrations.filter((row) => row.tenant === 'tenant-2')).toHaveLength(1);
@@ -284,14 +343,68 @@ describe('Teams integration actions', () => {
         notificationCategories: ['assignment', 'approval_request'],
         allowedActions: ['assign_ticket', 'log_time'],
         appId: null,
-        botId: null,
-        packageMetadata: null,
-        lastError: null,
-      },
-    });
+	        botId: null,
+	        packageMetadata: null,
+	        lastError: null,
+	        ...DEFAULT_MEETING_SETTINGS,
+	      },
+	    });
 
     const reloaded = await getTeamsIntegrationStatus();
     expect(reloaded).toEqual(saved);
+  });
+
+  it('T072/T073: resolves the meeting organizer object id and stores recording toggles', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'graph-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'organizer-object-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+      downloadRecordings: true,
+      exposeRecordingsInPortal: true,
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: expect.objectContaining({
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+        defaultMeetingOrganizerObjectId: 'organizer-object-1',
+        downloadRecordings: true,
+        exposeRecordingsInPortal: true,
+      }),
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://graph.microsoft.com/v1.0/users/scheduler%40acme.com',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer graph-token',
+        },
+      })
+    );
+    expect(teamsIntegrations[0]).toMatchObject({
+      default_meeting_organizer_upn: 'scheduler@acme.com',
+      default_meeting_organizer_object_id: 'organizer-object-1',
+      download_recordings: true,
+      expose_recordings_in_portal: true,
+    });
   });
 
   it('T086/T088/T090/T092/T094/T228/T254/T256: rejects missing, archived, or unready profiles and unsupported install states', async () => {
@@ -399,11 +512,12 @@ describe('Teams integration actions', () => {
         notificationCategories: ['assignment'],
         allowedActions: ['assign_ticket'],
         appId: null,
-        botId: null,
-        packageMetadata: null,
-        lastError: null,
-      },
-    });
+	        botId: null,
+	        packageMetadata: null,
+	        lastError: null,
+	        ...DEFAULT_MEETING_SETTINGS,
+	      },
+	    });
   });
 
   it('T191/T192/T255/T256: delegates execution-state reads into the EE implementation while preserving the existing shared result shape', async () => {
@@ -431,6 +545,7 @@ describe('Teams integration actions', () => {
       allowedActions: ['assign_ticket', 'log_time'],
       appId: 'teams-app-1',
       packageMetadata: { baseUrl: 'https://tenant.example.com' },
+      ...DEFAULT_MEETING_SETTINGS,
     });
   });
 
@@ -546,15 +661,43 @@ describe('Teams integration actions', () => {
         notificationCategories: ['assignment'],
         allowedActions: ['assign_ticket'],
         appId: null,
-        botId: null,
-        packageMetadata: null,
-        lastError: null,
-      },
-    });
+	        botId: null,
+	        packageMetadata: null,
+	        lastError: null,
+	        ...DEFAULT_MEETING_SETTINGS,
+	      },
+	    });
     expect(microsoftConsumerBindings).toEqual([
       expect.objectContaining({ consumer_type: 'email', profile_id: 'profile-1' }),
       expect.objectContaining({ consumer_type: 'calendar', profile_id: 'profile-1' }),
       expect.objectContaining({ consumer_type: 'msp_sso', profile_id: 'profile-1' }),
     ]);
+  });
+
+  it('T042: exports Teams diagnostics actions through the integrations action boundary', () => {
+    // Resolve the repo root from this file's location so the test is independent
+    // of the working directory the suite runs from.
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const repoRoot = path.resolve(testDir, '../../../../..');
+    const integrationsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
+      'utf8'
+    );
+    const rootActionsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'packages/integrations/src/actions/index.ts'),
+      'utf8'
+    );
+    const eeActionsIndex = fs.readFileSync(
+      path.resolve(repoRoot, 'ee/packages/microsoft-teams/src/actions/index.ts'),
+      'utf8'
+    );
+
+    expect(typeof runTeamsDiagnostics).toBe('function');
+    expect(typeof sendTeamsTestMessage).toBe('function');
+    expect(integrationsIndex).toContain('runTeamsDiagnostics');
+    expect(integrationsIndex).toContain('sendTeamsTestMessage');
+    expect(rootActionsIndex).toContain('runTeamsDiagnostics');
+    expect(rootActionsIndex).toContain('sendTeamsTestMessage');
+    expect(eeActionsIndex).toContain('teamsDiagnosticsActions');
   });
 });

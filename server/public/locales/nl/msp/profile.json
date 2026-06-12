@@ -6,7 +6,8 @@
       "sso": "Single sign-on",
       "apiKeys": "API-sleutels",
       "notifications": "Meldingen",
-      "calendar": "Agenda"
+      "calendar": "Agenda",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Basisinformatie"
@@ -133,7 +134,18 @@
         "inactiveHidden": "(inactieve gebruikers verborgen)"
       },
       "inactiveTag": "(Inactief)",
-      "unnamedUser": "Naamloze gebruiker"
+      "unnamedUser": "Naamloze gebruiker",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rol succesvol toegewezen",
+          "roleRemoved": "Rol succesvol verwijderd"
+        },
+        "error": {
+          "assignFailed": "Toewijzen van rol mislukt. Probeer het opnieuw.",
+          "removeFailed": "Verwijderen van rol mislukt. Probeer het opnieuw.",
+          "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+        }
+      }
     },
     "sessions": {
       "title": "Alle gebruikerssessies",
@@ -191,7 +203,222 @@
       "newWebhook": "Nieuwe webhook",
       "tabs": {
         "configuration": "Configuratie",
-        "deliveries": "Leveringen"
+        "deliveries": "Leveringen",
+        "inbound": "Inkomend",
+        "outbound": "Uitgaand"
+      },
+      "inbound": {
+        "title": "Inkomende webhooks",
+        "description": "Accepteer geauthenticeerde verzoeken van externe systemen en stuur ze door naar directe acties of workflows.",
+        "placeholder": "Configureer endpoints voor inkomende webhooks die verzoeken verifiëren, leveringen ontdubbelen en doorsturen naar acties of workflows.",
+        "newWebhook": "Nieuwe webhook",
+        "list": {
+          "title": "Geconfigureerde inkomende webhooks",
+          "loading": "Laden…",
+          "configuredCount": "{{count}} geconfigureerd",
+          "empty": "Nog geen inkomende webhooks geconfigureerd.",
+          "columns": {
+            "name": "Naam",
+            "handler": "Handler",
+            "lastDelivery": "Laatste aflevering",
+            "active": "Actief",
+            "actions": "Acties"
+          }
+        },
+        "handlers": {
+          "directAction": "Directe actie",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Actief",
+          "inactive": "Inactief"
+        },
+        "messages": {
+          "loadFailed": "Inkomende webhooks laden mislukt.",
+          "nameRequired": "Naam is verplicht.",
+          "slugRequired": "Slug is verplicht.",
+          "actionRequired": "Selecteer een actie voordat u opslaat.",
+          "workflowRequired": "Selecteer een workflow voordat u opslaat.",
+          "missingRequiredFields": "Wijs een waarde toe voor verplichte velden: {{fields}}"
+        },
+        "dialog": {
+          "createTitle": "Inkomende webhook maken",
+          "editTitle": "Inkomende webhook bewerken",
+          "cancel": "Annuleren",
+          "create": "Webhook maken",
+          "save": "Wijzigingen opslaan",
+          "saveUnavailable": "Doorgaan"
+        },
+        "identity": {
+          "title": "Identiteit",
+          "help": "Benoem de webhook en kies de URL-veilige slug voor het ontvangende endpoint.",
+          "name": "Naam",
+          "namePlaceholder": "Kritieke RMM-meldingen",
+          "slug": "Slug",
+          "slugPlaceholder": "rmm-kritieke-meldingen",
+          "description": "Beschrijving",
+          "descriptionPlaceholder": "Optionele notities over het bronsysteem en de payload."
+        },
+        "auth": {
+          "title": "Authenticatie",
+          "help": "Kies hoe inkomende verzoeken bewijzen dat ze dit endpoint mogen gebruiken.",
+          "method": "Authenticatiemethode",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer-token",
+            "ipAllowlist": "IP-witte lijst",
+            "pathToken": "Gedeeld geheim in pad"
+          },
+          "signatureHeader": "Handtekening-header",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer-token",
+          "bearerTokenPlaceholder": "Plak het token of laat leeg om er een te genereren",
+          "secretUnchangedPlaceholder": "Laat leeg om het huidige geheim te behouden",
+          "ipCidrs": "Toegestane IPs / CIDRs",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Querystring-parameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Pad-token",
+          "pathTokenPlaceholder": "Plak het token of laat leeg om er een te genereren"
+        },
+        "secret": {
+          "label": "Webhook-geheim",
+          "warning": "Deze waarde wordt alleen nu getoond. Sla het op in het bronsysteem voordat u dit dialoogvenster sluit.",
+          "copy": "Kopiëren",
+          "download": "Downloaden als .txt",
+          "close": "Sluiten"
+        },
+        "idempotency": {
+          "title": "Idempotentie",
+          "help": "Gebruik een stabiele sleutel om dubbele leveringen binnen het geconfigureerde venster te detecteren.",
+          "source": "Sleutelbron",
+          "types": {
+            "header": "HTTP-header",
+            "jsonata": "JSONata-expressie"
+          },
+          "headerName": "Headernaam",
+          "headerNamePlaceholder": "X-Idempotency-Key",
+          "jsonataExpression": "JSONata-expressie",
+          "jsonataExpressionPlaceholder": "alert.id",
+          "windowSeconds": "Duplicaatvenster (seconden)"
+        },
+        "active": {
+          "title": "Actieve status",
+          "help": "Pauzeer het endpoint zonder URL, toewijzingen of afleveringsgeschiedenis te verwijderen.",
+          "toggle": "Webhook is actief",
+          "autoDisabled": "Automatisch uitgeschakeld op {{date}} na herhaalde fouten.",
+          "updateFailed": "Status van inkomende webhook bijwerken mislukt."
+        },
+        "handler": {
+          "title": "Handler",
+          "help": "Kies wat Alga moet doen nadat het verzoek is geverifieerd en ontdubbeld.",
+          "type": "Handlertype",
+          "types": {
+            "directAction": "Directe actie",
+            "workflow": "Workflow"
+          },
+          "directActionTitle": "Directe actie",
+          "directActionHelp": "Selecteer een inkomende actie en koppel payload-velden aan haar doelvelden.",
+          "action": "Actie",
+          "actionPlaceholder": "Selecteer een actie",
+          "actionEmpty": "Er zijn geen inkomende acties geregistreerd. Zorg ervoor dat de server het actieregister heeft geïnitialiseerd voordat u opslaat.",
+          "targetFields": "Doelvelden",
+          "required": "Verplicht",
+          "optional": "Optioneel",
+          "mappingPlaceholder": "Typ een JSONata-expressie, bv. payload.field",
+          "workflowTitle": "Workflow",
+          "workflowHelp": "Selecteer een workflow om te starten met de genormaliseerde webhook-envelop.",
+          "workflow": "Workflow",
+          "workflowPlaceholder": "Selecteer een workflow",
+          "workflowEmpty": "Geen workflows zichtbaar in deze tenant. Publiceer of toon een workflow om de workflow-handler te gebruiken.",
+          "envelopeTitle": "Workflow-invoerenvelop",
+          "fieldTypes": {
+            "string": "tekenreeks",
+            "int": "geheel getal",
+            "number": "getal",
+            "boolean": "booleaans",
+            "enum": "enum",
+            "json": "json",
+            "ref": "referentie"
+          }
+        },
+        "sample": {
+          "title": "Voorbeeld-payload",
+          "help": "Leg het volgende geverifieerde verzoek vast voor mapping-autocomplete.",
+          "createFirst": "Sla de webhook op voordat u een voorbeeldverzoek vastlegt.",
+          "captureButton": "Voorbeeldverzoek vastleggen",
+          "captureActive": "Vastlegvenster actief tot {{expiresAt}}.",
+          "sampleAvailable": "Voorbeeld-payload vastgelegd.",
+          "noSample": "Nog geen voorbeeld vastgelegd.",
+          "captureFailed": "Voorbeeldvastlegging inschakelen mislukt."
+        },
+        "sampleTree": {
+          "title": "Voorbeeldpaden",
+          "help": "Klik op een pad om het in {{field}} in te voegen.",
+          "focusHelp": "Focus een mapping-veld en klik vervolgens op een pad om het in te voegen.",
+          "empty": "Leg een voorbeeld-payload vast om velden te verkennen."
+        },
+        "mapping": {
+          "modeStatic": "Statische waarde",
+          "modeExpression": "Toewijzen vanuit payload",
+          "unknownReference": "onbekende referentie",
+          "loading": "Laden…",
+          "errors": {
+            "INVALID_INT": "Waarde \"{{value}}\" moet een geheel getal zijn.",
+            "INVALID_NUMBER": "Waarde \"{{value}}\" moet een getal zijn.",
+            "INVALID_BOOLEAN": "Waarde moet \"true\" of \"false\" zijn.",
+            "INVALID_JSON": "Waarde moet geldige JSON zijn."
+          }
+        },
+        "deliveryLog": {
+          "title": "Afleveringslogboek",
+          "help": "Recente geverifieerde afleveringen voor deze inkomende webhook.",
+          "empty": "Nog geen afleveringen geregistreerd.",
+          "loadFailed": "Afleveringen laden mislukt.",
+          "pageSummary": "Pagina {{page}} van {{total}}",
+          "durationMs": "{{duration}} ms",
+          "allStatuses": "Alle statussen",
+          "columns": {
+            "received": "Ontvangen",
+            "status": "Status",
+            "response": "Antwoord",
+            "duration": "Duur",
+            "actions": "Acties"
+          },
+          "view": "Bekijken",
+          "status": {
+            "pending": "in behandeling",
+            "dispatched": "afgeleverd",
+            "duplicate": "duplicaat",
+            "failed": "mislukt"
+          }
+        },
+        "deliveryDetail": {
+          "title": "Afleveringsdetail",
+          "close": "Sluiten",
+          "replay": "Opnieuw verzenden",
+          "replayConfirm": "Deze aflevering opnieuw verzenden via de huidige webhook-configuratie? Eventuele neveneffecten (ticketcreatie, statusveranderingen, enz.) worden opnieuw uitgevoerd.",
+          "replayFailed": "Opnieuw verzenden van aflevering mislukt.",
+          "received": "Ontvangen",
+          "status": "Status",
+          "responseStatus": "Antwoordstatus",
+          "duration": "Duur",
+          "sections": {
+            "headers": "Verzoekheaders",
+            "requestBody": "Verzoektekst",
+            "responseBody": "Antwoordtekst",
+            "handlerOutcome": "Handler-resultaat"
+          }
+        },
+        "test": {
+          "openButton": "Test verzenden",
+          "title": "Testverzoek verzenden",
+          "body": "Verzoek-JSON",
+          "headers": "Headers",
+          "cancel": "Annuleren",
+          "send": "Test verzenden",
+          "sendFailed": "Verzenden van webhook-testverzoek mislukt."
+        }
       },
       "stats": {
         "total": "Totale webhooks",

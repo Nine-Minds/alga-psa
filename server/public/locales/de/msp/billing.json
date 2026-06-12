@@ -48,7 +48,8 @@
       "servicePeriods": "Servicezeiträume",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
-      "serviceCatalog": "Servicekatalog",
+      "serviceTypes": "Servicetypen",
+      "serviceCatalog": "Dienste",
       "products": "Produkte"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "Dieser Service erscheint in mehreren Vertragszeilen. Bitte wählen Sie die Vertragsposition aus, die abgerechnet werden soll.",
       "tooltipNoClient": "Kundeninformationen nicht verfügbar. Die Nutzung wird an den vom System verwalteten Standardvertrag weitergeleitet.",
-      "tooltipMultiple": "Dieser Service erscheint in mehreren Vertragszeilen. Bitte wählen Sie aus, welche Vertragszeile Sie verwenden möchten. In der Regel werden zunächst Bucket-Vertragslinien verwendet, bis sie erschöpft sind.",
+      "tooltipMultiple": "Dieser Service erscheint in mehreren Vertragszeilen. Bitte wählen Sie aus, welche Vertragszeile Sie verwenden möchten. Wenn nur eine davon eine Bucket-Vertragszeile ist, wird sie standardmäßig ausgewählt.",
       "tooltipSingle": "Diese Nutzung wird über die Vertragszeile „{{name}}“ abgerechnet.",
       "tooltipNone": "Für diesen Service wurden keine geeigneten Vertragszeilen gefunden.",
       "placeholderNoClient": "Verwendung eines vom System verwalteten Standardvertrags",
@@ -630,7 +631,8 @@
       "open": "Öffnen",
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
-      "creating": "Erstellen..."
+      "creating": "Erstellen...",
+      "cancelBatch": "Stapel stornieren"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -664,8 +666,10 @@
         "created": "Erstellt",
         "lines": "Zeilen",
         "errors": "Fehler",
-        "delivered": "Geliefert"
-      }
+        "delivered": "Geliefert",
+        "notes": "Notizen"
+      },
+      "errorDetails": "Fehlerdetails"
     },
     "toast": {
       "created": "Buchhaltungsexportstapel erstellt",
@@ -673,7 +677,9 @@
       "loadBatchesError": "Das Laden der Buchhaltungsexport-Batches ist fehlgeschlagen",
       "loadDetailError": "Batch-Details konnten nicht geladen werden",
       "createError": "Exportstapel konnte nicht erstellt werden",
-      "executeError": "Batch konnte nicht ausgeführt werden"
+      "executeError": "Batch konnte nicht ausgeführt werden",
+      "cancelled": "Stapel storniert",
+      "cancelError": "Batch konnte nicht storniert werden"
     },
     "status": {
       "pending": "Ausstehend",

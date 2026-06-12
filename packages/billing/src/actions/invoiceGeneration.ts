@@ -387,6 +387,115 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
   });
 }
 
+/**
+ * Resolves every recurring due obligation materialized for a client's billing
+ * window (legacy billing-cycle bridge). A client cycle window can contain
+ * multiple client-cadence schedules (one per contract line) plus
+ * contract-cadence lines whose invoice window coincides with the cycle window;
+ * production grouped generation (recurringBillingRunActions) passes one
+ * selector input per obligation, and the cycle bridge must do the same or it
+ * silently drops every obligation after the first.
+ */
+async function resolveCanonicalSelectorInputsForClientWindow(params: {
+  knex: Knex;
+  tenant: string;
+  clientId: string;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+}): Promise<IRecurringDueSelectionInput[]> {
+  const normalizedWindowStart = normalizeRecurringWindowDate(params.windowStart);
+  const normalizedWindowEnd = normalizeRecurringWindowDate(params.windowEnd);
+
+  const buildWindowRowsQuery = (trx: Knex.Transaction) =>
+    trx('recurring_service_periods as rsp')
+      .join('contract_lines as cl', function () {
+        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+          .andOn('cl.tenant', '=', 'rsp.tenant');
+      })
+      .join('contracts as ct', function () {
+        this.on('ct.contract_id', '=', 'cl.contract_id')
+          .andOn('ct.tenant', '=', 'cl.tenant');
+      })
+      .join('clients as c', function () {
+        this.on('c.client_id', '=', 'ct.owner_client_id')
+          .andOn('c.tenant', '=', 'ct.tenant');
+      })
+      .where({
+        'rsp.tenant': params.tenant,
+        'c.client_id': params.clientId,
+        'rsp.invoice_window_start': normalizedWindowStart,
+        'rsp.invoice_window_end': normalizedWindowEnd,
+      })
+      .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+      .orderBy('rsp.service_period_start', 'asc')
+      .orderBy('rsp.revision', 'asc')
+      .select(
+        'rsp.cadence_owner',
+        'rsp.schedule_key',
+        'rsp.period_key',
+        'rsp.obligation_id',
+        'ct.contract_id',
+      );
+
+  const windowRows = await withTransaction(
+    params.knex,
+    async (trx: Knex.Transaction) => {
+      const clientCadenceRows = await buildWindowRowsQuery(trx)
+        .where('rsp.cadence_owner', 'client')
+        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+      const contractCadenceRows = await buildWindowRowsQuery(trx)
+        .where('rsp.cadence_owner', 'contract')
+        .where('rsp.obligation_type', 'contract_line');
+      return [...clientCadenceRows, ...contractCadenceRows];
+    },
+  );
+
+  const selectorInputs: IRecurringDueSelectionInput[] = [];
+  const seenClientCadenceKeys = new Set<string>();
+  const seenContractLineIds = new Set<string>();
+
+  for (const row of windowRows) {
+    if (row.cadence_owner === 'client') {
+      if (!row.schedule_key || !row.period_key) {
+        continue;
+      }
+      const dedupeKey = `${row.schedule_key}::${row.period_key}`;
+      if (seenClientCadenceKeys.has(dedupeKey)) {
+        continue;
+      }
+      seenClientCadenceKeys.add(dedupeKey);
+      selectorInputs.push(buildClientCadenceDueSelectionInput({
+        clientId: params.clientId,
+        scheduleKey: row.schedule_key,
+        periodKey: row.period_key,
+        windowStart: normalizedWindowStart,
+        windowEnd: normalizedWindowEnd,
+      }));
+      continue;
+    }
+
+    if (!row.obligation_id || seenContractLineIds.has(row.obligation_id)) {
+      continue;
+    }
+    seenContractLineIds.add(row.obligation_id);
+    selectorInputs.push(buildContractCadenceDueSelectionInput({
+      clientId: params.clientId,
+      contractId: row.contract_id ?? null,
+      contractLineId: row.obligation_id,
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    }));
+  }
+
+  if (selectorInputs.length === 0) {
+    throw new Error(
+      'Recurring service periods were not materialized for this client billing schedule window.',
+    );
+  }
+
+  return selectorInputs;
+}
+
 async function assertClientCadenceWindowFullyMaterialized(params: {
   knex: Knex;
   tenant: string;
@@ -984,7 +1093,7 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
 ): Promise<PurchaseOrderOverageResult | null> => {
   const { knex } = await createTenantKnex();
 
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoices');
   }
 
@@ -1003,7 +1112,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -1400,7 +1509,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   let normalizedGroupedSelections = groupedSelections;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
     if (!Array.isArray(groupedSelections) || groupedSelections.length === 0) {
@@ -1462,7 +1571,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   let normalizedSelectorInput = selectorInput;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
     normalizedSelectorInput = await normalizeRecurringSelectorInput({
@@ -1495,7 +1604,7 @@ export const previewInvoice = withAuth(async (
   let selectorInput: IRecurringDueSelectionInput | null = null;
 
   try {
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
 
@@ -1573,7 +1682,7 @@ export const generateInvoice = withAuth(async (
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permissions within transaction
-    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -1606,7 +1715,11 @@ export const generateInvoice = withAuth(async (
     throw new Error('Invalid billing cycle dates');
   }
 
-  const selectorInput = await resolveCanonicalClientCadenceSelectorInput({
+  // Resolve every materialized obligation in this cycle window (multiple
+  // client-cadence schedules and same-window contract-cadence lines), matching
+  // how grouped recurring generation invoices a window. Resolving only the
+  // first schedule key would silently drop the remaining contract lines.
+  const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
     knex,
     tenant,
     clientId: client_id,
@@ -1614,11 +1727,34 @@ export const generateInvoice = withAuth(async (
     windowEnd: cycleEnd,
   });
 
-  return generateInvoiceForSelectionInput(
-    selectorInput,
+  let normalizedSelectorInputs: IRecurringDueSelectionInput[];
+  try {
+    normalizedSelectorInputs = await Promise.all(
+      selectorInputs.map((selectorInput) =>
+        normalizeRecurringSelectorInput({
+          knex,
+          tenant,
+          selectorInput,
+        }),
+      ),
+    );
+  } catch (error) {
+    throw withRecurringWindowErrorContext(
+      error instanceof Error
+        ? error
+        : new Error('An error occurred while validating the recurring execution window.'),
+      selectorInputs[0],
+    );
+  }
+
+  return generateInvoiceForNormalizedSelectionInputs({
+    user,
+    tenant,
+    knex,
+    normalizedSelectorInputs,
     options,
-    { billingCycleId: billing_cycle_id },
-  );
+    bridgeMetadata: { billingCycleId: billing_cycle_id },
+  });
 });
 
 export const generateInvoiceForSelectionInput = withAuth(async (
@@ -1628,6 +1764,10 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null> => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: invoice create or generate required');
+  }
+
   const { knex } = await createTenantKnex();
   let normalizedSelectorInput = selectorInput;
 
@@ -1816,11 +1956,6 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     user.user_id,
   );
 
-  const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd);
-  const nextBillingDate = toPlainDate(nextBillingDateStr);
-  const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
-  await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
-
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
 }
 
@@ -1831,6 +1966,10 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null> => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: invoice create or generate required');
+  }
+
   const { knex } = await createTenantKnex();
   if (!Array.isArray(selectorInputs) || selectorInputs.length === 0) {
     throw new Error('No recurring execution windows selected');
@@ -1872,7 +2011,7 @@ export const generateInvoiceNumber = withAuth(async (
   _trx?: Knex.Transaction
 ): Promise<string> => {
   // Check permissions
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoice numbers');
   }
 
@@ -1891,7 +2030,7 @@ export const generateInvoicePDF = withAuth(async (
   const { knex } = await createTenantKnex();
 
   // Check permissions
-  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoice PDFs');
   }
 
@@ -1929,7 +2068,7 @@ export const downloadInvoicePDF = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permissions
-    if (!hasPermission(user, 'invoice', 'read')) {
+    if (!await hasPermission(user, 'invoice', 'read')) {
       throw new Error('Permission denied: Cannot download invoice PDFs');
     }
 
@@ -2052,7 +2191,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check permissions within transaction
-        if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+        if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
           throw new Error('Permission denied: Cannot create invoices');
         }
 
@@ -2091,7 +2230,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         email: user.email,
         name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
         username: user.username,
-        image: user.image,
+        image: user.icon,
         proToken: '', // Not available in user, using empty string
         tenant: user.tenant,
         user_type: user.user_type,

@@ -88,7 +88,7 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, tenantId:
 
   const records = await knex('workflow_definitions')
     .select('*')
-    .where({ tenant_id: tenantId })
+    .where({ tenant: tenantId })
     .whereIn('workflow_id', uniqueIds);
 
   const foundIds = new Set(records.map((r: any) => r.workflow_id));

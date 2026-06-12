@@ -446,6 +446,22 @@ export class ClientService extends BaseService<IClient> {
     if (!result.deleted) {
       throw new ValidationError(result.message ?? 'Unable to delete client.');
     }
+
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_DELETED',
+      payload: {
+        clientId: id,
+        deletedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+        deletedAt: occurredAt,
+      },
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt,
+        actor: maybeUserActorFromContext(context),
+      },
+      idempotencyKey: `client_deleted:${id}:${occurredAt}`,
+    });
   }
 
   private async cleanupClientDeleteArtifacts(

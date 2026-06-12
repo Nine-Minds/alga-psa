@@ -28,6 +28,9 @@ import { toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
+import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
@@ -96,6 +99,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 
   // For server-side pagination, filteredInvoices is just invoices (already filtered server-side)
   const filteredInvoices = invoices;
+
+  const invoiceIds = filteredInvoices.map((inv) => inv.invoice_id);
+  const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(invoiceIds);
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
@@ -181,15 +187,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }
   };
 
-  const handleSelectInvoice = (invoiceId: string, checked: boolean) => {
-    const newSelection = new Set(selectedInvoices);
-    if (checked) {
-      newSelection.add(invoiceId);
-    } else {
-      newSelection.delete(invoiceId);
-    }
-    setSelectedInvoices(newSelection);
-  };
+  const rangeSelect = useRangeSelection<DbInvoiceViewModel>({
+    items: filteredInvoices,
+    getId: (invoice) => invoice.invoice_id,
+    selectedIds: selectedInvoices,
+    onSelectedIdsChange: setSelectedInvoices,
+  });
 
   const handleDownload = async () => {
     if (!selectedInvoice) return;
@@ -300,8 +303,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox
             id={`invoice-${record.invoice_id}`}
-            checked={selectedInvoices.has(record.invoice_id)}
-            onChange={(e) => handleSelectInvoice(record.invoice_id, (e.target as HTMLInputElement).checked)}
+            checked={rangeSelect.isSelected(record.invoice_id)}
+            onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              const isChecked = rangeSelect.isSelected(record.invoice_id);
+              rangeSelect.handleSelect(record.invoice_id, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
+            }}
+            onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
         </div>
       ),
@@ -333,6 +346,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         </Badge>
       ),
     },
+    ...(syncHidden ? [] : [{
+      title: t('finalizedTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      dataIndex: 'invoice_id' as const,
+      render: (_: unknown, record: DbInvoiceViewModel) => {
+        const syncStatus = syncStatuses[record.invoice_id];
+        if (!syncStatus) return null;
+        return <InvoiceSyncBadge status={syncStatus} environment={syncStatus.environment} />;
+      },
+    }]),
     {
       title: t('finalizedTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',
@@ -526,6 +548,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 onUnfinalize={handleUnfinalize}
                 isFinalized={true}
                 creditApplied={selectedInvoice?.credit_applied || 0}
+                clientId={selectedInvoice?.client_id ?? null}
+                invoiceTotal={selectedInvoice?.total_amount ?? 0}
+                onCreditApplied={async () => {
+                  await loadData();
+                  onRefreshNeeded();
+                }}
               />
             </div>
           </Panel>

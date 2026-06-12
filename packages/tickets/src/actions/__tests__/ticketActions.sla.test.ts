@@ -1,15 +1,35 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const withTransactionMock = vi.fn();
-const createTenantKnexMock = vi.fn();
-const hasPermissionMock = vi.fn();
-const deleteEntityTagsMock = vi.fn();
-const publishEventMock = vi.fn();
-const getBackendMock = vi.fn();
-const revalidatePathMock = vi.fn();
+// Static import keeps the (expensive) ticketActions module evaluation in the
+// collection phase instead of counting against the 5s test timeout. vi.mock
+// factories below are hoisted above this import by vitest.
+import { deleteTicket, registerSlaCancellation } from '../ticketActions';
+
+const {
+  withTransactionMock,
+  createTenantKnexMock,
+  hasPermissionMock,
+  deleteEntityTagsMock,
+  publishEventMock,
+  getBackendMock,
+  revalidatePathMock,
+  deleteEntityWithValidationMock,
+} = vi.hoisted(() => ({
+  withTransactionMock: vi.fn(),
+  createTenantKnexMock: vi.fn(),
+  hasPermissionMock: vi.fn(),
+  deleteEntityTagsMock: vi.fn(),
+  publishEventMock: vi.fn(),
+  getBackendMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+  deleteEntityWithValidationMock: vi.fn(),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
+  withOptionalAuth: (fn: any) => fn,
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -44,15 +64,31 @@ vi.mock('@alga-psa/sla/services', () => ({
   },
 }));
 
+// deleteTicket now routes through deleteEntityWithValidation (@alga-psa/core)
+// instead of a bare withTransaction; stub just that export and keep the rest.
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    deleteEntityWithValidation: (...args: unknown[]) => deleteEntityWithValidationMock(...args),
+  };
+});
+
 function createMockTrx(ticket: Record<string, any>) {
-  return ((table: string) => {
+  const trx: any = (table: string) => {
     const chain: any = {
       where: vi.fn().mockReturnThis(),
+      whereIn: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue(table === 'tickets' ? ticket : null),
+      pluck: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(1),
       delete: vi.fn().mockResolvedValue(1),
     };
     return chain;
-  }) as any;
+  };
+  trx.raw = vi.fn((sql: string) => sql);
+  return trx as any;
 }
 
 describe('ticketActions deleteTicket', () => {
@@ -79,8 +115,26 @@ describe('ticketActions deleteTicket', () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<void>) => {
       await callback(trx);
     });
+    deleteEntityWithValidationMock.mockImplementation(
+      async (
+        _entityType: string,
+        _entityId: string,
+        _knex: any,
+        tenantId: string,
+        performDelete: (trx: any, tenant: string) => Promise<void>
+      ) => {
+        await performDelete(trx, tenantId);
+        return { canDelete: true, deleted: true, dependencies: [], alternatives: [] };
+      }
+    );
 
-    const { deleteTicket } = await import('../ticketActions');
+    // SLA cancellation is injected by the composition layer in production
+    // (see packages/msp-composition/src/tickets/registerSlaIntegration.ts);
+    // mirror that wiring here against the mocked SlaBackendFactory.
+    await registerSlaCancellation(async (tenantId: string, ticketId: string) => {
+      const slaBackend = await getBackendMock();
+      await slaBackend.cancelSla(tenantId, ticketId);
+    });
 
     await (deleteTicket as any)(
       {
@@ -92,6 +146,6 @@ describe('ticketActions deleteTicket', () => {
       'ticket-1'
     );
 
-    expect(backend.cancelSla).toHaveBeenCalledWith('ticket-1');
+    expect(backend.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
   });
 });

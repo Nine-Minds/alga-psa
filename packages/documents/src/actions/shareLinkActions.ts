@@ -7,6 +7,7 @@ import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import bcrypt from 'bcryptjs';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export type ShareType = 'public' | 'password' | 'portal_authenticated';
 
@@ -57,6 +58,31 @@ export interface IValidateShareTokenResult {
   valid: boolean;
   share?: IShareLinkWithDocument;
   error?: string;
+}
+
+async function publishDocumentUpdatedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  changedFields: string[],
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        updatedByUserId: userId,
+        updatedAt: occurredAt,
+        changedFields,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_UPDATED search event:`, eventError);
+  }
 }
 
 const SHARE_LINK_SELECT_COLUMNS = [
@@ -163,6 +189,14 @@ export const createShareLink = withAuth(
       .where({ tenant, share_id: shareIdValue })
       .first();
 
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      input.documentId,
+      user.user_id,
+      ['document_share_links'],
+      'createShareLink',
+    );
+
     return shareLink as unknown as IDocumentShareLink;
   }
 );
@@ -222,6 +256,15 @@ export const revokeShareLink = withAuth(
       throw new Error('shareId is required');
     }
 
+    const shareLink = await knex('document_share_links')
+      .select('document_id')
+      .where({
+        tenant,
+        share_id: shareId,
+        is_revoked: false,
+      })
+      .first();
+
     const updated = await knex('document_share_links')
       .where({
         tenant,
@@ -233,6 +276,16 @@ export const revokeShareLink = withAuth(
         revoked_at: knex.fn.now(),
         revoked_by: user.user_id,
       });
+
+    if (updated > 0 && shareLink?.document_id) {
+      await publishDocumentUpdatedSearchEvent(
+        tenant,
+        shareLink.document_id,
+        user.user_id,
+        ['document_share_links'],
+        'revokeShareLink',
+      );
+    }
 
     return updated > 0;
   }

@@ -27,6 +27,8 @@ export interface AccountingExportBatch extends TenantEntity {
   created_at: ISO8601String;
   updated_at: ISO8601String;
   notes?: string | null;
+  /** Who created the batch: an operator ('manual') or the sync engine ('scheduled'). */
+  origin?: 'manual' | 'scheduled';
 }
 
 export type AccountingExportLineStatus =

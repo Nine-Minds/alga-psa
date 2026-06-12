@@ -900,15 +900,108 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "Processo di connessione completato.",
-        "errorDetail": "Errore: {{error}}",
-        "errored": "Il processo di connessione ha generato un errore.",
-        "failed": "Impossibile connettersi a QuickBooks Online.",
-        "realmId": "Realm ID: {{realmId}}",
-        "returnButton": "Torna alle impostazioni QuickBooks",
-        "success": "Connessione a QuickBooks Online riuscita!",
-        "title": "Stato della connessione QuickBooks"
+      "live": {
+        "defaultCompany": "Azienda QuickBooks connessa"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Connetti QuickBooks",
+          "disconnect": "Disconnetti QuickBooks",
+          "disconnecting": "Disconnessione in corso…",
+          "reconnect": "Riconnetti QuickBooks",
+          "refresh": "Aggiorna",
+          "saveCredentials": "Salva credenziali QuickBooks",
+          "saving": "Salvataggio…"
+        },
+        "badges": {
+          "connectionExpired": "La connessione richiede attenzione",
+          "credentialsReady": "Credenziali pronte",
+          "credentialsRequired": "Credenziali richieste",
+          "defaultConnected": "Azienda connessa",
+          "noCompany": "Nessuna azienda connessa"
+        },
+        "callback": {
+          "accessDenied": "L'accesso a QuickBooks è stato negato prima del completamento della connessione.",
+          "configMissing": "Impossibile avviare QuickBooks OAuth perché il client ID e il client secret non erano completamente configurati.",
+          "generic": "QuickBooks ha restituito un errore OAuth: {{code}}",
+          "invalidState": "Lo stato OAuth di QuickBooks non era valido o è scaduto. Riavvia il flusso di connessione.",
+          "missingParams": "Il callback QuickBooks mancava dei parametri richiesti. Riavvia il flusso di connessione.",
+          "oauthFailed": "Il callback OAuth di QuickBooks non è riuscito. Prova a connetterti di nuovo. Se il problema persiste, controlla il redirect URI e gli scope.",
+          "tokenExchangeFailed": "Intuit non ha restituito i token attesi. Prova a connetterti di nuovo."
+        },
+        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdPlaceholder": "Incolla il client ID della tua applicazione Intuit",
+        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretPlaceholder": "Incolla il client secret della tua applicazione Intuit",
+        "connectSuccess": "QuickBooks connesso con successo. L'azienda connessa è ora il contesto QuickBooks live predefinito.",
+        "connection": {
+          "defaultCompany": "Azienda connessa",
+          "description": "Avvia OAuth solo dopo aver configurato le credenziali dell'app QuickBooks. La disconnessione rimuove i token di accesso QuickBooks memorizzati ma mantiene le credenziali dell'app di proprietà del tenant.",
+          "notConnected": "Nessuna azienda QuickBooks è ancora connessa. Salva le credenziali, quindi clicca su Connetti QuickBooks.",
+          "realmId": "Realm ID: {{id}}",
+          "title": "Connessione QuickBooks live",
+          "unknown": "sconosciuto"
+        },
+        "credentialsSaved": "Credenziali QuickBooks salvate. Ora è possibile avviare il flusso OAuth QuickBooks.",
+        "csvAvailableMiddle": "in questa stessa sezione Contabilità e gestisci le esportazioni da",
+        "csvAvailablePrefix": "Se preferisci un flusso manuale, continua a usare",
+        "csvAvailableTitle": "QuickBooks CSV rimane disponibile",
+        "description": "Configura le credenziali OAuth QuickBooks, connetti la tua azienda QuickBooks e mantieni QuickBooks live accanto al flusso manuale QuickBooks CSV.",
+        "disconnectSuccess": "La connessione QuickBooks memorizzata è stata rimossa. Le credenziali dell'app QuickBooks di proprietà del tenant sono state preservate.",
+        "environment": "Ambiente Intuit",
+        "environmentProduction": "Produzione",
+        "environmentSandbox": "Sandbox",
+        "errors": {
+          "disconnect": "Impossibile disconnettere QuickBooks.",
+          "load": "Impossibile caricare le impostazioni QuickBooks.",
+          "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
+        },
+        "howItWorksDescription": "Salva qui le credenziali dell'app QuickBooks, completa il flusso OAuth Intuit e Alga PSA utilizzerà l'azienda QuickBooks connessa come contesto live predefinito per esportazioni e mappature.",
+        "howItWorksTitle": "Come funziona QuickBooks live in questa release",
+        "loading": "Caricamento impostazioni QuickBooks…",
+        "mapping": {
+          "alert": "Articoli, codici fiscali e condizioni di QuickBooks vengono caricati dall'azienda connessa in modo che le esportazioni live possano continuare a utilizzare la prima connessione QuickBooks memorizzata in v1.",
+          "descriptionPrefix": "Configura le mappature QuickBooks live per l'azienda connessa. Queste mappature sono limitate a",
+          "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima azienda QuickBooks e la sua impostazione come contesto QuickBooks live predefinito.",
+          "placeholderDescription": "Connetti un'azienda QuickBooks prima di configurare le mappature di articoli e imposte QuickBooks live.",
+          "title": "Mappatura e configurazione QuickBooks live"
+        },
+        "noClientId": "Nessun client ID ancora memorizzato per questo tenant.",
+        "noClientSecret": "Nessun client secret ancora memorizzato per questo tenant.",
+        "quickbooksCsv": "QuickBooks CSV",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Scope richiesti",
+        "storedClientId": "Client ID memorizzato: {{value}}",
+        "storedClientSecret": "Client secret memorizzato: {{value}}",
+        "tenantOauthDescription": "Incolla le credenziali dell'app Intuit registrate per questo tenant, o lascia vuoto per usare l'app QuickBooks a livello di applicazione se ne è configurata una. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
+        "tenantOauthTitle": "App OAuth di proprietà del tenant",
+        "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Stato della sincronizzazione",
+        "healthCardDescription": "Stato e controlli della sincronizzazione contabile di QuickBooks. Viene eseguita ogni 15 minuti.",
+        "lastCycleTitle": "Ultimo ciclo di sincronizzazione",
+        "lastCycleStatus": "Stato",
+        "lastCycleFinishedAt": "Completato",
+        "lastCycleStats": "Risultati",
+        "statOpsProcessed": "{{count}} operazioni elaborate",
+        "statDriftFound": "{{count}} divergenze",
+        "statPaymentsApplied": "{{count}} pagamenti applicati",
+        "noLastCycle": "Non è stato ancora eseguito alcun ciclo di sincronizzazione.",
+        "nextRunHint": "Viene eseguita automaticamente ogni 15 minuti quando la sincronizzazione automatica è attiva.",
+        "pendingOps": "Operazioni in sospeso",
+        "erroredOps": "Operazioni in errore",
+        "driftCount": "Divergenze",
+        "openExceptions": "Eccezioni aperte",
+        "refreshTokenExpiry": "Il token QuickBooks scade il {{date}}",
+        "refreshTokenExpired": "Token QuickBooks scaduto: riconnettersi per riprendere la sincronizzazione.",
+        "autoSyncLabel": "Sincronizzazione automatica attiva",
+        "syncNowButton": "Sincronizza ora",
+        "syncNowRunning": "Sincronizzazione in corso…",
+        "syncNowSuccess": "Sincronizzazione completata correttamente.",
+        "syncNowSkipped": "Sincronizzazione saltata: {{reason}}",
+        "syncNowError": "Sincronizzazione non riuscita: {{error}}",
+        "viewExceptionsLink": "Visualizza eccezioni"
       }
     },
     "rmm": {
@@ -1466,7 +1559,88 @@
           "packageGenerated": "Pacchetto dell'app Teams generato.",
           "saved": "Configurazione Teams salvata."
         },
-        "title": "Microsoft Teams"
+        "title": "Microsoft Teams",
+        "diagnostics": {
+          "title": "Diagnostica e messaggio di prova",
+          "description": "Verifica la configurazione di Teams e invia un messaggio di prova proattivo alla tua conversazione bot di Teams.",
+          "run": "Esegui diagnostica",
+          "running": "Esecuzione in corso...",
+          "sendTest": "Invia messaggio di prova",
+          "sending": "Invio in corso...",
+          "disabled": "La diagnostica e i messaggi di prova sono disponibili dopo che l'integrazione di Teams è attiva.",
+          "completedAt": "Completato {{time}}",
+          "lastSuccess": "Ultimo successo",
+          "lastFailure": "Ultimo errore",
+          "noneRecorded": "Nessuno registrato",
+          "recommendations": "Raccomandazioni",
+          "status": {
+            "pass": "Superato",
+            "warn": "Avviso",
+            "fail": "Errore",
+            "skip": "Ignorato"
+          },
+          "errors": {
+            "run": "Impossibile eseguire la diagnostica di Teams",
+            "testMessage": "Impossibile inviare il messaggio di prova di Teams"
+          },
+          "test": {
+            "sent": "Messaggio di prova di Teams inviato.",
+            "failed": "Messaggio di prova di Teams non riuscito.",
+            "addonInactive": "Il componente aggiuntivo Teams non è attivo per questo tenant.",
+            "integrationInactive": "Attiva l'integrazione di Teams prima di inviare un messaggio di prova.",
+            "capabilityDisabled": "Abilita la funzionalità bot personale prima di inviare un messaggio di prova.",
+            "botNotConfigured": "Configura le credenziali del bot di Teams prima di inviare un messaggio di prova.",
+            "missingUserLinkage": "Collega il tuo account Microsoft prima di inviare un messaggio di prova di Teams.",
+            "missingConversationReference": "Apri il bot Alga PSA in Teams e inviagli prima un messaggio qualsiasi, quindi riprova.",
+            "skipped": "Il messaggio di prova di Teams è stato ignorato."
+          },
+          "steps": {
+            "addonEntitlement": "Diritto al componente aggiuntivo Teams",
+            "integrationStatus": "Stato dell'integrazione di Teams",
+            "capabilities": "Funzionalità di Teams",
+            "microsoftProfile": "Disponibilità del profilo Microsoft",
+            "recordingPermissions": "Autorizzazioni di registrazione e trascrizione di Teams",
+            "packageMetadata": "Metadati del pacchetto Teams",
+            "botConnector": "Credenziali del connettore bot",
+            "userLinkage": "Collegamento dell'account Microsoft dell'amministratore",
+            "conversationReference": "Riferimento conversazione Teams dell'amministratore",
+            "recentDeliveryHealth": "Stato recente della consegna di Teams"
+          },
+          "recommendation": {
+            "addon": "Abilita il componente aggiuntivo Microsoft Teams per questo tenant.",
+            "activate": "Attiva l'integrazione di Teams nelle impostazioni.",
+            "capabilities": "Abilita il bot personale e le notifiche di attività per Teams.",
+            "profile": "Seleziona un profilo Microsoft pronto per Teams.",
+            "activeProfile": "Seleziona un profilo Microsoft attivo per Teams.",
+            "profileCredentials": "Completa le credenziali del profilo Microsoft prima di attivare Teams.",
+            "meetingOrganizer": "Configura l'organizzatore riunione Teams predefinito nelle impostazioni di Teams.",
+            "meetingOrganizerObjectId": "Salva di nuovo l'organizzatore riunione Teams predefinito in modo che Alga PSA possa risolvere il suo ID oggetto Microsoft Entra.",
+            "package": "Genera il pacchetto dell'app Teams prima di eseguire la convalida end-to-end.",
+            "baseUrl": "Rigenera il pacchetto Teams con un URL di base raggiungibile.",
+            "botEnv": "Configura TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID e TEAMS_BOT_APP_PASSWORD.",
+            "userLinkage": "Collega il tuo account Microsoft nelle impostazioni del tuo profilo.",
+            "conversationReference": "Apri il bot Alga PSA in Teams e inviagli prima un messaggio qualsiasi, quindi riprova.",
+            "deliveryFailure": "Esamina l'errore di consegna di Teams più recente e riprova dopo aver corretto la causa."
+          }
+        },
+        "meetings": {
+          "title": "Riunioni online e registrazioni",
+          "description": "Usa un unico account di servizio Microsoft per organizzare le riunioni di Teams e controllare la conservazione delle registrazioni.",
+          "organizer": {
+            "label": "UPN dell'organizzatore riunione predefinito",
+            "placeholder": "scheduler@acme.com",
+            "help": "Il salvataggio risolve e memorizza l'ID oggetto di Microsoft Entra usato per le chiamate di riunione Graph.",
+            "resolved": "ID oggetto risolto: {{objectId}}"
+          },
+          "downloadRecordings": {
+            "label": "Scarica le registrazioni nell'archiviazione interna",
+            "description": "Se abilitato, i blob delle registrazioni vengono copiati nell'archiviazione del tenant, oltre al proxy Graph autenticato."
+          },
+          "exposeRecordingsInPortal": {
+            "label": "Mostra registrazioni e trascrizioni nel portale clienti",
+            "description": "Disattivato per impostazione predefinita; gli utenti MSP possono comunque visualizzare gli artefatti dai dettagli di interazione e appuntamento."
+          }
+        }
       }
     },
     "xero": {

@@ -285,6 +285,85 @@ const SECTION_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const createLabelStylePanel = (): DesignerInspectorSchema['panels'][number] => ({
+  id: 'label-style',
+  title: 'Label Style',
+  fields: [
+    {
+      kind: 'enum',
+      id: 'labelFontWeight',
+      domId: 'designer-label-font-weight',
+      label: 'Weight',
+      path: 'metadata.labelStyle.inline.fontWeight',
+      options: [
+        { value: '', label: 'Default' },
+        { value: '400', label: 'Normal' },
+        { value: '500', label: 'Medium' },
+        { value: '600', label: 'Semibold' },
+        { value: '700', label: 'Bold' },
+      ],
+    },
+    {
+      kind: 'css-length-stepper',
+      id: 'labelFontSize',
+      domId: 'designer-label-font-size',
+      label: 'Size',
+      path: 'metadata.labelStyle.inline.fontSize',
+      allowedUnits: ['px', 'rem'],
+      defaultUnit: 'px',
+    },
+    {
+      kind: 'css-color',
+      id: 'labelColor',
+      domId: 'designer-label-color',
+      label: 'Color',
+      path: 'metadata.labelStyle.inline.color',
+      placeholder: '#111827',
+    },
+    {
+      kind: 'string',
+      id: 'labelFontFamily',
+      domId: 'designer-label-font-family',
+      label: 'Font family',
+      path: 'metadata.labelStyle.inline.fontFamily',
+      placeholder: 'Inter, sans-serif',
+    },
+    {
+      kind: 'string',
+      id: 'labelLineHeight',
+      domId: 'designer-label-line-height',
+      label: 'Line height',
+      path: 'metadata.labelStyle.inline.lineHeight',
+      placeholder: '1.35 | 18px',
+    },
+    {
+      kind: 'enum',
+      id: 'labelFontStyle',
+      domId: 'designer-label-font-style',
+      label: 'Style',
+      path: 'metadata.labelStyle.inline.fontStyle',
+      options: [
+        { value: '', label: 'Default' },
+        { value: 'normal', label: 'Normal' },
+        { value: 'italic', label: 'Italic' },
+      ],
+    },
+    {
+      kind: 'enum',
+      id: 'labelTextAlign',
+      domId: 'designer-label-text-align',
+      label: 'Text align',
+      path: 'metadata.labelStyle.inline.textAlign',
+      options: [
+        { value: '', label: 'Default' },
+        { value: 'left', label: 'Left' },
+        { value: 'center', label: 'Center' },
+        { value: 'right', label: 'Right' },
+      ],
+    },
+  ],
+});
+
 const FIELD_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -348,6 +427,7 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
+    createLabelStylePanel(),
     {
       id: 'field-layout',
       title: 'Field Layout',
@@ -478,6 +558,7 @@ const TOTALS_ROW_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
+    createLabelStylePanel(),
   ],
 };
 
@@ -510,6 +591,7 @@ const CUSTOM_TOTAL_INSPECTOR: DesignerInspectorSchema = {
         },
       ],
     },
+    createLabelStylePanel(),
   ],
 };
 

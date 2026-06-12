@@ -31,7 +31,7 @@ async function runWithTenant<T>(
   callback: (trx: Knex.Transaction) => Promise<T>
 ): Promise<T> {
   return withAdminTransactionRetryReadOnly(async (trx) => {
-    await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
+    await trx.raw(`SELECT set_config('app.current_tenant', ?, true)`, [tenantId]);
     return callback(trx);
   });
 }

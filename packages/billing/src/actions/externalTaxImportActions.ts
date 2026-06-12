@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import {
   getExternalTaxImportService,
@@ -19,6 +20,9 @@ export const importExternalTaxForInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<SingleImportResult> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const service = getExternalTaxImportService();
   return service.importTaxForInvoice(invoiceId, user.user_id);
 });
@@ -31,6 +35,9 @@ export const batchImportExternalTaxes = withAuth(async (
   user,
   { tenant }
 ): Promise<BatchImportResult> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const service = getExternalTaxImportService();
   return service.batchImportPendingTaxes(user.user_id);
 });
@@ -44,6 +51,9 @@ export const getExternalTaxImportHistory = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<IExternalTaxImport[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const service = getExternalTaxImportService();
   return service.getImportHistory(invoiceId);
 });
@@ -56,6 +66,9 @@ export const getInvoiceTaxReconciliation = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<ReconciliationResult | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const service = getExternalTaxImportService();
   return service.reconcileTaxDifferences(invoiceId);
 });
@@ -87,11 +100,14 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     adapter_type?: string;
   }>
 > => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   const invoices = await knex('invoices as i')
-    .join('companies as c', function() {
-      this.on('i.client_id', '=', 'c.company_id')
+    .join('clients as c', function() {
+      this.on('i.client_id', '=', 'c.client_id')
         .andOn('i.tenant', '=', 'c.tenant');
     })
     .leftJoin('tenant_external_entity_mappings as m', function() {
@@ -106,7 +122,7 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     .select(
       'i.invoice_id',
       'i.invoice_number',
-      'c.company_name as client_name',
+      'c.client_name as client_name',
       'i.total_amount',
       'i.created_at',
       'm.integration_type as adapter_type'

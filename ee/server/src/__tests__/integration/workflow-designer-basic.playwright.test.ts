@@ -62,7 +62,6 @@ async function setupDesigner(page: Page): Promise<{
       companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
     },
     completeOnboarding: { completedAt: new Date() },
-    experimentalFeatures: { workflowAutomation: true },
     permissions: ADMIN_PERMISSIONS,
   });
 
@@ -94,7 +93,7 @@ async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: 
     names.push(name);
     return {
       workflow_id: workflowId,
-      tenant_id: tenantId,
+      tenant: tenantId,
       name,
       description: null,
       payload_schema_ref: definition.payloadSchemaRef,
@@ -380,7 +379,6 @@ test.describe('Workflow Designer UI - basic', () => {
         companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
       },
       completeOnboarding: { completedAt: new Date() },
-      experimentalFeatures: { workflowAutomation: true },
       permissions: ADMIN_PERMISSIONS,
     });
 

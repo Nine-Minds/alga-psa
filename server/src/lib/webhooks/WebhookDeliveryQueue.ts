@@ -1,17 +1,17 @@
 import logger from '@alga-psa/core/logger';
 import type { RedisClientGetter, RedisClientLike } from '@alga-psa/email';
-import type { TicketWebhookPublicEvent } from '../eventBus/subscribers/webhook/webhookEventMap';
-import type { TicketWebhookPayload } from '../eventBus/subscribers/webhook/webhookTicketPayload';
 import { computeBackoff } from './backoff';
 import { emitWebhookMetric } from './metrics';
+
+export type WebhookDeliveryPayload = Record<string, unknown>;
 
 export type WebhookDeliveryJob = {
   webhookId: string;
   eventId: string;
-  eventType: TicketWebhookPublicEvent;
+  eventType: string;
   occurredAt: string;
   tenantId: string;
-  payload: TicketWebhookPayload;
+  payload: WebhookDeliveryPayload;
   attempt: number;
   deliverAt: number;
 };

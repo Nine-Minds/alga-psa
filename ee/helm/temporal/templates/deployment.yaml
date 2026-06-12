@@ -62,20 +62,33 @@ spec:
               value: "{{ .Values.db.host }}"
             - name: TEMPORAL_CLI_ADDRESS
               value: "{{ .Values.service.name }}:{{ .Values.service.port }}"
+            - name: DEFAULT_NAMESPACE
+              value: "{{ .Values.temporal.namespace }}"
+            - name: DEFAULT_NAMESPACE_RETENTION
+              value: "{{ .Values.temporal.namespaceRetention }}"
+            - name: SKIP_DEFAULT_NAMESPACE_CREATION
+              value: "true"
+            - name: SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES
+              value: "true"
           ports:
             - name: grpc
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: grpc
+            failureThreshold: {{ .Values.server.startupProbe.failureThreshold }}
+            periodSeconds: {{ .Values.server.startupProbe.periodSeconds }}
           readinessProbe:
             tcpSocket:
               port: grpc
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: {{ .Values.server.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.server.readinessProbe.periodSeconds }}
           livenessProbe:
             tcpSocket:
               port: grpc
-            initialDelaySeconds: 20
-            periodSeconds: 20
+            initialDelaySeconds: {{ .Values.server.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.server.livenessProbe.periodSeconds }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
 {{- end }}

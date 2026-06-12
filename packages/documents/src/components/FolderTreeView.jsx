@@ -150,4 +150,3 @@ export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolde
       </div>
     </div>);
 }
-//# sourceMappingURL=FolderTreeView.jsx.map

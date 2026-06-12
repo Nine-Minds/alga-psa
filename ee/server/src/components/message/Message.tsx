@@ -17,6 +17,9 @@ export type FunctionCallMeta = {
   timestamp: string;
   preview?: string;
   notice?: string;
+  details?: Record<string, unknown>;
+  autoExecuted?: boolean;
+  bundleItems?: FunctionCallMeta[];
 };
 
 type MessageProps = {
@@ -94,6 +97,25 @@ const FunctionStatusIcon: React.FC<{ status: FunctionCallMeta['status'] }> = ({ 
   );
 };
 
+const formatDetailValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+};
+
+const formatDetailKey = (key: string) =>
+  key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const formatTimestamp = (timestamp?: string) => {
   if (!timestamp) {
     return '';
@@ -156,6 +178,10 @@ export const Message: React.FC<MessageProps> = ({
     const preview =
       previewRaw && previewRaw.length > 220 ? `${previewRaw.slice(0, 217)}…` : previewRaw;
     const notice = functionCallMeta.notice?.trim();
+    const bundleItems = functionCallMeta.bundleItems ?? [];
+    const detailEntries = Object.entries(functionCallMeta.details ?? {}).filter(
+      ([, value]) => value !== undefined,
+    );
     const statusLabel =
       functionCallMeta.status === 'success'
         ? t('message.functionStatus.success')
@@ -189,8 +215,77 @@ export const Message: React.FC<MessageProps> = ({
               <span className="function-card__badge">{functionCallMeta.method}</span>
               <span className="function-card__endpoint">{functionCallMeta.endpoint}</span>
             </div>
+            {bundleItems.length > 0 ? (
+              <div className="function-card__bundle-strip" aria-label="Executed calls">
+                {bundleItems.slice(0, 6).map((item, index) => (
+                  <span key={`${item.method}-${item.endpoint}-${index}`} className="function-card__bundle-chip">
+                    <span>{item.method}</span>
+                    {item.endpoint}
+                  </span>
+                ))}
+                {bundleItems.length > 6 ? (
+                  <span className="function-card__bundle-more">+{bundleItems.length - 6} more</span>
+                ) : null}
+              </div>
+            ) : null}
             {preview ? <p className="function-card__preview">{preview}</p> : null}
             {notice ? <p className="function-card__preview">{notice}</p> : null}
+            {bundleItems.length > 0 ? (
+              <details className="function-card__details">
+                <summary>{t('chat.viewDetails')}</summary>
+                <div className="function-card__bundle-list">
+                  {bundleItems.map((item, index) => {
+                    const itemDetailEntries = Object.entries(item.details ?? {}).filter(
+                      ([, value]) => value !== undefined,
+                    );
+                    return (
+                      <section key={`${item.method}-${item.endpoint}-${index}`} className="function-card__bundle-item">
+                        <div className="function-card__bundle-item-header">
+                          <span className="function-card__badge">{item.method}</span>
+                          <span className="function-card__endpoint">{item.endpoint}</span>
+                        </div>
+                        <div className="function-card__bundle-item-title">{item.displayName}</div>
+                        {item.preview ? <p className="function-card__preview">{item.preview}</p> : null}
+                        {itemDetailEntries.length > 0 ? (
+                          <dl className="function-card__detail-list">
+                            {itemDetailEntries.map(([key, value]) => {
+                              const formatted = formatDetailValue(value);
+                              const isStructured = formatted.includes('\n') || formatted.length > 90;
+                              return (
+                                <div key={key} className="function-card__detail-row">
+                                  <dt>{formatDetailKey(key)}</dt>
+                                  <dd>
+                                    {isStructured ? <pre>{formatted}</pre> : <span>{formatted}</span>}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
+                        ) : null}
+                      </section>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : detailEntries.length > 0 ? (
+              <details className="function-card__details">
+                <summary>{t('chat.viewDetails')}</summary>
+                <dl className="function-card__detail-list">
+                  {detailEntries.map(([key, value]) => {
+                    const formatted = formatDetailValue(value);
+                    const isStructured = formatted.includes('\n') || formatted.length > 90;
+                    return (
+                      <div key={key} className="function-card__detail-row">
+                        <dt>{formatDetailKey(key)}</dt>
+                        <dd>
+                          {isStructured ? <pre>{formatted}</pre> : <span>{formatted}</span>}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </details>
+            ) : null}
             <span className="function-card__timestamp">
               {formatTimestamp(functionCallMeta.timestamp)}
             </span>

@@ -34,7 +34,24 @@
       "minutesSeconds": "{{minutes}} min {{seconds}} s",
       "hoursMinutes": "{{hours}} h {{minutes}} min"
     },
-    "externalId": "ID : {{id}}..."
+    "externalId": "ID : {{id}}...",
+    "print": {
+      "title": "Jobs récents",
+      "subtitle": "{{count}} jobs",
+      "noJobs": "Aucun job à imprimer",
+      "columns": {
+        "jobName": "Nom du job",
+        "runner": "Exécuteur",
+        "status": "Statut",
+        "duration": "Durée",
+        "started": "Démarré",
+        "completed": "Terminé"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des travaux."
+      }
+    }
   },
   "metrics": {
     "labels": {

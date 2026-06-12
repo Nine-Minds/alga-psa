@@ -29,6 +29,10 @@
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
     },
+    "./lib/appointmentApprovers": {
+      "import": "./src/lib/appointmentApprovers.ts",
+      "types": "./src/lib/appointmentApprovers.ts"
+    },
     "./context/*": {
       "import": "./src/context/*.tsx",
       "types": "./src/context/*.tsx"
@@ -46,6 +50,7 @@
   },
   "dependencies": {
     "@alga-psa/authorization": "*",
+    "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/shared": "*",

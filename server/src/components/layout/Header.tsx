@@ -7,9 +7,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   ChevronRight,
+  ExternalLink,
   Home,
   PlusCircle,
   Settings,
+  Sparkles,
   User,
 } from 'lucide-react';
 import {
@@ -29,6 +31,8 @@ import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import { isSelfHostLicensingAction } from '@alga-psa/licensing/actions';
+import { NINEMINDS_PORTAL_URL } from '@/lib/ninemindsPortal';
 import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
@@ -37,6 +41,10 @@ import { useProduct } from '@/context/ProductContext';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
+import { useQuickAsk } from './QuickAskContext';
+import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
+
+export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -188,6 +196,7 @@ const ALGADESK_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
 
 const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isAlgaDesk } = useProduct();
   const visibleOptions = isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
@@ -200,12 +209,26 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
 
   const handleQuickCreateSelect = (type: QuickCreateType) => {
     analytics.capture('ui.quick_create.select', { target: type });
+    setMenuOpen(false);
     setActiveQuickCreate(type);
   };
 
+  useEffect(() => {
+    const openMenu = () => {
+      setMenuOpen(true);
+    };
+
+    window.addEventListener(QUICK_CREATE_OPEN_EVENT, openMenu);
+    return () => window.removeEventListener(QUICK_CREATE_OPEN_EVENT, openMenu);
+  }, []);
+  useShortcutScope('page');
+  useCatalogShortcut('global.quickCreate', () => {
+    setMenuOpen(true);
+  }, { enabled: translatedOptions.length > 0 });
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             id="global-quick-create-trigger"
@@ -364,7 +387,11 @@ export default function Header({
   const { t } = useTranslation('msp/core');
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
+  // Self-host/on-prem installs manage billing via the Nine Minds client portal,
+  // not the in-app Stripe account page.
+  const [isOnPrem, setIsOnPrem] = useState<boolean>(false);
   const router = useRouter();
+  const { aiAssistantAvailable, openQuickAsk } = useQuickAsk();
 
   // Use SWR hooks for avatar - only one will be active based on user type
   const { avatarUrl: userAvatarUrl } = useUserAvatar(
@@ -385,8 +412,12 @@ export default function Header({
       if (user) {
         setUserData(user);
 
-        const hasAccountPermission = await checkAccountManagementPermission();
+        const [hasAccountPermission, onPrem] = await Promise.all([
+          checkAccountManagementPermission(),
+          isSelfHostLicensingAction(),
+        ]);
         setCanManageAccount(hasAccountPermission);
+        setIsOnPrem(onPrem);
       }
     };
 
@@ -418,6 +449,11 @@ export default function Header({
   };
 
   const pathname = usePathname();
+  const showWorkflowQuickAsk = aiAssistantAvailable && Boolean(pathname?.startsWith('/msp/workflow-editor'));
+  const handleWorkflowQuickAskOpen = () => {
+    analytics.capture('ui.workflow_designer.quick_ask.opened', { source: 'header' });
+    openQuickAsk();
+  };
   const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname, t]);
   const homeLabel = t('header.breadcrumb.home', { defaultValue: 'Home' });
   const tenantBadgeAriaLabel = userData?.tenant
@@ -470,6 +506,19 @@ export default function Header({
         <PaymentFailedBanner />
         <TrialBanner />
         <TenantBadge tenant={userData?.tenant} ariaLabel={tenantBadgeAriaLabel} />
+        {showWorkflowQuickAsk ? (
+          <button
+            id="workflow-designer-ask-ai"
+            type="button"
+            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:bg-purple-950/30 dark:hover:text-purple-200"
+            aria-label={t('header.quickAsk.ariaLabel', { defaultValue: 'Ask AI about this workflow' })}
+            title={t('header.quickAsk.shortcutHint', { defaultValue: 'Open Quick Ask for workflow guidance' })}
+            onClick={handleWorkflowQuickAskOpen}
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="hidden lg:inline">{t('header.quickAsk.title', { defaultValue: 'Ask AI' })}</span>
+          </button>
+        ) : null}
         <QuickCreateMenu t={t} />
         <ThemeToggle
           labels={{
@@ -532,10 +581,15 @@ export default function Header({
             {canManageAccount && (
               <DropdownMenuItem
                 id="user-account-menu-item"
-                onSelect={() => router.push('/msp/account')}
+                onSelect={() =>
+                  isOnPrem
+                    ? window.open(NINEMINDS_PORTAL_URL, '_blank', 'noopener,noreferrer')
+                    : router.push('/msp/account')
+                }
               >
                 <Settings className="mr-2 h-4 w-4" />
                 {t('header.account', { defaultValue: 'Account' })}
+                {isOnPrem && <ExternalLink className="ml-2 h-3 w-3 opacity-60" />}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />

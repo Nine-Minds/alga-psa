@@ -5,6 +5,7 @@
  */
 
 export { default as CategoryPicker } from './CategoryPicker';
+export { default as BoardFilterPicker } from './BoardFilterPicker';
 export { default as QuickAddCategory } from './QuickAddCategory';
 export { QuickAddTicket } from './QuickAddTicket';
 export { default as ResponseSourceBadge } from './ResponseSourceBadge';
@@ -24,6 +25,7 @@ export { default as TicketAppointmentRequests, type ITicketAppointmentRequest } 
 export { default as TicketConversation } from './ticket/TicketConversation';
 export { default as TicketDetails } from './ticket/TicketDetails';
 export { TicketDetailsSkeleton } from './ticket/TicketDetailsSkeleton';
+export { default as TicketChecklistSection, summarizeChecklist } from './ticket/TicketChecklistSection';
 export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSection';
 export { default as TicketInfo } from './ticket/TicketInfo';
 export { default as TicketMaterialsCard } from './ticket/TicketMaterialsCard';

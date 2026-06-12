@@ -12,7 +12,7 @@
     "allOpen": "Todos los tickets abiertos",
     "allClosed": "Todos los tickets cerrados",
     "allPriorities": "Todas las prioridades",
-    "search": "Buscar tickets...",
+    "search": "Buscar tickets y comentarios...",
     "category": "Filtrar por categoría",
     "clearFilters": "Limpiar filtros",
     "assignee": "Asignado",
@@ -39,7 +39,8 @@
     "breached": "Vencido",
     "paused": "Pausado",
     "allResponseStatuses": "Todos los estados de respuesta",
-    "responseStatus": "Estado de respuesta"
+    "responseStatus": "Estado de respuesta",
+    "board": "Filtrar por tablero"
   },
   "create": {
     "title": "Crear ticket de soporte",
@@ -334,6 +335,7 @@
   "dashboard": {
     "title": "Panel de tickets",
     "addTicket": "Agregar ticket",
+    "shareTooltip": "Imprimir, importar y exportar",
     "exportCsv": "Exportar CSV",
     "bundledToggle": "Agrupado",
     "exportSelectedTooltip_one": "Exportar {{count}} ticket seleccionado a CSV",
@@ -376,7 +378,10 @@
       "onTrack": "En curso",
       "breached": "Vencido",
       "paused": "Pausado",
-      "bundled": "Agrupado"
+      "bundled": "Agrupado",
+      "activeBoards": "Tableros activos",
+      "inactiveBoards": "Tableros inactivos",
+      "allBoards": "Todos los tableros"
     },
     "selection": {
       "pageSelected_one": "Todos los {{count}} ticket de esta página están seleccionados.",
@@ -393,12 +398,42 @@
       "decrease": "Disminuir el espaciado de la lista de tickets",
       "increase": "Aumentar el espaciado de la lista de tickets",
       "reset": "Restablecer el espaciado de la lista de tickets"
-    }
+    },
+    "print": {
+      "action": "Imprimir",
+      "selectedAction_one": "Imprimir seleccionado ({{count}})",
+      "selectedAction_other": "Imprimir seleccionados ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Tickets seleccionados ({{count}})",
+      "selectedTitle_other": "Tickets seleccionados ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "No hay tickets para imprimir",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Título",
+        "client": "Cliente",
+        "status": "Estado",
+        "priority": "Prioridad",
+        "assigned": "Asignado",
+        "dueDate": "Fecha de vencimiento"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Sin fecha de vencimiento",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "selectedTitle": "Opciones de impresión ({{count}} seleccionados)",
+        "description": "Elige qué columnas incluir al imprimir los tickets."
+      }
+    },
+    "exportSelectedAction": "Exportar seleccionados ({{count}})",
+    "exportAction": "Exportar CSV",
+    "importAction": "Importar CSV"
   },
   "bulk": {
-    "moveToBoard": "Mover al tablero",
-    "deleteSelected_one": "Eliminar seleccionados ({{count}})",
-    "deleteSelected_other": "Eliminar seleccionados ({{count}})",
     "bundleTickets": "Agrupar tickets",
     "moveDialogTitle": "Mover tickets seleccionados",
     "moveDialogDescription": "Selecciona un tablero y un estado de destino, y luego confirma el traslado de los tickets seleccionados.",
@@ -499,7 +534,98 @@
     },
     "auth": {
       "moveRequired": "Debes iniciar sesión para mover tickets",
-      "deleteRequired": "Debes iniciar sesión para eliminar tickets"
+      "deleteRequired": "Debes iniciar sesión para eliminar tickets",
+      "assignRequired": "Debes iniciar sesión para reasignar tickets",
+      "tagsRequired": "Debes iniciar sesión para añadir etiquetas",
+      "dueDateRequired": "Debes iniciar sesión para actualizar tickets",
+      "statusRequired": "Debes iniciar sesión para actualizar tickets",
+      "priorityRequired": "Debes iniciar sesión para actualizar tickets"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} seleccionado",
+      "selectedCount_other": "{{count}} seleccionados",
+      "move": "Mover al tablero",
+      "bundle": "Agrupar",
+      "delete": "Eliminar",
+      "clear": "Limpiar selección",
+      "bundleNeedsTwo": "Selecciona al menos 2 tickets para agrupar",
+      "assign": "Asignar",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "tags": "Etiquetas",
+      "dueDate": "Fecha de vencimiento",
+      "statusDisabledMultiBoard": "Los tickets seleccionados están en tableros distintos",
+      "statusResolvingBoards": "Comprobando los tableros de los tickets seleccionados…",
+      "more": "Más"
+    },
+    "assign": {
+      "dialogTitle": "Asignar tickets seleccionados",
+      "message": "Reasignar {{count}} ticket(s) seleccionado(s) a:",
+      "unassigned": "Sin asignar",
+      "teamHint": "El líder del equipo será el asignado principal; los demás miembros se añaden como agentes adicionales.",
+      "confirm_one": "Reasignar {{count}} ticket",
+      "confirm_other": "Reasignar {{count}} tickets",
+      "submitting": "Reasignando...",
+      "success_one": "{{count}} ticket reasignado",
+      "success_other": "{{count}} tickets reasignados",
+      "partialFailure": "Algunos tickets no pudieron reasignarse",
+      "failure": "No se pudieron reasignar los tickets seleccionados",
+      "failedHeading": "Los siguientes tickets no pudieron reasignarse:"
+    },
+    "tags": {
+      "dialogTitle": "Añadir etiquetas a los tickets seleccionados",
+      "message": "Añade una o varias etiquetas a {{count}} ticket(s). Las etiquetas ya presentes se omiten.",
+      "placeholder": "Escribe una etiqueta y pulsa Enter",
+      "confirm_one": "Añadir etiquetas a {{count}} ticket",
+      "confirm_other": "Añadir etiquetas a {{count}} tickets",
+      "submitting": "Añadiendo etiquetas...",
+      "success_one": "Etiquetas añadidas a {{count}} ticket",
+      "success_other": "Etiquetas añadidas a {{count}} tickets",
+      "partialFailure": "No se pudieron añadir etiquetas a algunos tickets",
+      "failure": "Error al añadir etiquetas",
+      "failedHeading": "No se pudieron añadir etiquetas a los siguientes tickets:"
+    },
+    "dueDate": {
+      "dialogTitle": "Establecer fecha de vencimiento",
+      "message": "Establece o borra la fecha de vencimiento en {{count}} ticket(s).",
+      "modeSet": "Establecer en",
+      "modeClear": "Borrar fecha de vencimiento",
+      "placeholder": "Elige una fecha",
+      "confirm_one": "Actualizar {{count}} ticket",
+      "confirm_other": "Actualizar {{count}} tickets",
+      "submitting": "Actualizando...",
+      "success_one": "Fecha de vencimiento actualizada en {{count}} ticket",
+      "success_other": "Fecha de vencimiento actualizada en {{count}} tickets",
+      "partialFailure": "La fecha de vencimiento no se pudo actualizar en algunos tickets",
+      "failure": "Error al actualizar la fecha de vencimiento",
+      "failedHeading": "No se pudo actualizar la fecha de vencimiento en los siguientes tickets:"
+    },
+    "status": {
+      "dialogTitle": "Cambiar estado de los tickets seleccionados",
+      "message": "Establece el estado para {{count}} ticket(s):",
+      "placeholder": "Selecciona un estado",
+      "loading": "Cargando estados...",
+      "confirm_one": "Actualizar {{count}} ticket",
+      "confirm_other": "Actualizar {{count}} tickets",
+      "submitting": "Actualizando...",
+      "success_one": "Estado actualizado en {{count}} ticket",
+      "success_other": "Estado actualizado en {{count}} tickets",
+      "partialFailure": "El estado no se pudo actualizar en algunos tickets",
+      "failure": "Error al actualizar el estado",
+      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:"
+    },
+    "priority": {
+      "dialogTitle": "Cambiar prioridad de los tickets seleccionados",
+      "message": "Establece la prioridad para {{count}} ticket(s):",
+      "placeholder": "Selecciona una prioridad",
+      "confirm_one": "Actualizar {{count}} ticket",
+      "confirm_other": "Actualizar {{count}} tickets",
+      "submitting": "Actualizando...",
+      "success_one": "Prioridad actualizada en {{count}} ticket",
+      "success_other": "Prioridad actualizada en {{count}} tickets",
+      "partialFailure": "La prioridad no se pudo actualizar en algunos tickets",
+      "failure": "Error al actualizar la prioridad",
+      "failedHeading": "No se pudo actualizar la prioridad en los siguientes tickets:"
     }
   },
   "quickAdd": {
@@ -1127,5 +1253,34 @@
       "hrs": "h",
       "min": "min"
     }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} está editando",
+      "multiple_one": "{{name}} y {{count}} persona más están editando",
+      "multiple_other": "{{name}} y {{count}} personas más están editando"
+    },
+    "remoteFieldUpdated": "{{name}} actualizó {{field}}",
+    "connection": {
+      "reconnecting": "Actualizaciones en vivo sin conexión - reconectando...",
+      "unavailable": "Actualizaciones en vivo no disponibles"
+    }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} eliminado correctamente.",
+    "error": "No se pudo eliminar el ticket. Inténtalo de nuevo.",
+    "validationError": "No se pudo validar la eliminación. Inténtalo de nuevo."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inactivo",
+    "noBoard": "Sin tablero",
+    "selectedCount_one": "{{count}} tablero",
+    "selectedCount_other": "{{count}} tableros",
+    "excludingPrefix": "excluyendo {{name}}",
+    "excludingCount_one": "excluyendo {{count}} tablero",
+    "excludingCount_other": "excluyendo {{count}} tableros",
+    "placeholder": "Filtrar por tablero",
+    "title": "Selector de tablero",
+    "searchPlaceholder": "Buscar tableros..."
   }
 }

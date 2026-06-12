@@ -50,12 +50,14 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "lucide-react": "^0.428.0",
+    "react-hot-toast": "^2.5.1",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

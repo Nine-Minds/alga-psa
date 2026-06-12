@@ -5,6 +5,7 @@ import { resolveTeamsMeetingExecutionConfig } from './meetingConfig';
 export interface DeleteTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   appointmentRequestId?: string | null;
 }
 
@@ -27,6 +28,7 @@ export async function deleteTeamsMeeting(
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'delete',
         meeting_id: input.meetingId,
+        event_id: input.eventId ?? null,
         status: null,
       });
       return false;
@@ -39,7 +41,7 @@ export async function deleteTeamsMeeting(
     });
 
     const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/onlineMeetings/${encodeURIComponent(input.meetingId)}`,
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'DELETE',
         headers: {
@@ -55,6 +57,7 @@ export async function deleteTeamsMeeting(
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'delete',
         meeting_id: input.meetingId,
+        event_id: input.eventId ?? null,
         status: response.status,
         graph_error: errorBody || response.statusText,
       });
@@ -66,6 +69,7 @@ export async function deleteTeamsMeeting(
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'delete',
       meeting_id: input.meetingId,
+      event_id: input.eventId ?? null,
       status: response.status,
     });
 
@@ -76,6 +80,7 @@ export async function deleteTeamsMeeting(
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'delete',
       meeting_id: input.meetingId,
+      event_id: input.eventId ?? null,
       status: null,
       error: normalizeErrorMessage(error),
     });

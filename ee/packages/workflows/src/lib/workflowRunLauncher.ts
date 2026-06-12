@@ -16,6 +16,7 @@ import { startWorkflowRuntimeV2TemporalRun } from './workflowRuntimeV2Temporal';
 import { WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION } from './workflowRuntimeV2Semantics';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
+
 const hashDefinition = (definition: unknown): string | null => {
   try {
     return createHash('sha256').update(JSON.stringify(definition ?? null)).digest('hex');
@@ -35,7 +36,6 @@ export type WorkflowRunLaunchRequest = {
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
-  execute?: boolean;
   executionKey?: string;
 };
 
@@ -96,7 +96,7 @@ export async function recordFailedWorkflowRunLaunch(
   const run = await WorkflowRunModelV2.create(knex, {
     workflow_id: request.workflowId,
     workflow_version: request.workflowVersion,
-    tenant_id: request.tenantId,
+    tenant: request.tenantId,
     status: 'FAILED',
     node_path: null,
     input_json: request.payload,
@@ -213,8 +213,7 @@ export async function launchPublishedWorkflowRun(
       sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
       triggerMappingApplied: Boolean(request.triggerMappingApplied),
       definitionHash,
-      runtimeSemanticsVersion: WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION,
-      engine: 'temporal'
+      runtimeSemanticsVersion: WORKFLOW_RUNTIME_V2_SEMANTICS_VERSION
     });
   } catch (error) {
     if (!request.triggerFireKey || !isTriggerFireKeyDuplicateError(error)) {
@@ -232,36 +231,33 @@ export async function launchPublishedWorkflowRun(
     };
   }
 
-  if (request.execute !== false) {
-    const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
-    try {
-      const temporalStart = await startWorkflowRuntimeV2TemporalRun({
-        runId,
-        tenantId: request.tenantId ?? null,
-        workflowId: request.workflowId,
-        workflowVersion: versionRecord.version,
-        triggerType: request.triggerType ?? null,
-        executionKey,
-      });
-      await WorkflowRunModelV2.update(knex, runId, {
-        engine: 'temporal',
-        temporal_workflow_id: temporalStart.workflowId,
-        temporal_run_id: temporalStart.firstExecutionRunId,
-      });
-    } catch (error) {
-      await WorkflowRunModelV2.update(knex, runId, {
-        status: 'FAILED',
-        completed_at: new Date().toISOString(),
-        error_json: {
-          message: error instanceof Error ? error.message : 'Failed to start Temporal workflow runtime',
-          stage: 'launch',
-          details: error instanceof Error
-            ? { name: error.name, stack: error.stack }
-            : { raw: error }
-        }
-      });
-      throw error;
-    }
+  const executionKey = request.executionKey ?? `launch-${request.workflowId}-${Date.now()}`;
+  try {
+    const temporalStart = await startWorkflowRuntimeV2TemporalRun({
+      runId,
+      tenantId: request.tenantId ?? null,
+      workflowId: request.workflowId,
+      workflowVersion: versionRecord.version,
+      triggerType: request.triggerType ?? null,
+      executionKey,
+    });
+    await WorkflowRunModelV2.update(knex, runId, {
+      temporal_workflow_id: temporalStart.workflowId,
+      temporal_run_id: temporalStart.firstExecutionRunId,
+    });
+  } catch (error) {
+    await WorkflowRunModelV2.update(knex, runId, {
+      status: 'FAILED',
+      completed_at: new Date().toISOString(),
+      error_json: {
+        message: error instanceof Error ? error.message : 'Failed to start Temporal workflow runtime',
+        stage: 'launch',
+        details: error instanceof Error
+          ? { name: error.name, stack: error.stack }
+          : { raw: error }
+      }
+    });
+    throw error;
   }
 
   return {

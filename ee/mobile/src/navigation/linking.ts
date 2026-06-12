@@ -11,8 +11,13 @@ const UUID_RE =
 
 function isAllowedPath(path: string): boolean {
   if (path === "signin") return true;
+  if (path === "server") return true;
   if (path === "auth/callback") return true;
   if (path === "tickets") return true;
+  if (path === "schedule") return true;
+  if (path === "time-entries") return true;
+  if (path === "clients") return true;
+  if (path === "contacts") return true;
   if (path === "settings") return true;
   const ticketMatch = /^ticket\/(.+)$/.exec(path);
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
@@ -70,6 +75,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   config: {
     screens: {
       SignIn: "signin",
+      ServerEntry: "server",
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
       Tabs: {
@@ -79,6 +85,10 @@ export const linking: LinkingOptions<RootStackParamList> = {
               TicketsList: "tickets",
             },
           },
+          ScheduleTab: "schedule",
+          TimeEntriesTab: "time-entries",
+          ClientsTab: "clients",
+          ContactsTab: "contacts",
           SettingsTab: "settings",
         },
       },

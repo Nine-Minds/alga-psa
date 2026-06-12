@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SITE_ID="appliance-single-node"
-PROFILE="talos-single-node"
+PROFILE="single-node"
 RELEASE_VERSION=""
 CHANNEL=""
 BOOTSTRAP_MODE=""
@@ -56,11 +56,16 @@ usage() {
 Usage:
   bootstrap-appliance.sh [options]
 
+LEGACY TALOS ONLY:
+  This script is retained for internal/support fallback workflows. It is not the
+  supported customer Ubuntu appliance install path. New customer installs should
+  use the Ubuntu appliance setup/status service instead.
+
 Options:
   --site-id <id>                 Appliance/site identifier (default: appliance-single-node)
   --release-version <version>    Appliance release version from ee/appliance/releases/
   --channel <name>               Resolve release from ee/appliance/releases/channels/<name>.json
-  --profile <name>               Values profile name (default: talos-single-node)
+  --profile <name>               Values profile name (default: single-node)
   --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
   --hostname <name>              Appliance hostname
@@ -89,12 +94,16 @@ Options:
   --dry-run                      Print the planned commands without mutating cluster state
   --help                         Show this help
 
-If kubeconfig is not supplied, the script will generate Talos config, apply it to
-the node, bootstrap the cluster, persist talosconfig and kubeconfig under
-~/.alga-psa-appliance/<site-id>/ by default, install storage, install Flux, apply
-runtime values derived from the appliance release manifest, and wait for the
-first-run Alga bootstrap to complete. Set ALGA_APPLIANCE_HOME to override the
-default operator config root.
+If kubeconfig is not supplied, the script follows the legacy Talos first-boot
+path: generate Talos config, apply it to the node, bootstrap the cluster, persist
+talosconfig and kubeconfig under ~/.alga-psa-appliance/<site-id>/ by default,
+install storage, install Flux, apply runtime values derived from the appliance
+release manifest, and wait for the first-run Alga bootstrap to complete.
+
+Current Ubuntu appliance release manifests no longer carry Talos installer
+metadata, so the no-kubeconfig Talos first-boot path is only valid with legacy
+Talos release manifests. Set ALGA_APPLIANCE_HOME to override the default operator
+config root.
 
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall
@@ -108,6 +117,24 @@ EOF
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Required command not found: $1" >&2
+    exit 1
+  fi
+}
+
+require_flux_v2_cli() {
+  require_command flux
+
+  if ! flux install --help 2>&1 | grep -q -- '--kubeconfig'; then
+    cat >&2 <<'EOF'
+Unsupported Flux CLI found: this bootstrap requires the Flux v2 CLI with --kubeconfig support.
+
+Install Flux v2 and make sure it appears first on PATH:
+  macOS: brew install fluxcd/tap/flux
+  Linux: https://fluxcd.io/flux/installation/
+
+Verify with:
+  flux version --client
+EOF
     exit 1
   fi
 }
@@ -428,9 +455,33 @@ EOF
   fi
 }
 
+normalize_git_url_for_flux() {
+  local url="$1"
+
+  if [[ "$url" == *://* ]]; then
+    printf '%s\n' "$url"
+    return 0
+  fi
+
+  if [[ "$url" =~ ^([^@[:space:]/]+@[^:[:space:]/]+):(.+)$ ]]; then
+    if [[ "${BASH_REMATCH[1]}" == git@github.com ]]; then
+      printf 'https://github.com/%s\n' "${BASH_REMATCH[2]}"
+    else
+      printf 'ssh://%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    fi
+    return 0
+  fi
+
+  printf '%s\n' "$url"
+}
+
 resolve_repo_defaults() {
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
+  fi
+
+  if [ -n "$REPO_URL" ]; then
+    REPO_URL="$(normalize_git_url_for_flux "$REPO_URL")"
   fi
 
   if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
@@ -1491,7 +1542,7 @@ require_command git
 require_command jq
 require_command curl
 require_command kubectl
-require_command flux
+require_flux_v2_cli
 require_command python3
 require_command talosctl
 

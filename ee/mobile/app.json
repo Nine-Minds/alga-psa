@@ -2,7 +2,7 @@
   "expo": {
     "name": "AlgaPSA",
     "slug": "mobile",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "scheme": "alga",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "23",
+      "buildNumber": "25",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.alga.psa.mobile",
-      "versionCode": 23,
+      "versionCode": 25,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -45,6 +45,12 @@
           "photosPermission": "Allow AlgaPSA to access your photo library so you can attach screenshots and images to tickets.",
           "cameraPermission": "Allow AlgaPSA to use the camera so you can capture photos to attach to tickets.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AlgaPSA to use the camera to capture photos for tickets and scan your server's connection QR code."
         }
       ],
       "expo-document-picker",

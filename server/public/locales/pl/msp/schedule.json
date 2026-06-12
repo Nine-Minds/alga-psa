@@ -92,6 +92,24 @@
         "future": "To i przyszłe wydarzenia",
         "all": "Wszystkie wydarzenia"
       }
+    },
+    "print": {
+      "title": "Agenda harmonogramu",
+      "subtitle": "{{count}} zaplanowanych pozycji",
+      "noEntries": "Brak zaplanowanych pozycji do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Tytuł",
+        "type": "Typ",
+        "start": "Początek",
+        "end": "Koniec",
+        "assigned": "Przypisano",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania harmonogramu."
+      }
     }
   },
   "weeklyEvent": {
@@ -231,7 +249,7 @@
         "deleting": "Usuwanie..."
       },
       "defaultApprover": {
-        "placeholder": "Wybierz osobę zatwierdzającą"
+        "placeholder": "Wybierz osoby zatwierdzające"
       },
       "teamSelect": {
         "label": "Wybierz zespół",
@@ -254,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Domyślna osoba zatwierdzająca",
-        "help": "Domyślna osoba zatwierdzająca w całej firmie dla próśb o spotkanie, które wymagają ręcznego zatwierdzenia. Można to zmienić dla każdego technika w ustawieniach godzin użytkownika."
+        "label": "Osoby zatwierdzające",
+        "help": "Osoby zatwierdzające w całej firmie dla próśb o spotkanie, które wymagają ręcznego zatwierdzenia. Dodaj wielu użytkowników i/lub zespoły — wszystkie wybrane osoby otrzymują powiadomienie i mogą zatwierdzać. Można to zmienić dla każdego technika w ustawieniach godzin użytkownika."
       },
       "advanceBookingDays": {
         "label": "Domyślna rezerwacja z wyprzedzeniem (dni)"
@@ -297,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Domyślna osoba zatwierdzająca",
-          "help": "Kto powinien przeglądać i zatwierdzać prośby o spotkanie dla tego technika, które wymagają ręcznego zatwierdzenia"
+          "label": "Osoby zatwierdzające",
+          "help": "Kto powinien przeglądać i zatwierdzać prośby o spotkanie dla tego technika, które wymagają ręcznego zatwierdzenia? Dodaj wielu użytkowników i/lub zespoły. Pozostaw puste, aby użyć osób zatwierdzających w całej firmie."
         },
         "allowClientPreference": {
           "label": "Zezwalaj na preferencje klienta",

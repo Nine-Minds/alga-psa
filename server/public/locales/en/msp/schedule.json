@@ -92,6 +92,24 @@
         "future": "This and future events",
         "all": "All events"
       }
+    },
+    "print": {
+      "title": "Schedule Agenda",
+      "subtitle": "{{count}} scheduled entries",
+      "noEntries": "No scheduled entries to print",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Title",
+        "type": "Type",
+        "start": "Start",
+        "end": "End",
+        "assigned": "Assigned",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing the schedule."
+      }
     }
   },
   "weeklyEvent": {
@@ -231,7 +249,7 @@
         "deleting": "Deleting..."
       },
       "defaultApprover": {
-        "placeholder": "Select an approver"
+        "placeholder": "Select approvers"
       },
       "teamSelect": {
         "label": "Select Team",
@@ -254,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Default Approver",
-        "help": "Company-wide default approver for appointment requests that require manual approval. This can be overridden per technician in User Hours settings."
+        "label": "Approvers",
+        "help": "Company-wide approvers for appointment requests that require manual approval. Add multiple users and/or teams — everyone selected is notified and can approve. This can be overridden per technician in User Hours settings."
       },
       "advanceBookingDays": {
         "label": "Default Advance Booking (Days)"
@@ -297,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Default Approver",
-          "help": "Who should review and approve appointment requests for this technician that require manual approval"
+          "label": "Approvers",
+          "help": "Who should review and approve appointment requests for this technician that require manual approval. Add multiple users and/or teams. Leave empty to use the company-wide approvers."
         },
         "allowClientPreference": {
           "label": "Allow Client Preference",

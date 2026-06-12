@@ -1,6 +1,6 @@
 export type HostedEnvironment = "dev" | "stage" | "prod";
 
-const HARDCODED_BASE_URL = "https://algapsa.com";
+export const DEFAULT_BASE_URL = "https://algapsa.com";
 
 export type AppConfig =
   | {
@@ -24,7 +24,7 @@ function parseHostedEnvironment(raw: unknown): HostedEnvironment | undefined {
     : undefined;
 }
 
-function normalizeBaseUrl(raw: string): string | undefined {
+export function normalizeBaseUrl(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
   try {
@@ -39,17 +39,47 @@ function normalizeBaseUrl(raw: string): string | undefined {
   }
 }
 
+function buildOverrideBaseUrl(): string | undefined {
+  const raw = process.env.EXPO_PUBLIC_ALGA_BASE_URL;
+  return raw ? normalizeBaseUrl(raw) : undefined;
+}
+
+// Resolved host, hydrated at boot from the persisted custom host.
+let activeBaseUrl: string | null = null;
+
+export function resolveBaseUrl(storedHost: string | null): string {
+  return (
+    buildOverrideBaseUrl() ??
+    (storedHost ? normalizeBaseUrl(storedHost) : undefined) ??
+    DEFAULT_BASE_URL
+  );
+}
+
+export function hydrateAppConfig(storedHost: string | null): void {
+  activeBaseUrl = resolveBaseUrl(storedHost);
+}
+
+export function setActiveBaseUrl(url: string | null): void {
+  activeBaseUrl = resolveBaseUrl(url);
+}
+
 export function getAppConfig(): AppConfig {
   const env = parseHostedEnvironment(process.env.EXPO_PUBLIC_ALGA_ENV) ?? "dev";
-  const baseUrl = normalizeBaseUrl(HARDCODED_BASE_URL);
+  return { ok: true, env, baseUrl: activeBaseUrl ?? resolveBaseUrl(null) };
+}
 
-  if (!baseUrl) {
-    return {
-      ok: false,
-      env,
-      error: "Invalid hardcoded hosted base URL.",
-    };
+export function isHostLocked(): boolean {
+  return Boolean(buildOverrideBaseUrl());
+}
+
+export function isDefaultHost(baseUrl: string | null): boolean {
+  if (!baseUrl) return false;
+  try {
+    return (
+      new URL(baseUrl).hostname.toLowerCase() ===
+      new URL(DEFAULT_BASE_URL).hostname.toLowerCase()
+    );
+  } catch {
+    return false;
   }
-
-  return { ok: true, env, baseUrl };
 }

@@ -22,6 +22,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
   item_id: string;
@@ -311,6 +312,22 @@ const Invoice = {
       }
       return 0;
     };
+    // Quantities are not minor units — they can be fractional (e.g. 4.25 hours
+    // for hourly time charges), so parse them as decimals instead of truncating
+    // to whole integers the way parseMinorUnit does for cents.
+    const parseDecimal = (value: unknown): number => {
+      if (typeof value === 'number') {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      if (typeof value === 'bigint') {
+        return Number(value);
+      }
+      return 0;
+    };
     const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
     const normalizeDateLikeString = (value: unknown): string => {
       if (typeof value === 'string') {
@@ -499,7 +516,7 @@ const Invoice = {
 
     const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
       ...item,
-      quantity: parseMinorUnit(item.quantity),
+      quantity: parseDecimal(item.quantity),
       unit_price: parseMinorUnit(item.unit_price),
       total_price: parseMinorUnit(item.total_price),
       tax_amount: parseMinorUnit(item.tax_amount),
@@ -632,7 +649,7 @@ const Invoice = {
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
-          knexOrTrx.raw('CAST(ic.quantity AS INTEGER) as quantity'),
+          knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
@@ -691,6 +708,17 @@ const Invoice = {
       if (!updatedItem) {
         throw new Error(`Invoice item ${itemId} not found in tenant ${tenant}`);
       }
+
+      await publishEvent({
+        eventType: 'INVOICE_ITEM_UPDATED',
+        payload: {
+          tenantId: tenant,
+          invoiceId: updatedItem.invoice_id,
+          itemId: updatedItem.item_id,
+          changes: updateData as Record<string, unknown>,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return updatedItem;
     } catch (error) {
@@ -950,7 +978,61 @@ const Invoice = {
     const [savedAnnotation] = await knexOrTrx('invoice_annotations')
       .insert(annotation)
       .returning('*');
+
+    if (savedAnnotation?.tenant && savedAnnotation?.invoice_id && savedAnnotation?.annotation_id) {
+      await publishEvent({
+        eventType: 'INVOICE_ANNOTATION_CREATED',
+        payload: {
+          tenantId: savedAnnotation.tenant,
+          invoiceId: savedAnnotation.invoice_id,
+          annotationId: savedAnnotation.annotation_id,
+          userId: savedAnnotation.user_id ?? undefined,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
     return savedAnnotation;
+  },
+
+  /**
+   * Update an invoice annotation.
+   */
+  updateAnnotation: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    annotationId: string,
+    updateData: Partial<Pick<IInvoiceAnnotation, 'content' | 'is_internal'>>
+  ): Promise<IInvoiceAnnotation> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating invoice annotation');
+    }
+
+    const [updatedAnnotation] = await knexOrTrx('invoice_annotations')
+      .where({
+        annotation_id: annotationId,
+        tenant,
+      })
+      .update(updateData)
+      .returning('*');
+
+    if (!updatedAnnotation) {
+      throw new Error(`Invoice annotation ${annotationId} not found in tenant ${tenant}`);
+    }
+
+    await publishEvent({
+      eventType: 'INVOICE_ANNOTATION_UPDATED',
+      payload: {
+        tenantId: tenant,
+        invoiceId: updatedAnnotation.invoice_id,
+        annotationId: updatedAnnotation.annotation_id,
+        userId: updatedAnnotation.user_id ?? undefined,
+        changes: updateData as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return updatedAnnotation;
   },
 
   /**

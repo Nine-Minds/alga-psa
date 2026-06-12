@@ -4,6 +4,7 @@ import {
   getServiceRequestExecutionProvider,
   getServiceRequestFormBehaviorProvider,
 } from './providers/registry';
+import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -29,6 +30,11 @@ export interface SubmitPortalServiceRequestResult {
   executionStatus: 'pending' | 'succeeded' | 'failed';
   createdTicketId?: string;
   workflowExecutionId?: string;
+  /**
+   * Transient post-submit redirect target surfaced by the execution provider
+   * (e.g. a Stripe Checkout URL). Not persisted on the submission.
+   */
+  redirectUrl?: string;
 }
 
 function isMissingRequiredValue(value: unknown): boolean {
@@ -191,6 +197,19 @@ export async function submitPortalServiceRequest(
     return submissionId;
   });
 
+  await publishServiceRequestSubmissionSearchEvent(
+    'SERVICE_REQUEST_SUBMISSION_CREATED',
+    tenant,
+    submissionId,
+    {
+      definitionId: definitionDetail.definitionId,
+      clientId,
+      requesterUserId,
+      executionStatus: 'pending',
+      changedFields: ['request_name', 'submitted_payload', 'execution_status'],
+    },
+  );
+
   const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
   if (!executionProvider) {
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
@@ -201,6 +220,18 @@ export async function submitPortalServiceRequest(
         execution_error_summary: errorSummary,
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',
@@ -232,11 +263,30 @@ export async function submitPortalServiceRequest(
           updated_at: knex.fn.now(),
         });
 
+      await publishServiceRequestSubmissionSearchEvent(
+        'SERVICE_REQUEST_SUBMISSION_UPDATED',
+        tenant,
+        submissionId,
+        {
+          definitionId: definitionDetail.definitionId,
+          clientId,
+          requesterUserId,
+          executionStatus: 'succeeded',
+          changedFields: [
+            'execution_status',
+            'created_ticket_id',
+            'workflow_execution_id',
+            'execution_error_summary',
+          ],
+        },
+      );
+
       return {
         submissionId,
         executionStatus: 'succeeded',
         createdTicketId: executionResult.createdTicketId,
         workflowExecutionId: executionResult.workflowExecutionId,
+        redirectUrl: executionResult.redirectUrl,
       };
     }
 
@@ -247,6 +297,18 @@ export async function submitPortalServiceRequest(
         execution_error_summary: executionResult.errorSummary ?? 'Execution failed.',
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',
@@ -262,9 +324,73 @@ export async function submitPortalServiceRequest(
         execution_error_summary: errorSummary,
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',
     };
   }
+}
+
+export async function deleteServiceRequestSubmission(input: {
+  knex: Knex;
+  tenant: string;
+  submissionId: string;
+  deletedBy?: string;
+}): Promise<boolean> {
+  const { knex, tenant, submissionId, deletedBy } = input;
+
+  const existing = await knex('service_request_submissions')
+    .where({ tenant, submission_id: submissionId })
+    .select('definition_id', 'client_id', 'requester_user_id', 'execution_status')
+    .first<{
+      definition_id: string;
+      client_id: string | null;
+      requester_user_id: string;
+      execution_status: string;
+    }>();
+
+  if (!existing) {
+    return false;
+  }
+
+  let deleted = 0;
+  await knex.transaction(async (trx) => {
+    await trx('service_request_submission_attachments')
+      .where({ tenant, submission_id: submissionId })
+      .delete();
+
+    const deletedRows = await trx('service_request_submissions')
+      .where({ tenant, submission_id: submissionId })
+      .delete();
+
+    deleted = Number(deletedRows ?? 0);
+  });
+
+  if (deleted > 0) {
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_DELETED',
+      tenant,
+      submissionId,
+      {
+        definitionId: existing.definition_id,
+        clientId: existing.client_id,
+        requesterUserId: deletedBy ?? existing.requester_user_id,
+        executionStatus: existing.execution_status,
+      },
+    );
+  }
+
+  return deleted > 0;
 }

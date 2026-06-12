@@ -1,7 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {
-  WorkflowRuntimeV2,
   workflowStepQuotaService,
 } from '@alga-psa/workflows/runtime/core';
 import {
@@ -18,8 +17,7 @@ type QuotaWaitCandidate = {
   wait_id: string;
   run_id: string;
   step_path: string;
-  tenant_id: string | null;
-  engine: string | null;
+  tenant: string | null;
   node_path: string | null;
 };
 
@@ -33,7 +31,6 @@ function toFiniteCapacity(effectiveLimit: number | null, usedCount: number): num
 export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeScanJobData): Promise<void> {
   const batchSize = Math.max(1, Math.min(Number(data.batchSize ?? DEFAULT_BATCH_SIZE), 500));
   const knex = await getAdminConnection();
-  const runtime = new WorkflowRuntimeV2();
   const workerId = 'job:workflow-quota-resume-scan';
 
   let resumedTotal = 0;
@@ -41,16 +38,18 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
     const resumptions = await knex.transaction(async (trx) => {
       const nowIso = new Date().toISOString();
       const candidates = await trx<QuotaWaitCandidate>('workflow_run_waits as w')
-        .join('workflow_runs as r', 'r.run_id', 'w.run_id')
+        .join('workflow_runs as r', function () {
+          this.on('r.run_id', 'w.run_id').andOn('r.tenant', 'w.tenant');
+        })
         .where('w.wait_type', 'quota')
         .where('w.status', 'WAITING')
         .where('r.status', 'WAITING')
-        .whereNotNull('r.tenant_id')
+        .whereNotNull('r.tenant')
         .orderBy('w.created_at', 'asc')
         .forUpdate()
         .skipLocked()
         .limit(batchSize)
-        .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant_id', 'r.engine', 'r.node_path');
+        .select('w.wait_id', 'w.run_id', 'w.step_path', 'r.tenant', 'r.node_path');
 
       if (candidates.length === 0) {
         return [] as QuotaWaitCandidate[];
@@ -59,10 +58,10 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
       const selected: QuotaWaitCandidate[] = [];
       const byTenant = new Map<string, QuotaWaitCandidate[]>();
       for (const candidate of candidates) {
-        if (!candidate.tenant_id || candidate.node_path !== candidate.step_path) continue;
-        const list = byTenant.get(candidate.tenant_id) ?? [];
+        if (!candidate.tenant || candidate.node_path !== candidate.step_path) continue;
+        const list = byTenant.get(candidate.tenant) ?? [];
         list.push(candidate);
-        byTenant.set(candidate.tenant_id, list);
+        byTenant.set(candidate.tenant, list);
       }
 
       for (const [tenantId, waits] of byTenant.entries()) {
@@ -114,7 +113,7 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
       for (const selectedWait of selected) {
         await WorkflowRunLogModelV2.create(trx, {
           run_id: selectedWait.run_id,
-          tenant_id: selectedWait.tenant_id,
+          tenant: selectedWait.tenant,
           step_path: selectedWait.step_path,
           level: 'INFO',
           message: 'Quota wait resolved by scheduled scan',
@@ -133,20 +132,16 @@ export async function workflowQuotaResumeScanHandler(data: WorkflowQuotaResumeSc
     resumedTotal += resumptions.length;
 
     for (const item of resumptions) {
-      if (item.engine === 'temporal') {
-        await signalWorkflowRuntimeV2QuotaResume({
-          runId: item.run_id,
-          waitId: item.wait_id,
-          reason: 'quota_available',
-          resumedBy: workerId,
-        });
-        logger.info('[WorkflowQuotaResumeScanJob] Temporal quota wait signaled for resume', {
-          runId: item.run_id,
-          waitId: item.wait_id,
-        });
-        continue;
-      }
-      await runtime.executeRun(knex, item.run_id, workerId);
+      await signalWorkflowRuntimeV2QuotaResume({
+        runId: item.run_id,
+        waitId: item.wait_id,
+        reason: 'quota_available',
+        resumedBy: workerId,
+      });
+      logger.info('[WorkflowQuotaResumeScanJob] Temporal quota wait signaled for resume', {
+        runId: item.run_id,
+        waitId: item.wait_id,
+      });
     }
   }
 

@@ -1,49 +1,50 @@
 # Technical Reference
 
-This reference explains how the appliance is structured and what the operator is interacting with behind the scenes.
+This reference explains the supported Ubuntu/k3s appliance model and the release artifacts operators interact with behind the scenes.
 
-It is intended for technical IT administrators, MSP technicians, support engineers, and anyone who needs a deeper understanding of the appliance model.
+It is intended for technical IT administrators, MSP technicians, support engineers, and anyone who needs a deeper understanding of the supported appliance path.
 
-## Appliance Layers
+## Supported Appliance Layers
 
-The appliance has four main layers:
+The supported v1 appliance has four main layers:
 
-1. Talos OS
-   - boots the node and Kubernetes control plane
-2. Kubernetes and storage prerequisites
-   - provides the cluster runtime and persistent volumes
+1. Ubuntu Server 24.04 LTS
+   - boots the host and runs the local setup/status service on port `8080`
+2. k3s and storage prerequisites
+   - provide the Kubernetes runtime and persistent volumes
 3. Flux and Helm
    - reconcile the declared application release
 4. Alga PSA workloads
    - `alga-core` and related services
 
-The operator UI sits on top of these layers and hides the raw command surfaces for normal use.
+The setup/status UI sits on top of these layers and hides raw command surfaces for normal use.
+
+Talos artifacts still exist in this repository for legacy internal/support work, but they are not the supported customer install path for Ubuntu v1.
 
 ## Core Directories
 
 Relevant repo paths:
 
 - `ee/appliance/`
-  - appliance scripts, release manifests, Flux topology, operator entrypoint
-- `ee/appliance/scripts/`
-  - bootstrap, upgrade, reset, support bundle, image build
+  - appliance release manifests, Flux topology, host service, Ubuntu ISO workspace, and legacy support scripts
+- `ee/appliance/ubuntu-iso/`
+  - Ubuntu installer ISO build workspace
+- `ee/appliance/host-service/`
+  - setup/status/update service used by the Ubuntu appliance
 - `ee/appliance/releases/`
-  - published appliance release manifests and channels
+  - appliance release manifests and channel pointers
 - `ee/appliance/flux/`
   - GitOps topology and profile values
-- `ee/appliance/operator/`
-  - TUI/CLI implementation
+- `ee/appliance/flux/profiles/single-node/`
+  - values profile for the single-node appliance
 - `ee/docs/premise/`
-  - deeper generic Talos appliance platform docs
+  - legacy Talos reference docs only
 
 ## Appliance Release Model
 
 An appliance release couples:
 
-- Talos version
-- Kubernetes version
-- Talos ISO
-- Talos installer image
+- appliance release version
 - app release version
 - app release branch
 - exact pinned application image tags
@@ -55,61 +56,66 @@ The release contract is stored in:
 ee/appliance/releases/<release>/release.json
 ```
 
-This is the authoritative install and upgrade contract.
+This is the authoritative install and upgrade contract. Use the release manifest, not remembered ad hoc image tags or URLs.
 
-Use the release manifest, not remembered ad hoc image tags or URLs.
+The active release manifest no longer carries Talos ISO, Talos installer, Kubernetes version, or OS image metadata. Ubuntu/k3s host installation is handled by the appliance installer and host service, while application image selection is release-manifest driven.
 
-For deeper release semantics:
+Channels are separate pointers under:
 
-- `../premise/talos-release-model.md`
+```text
+ee/appliance/releases/channels/<channel>.json
+```
+
+They select a `releaseVersion` and Flux source `repoBranch`.
 
 ## Config And Access Files
 
-The bootstrap/operator flow persists appliance access files under:
+The Ubuntu appliance persists host/setup state under system paths such as:
 
 ```text
-~/.alga-psa-appliance/<site-id>/
+/etc/alga-appliance/
+/var/lib/alga-appliance/
+/opt/alga-appliance/
 ```
 
-Typical contents:
+Common files include:
 
-- `controlplane.yaml`
-- `talosconfig`
-- `kubeconfig`
-- `node-ip`
-- `app-url`
+- setup inputs
+- install state
+- release selection
+- setup/status tokens
+- packaged Flux/profile/release assets
 
-These files are the durable operator access path. They should survive across sessions and should not be replaced with temporary working files.
-Set `ALGA_APPLIANCE_HOME` if you need a different operator config root.
+Legacy Talos scripts may still persist operator files under `~/.alga-psa-appliance/<site-id>/`, but that is not the primary supported Ubuntu install path.
 
 ## Bootstrap Model
 
-Bootstrap is driven by:
+Supported bootstrap is driven by the Ubuntu appliance setup/status service.
 
-- `ee/appliance/appliance tui`
-- or the lower-level `ee/appliance/scripts/bootstrap-appliance.sh`
+High-level responsibilities include:
 
-Bootstrap responsibilities include:
+- validate DNS and outbound access to GitHub/GHCR
+- install k3s
+- install storage prerequisites
+- install Flux
+- resolve channel and release metadata
+- render runtime values from the selected release manifest
+- apply release-selection ConfigMaps and secrets
+- apply the Flux GitRepository/Kustomization source
+- surface progress and blockers through the status UI
 
-- generating machine config
-- persisting Talos and Kubernetes access files
-- applying Talos config
-- installing storage prerequisites
-- installing Flux
-- rendering runtime values from the release manifest
-- selecting the appliance release in-cluster
-- waiting for initial application bootstrap
+Legacy Talos bootstrap scripts remain in `ee/appliance/scripts/` for internal support and engineering fallbacks, but they should not be treated as the default customer workflow.
 
 ## Release Selection And Upgrades
 
 Customer-facing upgrades are release-based, not raw-tag-based.
 
-The operator upgrade flow selects a published appliance release and reconciles the cluster to it.
+The setup/status service resolves a channel, fetches the selected release manifest, patches runtime values ConfigMaps with pinned image tags, records release selection, and asks Flux/Helm to reconcile.
 
 Important behavior:
 
 - no automatic rollback loops
-- failures should stop in place for support investigation
+- failures stop in place for support investigation
 - support bundles are the preferred first artifact after failure
 
 ## Namespace Model
@@ -123,7 +129,7 @@ The appliance uses three key namespaces:
 - `msp`
   - primary PSA application workloads
 
-The current operator workload view intentionally focuses on `msp` by default so the UI centers PSA runtime health rather than cluster internals.
+The operator/status workload view intentionally focuses on `msp` by default so the UI centers PSA runtime health rather than cluster internals.
 
 ## PSA Workloads
 
@@ -138,17 +144,17 @@ Common appliance workloads include:
 - `email-service`
 - `temporal-worker`
 
-Health and logs for these are surfaced in the operator UI through `Status` and `Workloads`.
+Health and logs for these are surfaced through the status/operator tooling.
 
 ## Workload And Log Model
 
-The workload view is backed by a kubectl adapter that:
+The workload view is backed by Kubernetes reads that:
 
-- lists appliance-relevant pods
-- normalizes pod status
-- presents readiness, restart counts, and age
+- list appliance-relevant pods
+- normalize pod status
+- present readiness, restart counts, and age
 
-The log viewer is backed by kubectl log reads that:
+The log viewer is backed by Kubernetes log reads that:
 
 - load a recent tail first
 - append live lines while following
@@ -162,38 +168,29 @@ This is deliberately a practical operator model, not a full cluster log backend.
 
 The appliance assumes:
 
-- stable host reachability during bootstrap
-- either reserved DHCP or static networking for predictable first install
-- a known public app URL configured during bootstrap
+- stable host reachability during setup
+- working DNS resolution for GitHub and GHCR
+- outbound HTTPS access to GitHub/GHCR or a supported proxy path
+- a known public app URL configured during setup
 
 The app URL is injected into runtime values and used for public-facing application URL settings.
 
-A changing node IP during bootstrap can break installation and operator access assumptions.
-
 ## Storage Assumptions
 
-The single-node appliance flow installs a local-path style storage provisioner and verifies it before expecting the application to reconcile cleanly.
+The single-node appliance flow installs local-path style storage and verifies it before expecting the application to reconcile cleanly.
 
 Persistent application state lives on PVC-backed storage. Reset and fresh-install flows must be treated carefully so existing data and credentials are not mixed unintentionally.
 
-For deeper storage/bootstrap semantics:
-
-- `../premise/talos-alga-bootstrap-and-persistence.md`
-
 ## Flux And Helm
 
-Talos owns cluster bring-up. Flux owns application reconciliation.
+k3s provides the Kubernetes runtime. Flux owns application reconciliation.
 
 Flux applies the appliance topology and Helm releases from:
 
 - `ee/appliance/flux/base/`
-- `ee/appliance/flux/profiles/talos-single-node/`
+- `ee/appliance/flux/profiles/single-node/`
 
-The operator status view summarizes Flux and Helm health, but the underlying deployment model remains GitOps-driven.
-
-For deeper GitOps details:
-
-- `../premise/talos-gitops-bootstrap.md`
+The status view summarizes Flux and Helm health, but the underlying deployment model remains GitOps-driven.
 
 ## Support Bundles
 
@@ -201,36 +198,28 @@ Support begins with an exportable support bundle rather than a remote support tu
 
 The bundle is meant to capture enough data to diagnose:
 
-- Talos host issues
-- Kubernetes reachability problems
+- host and k3s reachability problems
 - Flux/Kustomization/Helm failures
 - workload failures
 - storage and bootstrap problems
 
-For deeper support-bundle expectations:
-
-- `../premise/talos-support-bundles.md`
+Legacy Talos node diagnostics may still be collected when a Talos context is explicitly supplied, but they are not part of the supported Ubuntu appliance baseline.
 
 ## Lower-Level Commands
 
-The operator UI is the preferred interface.
+The setup/status UI is the preferred interface.
 
-Lower-level scripts remain available:
+Lower-level scripts remain available for advanced support and automation:
 
-- `ee/appliance/scripts/bootstrap-appliance.sh`
 - `ee/appliance/scripts/upgrade-appliance.sh`
 - `ee/appliance/scripts/reset-appliance-data.sh`
 - `ee/appliance/scripts/collect-support-bundle.sh`
 
-These are useful for:
-
-- advanced support
-- automation
-- fallback operation when working outside the TUI
+Talos-era scripts such as `bootstrap-appliance.sh` and `build-images.sh` are legacy/internal unless explicitly used by engineering or support.
 
 ## Related Reading
 
 - `README.md`
 - `quick-start.md`
 - `operators-manual.md`
-- `../premise/README.md`
+- `../premise/README.md` — legacy Talos reference only

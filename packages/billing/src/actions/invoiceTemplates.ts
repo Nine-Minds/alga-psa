@@ -17,6 +17,7 @@ import {
 import type { TemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
@@ -75,6 +76,10 @@ export const getInvoiceTemplates = withAuth(async (
     user,
     { tenant }
 ): Promise<IInvoiceTemplate[]> => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+        throw new Error('Permission denied: billing read required');
+    }
+
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
         // Returns all standard templates and tenant-specific templates.
@@ -94,6 +99,10 @@ export const setDefaultTemplate = withAuth(async (
     { tenant },
     payload: SetDefaultTemplatePayload
 ): Promise<void> => {
+    if (!await hasPermission(user, 'billing', 'update')) {
+        throw new Error('Permission denied: billing update required');
+    }
+
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -158,6 +167,10 @@ export const setClientTemplate = withAuth(async (
     clientId: string,
     templateId: string | null
 ): Promise<void> => {
+    if (!await hasPermission(user, 'billing', 'update')) {
+        throw new Error('Permission denied: billing update required');
+    }
+
     const { knex } = await createTenantKnex();
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('clients')
@@ -175,6 +188,10 @@ export const saveInvoiceTemplate = withAuth(async (
     { tenant },
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IInvoiceTemplate; error?: string }> => {
+    if (!await hasPermission(user, 'billing', 'update')) {
+        throw new Error('Permission denied: billing update required');
+    }
+
     const { knex } = await createTenantKnex();
 
     if (!(template as any)?.templateAst) {
@@ -286,13 +303,16 @@ export const addInvoiceAnnotation = withAuth(async (
     return newAnnotation;
 });
 
-export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoiceAnnotation[]> {
-    // Implementation to fetch annotations for an invoice
-    console.warn(`getInvoiceAnnotations implementation needed for invoice ${invoiceId}`);
-    // const { knex, tenant } = await createTenantKnex();
-    // return knex('invoice_annotations').where({ invoice_id: invoiceId, tenant }); // Example query
-    return [];
-}
+export const getInvoiceAnnotations = withAuth(async (
+    user,
+    { tenant },
+    invoiceId: string
+): Promise<IInvoiceAnnotation[]> => {
+    const { knex } = await createTenantKnex();
+    return knex('invoice_annotations')
+        .where({ invoice_id: invoiceId, tenant })
+        .orderBy('created_at', 'asc');
+});
 // --- Server-Side Rendering Action ---
 
 /**
@@ -365,6 +385,10 @@ export const deleteInvoiceTemplate = withAuth(async (
     { tenant },
     templateId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string }> => {
+    if (!await hasPermission(user, 'billing', 'delete')) {
+        throw new Error('Permission denied: billing delete required');
+    }
+
     const { knex } = await createTenantKnex();
 
     try {

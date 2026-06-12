@@ -1063,8 +1063,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
               ? [{ template: 'own' }, { template: 'same_client' }]
               : [],
           mutationGuards:
-            input.action === 'approve' &&
-            (input.resourceType === 'billing' || input.resourceType === 'time_entry')
+            input.action === 'approve' && input.resourceType === 'billing'
               ? [
                   (evaluationInput) => {
                     const ownerUserId = evaluationInput.record?.ownerUserId;
@@ -1075,14 +1074,8 @@ export const runAuthorizationBundleSimulationAction = withAuth(
                           {
                             stage: 'mutation' as const,
                             sourceType: 'builtin' as const,
-                            code:
-                              input.resourceType === 'billing'
-                                ? 'billing_not_self_approver_denied'
-                                : 'timesheet_not_self_approver_denied',
-                            message:
-                              input.resourceType === 'billing'
-                                ? 'Approvers cannot approve their own quotes.'
-                                : 'Approvers cannot approve their own time submissions.',
+                            code: 'billing_not_self_approver_denied',
+                            message: 'Approvers cannot approve their own quotes.',
                           },
                         ],
                       };
@@ -1094,14 +1087,8 @@ export const runAuthorizationBundleSimulationAction = withAuth(
                         {
                           stage: 'mutation' as const,
                           sourceType: 'builtin' as const,
-                          code:
-                            input.resourceType === 'billing'
-                              ? 'billing_not_self_approver_passed'
-                              : 'timesheet_not_self_approver_passed',
-                          message:
-                            input.resourceType === 'billing'
-                              ? 'Not-self-approver guard passed for billing approvals.'
-                              : 'Not-self-approver guard passed for time approvals.',
+                          code: 'billing_not_self_approver_passed',
+                          message: 'Not-self-approver guard passed for billing approvals.',
                         },
                       ],
                     };

@@ -294,10 +294,20 @@ def "main cleanup" [
         "sessions"
 
         # === LEVEL 1: Leaf tables with no dependencies ===
+        # Global search index (no FKs, denormalized projection)
+        "app_search_index"
+
         # Workflow details
         "workflow_action_results" "workflow_event_attachments" "workflow_snapshots"
         "workflow_action_dependencies" "workflow_sync_points" "workflow_timers"
         "workflow_task_history" "workflow_form_schemas"
+
+        # Workflow runtime V2 (child tables first, then parent) — keep in sync
+        # with TENANT_TABLES_DELETION_ORDER in tenant-deletion-activities.ts
+        "workflow_run_steps" "workflow_run_waits" "workflow_run_snapshots"
+        "workflow_action_invocations" "workflow_definition_versions"
+        "workflow_run_logs" "workflow_runtime_events" "workflow_step_usage_periods"
+        "workflow_runs" "tenant_workflow_schedule" "workflow_definitions"
 
         # Task/project details
         "task_checklist_items" "project_task_dependencies" "task_resources"
@@ -325,7 +335,10 @@ def "main cleanup" [
         "document_folders" "document_system_entries"
 
         # Messages and comments
-        "comments"
+        # comment_threads is the parent of comments.thread_id / project_task_comments.thread_id
+        # (CASCADE) and email_sending_logs.comment_thread_id (SET NULL); delete AFTER comments
+        # and project_task_comments (which is removed at the project_task_comments line above).
+        "comments" "comment_threads"
         "gmail_processed_history" "email_processed_messages"
         "email_reply_tokens" "email_sending_logs" "email_rate_limits"
 
@@ -411,6 +424,7 @@ def "main cleanup" [
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings" "client_inbound_email_domains"
+        "client_name_aliases"
         "tenant_companies"
         
         # Project/task entities
@@ -465,6 +479,16 @@ def "main cleanup" [
         # Workflow templates
         "workflow_registrations" "workflow_templates" "workflow_template_categories"
         
+        # === Ticket close rules (2026-06-10) ===
+        # All seven FK to tickets / boards / statuses, so they must be deleted
+        # BEFORE those. Internal order follows the FKs among them:
+        # ticket_auto_close_state → board_auto_close_rules, and
+        # checklist_template_items / _apply_rules → checklist_templates.
+        "ticket_auto_close_state" "board_auto_close_rules"
+        "ticket_checklist_items"
+        "checklist_template_apply_rules" "checklist_template_items" "checklist_templates"
+        "board_close_rules"
+
         # === LEVEL 5: Tickets and related ===
         # Tickets MUST be deleted BEFORE categories, statuses, etc that it references
         # AND BEFORE client_locations that tickets reference via location_id
@@ -552,6 +576,8 @@ def "main cleanup" [
         "tenant_telemetry_settings"
         "tenant_external_entity_mappings" "telemetry_consent_log"
         "default_billing_settings" "notification_settings"
+        # inbound_email_rules references inbound_ticket_defaults (fallback destination)
+        "inbound_email_rules"
         "inbound_ticket_defaults" "user_type_rates" "next_number"
         "event_catalog" "provider_events"
 

@@ -8,7 +8,7 @@ FACTORY_BASE_URL="${EE_APPLIANCE_FACTORY_BASE_URL:-https://factory.talos.dev}"
 SCHEMATIC_PATH="${REPO_ROOT}/ee/appliance/schematics/metal-amd64.yaml"
 OUT_DIR="${REPO_ROOT}/dist/appliance"
 RELEASES_DIR="${REPO_ROOT}/ee/appliance/releases"
-VALUES_PROFILE="talos-single-node"
+VALUES_PROFILE="single-node"
 CHANNEL="stable"
 ARCH="amd64"
 PLATFORM="metal"
@@ -20,19 +20,24 @@ usage() {
 Usage:
   build-images.sh --release-version <version> --talos-version <version> --kubernetes-version <version> --app-version <version> --app-release-branch <branch> --alga-core-tag <tag> --workflow-worker-tag <tag> --email-service-tag <tag> --temporal-worker-tag <tag> [options]
 
+LEGACY TALOS ONLY:
+  This script is retained for historical Talos image scaffolding and release
+  manifest generation. Supported Ubuntu appliance installs do not use Talos ISO
+  or Talos installer artifacts.
+
 Options:
   --release-version <version>   Appliance release version (x.y.z)
-  --talos-version <version>     Talos version (for example: v1.12.0)
-  --kubernetes-version <ver>    Kubernetes version (for example: v1.31.4)
+  --talos-version <version>     Legacy Talos version input (for example: v1.12.0)
+  --kubernetes-version <ver>    Legacy Kubernetes version input (for example: v1.31.4)
   --app-version <version>       Alga application version/tag carried by the release manifest
   --app-release-branch <name>   App release branch (for example: release/1.0-rc3)
   --alga-core-tag <tag>         Published image tag for alga-core/setup image
   --workflow-worker-tag <tag>   Published image tag for workflow-worker
   --email-service-tag <tag>     Published image tag for email-service
   --temporal-worker-tag <tag>   Published image tag for temporal-worker
-  --schematic <path>            Schematic YAML path (default: ee/appliance/schematics/metal-amd64.yaml)
+  --schematic <path>            Legacy Talos schematic path (default: ee/appliance/schematics/metal-amd64.yaml)
   --out <dir>                   Artifact output directory root (default: dist/appliance)
-  --values-profile <name>       Appliance values profile name (default: talos-single-node)
+  --values-profile <name>       Appliance values profile name (default: single-node)
   --channel <name>              Release channel recorded in manifest (default: stable)
   --dry-run                     Resolve and print artifact metadata without downloading or writing files
   --help                        Show this help
@@ -109,33 +114,16 @@ resolve_installer_digest() {
 
 render_manifest() {
   local release_version="$1"
-  local talos_version="$2"
-  local kubernetes_version="$3"
-  local app_version="$4"
-  local app_release_branch="$5"
-  local alga_core_tag="$6"
-  local workflow_worker_tag="$7"
-  local email_service_tag="$8"
-  local temporal_worker_tag="$9"
-  local schematic_id="${10}"
-  local iso_url="${11}"
-  local iso_local_path="${12}"
-  local iso_sha256="${13}"
-  local installer_image="${14}"
-  local installer_digest="${15:-}"
+  local app_version="$2"
+  local app_release_branch="$3"
+  local alga_core_tag="$4"
+  local workflow_worker_tag="$5"
+  local email_service_tag="$6"
+  local temporal_worker_tag="$7"
 
   jq -n \
     --arg releaseVersion "$release_version" \
     --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    --arg talosVersion "$talos_version" \
-    --arg schematicId "$schematic_id" \
-    --arg schematicPath "${SCHEMATIC_PATH#$REPO_ROOT/}" \
-    --arg kubernetesVersion "$kubernetes_version" \
-    --arg isoUrl "$iso_url" \
-    --arg isoLocalPath "$iso_local_path" \
-    --arg isoSha256 "$iso_sha256" \
-    --arg installerImage "$installer_image" \
-    --arg installerDigest "$installer_digest" \
     --arg appVersion "$app_version" \
     --arg appReleaseBranch "$app_release_branch" \
     --arg algaCoreTag "$alga_core_tag" \
@@ -143,35 +131,10 @@ render_manifest() {
     --arg emailServiceTag "$email_service_tag" \
     --arg temporalWorkerTag "$temporal_worker_tag" \
     --arg valuesProfile "$VALUES_PROFILE" \
-    --arg channel "$CHANNEL" \
     '
     {
       releaseVersion: $releaseVersion,
       generatedAt: $generatedAt,
-      talos: {
-        version: $talosVersion,
-        schematicId: $schematicId,
-        schematicPath: $schematicPath
-      },
-      kubernetes: {
-        version: $kubernetesVersion
-      },
-      os: {
-        platform: "metal",
-        architecture: "amd64",
-        iso: {
-          url: $isoUrl,
-          localPath: $isoLocalPath,
-          sha256: $isoSha256
-        },
-        installer: (
-          if $installerDigest == "" then
-            { image: $installerImage }
-          else
-            { image: $installerImage, digest: $installerDigest }
-          end
-        )
-      },
       app: {
         version: $appVersion,
         releaseBranch: $appReleaseBranch,
@@ -182,8 +145,7 @@ render_manifest() {
           emailService: $emailServiceTag,
           temporalWorker: $temporalWorkerTag
         }
-      },
-      channel: $channel
+      }
     }
     '
 }
@@ -299,20 +261,12 @@ INSTALLER_DIGEST="$(resolve_installer_digest "$INSTALLER_IMAGE")"
 if [ "$DRY_RUN" -eq 1 ]; then
   render_manifest \
     "$RELEASE_VERSION" \
-    "$TALOS_VERSION" \
-    "$KUBERNETES_VERSION" \
     "$APP_VERSION" \
     "$APP_RELEASE_BRANCH" \
     "$ALGA_CORE_TAG" \
     "$WORKFLOW_WORKER_TAG" \
     "$EMAIL_SERVICE_TAG" \
-    "$TEMPORAL_WORKER_TAG" \
-    "$SCHEMATIC_ID" \
-    "$ISO_URL" \
-    "" \
-    "" \
-    "$INSTALLER_IMAGE" \
-    "$INSTALLER_DIGEST"
+    "$TEMPORAL_WORKER_TAG"
   exit 0
 fi
 
@@ -335,20 +289,12 @@ fi
 
 render_manifest \
   "$RELEASE_VERSION" \
-  "$TALOS_VERSION" \
-  "$KUBERNETES_VERSION" \
   "$APP_VERSION" \
   "$APP_RELEASE_BRANCH" \
   "$ALGA_CORE_TAG" \
   "$WORKFLOW_WORKER_TAG" \
   "$EMAIL_SERVICE_TAG" \
-  "$TEMPORAL_WORKER_TAG" \
-  "$SCHEMATIC_ID" \
-  "$ISO_URL" \
-  "$ISO_RELATIVE_PATH" \
-  "$ISO_SHA256" \
-  "$INSTALLER_IMAGE" \
-  "$INSTALLER_DIGEST" > "$RELEASE_FILE"
+  "$TEMPORAL_WORKER_TAG" > "$RELEASE_FILE"
 
 cat <<EOF
 Built Talos appliance assets for release ${RELEASE_VERSION}

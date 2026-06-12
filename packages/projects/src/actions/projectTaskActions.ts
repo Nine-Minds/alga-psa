@@ -23,7 +23,11 @@ import type {
   IUserWithRoles,
   ProjectStatus,
 } from '@alga-psa/types';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { revalidatePath } from 'next/cache';
+import {
+  bulkApplyTagsToEntities,
+  findTagsByEntityIds,
+} from '@alga-psa/tags/actions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -37,6 +41,8 @@ import {
     updateChecklistItemSchema
 } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
+import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 import {
   buildProjectTaskAssignedPayload,
@@ -67,7 +73,7 @@ async function resolveProjectStatusInfo(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -114,7 +120,7 @@ async function getProjectStatusMappingDetails(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -289,37 +295,138 @@ async function createProjectReadAuthorizer(
     };
 }
 
-type KernelAuthorizationContext = {
-    subject: AuthorizationSubject;
-    authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
-    requestCache: RequestLocalAuthorizationCache;
-};
+async function isProjectReadAdmin(
+    user: IUserWithRoles,
+    trx: Knex.Transaction
+): Promise<boolean> {
+    return hasPermission(user, 'project', 'read', trx);
+}
 
-async function createKernelAuthorizationContext(
+/**
+ * Builds the per-ticket assignee set: primary assignee + ticket_resources
+ * additional agents + members of the ticket's assigned_team_id. Used to gate
+ * non-admin (no project:read) access to linked tickets.
+ */
+export async function buildTicketAssigneeSetByTicketId(
     trx: Knex.Transaction,
     tenant: string,
-    user: IUserWithRoles
-): Promise<KernelAuthorizationContext> {
-    const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-    const authorizationKernel = createAuthorizationKernel({
-        builtinProvider: new BuiltinAuthorizationKernelProvider(),
-        bundleProvider: new BundleAuthorizationKernelProvider({
-            resolveRules: async (input) => {
-                try {
-                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                } catch {
-                    return [];
-                }
-            },
-        }),
-        rbacEvaluator: async () => true,
-    });
+    ticketIds: string[]
+): Promise<Map<string, Set<string>>> {
+    const result = new Map<string, Set<string>>();
+    const uniqueIds = Array.from(new Set(ticketIds.filter(Boolean)));
+    if (uniqueIds.length === 0) {
+        return result;
+    }
 
-    return {
-        subject,
-        authorizationKernel,
-        requestCache: new RequestLocalAuthorizationCache(),
-    };
+    const tickets = await trx('tickets')
+        .where({ tenant })
+        .whereIn('ticket_id', uniqueIds)
+        .select<{ ticket_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
+            'ticket_id',
+            'assigned_to',
+            'assigned_team_id'
+        );
+
+    for (const ticket of tickets) {
+        const set = new Set<string>();
+        if (ticket.assigned_to) set.add(ticket.assigned_to);
+        result.set(ticket.ticket_id, set);
+    }
+
+    const additional = await trx('ticket_resources')
+        .where({ tenant })
+        .whereIn('ticket_id', uniqueIds)
+        .whereNotNull('additional_user_id')
+        .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');
+    for (const row of additional) {
+        result.get(row.ticket_id)?.add(row.additional_user_id);
+    }
+
+    const teamIds = Array.from(new Set(tickets.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
+    if (teamIds.length > 0) {
+        const members = await trx('team_members')
+            .where({ tenant })
+            .whereIn('team_id', teamIds)
+            .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
+        const membersByTeam = new Map<string, string[]>();
+        for (const row of members) {
+            const ids = membersByTeam.get(row.team_id) ?? [];
+            ids.push(row.user_id);
+            membersByTeam.set(row.team_id, ids);
+        }
+        for (const ticket of tickets) {
+            if (!ticket.assigned_team_id) continue;
+            const teamMembers = membersByTeam.get(ticket.assigned_team_id) ?? [];
+            const set = result.get(ticket.ticket_id);
+            if (!set) continue;
+            for (const id of teamMembers) set.add(id);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Builds the per-task assignee set: primary assignee + task_resources
+ * additional agents + members of the task's assigned_team_id.
+ */
+export async function buildTaskAssigneeSetByTaskId(
+    trx: Knex.Transaction,
+    tenant: string,
+    taskIds: string[]
+): Promise<Map<string, Set<string>>> {
+    const result = new Map<string, Set<string>>();
+    const uniqueIds = Array.from(new Set(taskIds.filter(Boolean)));
+    if (uniqueIds.length === 0) {
+        return result;
+    }
+
+    const tasks = await trx('project_tasks')
+        .where({ tenant })
+        .whereIn('task_id', uniqueIds)
+        .select<{ task_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
+            'task_id',
+            'assigned_to',
+            'assigned_team_id'
+        );
+
+    for (const task of tasks) {
+        const set = new Set<string>();
+        if (task.assigned_to) set.add(task.assigned_to);
+        result.set(task.task_id, set);
+    }
+
+    const additional = await trx('task_resources')
+        .where({ tenant })
+        .whereIn('task_id', uniqueIds)
+        .whereNotNull('additional_user_id')
+        .select<{ task_id: string; additional_user_id: string }[]>('task_id', 'additional_user_id');
+    for (const row of additional) {
+        result.get(row.task_id)?.add(row.additional_user_id);
+    }
+
+    const teamIds = Array.from(new Set(tasks.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
+    if (teamIds.length > 0) {
+        const members = await trx('team_members')
+            .where({ tenant })
+            .whereIn('team_id', teamIds)
+            .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
+        const membersByTeam = new Map<string, string[]>();
+        for (const row of members) {
+            const ids = membersByTeam.get(row.team_id) ?? [];
+            ids.push(row.user_id);
+            membersByTeam.set(row.team_id, ids);
+        }
+        for (const task of tasks) {
+            if (!task.assigned_team_id) continue;
+            const teamMembers = membersByTeam.get(task.assigned_team_id) ?? [];
+            const set = result.get(task.task_id);
+            if (!set) continue;
+            for (const id of teamMembers) set.add(id);
+        }
+    }
+
+    return result;
 }
 
 export async function filterAuthorizedTicketIds(
@@ -333,52 +440,18 @@ export async function filterAuthorizedTicketIds(
         return new Set();
     }
 
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-        return new Set();
+    if (await isProjectReadAdmin(user, trx)) {
+        return new Set(uniqueTicketIds);
     }
 
-    const context = await createKernelAuthorizationContext(trx, tenant, user);
-    const tickets = await trx('tickets')
-        .where({ tenant })
-        .whereIn('ticket_id', uniqueTicketIds)
-        .select(
-            'ticket_id',
-            'entered_by',
-            'assigned_to',
-            'assigned_team_id',
-            'client_id',
-            'board_id',
-            'status_id'
-        );
-
-    const decisions = await Promise.all(
-        tickets.map((ticket) =>
-            context.authorizationKernel.authorizeResource({
-                subject: context.subject,
-                resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
-                record: {
-                    id: ticket.ticket_id,
-                    ownerUserId: ticket.entered_by ?? null,
-                    assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
-                    clientId: ticket.client_id ?? null,
-                    boardId: ticket.board_id ?? undefined,
-                    teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
-                    statusId: ticket.status_id,
-                },
-                requestCache: context.requestCache,
-                knex: trx,
-            })
-        )
-    );
-
-    const allowedIds = new Set<string>();
-    tickets.forEach((ticket, index) => {
-        if (decisions[index]?.allowed) {
-            allowedIds.add(ticket.ticket_id);
+    const assigneesByTicket = await buildTicketAssigneeSetByTicketId(trx, tenant, uniqueTicketIds);
+    const allowed = new Set<string>();
+    for (const ticketId of uniqueTicketIds) {
+        if (assigneesByTicket.get(ticketId)?.has(user.user_id)) {
+            allowed.add(ticketId);
         }
-    });
-
-    return allowedIds;
+    }
+    return allowed;
 }
 
 async function assertTicketReadAllowedById(
@@ -529,6 +602,11 @@ export const updateTaskWithChecklist = withAuth(async (
             const validatedTaskData = validateData(updateTaskSchema, taskUpdateData);
 
             const updatedTask = await ProjectTaskModel.updateTask(trx, tenant, taskId, validatedTaskData as Partial<IProjectTask>);
+            const webhookChanges = buildProjectTaskWebhookChanges(
+                existingTask,
+                updatedTask,
+                Object.keys(validatedTaskData)
+            );
 
             const phase = await ProjectModel.getPhaseById(trx, tenant, updatedTask.phase_id);
             if (phase) {
@@ -588,6 +666,25 @@ export const updateTaskWithChecklist = withAuth(async (
                             }),
                         });
                     }
+                }
+
+                // Single shared PROJECT_TASK_UPDATED emit. Search reindexes on
+                // any change (treats `changes` opaquely); the webhook builder
+                // needs the rich {previous,new} diff, so emit that and gate on
+                // a real field change (PRD F003 — no no-op deliveries).
+                if (Object.keys(webhookChanges).length > 0) {
+                    await publishEvent({
+                        eventType: 'PROJECT_TASK_UPDATED',
+                        payload: {
+                            tenantId: tenant,
+                            projectId: phase.project_id,
+                            phaseId: phase.phase_id,
+                            taskId,
+                            userId: user.user_id,
+                            timestamp: new Date().toISOString(),
+                            changes: webhookChanges,
+                        },
+                    });
                 }
             }
 
@@ -963,6 +1060,17 @@ export const deleteTask = withAuth(async (
             await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
 
             await ProjectTaskModel.deleteTask(trx, tenant, taskId);
+
+            await publishEvent({
+                eventType: 'PROJECT_TASK_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
         });
     } catch (error) {
         console.error('Error deleting task:', error);
@@ -1020,7 +1128,7 @@ export const getTaskTicketLinksAction = withAuth(async (
                 user as IUserWithRoles,
                 links.map((link) => link.ticket_id)
             );
-            return links.filter((link) => allowedTicketIds.has(link.ticket_id));
+            return links.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
@@ -1043,20 +1151,30 @@ export const getLinkedTasksForTicketAction = withAuth(async (
                 return linkedTasks;
             }
 
-            const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
-            const projects = await trx('projects')
-                .where({ tenant })
-                .whereIn('project_id', Array.from(new Set(linkedTasks.map((task) => task.project_id).filter(Boolean))))
-                .select('project_id', 'client_id', 'assigned_to');
+            const isAdmin = await isProjectReadAdmin(user as IUserWithRoles, trx);
+            if (isAdmin) {
+                return linkedTasks.map((task) => ({ ...task, restricted: false }));
+            }
 
-            const allowedProjectIds = new Set<string>();
-            await Promise.all(projects.map(async (project) => {
-                if (await authorizeProjectRead(project)) {
-                    allowedProjectIds.add(project.project_id);
+            const assigneesByTask = await buildTaskAssigneeSetByTaskId(
+                trx,
+                tenant,
+                linkedTasks.map((task) => task.task_id)
+            );
+            return linkedTasks.map((task) => {
+                const isAssigned = assigneesByTask.get(task.task_id)?.has(user.user_id) ?? false;
+                if (isAssigned) {
+                    return { ...task, restricted: false };
                 }
-            }));
-
-            return linkedTasks.filter((task) => allowedProjectIds.has(task.project_id));
+                return {
+                    ...task,
+                    project_name: null,
+                    phase_name: null,
+                    status_name: null,
+                    is_closed: null,
+                    restricted: true,
+                };
+            });
         });
     } catch (error) {
         console.error('Error getting linked tasks for ticket:', error);
@@ -1142,7 +1260,9 @@ export const getTasksForPhase = withAuth(async (
                 user as IUserWithRoles,
                 ticketLinksArray.map((link) => link.ticket_id)
             );
-            const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+            const authorizedTicketLinksArray = ticketLinksArray.map((link) =>
+                applyTicketLinkRestriction(link, allowedTicketIds)
+            );
 
             // Convert arrays to maps
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
@@ -1275,6 +1395,84 @@ export const addTaskResourceAction = withAuth(async (
     }
 });
 
+// Batched equivalent of addTaskResourceAction: inserts every missing resource in a
+// single transaction, then emits one PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event
+// per added agent (same per-agent contract as the single-add path). Returns the
+// task's resources so callers refetch once instead of per member.
+export const addTaskResourcesAction = withAuth(async (
+    user,
+    { tenant },
+    taskId: string,
+    userIds: string[],
+    role?: string
+): Promise<any[]> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        const { resources, added, projectId, primaryAgentId } = await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const task = await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .first();
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            const wanted = Array.from(new Set(userIds.filter(Boolean)));
+            const existing = await trx('task_resources')
+                .where({ task_id: taskId, tenant })
+                .whereIn('additional_user_id', wanted)
+                .select('additional_user_id');
+            const existingIds = new Set(existing.map((row: { additional_user_id: string }) => row.additional_user_id));
+
+            // A user can't be both the primary and an additional agent
+            // (CHECK assigned_to != additional_user_id); also skip rows already present.
+            const primaryAgentId = task.assigned_to as string | null;
+            const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
+
+            if (toInsert.length > 0) {
+                await trx('task_resources').insert(
+                    toInsert.map((userId) => ({
+                        tenant,
+                        task_id: taskId,
+                        assigned_to: primaryAgentId || userId,
+                        additional_user_id: userId,
+                        role: role || null
+                    }))
+                );
+            }
+
+            const resources = await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
+            return { resources, added: toInsert, projectId, primaryAgentId };
+        });
+
+        // Emit per-agent events after commit so subscribers see the committed rows.
+        for (const userId of added) {
+            await publishEvent({
+                eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    primaryAgentId,
+                    additionalAgentId: userId,
+                    assignedByUserId: user.user_id
+                }
+            });
+        }
+
+        return resources;
+    } catch (error) {
+        console.error('Error adding task resources:', error);
+        throw error;
+    }
+});
+
 export const assignTeamToProjectTask = withAuth(async (
     user,
     { tenant },
@@ -1325,9 +1523,16 @@ export const assignTeamToProjectTask = withAuth(async (
                 .andWhere('users.is_inactive', false)
                 .select('team_members.user_id');
 
-            // assigned_to is guaranteed non-null: either the task already has one,
-            // or we fall back to team.manager_id (validated above).
-            const assignedTo: string = (task.assigned_to as string | null) || team.manager_id;
+            // Assigning a team makes that team's lead the task's primary agent,
+            // overwriting any previous primary (e.g. the prior team's lead).
+            const assignedTo: string = team.manager_id;
+
+            // The new lead can't be both primary and an additional resource
+            // (CHECK assigned_to != additional_user_id + unique index), so drop
+            // any existing resource row for them before promoting to primary.
+            await trx('task_resources')
+                .where({ task_id: taskId, tenant, additional_user_id: assignedTo })
+                .delete();
 
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
@@ -1426,6 +1631,15 @@ export const removeTeamFromProjectTask = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
+            // Resolve the team's lead so we know whether removing the team should
+            // also vacate the primary agent slot it filled.
+            const removedTeam = task.assigned_team_id
+                ? await trx('teams')
+                    .where({ team_id: task.assigned_team_id, tenant })
+                    .first()
+                : null;
+            const teamLeadId: string | null = removedTeam?.manager_id ?? null;
+
             const mode = options.mode;
             if (mode === 'remove_all') {
                 await trx('task_resources')
@@ -1453,10 +1667,16 @@ export const removeTeamFromProjectTask = withAuth(async (
                     .update({ role: null });
             }
 
+            // 'remove_all' takes the whole team off the task, including its lead,
+            // so clear the primary agent when it's that lead. 'keep_all' and
+            // 'selective' keep people assigned, so the lead stays as primary.
+            const clearPrimary = mode === 'remove_all' && !!teamLeadId && task.assigned_to === teamLeadId;
+
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
                 .update({
                     assigned_team_id: null,
+                    ...(clearPrimary ? { assigned_to: null } : {}),
                     updated_at: new Date()
                 });
         });
@@ -1761,6 +1981,29 @@ export const moveTaskToPhase = withAuth(async (
                         phase_id: newPhaseId
                     });
                 }
+            }
+
+            // A phase move is a task update: emit PROJECT_TASK_UPDATED with a
+            // rich {previous,new} diff so the webhook delivers a meaningful
+            // changes body (search treats `changes` opaquely either way).
+            const moveChanges = buildProjectTaskWebhookChanges(
+                existingTask,
+                updatedTask,
+                ['phase_id', 'project_status_mapping_id']
+            );
+            if (Object.keys(moveChanges).length > 0) {
+                await publishEvent({
+                    eventType: 'PROJECT_TASK_UPDATED',
+                    payload: {
+                        tenantId: tenant,
+                        projectId: newPhase.project_id,
+                        phaseId: newPhaseId,
+                        taskId,
+                        userId: user.user_id,
+                        timestamp: new Date().toISOString(),
+                        changes: moveChanges,
+                    }
+                });
             }
 
             return updatedTask;
@@ -2084,7 +2327,7 @@ export const getTaskWithDetails = withAuth(async (
                 user as IUserWithRoles,
                 ticketLinks.map((link) => link.ticket_id)
             );
-            const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));
+            const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
             return {
                 ...task,
@@ -2624,7 +2867,9 @@ export const getAllProjectTasksForListView = withAuth(async (
             user as IUserWithRoles,
             ticketLinksArray.map((link) => link.ticket_id)
         );
-        const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+        const authorizedTicketLinksArray = ticketLinksArray.map((link) =>
+            applyTicketLinkRestriction(link, allowedTicketIds)
+        );
 
         // 5. Convert arrays to maps keyed by task_id
         const ticketLinks: Record<string, IProjectTicketLinkWithDetails[]> = {};
@@ -2838,4 +3083,162 @@ export const getProjectTaskData = withAuth(async (
 
         return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
     });
+});
+
+export const bulkAddTagsToTasks = withAuth(async (
+  user,
+  { tenant },
+  taskIds: string[],
+  tagTexts: string[],
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ taskId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(taskIds.filter((id) => !!id)));
+  // Dedupe case-insensitively (keeping first-seen casing) so it matches the
+  // lower-cased existing-tag and applied-tag comparisons used downstream.
+  const normalizedTextByLower = new Map<string, string>();
+  for (const raw of tagTexts) {
+    const text = raw.trim();
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (!normalizedTextByLower.has(lower)) normalizedTextByLower.set(lower, text);
+  }
+  const normalizedTexts = Array.from(normalizedTextByLower.values());
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ taskId: string; message: string }> = [];
+
+  if (uniqueIds.length === 0 || normalizedTexts.length === 0) {
+    return { updatedIds, failed };
+  }
+
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'project', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update project tasks');
+  }
+
+  // Filter to task IDs that actually exist in this tenant. tag_mappings.tagged_id
+  // has no FK to project_tasks, so without this we'd silently insert orphan
+  // mappings for any UUID a project:update holder submits.
+  const existingTaskRows = await knex('project_tasks')
+    .where('tenant', tenant)
+    .whereIn('task_id', uniqueIds)
+    .select<Array<{ task_id: string }>>('task_id');
+  const knownTaskIds = new Set<string>(existingTaskRows.map((row) => row.task_id));
+  const validIds: string[] = [];
+  for (const id of uniqueIds) {
+    if (knownTaskIds.has(id)) {
+      validIds.push(id);
+    } else {
+      failed.push({ taskId: id, message: 'Task not found' });
+    }
+  }
+
+  if (validIds.length === 0) {
+    return { updatedIds, failed };
+  }
+
+  // Load each task's current tags once (batched) for before/after snapshots
+  // and dedupe — bulkApplyTagsToEntities resolves definitions and applies the
+  // mappings in one pass rather than per task.
+  const existingByTask = new Map<string, string[]>();
+  try {
+    const existing = await findTagsByEntityIds(validIds, 'project_task');
+    for (const tag of existing) {
+      const texts = existingByTask.get(tag.tagged_id) ?? [];
+      texts.push(tag.tag_text);
+      existingByTask.set(tag.tagged_id, texts);
+    }
+  } catch (error) {
+    console.warn('[bulkAddTagsToTasks] Failed to load existing tags for dedupe:', error);
+  }
+
+  const unauthorizedIds = new Set<string>();
+  let appliedByEntity: Record<string, string[]> = {};
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // The global project:update grant above isn't enough: a client can submit
+      // task IDs from projects the caller can't read. Authorize each task's
+      // project (resolved once per distinct project, not per task) the same way
+      // every other task mutation here does, and drop tasks that fail.
+      const taskProjectRows = await trx('project_tasks as pt')
+        .join('project_phases as pp', function joinPhases() {
+          this.on('pt.phase_id', '=', 'pp.phase_id')
+            .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where('pt.tenant', tenant)
+        .whereIn('pt.task_id', validIds)
+        .select<Array<{ task_id: string; project_id: string }>>('pt.task_id', 'pp.project_id');
+      const projectIdByTask = new Map(taskProjectRows.map((row) => [row.task_id, row.project_id]));
+
+      const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+      const projectAllowed = new Map<string, boolean>();
+      const isProjectAllowed = async (projectId: string): Promise<boolean> => {
+        const cached = projectAllowed.get(projectId);
+        if (cached !== undefined) return cached;
+        const project = await ProjectModel.getById(trx, tenant, projectId);
+        const allowed = !!project && (await authorizeProjectRead(project));
+        projectAllowed.set(projectId, allowed);
+        return allowed;
+      };
+
+      const authorizedIds: string[] = [];
+      for (const taskId of validIds) {
+        const projectId = projectIdByTask.get(taskId);
+        if (projectId && (await isProjectAllowed(projectId))) {
+          authorizedIds.push(taskId);
+        } else {
+          unauthorizedIds.add(taskId);
+        }
+      }
+
+      if (authorizedIds.length === 0) {
+        return { appliedByEntity: {} as Record<string, string[]> };
+      }
+
+      const applications = authorizedIds.map((taskId) => ({
+        entityId: taskId,
+        existingTexts: existingByTask.get(taskId) ?? [],
+        newTexts: normalizedTexts,
+      }));
+      return bulkApplyTagsToEntities(trx, tenant, 'project_task', applications);
+    });
+    appliedByEntity = result.appliedByEntity;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to add tags to tasks';
+    // The whole batch shares one transaction, so a throw fails every valid task;
+    // keep the not-found entries already collected above.
+    return {
+      updatedIds: [],
+      failed: [...failed, ...validIds.map((taskId) => ({ taskId, message }))],
+    };
+  }
+
+  for (const taskId of validIds) {
+    if (unauthorizedIds.has(taskId)) {
+      failed.push({ taskId, message: 'Permission denied: Cannot read project' });
+      continue;
+    }
+    const existingLower = new Set((existingByTask.get(taskId) ?? []).map((t) => t.toLowerCase()));
+    const requestedNew = normalizedTexts.filter((t) => !existingLower.has(t.toLowerCase()));
+    const appliedLower = new Set((appliedByEntity[taskId] ?? []).map((t) => t.toLowerCase()));
+    // A tag is "dropped" only when it needed creating but the user lacks
+    // tag:create. Tasks already carrying every requested tag count as updated.
+    const dropped = requestedNew.filter((t) => !appliedLower.has(t.toLowerCase()));
+    if (dropped.length > 0) {
+      failed.push({
+        taskId,
+        message: `Could not add tag(s): ${dropped.join(', ')}`,
+      });
+    } else {
+      updatedIds.push(taskId);
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/projects');
+  }
+
+  return { updatedIds, failed };
 });

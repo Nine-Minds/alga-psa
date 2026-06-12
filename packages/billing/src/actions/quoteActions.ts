@@ -922,6 +922,10 @@ export const saveQuoteAsTemplate = withAuth(async (
   { tenant },
   quoteId: string
 ): Promise<IQuote | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const denied = await requireBillingCreatePermission(user);
   if (denied) {
     return denied;
@@ -1036,6 +1040,10 @@ export const submitQuoteForApproval = withAuth(async (
   { tenant },
   quoteId: string
 ): Promise<IQuote | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1100,9 +1108,12 @@ export const updateQuoteApprovalSettings = withAuth(async (
   { tenant },
   approvalRequired: boolean
 ): Promise<QuoteApprovalWorkflowSettings | ActionPermissionError> => {
-  const denied = await requireSettingsUpdatePermission(user);
-  if (denied) {
-    return denied;
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    return permissionError('Permission denied: Cannot update quote approval settings');
   }
 
   const { knex } = await createTenantKnex();
@@ -1221,6 +1232,10 @@ export const sendQuote = withAuth(async (
   quoteId: string,
   input: SendQuoteInput = {}
 ): Promise<IQuote | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1332,6 +1347,10 @@ export const resendQuote = withAuth(async (
   quoteId: string,
   input: SendQuoteInput = {}
 ): Promise<IQuote | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1417,6 +1436,10 @@ export const sendQuoteReminder = withAuth(async (
   quoteId: string,
   input: SendQuoteInput = {}
 ): Promise<IQuote | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1501,6 +1524,10 @@ export const convertQuoteToContract = withAuth(async (
   { tenant },
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract } | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1530,6 +1557,10 @@ export const convertQuoteToInvoice = withAuth(async (
   { tenant },
   quoteId: string,
 ): Promise<{ quote: IQuote; invoice: IInvoice } | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1559,6 +1590,10 @@ export const convertQuoteToBoth = withAuth(async (
   { tenant },
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | ActionPermissionError> => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;

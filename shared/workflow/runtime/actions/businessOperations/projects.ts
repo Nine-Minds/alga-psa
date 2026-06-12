@@ -244,7 +244,10 @@ const assignTaskInputSchema = z.object({
 });
 
 const duplicateTaskInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for source task picker scope', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for source task picker scope', 'project-phase', ['project_id']),
   source_task_id: withWorkflowPicker(uuidSchema, 'Source project task id', 'project-task', ['project_id', 'phase_id']),
+  target_project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional target project id', 'project'),
   target_phase_id: withWorkflowPicker(uuidSchema, 'Target project phase id', 'project-phase', ['target_project_id']),
   target_project_status_mapping_id: withWorkflowPicker(
     uuidSchema.optional(),
@@ -572,7 +575,7 @@ async function getProjectStatusMappingDetails(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.tenant': tx.tenantId, 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
@@ -607,7 +610,7 @@ async function getScopedProjectStatusMappings(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.tenant': tx.tenantId, 'psm.project_id': projectId });
 
@@ -644,7 +647,7 @@ async function ensureProjectDefaultStatusMappings(
   if (existing.length > 0) return existing;
 
   const standardStatuses = await tx.trx('standard_statuses')
-    .where({ tenant: tx.tenantId, item_type: 'project_task' })
+    .where({ item_type: 'project_task' })
     .orderBy('display_order', 'asc');
 
   for (const status of standardStatuses) {
@@ -2019,6 +2022,7 @@ export function registerProjectActions(): void {
     id: 'projects.update_phase',
     version: 1,
     inputSchema: z.object({
+      project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for phase picker scope', 'project'),
       phase_id: withWorkflowPicker(uuidSchema, 'Project phase id', 'project-phase', ['project_id']),
       patch: phaseUpdatePatchSchema,
     }),
@@ -2081,6 +2085,8 @@ export function registerProjectActions(): void {
     id: 'projects.update_task',
     version: 1,
     inputSchema: z.object({
+      project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for task picker scope', 'project'),
+      phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for task picker scope', 'project-phase', ['project_id']),
       task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
       patch: taskUpdatePatchSchema,
     }),

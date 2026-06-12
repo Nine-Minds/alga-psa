@@ -28,6 +28,15 @@ export {
   type RecordSlaEventResult
 } from './slaService';
 
+// Backend actions returned by the SLA write functions; dispatch after commit
+export {
+  dispatchSlaBackendActions,
+  type SlaBackendAction
+} from './slaBackendActions';
+
+// Per-ticket SLA write serialization
+export { acquireTicketSlaLock } from './slaLock';
+
 // SLA pause/resume service
 export {
   pauseSla,

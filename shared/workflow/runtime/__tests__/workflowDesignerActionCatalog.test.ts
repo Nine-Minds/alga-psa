@@ -70,6 +70,20 @@ const mockActions: WorkflowDesignerCatalogSourceAction[] = [
     outputSchema: { type: 'object', properties: { task_id: { type: 'string' } } }
   },
   {
+    id: 'store.get',
+    version: 1,
+    ui: { label: 'Get Stored Value', description: 'Read durable workflow state', category: 'Data Store' },
+    inputSchema: { type: 'object', properties: { namespace: { type: 'string' }, key: { type: 'string' } } },
+    outputSchema: { type: 'object', properties: { found: { type: 'boolean' }, value: {} } }
+  },
+  {
+    id: 'links.lookup',
+    version: 1,
+    ui: { label: 'Lookup Entity Links', description: 'Read durable workflow links', category: 'Data Store' },
+    inputSchema: { type: 'object', properties: { namespace: { type: 'string' }, from: { type: 'object' } } },
+    outputSchema: { type: 'object', properties: { matches: { type: 'array' } } }
+  },
+  {
     id: 'time.create_entry',
     version: 1,
     ui: { label: 'Create Time Entry', description: 'Create a time entry', category: 'Business Operations' },
@@ -221,6 +235,23 @@ describe('workflow designer action catalog', () => {
     ]);
   });
 
+  it('T002: data-store actions are grouped into the Data Store catalog record', () => {
+    const record = catalog.find((candidate) => candidate.groupKey === 'data-store');
+    expect(record).toMatchObject({
+      groupKey: 'data-store',
+      label: 'Data Store',
+      iconToken: 'data-store',
+      tileKind: 'core-object',
+      defaultActionId: 'store.get',
+      description: 'Read and write durable workflow state across runs.',
+      allowedActionIds: ['store.get', 'links.lookup'],
+    });
+    expect(record?.actions.map((action) => action.id)).toEqual(['store.get', 'links.lookup']);
+    expect(record?.actions.find((action) => action.id === 'store.get')?.inputFieldNames).toEqual(['key', 'namespace']);
+    expect(record?.actions.find((action) => action.id === 'links.lookup')?.outputFieldNames).toEqual(['matches']);
+    expect(getWorkflowDesignerCatalogRecordForAction(catalog, 'links.lookup')?.groupKey).toBe('data-store');
+  });
+
   it('T018: time actions are grouped into the Time catalog record', () => {
     expect(catalog.find((record) => record.groupKey === 'time')?.allowedActionIds).toEqual([
       'time.create_entry'
@@ -238,5 +269,25 @@ describe('workflow designer action catalog', () => {
       groupKey: 'app:create_ticket_from_email',
       tileKind: 'app',
     });
+  });
+
+  it('uses explicit module records when provided', () => {
+    const ninjaCatalog = buildWorkflowDesignerActionCatalog(mockActions, {
+      modules: [{
+        groupKey: 'app:ninjaone',
+        label: 'NinjaOne',
+        tileKind: 'app',
+        iconToken: 'ninjaone',
+        defaultActionId: 'slack.send_message',
+        allowedActionIds: ['slack.send_message']
+      }]
+    });
+
+    expect(ninjaCatalog.find((record) => record.groupKey === 'app:ninjaone')).toMatchObject({
+      groupKey: 'app:ninjaone',
+      iconToken: 'ninjaone',
+      allowedActionIds: ['slack.send_message']
+    });
+    expect(ninjaCatalog.find((record) => record.groupKey === 'app:slack')).toBeUndefined();
   });
 });

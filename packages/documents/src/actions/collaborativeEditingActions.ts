@@ -3,9 +3,8 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { createYjsProvider } from '@alga-psa/ui/editor';
-import { CacheFactory } from '../cache/CacheFactory';
+import { persistCollabSnapshot } from '../lib/collabPersistence';
 
 const SYNC_TIMEOUT_MS = 5000;
 
@@ -46,37 +45,7 @@ export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: 
     const fragment = ydoc.getXmlFragment('prosemirror');
     const json = yXmlFragmentToProsemirrorJSON(fragment);
 
-    const { knex } = await createTenantKnex();
-
-    const updated = await withTransaction(knex, async (trx) => {
-      const existing = await trx('document_block_content')
-        .where({ document_id: documentId, tenant })
-        .first();
-
-      if (!existing) {
-        return null;
-      }
-
-      const [result] = await trx('document_block_content')
-        .where({ document_id: documentId, tenant })
-        .update({
-          block_data: JSON.stringify(json),
-          updated_at: trx.fn.now(),
-        })
-        .returning(['content_id', 'block_data']);
-
-      return result;
-    });
-
-    if (!updated) {
-      return { success: false, message: 'Document not found.' };
-    }
-
-    // Invalidate preview cache so the grid thumbnail regenerates
-    const cache = CacheFactory.getPreviewCache(tenant);
-    await cache.delete(documentId);
-
-    return { success: true };
+    return await persistCollabSnapshot(tenant, documentId, json);
   } catch (error) {
     console.error('[syncCollabSnapshot] Failed to sync snapshot:', error);
     return { success: false, message: 'Snapshot sync failed.' };

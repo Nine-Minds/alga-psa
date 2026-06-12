@@ -2,7 +2,9 @@ import { Knex } from 'knex';
 
 export type WorkflowDefinitionRecord = {
   workflow_id: string;
-  tenant_id: string;
+  // uuid Citus distribution column. The legacy textual `tenant_id` column is
+  // being phased out (dropped in the cleanup migration) and is not referenced here.
+  tenant: string;
   key?: string | null;
   name: string;
   description?: string | null;
@@ -71,7 +73,7 @@ const WorkflowDefinitionModelV2 = {
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
       .insert({
         ...normalized,
-        tenant_id: tenant,
+        tenant,
         is_system: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -83,9 +85,10 @@ const WorkflowDefinitionModelV2 = {
   update: async (knex: Knex, tenantId: string, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
     const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
-    delete (normalized as Partial<WorkflowDefinitionRecord>).tenant_id;
+    delete (normalized as Record<string, unknown>).tenant_id;
+    delete (normalized as Record<string, unknown>).tenant;
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant_id: tenant })
+      .where({ workflow_id: workflowId, tenant })
       .update({
         ...normalized,
         is_system: false,
@@ -98,7 +101,7 @@ const WorkflowDefinitionModelV2 = {
   getById: async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
     const tenant = assertTenantId(tenantId);
     const record = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant_id: tenant })
+      .where({ workflow_id: workflowId, tenant })
       .first();
     return record || null;
   },
@@ -107,7 +110,7 @@ const WorkflowDefinitionModelV2 = {
     const tenant = assertTenantId(tenantId);
     return knex<WorkflowDefinitionRecord>('workflow_definitions')
       .select('*')
-      .where({ tenant_id: tenant });
+      .where({ tenant });
   }
 };
 

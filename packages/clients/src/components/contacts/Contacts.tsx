@@ -5,12 +5,25 @@ import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { getAllContacts, getContactsByClient, getAllClients } from '@alga-psa/clients/actions';
+import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import {
+  DropdownMenuContent as StyledDropdownMenuContent,
+  DropdownMenuItem as StyledDropdownMenuItem,
+  DropdownMenuSeparator as StyledDropdownMenuSeparator,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
-import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw } from 'lucide-react';
+import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw, Printer, Settings2, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -39,6 +52,7 @@ import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -80,6 +94,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -87,6 +102,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [isFiltered, setIsFiltered] = useState(false);
   const [sortBy, setSortBy] = useState<string>('full_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const openQuickAddContact = useCallback(() => setIsQuickAddOpen(true), []);
+  usePageCreateShortcut(openQuickAddContact);
   const { openDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
   const router = useRouter();
@@ -252,12 +269,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     });
   };
 
-  const getClientName = (clientId: string) => {
+  const getClientName = useCallback((clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
     return client
       ? client.client_name
       : t('contactsPage.unknownClient', { defaultValue: 'Unknown Client' });
-  };
+  }, [clients, t]);
 
   const handleContactAdded = (newContact: IContact) => {
     // Store tags for the new contact if provided
@@ -774,14 +791,52 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     },
   ];
 
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (!query) {
+      setIndexedSearchContactIds(null);
+      return;
+    }
+
+    setIndexedSearchContactIds(null);
+    let isCancelled = false;
+    const timeout = setTimeout(() => {
+      searchContactListIds(query)
+        .then((contactIds) => {
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set(contactIds));
+          }
+        })
+        .catch((error) => {
+          console.error('Error searching contacts:', error);
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set());
+          }
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [searchTerm]);
+
   const filteredContacts = useMemo(() => {
     return contacts.filter(contact => {
       const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch = contact.full_name.toLowerCase().includes(searchTermLower) || 
-                          (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                          contact.additional_email_addresses?.some((emailAddress) =>
-                            emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                          );
+      const matchesSearch = !searchTermLower ||
+                          (indexedSearchContactIds
+                            ? indexedSearchContactIds.has(contact.contact_name_id) ||
+                              contact.full_name.toLowerCase().includes(searchTermLower) ||
+                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+                              contact.additional_email_addresses?.some((emailAddress) =>
+                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
+                              )
+                            : contact.full_name.toLowerCase().includes(searchTermLower) ||
+                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+                              contact.additional_email_addresses?.some((emailAddress) =>
+                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
+                              ));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);
@@ -794,13 +849,82 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
       return matchesSearch && matchesStatus && matchesTags;
     });
-  }, [contacts, searchTerm, filterStatus, selectedTags]);
+  }, [contacts, searchTerm, filterStatus, selectedTags, indexedSearchContactIds]);
 
   // Memoize the data transformation for DataTable
   const tableData = useMemo(() => filteredContacts.map((contact) => ({
     ...contact,
     id: contact.contact_name_id
   })), [filteredContacts]);
+
+  const printColumns = useMemo<PrintColumnOption<IContact>[]>(() => [
+    {
+      key: 'full_name',
+      label: t('contactsPage.table.name', { defaultValue: 'Name' }),
+      header: t('contactsPage.table.name', { defaultValue: 'Name' }),
+      render: (contact) => contact.full_name,
+    },
+    {
+      key: 'created_at',
+      label: t('contactsPage.table.created', { defaultValue: 'Created' }),
+      header: t('contactsPage.table.created', { defaultValue: 'Created' }),
+      render: (contact) => contact.created_at
+        ? new Date(contact.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'email',
+      label: t('contactsPage.table.email', { defaultValue: 'Email' }),
+      header: t('contactsPage.table.email', { defaultValue: 'Email' }),
+      render: (contact) => contact.email || t('contactsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'default_phone_number',
+      label: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
+      header: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
+      render: (contact) => contact.default_phone_number
+        || contact.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
+        || contact.phone_numbers?.[0]?.phone_number
+        || t('contactsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'client_name',
+      label: t('contactsPage.table.client', { defaultValue: 'Client' }),
+      header: t('contactsPage.table.client', { defaultValue: 'Client' }),
+      render: (contact) => contact.client_id
+        ? getClientName(contact.client_id)
+        : t('contactsPage.noClient', { defaultValue: 'No Client' }),
+    },
+    {
+      key: 'tags',
+      label: t('contactsPage.table.tags', { defaultValue: 'Tags' }),
+      header: t('contactsPage.table.tags', { defaultValue: 'Tags' }),
+      render: (contact) => {
+        const tags = contact.contact_name_id ? contactTagsRef.current[contact.contact_name_id] ?? [] : [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('contactsPage.print.emptyValue', { defaultValue: '-' });
+      },
+    },
+    {
+      key: 'status',
+      label: t('contactsPage.print.columns.status', { defaultValue: 'Status' }),
+      header: t('contactsPage.print.columns.status', { defaultValue: 'Status' }),
+      render: (contact) => contact.is_inactive
+        ? t('common.states.inactive', { defaultValue: 'Inactive' })
+        : t('common.states.active', { defaultValue: 'Active' }),
+    },
+  ], [t, getClientName]);
+  const {
+    selectedColumnKeys: selectedContactPrintColumnKeys,
+    selectedColumns: selectedContactPrintColumns,
+    setSelectedColumnKeys: setSelectedContactPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedContactPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:contacts-list', printColumns);
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintContacts, isPreparing: isPreparingContactPrint } = usePrintAction();
 
   if (isLoading) {
     return <ContactsSkeleton />;
@@ -815,33 +939,56 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           <div className="flex items-center gap-2">
             <Button
               id="new-contact-dialog-button"
-              onClick={() => setIsQuickAddOpen(true)}
+              onClick={openQuickAddContact}
             >
               {t('contactsPage.addContact', { defaultValue: '+ Add Contact' })}
             </Button>
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
-                    <MoreVertical size={16} />
-                    {t('contactsPage.actions', { defaultValue: 'Actions' })}
-                  </button>
-              </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                  <DropdownMenu.Item 
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => setIsImportDialogOpen(true)}
+              <Tooltip content={t('contactsPage.shareTooltip', { defaultValue: 'Print, import and export' })}>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    id="contacts-actions-button"
+                    variant="outline"
+                    size="default"
+                    className="w-10 px-0"
+                    aria-label={t('contactsPage.shareTooltip', { defaultValue: 'Print, import and export' })}
                   >
-                    <Upload size={14} className="mr-2" />
-                    {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item 
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => void handleExportToCSV()}
-                  >
-                    <CloudDownload size={14} className="mr-2" />
-                    {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
-                  </DropdownMenu.Item>
-              </DropdownMenu.Content>
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenu.Trigger>
+              </Tooltip>
+              <StyledDropdownMenuContent align="end" className="w-56">
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); void triggerPrintContacts(); }}
+                  disabled={isPreparingContactPrint}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.print', { defaultValue: 'Print' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); setIsPrintOptionsOpen(true); }}
+                  className="gap-2"
+                >
+                  <Settings2 className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.printOptions', { defaultValue: 'Print options' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
+                  onSelect={() => setIsImportDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={() => void handleExportToCSV()}
+                  className="gap-2"
+                >
+                  <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
+                </StyledDropdownMenuItem>
+              </StyledDropdownMenuContent>
             </DropdownMenu.Root>
           </div>
         </div>
@@ -851,7 +998,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 <SearchInput
                   id='filter-contacts'
                   placeholder={t('contactsPage.searchPlaceholder', {
-                    defaultValue: 'Search contacts'
+                    defaultValue: 'Search contacts, notes, and interactions'
                   })}
                   className="w-64"
                   value={searchTerm}
@@ -909,20 +1056,50 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 </Button>
             </div>
           </ReflectionContainer>
-          <DataTable
-            key={`${currentPage}-${pageSize}`}
-            id="contacts-table"
-            data={tableData}
-            columns={columns}
-            pagination={true}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            pageSize={pageSize}
-            onItemsPerPageChange={handlePageSizeChange}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSortChange={handleSortChange}
-            manualSorting={true}
+          <ShortcutActiveRegion id="contacts-shortcut-region" className="outline-none">
+            <DataTable
+              key={`${currentPage}-${pageSize}`}
+              id="contacts-table"
+              data={tableData}
+              columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
+              manualSorting={true}
+            />
+          </ShortcutActiveRegion>
+          <div className="app-print-root app-print-only">
+            <PrintableTable
+              title={t('contactsPage.print.title', { defaultValue: 'Contacts' })}
+              subtitle={t('contactsPage.print.subtitle', {
+                count: filteredContacts.length,
+                defaultValue: '{{count}} contacts',
+              })}
+              rows={filteredContacts}
+              columns={selectedContactPrintColumns}
+              getRowKey={(contact) => contact.contact_name_id}
+              emptyMessage={t('contactsPage.print.noContacts', { defaultValue: 'No contacts to print' })}
+            />
+          </div>
+          <PrintOptionsDialog
+            id="contacts-print-options-dialog"
+            open={isPrintOptionsOpen}
+            onOpenChange={setIsPrintOptionsOpen}
+            title={t('contactsPage.print.optionsDialog.title', { defaultValue: 'Print options' })}
+            description={t('contactsPage.print.optionsDialog.description', {
+              defaultValue: 'Choose which columns to include when printing contacts.',
+            })}
+            columns={printColumns}
+            selectedColumnKeys={selectedContactPrintColumnKeys}
+            onSelectedColumnKeysChange={setSelectedContactPrintColumnKeys}
+            onReset={resetSelectedContactPrintColumnKeys}
+            onPrint={() => triggerPrintContacts()}
+            isPrinting={isPreparingContactPrint}
           />
         </div>
         <QuickAddContact

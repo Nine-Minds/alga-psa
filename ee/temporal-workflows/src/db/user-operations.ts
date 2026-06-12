@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
 import type {
@@ -22,9 +22,7 @@ export async function createAdminUserInDB(
   });
 
   try {
-    const knex = await getAdminConnection();
-    
-    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+    const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Check if an internal user with this email already exists in ANY tenant
       // This prevents duplicate MSP users across tenants which causes SSO issues
       const existingInternalUser = await trx('users')
@@ -112,9 +110,7 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
   log.info('Rolling back user creation', { userId, tenantId });
 
   try {
-    const knex = await getAdminConnection();
-
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Delete user associations in reverse order
       await trx('mobile_push_tokens')
         .where({ user_id: userId, tenant: tenantId })

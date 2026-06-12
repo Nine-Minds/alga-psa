@@ -7,11 +7,11 @@ import { Label } from './Label';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import * as Select from '@radix-ui/react-select';
 import { ChevronDown } from 'lucide-react';
+import { ConfirmationDialog } from './ConfirmationDialog';
 
 interface ServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit';
   is_standard?: boolean;
 }
 
@@ -46,6 +46,10 @@ export function EditableServiceTypeSelect({
   const [isAdding, setIsAdding] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const selectedType = serviceTypes.find(t => t.id === value);
 
@@ -74,45 +78,66 @@ export function EditableServiceTypeSelect({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this service type?')) return;
+  const handleRequestDelete = (id: string) => {
+    setDeleteError(null);
+    setPendingDeleteId(id);
+    // Close the Radix Select so the confirmation dialog owns focus cleanly.
+    setIsOpen(false);
+  };
 
-    setIsSaving(true);
+  const handleCancelDelete = () => {
+    setPendingDeleteId(null);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    // After an "in use" error the confirm button becomes a Close action.
+    if (deleteError) {
+      handleCancelDelete();
+      return;
+    }
+    if (!pendingDeleteId) return;
+
+    setIsDeleting(true);
     try {
-      await onDeleteType(id);
+      await onDeleteType(pendingDeleteId);
       // If the deleted type was selected, clear the selection
-      if (value === id) {
+      if (value === pendingDeleteId) {
         onChange('');
       }
+      setPendingDeleteId(null);
     } catch (error) {
       console.error('Error deleting service type:', error);
-      alert('Cannot delete this service type. It may be in use by existing services.');
+      setDeleteError('Cannot delete this service type. It may be in use by existing services.');
     } finally {
-      setIsSaving(false);
+      setIsDeleting(false);
     }
   };
 
   const handleStartAdd = () => {
     setIsAdding(true);
     setNewTypeName('');
+    setCreateError(null);
   };
 
   const handleCancelAdd = () => {
     setIsAdding(false);
     setNewTypeName('');
+    setCreateError(null);
   };
 
   const handleSaveAdd = async () => {
     if (!newTypeName.trim()) return;
 
     setIsSaving(true);
+    setCreateError(null);
     try {
       await onCreateType(newTypeName.trim());
       setIsAdding(false);
       setNewTypeName('');
     } catch (error) {
       console.error('Error creating service type:', error);
-      alert('Failed to create service type. Please try again.');
+      setCreateError('Failed to create service type. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -238,7 +263,7 @@ export function EditableServiceTypeSelect({
                           className="h-6 w-6 p-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(type.id);
+                            handleRequestDelete(type.id);
                           }}
                           disabled={isSaving}
                         >
@@ -257,10 +282,14 @@ export function EditableServiceTypeSelect({
 
               {/* Add new service type */}
               {isAdding ? (
-                <div className="flex items-center gap-1 px-2 py-1">
+                <div className="px-2 py-1">
+                  <div className="flex items-center gap-1">
                   <Input
                     value={newTypeName}
-                    onChange={(e) => setNewTypeName(e.target.value)}
+                    onChange={(e) => {
+                      setNewTypeName(e.target.value);
+                      setCreateError(null);
+                    }}
                     onKeyDown={(e) => handleKeyDown(e, 'add')}
                     className="flex-1 h-8 text-sm"
                     placeholder="New service type name..."
@@ -287,6 +316,10 @@ export function EditableServiceTypeSelect({
                   >
                     <X className="h-4 w-4 text-destructive" />
                   </Button>
+                  </div>
+                  {createError && (
+                    <p className="mt-1 text-xs text-destructive">{createError}</p>
+                  )}
                 </div>
               ) : (
                 <button
@@ -306,6 +339,21 @@ export function EditableServiceTypeSelect({
           </Select.Content>
         </Select.Portal>
       </Select.Root>
+
+      <ConfirmationDialog
+        id="delete-service-type-confirmation"
+        isOpen={pendingDeleteId !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete Service Type"
+        message={
+          deleteError ??
+          'Are you sure you want to delete this service type? This cannot be undone.'
+        }
+        confirmLabel={deleteError ? 'Close' : 'Delete'}
+        cancelLabel="Cancel"
+        isConfirming={isDeleting}
+      />
     </div>
   );
 }

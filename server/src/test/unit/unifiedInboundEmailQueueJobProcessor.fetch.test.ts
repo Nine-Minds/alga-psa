@@ -767,6 +767,68 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
   });
 
+  it('T075: duplicate threaded inbound email no-ops before thread routing can create a comment', async () => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      microsoftRow: {
+        id: 'provider-ms-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    emailProcessedInsertMock.mockRejectedValueOnce({ code: '23505' });
+    microsoftDownloadMessageSourceMock.mockResolvedValue(Buffer.from('duplicate threaded microsoft mime'));
+    simpleParserMock.mockResolvedValue({
+      messageId: '<ms-threaded-dup-1@example.com>',
+      date: new Date('2026-03-01T00:00:00.000Z'),
+      from: { value: [{ address: 'client@example.com' }] },
+      to: { value: [{ address: 'support@example.com' }] },
+      cc: { value: [] },
+      subject: 'Re: Threaded Ticket Subject',
+      text: 'Threaded reply body',
+      html: '<p>Threaded reply body</p>',
+      attachments: [],
+      inReplyTo: '<outbound-thread-message@example.com>',
+      references: '<root-thread-message@example.com> <outbound-thread-message@example.com>',
+    });
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+    const result = await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-ms-threaded-dup-1',
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: 'provider-ms-1',
+      provider: 'microsoft',
+      pointer: {
+        subscriptionId: 'sub-ms-1',
+        messageId: 'ms-threaded-dup-1',
+      },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(result).toMatchObject({
+      outcome: 'skipped',
+      processedCount: 0,
+      dedupedCount: 1,
+      skippedCount: 1,
+    });
+    expect(emailProcessedInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message_id: 'microsoft:<ms-threaded-dup-1@example.com>',
+        processing_status: 'processing',
+      })
+    );
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+  });
+
   it('T023: source-unavailable IMAP pointer is marked skipped with deterministic reason', async () => {
     const { db, emailProcessedInsertMock } = createDbMock({
       imapRow: {

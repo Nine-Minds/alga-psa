@@ -1,0 +1,8 @@
+[
+  { "id": "F001", "description": "Define Teams and Enterprise add-on constants with labels and descriptions", "implemented": true },
+  { "id": "F002", "description": "Change client settings gates for Teams and Entra from tier features to add-ons", "implemented": true },
+  { "id": "F003", "description": "Require Enterprise add-on in Entra API guard while preserving RBAC and PostHog gates", "implemented": true },
+  { "id": "F004", "description": "Require Teams add-on in Teams runtime/action availability while preserving EE and tenant checks", "implemented": true },
+  { "id": "F005", "description": "Generalize Stripe add-on price lookup for AI, Teams, and Enterprise monthly/annual prices", "implemented": true },
+  { "id": "F006", "description": "Render Teams and Enterprise add-on purchase/cancel cards in Account Management", "implemented": true }
+]

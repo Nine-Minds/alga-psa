@@ -2,11 +2,12 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Header from '../../../components/layout/Header';
+import { QuickAskProvider } from '../../../components/layout/QuickAskContext';
 
 const routerPush = vi.fn();
 const signOut = vi.fn();
@@ -176,6 +177,9 @@ describe('Header i18n wiring', () => {
     themeToggleSpy.mockReset();
     isAlgaDeskProduct = false;
     translations = {
+      'header.quickAsk.ariaLabel': 'Demander a l IA pour ce workflow',
+      'header.quickAsk.title': 'Demander IA',
+      'header.quickAsk.shortcutHint': 'Ouvrir Quick Ask pour le workflow',
       'header.quickCreate.ariaLabel': 'Ouvrir creation rapide',
       'header.quickCreate.title': 'Creation rapide',
       'header.quickCreate.heading': 'Creer',
@@ -244,6 +248,44 @@ describe('Header i18n wiring', () => {
     expect(screen.getByText('Ajouter un service facturable')).toBeInTheDocument();
     expect(screen.getByText('Produit FR')).toBeInTheDocument();
     expect(screen.getByText('Ajouter un produit au catalogue')).toBeInTheDocument();
+  });
+
+  it('shows the workflow Quick Ask trigger in the header when AI is available on workflow editor routes', () => {
+    pathname = '/msp/workflow-editor/workflow-1';
+    const openQuickAsk = vi.fn();
+
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk }}>
+        <Header
+          sidebarOpen={true}
+          setSidebarOpen={vi.fn()}
+          rightSidebarOpen={false}
+          setRightSidebarOpen={vi.fn()}
+        />
+      </QuickAskProvider>
+    );
+
+    const askAi = screen.getByRole('button', { name: 'Demander a l IA pour ce workflow' });
+    expect(askAi).toHaveAttribute('id', 'workflow-designer-ask-ai');
+    expect(screen.getByText('Demander IA')).toBeInTheDocument();
+
+    fireEvent.click(askAi);
+    expect(openQuickAsk).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show the workflow Quick Ask trigger outside workflow editor routes', () => {
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk: vi.fn() }}>
+        <Header
+          sidebarOpen={true}
+          setSidebarOpen={vi.fn()}
+          rightSidebarOpen={false}
+          setRightSidebarOpen={vi.fn()}
+        />
+      </QuickAskProvider>
+    );
+
+    expect(screen.queryByRole('button', { name: 'Demander a l IA pour ce workflow' })).not.toBeInTheDocument();
   });
 
   it('T024-T026: job activity indicator strings are translated', async () => {

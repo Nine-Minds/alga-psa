@@ -40,3 +40,6 @@ jobs:
 
       - name: Detect circular dependencies
         run: node scripts/check-circular-deps.mjs /tmp/project-graph.json --baseline .github/known-cycles.json
+
+      - name: Enforce keyboard shortcuts engine boundaries
+        run: node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json

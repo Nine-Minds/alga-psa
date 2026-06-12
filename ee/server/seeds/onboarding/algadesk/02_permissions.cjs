@@ -15,6 +15,7 @@ exports.seed = async function(knex, tenantId) {
         ['contact', ['create', 'read', 'update', 'delete'], 'contacts'],
         ['document', ['create', 'read', 'update', 'delete'], 'documents'],
         ['profile', ['read', 'update'], 'profiles'],
+        ['reports', ['create', 'read', 'update', 'delete'], 'reports'],
         ['settings', ['read', 'update'], 'settings'],
         ['system_settings', ['read', 'update'], 'system settings'],
         ['security_settings', ['read', 'update'], 'security settings'],

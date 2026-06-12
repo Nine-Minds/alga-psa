@@ -92,6 +92,24 @@
         "future": "Cet événement et les événements à venir",
         "all": "Tous les événements"
       }
+    },
+    "print": {
+      "title": "Agenda du planning",
+      "subtitle": "{{count}} entrées planifiées",
+      "noEntries": "Aucune entrée planifiée à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titre",
+        "type": "Type",
+        "start": "Début",
+        "end": "Fin",
+        "assigned": "Assigné",
+        "status": "Statut"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression du planning."
+      }
     }
   },
   "weeklyEvent": {
@@ -231,7 +249,7 @@
         "deleting": "Suppression..."
       },
       "defaultApprover": {
-        "placeholder": "Sélectionnez un approbateur"
+        "placeholder": "Sélectionnez des approbateurs"
       },
       "teamSelect": {
         "label": "Sélectionnez une équipe",
@@ -254,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Approbateur par défaut",
-        "help": "Approbateur par défaut à l’échelle de l’entreprise pour les demandes de rendez-vous nécessitant une approbation manuelle. Cela peut être annulé par technicien dans les paramètres des heures utilisateur."
+        "label": "Approbateurs",
+        "help": "Approbateurs à l’échelle de l’entreprise pour les demandes de rendez-vous nécessitant une approbation manuelle. Ajoutez plusieurs utilisateurs et/ou équipes — toutes les personnes sélectionnées sont notifiées et peuvent approuver. Cela peut être remplacé par technicien dans les paramètres des heures utilisateur."
       },
       "advanceBookingDays": {
         "label": "Réservation à l'avance par défaut (jours)"
@@ -297,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Approbateur par défaut",
-          "help": "Qui doit examiner et approuver les demandes de rendez-vous pour ce technicien qui nécessitent une approbation manuelle"
+          "label": "Approbateurs",
+          "help": "Qui doit examiner et approuver les demandes de rendez-vous pour ce technicien qui nécessitent une approbation manuelle ? Ajoutez plusieurs utilisateurs et/ou équipes. Laissez vide pour utiliser les approbateurs à l’échelle de l’entreprise."
         },
         "allowClientPreference": {
           "label": "Autoriser les préférences du client",

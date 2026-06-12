@@ -404,9 +404,11 @@ export const listWorkflowSchedulesAction = withAuth(async (user, _ctx, input: un
   }
 
   const query = knex('tenant_workflow_schedule as tws')
-    .leftJoin('workflow_definitions as wd', 'wd.workflow_id', 'tws.workflow_id')
+    .leftJoin('workflow_definitions as wd', function () {
+      this.on('wd.workflow_id', 'tws.workflow_id').andOn('wd.tenant', 'tws.tenant');
+    })
     .select('tws.*', 'wd.name as workflow_name')
-    .where('tws.tenant_id', tenant);
+    .where('tws.tenant', tenant);
 
   if (parsed.workflowId) {
     query.andWhere('tws.workflow_id', parsed.workflowId);
@@ -438,7 +440,7 @@ export const getWorkflowScheduleAction = withAuth(async (user, _ctx, input: unkn
   }
 
   const row = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
-  if (!row || row.tenant_id !== tenant) {
+  if (!row || row.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
@@ -493,7 +495,7 @@ async function mutateWorkflowSchedule(
   }
 
   const existing = await WorkflowScheduleStateModel.getById(knex, existingScheduleId);
-  if (!existing || existing.tenant_id !== tenant) {
+  if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
@@ -531,7 +533,7 @@ export const pauseWorkflowScheduleAction = withAuth(async (user, _ctx, input: un
   await requireWorkflowPermission(user, 'manage', knex);
 
   const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
-  if (!existing || existing.tenant_id !== tenant) {
+  if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
@@ -549,7 +551,7 @@ export const resumeWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   await requireWorkflowPermission(user, 'manage', knex);
 
   const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
-  if (!existing || existing.tenant_id !== tenant) {
+  if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
@@ -567,7 +569,7 @@ export const deleteWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   await requireWorkflowPermission(user, 'manage', knex);
 
   const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
-  if (!existing || existing.tenant_id !== tenant) {
+  if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 

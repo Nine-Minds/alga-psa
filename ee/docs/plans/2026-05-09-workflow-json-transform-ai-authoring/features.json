@@ -1,0 +1,214 @@
+[
+  {
+    "id": "F001",
+    "description": "Register transform.parse_json as a pure Transform action with explicit input/output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Functional Requirements 8",
+      "Functional Requirements 9"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Allow transform.parse_json to parse JSON strings into structured values.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Allow transform.parse_json to pass through static literal objects and arrays without reparsing.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Return transform.parse_json output as a wrapper containing value and detected JSON type.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Fail transform.parse_json with an actionable error when string input is invalid JSON.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 3",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Register transform.query_json as a pure Transform action with explicit input/output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 4",
+      "Functional Requirements 8",
+      "Functional Requirements 9"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Evaluate transform.query_json expressions against a provided source value exposed as source.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 4",
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Expose current workflow expression context to transform.query_json as payload, vars, meta, and error where available.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Apply existing workflow expression validation, allow-listed functions, timeout, JSON-serializable result, and max output size rules to transform.query_json.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 5",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Return transform.query_json output as a wrapper containing the evaluated value.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Register transform.stringify_json if included in the first implementation, with source and optional spacing inputs and text output.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 7",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Ensure all new JSON Transform actions are sideEffectful false and use engine-provided idempotency.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 8"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Ensure new JSON Transform actions appear under the existing Transform palette/catalog group.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements 9"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure saved JSON Transform outputs work with existing action.call saveAs behavior and downstream expression references.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 10",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Add or reuse an expression helper path so transform.query_json can evaluate against a custom source without duplicating unsafe expression logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 5",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add clear runtime error messages for parse failures, expression validation failures, and expression evaluation failures.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Update Alga AI system prompt or prompt context with workflow JSON Transform action names and usage guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 11",
+      "AI-assisted workflow author"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Include JSONata examples in AI guidance for field extraction, object construction, defaults/coalesce, array map/filter, and saveAs references.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 11",
+      "Functional Requirements 12"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Ensure AI guidance tells users where to paste expressions and does not claim that AI runs inside workflow execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Functional Requirements 12"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Preserve existing Quick Ask/chat endpoint entitlement checks for AI-assisted authoring.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Functional Requirements 13"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "If the lightweight Ask AI trigger is included, render it only when AI Assistant entitlement and feature access are available.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements 13",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "If the lightweight Ask AI trigger is included, make it open/seed existing Quick Ask rather than introducing a separate AI panel or required workflow path.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Document or guard the risk of saving parsed secret-derived JSON into workflow payload/vars.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Keep all existing workflows and transform actions backward-compatible.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Non-functional Requirements"
+    ]
+  }
+]

@@ -80,10 +80,14 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
 
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
+    boardIds: decodeCsvParam(params.get('boardIds')),
+    excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
     statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
+    categoryIds: decodeCsvParam(params.get('categoryIds')),
+    excludeCategoryIds: decodeCsvParam(params.get('excludeCategoryIds')),
     searchQuery: params.get('searchQuery') || '',
     boardFilterState: ALLOWED_BOARD_FILTER_STATES.has(params.get('boardFilterState') || '')
       ? (params.get('boardFilterState') as ITicketListFilters['boardFilterState'])
@@ -157,12 +161,9 @@ export default function TicketingDashboardContainer({
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const latestFetchRequestIdRef = useRef(0);
-  const pendingFetchCountRef = useRef(0);
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
-  // R1: Track initial mount to prevent unnecessary re-fetch when server data is already present
-  const isInitialMountRef = useRef(true);
 
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -213,13 +214,17 @@ export default function TicketingDashboardContainer({
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
+    // A revalidatePath() inside a bulk action triggers an RSC refresh that can
+    // abort the concurrent client-side fetchTickets request, leaving its promise
+    // unsettled (so its finally never runs). The refresh itself delivers fresh
+    // data here, so clear the loading spinner — otherwise it hangs forever.
+    setIsLoading(false);
   }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
 
   const {
     value: storedPageSize,
     setValue: setStoredPageSize,
     hasLoadedInitial: hasLoadedPageSizePreference,
-    isLoading: isLoadingPageSizePreference
   } = useUserPreference<number>(
     TICKETS_PAGE_SIZE_SETTING,
     {
@@ -238,11 +243,25 @@ export default function TicketingDashboardContainer({
     if (pageSize && pageSize !== 10) params.set('pageSize', String(pageSize));
 
     // Only add non-default/non-empty values to URL
-    if (filters.boardId) params.set('boardId', filters.boardId);
+    if (filters.boardIds && Array.isArray(filters.boardIds) && filters.boardIds.length > 0) {
+      params.set('boardIds', filters.boardIds.join(','));
+    } else if (filters.boardId) {
+      params.set('boardId', filters.boardId);
+    }
+    if (filters.excludeBoardIds && Array.isArray(filters.excludeBoardIds) && filters.excludeBoardIds.length > 0) {
+      params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
+    }
     if (filters.clientId) params.set('clientId', filters.clientId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
-    if (filters.categoryId) params.set('categoryId', filters.categoryId);
+    if (filters.categoryIds && Array.isArray(filters.categoryIds) && filters.categoryIds.length > 0) {
+      params.set('categoryIds', filters.categoryIds.join(','));
+    } else if (filters.categoryId) {
+      params.set('categoryId', filters.categoryId);
+    }
+    if (filters.excludeCategoryIds && Array.isArray(filters.excludeCategoryIds) && filters.excludeCategoryIds.length > 0) {
+      params.set('excludeCategoryIds', filters.excludeCategoryIds.join(','));
+    }
     if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
     if (filters.boardFilterState && filters.boardFilterState !== 'active') {
       params.set('boardFilterState', filters.boardFilterState);
@@ -304,7 +323,6 @@ export default function TicketingDashboardContainer({
       return;
     }
     const requestId = ++latestFetchRequestIdRef.current;
-    pendingFetchCountRef.current++;
     setIsLoading(true);
     try {
       const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
@@ -313,9 +331,13 @@ export default function TicketingDashboardContainer({
 
       const currentFiltersWithDefaults: ITicketListFilters = {
         boardId: filters.boardId || undefined,
+        boardIds: filters.boardIds && filters.boardIds.length > 0 ? filters.boardIds : undefined,
+        excludeBoardIds: filters.excludeBoardIds && filters.excludeBoardIds.length > 0 ? filters.excludeBoardIds : undefined,
         statusId: filters.statusId || TICKET_STATUS_FILTER_OPEN,
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,
+        categoryIds: filters.categoryIds && filters.categoryIds.length > 0 ? filters.categoryIds : undefined,
+        excludeCategoryIds: filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0 ? filters.excludeCategoryIds : undefined,
         clientId: filters.clientId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
@@ -363,9 +385,10 @@ export default function TicketingDashboardContainer({
       setTickets([]);
       setTotalCount(0);
     } finally {
-      pendingFetchCountRef.current--;
-      if (pendingFetchCountRef.current === 0) {
-        console.log('[Container] Setting isLoading to false (no pending fetches)');
+      // Clear loading only if this is still the latest request. A superseded
+      // (older) fetch must not flip the spinner off while a newer one is in
+      // flight, and an orphaned fetch must not be able to keep it stuck.
+      if (requestId === latestFetchRequestIdRef.current) {
         setIsLoading(false);
       }
     }
@@ -439,37 +462,12 @@ export default function TicketingDashboardContainer({
     if (typeof window !== 'undefined') {
       const hasExplicitPageSizeInUrl = new URLSearchParams(window.location.search).has('pageSize');
       if (hasExplicitPageSizeInUrl) {
-        // URL takes precedence; clear mount flag once server pref is settled
-        if (!isLoadingPageSizePreference) {
-          isInitialMountRef.current = false;
-        }
         return;
       }
     }
 
     const normalizedPageSize = storedPageSize ?? initialPageSize;
     if (normalizedPageSize === pageSize) {
-      // R1: Only clear mount flag once the server preference is also loaded.
-      // useUserPreference loads in two phases (localStorage then server).
-      // If we clear the flag after the localStorage phase, the later server
-      // response can trigger a spurious fetch.
-      if (!isLoadingPageSizePreference) {
-        isInitialMountRef.current = false;
-      }
-      return;
-    }
-
-    // R1: During the initial mount/load phase, the server already provided data.
-    // Update state and URL to reflect the stored preference, but skip the re-fetch.
-    // Keep the flag active while the server preference is still loading so that
-    // both the localStorage read AND the server response are covered.
-    if (isInitialMountRef.current) {
-      if (!isLoadingPageSizePreference) {
-        isInitialMountRef.current = false;
-      }
-      setCurrentPage(1);
-      setPageSize(normalizedPageSize);
-      updateURLWithFilters(activeFiltersRef.current, 1, normalizedPageSize);
       return;
     }
 
@@ -479,7 +477,6 @@ export default function TicketingDashboardContainer({
     void fetchTicketsRef.current(activeFiltersRef.current, 1, normalizedPageSize);
   }, [
     hasLoadedPageSizePreference,
-    isLoadingPageSizePreference,
     storedPageSize,
     pageSize,
     initialPageSize,

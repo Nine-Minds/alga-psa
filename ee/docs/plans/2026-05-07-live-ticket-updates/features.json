@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `publishTicketUpdate` helper in `packages/tickets/src/lib/liveUpdates.ts` that publishes JSON `{updatedFields, updatedBy, updatedAt}` to Redis channel `ticket-updates:<tenantId>:<ticketId>` using `getRedisClient()` from `@alga-psa/event-bus`. Best-effort: log on failure, do not throw.",
+    "implemented": true,
+    "prdRefs": ["FR-1", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Extract a `diffTicketFields(currentRow, validatedUpdate)` helper that returns the array of changed field names; reuse the same diff already implicit in `updateTicketWithCache` for ITIL/status validation paths.",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F003",
+    "description": "Wire `publishTicketUpdate` into `updateTicketWithCache` (`packages/tickets/src/actions/optimizedTicketActions.ts` ~L2038–2101) right after the existing `publishEvent('TICKET_UPDATED', …)` call. Compute `updatedFields` via F002.",
+    "implemented": true,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F004",
+    "description": "Propagate live-update broadcast to bundled-child tickets when sync-propagation runs (`optimizedTicketActions.ts` L2124–2143): one publish per affected child.",
+    "implemented": true,
+    "prdRefs": ["FR-1", "Open Questions #2"]
+  },
+  {
+    "id": "F005",
+    "description": "Add server env var `HOCUSPOCUS_JWT_SECRET` plumbing (read in both Next.js server actions and Hocuspocus). In dev, fall back to a fixed string with a console warning.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Add server endpoint `GET /api/tickets/:id/live-token` that runs `withAuth`, calls `assertTicketReadAllowed`, and returns a JWT signed with `HOCUSPOCUS_JWT_SECRET` containing `{tenantId, userId, ticketId, exp ≤ 5 min, iat, jti}`.",
+    "implemented": true,
+    "prdRefs": ["FR-3", "Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Extend `hocuspocus/tenantValidation.js` with `parseTicketRoom(roomName)` for the `ticket:<tenant>:<ticketId>` shape.",
+    "implemented": true,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F008",
+    "description": "Update `validateDocumentRoomAccess` to handle the `ticket:` prefix: parse, extract `token` from request query params, verify JWT signature/expiry/claims, assert tenant and ticketId match the room. Reject on any mismatch.",
+    "implemented": true,
+    "prdRefs": ["FR-3", "Security / Permissions"]
+  },
+  {
+    "id": "F009",
+    "description": "Create `hocuspocus/TicketUpdatesExtension.js` modeled on `NotificationExtension.js`: `onConfigure` connects a Redis subscriber, pattern-subscribes to `<redisPrefix>ticket-updates:*`, on message broadcasts to room `ticket:<tenant>:<id>` via Hocuspocus stateless message API.",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F010",
+    "description": "Register `TicketUpdatesExtension` in `hocuspocus/server.js` extensions list, mirroring how `NotificationExtension` is registered.",
+    "implemented": true,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F011",
+    "description": "Lift the presence bar (currently in `packages/documents/src/components/CollaborativeEditor.tsx` L259–305) into `packages/ui/src/presence/PresenceBar.tsx`. Update `CollaborativeEditor` to import from the new location; visual output identical.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "Create `packages/ui/src/presence/FieldConflictBanner.tsx`: takes `{remoteValue, remoteAuthor, remoteAt, onKeepYours, onTakeTheirs}`. Renders inside a field's container with two buttons.",
+    "implemented": true,
+    "prdRefs": ["FR-7", "UX / UI Notes"]
+  },
+  {
+    "id": "F013",
+    "description": "Create `packages/tickets/src/hooks/useTicketLive.ts`: fetches live token, calls `createYjsProvider('ticket:<tenant>:<id>', { token })`, exposes `presence`, `connectionStatus` (connected | reconnecting | unavailable), `setEditingField(field|null)`, and `onRemoteUpdate` callback registration.",
+    "implemented": true,
+    "prdRefs": ["FR-4", "FR-5", "FR-9"]
+  },
+  {
+    "id": "F014",
+    "description": "Implement automatic JWT refresh in `useTicketLive`: refresh at 80% of TTL; on refresh failure, transition to `unavailable` connectionStatus.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F015",
+    "description": "Implement reconnect-with-backoff in `useTicketLive`: start 1s, exponential, cap 30s, give up after 5 failed reconnects (transition to `unavailable`).",
+    "implemented": true,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F016",
+    "description": "On WebSocket reconnect after a drop, `useTicketLive` triggers a single ticket refetch to catch missed updates.",
+    "implemented": true,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F017",
+    "description": "Create `packages/tickets/src/components/ticket/TicketLiveProvider.tsx`: React context that owns `useTicketLive` and exposes presence + remote-update events to descendant components.",
+    "implemented": true,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F018",
+    "description": "Wrap `TicketDetails` in `TicketLiveProvider` from `TicketDetailsContainer.tsx`. No-op render if user is unauthenticated or feature flag is off.",
+    "implemented": true,
+    "prdRefs": ["FR-4", "Rollout / Migration"]
+  },
+  {
+    "id": "F019",
+    "description": "Render `PresenceBar` in `TicketDetails.tsx` header next to the title. Visible only when `connectionStatus === 'connected'` and at least one peer is present.",
+    "implemented": true,
+    "prdRefs": ["FR-5", "UX / UI Notes"]
+  },
+  {
+    "id": "F020",
+    "description": "Render connection-status indicator in `TicketDetails.tsx` header: hidden when connected; shows 'Live updates offline — reconnecting…' while reconnecting; shows 'Live updates unavailable' on permanent failure.",
+    "implemented": true,
+    "prdRefs": ["FR-10", "UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "Dedupe presence by `userId` in `PresenceBar`: a single user with multiple connections shows once.",
+    "implemented": true,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F022",
+    "description": "Implement `onRemoteUpdate` handler in `TicketDetails.tsx`: intersect `updatedFields` against `pendingRequestRef` queue + component dirty-field set to classify into silent / toast / conflict paths.",
+    "implemented": true,
+    "prdRefs": ["FR-6", "FR-7", "FR-8"]
+  },
+  {
+    "id": "F023",
+    "description": "Silent refetch path: when no overlap with local unsaved state, refetch ticket and update component state. Briefly highlight changed fields (~600ms fade).",
+    "implemented": true,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F024",
+    "description": "Debounce burst refetches at 200ms: multiple updates within the window collapse into a single refetch.",
+    "implemented": true,
+    "prdRefs": ["FR-6", "Failure modes"]
+  },
+  {
+    "id": "F025",
+    "description": "Toast-on-non-overlap path: when remote update touches different fields than local pending, show a passing toast `'{Name} updated {field}'` and refetch silently; preserve local pending changes.",
+    "implemented": true,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F026",
+    "description": "Conflict-banner path: when remote update touches a field with local unsaved state, freeze that field, render `FieldConflictBanner` inside it with remote value/author/timestamp.",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F027",
+    "description": "Conflict-banner Keep yours: keep local pending value, clear banner, unfreeze field. Local value remains queued for next save (may overwrite remote — accepted tradeoff per PRD).",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F028",
+    "description": "Conflict-banner Take theirs: drop local pending value, refetch, set field to remote value, clear banner, unfreeze.",
+    "implemented": true,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F029",
+    "description": "Wire `setEditingField` on focus/blur of editable fields in `TicketInfo.tsx` and `TicketProperties.tsx`. Field set: title, status, priority, ITIL impact, ITIL urgency, board, category, assignee, client, contact, location.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F030",
+    "description": "Render 'X is editing' indicator on dropdown-shaped fields (status, priority, ITIL impact, ITIL urgency, board, category, assignee, client, contact, location) when at least one remote awareness has matching `editingField`: dim the control + caption beneath. No hard lock.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F034",
+    "description": "Render 'X is editing' indicator on the title text input as a caption pill near the control (no dim) when at least one remote awareness has `editingField='title'`. No hard lock.",
+    "implemented": true,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F031",
+    "description": "Permission revocation handling: if a refetch following a remote-update message returns 403, redirect away from the ticket detail page (or show a no-access view).",
+    "implemented": true,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F032",
+    "description": "Gate the entire live layer behind PostHog feature flag `live-ticket-updates` per `alga-feature-flags` conventions. When off: no `useTicketLive` mount, no token request, no presence; ticket page behaves as today.",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration"]
+  },
+  {
+    "id": "F033",
+    "description": "Add server-side env-var kill-switch (`LIVE_TICKET_UPDATES_DISABLED=1`) that short-circuits `publishTicketUpdate` to a no-op for incident response.",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration"]
+  }
+]

@@ -666,6 +666,7 @@ async function handleQuickActionSubmit(params: {
   activity: TeamsQuickActionActivity;
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  microsoftUserId?: string | null;
   actionId: QuickActionId;
   target: TeamsActionEntityReference | null;
 }): Promise<TeamsQuickActionResponse> {
@@ -718,6 +719,7 @@ async function handleQuickActionSubmit(params: {
     surface: 'quick_action',
     tenantId: params.tenantId,
     user: params.user,
+    microsoftUserId: params.microsoftUserId,
     target: params.target,
     idempotencyKey: normalizeOptionalString(getStringField(params.activity, 'idempotencyKey')) || undefined,
     input: payload,
@@ -784,6 +786,7 @@ export async function handleTeamsQuickActionActivity(
     activity,
     tenantId: tenantContext.tenantId,
     user: invokingUser.user,
+    microsoftUserId: getMicrosoftAccountId(activity),
     actionId,
     target,
   });

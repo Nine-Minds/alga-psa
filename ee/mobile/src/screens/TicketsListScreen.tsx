@@ -1,11 +1,11 @@
 import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
-import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
+import type { DrawerParamList, RootStackParamList, TicketsStackParamList } from "../navigation/types";
 import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
@@ -26,11 +26,14 @@ import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { DatePickerField } from "../ui/components/DatePickerField";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
+import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
+import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
+import { addTagFilter, normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
   CompositeScreenProps<
-    BottomTabScreenProps<TabsParamList, "TicketsTab">,
+    DrawerScreenProps<DrawerParamList, "TicketsTab">,
     NativeStackScreenProps<RootStackParamList>
   >
 >;
@@ -42,6 +45,7 @@ type TicketListFilters = {
   assigneeUserId?: string;
   assigneeName?: string;
   priorityName: string;
+  tags: string[];
   updatedSinceDays: number | null;
   updatedSinceDate: string;
   sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
@@ -60,6 +64,7 @@ const DEFAULT_FILTERS: TicketListFilters = {
   statusIds: [],
   assignee: "any",
   priorityName: "",
+  tags: [],
   updatedSinceDays: null,
   updatedSinceDate: "",
   sortField: "entered_at",
@@ -75,9 +80,15 @@ function dateOnlyToIsoUtc(dateOnly: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function TicketsListScreen({ navigation }: Props) {
+export function TicketsListScreen({ navigation, route }: Props) {
   const { t } = useTranslation("tickets");
+  const { t: tClients } = useTranslation("clients");
+  const { t: tContacts } = useTranslation("contacts");
   const theme = useTheme();
+  const clientFilterId = route.params?.clientId;
+  const clientFilterName = route.params?.clientName;
+  const contactFilterId = route.params?.contactId;
+  const contactFilterName = route.params?.contactName;
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
@@ -129,7 +140,8 @@ export function TicketsListScreen({ navigation }: Props) {
       if (canceled) return;
       if (saved) {
         const statusIds = Array.isArray((saved as any).statusIds) ? ((saved as any).statusIds as string[]) : [];
-        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds });
+        const tags = normalizeSavedTags((saved as any).tags);
+        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds, tags });
       }
       setFiltersLoaded(true);
     };
@@ -192,8 +204,16 @@ export function TicketsListScreen({ navigation }: Props) {
       out.updated_from = new Date(Date.now() - filters.updatedSinceDays * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    return out;
-  }, [filters, session]);
+    return withContactFilter(withClientFilter(withTagsFilter(out, filters.tags), clientFilterId), contactFilterId);
+  }, [clientFilterId, contactFilterId, filters, session]);
+
+  const clearClientFilter = useCallback(() => {
+    navigation.setParams({ clientId: undefined, clientName: undefined });
+  }, [navigation]);
+
+  const clearContactFilter = useCallback(() => {
+    navigation.setParams({ contactId: undefined, contactName: undefined });
+  }, [navigation]);
 
   const listCacheKey = useMemo(() => {
     if (!session) return null;
@@ -401,6 +421,27 @@ export function TicketsListScreen({ navigation }: Props) {
     [onPressTicket],
   );
 
+  const clientFilterChip = clientFilterId ? (
+    <RouteFilterChip
+      theme={theme}
+      label={tClients("ticketsFilter.chip", { name: clientFilterName ?? clientFilterId })}
+      clearLabel={tClients("ticketsFilter.clear")}
+      onClear={clearClientFilter}
+    />
+  ) : null;
+
+  const contactFilterChip = contactFilterId ? (
+    <RouteFilterChip
+      theme={theme}
+      label={tContacts("ticketsFilter.chip", {
+        defaultValue: "Contact: {{name}}",
+        name: contactFilterName ?? contactFilterId,
+      })}
+      clearLabel={tContacts("ticketsFilter.clear", { defaultValue: "Clear contact filter" })}
+      onClear={clearContactFilter}
+    />
+  ) : null;
+
   const onEndReached = useCallback(async () => {
     if (!client || !session) return;
     if (initialLoading || refreshing || loadingMoreRef.current) return;
@@ -453,10 +494,13 @@ export function TicketsListScreen({ navigation }: Props) {
   }
 
   const hasActiveFilters =
+    Boolean(clientFilterId) ||
+    Boolean(contactFilterId) ||
     filters.status !== DEFAULT_FILTERS.status ||
     filters.statusIds.length > 0 ||
     filters.assignee !== DEFAULT_FILTERS.assignee ||
     filters.priorityName.trim() !== "" ||
+    filters.tags.length > 0 ||
     filters.updatedSinceDays !== DEFAULT_FILTERS.updatedSinceDays ||
     filters.updatedSinceDate.trim() !== "" ||
     filters.sortField !== DEFAULT_FILTERS.sortField ||
@@ -528,6 +572,8 @@ export function TicketsListScreen({ navigation }: Props) {
               <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
             </Pressable>
           </View>
+          {clientFilterChip}
+          {contactFilterChip}
           <FilterChipBar
             theme={theme}
             filters={filters}
@@ -632,6 +678,8 @@ export function TicketsListScreen({ navigation }: Props) {
           <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
         </Pressable>
       </View>
+      {clientFilterChip}
+      {contactFilterChip}
       <FilterChipBar
         theme={theme}
         filters={filters}
@@ -715,6 +763,7 @@ function FilterChipBar({
   else if (filters.status !== "any") chips.push(t("filters.statusLabel", { status: filters.status === "open" ? t("filters.open") : t("filters.closed") }));
   if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : filters.assignee === "agent" ? (filters.assigneeName ?? "Agent") : t("quickFilters.unassigned") }));
   if (filters.priorityName.trim()) chips.push(t("filters.priorityLabel", { priority: filters.priorityName.trim() }));
+  if (filters.tags.length > 0) chips.push(t("filters.tagsCount", { count: filters.tags.length, defaultValue: "Tags ({{count}})" }));
   const dateOnly = filters.updatedSinceDate.trim();
   if (dateOnly) chips.push(t("filters.updatedDate", { date: dateOnly }));
   else if (filters.updatedSinceDays) chips.push(t("filters.updatedDays", { days: filters.updatedSinceDays }));
@@ -733,6 +782,43 @@ function FilterChipBar({
       <View style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
         <QuickChip theme={theme} label={t("filters.clearAll")} onPress={onClearAll} />
       </View>
+    </View>
+  );
+}
+
+function RouteFilterChip({
+  theme,
+  label,
+  clearLabel,
+  onClear,
+}: {
+  theme: Theme;
+  label: string;
+  clearLabel: string;
+  onClear: () => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+      <Pressable
+        onPress={onClear}
+        accessibilityRole="button"
+        accessibilityLabel={clearLabel}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: 6,
+          borderRadius: theme.borderRadius.full,
+          borderWidth: 1,
+          borderColor: theme.colors.primary,
+          backgroundColor: theme.colors.primary,
+          opacity: pressed ? 0.95 : 1,
+        })}
+      >
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textInverse, fontWeight: "600" }}>{label}</Text>
+        <View style={{ width: theme.spacing.xs }} />
+        <Feather name="x" size={14} color={theme.colors.textInverse} />
+      </Pressable>
     </View>
   );
 }
@@ -878,6 +964,7 @@ function FiltersModal({
   const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
   const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
   const [agentFilterPickerOpen, setAgentFilterPickerOpen] = useState(false);
+  const [tagFilterPickerOpen, setTagFilterPickerOpen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -1081,6 +1168,66 @@ function FiltersModal({
             })}
           </View>
         ) : null}
+
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.tags", { defaultValue: "Tags" })}</Text>
+        {filters.tags.length > 0 ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+            {filters.tags.map((tag) => (
+              <View key={tag.toLowerCase()} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                <Pressable
+                  onPress={() => setFilters({ ...filters, tags: removeTagFilter(filters.tags, tag) })}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("tags.removeTag", { tag, defaultValue: "Remove tag {{tag}}" })}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.full,
+                    borderWidth: 1,
+                    borderColor: theme.colors.primary,
+                    backgroundColor: theme.colors.primary,
+                    opacity: pressed ? 0.95 : 1,
+                  })}
+                >
+                  <Text style={{ ...theme.typography.caption, color: theme.colors.textInverse, fontWeight: "600" }}>{tag}</Text>
+                  <View style={{ width: theme.spacing.xs }} />
+                  <Feather name="x" size={14} color={theme.colors.textInverse} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <Pressable
+          onPress={() => setTagFilterPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("filters.addTag", { defaultValue: "Add tag" })}
+          style={({ pressed }) => ({
+            marginTop: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+            borderRadius: theme.borderRadius.full,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            alignSelf: "flex-start",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>
+            {t("filters.addTag", { defaultValue: "Add tag" })}
+          </Text>
+        </Pressable>
+        <TagPickerModal
+          visible={tagFilterPickerOpen}
+          updating={false}
+          updateError={null}
+          appliedTagTexts={filters.tags}
+          onSelect={(tagText) => setFilters({ ...filters, tags: addTagFilter(filters.tags, tagText) })}
+          onClose={() => setTagFilterPickerOpen(false)}
+          client={client}
+          apiKey={apiKey ?? ""}
+        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>
         <OptionRow

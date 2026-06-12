@@ -13,8 +13,12 @@ interface TokenRecord {
   tenant: string;
   token: string;
   ticket_id?: string | null;
+  project_id?: string | null;
   comment_id?: string | null;
   metadata?: string | null;
+  template?: string | null;
+  recipient_email?: string | null;
+  entity_type?: string | null;
 }
 
 interface TicketRecord {
@@ -356,6 +360,10 @@ function createQuery(getter: () => any) {
   const builder: any = {
     select: () => builder,
     leftJoin: () => builder,
+    modify: (callback: (queryBuilder: any) => void) => {
+      callback(builder);
+      return builder;
+    },
     where: () => builder,
     orderBy: () => builder,
     toSQL: () => ({ sql: 'mock-query', bindings: [] }),
@@ -881,12 +889,16 @@ function createMockKnex() {
         return systemTemplateBuilder();
       case 'email_reply_tokens':
         return tokenTableBuilder();
+      case 'comments as cm':
+        return createQuery(() => null);
       case 'tickets as t':
         return ticketTableBuilder();
       case 'projects as p':
         return projectTableBuilder();
       case 'users':
         return userTableBuilder();
+      case 'tenant_settings':
+        return createQuery(() => null);
       case 'ticket_resources as tr':
         return resourceTableBuilder();
       case 'portal_domains':
@@ -929,6 +941,21 @@ vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getInstance: () => ({ sendEmail: sendEmailMock }),
     getTenantEmailSettings: async () => null,
+  },
+  StaticTemplateProcessor: class {
+    constructor(
+      private readonly subject: string,
+      private readonly html: string,
+      private readonly text: string,
+    ) {}
+
+    async process() {
+      return {
+        subject: this.subject,
+        html: this.html,
+        text: this.text,
+      };
+    }
   },
 }));
 
@@ -1108,7 +1135,7 @@ describe('sendEventEmail reply markers', () => {
     expect(tokenStore.has(tokenMatch![1])).toBe(true);
   });
 
-  it('includes comment and thread markers for comment notifications', async () => {
+  it('T042: persists a reply token row scoped to the outbound comment and recipient', async () => {
     const templateName = `template-${randomUUID()}`;
     seedTemplate(templateName, 'Comment Added {{body}}', '<p>{{body}}</p>');
 
@@ -1139,7 +1166,14 @@ describe('sendEventEmail reply markers', () => {
     const processed = await templateProcessor.process({ templateData });
     expect(processed.html).toContain(`data-alga-comment-id="${commentId}`);
     expect(processed.text).toContain('ALGA-THREAD-ID:thread-123');
-    expect(tokenStore.get(conversationToken)?.comment_id).toBe(commentId);
+    expect(tokenStore.get(conversationToken)).toMatchObject({
+      tenant: tenantId,
+      token: conversationToken,
+      ticket_id: ticketId,
+      comment_id: commentId,
+      recipient_email: 'user@example.com',
+      entity_type: 'ticket',
+    });
   });
 });
 
@@ -1456,7 +1490,7 @@ describe('ticket email subscriber deduplication', () => {
     expect(sharedCount).toBe(1);
   });
 
-  it('sends one ticket comment email when additional resource shares email with assignee', async () => {
+  it('T076: sends one ticket comment email per recipient with distinct reply tokens', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
@@ -1512,6 +1546,19 @@ describe('ticket email subscriber deduplication', () => {
     const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
     expect(recipients.filter((email) => email === contactEmail).length).toBe(1);
     expect(recipients.filter((email) => email === sharedEmail).length).toBe(1);
+
+    const tokenRows = Array.from(tokenStore.values()).filter((row) => row.comment_id === commentId);
+    expect(tokenRows).toHaveLength(2);
+    expect(tokenRows.map((row) => row.recipient_email).sort()).toEqual([contactEmail, sharedEmail].sort());
+    expect(new Set(tokenRows.map((row) => row.token)).size).toBe(2);
+    for (const row of tokenRows) {
+      expect(row).toMatchObject({
+        tenant: tenantId,
+        ticket_id: ticketId,
+        comment_id: commentId,
+        entity_type: 'ticket',
+      });
+    }
   });
 });
 

@@ -182,9 +182,9 @@ export const deleteContact = withAuth(async (
 
       // Clean up child records owned by the contact
       await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
+      await trx('contact_additional_email_addresses').where({ contact_name_id: contactId, tenant: tenantId }).delete();
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
-      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
 
       const contactRecord = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })
@@ -220,6 +220,25 @@ export const deleteContact = withAuth(async (
       acc[dependency.type] = dependency.count;
       return acc;
     }, {});
+
+    if (result.deleted) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_DELETED',
+        payload: {
+          contactId,
+          clientId: typeof contact.client_id === 'string' ? contact.client_id : undefined,
+          deletedByUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `contact_deleted:${contactId}:${occurredAt}`,
+      });
+    }
 
     return {
       ...result,

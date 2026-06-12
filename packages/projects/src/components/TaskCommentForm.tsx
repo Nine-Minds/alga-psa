@@ -7,19 +7,24 @@ import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface TaskCommentFormProps {
   taskId: string;
   projectId: string;
+  parentCommentId?: string | null;
   onCommentAdded: () => void;
   onCancel?: () => void;
+  autoFocus?: boolean;
 }
 
 export function TaskCommentForm({
   taskId,
   projectId,
+  parentCommentId = null,
   onCommentAdded,
-  onCancel
+  onCancel,
+  autoFocus = false,
 }: TaskCommentFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +59,8 @@ export function TaskCommentForm({
 
       await createTaskComment({
         taskId: taskId,
-        note
+        note,
+        parent_comment_id: parentCommentId
       });
 
       // Clear the editor by replacing content with default empty block
@@ -73,6 +79,8 @@ export function TaskCommentForm({
     }
   };
 
+  useDialogSubmitShortcut(() => { void handleSubmit(); }, { enabled: !isSubmitting });
+
   return (
     <div className="space-y-3">
       <TextEditor
@@ -80,6 +88,7 @@ export function TaskCommentForm({
         editorRef={editorRef}
         initialContent={DEFAULT_BLOCK}
         searchMentions={searchUsersForMentions}
+        autoFocus={autoFocus}
       />
       <div className="flex justify-end gap-2">
         <Button
@@ -93,7 +102,11 @@ export function TaskCommentForm({
           disabled={isSubmitting}
           variant="default"
         >
-          {isSubmitting ? t('comments.submitting', 'Submitting...') : t('comments.addComment', 'Add Comment')}
+          {isSubmitting
+            ? t('comments.submitting', 'Submitting...')
+            : parentCommentId
+              ? t('comments.reply', 'Reply')
+              : t('comments.addComment', 'Add Comment')}
         </Button>
         {onCancel && (
           <Button

@@ -36,6 +36,7 @@ import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
+  getDocument,
   getDocumentsByEntity,
   getDocumentsByFolder,
   moveDocumentsToFolder,
@@ -627,6 +628,9 @@ const Documents = ({
       }
 
       preCreatedDocIdRef.current = result.document_id;
+      if (inFolderMode) {
+        setFolderTreeKey(prev => prev + 1);
+      }
       setIsCreatingNew(true);
       setNewDocumentName('');
       setDocumentName('');
@@ -743,6 +747,9 @@ const Documents = ({
     }
 
     setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
+    if (inFolderMode) {
+      setFolderTreeKey(prev => prev + 1);
+    }
     toast.success(
       tDoc('messages.deleteSuccess', {
         name: document.document_name,
@@ -754,7 +761,7 @@ const Documents = ({
     }
 
     return result;
-  }, [userId, onDocumentCreated]);
+  }, [userId, onDocumentCreated, inFolderMode]);
 
   const handleDisassociate = useCallback(async (document: IDocument) => {
     if (!entityId || !entityType) return;
@@ -762,6 +769,9 @@ const Documents = ({
     try {
       await removeDocumentAssociations(entityId, entityType, [document.document_id]);
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
+      if (inFolderMode) {
+        setFolderTreeKey(prev => prev + 1);
+      }
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -771,7 +781,7 @@ const Documents = ({
         tDoc('messages.removeAssociationFailed', 'Failed to remove document association')
       );
     }
-  }, [entityId, entityType, onDocumentCreated]);
+  }, [entityId, entityType, onDocumentCreated, inFolderMode]);
 
   const handleMoveDocument = useCallback((document: IDocument) => {
     setDocumentToMove(document);
@@ -845,6 +855,9 @@ const Documents = ({
 
       // Refresh the document list (triggers router.refresh() in entity mode)
       await refreshDocuments();
+      if (inFolderMode) {
+        setFolderTreeKey(prev => prev + 1);
+      }
 
       // Reset folder selection for next document
       setDocumentFolderPath(null);
@@ -1089,6 +1102,48 @@ const Documents = ({
     }
     return clickHandlersRef.current.get(key)!;
   };
+
+  // Auto-open a document when ?doc=<id> is present (e.g. from search results / notifications)
+  const autoOpenedDocRef = useRef<string | null>(null);
+  const handleDocumentClickRef = useRef(handleDocumentClick);
+  useEffect(() => {
+    handleDocumentClickRef.current = handleDocumentClick;
+  });
+  useEffect(() => {
+    if (!inFolderMode) return;
+    const docId = searchParams?.get('doc') ?? null;
+    if (!docId || autoOpenedDocRef.current === docId) return;
+    autoOpenedDocRef.current = docId;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await getDocument(docId);
+        if (cancelled) return;
+        if (!result) return;
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+          return;
+        }
+        await handleDocumentClickRef.current(result as IDocument);
+      } catch (err) {
+        if (!cancelled) {
+          handleError(err, 'Failed to open document');
+        }
+      } finally {
+        if (!cancelled) {
+          const params = new URLSearchParams(searchParams?.toString() ?? '');
+          params.delete('doc');
+          const query = params.toString();
+          router.replace(query ? `?${query}` : window.location.pathname);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, inFolderMode, router]);
 
   // Similarly for delete and disassociate handlers
   const deleteHandlersRef = useRef<Map<string, () => void>>(new Map());
@@ -1520,6 +1575,7 @@ const Documents = ({
                   onFolderSelect={handleFolderSelect}
                   entityId={entityId}
                   entityType={entityType}
+                  filters={filters}
                   showVisibilityIndicators={showVisibilityControls}
                   onFolderDeleted={() => {
                     refreshDocuments();
@@ -1544,6 +1600,7 @@ const Documents = ({
                   onUploadComplete={async () => {
                     setShowUpload(false);
                     await refreshDocuments();
+                    setFolderTreeKey(prev => prev + 1);
                   }}
                   onCancel={() => setShowUpload(false)}
                   getFoldersFn={getFoldersFn}
@@ -1622,6 +1679,7 @@ const Documents = ({
                                 }
                                 setSelectedDocumentsForMove(new Set());
                                 await refreshDocuments();
+                                setFolderTreeKey(prev => prev + 1);
                               } catch (error) {
                                 handleError(error, tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents'));
                               }
@@ -1885,6 +1943,9 @@ const Documents = ({
                     setShowUpload(false);
                     // Refresh the documents list (triggers router.refresh() in entity mode)
                     await refreshDocuments();
+                    if (inFolderMode) {
+                      setFolderTreeKey(prev => prev + 1);
+                    }
                   }}
                   onCancel={() => setShowUpload(false)}
                   getFoldersFn={getFoldersFn}

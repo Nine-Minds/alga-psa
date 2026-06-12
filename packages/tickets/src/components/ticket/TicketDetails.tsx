@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
+import { preCheckDeletion } from "@alga-psa/auth/lib/preCheckDeletion";
+import type { DeletionValidationResult } from "@alga-psa/types";
 import {
     ITicket,
     IComment,
@@ -31,18 +34,30 @@ import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
+import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
+import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
 import { findBoardById } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
+import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
-import { updateTicket } from "../../actions/ticketActions";
+import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
+import {
+    checkTicketClosure,
+    getTicketAutoCloseState,
+    type ITicketAutoCloseState,
+} from "../../actions/close-rules/closeRuleActions";
+import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
+import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
+import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
+import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
@@ -51,7 +66,8 @@ import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
-import { ExternalLink, Mail } from 'lucide-react';
+import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
+import { ExternalLink, Mail, History, Trash2 } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -63,6 +79,7 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
@@ -86,11 +103,15 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
+import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 
 interface PendingCommentDelete {
     commentId: string;
     imageDocuments: CommentImageDocumentReference[];
 }
+
+const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
+const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -127,7 +148,7 @@ interface TicketDetailsProps {
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
     onBatchTicketUpdate?: (changes: Record<string, unknown>) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -243,10 +264,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAgentSchedule = false,
 }) => {
     const { t } = useTranslation('features/tickets');
+    const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         setHasHydrated(true);
@@ -285,6 +309,63 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [cardTitleVisible, setCardTitleVisible] = useState(true);
     const cardTitleRef = useRef<HTMLHeadingElement>(null);
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
+    const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
+    const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
+    // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
+    const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
+
+    // Close rules: blocked-close dialog + checklist + auto-close banner state
+    const [closeBlockedDialog, setCloseBlockedDialog] = useState<{
+        isOpen: boolean;
+        statusId: string | null;
+        failures: CloseRuleFailure[];
+        canOverride: boolean;
+    }>({ isOpen: false, statusId: null, failures: [], canOverride: false });
+    const [closeOverrideReason, setCloseOverrideReason] = useState('');
+    const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
+    const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(undefined);
+    const [autoCloseState, setAutoCloseState] = useState<ITicketAutoCloseState | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!ticket.ticket_id) return;
+        getTicketChecklistItems(ticket.ticket_id)
+            .then((items) => { if (!cancelled) setChecklistItems(items); })
+            .catch((err) => console.error('Failed to load ticket checklist:', err));
+        getTicketAutoCloseState(ticket.ticket_id)
+            .then((state) => { if (!cancelled) setAutoCloseState(state); })
+            .catch((err) => console.error('Failed to load auto-close state:', err));
+        return () => { cancelled = true; };
+        // Re-check the pending auto-close whenever the status changes — a
+        // status move usually cancels or reschedules it.
+    }, [ticket.ticket_id, ticket.status_id]);
+
+    const checklistSummary = useMemo(
+        () => summarizeChecklist(checklistItems ?? []),
+        [checklistItems]
+    );
+
+    const submitCloseOverride = async () => {
+        if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
+        setIsSubmittingCloseOverride(true);
+        try {
+            await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
+                overrideCloseRules: true,
+                overrideCloseRulesReason: closeOverrideReason.trim() || null,
+            });
+            setTicket((prev: any) => ({ ...prev, status_id: closeBlockedDialog.statusId, response_state: null }));
+            setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+            setCloseOverrideReason('');
+            toast.success('Ticket closed');
+        } catch (error) {
+            handleError(error, 'Failed to close ticket');
+        } finally {
+            setIsSubmittingCloseOverride(false);
+        }
+    };
+    const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
+    const [isTicketDeleteValidating, setIsTicketDeleteValidating] = useState(false);
+    const [isTicketDeleteProcessing, setIsTicketDeleteProcessing] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
     const [client, setClient] = useState<IClient | null>(initialClient);
@@ -339,6 +420,352 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         api: t('origin.api', 'Created via API'),
         other: t('origin.other', 'Created via Other'),
     }), [t]);
+    const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
+    const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
+    const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
+    const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
+    const [reactionRefreshVersion, setReactionRefreshVersion] = useState(0);
+    const [livePendingFieldVersion, setLivePendingFieldVersion] = useState(0);
+    const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
+    const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
+    const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
+    const pendingRemoteUpdateRef = useRef<{
+        updatedFields: string[];
+        updatedBy: { userId: string; displayName: string };
+        updatedAt: string;
+    } | null>(null);
+    const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+    const runWithPendingLiveFields = useCallback(async <T,>(fields: string[], fn: () => Promise<T>): Promise<T> => {
+        const normalizedFields = Array.from(new Set(fields.map((field) => normalizeTicketLiveField(field))));
+
+        for (const field of normalizedFields) {
+            pendingLiveNetworkFieldsRef.current.add(field);
+        }
+        setLivePendingFieldVersion((current) => current + 1);
+
+        try {
+            return await fn();
+        } finally {
+            for (const field of normalizedFields) {
+                pendingLiveNetworkFieldsRef.current.delete(field);
+            }
+            setLivePendingFieldVersion((current) => current + 1);
+        }
+    }, []);
+
+    const liveDirtyFieldSet = useMemo(() => {
+        const fields = new Set<string>();
+
+        for (const field of ticketInfoDirtyFields) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of ticketPropertiesDirtyFields) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of pendingLiveNetworkFieldsRef.current) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+
+        return fields;
+    }, [livePendingFieldVersion, ticketInfoDirtyFields, ticketPropertiesDirtyFields]);
+
+    const liveEditingUsers = useMemo(() => {
+        const editingUsersByField: Partial<Record<string, string[]>> = {};
+        const seenByField = new Map<string, Set<string>>();
+
+        for (const presenceUser of ticketLive.presence) {
+            if (!presenceUser.editingField) {
+                continue;
+            }
+
+            const field = normalizeTicketLiveField(presenceUser.editingField);
+            const seenUsers = seenByField.get(field) ?? new Set<string>();
+            if (seenUsers.has(presenceUser.userId)) {
+                continue;
+            }
+
+            seenUsers.add(presenceUser.userId);
+            seenByField.set(field, seenUsers);
+            editingUsersByField[field] = [...(editingUsersByField[field] ?? []), presenceUser.displayName];
+        }
+
+        return editingUsersByField;
+    }, [ticketLive.presence]);
+
+    useEffect(() => {
+        ticketInfoDirtyFieldsRef.current = ticketInfoDirtyFields;
+    }, [ticketInfoDirtyFields]);
+
+    useEffect(() => {
+        ticketPropertiesDirtyFieldsRef.current = ticketPropertiesDirtyFields;
+    }, [ticketPropertiesDirtyFields]);
+
+    const clearRemoteUpdateTimer = useCallback(() => {
+        if (remoteUpdateTimerRef.current) {
+            clearTimeout(remoteUpdateTimerRef.current);
+            remoteUpdateTimerRef.current = null;
+        }
+    }, []);
+
+    const highlightLiveFields = useCallback((fields: string[]) => {
+        const normalizedFields = Array.from(new Set(fields.map((field) => normalizeTicketLiveField(field))));
+
+        if (normalizedFields.length === 0) {
+            return;
+        }
+
+        setLiveHighlightedFields((current) => Array.from(new Set([...current, ...normalizedFields])));
+
+        for (const field of normalizedFields) {
+            if (liveHighlightTimersRef.current[field]) {
+                clearTimeout(liveHighlightTimersRef.current[field]);
+            }
+
+            liveHighlightTimersRef.current[field] = setTimeout(() => {
+                setLiveHighlightedFields((current) => current.filter((currentField) => currentField !== field));
+                delete liveHighlightTimersRef.current[field];
+            }, LIVE_UPDATE_HIGHLIGHT_MS);
+        }
+    }, []);
+
+    const getLiveFieldLabel = useCallback((field: string) => {
+        switch (normalizeTicketLiveField(field)) {
+            case 'title':
+                return t('fields.title', 'title').toLowerCase();
+            case 'status_id':
+                return t('fields.status', 'status').toLowerCase();
+            case 'priority_id':
+                return t('fields.priority', 'priority').toLowerCase();
+            case 'assigned_to':
+                return t('fields.assignedTo', 'assigned to').toLowerCase();
+            case 'board_id':
+                return t('info.board', 'board').toLowerCase();
+            case 'category_id':
+                return t('fields.category', 'category').toLowerCase();
+            case 'itil_impact':
+                return t('itil.impact', 'impact').toLowerCase();
+            case 'itil_urgency':
+                return t('itil.urgency', 'urgency').toLowerCase();
+            case 'client_id':
+                return t('fields.client', 'client').toLowerCase();
+            case 'contact_name_id':
+                return t('properties.contact', 'contact').toLowerCase();
+            case 'location_id':
+                return t('properties.location', 'location').toLowerCase();
+            case 'response_state':
+                return t('fields.responseState', 'response state').toLowerCase();
+            case 'due_date':
+                return t('fields.dueDate', 'due date').toLowerCase();
+            default:
+                return normalizeTicketLiveField(field).replace(/_/g, ' ');
+        }
+    }, [t]);
+
+    const isRemoteUpdateAccessError = useCallback((error: unknown) => {
+        if (isActionPermissionError(error)) {
+            return true;
+        }
+
+        if (error instanceof Error) {
+            return /403|forbidden|permission denied/i.test(error.message);
+        }
+
+        if (typeof error === 'string') {
+            return /403|forbidden|permission denied/i.test(error);
+        }
+
+        return false;
+    }, []);
+
+    const clearLiveFieldConflict = useCallback((field: string) => {
+        setLiveFieldConflicts((current) => {
+            if (!current[field]) {
+                return current;
+            }
+
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    }, []);
+
+    const handleKeepLiveConflict = useCallback((field: string) => {
+        clearLiveFieldConflict(field);
+    }, [clearLiveFieldConflict]);
+
+    const handleTakeLiveConflict = useCallback((field: string) => {
+        clearLiveFieldConflict(field);
+        highlightLiveFields([field]);
+    }, [clearLiveFieldConflict, highlightLiveFields]);
+
+    const refreshTicketSnapshot = useCallback(async (updatedFields: string[] = []) => {
+        if (!ticket.ticket_id) {
+            return { refreshed: false as const };
+        }
+
+        try {
+            const latestTicket = await getTicketById(ticket.ticket_id);
+            const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
+
+            setTicket(latestTicket);
+            setItilImpact(latestTicket.itil_impact || undefined);
+            setItilUrgency(latestTicket.itil_urgency || undefined);
+            setSavedBoardId(latestTicket.board_id ?? null);
+
+            const shouldRefreshClientContext =
+                normalizedUpdatedFields.has('client_id') || latestTicket.client_id !== ticket.client_id;
+            const shouldRefreshContactContext =
+                normalizedUpdatedFields.has('contact_name_id') || latestTicket.contact_name_id !== ticket.contact_name_id;
+            const shouldRefreshLocationContext =
+                normalizedUpdatedFields.has('location_id') || latestTicket.location_id !== ticket.location_id;
+
+            if (shouldRefreshClientContext) {
+                if (!latestTicket.client_id) {
+                    setClient(null);
+                    setContacts([]);
+                    setLocations([]);
+                    setContactInfo(null);
+                } else {
+                    const [latestClient, latestContacts, latestLocations] = await Promise.all([
+                        getClientById(latestTicket.client_id),
+                        getContactsByClient(latestTicket.client_id),
+                        getClientLocations(latestTicket.client_id),
+                    ]);
+
+                    setClient(latestClient);
+                    setContacts(latestContacts || []);
+                    setLocations(latestLocations || []);
+                    setContactInfo(
+                        latestTicket.contact_name_id
+                            ? await getContactByContactNameId(latestTicket.contact_name_id)
+                            : null
+                    );
+                }
+            } else {
+                if (shouldRefreshContactContext) {
+                    setContactInfo(
+                        latestTicket.contact_name_id
+                            ? await getContactByContactNameId(latestTicket.contact_name_id)
+                            : null
+                    );
+                }
+
+                if (shouldRefreshLocationContext && latestTicket.client_id) {
+                    setLocations(await getClientLocations(latestTicket.client_id));
+                }
+            }
+
+            if (normalizedUpdatedFields.has('comments')) {
+                setConversations(await findCommentsByTicketId(ticket.ticket_id));
+            }
+
+            if (normalizedUpdatedFields.has('comment_reactions')) {
+                setReactionRefreshVersion((value) => value + 1);
+            }
+
+            return { refreshed: true as const, latestTicket };
+        } catch (error) {
+            if (isRemoteUpdateAccessError(error)) {
+                router.push('/msp/tickets');
+                return { refreshed: false as const, redirected: true as const };
+            }
+
+            console.warn('Failed to refresh live ticket snapshot', error);
+            return { refreshed: false as const, error };
+        }
+    }, [
+        getClientLocations,
+        getContactByContactNameId,
+        getClientById,
+        getContactsByClient,
+        isRemoteUpdateAccessError,
+        router,
+        ticket.client_id,
+        ticket.contact_name_id,
+        ticket.location_id,
+        ticket.ticket_id,
+    ]);
+
+    const flushPendingRemoteUpdate = useCallback(async () => {
+        const pendingUpdate = pendingRemoteUpdateRef.current;
+        pendingRemoteUpdateRef.current = null;
+        remoteUpdateTimerRef.current = null;
+
+        if (!pendingUpdate || pendingUpdate.updatedFields.length === 0) {
+            return;
+        }
+
+        const dirtyFields = new Set<string>();
+
+        for (const field of ticketInfoDirtyFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of ticketPropertiesDirtyFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of pendingLiveNetworkFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+
+        const updatedFields = Array.from(new Set(pendingUpdate.updatedFields.map((field) => normalizeTicketLiveField(field))));
+        const overlappingFields = updatedFields.filter((field) => dirtyFields.has(field));
+        const nonOverlappingFields = updatedFields.filter((field) => !dirtyFields.has(field));
+
+        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields);
+        if (!refreshResult.refreshed) {
+            return;
+        }
+
+        if (nonOverlappingFields.length > 0) {
+            highlightLiveFields(nonOverlappingFields);
+        }
+
+        if (overlappingFields.length > 0) {
+            setLiveFieldConflicts((current) => {
+                const next = { ...current };
+
+                for (const field of overlappingFields) {
+                    next[field] = {
+                        updatedFields: pendingUpdate.updatedFields.filter(
+                            (updatedField) => normalizeTicketLiveField(updatedField) === field
+                        ),
+                        updatedBy: pendingUpdate.updatedBy,
+                        updatedAt: pendingUpdate.updatedAt,
+                    };
+                }
+
+                return next;
+            });
+            return;
+        }
+
+        if (dirtyFields.size > 0 && nonOverlappingFields.length > 0) {
+            toast.success(
+                t('liveUpdates.remoteFieldUpdated', '{{name}} updated {{field}}')
+                    .replace('{{name}}', pendingUpdate.updatedBy.displayName)
+                    .replace('{{field}}', getLiveFieldLabel(nonOverlappingFields[0]))
+            );
+        }
+    }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
+
+    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+        const currentPendingUpdate = pendingRemoteUpdateRef.current;
+
+        pendingRemoteUpdateRef.current = currentPendingUpdate
+            ? {
+                updatedFields: Array.from(new Set([...currentPendingUpdate.updatedFields, ...update.updatedFields])),
+                updatedBy: update.updatedBy,
+                updatedAt: update.updatedAt,
+            }
+            : update;
+
+        clearRemoteUpdateTimer();
+        remoteUpdateTimerRef.current = setTimeout(() => {
+            void flushPendingRemoteUpdate();
+        }, LIVE_UPDATE_REFETCH_DEBOUNCE_MS);
+    }, [clearRemoteUpdateTimer, flushPendingRemoteUpdate]);
 
     useEffect(() => {
         setBundle(initialBundle);
@@ -348,6 +775,47 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setBoard(initialBoard);
         setSavedBoardId(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     }, [initialBoard, initialTicket.board_id]);
+
+    useEffect(() => {
+        if (!ticketLive.enabled || ticketLive.reconnectVersion === 0) {
+            return;
+        }
+
+        void refreshTicketSnapshot();
+    }, [refreshTicketSnapshot, ticketLive.enabled, ticketLive.reconnectVersion]);
+
+    useEffect(() => {
+        const remoteUpdate = ticketLive.lastRemoteUpdate;
+        if (!ticketLive.enabled || !remoteUpdate || remoteUpdate.updatedBy.userId === userId) {
+            return;
+        }
+
+        queueRemoteUpdate(remoteUpdate);
+    }, [queueRemoteUpdate, ticketLive.enabled, ticketLive.lastRemoteUpdate, userId]);
+
+    useEffect(() => {
+        return () => {
+            clearRemoteUpdateTimer();
+
+            for (const timer of Object.values(liveHighlightTimersRef.current)) {
+                clearTimeout(timer);
+            }
+
+            liveHighlightTimersRef.current = {};
+        };
+    }, [clearRemoteUpdateTimer]);
+
+    useEffect(() => {
+        setLiveFieldConflicts((current) => {
+            const nextEntries = Object.entries(current).filter(([field]) => liveDirtyFieldSet.has(field));
+
+            if (nextEntries.length === Object.keys(current).length) {
+                return current;
+            }
+
+            return Object.fromEntries(nextEntries);
+        });
+    }, [liveDirtyFieldSet]);
 
     useEffect(() => {
         let cancelled = false;
@@ -461,7 +929,80 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
     const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
-    const router = useRouter();
+
+    const resetTicketDeleteState = useCallback(() => {
+        if (isTicketDeleteProcessing) return;
+        setIsDeleteTicketDialogOpen(false);
+        setTicketDeleteValidation(null);
+        setIsTicketDeleteValidating(false);
+    }, [isTicketDeleteProcessing]);
+
+    const runTicketDeleteValidation = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        setIsTicketDeleteValidating(true);
+        try {
+            const result = await preCheckDeletion('ticket', ticket.ticket_id);
+            setTicketDeleteValidation(result);
+        } catch (error: any) {
+            console.error('Failed to validate ticket deletion:', error);
+            setTicketDeleteValidation({
+                canDelete: false,
+                code: 'VALIDATION_FAILED',
+                message: t('delete.validationError', {
+                    defaultValue: 'Failed to validate deletion. Please try again.',
+                }),
+                dependencies: [],
+                alternatives: [],
+            });
+        } finally {
+            setIsTicketDeleteValidating(false);
+        }
+    }, [ticket.ticket_id, t]);
+
+    const handleDeleteTicket = useCallback(() => {
+        setIsDeleteTicketDialogOpen(true);
+        void runTicketDeleteValidation();
+    }, [runTicketDeleteValidation]);
+
+    const confirmTicketDelete = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+        setIsTicketDeleteProcessing(true);
+        try {
+            const result = await deleteTicket(ticket.ticket_id);
+
+            if (!result.success) {
+                // Surface blocking dependencies / permission issues in the dialog.
+                setTicketDeleteValidation(result);
+                return;
+            }
+
+            setIsDeleteTicketDialogOpen(false);
+            setTicketDeleteValidation(null);
+            toast.success(t('delete.success', {
+                defaultValue: 'Ticket #{{number}} deleted successfully.',
+                number: ticket.ticket_number,
+            }));
+
+            if (isInDrawer) {
+                closeDrawer();
+                onClose?.();
+            } else {
+                // Preserve the list filters the user came in with (same mechanism
+                // as the Back button / BackNav) so the tickets list reopens filtered.
+                const returnFilters = searchParams?.get('returnFilters') ?? null;
+                const filtersQuery = returnFilters ? decodeURIComponent(returnFilters) : '';
+                router.push(filtersQuery ? `/msp/tickets?${filtersQuery}` : '/msp/tickets');
+            }
+        } catch (error: any) {
+            console.error('Failed to delete ticket:', error);
+            toast.error(error?.message || t('delete.error', {
+                defaultValue: 'Failed to delete ticket. Please try again.',
+            }));
+        } finally {
+            setIsTicketDeleteProcessing(false);
+        }
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
+
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
@@ -908,49 +1449,74 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
+        // Pre-close check: when this status change would close the ticket,
+        // surface unmet close rules in a dialog instead of submitting a write
+        // that the server would reject. The write paths re-enforce, so this is
+        // UX only — never trust it for correctness.
+        if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
+            try {
+                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
+                if (check.wouldClose && !check.allowed) {
+                    setCloseOverrideReason('');
+                    setCloseBlockedDialog({
+                        isOpen: true,
+                        statusId: normalizedValue,
+                        failures: check.failures,
+                        canOverride: check.canOverride,
+                    });
+                    return;
+                }
+            } catch (checkError) {
+                // Fall through to the normal update; the server still enforces.
+                console.error('Close rules pre-check failed:', checkError);
+            }
+        }
+
         // Store the previous value before updating
         const previousValue = ticket[field];
-        
+
         // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
         try {
-            // Use the optimized handler if provided
-            if (onTicketUpdate) {
-                await onTicketUpdate(field, normalizedValue);
-                if (field === 'board_id') {
-                    setSavedBoardId(normalizedValue);
-                }
-                
-                // If we're changing the assigned_to field, we need to handle additional resources
-                // This will be handled by the container component and passed back in props
-            } else {
-                // Fallback to the original implementation if no optimized handler is provided
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
-                
-                if (result === 'success') {
-                    console.log(`${field} changed to: ${normalizedValue}`);
+            await runWithPendingLiveFields([field], async () => {
+                // Use the optimized handler if provided
+                if (onTicketUpdate) {
+                    await onTicketUpdate(field, normalizedValue);
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
                     }
-                    
-                    // If we're changing the assigned_to field, refresh the additional resources
-                    if (field === 'assigned_to') {
-                        try {
-                            // Refresh the additional resources
-                            const resources = await getTicketResources(ticket.ticket_id!);
-                            setAdditionalAgents(resources);
-                            console.log('Additional resources refreshed after assignment change');
-                        } catch (resourceError) {
-                            console.error('Error refreshing additional resources:', resourceError);
-                        }
-                    }
+
+                    // If we're changing the assigned_to field, we need to handle additional resources
+                    // This will be handled by the container component and passed back in props
                 } else {
-                    console.error(`Failed to update ticket ${field}`);
-                    // Revert to previous value on failure
-                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                    // Fallback to the original implementation if no optimized handler is provided
+                    const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
+
+                    if (result === 'success') {
+                        console.log(`${field} changed to: ${normalizedValue}`);
+                        if (field === 'board_id') {
+                            setSavedBoardId(normalizedValue);
+                        }
+
+                        // If we're changing the assigned_to field, refresh the additional resources
+                        if (field === 'assigned_to') {
+                            try {
+                                // Refresh the additional resources
+                                const resources = await getTicketResources(ticket.ticket_id!);
+                                setAdditionalAgents(resources);
+                                console.log('Additional resources refreshed after assignment change');
+                            } catch (resourceError) {
+                                console.error('Error refreshing additional resources:', resourceError);
+                            }
+                        }
+                    } else {
+                        console.error(`Failed to update ticket ${field}`);
+                        // Revert to previous value on failure
+                        setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                    }
                 }
-            }
+            });
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
@@ -1087,12 +1653,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const markdownContent = await convertBlockNoteToMarkdown(newCommentContent);
             console.log("Converted markdown content:", markdownContent);
     
+            // The resolution toggle is paired with an immediate close when a
+            // close-status is selected and the ticket isn't already in that
+            // status. Surface that intent to the server so the email
+            // subscriber can suppress the duplicate comment email — the
+            // close email will carry the resolution body.
+            const willCloseTicket = Boolean(
+                isResolution && closeStatusId && ticket.status_id !== closeStatusId
+            );
+
             // Use the optimized handler if provided
             if (onAddComment) {
                 await onAddComment(
                     JSON.stringify(newCommentContent),
                     isInternal,
-                    isResolution
+                    isResolution,
+                    willCloseTicket
                 );
 
                 // Optimistically update the response state in UI to match server behavior:
@@ -1148,7 +1724,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_internal: isInternal,
                         is_resolution: isResolution,
                         user_id: userId,
-                        author_type: 'internal' // Will be overridden based on user type in the action
+                        author_type: 'internal', // Will be overridden based on user type in the action
+                        // See email-subscriber suppression note above.
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });
                     
                     if (newComment) {
@@ -1188,6 +1766,58 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         } catch (error) {
             console.error("Error adding new note:", error);
+            return false;
+        }
+    };
+
+    const handleAddReplyComment = async (
+        content: PartialBlock[],
+        parentCommentId: string,
+        isInternal: boolean
+    ): Promise<boolean> => {
+        const contentStr = JSON.stringify(content);
+        const hasContent = contentStr !== JSON.stringify([{
+            type: "paragraph",
+            props: {
+                textAlignment: "left",
+                backgroundColor: "default",
+                textColor: "default"
+            },
+            content: [{
+                type: "text",
+                text: "",
+                styles: {}
+            }]
+        }]);
+
+        if (!hasContent || !ticket.ticket_id || !userId) {
+            return false;
+        }
+
+        try {
+            await createComment({
+                ticket_id: ticket.ticket_id,
+                note: contentStr,
+                is_internal: isInternal,
+                is_resolution: false,
+                user_id: userId,
+                author_type: 'internal',
+                parent_comment_id: parentCommentId
+            });
+
+            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+            setConversations(updatedComments);
+
+            if (!isInternal && responseStateTrackingEnabled) {
+                setTicket((prev: any) => ({
+                    ...prev,
+                    response_state: 'awaiting_client'
+                }));
+            }
+
+            return true;
+        } catch (error) {
+            handleError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
         }
     };
@@ -1363,6 +1993,7 @@ const handleClose = () => {
                     clientName: client?.client_name ?? null,
                     elapsedTime,
                     timeDescription,
+                    masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
                     baseOnComplete();
@@ -1389,6 +2020,7 @@ const handleClose = () => {
                     clientName: client?.client_name ?? null,
                     elapsedTime: 0,
                     timeDescription: '',
+                    masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 existingEntryId: entry.entry_id,
                 onComplete: () => {
@@ -1403,6 +2035,8 @@ const handleClose = () => {
     const handleRequestDeleteTimeEntry = (entry: { entry_id: string; user_name: string | null }) => {
         setPendingDeleteTimeEntry(entry);
     };
+
+    useCatalogShortcut('record.addTime', () => { void handleAddTimeEntry(); });
 
     const handleConfirmDeleteTimeEntry = async () => {
         if (!pendingDeleteTimeEntry) return;
@@ -1477,7 +2111,7 @@ const handleClose = () => {
 
     const handleContactChange = async (newContactId: string | null) => {
         try {
-            await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+            await runWithPendingLiveFields(['contact_name_id'], () => updateTicket(ticket.ticket_id!, { contact_name_id: newContactId }));
             
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -1521,7 +2155,7 @@ const handleClose = () => {
 
             // NOTE: Category management is now unified through the CategoryPicker
 
-            await updateTicketWithCache(ticket.ticket_id!, updateData);
+            await runWithPendingLiveFields([field], () => updateTicketWithCache(ticket.ticket_id!, updateData));
 
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
@@ -1547,7 +2181,7 @@ const handleClose = () => {
     const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await onBatchTicketUpdate(changes);
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -1573,30 +2207,26 @@ const handleClose = () => {
             console.error('Error in batch save:', error);
             return false;
         }
-    }, [onBatchTicketUpdate, handleItilFieldChange]);
+    }, [handleItilFieldChange, onBatchTicketUpdate, runWithPendingLiveFields]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
-            await updateTicket(ticket.ticket_id!, {
+            await runWithPendingLiveFields(['client_id', 'contact_name_id', 'location_id'], () => updateTicket(ticket.ticket_id!, {
                 client_id: newClientId,
                 contact_name_id: null, // Reset contact when client changes
                 location_id: null // Reset location when client changes
-            });
+            }));
             
-            const [clientData, contactsData] = await Promise.all([
+            const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
-                getContactsByClient(newClientId)
+                getContactsByClient(newClientId),
+                getClientLocations(newClientId),
             ]);
             
             setClient(clientData);
             setContacts(contactsData || []);
+            setLocations(locationData || []);
             setContactInfo(null); // Reset contact info
-            
-            // Update locations for the new client
-            if (newClientId) {
-                // TODO: Fetch locations for the new client
-                // For now, we'll rely on the parent component to provide updated locations
-            }
 
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));
@@ -1607,9 +2237,9 @@ const handleClose = () => {
     
     const handleLocationChange = async (newLocationId: string | null) => {
         try {
-            await updateTicket(ticket.ticket_id!, {
+            await runWithPendingLiveFields(['location_id'], () => updateTicket(ticket.ticket_id!, {
                 location_id: newLocationId
-            });
+            }));
             
             // Update the ticket state with the new location
             setTicket(prevTicket => ({
@@ -1918,6 +2548,19 @@ const handleClose = () => {
         );
     }
 
+    const livePresenceUsers = ticketLive.presence.map((user) => ({
+        id: user.userId,
+        name: user.displayName,
+        avatarUrl: user.avatarUrl ?? null,
+        color: user.color,
+    }));
+
+    const connectionStatusLabel = ticketLive.connectionStatus === 'reconnecting'
+        ? t('liveUpdates.connection.reconnecting', 'Live updates offline — reconnecting…')
+        : ticketLive.connectionStatus === 'unavailable'
+            ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
+            : null;
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100 dark:bg-gray-900">
@@ -1965,6 +2608,16 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
+                                <Button
+                                    id={`${id}-delete-ticket-button`}
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleDeleteTicket}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>{t('actions.delete', { defaultValue: 'Delete' })}</span>
+                                </Button>
                             </div>
                         </div>
                         <h1
@@ -1972,6 +2625,18 @@ const handleClose = () => {
                         >
                             {ticket.title}
                         </h1>
+                        {ticketLive.enabled ? (
+                            <div className="flex flex-wrap items-center gap-3 text-sm">
+                                {ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
+                                    <PresenceBar users={livePresenceUsers} />
+                                ) : null}
+                                {connectionStatusLabel ? (
+                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
+                                        {connectionStatusLabel}
+                                    </span>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
@@ -1995,6 +2660,18 @@ const handleClose = () => {
                         </p>
                     )}
                 </div>
+                {/* Delete Ticket Dialog (with dependency validation) */}
+                <DeleteEntityDialog
+                    id={`${id}-delete-ticket-dialog`}
+                    isOpen={isDeleteTicketDialogOpen}
+                    onClose={resetTicketDeleteState}
+                    onConfirmDelete={confirmTicketDelete}
+                    entityName={`#${ticket.ticket_number}`}
+                    validationResult={ticketDeleteValidation}
+                    isValidating={isTicketDeleteValidating}
+                    isDeleting={isTicketDeleteProcessing}
+                />
+
                 {/* Confirmation Dialog for Comment Deletion */}
                 <ConfirmationDialog
                     id={`${id}-delete-comment-dialog`}
@@ -2010,6 +2687,101 @@ const handleClose = () => {
                     isConfirming={isDeletingComment}
                 />
                 
+                {/* Blocked-close dialog: unmet close rules with quick actions and
+                    a permissioned "Close anyway" override. */}
+                <Dialog
+                    id={`${id}-close-blocked-dialog`}
+                    isOpen={closeBlockedDialog.isOpen}
+                    onClose={() => {
+                        setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                        setCloseOverrideReason('');
+                    }}
+                    title="This ticket can't be closed yet"
+                >
+                    <DialogContent>
+                        <p className="text-sm text-gray-600 mb-3">
+                            The board's close rules require the following before this ticket can be closed:
+                        </p>
+                        <ul className="space-y-2 mb-4">
+                            {closeBlockedDialog.failures.map((failure) => (
+                                <li
+                                    key={failure.rule}
+                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                >
+                                    <span>{failure.message}</span>
+                                    {failure.rule === 'checklist_incomplete' && (
+                                        <Button
+                                            id={`${id}-close-blocked-view-checklist`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                document
+                                                    .getElementById(`${id}-checklist-section`)
+                                                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                        >
+                                            View checklist
+                                        </Button>
+                                    )}
+                                    {failure.rule === 'resolution_comment' && (
+                                        <Button
+                                            id={`${id}-close-blocked-add-comment`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                document
+                                                    .getElementById(`${id}-conversation`)
+                                                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                        >
+                                            Add comment
+                                        </Button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                        {closeBlockedDialog.canOverride && (
+                            <div className="mb-2">
+                                <TextArea
+                                    id={`${id}-close-override-reason`}
+                                    value={closeOverrideReason}
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCloseOverrideReason(e.target.value)}
+                                    placeholder="Reason for closing anyway (optional, recorded in the audit log)"
+                                    rows={2}
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-close-blocked-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                    setCloseOverrideReason('');
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            {closeBlockedDialog.canOverride && (
+                                <Button
+                                    id={`${id}-close-blocked-close-anyway`}
+                                    type="button"
+                                    variant="destructive"
+                                    onClick={submitCloseOverride}
+                                    disabled={isSubmittingCloseOverride}
+                                >
+                                    {isSubmittingCloseOverride ? 'Closing…' : 'Close anyway'}
+                                </Button>
+                            )}
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 {/* Timer Replace Confirmation */}
                 <ConfirmationDialog
                     id={`${id}-replace-timer-dialog`}
@@ -2229,6 +3001,38 @@ const handleClose = () => {
                                     </div>
                                 ) : null}
 
+                                {(autoCloseState || checklistSummary.requiredTotal > 0) && (
+                                    <div id={`${id}-close-rules-banner`} className="mb-4 flex flex-wrap items-center gap-2">
+                                        {autoCloseState && (
+                                            <div
+                                                id={`${id}-auto-close-banner`}
+                                                className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                            >
+                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
+                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                            </div>
+                                        )}
+                                        {checklistSummary.requiredTotal > 0 && (
+                                            <button
+                                                type="button"
+                                                id={`${id}-checklist-progress-chip`}
+                                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
+                                                    checklistSummary.requiredDone === checklistSummary.requiredTotal
+                                                        ? 'border-green-300 bg-green-50 text-green-800'
+                                                        : 'border-amber-300 bg-amber-50 text-amber-900'
+                                                }`}
+                                                onClick={() =>
+                                                    document
+                                                        .getElementById(`${id}-checklist-section`)
+                                                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                                }
+                                            >
+                                                {`${checklistSummary.requiredDone} of ${checklistSummary.requiredTotal} required checklist items done`}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
                                 <TicketInfo
                                     id={`${id}-info`}
                                     titleRef={cardTitleRef}
@@ -2264,8 +3068,20 @@ const handleClose = () => {
                                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
+                                    onOpenActivityLog={() => {
+                                        setActivityLogRefreshKey((value) => value + 1);
+                                        setIsActivityLogDrawerOpen(true);
+                                    }}
                                     hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgentsForInfo}
+                                    onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
+                                    liveHighlightedFields={liveHighlightedFields}
+                                    liveFieldConflicts={liveFieldConflicts}
+                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    onKeepLiveConflict={handleKeepLiveConflict}
+                                    onTakeLiveConflict={handleTakeLiveConflict}
+                                    liveEditingUsers={liveEditingUsers}
+                                    onLiveEditingFieldChange={ticketLive.setEditingField}
                                 />
                             </div>
                         </Suspense>
@@ -2291,6 +3107,7 @@ const handleClose = () => {
                                     editorKey={editorKey}
                                     onNewCommentContentChange={setNewCommentContent}
                                     onAddNewComment={handleAddNewComment}
+                                    onAddReplyComment={handleAddReplyComment}
                                     onTabChange={setActiveTab}
                                     onEdit={handleEdit}
                                     onSave={handleSave}
@@ -2306,10 +3123,20 @@ const handleClose = () => {
                                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+                                    reactionRefreshVersion={reactionRefreshVersion}
                                 />
                             </div>
                         </Suspense>
                         
+                        <div className="mb-6">
+                            <TicketChecklistSection
+                                id={`${id}-checklist-section`}
+                                ticketId={ticket.ticket_id || ''}
+                                initialItems={checklistItems}
+                                onItemsChanged={setChecklistItems}
+                            />
+                        </div>
+
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
@@ -2387,6 +3214,14 @@ const handleClose = () => {
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                                     onEditTimeEntry={handleEditTimeEntry}
                                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
+                                    onLiveDirtyFieldsChange={setTicketPropertiesDirtyFields}
+                                    liveHighlightedFields={liveHighlightedFields}
+                                    liveFieldConflicts={liveFieldConflicts}
+                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    onKeepLiveConflict={handleKeepLiveConflict}
+                                    onTakeLiveConflict={handleTakeLiveConflict}
+                                    liveEditingUsers={liveEditingUsers}
+                                    onLiveEditingFieldChange={ticketLive.setEditingField}
                                 />
                         </Suspense>
                         
@@ -2412,6 +3247,27 @@ const handleClose = () => {
                         ticketId={ticket.ticket_id || ''}
                         variant="flat"
                     />
+                </div>
+            </Drawer>
+            <Drawer
+                id="ticket-activity-log-drawer"
+                isOpen={isActivityLogDrawerOpen}
+                onClose={() => setIsActivityLogDrawerOpen(false)}
+                width="48rem"
+            >
+                <div className="space-y-4 pr-8">
+                    <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-[rgb(var(--color-text-700))]" />
+                        <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+                            Ticket Activity
+                        </h2>
+                    </div>
+                    {ticket.ticket_id ? (
+                        <TicketActivityTimeline
+                            ticketId={ticket.ticket_id}
+                            refreshKey={conversations.length + activityLogRefreshKey}
+                        />
+                    ) : null}
                 </div>
             </Drawer>
         </ReflectionContainer>

@@ -27,6 +27,7 @@
     "close": "Fermer"
   },
   "runList": {
+    "shareTooltip": "Imprimer et exporter",
     "quickRanges": {
       "last24h": "Dernières 24 h",
       "last7d": "7 derniers jours"
@@ -56,7 +57,6 @@
       "runNow": "Exécuter maintenant",
       "exportCsv": "Exporter en CSV",
       "refresh": "Actualiser",
-      "resumeSelected": "Reprendre la sélection ({{count}})",
       "cancelSelected": "Annuler la sélection ({{count}})",
       "clearSelection": "Effacer la sélection",
       "details": "Détails",
@@ -84,14 +84,10 @@
       "empty": "Aucune exécution ne correspond aux filtres."
     },
     "bulk": {
-      "resumeTitle": "Reprendre les exécutions sélectionnées",
-      "resumeMessage": "Reprendre {{count}} exécution(s) sélectionnée(s) ?",
       "cancelTitle": "Annuler les exécutions sélectionnées",
       "cancelMessage": "Annuler {{count}} exécution(s) sélectionnée(s) ? Cette action est irréversible.",
       "reasonLabel": "Motif",
-      "resumeReasonPlaceholder": "Indiquez un motif pour la reprise",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
-      "resumeConfirm": "Reprendre les exécutions",
       "cancelConfirm": "Annuler les exécutions"
     },
     "toasts": {
@@ -105,12 +101,29 @@
       "selectRunsForBulkAction": "Sélectionnez des exécutions pour effectuer cette action.",
       "bulkReasonTooShort": "Le motif doit comporter au moins 3 caractères.",
       "noEligibleRuns": "Aucune des exécutions sélectionnées n’est éligible pour cette action.",
-      "bulkResumeFailedCount": "Échec de la reprise de {{count}} exécution(s).",
       "bulkCancelFailedCount": "Échec de l’annulation de {{count}} exécution(s).",
-      "bulkResumeSuccessCount": "{{count}} exécution(s) reprise(s).",
       "bulkCancelSuccessCount": "{{count}} exécution(s) annulée(s).",
       "bulkSkippedIneligibleCount": "{{count}} exécution(s) non éligible(s) ignorée(s).",
       "bulkActionFailed": "Échec de l’action groupée"
+    },
+    "print": {
+      "title": "Exécutions de workflow",
+      "selectedTitle": "Exécutions sélectionnées",
+      "subtitle": "{{count}} exécutions",
+      "noRuns": "Aucune exécution de workflow à imprimer",
+      "columns": {
+        "run": "Exécution",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Statut",
+        "started": "Démarré",
+        "updated": "Mis à jour",
+        "duration": "Durée"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des exécutions de workflow."
+      }
     }
   },
   "runDetails": {
@@ -123,12 +136,9 @@
       "triggerLabel": "Déclencheur :"
     },
     "actions": {
-      "resume": "Reprendre",
       "cancel": "Annuler",
       "export": "Exporter",
-      "retry": "Réessayer",
       "replay": "Rejouer",
-      "requeueEvent": "Remettre en file l’événement",
       "close": "Fermer",
       "view": "Voir",
       "apply": "Appliquer",
@@ -247,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motif",
-      "resumeTitle": "Reprendre l’exécution du workflow",
-      "resumeMessage": "Reprendre cette exécution maintenant ?",
-      "resumeReasonPlaceholder": "Indiquez un motif pour la reprise",
       "cancelTitle": "Annuler l’exécution du workflow",
       "cancelMessage": "Annuler cette exécution ? Cette action est irréversible.",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
       "cancelConfirm": "Annuler l’exécution",
-      "retryTitle": "Relancer l’exécution du workflow",
-      "retryMessage": "Relancer cette exécution à partir de la dernière étape en échec ?",
-      "retryReasonPlaceholder": "Indiquez un motif pour la nouvelle tentative",
-      "retryConfirm": "Relancer l’exécution",
       "replayTitle": "Rejouer l’exécution du workflow",
       "replayMessage": "Rejouer cette exécution avec une nouvelle charge utile.",
       "replayReasonPlaceholder": "Indiquez un motif pour la relecture",
       "payloadLabel": "Charge utile (JSON)",
-      "replayConfirm": "Rejouer l’exécution",
-      "requeueTitle": "Remettre en file l’attente d’événement",
-      "requeueMessage": "Remettre en file la dernière attente d’événement de cette exécution ?",
-      "requeueReasonPlaceholder": "Indiquez un motif pour la remise en file",
-      "requeueConfirm": "Remettre en file l’attente"
+      "replayConfirm": "Rejouer l’exécution"
     },
     "toasts": {
       "loadRunDetailsFailed": "Échec du chargement des détails de l’exécution",
@@ -275,21 +274,19 @@
       "logExportReady": "Export des journaux prêt",
       "exportLogsFailed": "Échec de l’exportation des journaux",
       "reasonTooShort": "Le motif doit comporter au moins 3 caractères.",
-      "runResumed": "Exécution reprise",
-      "resumeRunFailed": "Échec de la reprise de l’exécution",
       "runCanceled": "Exécution annulée",
       "cancelRunFailed": "Échec de l’annulation de l’exécution",
       "runExportReady": "Export d’exécution prêt",
       "exportRunFailed": "Échec de l’exportation de l’exécution",
-      "runRetryStarted": "Nouvelle tentative démarrée",
-      "retryRunFailed": "Échec de la relance de l’exécution",
       "replayPayloadInvalid": "La charge utile de relecture doit être un JSON valide.",
       "runReplayStarted": "Relecture de l’exécution démarrée",
       "replayRunFailed": "Échec de la relecture de l’exécution",
-      "eventWaitRequeued": "Attente d’événement remise en file",
-      "requeueEventWaitFailed": "Échec de la remise en file de l’attente d’événement",
       "auditExportReady": "Export d’audit prêt",
       "exportAuditLogsFailed": "Échec de l’exportation des journaux d’audit"
+    },
+    "queuedWarning": {
+      "title": "En file d’attente — en attente d’un worker de workflow",
+      "description": "Cette exécution a démarré il y a plus d’une minute, mais aucune étape n’a encore été exécutée. Vérifiez que le service worker de workflow est en cours d’exécution et connecté à Temporal."
     }
   },
   "runDialog": {
@@ -767,6 +764,50 @@
       "ai.infer": {
         "label": "Inférer une sortie structurée",
         "description": "Générer des données structurées de workflow à partir d’une invite via le fournisseur d’IA configuré."
+      },
+      "store.get": {
+        "label": "Obtenir la valeur stockée",
+        "description": "Lire une entrée clé/valeur de workflow persistée."
+      },
+      "store.set": {
+        "label": "Définir la valeur stockée",
+        "description": "Persister une entrée clé/valeur de workflow."
+      },
+      "store.delete": {
+        "label": "Supprimer la valeur stockée",
+        "description": "Supprimer une entrée clé/valeur de workflow persistée."
+      },
+      "store.increment": {
+        "label": "Incrémenter le nombre stocké",
+        "description": "Incrémenter de façon atomique un nombre de workflow persisté."
+      },
+      "store.list": {
+        "label": "Lister les valeurs stockées",
+        "description": "Lister les entrées clé/valeur de workflow persistées dans un espace de noms."
+      },
+      "store.list_namespaces": {
+        "label": "Lister les espaces de noms du magasin",
+        "description": "Lister les espaces de noms du magasin de données de workflow utilisés par ce locataire."
+      },
+      "links.upsert": {
+        "label": "Créer ou mettre à jour un lien d'entité",
+        "description": "Créer ou mettre à jour un lien persisté entre deux entités de workflow."
+      },
+      "links.lookup": {
+        "label": "Rechercher des liens d'entité",
+        "description": "Rechercher des liens d'entité persistés par entité source et direction."
+      },
+      "links.delete": {
+        "label": "Supprimer des liens d'entité",
+        "description": "Supprimer des liens d'entité persistés par côté et relation facultative."
+      },
+      "links.list": {
+        "label": "Lister les liens d'entité",
+        "description": "Lister les liens d'entité persistés dans un espace de noms."
+      },
+      "links.list_namespaces": {
+        "label": "Lister les espaces de noms de liens",
+        "description": "Lister les espaces de noms de liens d'entité de workflow utilisés par ce locataire."
       }
     },
     "validation": {
@@ -911,6 +952,10 @@
         "ai": {
           "label": "IA",
           "description": "Actions IA"
+        },
+        "data-store": {
+          "label": "Magasin de données",
+          "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
         }
       }
     },
@@ -1383,7 +1428,16 @@
       "openEditor": "Ouvrir l’éditeur",
       "apply": "Appliquer",
       "cancel": "Annuler"
-    }
+    },
+    "askAi": {
+      "ariaLabel": "Demander de l’aide à l’IA pour les transformations",
+      "title": "Demander à l’IA",
+      "shortcutHint": "Ouvrir Quick Ask pour l’aide sur les transformations"
+    },
+    "softEnumPlaceholder": "Sélectionner ou saisir une valeur",
+    "softEnumSearchPlaceholder": "Rechercher ou saisir une valeur personnalisée",
+    "softEnumNoResults": "Aucune suggestion",
+    "softEnumUseCustom": "Utiliser « {{value}} »"
   },
   "schemaReference": {
     "selectAction": "Sélectionnez une action pour voir son schéma d’entrée/sortie",
@@ -1959,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Date et heure précises",
       "expression": "Expression avancée"
+    },
+    "workflowEntityType": {
+      "project_task": "Tâche de projet",
+      "ticket": "Ticket",
+      "contact": "Contact",
+      "client": "Client",
+      "project": "Projet",
+      "appointment": "Rendez-vous",
+      "quote": "Devis"
+    },
+    "workflowLinkRelation": {
+      "related": "Associé",
+      "mirrors": "Reflète",
+      "maps_to": "Correspond à",
+      "blocks": "Bloque",
+      "duplicate_of": "Doublon de",
+      "synced_with": "Synchronisé avec"
     }
   },
   "automation": {
@@ -2347,13 +2418,7 @@
     }
   },
   "automationGate": {
-    "loading": "Chargement de l'automatisation des workflows...",
-    "featureName": "Automatisation des workflows",
-    "notEnabled": "Cette fonctionnalité est expérimentale et n'est pas activée pour votre locataire.",
-    "experimental": "Expérimental",
-    "enableHint": "Activez l'automatisation des workflows dans les paramètres pour y accéder.",
-    "goToExperimental": "Accéder aux fonctionnalités expérimentales",
-    "openSettings": "Ouvrir les paramètres"
+    "loading": "Chargement de l'automatisation des workflows..."
   },
   "flow": {
     "designer": {

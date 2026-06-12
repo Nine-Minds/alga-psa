@@ -74,7 +74,7 @@
     "addProject": "Project toevoegen",
     "createFromTemplate": "Maken vanuit sjabloon",
     "openMenu": "Menu openen",
-    "searchPlaceholder": "Zoek projecten",
+    "searchPlaceholder": "Zoek projecten, taken en opmerkingen",
     "statusPlaceholder": "Selecteer status",
     "contactPlaceholder": "Filter op contactpersoon",
     "managerPlaceholder": "Alle beheerders",
@@ -103,6 +103,8 @@
       "created": "Gemaakt",
       "projectManager": "Projectmanager",
       "tags": "Labels",
+      "priority": "Prioriteit",
+      "taskType": "Type",
       "actions": "Acties"
     },
     "unknownUser": "Onbekend"
@@ -240,7 +242,26 @@
     "dueLabel": "Vervaldatum",
     "noDueDate": "Geen vervaldatum",
     "hideTags": "Tags verbergen",
-    "criticalPath": "Kritiek pad"
+    "criticalPath": "Kritiek pad",
+    "selectTaskAria": "Taak {{taskName}} selecteren",
+    "bulkMoveSuccess": "{{count}} taak/taken succesvol verplaatst!",
+    "bulkMovePartial": "{{moved}} taak/taken verplaatst, {{failed}} mislukt.",
+    "bulkDeleteSuccess": "{{count}} taak/taken succesvol verwijderd!",
+    "bulkDeletePartial": "{{deleted}} taak/taken verwijderd, {{failed}} mislukt.",
+    "bulkAssignSuccess": "{{count}} taak/taken succesvol toegewezen!",
+    "bulkAssignPartial": "{{success}} taak/taken toegewezen, {{failed}} mislukt.",
+    "bulkAssignTeamSuccess": "{{count}} taak/taken succesvol aan team toegewezen!",
+    "bulkAssignTeamPartial": "{{success}} taak/taken aan team toegewezen, {{failed}} mislukt.",
+    "bulkDeleteTitle": "Taken verwijderen",
+    "bulkDeleteMessage": "Weet je zeker dat je {{count}} geselecteerde taak/taken wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "bulkTasksMovedSuccess": "{{count}} taken verplaatst",
+    "bulkTasksMovedToPhase": "{{count}} taken verplaatst naar {{phaseName}}",
+    "moveTasksTitle": "Taken verplaatsen",
+    "confirmMoveTasksMessage": "Weet je zeker dat je {{count}} geselecteerde taken naar fase \"{{targetPhase}}\" wilt verplaatsen?",
+    "bulkTagsSuccess_one": "Labels toegevoegd aan {{count}} taak",
+    "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
+    "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
+    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -415,6 +436,7 @@
     "selectFolderDescription": "Kies waar u dit nieuwe document wilt opslaan"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan dit kaartje",
     "title": "Bijbehorende kaartjes",
     "linkExistingTitle": "Koppel bestaand ticket",
     "createTicket": "Ticket aanmaken",
@@ -519,7 +541,9 @@
       "tags": "Labels",
       "createdAt": "Gemaakt op",
       "updatedAt": "Bijgewerkt op"
-    }
+    },
+    "exportSelected": "{{count}} geselecteerde exporteren",
+    "selectedTasksNotice": "{{count}} geselecteerde taak{{plural}} exporteren."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -701,6 +725,7 @@
       "allPriorities": "Alle prioriteiten"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan deze taak",
       "title": "Gekoppelde projecttaken",
       "loadFailed": "Taak laden mislukt",
       "phaseNotFound": "Taakfase niet gevonden",
@@ -709,6 +734,22 @@
       "tasks": "Taken",
       "badgeCount": "{{count}} Taak",
       "badgeCount_other": "{{count}} Taken"
+    },
+    "bulkMoveTask": {
+      "title": "Taken verplaatsen",
+      "message": "{{count}} geselecteerde taak/taken naar een nieuwe fase/status verplaatsen:",
+      "confirm": "Taken verplaatsen"
+    },
+    "bulkAssign": {
+      "title": "Taken toewijzen",
+      "message": "{{count}} geselecteerde taak/taken toewijzen aan:",
+      "unassigned": "Niet toegewezen",
+      "assigning": "Toewijzen...",
+      "confirm": "Taken toewijzen",
+      "teamReplaceNotice": "Taken die al aan een ander team zijn toegewezen, worden aan het nieuwe team toegewezen."
+    },
+    "convertAdHocToTask": {
+      "title": "Omzetten naar projecttaak"
     }
   },
   "filters": {
@@ -1268,7 +1309,8 @@
     "templateCreatedSuccess": "Sjabloon succesvol aangemaakt",
     "notAvailable": "N.v.t.",
     "saveAsTemplate": "Opslaan als sjabloon",
-    "materials": "Materialen"
+    "materials": "Materialen",
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "projectPhases": {
     "addTask": "Taak toevoegen",
@@ -1382,5 +1424,55 @@
     "unknownTask": "Onbekende taak",
     "blocks": "Blokkeert"
   },
-  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien."
+  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projecttaken",
+      "subtitle": "{{count}} taken",
+      "noTasks": "Geen projecttaken om af te drukken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Taak",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "hours": "Uren"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van projecttaken."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "estimatedHours": "Geschatte uren",
+        "wbsCode": "WBS-code",
+        "description": "Beschrijving"
+      },
+      "subtitleSelected": "{{count}} geselecteerde taken"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} geselecteerd",
+    "move": "Verplaatsen",
+    "assign": "Toewijzen",
+    "delete": "Verwijderen",
+    "clear": "Wissen",
+    "tags": "Labels"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Labels toevoegen aan geselecteerde taken",
+      "message": "Voeg een of meer labels toe aan {{count}} geselecteerde taak/taken. Labels die al op een taak staan, worden overgeslagen.",
+      "placeholder": "Typ een label en druk op Enter",
+      "submitting": "Labels toevoegen...",
+      "confirm_one": "Labels toevoegen aan {{count}} taak",
+      "confirm_other": "Labels toevoegen aan {{count}} taken",
+      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
+    }
+  }
 }

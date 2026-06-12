@@ -1,7 +1,7 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { DeletionValidationResult, IUser, IUserWithRoles, IUserRole } from '@alga-psa/types';
+import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
@@ -16,6 +16,12 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions';
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  sanitizeUserForResponse,
+  USER_RESPONSE_FIELD_NAMES,
+  type SafeApiUser
+} from '../../services/userResponseSanitizer';
 
 interface ActionResult {
   success: boolean;
@@ -33,7 +39,7 @@ export type AddUserErrorCode =
   | 'SOLO_PLAN_LIMIT';
 
 type AddUserResult =
-  | { success: true; user: IUser }
+  | { success: true; user: SafeApiUser }
   | { success: false; code: AddUserErrorCode; error: string };
 
 export type UpdateUserErrorCode =
@@ -42,7 +48,7 @@ export type UpdateUserErrorCode =
   | 'REPORTS_TO_CYCLE';
 
 export type UpdateUserResult =
-  | { success: true; user: IUserWithRoles | null }
+  | { success: true; user: SafeApiUser | null }
   | { success: false; code: UpdateUserErrorCode; error: string };
 
 export type RegisterClientUserErrorCode =
@@ -66,6 +72,34 @@ export type RegisterClientUserResult =
 
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '';
+
+function maybeUserActor(currentUser: any) {
+  const userId = currentUser?.user_id;
+  if (typeof userId !== 'string' || !userId) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+async function getSafeUserWithRoles(
+  trx: Knex | Knex.Transaction,
+  userId: string,
+  tenant: string
+): Promise<SafeApiUser | null> {
+  if (!tenant) {
+    throw new Error('Tenant context is required for safe user lookup');
+  }
+
+  const user = await trx('users')
+    .where({ user_id: userId, tenant })
+    .select(USER_RESPONSE_FIELD_NAMES)
+    .first();
+
+  if (!user) {
+    return null;
+  }
+
+  const roles = await User.getUserRoles(trx, userId, tenant);
+  return sanitizeUserForResponse({ ...user, roles });
+}
 
 async function findExistingUserByEmailGlobally(
   email: string,
@@ -142,7 +176,7 @@ export const addUser = withAuth(async (
   try {
     const {knex: db} = await createTenantKnex();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction): Promise<AddUserResult> => {
       if (!await hasPermission(user, 'user', 'create', trx)) {
         throwPermissionError('create user');
       }
@@ -228,6 +262,25 @@ export const addUser = withAuth(async (
           };
         }
 
+        // Appliance license seat limit — Enterprise Edition only. Resolves to a
+        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
+        // licensing concept ships in or runs on Community Edition.
+        const seatLimit = await (async () => {
+          try {
+            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
+            return await checkApplianceLicenseSeatLimit(used);
+          } catch {
+            return null;
+          }
+        })();
+        if (seatLimit) {
+          return {
+            success: false,
+            code: 'LICENSE_LIMIT_REACHED',
+            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license.`,
+          };
+        }
+
       }
 
       const [newUser] = await trx('users')
@@ -242,7 +295,7 @@ export const addUser = withAuth(async (
           user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
           contact_id: userData.contactId || undefined,
           reports_to: userData.reportsTo || undefined
-        }).returning('*');
+        }).returning(USER_RESPONSE_FIELD_NAMES);
 
       await trx('user_roles').insert({
         user_id: newUser.user_id,
@@ -259,8 +312,30 @@ export const addUser = withAuth(async (
       });
 
       revalidatePath('/settings');
-      return { success: true, user: newUser };
+      const safeUser = await getSafeUserWithRoles(trx, newUser.user_id, tenant);
+      return {
+        success: true,
+        user: safeUser || sanitizeUserForResponse({ ...newUser, roles: [] })
+      };
     });
+
+    if (result.success) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'USER_CREATED',
+        payload: {
+          userId: result.user.user_id,
+          userType: result.user.user_type,
+          email: result.user.email,
+          actorUserId: user.user_id,
+          createdAt: occurredAt,
+        },
+        ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+        idempotencyKey: `user_created:${result.user.user_id}:${occurredAt}`,
+      });
+    }
+
+    return result;
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
@@ -472,11 +547,27 @@ export const deleteUser = withAuth(async (
 
     revalidatePath('/settings');
 
-    return {
+    const response = {
       ...result,
       success: result.deleted === true,
       deleted: result.deleted
     };
+
+    if (response.success) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'USER_DELETED',
+        payload: {
+          userId,
+          actorUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+        idempotencyKey: `user_deleted:${userId}:${occurredAt}`,
+      });
+    }
+
+    return response;
   } catch (error) {
     logger.error('Error deleting user:', error);
     return {
@@ -498,7 +589,7 @@ export const updateUser = withAuth(async (
 ): Promise<UpdateUserResult> => {
   try {
     const { knex } = await createTenantKnex();
-    return await withTransaction(knex, async (trx): Promise<UpdateUserResult> => {
+    const result = await withTransaction(knex, async (trx): Promise<UpdateUserResult> => {
       // Permission Check: User can update their own profile OR have user:update permission
       const isOwnProfile = currentUser.user_id === userId;
 
@@ -543,7 +634,10 @@ export const updateUser = withAuth(async (
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await User.getUserWithRoles(trx, userId);
+        const existing = await trx('users')
+          .where({ user_id: userId, tenant: tenant || undefined })
+          .select('email', 'user_type')
+          .first();
         const currentEmail = existing?.email?.toLowerCase();
 
         if (currentEmail !== normalizedEmail) {
@@ -568,9 +662,32 @@ export const updateUser = withAuth(async (
       }
 
       await User.update(trx, userId, normalizedUserData);
-      const updatedUser = await User.getUserWithRoles(trx, userId);
-      return { success: true, user: updatedUser || null };
+      const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
+      return { success: true, user: updatedUser };
     });
+
+    if (result.success && result.user) {
+      const occurredAt = new Date().toISOString();
+      const changedFields = Object.keys(userData).filter(
+        (field) => userData[field as keyof typeof userData] !== undefined
+      );
+
+      await publishWorkflowEvent({
+        eventType: 'USER_UPDATED',
+        payload: {
+          userId,
+          userType: result.user.user_type,
+          email: result.user.email,
+          changedFields,
+          actorUserId: currentUser.user_id,
+          updatedAt: occurredAt,
+        },
+        ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+        idempotencyKey: `user_updated:${userId}:${occurredAt}`,
+      });
+    }
+
+    return result;
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
@@ -609,6 +726,19 @@ export const updateUserRoles = withAuth(async (
         }));
         await trx('user_roles').insert(userRoles);
       }
+    });
+
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'USER_ROLES_UPDATED',
+      payload: {
+        userId,
+        roleIds,
+        actorUserId: currentUser.user_id,
+        updatedAt: occurredAt,
+      },
+      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(currentUser) },
+      idempotencyKey: `user_roles_updated:${userId}:${occurredAt}`,
     });
 
     revalidatePath('/settings');
@@ -722,7 +852,7 @@ export const registerClientUser = withAuth(async (
           is_inactive: false,
           created_at: new Date()
         })
-        .returning('*');
+        .returning(['user_id']);
 
       // Get the default client portal user role (must exist via migrations)
       const clientRole = await trx('roles')
@@ -804,7 +934,7 @@ export const changeOwnPassword = withAuth(async (
 
     // Hash the new password and update
     const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(currentUser.email, hashedPassword);
+    await User.updatePassword(currentUser.user_id, currentUser.tenant, hashedPassword);
 
     // Mark that the user has reset their password
     const {knex} = await createTenantKnex();
@@ -851,7 +981,7 @@ export const adminChangeUserPassword = withAuth(async (
 
     // Hash the new password and update
     const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(targetUser.email, hashedPassword);
+    await User.updatePassword(targetUser.user_id, targetUser.tenant, hashedPassword);
 
     return { success: true };
   } catch (error) {

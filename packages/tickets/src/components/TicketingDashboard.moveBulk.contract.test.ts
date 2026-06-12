@@ -10,17 +10,21 @@ function read(relativePath: string): string {
 
 describe('ticketing dashboard bulk move wiring contract', () => {
   it('T001: shows Move to Board action when tickets are selected', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const dashboard = read('./TicketingDashboard.tsx');
+    const bar = read('./BulkTicketActionBar.tsx');
 
-    expect(source).toContain('{hasSelection && canUpdateTickets && (');
-    expect(source).toContain('id={`${id}-bulk-move-button`}');
-    expect(source).toContain('Move to Board');
+    expect(dashboard).toContain('<BulkTicketActionBar');
+    expect(dashboard).toContain('showMove={canUpdateTickets}');
+    expect(bar).toContain("id: 'move'");
+    expect(bar).toContain("'bulk.actionBar.move'");
   });
 
   it('T002: hides Move to Board action when user cannot update tickets', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const dashboard = read('./TicketingDashboard.tsx');
+    const bar = read('./BulkTicketActionBar.tsx');
 
-    expect(source).toContain('hasSelection && canUpdateTickets && (');
+    expect(dashboard).toContain('showMove={canUpdateTickets}');
+    expect(bar).toContain('if (showMove)');
   });
 
   it('T003: opens a bulk move dialog with destination board and status controls', () => {
@@ -84,10 +88,13 @@ describe('ticketing dashboard bulk move wiring contract', () => {
   });
 
   it('T018: bulk delete behavior remains in place', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const dashboard = read('./TicketingDashboard.tsx');
+    const bar = read('./BulkTicketActionBar.tsx');
 
-    expect(source).toContain('id={`${id}-bulk-delete-button`}');
-    expect(source).toContain('id={`${id}-bulk-delete-dialog`}');
-    expect(source).toContain('setBulkDeleteErrors([]);');
+    // Trigger button now lives on the floating action bar.
+    expect(bar).toContain("id: 'delete'");
+    // Dialog and reset wiring remain on the dashboard.
+    expect(dashboard).toContain('id={`${id}-bulk-delete-dialog`}');
+    expect(dashboard).toContain('setBulkDeleteErrors([]);');
   });
 });

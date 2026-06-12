@@ -196,11 +196,9 @@ async function calculateTaxWithConnection(
   }
 
   if (taxRate.is_composite) {
+    // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
     const components = await knexOrTrx('tax_components')
-      .join('composite_tax_mappings', function joinMappings() {
-        this.on('tax_components.tax_component_id', '=', 'composite_tax_mappings.tax_component_id')
-          .andOn('tax_components.tenant', '=', 'composite_tax_mappings.tenant');
-      })
+      .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
       .where({
         'tax_components.tenant': tenant,
         'composite_tax_mappings.composite_tax_id': taxRate.tax_rate_id,

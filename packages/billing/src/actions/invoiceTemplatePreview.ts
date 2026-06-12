@@ -3,6 +3,7 @@
 
 import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
@@ -52,7 +53,11 @@ type AuthoritativePreviewResult = {
 };
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
-  async (_user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      throw new Error('Permission denied: billing read required');
+    }
+
     const hasWorkspaceNodes =
       Boolean(input?.workspace?.nodesById) &&
       typeof input.workspace.nodesById === 'object' &&

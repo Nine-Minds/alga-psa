@@ -17,20 +17,37 @@ services:
 
   redis-playwright:
     image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-sebastian123}"]
     ports:
       - "${REDIS_PORT:-16379}:6379"
     volumes:
       - playwright-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-sebastian123}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20
+
+  temporal-playwright:
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres-playwright
+      POSTGRES_USER: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
+      POSTGRES_PWD: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
+    ports:
+      - "${PLAYWRIGHT_TEMPORAL_PORT:-17233}:7233"
+    depends_on:
+      postgres-playwright:
+        condition: service_healthy
 
   workflow-worker-playwright:
     build:
       context: .
       dockerfile: services/workflow-worker/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       EDITION: enterprise
       APP_ENV: test
@@ -39,6 +56,8 @@ services:
       WORKFLOW_WORKER_VERBOSE: "true"
       WORKFLOW_WORKER_MODE: v2
       WORKFLOW_RUNTIME_V2_EVENT_CONSUMER_GROUP: workflow-runtime-v2
+      TEMPORAL_ADDRESS: temporal-playwright:7233
+      TEMPORAL_NAMESPACE: default
 
       # DB (internal docker network)
       DB_TYPE: postgres
@@ -53,6 +72,7 @@ services:
       # Redis (internal docker network)
       REDIS_HOST: redis-playwright
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sebastian123}
 
       # App/runtime
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-test-nextauth-secret}
@@ -70,8 +90,40 @@ services:
         condition: service_healthy
       redis-playwright:
         condition: service_healthy
+      temporal-playwright:
+        condition: service_started
     ports:
       - "4000"
+
+  hocuspocus-playwright:
+    build:
+      context: .
+      dockerfile: hocuspocus/Dockerfile
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: redis-playwright
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sebastian123}
+      DB_HOST: postgres-playwright
+      DB_PORT: 5432
+      DB_NAME_HOCUSPOCUS: ${PLAYWRIGHT_DB_NAME:-alga_contract_wizard_test}
+      DB_USER_HOCUSPOCUS: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
+      DB_PASSWORD_HOCUSPOCUS: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
+      HOCUSPOCUS_JWT_SECRET: ${HOCUSPOCUS_JWT_SECRET:-dev-hocuspocus-jwt-secret}
+      EXPOSE_HOCUSPOCUS_PORT: ${PLAYWRIGHT_HOCUSPOCUS_PORT:-1234}
+      PORT: 1234
+    depends_on:
+      postgres-playwright:
+        condition: service_healthy
+      redis-playwright:
+        condition: service_healthy
+    ports:
+      - "${PLAYWRIGHT_HOCUSPOCUS_PORT:-1234}:1234"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:1234/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   playwright-postgres-data:

@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import CreditReconciliationReport from '../models/creditReconciliationReport';
 import { auditLog } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import Invoice from '../models/invoice';
 
 /**
@@ -300,6 +301,7 @@ export async function validateCreditBalanceWithoutCorrection(
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
+// Internal helper — not a direct server action endpoint
 export async function validateCreditTrackingEntries(
     clientId: string,
     providedTrx?: Knex.Transaction
@@ -603,6 +605,7 @@ export async function validateCreditTrackingRemainingAmounts(
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
+// Internal helper — not a direct server action endpoint
 export async function validateAllCreditTracking(
     clientId: string,
     providedTrx?: Knex.Transaction
@@ -788,19 +791,21 @@ export async function runScheduledCreditBalanceValidation(
  * The tenant context is set by the withAuth wrapper.
  *
  * @param reportId The ID of the reconciliation report to resolve
- * @param userId The ID of the user resolving the report
  * @param notes Optional notes about the resolution
  * @param trx Optional transaction object
  * @returns The resolved report
  */
 export const resolveReconciliationReport = withAuth(async (
-    _user,
+    user,
     { tenant },
     reportId: string,
-    userId: string,
     notes?: string,
     trx?: Knex.Transaction
 ): Promise<ICreditReconciliationReport> => {
+    if (!await hasPermission(user as any, 'billing', 'update')) {
+        throw new Error('Permission denied: billing update required');
+    }
+    const userId = user.user_id;
     const { knex } = await createTenantKnex();
 
     const executeWithTransaction = async (transaction: Knex.Transaction) => {
@@ -945,10 +950,9 @@ export const resolveReconciliationReport = withAuth(async (
  * @returns Summary of validation results
  */
 export const validateClientCredit = withAuth(async (
-    _user,
+    user,
     _ctx,
-    clientId: string,
-    userId: string = 'system'
+    clientId: string
 ): Promise<{
     totalClients: number;
     balanceValidCount: number;
@@ -957,9 +961,12 @@ export const validateClientCredit = withAuth(async (
     inconsistentTrackingCount: number;
     errorCount: number;
 }> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        throw new Error('Permission denied: billing read required');
+    }
     if (!clientId) {
         throw new Error('Client ID is required for client-specific validation');
     }
 
-    return await runScheduledCreditBalanceValidation(clientId, userId);
+    return await runScheduledCreditBalanceValidation(clientId, user.user_id);
 });

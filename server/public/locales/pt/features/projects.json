@@ -74,7 +74,7 @@
     "addProject": "Add Project",
     "createFromTemplate": "Create from Template",
     "openMenu": "Open menu",
-    "searchPlaceholder": "Search projects",
+    "searchPlaceholder": "Search projects, tasks, and comments",
     "statusPlaceholder": "Select status",
     "contactPlaceholder": "Filter by contact",
     "managerPlaceholder": "All managers",
@@ -103,6 +103,8 @@
       "created": "Created",
       "projectManager": "Project Manager",
       "tags": "Tags",
+      "priority": "Prioridade",
+      "taskType": "Tipo",
       "actions": "Actions"
     },
     "unknownUser": "Unknown"
@@ -240,7 +242,26 @@
     "dueLabel": "Due",
     "noDueDate": "No due date",
     "hideTags": "Hide tags",
-    "criticalPath": "Critical Path"
+    "criticalPath": "Critical Path",
+    "selectTaskAria": "Select task {{taskName}}",
+    "bulkMoveSuccess": "{{count}} task(s) moved successfully!",
+    "bulkMovePartial": "Moved {{moved}} task(s), {{failed}} failed.",
+    "bulkDeleteSuccess": "{{count}} task(s) deleted successfully!",
+    "bulkDeletePartial": "Deleted {{deleted}} task(s), {{failed}} failed.",
+    "bulkAssignSuccess": "{{count}} task(s) assigned successfully!",
+    "bulkAssignPartial": "Assigned {{success}} task(s), {{failed}} failed.",
+    "bulkAssignTeamSuccess": "{{count}} task(s) assigned to team successfully!",
+    "bulkAssignTeamPartial": "Assigned {{success}} task(s) to team, {{failed}} failed.",
+    "bulkDeleteTitle": "Delete Tasks",
+    "bulkDeleteMessage": "Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.",
+    "bulkTasksMovedSuccess": "{{count}} tasks moved",
+    "bulkTasksMovedToPhase": "{{count}} tasks moved to {{phaseName}}",
+    "moveTasksTitle": "Move Tasks",
+    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Tags adicionadas a {{count}} tarefa",
+    "bulkTagsSuccess_other": "Tags adicionadas a {{count}} tarefas",
+    "bulkTagsPartial": "Não foi possível adicionar tags a algumas tarefas",
+    "bulkTagsFailure": "Não foi possível adicionar tags às tarefas selecionadas"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -415,6 +436,7 @@
     "selectFolderDescription": "Choose where to save this new document"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Detalhes limitados — você não está atribuído a este ticket",
     "title": "Associated Tickets",
     "linkExistingTitle": "Link Existing Ticket",
     "createTicket": "Create Ticket",
@@ -519,7 +541,9 @@
       "tags": "Tags",
       "createdAt": "Created At",
       "updatedAt": "Updated At"
-    }
+    },
+    "exportSelected": "Export {{count}} Selected",
+    "selectedTasksNotice": "Exporting {{count}} selected task{{plural}}."
   },
   "import": {
     "title": "Import Phases & Tasks",
@@ -701,6 +725,7 @@
       "allPriorities": "All Priorities"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Detalhes limitados — você não está atribuído a esta tarefa",
       "title": "Linked Project Tasks",
       "loadFailed": "Failed to load task",
       "phaseNotFound": "Task phase not found",
@@ -709,6 +734,22 @@
       "tasks": "Tasks",
       "badgeCount": "{{count}} Task",
       "badgeCount_other": "{{count}} Tasks"
+    },
+    "bulkMoveTask": {
+      "title": "Move Tasks",
+      "message": "Move {{count}} selected task(s) to a new phase/status:",
+      "confirm": "Move Tasks"
+    },
+    "bulkAssign": {
+      "title": "Assign Tasks",
+      "message": "Assign {{count}} selected task(s) to:",
+      "unassigned": "Not assigned",
+      "assigning": "Assigning...",
+      "confirm": "Assign Tasks",
+      "teamReplaceNotice": "Tasks already assigned to a different team will have that team replaced."
+    },
+    "convertAdHocToTask": {
+      "title": "Converter em tarefa de projeto"
     }
   },
   "filters": {
@@ -1268,7 +1309,8 @@
     "saveAsTemplate": "Save as Template",
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
-    "templateCreatedSuccess": "Template created successfully"
+    "templateCreatedSuccess": "Template created successfully",
+    "shareTooltip": "Imprimir, importar e exportar"
   },
   "comments": {
     "title": "Comments",
@@ -1382,5 +1424,55 @@
     "unknownTask": "Unknown task",
     "blocks": "Blocks"
   },
-  "columnsHidden": "coluna(s) ocultas por espaço limitado. Redimensione o navegador para ver mais."
+  "columnsHidden": "coluna(s) ocultas por espaço limitado. Redimensione o navegador para ver mais.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tarefas do projeto",
+      "subtitle": "{{count}} tarefas",
+      "noTasks": "Nenhuma tarefa do projeto para imprimir",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tarefa",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Responsável",
+        "dueDate": "Data de vencimento",
+        "hours": "Horas"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir as tarefas do projeto."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Atribuído a",
+        "dueDate": "Data de vencimento",
+        "estimatedHours": "Horas estimadas",
+        "wbsCode": "Código EAP",
+        "description": "Descrição"
+      },
+      "subtitleSelected": "{{count}} selected tasks"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} selected",
+    "move": "Move",
+    "assign": "Assign",
+    "delete": "Delete",
+    "clear": "Clear",
+    "tags": "Tags"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Adicionar tags às tarefas selecionadas",
+      "message": "Adicione uma ou mais tags a {{count}} tarefa(s) selecionada(s). As tags que já estão numa tarefa são ignoradas.",
+      "placeholder": "Digite uma tag e pressione Enter",
+      "submitting": "Adicionando tags...",
+      "confirm_one": "Adicionar tags a {{count}} tarefa",
+      "confirm_other": "Adicionar tags a {{count}} tarefas",
+      "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:"
+    }
+  }
 }

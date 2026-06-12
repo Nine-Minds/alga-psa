@@ -1,0 +1,361 @@
+[
+  {
+    "id": "F001",
+    "description": "Add getLatestTeamsConversationReferenceImpl({ tenant, microsoftUserId, conversationType? }) in teamsConversationReferences.ts that selects the newest row by last_activity_at DESC, tenant-scoped, with optional conversation_type filter (default 'personal').",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "prdRefs": [
+      "Data Model / Integration Notes",
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Reader returns a typed result and is null-safe: returns null (never throws) when no matching conversation reference exists, so callers can map to a 'message the bot first' skip reason.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Map PSA user id -> microsoft_user_id by reusing resolveTeamsRecipientLink(tenant, userId).providerAccountId (verified to equal the AAD oid stored as teams_conversation_references.microsoft_user_id). No new mapping helper; export/reuse resolveTeamsRecipientLink and feed its providerAccountId into the F001 reader.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Export the conversation-reference reader, resolver, and their TypeScript record/result types from the microsoft-teams package lib index so server actions can import them.",
+    "implemented": true,
+    "commitGroup": "conversation-reader",
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add sendTeamsTestMessageImpl(input, ctx) server action behind withAuth, gated on the same permission as saveTeamsIntegrationSettingsImpl, returning a structured TeamsTestMessageResult.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Goals",
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Test message resolves Teams availability; when addon is inactive it returns a skipped result (reason 'addon_inactive') and records a skipped delivery row without attempting send.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B",
+      "Non-Goals (Explicit)"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Test message returns skipped ('integration_inactive' or 'capability_disabled') when the integration row is not active or the personal_bot capability is disabled.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Test message returns skipped ('bot_not_configured') when isBotConnectorConfigured() is false, without attempting a Bot Framework token or send.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B",
+      "Risks / Open Questions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Test message resolves the calling admin's Microsoft user linkage; when missing returns skipped ('missing_user_linkage').",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Test message looks up the latest personal conversation reference via the F001 reader; when missing returns skipped ('missing_conversation_reference') with an actionable hint to message the bot first.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Test message builds a synthetic test activity (card + text 'Alga PSA Teams test message') and calls sendBotActivity({ serviceUrl, conversationId, activity }) from the stored conversation reference.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Flow B",
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Test message records a teams_notification_deliveries row for every outcome (skipped/sent/failed) reusing the existing recorder: category='test', destination_type='bot_test', destination_id=microsoft_user_id, idempotency_key includes an attempt nonce so repeated tests each record.",
+    "implemented": true,
+    "commitGroup": "test-message",
+    "prdRefs": [
+      "Data Model / Integration Notes",
+      "Risks / Open Questions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Define TeamsDiagnosticsStep and TeamsDiagnosticsReport types (status: 'pass'|'warn'|'fail'|'skip', id, title, detail, durationMs, data?, error?, plus overallStatus and recommendations: string[]), mirroring Microsoft365DiagnosticsReport.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Data Model / Integration Notes",
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Add runTeamsDiagnosticsImpl(input, ctx) with a runStep(id, title, fn) helper that captures status/duration/error per step and accumulates recommendations, mirroring runMicrosoft365Diagnostics aggregation.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Diagnostics check: addon entitlement active via getTeamsAvailability — fail with an actionable recommendation when addon_required/ce_unavailable.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Diagnostics check: teams_integrations row exists and install_status='active' — fail when missing, warn when present but not active.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Diagnostics check: enabled_capabilities include personal_bot and activity_notifications — warn (with which are missing) otherwise.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Diagnostics check: selected Microsoft profile exists, is not archived, and has a client_secret_ref — fail otherwise.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Diagnostics check: package metadata present and base URL resolvable — fail when no package generated, warn when base URL missing.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Diagnostics check: bot connector credentials configured (isBotConnectorConfigured) — fail with the TEAMS_BOT_APP_* env recommendation when absent.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A",
+      "Risks / Open Questions"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Diagnostics check: the calling admin's Microsoft user linkage present — warn with 'link your Microsoft account' recommendation when missing.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Diagnostics check: a conversation reference exists for the calling admin — warn with 'open the bot and message it once' recommendation when missing.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Diagnostics check: recent delivery health — read most recent success and most recent failure from teams_notification_deliveries (tenant-scoped); warn when the latest attempt failed and surface the error_code/message.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A",
+      "User Value"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Aggregate overallStatus (fail if any fail, else warn if any warn, else pass), dedupe recommendations, and expose runTeamsDiagnostics = withAuth(runTeamsDiagnosticsImpl) gated on the teams settings permission.",
+    "implemented": true,
+    "commitGroup": "diagnostics",
+    "prdRefs": [
+      "Flow A",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Add a 'Diagnostics & Test Message' Card section to TeamsIntegrationSettings.tsx below the existing config/package cards.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Wire a 'Run diagnostics' button that calls runTeamsDiagnostics with loading and error state handling.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Render diagnostics steps as a list, each with a status badge (pass=green, warn=amber, fail=red, skip=grey) plus title and detail text.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Render the aggregated recommendations as a bullet list when the report includes any.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Wire a 'Send test message' button that calls sendTeamsTestMessage with its own loading state.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Render the test-message result: success confirmation on sent; friendly mapped text for each skip reason (including 'missing_conversation_reference' -> open the bot and message it first) and for failures.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "Flow B"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Surface the recent delivery summary (last success / last failure) from the diagnostics report data in the panel.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "Flow A"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Disable the diagnostics and test-message buttons when the addon is missing or the integration is not active, consistent with the existing canPersist gating.",
+    "implemented": true,
+    "commitGroup": "settings-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "Non-Goals (Explicit)"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Add i18n keys for the diagnostics section title/description, the two button labels, and the four status labels, with defaultValue fallbacks.",
+    "implemented": true,
+    "commitGroup": "i18n",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Add i18n keys for each diagnostics check title, each skip/fail reason, and each recommendation string, with defaultValue fallbacks.",
+    "implemented": true,
+    "commitGroup": "i18n",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Ensure the new keys exist in every locale file used by integrations settings, mirroring the existing integrations.teams.settings.* key placement.",
+    "implemented": true,
+    "commitGroup": "i18n",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Export runTeamsDiagnostics and sendTeamsTestMessage from the microsoft-teams package action index, mirroring teamsObservabilityActions.",
+    "implemented": true,
+    "commitGroup": "wiring",
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Re-export/register the two actions where packages/integrations consumes EE Teams actions so TeamsIntegrationSettings can import them through the established boundary.",
+    "implemented": true,
+    "commitGroup": "wiring",
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Rebuild @alga-psa/microsoft-teams (tsup -> dist) so the server resolves the new exports at runtime (per observability-loop F045).",
+    "implemented": true,
+    "commitGroup": "wiring",
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  }
+]

@@ -21,6 +21,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       asset_tag: zOpenApi.string().optional().describe('Partial asset tag match using ILIKE.'),
       name: zOpenApi.string().optional().describe('Partial asset name match using ILIKE.'),
       client_id: zOpenApi.string().uuid().optional().describe('Client UUID from clients.client_id.'),
+      location_id: zOpenApi.string().uuid().optional().describe('Client location UUID from client_locations.location_id.'),
       asset_type: AssetType.optional().describe('Asset type stored in assets.asset_type.'),
       status: zOpenApi.string().optional().describe('Exact asset status match.'),
       location: zOpenApi.string().optional().describe('Partial location match using ILIKE.'),
@@ -38,14 +39,11 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetExportQuery = registry.registerSchema(
     'AssetExportQuery',
     zOpenApi.object({
-      format: zOpenApi.enum(['csv', 'json', 'xlsx']).optional().describe('Export format. csv returns text/csv; json and xlsx currently return the same JSON envelope.'),
-      include_extension_data: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      include_maintenance: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      include_documents: zOpenApi.enum(['true', 'false']).optional().describe('Accepted by validation, but currently ignored by ApiAssetController.export.'),
-      asset_types: zOpenApi.array(AssetType).optional().describe('Accepted by validation as an array, but the controller builds query values with Object.fromEntries and does not apply this filter.'),
-      statuses: zOpenApi.array(zOpenApi.string()).optional().describe('Accepted by validation as an array, but not currently applied.'),
-      client_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Accepted by validation as an array, but not currently applied.'),
-      fields: zOpenApi.array(zOpenApi.string()).optional().describe('Accepted by validation as an array, but not currently used to select export columns.'),
+      format: zOpenApi.enum(['csv', 'json']).optional().describe('Export format. csv (default) returns text/csv as an attachment; json returns the success envelope with the rows in data.'),
+      asset_types: zOpenApi.array(AssetType).optional().describe('Filter to these asset types. Repeat the param or pass a comma-separated list.'),
+      statuses: zOpenApi.array(zOpenApi.string()).optional().describe('Filter to these asset statuses. Repeat the param or pass a comma-separated list.'),
+      client_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Filter to these client UUIDs. Repeat the param or pass a comma-separated list.'),
+      fields: zOpenApi.array(zOpenApi.string()).optional().describe('Restrict exported columns to this set. Repeat the param or pass a comma-separated list.'),
     }),
   );
 
@@ -84,7 +82,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       asset_tag: zOpenApi.string().min(1).max(255).describe('Required tenant-specific asset tag.'),
       name: zOpenApi.string().min(1).max(255).describe('Required asset name.'),
       status: zOpenApi.string().min(1).describe('Required asset status.'),
-      location: zOpenApi.string().optional().describe('Optional asset location.'),
+      location_id: zOpenApi.string().uuid().nullable().optional().describe('Optional client_locations.location_id link. Validated to belong to client_id.'),
+      location: zOpenApi.string().optional().describe('Optional free-text asset location.'),
       serial_number: zOpenApi.string().optional().describe('Optional serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Optional purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Optional warranty end date/time.'),
@@ -100,7 +99,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       asset_tag: zOpenApi.string().min(1).max(255).optional().describe('Tenant-specific asset tag.'),
       name: zOpenApi.string().min(1).max(255).optional().describe('Asset name.'),
       status: zOpenApi.string().min(1).optional().describe('Asset status.'),
-      location: zOpenApi.string().optional().describe('Asset location.'),
+      location_id: zOpenApi.string().uuid().nullable().optional().describe('Client_locations.location_id link. Pass null to clear.'),
+      location: zOpenApi.string().optional().describe('Free-text asset location.'),
       serial_number: zOpenApi.string().optional().describe('Serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Warranty end date/time.'),
@@ -215,6 +215,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       asset_tag: zOpenApi.string().describe('Tenant-specific asset tag.'),
       name: zOpenApi.string().describe('Asset display name.'),
       status: zOpenApi.string().describe('Asset status.'),
+      location_id: zOpenApi.string().uuid().nullable().optional().describe('Client_locations.location_id link, when set.'),
       location: zOpenApi.string().nullable().optional().describe('Asset location, when recorded.'),
       serial_number: zOpenApi.string().nullable().optional().describe('Asset serial number, when recorded.'),
       purchase_date: zOpenApi.string().nullable().optional().describe('Asset purchase date from assets.purchase_date.'),
@@ -651,6 +652,128 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const AssetTicketRow = registry.registerSchema(
+    'AssetTicketRow',
+    zOpenApi.object({
+      ticket_id: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+      ticket_number: zOpenApi.string().describe('Human-readable ticket number from tickets.ticket_number.'),
+      title: zOpenApi.string().nullable().optional().describe('Ticket title.'),
+      status_id: zOpenApi.string().uuid().nullable().optional().describe('Status UUID from tickets.status_id.'),
+      status_name: zOpenApi.string().nullable().optional().describe('Status name from the joined statuses table.'),
+      is_closed: zOpenApi.boolean().nullable().optional().describe('Whether the ticket is closed.'),
+      priority_id: zOpenApi.string().uuid().nullable().optional().describe('Priority UUID from tickets.priority_id.'),
+      assigned_to: zOpenApi.string().uuid().nullable().optional().describe('Assigned user UUID from tickets.assigned_to.'),
+      client_id: zOpenApi.string().uuid().nullable().optional().describe('Client UUID from tickets.client_id.'),
+      board_id: zOpenApi.string().uuid().nullable().optional().describe('Board UUID from tickets.board_id.'),
+      entered_at: zOpenApi.string().nullable().optional().describe('Ticket creation timestamp.'),
+      updated_at: zOpenApi.string().nullable().optional().describe('Ticket last update timestamp.'),
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (e.g. affected, related).'),
+      association_notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      linked_at: zOpenApi.string().nullable().optional().describe('When the asset was linked to the ticket, from asset_associations.created_at.'),
+    }),
+  );
+
+  const AssetTicketListResponse = registry.registerSchema(
+    'AssetTicketListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: zOpenApi.array(AssetTicketRow).describe('Tickets linked to the asset via asset_associations, ordered by ticket updated_at descending. Empty when no associations exist or the asset is not found.'),
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  // Assets linked to a ticket. Returned by GET /api/v1/tickets/{id}/assets,
+  // which responds with the apiMiddleware envelope ({ data } — no `success`).
+  const TicketAssetRow = registry.registerSchema(
+    'TicketAssetRow',
+    AssetResource.extend({
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (e.g. affected, related).'),
+      association_notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      linked_at: zOpenApi.string().nullable().optional().describe('When the asset was linked to the ticket, from asset_associations.created_at.'),
+    }),
+  );
+
+  const TicketAssetListResponse = registry.registerSchema(
+    'TicketAssetListResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(TicketAssetRow).describe('Assets linked to the ticket via asset_associations, ordered by link time descending. Empty when no associations exist or the ticket is not found.'),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  // The asset_associations row created by the link endpoints (returned by both
+  // POST /assets/{id}/tickets and POST /tickets/{id}/assets).
+  const AssetAssociationRow = registry.registerSchema(
+    'AssetAssociationRow',
+    zOpenApi.object({
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID from asset_associations.tenant.'),
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_associations.asset_id.'),
+      entity_id: zOpenApi.string().uuid().describe('Linked entity UUID — the ticket_id, from asset_associations.entity_id.'),
+      entity_type: zOpenApi.literal('ticket').describe("Always 'ticket' for these endpoints."),
+      relationship_type: zOpenApi.string().describe('Association type from asset_associations.relationship_type (defaults to affected).'),
+      notes: zOpenApi.string().nullable().optional().describe('Optional notes from asset_associations.notes.'),
+      created_by: zOpenApi.string().uuid().describe('Creator user UUID from asset_associations.created_by.'),
+      created_at: zOpenApi.string().describe('Link creation timestamp from asset_associations.created_at.'),
+    }),
+  );
+
+  // POST /api/v1/assets/{id}/tickets body.
+  const AssetTicketLinkRequest = registry.registerSchema(
+    'AssetTicketLinkRequest',
+    zOpenApi.object({
+      ticket_id: zOpenApi.string().uuid().describe('Ticket UUID to link to the asset.'),
+      relationship_type: zOpenApi.string().min(1).optional().describe('Optional association type; defaults to affected.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on asset_associations.notes.'),
+    }),
+  );
+
+  // POST /api/v1/tickets/{id}/assets body.
+  const TicketAssetLinkRequest = registry.registerSchema(
+    'TicketAssetLinkRequest',
+    zOpenApi.object({
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID to link to the ticket.'),
+      relationship_type: zOpenApi.string().min(1).optional().describe('Optional association type; defaults to affected.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on asset_associations.notes.'),
+    }),
+  );
+
+  // createApiResponse envelope ({ success, data, meta }) — used by the asset-side POST.
+  const AssetTicketLinkResponse = registry.registerSchema(
+    'AssetTicketLinkResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetAssociationRow.describe('The inserted asset_associations row.'),
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  // apiMiddleware envelope ({ data } — no success) — used by the ticket-side POST.
+  const TicketAssetLinkResponse = registry.registerSchema(
+    'TicketAssetLinkResponse',
+    zOpenApi.object({
+      data: AssetAssociationRow.describe('The inserted asset_associations row.'),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  // DELETE /api/v1/assets/{id}/tickets/{ticketId} params.
+  const AssetTicketLinkParams = registry.registerSchema(
+    'AssetTicketLinkParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Asset UUID from assets.asset_id.'),
+      ticketId: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+    }),
+  );
+
+  // DELETE /api/v1/tickets/{id}/assets/{assetId} params.
+  const TicketAssetLinkParams = registry.registerSchema(
+    'TicketAssetLinkParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Ticket UUID from tickets.ticket_id.'),
+      assetId: zOpenApi.string().uuid().describe('Asset UUID from assets.asset_id.'),
+    }),
+  );
+
   const assetRouteExtensions = {
     'x-tenant-scoped': true,
     'x-request-context-required': true,
@@ -662,7 +785,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets',
     summary: 'List assets',
     description:
-      'Lists assets for the authenticated tenant with pagination, sorting, and asset filters. The controller validates query parameters with assetListQuerySchema, calls requireRequestContext, queries assets filtered by assets.tenant, joins clients for client_name, computes warranty_status, and adds HATEOAS links from asset_id. In the current route wiring, the edge middleware only checks x-api-key presence and the route is not wrapped with withApiKeyAuth or ApiBaseController authentication, so req.context may be absent and produce a 500 INTERNAL_ERROR before the intended tenant-scoped list can run.',
+      'Lists assets for the authenticated tenant with pagination, sorting, and asset filters. The controller validates query parameters with assetListQuerySchema, queries assets filtered by assets.tenant, joins clients for client_name, computes warranty_status, and adds HATEOAS links from asset_id. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated before the handler runs).',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -686,7 +809,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -704,7 +827,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets',
     summary: 'Create asset',
     description:
-      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before creation.',
+      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -732,7 +855,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -750,7 +873,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/bulk-status',
     summary: 'Bulk update asset status',
     description:
-      'Updates the status field for up to 50 assets in the authenticated tenant. The controller validates asset_ids and status with bulkAssetStatusSchema, then calls AssetService.update for each asset_id with { status }. Each update is tenant-scoped by assets.asset_id and assets.tenant and publishes an ASSET_UPDATED event. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before updates.',
+      'Updates the status field for up to 50 assets in the authenticated tenant. The controller validates asset_ids and status with bulkAssetStatusSchema, then calls AssetService.update for each asset_id with { status }. Each update is tenant-scoped by assets.asset_id and assets.tenant and publishes an ASSET_UPDATED event.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -778,7 +901,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -797,7 +920,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/bulk-update',
     summary: 'Bulk update assets',
     description:
-      'Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before updates.',
+      'Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -825,7 +948,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -844,7 +967,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/documents/{associationId}',
     summary: 'Remove asset document association',
     description:
-      'Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+      'Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -864,7 +987,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context or the current 204 JSON response construction issue.',
+        description: 'Unexpected error, including the current 204 JSON response construction issue.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -882,7 +1005,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/export',
     summary: 'Export assets',
     description:
-      'Exports assets for the authenticated tenant. The controller validates assetExportQuerySchema, but currently ignores the validated filters and include flags and calls AssetService.list with default options. When format=csv or omitted, it returns text/csv with Content-Disposition attachment filename=assets.csv. When format=json or format=xlsx, it returns a JSON success envelope; xlsx generation is not implemented. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before export.',
+      'Exports all assets for the authenticated tenant (paginated internally, not capped to the default list page). Optional set filters asset_types, statuses, and client_ids narrow the result; fields restricts the exported columns. format=csv (default) returns text/csv with Content-Disposition attachment filename=assets.csv; format=json returns the success envelope with the rows in data. The route is authenticated and tenant-scoped via withApiKeyRouteAuth.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -890,7 +1013,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     responses: {
       200: {
-        description: 'Asset export returned successfully. For format=csv or omitted, the handler returns text/csv with an attachment filename; for format=json or format=xlsx, the handler currently returns this JSON envelope.',
+        description: 'Asset export returned successfully. For format=csv (or omitted) the handler returns text/csv with an attachment filename; for format=json it returns this JSON envelope.',
         schema: AssetExportJsonResponse,
       },
       400: {
@@ -898,25 +1021,24 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       401: {
-        description: 'x-api-key is missing at middleware.',
+        description: 'x-api-key is missing/invalid.',
         schema: MiddlewareUnauthorizedResponse,
       },
       403: {
-        description: 'Authenticated request context lacks permission to read/export assets when auth wiring is present.',
+        description: 'Caller lacks asset:read.',
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
     extensions: {
       ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
       'x-csv-content-disposition': 'attachment; filename=assets.csv',
-      'x-export-filters-currently-ignored': true,
-      'x-xlsx-generation-implemented': false,
     },
     edition: 'both',
   });
@@ -926,7 +1048,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/maintenance/{scheduleId}',
     summary: 'Delete asset maintenance schedule',
     description:
-      'Deletes a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. The service scopes deletion by schedule_id and context.tenant and performs no existence check, so missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+      'Deletes a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. The service scopes deletion by schedule_id and context.tenant and performs no existence check, so missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -946,7 +1068,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context or the current 204 JSON response construction issue.',
+        description: 'Unexpected error, including the current 204 JSON response construction issue.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -967,7 +1089,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/maintenance/{scheduleId}',
     summary: 'Update asset maintenance schedule',
     description:
-      'Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.',
+      'Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -996,7 +1118,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1015,7 +1137,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/relationships/{relationshipId}',
     summary: 'Delete asset relationship',
     description:
-      'Deletes an asset relationship by asset_relationships.relationship_id for the authenticated tenant. The service hard-deletes rows where relationship_id and context.tenant match, publishes no event, and performs no existence check; missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+      'Deletes an asset relationship by asset_relationships.relationship_id for the authenticated tenant. The service hard-deletes rows where relationship_id and context.tenant match, publishes no event, and performs no existence check; missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1035,7 +1157,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context or the current 204 JSON response construction issue.',
+        description: 'Unexpected error, including the current 204 JSON response construction issue.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1056,7 +1178,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/search',
     summary: 'Search assets',
     description:
-      'Searches tenant assets with a required query term and optional field, asset type, status, client, extension-data, and limit parameters. The service searches assets scoped to context.tenant, joins clients for client_name, and optionally loads asset-type-specific extension data per result. The response is not paginated and includes HATEOAS links for each asset; the top-level search link currently points at /api/v2/assets/search. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before search.',
+      'Searches tenant assets with a required query term and optional field, asset type, status, client, extension-data, and limit parameters. The service searches assets scoped to context.tenant, joins clients for client_name, and optionally loads asset-type-specific extension data per result. The response is not paginated and includes HATEOAS links for each asset; the top-level search link currently points at /api/v2/assets/search.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1080,7 +1202,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1099,7 +1221,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/stats',
     summary: 'Get asset statistics',
     description:
-      'Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before statistics can be calculated.',
+      'Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     responses: {
@@ -1116,7 +1238,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1135,7 +1257,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}',
     summary: 'Get asset details',
     description:
-      'Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+      'Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1159,7 +1281,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1177,7 +1299,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}',
     summary: 'Update asset',
     description:
-      'Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.',
+      'Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1214,7 +1336,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context or null asset result handling in the current route wiring.',
+        description: 'Unexpected error, including null asset result handling.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1236,7 +1358,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}',
     summary: 'Delete asset',
     description:
-      'Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+      'Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1260,7 +1382,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context, generic Asset not found errors, or the current 204 JSON response construction issue.',
+        description: 'Unexpected error, including generic Asset not found errors or the current 204 JSON response construction issue.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1281,7 +1403,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/documents',
     summary: 'List asset document associations',
     description:
-      'Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+      'Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1301,7 +1423,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1320,7 +1442,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/documents',
     summary: 'Associate document with asset',
     description:
-      'Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+      'Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1353,7 +1475,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: ApiErrorEnvelope,
       },
       500: {
-        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
       },
     },
@@ -1375,7 +1497,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/history',
     summary: 'List asset maintenance history',
     description:
-      'Returns all maintenance history rows for the path asset ID in the authenticated tenant, ordered by performed_at descending. The service joins users to add performed_by_user_name and filters asset_maintenance_history by asset_id and context.tenant. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+      'Returns all maintenance history rows for the path asset ID in the authenticated tenant, ordered by performed_at descending. The service joins users to add performed_by_user_name and filters asset_maintenance_history by asset_id and context.tenant. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
@@ -1383,7 +1505,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       200: { description: 'Maintenance history rows returned successfully.', schema: MaintenanceHistoryResponse },
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to read asset history when auth wiring is present.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1401,7 +1523,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'List asset maintenance schedules',
     description:
-      'Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+      'Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
@@ -1409,7 +1531,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       200: { description: 'Maintenance schedules returned successfully.', schema: MaintenanceScheduleListResponse },
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to read asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1426,7 +1548,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'Create asset maintenance schedule',
     description:
-      'Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+      'Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1439,7 +1561,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to create or update asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
       409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1458,7 +1580,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance/record',
     summary: 'Record asset maintenance',
     description:
-      'Inserts an asset_maintenance_history row for the path asset ID in the authenticated tenant. The request body requires maintenance_type, performed_by, and performed_at; schedule_id, duration, cost, notes, parts, and structured maintenance_data are optional. If schedule_id is supplied and a matching tenant schedule exists, the service updates that schedule last_maintenance and next_maintenance. It does not verify asset existence or performed_by before insert, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+      'Inserts an asset_maintenance_history row for the path asset ID in the authenticated tenant. The request body requires maintenance_type, performed_by, and performed_at; schedule_id, duration, cost, notes, parts, and structured maintenance_data are optional. If schedule_id is supplied and a matching tenant schedule exists, the service updates that schedule last_maintenance and next_maintenance. It does not verify asset existence or performed_by before insert, does not set created_by, and publishes no event.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1471,7 +1593,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to update asset maintenance records when auth wiring is present.', schema: ApiErrorEnvelope },
       409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1491,7 +1613,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/relationships',
     summary: 'List asset relationships',
     description:
-      'Returns asset_relationships rows for the path asset ID in the authenticated tenant, joined with the related assets table for display fields. The service filters by asset_relationships.asset_id and context.tenant and joins related assets on matching tenant. It performs no parent asset existence check and does not filter soft-deleted related assets. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+      'Returns asset_relationships rows for the path asset ID in the authenticated tenant, joined with the related assets table for display fields. The service filters by asset_relationships.asset_id and context.tenant and joins related assets on matching tenant. It performs no parent asset existence check and does not filter soft-deleted related assets. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
@@ -1499,7 +1621,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       200: { description: 'Asset relationships returned successfully.', schema: AssetRelationshipListResponse },
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to read asset relationships when auth wiring is present.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1517,7 +1639,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/relationships',
     summary: 'Create asset relationship',
     description:
-      'Creates a relationship row between the path asset ID and related_asset_id for the authenticated tenant. The request body requires related_asset_id and non-empty relationship_type. The service rejects self relationships and duplicate source/related pairs, but currently throws generic Errors for those cases, which surface as 500 rather than 400 or 409. The inserted row is returned without joined related asset details. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+      'Creates a relationship row between the path asset ID and related_asset_id for the authenticated tenant. The request body requires related_asset_id and non-empty relationship_type. The service rejects self relationships and duplicate source/related pairs, but currently throws generic Errors for those cases, which surface as 500 rather than 400 or 409. The inserted row is returned without joined related asset details.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1530,7 +1652,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to update asset relationships when auth wiring is present.', schema: ApiErrorEnvelope },
       409: { description: 'Intended duplicate conflict response; current duplicate check throws a generic Error that may surface as 500.', schema: ApiErrorEnvelope },
-      500: { description: 'Unexpected error, including missing req.context, self-relationship errors, or duplicate relationship errors in the current implementation.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including self-relationship or duplicate-relationship errors in the current implementation.', schema: ApiErrorEnvelope },
     },
     extensions: {
       ...assetRouteExtensions,
@@ -1543,6 +1665,365 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       'x-no-event-published': true,
     },
     edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/tickets',
+    operationId: 'listAssetTickets',
+    summary: 'List tickets linked to an asset',
+    description:
+      'Returns tickets associated with the path asset ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to tickets and statuses. Results include the association relationship_type and linked_at and are ordered by ticket updated_at descending. This mirrors the asset detail UI and the assets.find_associated_tickets workflow action. The route is authenticated and tenant-scoped via withApiKeyRouteAuth (req.context is populated and RLS is active) and enforces BOTH asset:read and ticket:read because the response joins ticket data. It performs no asset existence check, so a valid caller hitting a nonexistent or cross-tenant asset ID gets 200 with an empty array (tenant scoping prevents cross-tenant leakage; this is not an authorization bypass).',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Linked tickets returned successfully. Empty when no associations exist or the asset is not found.', schema: AssetTicketListResponse },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:read or ticket:read.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-rbac-additional-required': 'ticket:read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/tickets/{id}/assets',
+    operationId: 'listTicketAssets',
+    summary: 'List assets linked to a ticket',
+    description:
+      'Returns assets associated with the path ticket ID in the authenticated tenant, read from asset_associations where entity_type is ticket, joined to assets and clients. Each row includes the asset fields plus the association relationship_type, association_notes, and linked_at, ordered by link time descending. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant (RLS active); it enforces ticket:read, a per-ticket authorization-kernel check (assertTicketReadAllowed), AND asset:read because the response exposes asset records. The response uses the apiMiddleware envelope ({ data } with no top-level success field). It performs no asset existence check beyond the ticket authorization, so an authorized caller on a ticket with no linked assets gets 200 with an empty array.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Linked assets returned successfully. Empty when the ticket has no linked assets.', schema: TicketAssetListResponse },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:read (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Ticket not found / not authorized for the caller.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'read',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/tickets',
+    operationId: 'linkTicketToAsset',
+    summary: 'Link a ticket to an asset',
+    description:
+      'Creates an asset_associations row (entity_type=ticket) linking the path asset to the ticket in the request body. This is the same table the asset detail UI, GET /api/v1/assets/{id}/tickets, and GET /api/v1/tickets/{id}/assets read, so the link is immediately visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update (the asset associations are being mutated) plus ticket:read (the ticket is only referenced). Both the asset and the ticket must exist in the tenant (404 otherwise), and a duplicate link returns 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: AssetTicketLinkRequest,
+        description: 'The ticket to link plus optional relationship_type and notes.',
+        required: true,
+      },
+    },
+    responses: {
+      201: { description: 'Ticket linked. Returns the inserted asset_associations row.', schema: AssetTicketLinkResponse },
+      400: { description: 'Request body validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:update or ticket:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset or ticket not found in the tenant.', schema: ApiErrorEnvelope },
+      409: { description: 'Ticket is already linked to this asset.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'ticket:read',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/assets/{id}/tickets/{ticketId}',
+    operationId: 'unlinkTicketFromAsset',
+    summary: 'Unlink a ticket from an asset',
+    description:
+      'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. The route is authenticated and tenant-scoped via withApiKeyRouteAuth and enforces asset:update plus ticket:read. Returns 404 when no such link exists.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetTicketLinkParams },
+    responses: {
+      204: { description: 'Link removed.', emptyBody: true },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset:update or ticket:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset-ticket association not found.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-current-auth-wiring-missing': false,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'ticket:read',
+      'x-idempotent': false,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/tickets/{id}/assets',
+    operationId: 'linkAssetToTicket',
+    summary: 'Link an asset to a ticket',
+    description:
+      'Creates an asset_associations row (entity_type=ticket) linking the asset in the request body to the path ticket. Same table GET /api/v1/tickets/{id}/assets and the asset detail UI read, so the link is visible from both sides. relationship_type defaults to affected. The route is authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; it enforces ticket:update plus a per-ticket authorization-kernel check (assertTicketReadAllowed) AND asset:read (the asset is referenced). The response uses the apiMiddleware envelope ({ data } with no top-level success field). Both the ticket and asset must exist (404 otherwise); a duplicate link returns 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: TicketAssetLinkRequest,
+        description: 'The asset to link plus optional relationship_type and notes.',
+        required: true,
+      },
+    },
+    responses: {
+      201: { description: 'Asset linked. Returns the inserted asset_associations row.', schema: TicketAssetLinkResponse },
+      400: { description: 'Request body validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:update (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Ticket or asset not found in the tenant.', schema: ApiErrorEnvelope },
+      409: { description: 'Asset is already linked to this ticket.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/tickets/{id}/assets/{assetId}',
+    operationId: 'unlinkAssetFromTicket',
+    summary: 'Unlink an asset from a ticket',
+    description:
+      'Deletes the asset_associations row (entity_type=ticket) linking the path asset and ticket for the authenticated tenant. Authenticated and tenant-scoped via ApiBaseController.authenticate + runWithTenant; enforces ticket:update plus the per-ticket authorization check and asset:read. Returns 404 when no such link exists.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketAssetLinkParams },
+    responses: {
+      204: { description: 'Link removed.', emptyBody: true },
+      401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks ticket:update (or per-ticket authorization) or asset:read.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset-ticket association not found.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-request-context-required': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'update',
+      'x-rbac-additional-required': 'asset:read',
+      'x-per-record-authorization': 'assertTicketReadAllowed',
+      'x-idempotent': false,
+    },
+    edition: 'both',
+  });
+
+  // ==========================================================================
+  // Asset sub-resources: notes, RMM actions, software inventory, summary
+  // ==========================================================================
+  const AssetNotesResponse = registry.registerSchema(
+    'AssetNotesResponse',
+    zOpenApi.object({
+      document: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      blockData: zOpenApi.unknown().nullable().optional().describe('Parsed BlockNote JSON, or null when no notes exist.'),
+      lastUpdated: zOpenApi.string().nullable().optional(),
+    }),
+  );
+  const AssetNotesUpdateBody = registry.registerSchema(
+    'AssetNotesUpdateBody',
+    zOpenApi.object({ blockData: zOpenApi.unknown().describe('BlockNote JSON block data to store as the asset notes.') }),
+  );
+  const AssetRmmResponse = registry.registerSchema(
+    'AssetRmmResponse',
+    zOpenApi.object({ data: zOpenApi.record(zOpenApi.unknown()).nullable().describe('Cached RMM device data, or null (always null on Community Edition).') }),
+  );
+  const AssetRmmActionResponse = registry.registerSchema(
+    'AssetRmmActionResponse',
+    zOpenApi.object({
+      success: zOpenApi.boolean(),
+      message: zOpenApi.string(),
+      jobId: zOpenApi.string().optional().describe('Provider job id when the action was queued (EE).'),
+    }),
+  );
+  const AssetRemoteControlResponse = registry.registerSchema(
+    'AssetRemoteControlResponse',
+    zOpenApi.object({
+      url: zOpenApi.string().optional(),
+      type: zOpenApi.string().optional(),
+    }).nullable().describe('Remote-control session URL, or null when unavailable (always null on Community Edition).'),
+  );
+  const AssetRmmScriptBody = registry.registerSchema(
+    'AssetRmmScriptBody',
+    zOpenApi.object({ scriptId: zOpenApi.string().describe('Provider script identifier to run on the device.') }),
+  );
+  const AssetRemoteControlQuery = registry.registerSchema(
+    'AssetRemoteControlQuery',
+    zOpenApi.object({ type: zOpenApi.enum(['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell']).optional().describe('Remote-control protocol (default splashtop).') }),
+  );
+  const AssetSoftwareQuery = registry.registerSchema(
+    'AssetSoftwareQuery',
+    zOpenApi.object({
+      page: zOpenApi.number().int().min(1).optional(),
+      limit: zOpenApi.number().int().min(1).max(200).optional(),
+      category: zOpenApi.string().optional(),
+      software_type: zOpenApi.string().optional(),
+      search: zOpenApi.string().optional(),
+      include_uninstalled: zOpenApi.enum(['true', 'false']).optional(),
+    }),
+  );
+  const AssetSoftwareResponse = registry.registerSchema(
+    'AssetSoftwareResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      summary: zOpenApi.record(zOpenApi.unknown()).optional(),
+      pagination: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+  const AssetSummaryResponse = registry.registerSchema(
+    'AssetSummaryResponse',
+    zOpenApi.object({
+      health_status: zOpenApi.enum(['healthy', 'warning', 'critical', 'unknown']).optional(),
+      health_reason: zOpenApi.string().optional(),
+      security_status: zOpenApi.enum(['secure', 'at_risk', 'critical']).optional(),
+      security_issues: zOpenApi.array(zOpenApi.string()).optional(),
+      warranty_status: zOpenApi.enum(['no_warranty', 'expired', 'expiring_soon', 'active']).optional(),
+      warranty_days_remaining: zOpenApi.number().nullable().optional(),
+      open_tickets_count: zOpenApi.number().optional(),
+    }),
+  );
+
+  const assetSubErrs = {
+    401: { description: 'x-api-key missing/invalid.', schema: MiddlewareUnauthorizedResponse },
+    403: { description: 'Caller lacks the required asset permission.', schema: ApiErrorEnvelope },
+    404: { description: 'Asset not found.', schema: ApiErrorEnvelope },
+    500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+  };
+  const assetExt = (action: string, extra: Record<string, unknown> = {}) => ({
+    'x-tenant-scoped': true,
+    'x-rbac-resource': 'asset',
+    'x-rbac-action': action,
+    ...extra,
+  });
+  // RMM device actions are gated to Enterprise Edition: on Community Edition the
+  // handlers return null / { success:false, message:'…requires Enterprise Edition' }.
+  const EE_RMM = { 'x-edition-feature': 'ee-rmm', 'x-ce-behavior': 'returns null or success:false EE-required message' };
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/notes',
+    summary: 'Get asset notes',
+    description: 'Returns the BlockNote content of the asset notes document, or an empty result when no notes exist.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Asset notes content.', schema: AssetNotesResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/assets/{id}/notes',
+    summary: 'Update asset notes',
+    description: 'Creates or updates the BlockNote notes document linked to the asset. Returns the document id.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, body: { schema: AssetNotesUpdateBody } },
+    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ document_id: zOpenApi.string().uuid() }) }, ...assetSubErrs },
+    extensions: assetExt('update'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/assets/{id}/notes',
+    summary: 'Delete asset notes',
+    description: 'Unlinks the notes document from the asset. Pass delete_document=true to also hard-delete the document and its block content.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, query: zOpenApi.object({ delete_document: zOpenApi.enum(['true', 'false']).optional() }) },
+    responses: { 204: { description: 'Notes unlinked/deleted.', emptyBody: true }, ...assetSubErrs },
+    extensions: assetExt('update'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/rmm',
+    summary: 'Get cached RMM data',
+    description: 'Returns the cached RMM device data synced from the RMM provider. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Cached RMM data (null on CE).', schema: AssetRmmResponse }, ...assetSubErrs },
+    extensions: assetExt('read', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/reboot',
+    summary: 'Reboot device via RMM',
+    description: 'Sends a reboot command to the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Reboot result.', schema: AssetRmmActionResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/refresh',
+    summary: 'Refresh RMM data for device',
+    description: 'Triggers a single-device RMM sync and returns the refreshed data. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Refreshed RMM data (null on CE).', schema: AssetRmmResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/rmm/remote-control',
+    summary: 'Get remote-control session URL',
+    description: 'Generates a remote-control URL for the device using the protocol given by the type query param. Enterprise Edition feature — on Community Edition this returns null.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, query: AssetRemoteControlQuery },
+    responses: { 200: { description: 'Remote-control URL (null on CE).', schema: AssetRemoteControlResponse }, ...assetSubErrs },
+    extensions: assetExt('read', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/assets/{id}/rmm/script',
+    summary: 'Run a script via RMM',
+    description: 'Runs the script identified by scriptId on the RMM-managed device. Enterprise Edition feature — on Community Edition this returns { success:false } with an EE-required message.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, body: { schema: AssetRmmScriptBody } },
+    responses: { 200: { description: 'Script run result.', schema: AssetRmmActionResponse }, ...assetSubErrs },
+    extensions: assetExt('update', EE_RMM), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/software',
+    summary: 'List asset software inventory',
+    description: 'Returns the paginated software inventory for the asset (from the normalized software tables), with filters for category, software_type, search, and include_uninstalled, plus a summary of totals.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams, query: AssetSoftwareQuery },
+    responses: { 200: { description: 'Asset software inventory.', schema: AssetSoftwareResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/assets/{id}/summary',
+    summary: 'Get asset summary metrics',
+    description: 'Returns computed asset metrics: health status/reason, security status/issues, warranty status and days remaining, and open ticket count.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }], request: { params: AssetIdParams },
+    responses: { 200: { description: 'Asset summary metrics.', schema: AssetSummaryResponse }, ...assetSubErrs },
+    extensions: assetExt('read'), edition: 'both',
   });
 
 }

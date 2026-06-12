@@ -440,61 +440,41 @@ export async function runTenantCreationOrchestration(
     workflowState.step = 'failed';
     workflowState.error = error instanceof Error ? error.message : 'Unknown error';
 
-    log.error('Tenant creation workflow failed', {
-      error: workflowState.error,
-      tenantCreated,
-      userCreated,
-    });
-
-    try {
-      if (portalUserCreated && portalUserId) {
-        try {
-          const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
-          log.info('Rolling back portal user', { userId: portalUserId, tenantId: ninemindsTenantId });
-          await activities.rollbackPortalUser(portalUserId, ninemindsTenantId);
-        } catch (portalRollbackError) {
-          log.warn('Failed to rollback portal user (non-critical)', {
-            error: portalRollbackError instanceof Error ? portalRollbackError.message : 'Unknown error',
-          });
+    // Policy: once the customer tenant row has been created, do NOT auto-rollback.
+    //
+    // Auto-rollback on a downstream failure was deleting paying customers'
+    // tenants + Stripe records on recoverable infra blips (e.g. a stale Citus
+    // loopback connection landing in a read-only session). A partial tenant
+    // is recoverable manually — backfilling missing rows is cheap; restoring
+    // a deleted tenant is not. Activities self-heal via
+    // withAdminTransactionRetryReadOnly; anything that gets past that needs
+    // a human to look at it, not a destructive cleanup.
+    //
+    // The rollback activities are still exposed and can be invoked manually
+    // from the Temporal UI if an operator decides cleanup is the right call.
+    if (tenantCreated) {
+      log.error(
+        'Tenant creation workflow failed AFTER tenant row was created — skipping auto-rollback, leaving state intact for manual recovery',
+        {
+          error: workflowState.error,
+          tenantId: workflowState.tenantId,
+          userCreated,
+          adminUserId: workflowState.adminUserId,
+          customerClientId,
+          customerContactId,
+          portalUserCreated,
+          portalUserId,
         }
-      }
-
-      if (customerContactId) {
-        try {
-          log.info('Rolling back customer contact', { contactId: customerContactId });
-          await activities.deleteCustomerContactActivity({ contactId: customerContactId });
-        } catch (customerRollbackError) {
-          log.warn('Failed to rollback customer contact (non-critical)', {
-            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error',
-          });
-        }
-      }
-
-      if (customerClientId) {
-        try {
-          log.info('Rolling back customer client', { clientId: customerClientId });
-          await activities.deleteCustomerClientActivity({ clientId: customerClientId });
-        } catch (customerRollbackError) {
-          log.warn('Failed to rollback customer client (non-critical)', {
-            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error',
-          });
-        }
-      }
-
-      if (userCreated && workflowState.adminUserId && workflowState.tenantId) {
-        log.info('Rolling back user creation', { userId: workflowState.adminUserId });
-        await activities.rollbackUser(workflowState.adminUserId, workflowState.tenantId);
-      }
-
-      if (tenantCreated && workflowState.tenantId) {
-        log.info('Rolling back tenant creation', { tenantId: workflowState.tenantId });
-        await activities.rollbackTenant(workflowState.tenantId);
-      }
-    } catch (rollbackError) {
-      log.error('Rollback failed', {
-        rollbackError: rollbackError instanceof Error ? rollbackError.message : 'Unknown rollback error',
-      });
+      );
+      throw error;
     }
+
+    // Pre-tenant failure: nothing was created in the customer tenant, and
+    // customer-tracking / portal-user steps run only after the tenant exists,
+    // so there is nothing to clean up. Surface the error.
+    log.error('Tenant creation workflow failed before tenant was created — nothing to roll back', {
+      error: workflowState.error,
+    });
 
     throw error;
   }

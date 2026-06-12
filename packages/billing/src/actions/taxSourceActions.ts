@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 /**
  * Client-specific tax source resolution result.
@@ -26,6 +27,9 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ClientTaxSourceInfo> => {
+  if (!await hasPermission(_user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -88,15 +92,37 @@ export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: 
  * Validate that an invoice can be finalized based on its tax source.
  * Returns an error message if finalization should be blocked.
  */
+/**
+ * Machine-readable reason a finalization was blocked. Lets callers (UI) react to a
+ * specific cause without string-matching the human-readable `error` message — which
+ * matters because thrown server-action errors are masked in production, so the UI
+ * relies on this returned shape rather than a caught exception.
+ */
+export type InvoiceFinalizationBlockCode =
+  | 'no_tenant'
+  | 'not_found'
+  | 'already_finalized'
+  | 'pending_external_tax';
+
+export interface InvoiceFinalizationValidation {
+  canFinalize: boolean;
+  code?: InvoiceFinalizationBlockCode;
+  error?: string;
+  warning?: string;
+}
+
 export const validateInvoiceFinalization = withAuth(async (
   _user,
   { tenant },
   invoiceId: string
-): Promise<{ canFinalize: boolean; error?: string; warning?: string }> => {
+): Promise<InvoiceFinalizationValidation> => {
+  if (!await hasPermission(_user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return { canFinalize: false, error: 'No tenant context' };
+    return { canFinalize: false, code: 'no_tenant', error: 'No tenant context' };
   }
 
   const invoice = await knex('invoices')
@@ -105,11 +131,11 @@ export const validateInvoiceFinalization = withAuth(async (
     .first();
 
   if (!invoice) {
-    return { canFinalize: false, error: 'Invoice not found' };
+    return { canFinalize: false, code: 'not_found', error: 'Invoice not found' };
   }
 
   if (invoice.status === 'finalized' || invoice.status === 'paid') {
-    return { canFinalize: false, error: 'Invoice is already finalized' };
+    return { canFinalize: false, code: 'already_finalized', error: 'Invoice is already finalized' };
   }
 
   // Finalization gating is import-state driven; canonical recurring service periods do not
@@ -117,6 +143,7 @@ export const validateInvoiceFinalization = withAuth(async (
   if (getTaxImportState(invoice.tax_source as TaxSource) === 'pending') {
     return {
       canFinalize: false,
+      code: 'pending_external_tax',
       error: 'Cannot finalize invoice with pending external tax. Please import tax from the accounting system first.',
       warning: 'Invoice has external tax delegation enabled but tax has not been imported yet.'
     };
@@ -135,6 +162,9 @@ export const updateInvoiceTaxSource = withAuth(async (
   invoiceId: string,
   newTaxSource: TaxSource
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!await hasPermission(_user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {

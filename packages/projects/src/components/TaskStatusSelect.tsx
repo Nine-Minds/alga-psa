@@ -91,7 +91,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
         id={selectId}
         className={`
           inline-flex items-center justify-between gap-1
-          rounded-md px-2.5 py-1 h-7
+          rounded-md px-2.5 py-1 h-7 max-w-full overflow-hidden
           text-xs font-medium transition-colors
           cursor-pointer
           border-0
@@ -104,7 +104,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
         aria-label={t('taskStatusSelect.ariaLabel', 'Task status')}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <RadixSelect.Value>
+        <RadixSelect.Value className="truncate min-w-0">
           {selectedStatus ? getDisplayName(selectedStatus) : t('taskStatusSelect.selectStatus', 'Select status')}
         </RadixSelect.Value>
         <RadixSelect.Icon>

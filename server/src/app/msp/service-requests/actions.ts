@@ -74,13 +74,14 @@ export const listServiceRequestDefinitionsAction = withAuth(async (
 });
 
 export const listServiceRequestTemplatesAction = withAuth(async (
-  user
+  user,
+  { tenant }
 ): Promise<
   ServiceRequestTemplateOption[]
 > => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
-  return listServiceRequestTemplateOptions();
+  return listServiceRequestTemplateOptions(tenant);
 });
 
 export const getServiceRequestDefinitionEditorDataAction = withAuth(async (

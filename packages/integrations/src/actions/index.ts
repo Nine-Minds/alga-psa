@@ -4,17 +4,27 @@
 
 export {
   getQboItems,
+  getQboAccounts,
+  getQboClasses,
+  getQboDepartments,
   getQboConnectionStatus,
+  saveQboCredentials,
   disconnectQbo,
   getQboTaxCodes,
   getQboTerms,
+  getQboCustomers,
   resetQboCatalogCacheForTenant,
   getTenantQboCredentials,
   type QboConnectionSummary,
   type QboConnectionStatus,
+  type QboCredentialStatus,
   type QboItem,
   type QboTaxCode,
-  type QboTerm
+  type QboTerm,
+  type QboCustomer,
+  type QboAccount,
+  type QboClass,
+  type QboDepartment
 } from './qboActions';
 export {
   getCalendarProviders,
@@ -125,7 +135,11 @@ export {
 } from './integrations/mspSsoDomainActions';
 export {
   getTeamsIntegrationStatus,
+  runTeamsDiagnostics,
+  sendTeamsTestMessage,
   saveTeamsIntegrationSettings,
+  type TeamsDiagnosticsReport,
+  type TeamsTestMessageResult,
 } from './integrations/teamsActions';
 export {
   getTeamsAppPackageStatus,

@@ -900,15 +900,108 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "Proces połączenia zakończony.",
-        "errorDetail": "Błąd: {{error}}",
-        "errored": "Proces połączenia zakończył się błędem.",
-        "failed": "Nie udało się połączyć z QuickBooks Online.",
-        "realmId": "Identyfikator Realm: {{realmId}}",
-        "returnButton": "Powrót do ustawień QuickBooks",
-        "success": "Pomyślnie połączono z QuickBooks Online!",
-        "title": "Status połączenia z QuickBooks"
+      "live": {
+        "defaultCompany": "Połączona firma QuickBooks"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Połącz QuickBooks",
+          "disconnect": "Rozłącz QuickBooks",
+          "disconnecting": "Rozłączanie…",
+          "reconnect": "Połącz ponownie QuickBooks",
+          "refresh": "Odśwież",
+          "saveCredentials": "Zapisz poświadczenia QuickBooks",
+          "saving": "Zapisywanie…"
+        },
+        "badges": {
+          "connectionExpired": "Połączenie wymaga uwagi",
+          "credentialsReady": "Poświadczenia gotowe",
+          "credentialsRequired": "Wymagane poświadczenia",
+          "defaultConnected": "Połączono firmę",
+          "noCompany": "Nie połączono żadnej firmy"
+        },
+        "callback": {
+          "accessDenied": "Dostęp do QuickBooks został odmówiony przed ukończeniem połączenia.",
+          "configMissing": "Nie można uruchomić QuickBooks OAuth, ponieważ Client ID i Client Secret nie zostały w pełni skonfigurowane.",
+          "generic": "QuickBooks zwróciło błąd OAuth: {{code}}",
+          "invalidState": "Stan OAuth QuickBooks był nieprawidłowy lub wygasł. Rozpocznij przepływ łączenia ponownie.",
+          "missingParams": "W wywołaniu zwrotnym QuickBooks brakowało wymaganych parametrów. Rozpocznij przepływ łączenia ponownie.",
+          "oauthFailed": "Wywołanie zwrotne OAuth QuickBooks nie powiodło się. Spróbuj ponownie się połączyć. Jeśli problem nadal występuje, sprawdź swój redirect URI i zakresy.",
+          "tokenExchangeFailed": "Intuit nie zwróciło oczekiwanych tokenów. Spróbuj ponownie się połączyć."
+        },
+        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdPlaceholder": "Wklej Client ID swojej aplikacji Intuit",
+        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretPlaceholder": "Wklej Client Secret swojej aplikacji Intuit",
+        "connectSuccess": "QuickBooks połączone pomyślnie. Połączona firma jest teraz domyślnym kontekstem QuickBooks na żywo.",
+        "connection": {
+          "defaultCompany": "Połączona firma",
+          "description": "Uruchom OAuth dopiero po skonfigurowaniu poświadczeń aplikacji QuickBooks. Rozłączenie usuwa zapisane tokeny dostępu QuickBooks, ale zachowuje poświadczenia aplikacji należącej do tenanta.",
+          "notConnected": "Nie połączono jeszcze żadnej firmy QuickBooks. Zapisz poświadczenia, a następnie kliknij Połącz QuickBooks.",
+          "realmId": "Realm ID: {{id}}",
+          "title": "Połączenie QuickBooks na żywo",
+          "unknown": "nieznany"
+        },
+        "credentialsSaved": "Zapisano poświadczenia QuickBooks. Można teraz rozpocząć przepływ OAuth QuickBooks.",
+        "csvAvailableMiddle": "w tej samej sekcji Księgowość i zarządzaj eksportami z",
+        "csvAvailablePrefix": "Jeśli wolisz ręczny przepływ, nadal używaj",
+        "csvAvailableTitle": "QuickBooks CSV pozostaje dostępne",
+        "description": "Skonfiguruj poświadczenia OAuth QuickBooks, połącz swoją firmę QuickBooks i zachowaj QuickBooks na żywo obok ręcznego przepływu QuickBooks CSV.",
+        "disconnectSuccess": "Zapisane połączenie QuickBooks zostało usunięte. Poświadczenia aplikacji QuickBooks należące do tenanta zostały zachowane.",
+        "environment": "Środowisko Intuit",
+        "environmentProduction": "Produkcja",
+        "environmentSandbox": "Sandbox",
+        "errors": {
+          "disconnect": "Nie udało się rozłączyć QuickBooks.",
+          "load": "Nie udało się załadować ustawień QuickBooks.",
+          "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
+        },
+        "howItWorksDescription": "Zapisz tutaj poświadczenia aplikacji QuickBooks, ukończ przepływ OAuth Intuit, a Alga PSA użyje połączonej firmy QuickBooks jako domyślnego kontekstu na żywo dla eksportów i mapowań.",
+        "howItWorksTitle": "Jak działa QuickBooks na żywo w tej wersji",
+        "loading": "Ładowanie ustawień QuickBooks…",
+        "mapping": {
+          "alert": "Pozycje QuickBooks, kody podatkowe i warunki są ładowane z połączonej firmy, aby eksporty na żywo mogły nadal używać pierwszego zapisanego połączenia QuickBooks w v1.",
+          "descriptionPrefix": "Skonfiguruj mapowania QuickBooks na żywo dla połączonej firmy. Te mapowania są ograniczone do",
+          "placeholderAlert": "Menedżer mapowań staje się dostępny po połączeniu pierwszej firmy QuickBooks i ustawieniu jej jako domyślnego kontekstu QuickBooks na żywo.",
+          "placeholderDescription": "Połącz firmę QuickBooks przed skonfigurowaniem mapowań pozycji i podatków QuickBooks na żywo.",
+          "title": "Mapowanie i konfiguracja QuickBooks na żywo"
+        },
+        "noClientId": "Dla tego tenanta nie zapisano jeszcze żadnego Client ID.",
+        "noClientSecret": "Dla tego tenanta nie zapisano jeszcze żadnego Client Secret.",
+        "quickbooksCsv": "QuickBooks CSV",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Wymagane zakresy",
+        "storedClientId": "Zapisany Client ID: {{value}}",
+        "storedClientSecret": "Zapisany Client Secret: {{value}}",
+        "tenantOauthDescription": "Wklej poświadczenia aplikacji Intuit zarejestrowane dla tego tenanta lub pozostaw puste, aby użyć QuickBooks na poziomie aplikacji, jeśli jest skonfigurowane. Wartości secret nigdy nie są zwracane do przeglądarki po zapisaniu.",
+        "tenantOauthTitle": "Aplikacja OAuth należąca do tenanta",
+        "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Stan synchronizacji",
+        "healthCardDescription": "Stan i ustawienia synchronizacji księgowej QuickBooks. Uruchamiana co 15 minut.",
+        "lastCycleTitle": "Ostatni cykl synchronizacji",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Zakończono",
+        "lastCycleStats": "Wyniki",
+        "statOpsProcessed": "Przetworzone operacje: {{count}}",
+        "statDriftFound": "Rozbieżności: {{count}}",
+        "statPaymentsApplied": "Zastosowane płatności: {{count}}",
+        "noLastCycle": "Nie uruchomiono jeszcze żadnego cyklu synchronizacji.",
+        "nextRunHint": "Uruchamiana automatycznie co 15 minut, gdy automatyczna synchronizacja jest włączona.",
+        "pendingOps": "Operacje oczekujące",
+        "erroredOps": "Operacje z błędami",
+        "driftCount": "Rozbieżności",
+        "openExceptions": "Otwarte wyjątki",
+        "refreshTokenExpiry": "Token QuickBooks wygasa {{date}}",
+        "refreshTokenExpired": "Token QuickBooks wygasł — połącz ponownie, aby wznowić synchronizację.",
+        "autoSyncLabel": "Automatyczna synchronizacja włączona",
+        "syncNowButton": "Synchronizuj teraz",
+        "syncNowRunning": "Synchronizowanie…",
+        "syncNowSuccess": "Synchronizacja zakończona pomyślnie.",
+        "syncNowSkipped": "Pominięto synchronizację: {{reason}}",
+        "syncNowError": "Synchronizacja nie powiodła się: {{error}}",
+        "viewExceptionsLink": "Zobacz wyjątki"
       }
     },
     "rmm": {
@@ -1466,7 +1559,88 @@
           "packageGenerated": "Wygenerowano pakiet aplikacji Teams.",
           "saved": "Zapisano konfigurację Teams."
         },
-        "title": "Microsoft Teams"
+        "title": "Microsoft Teams",
+        "diagnostics": {
+          "title": "Diagnostyka i wiadomość testowa",
+          "description": "Zweryfikuj konfigurację Teams i wyślij proaktywną wiadomość testową do swojej konwersacji z botem Teams.",
+          "run": "Uruchom diagnostykę",
+          "running": "Trwa uruchamianie...",
+          "sendTest": "Wyślij wiadomość testową",
+          "sending": "Trwa wysyłanie...",
+          "disabled": "Diagnostyka i wiadomości testowe są dostępne po aktywacji integracji Teams.",
+          "completedAt": "Ukończono {{time}}",
+          "lastSuccess": "Ostatni sukces",
+          "lastFailure": "Ostatni błąd",
+          "noneRecorded": "Brak zarejestrowanych",
+          "recommendations": "Zalecenia",
+          "status": {
+            "pass": "Powodzenie",
+            "warn": "Ostrzeżenie",
+            "fail": "Niepowodzenie",
+            "skip": "Pominięto"
+          },
+          "errors": {
+            "run": "Nie udało się uruchomić diagnostyki Teams",
+            "testMessage": "Nie udało się wysłać wiadomości testowej Teams"
+          },
+          "test": {
+            "sent": "Wiadomość testowa Teams wysłana.",
+            "failed": "Wiadomość testowa Teams nie powiodła się.",
+            "addonInactive": "Dodatek Teams nie jest aktywny dla tego dzierżawcy.",
+            "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
+            "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
+            "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
+            "missingUserLinkage": "Połącz swoje konto Microsoft przed wysłaniem wiadomości testowej Teams.",
+            "missingConversationReference": "Otwórz bota Alga PSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
+            "skipped": "Wiadomość testowa Teams została pominięta."
+          },
+          "steps": {
+            "addonEntitlement": "Uprawnienie do dodatku Teams",
+            "integrationStatus": "Stan integracji Teams",
+            "capabilities": "Możliwości Teams",
+            "microsoftProfile": "Gotowość profilu Microsoft",
+            "recordingPermissions": "Uprawnienia Teams do nagrywania i transkrypcji",
+            "packageMetadata": "Metadane pakietu Teams",
+            "botConnector": "Poświadczenia łącznika bota",
+            "userLinkage": "Powiązanie konta Microsoft administratora",
+            "conversationReference": "Odwołanie do konwersacji Teams administratora",
+            "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
+          },
+          "recommendation": {
+            "addon": "Włącz dodatek Microsoft Teams dla tego dzierżawcy.",
+            "activate": "Aktywuj integrację Teams w ustawieniach.",
+            "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
+            "profile": "Wybierz gotowy profil Microsoft dla Teams.",
+            "activeProfile": "Wybierz aktywny profil Microsoft dla Teams.",
+            "profileCredentials": "Uzupełnij poświadczenia profilu Microsoft przed aktywacją Teams.",
+            "meetingOrganizer": "Skonfiguruj domyślnego organizatora spotkań Teams w ustawieniach Teams.",
+            "meetingOrganizerObjectId": "Zapisz ponownie domyślnego organizatora spotkań Teams, aby Alga PSA mogła rozpoznać jego identyfikator obiektu Microsoft Entra.",
+            "package": "Wygeneruj pakiet aplikacji Teams przed uruchomieniem walidacji kompleksowej.",
+            "baseUrl": "Wygeneruj ponownie pakiet Teams z osiągalnym adresem URL bazowym.",
+            "botEnv": "Skonfiguruj TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID i TEAMS_BOT_APP_PASSWORD.",
+            "userLinkage": "Połącz swoje konto Microsoft w ustawieniach profilu.",
+            "conversationReference": "Otwórz bota Alga PSA w Teams i wyślij mu najpierw dowolną wiadomość, a następnie spróbuj ponownie.",
+            "deliveryFailure": "Przejrzyj najnowszy błąd dostarczania Teams i spróbuj ponownie po usunięciu przyczyny."
+          }
+        },
+        "meetings": {
+          "title": "Spotkania online i nagrania",
+          "description": "Użyj jednego konta usługi Microsoft do organizowania spotkań Teams i kontrolowania sposobu przechowywania nagrań.",
+          "organizer": {
+            "label": "Domyślny UPN organizatora spotkania",
+            "placeholder": "scheduler@acme.com",
+            "help": "Zapisanie rozwiązuje i przechowuje identyfikator obiektu Microsoft Entra używany do wywołań spotkań Graph.",
+            "resolved": "Rozwiązany identyfikator obiektu: {{objectId}}"
+          },
+          "downloadRecordings": {
+            "label": "Pobieraj nagrania do magazynu wewnętrznego",
+            "description": "Gdy włączone, obiekty blob nagrań są kopiowane do magazynu dzierżawcy oprócz uwierzytelnionego serwera proxy Graph."
+          },
+          "exposeRecordingsInPortal": {
+            "label": "Pokaż nagrania i transkrypcje w portalu klienta",
+            "description": "Domyślnie wyłączone; użytkownicy MSP nadal mogą przeglądać artefakty ze szczegółów interakcji i spotkań."
+          }
+        }
       }
     },
     "xero": {

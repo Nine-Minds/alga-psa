@@ -1,0 +1,127 @@
+'use server';
+
+import { withAuth } from '@alga-psa/auth';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { hasPermissionAsync } from '../lib/authHelpers';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface ClientNameAlias {
+  id: string;
+  client_id: string;
+  alias: string;
+  created_at?: string;
+}
+
+function normalizeAliasInput(raw: string): string {
+  return String(raw ?? '').replace(/\s+/g, ' ').trim();
+}
+
+async function findAliasOwner(
+  trx: Knex.Transaction,
+  tenant: string,
+  alias: string
+): Promise<{ client_id: string; client_name: string } | null> {
+  const row = await trx('client_name_aliases as a')
+    .leftJoin('clients as c', function () {
+      this.on('a.client_id', '=', 'c.client_id').andOn('a.tenant', '=', 'c.tenant');
+    })
+    .select('a.client_id', 'c.client_name')
+    .where('a.tenant', tenant)
+    .andWhereRaw('lower(a.alias) = ?', [alias.toLowerCase()])
+    .first();
+
+  const clientId = (row as any)?.client_id;
+  const clientName = (row as any)?.client_name;
+  if (typeof clientId !== 'string' || !clientId) return null;
+  return {
+    client_id: clientId,
+    client_name: typeof clientName === 'string' && clientName ? clientName : clientId,
+  };
+}
+
+export const listClientNameAliases = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<ClientNameAlias[]> => {
+  if (!await hasPermissionAsync(user, 'client', 'read')) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const rows = await trx('client_name_aliases')
+      .select('id', 'client_id', 'alias', 'created_at')
+      .where({ tenant, client_id: clientId })
+      .orderBy('alias', 'asc');
+    return rows as any;
+  });
+});
+
+export const addClientNameAlias = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  rawAlias: string
+): Promise<ClientNameAlias> => {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update clients');
+  }
+
+  const alias = normalizeAliasInput(rawAlias);
+  if (!alias) {
+    throw new Error('Alias is required');
+  }
+  if (alias.length > 255) {
+    throw new Error('Alias is too long');
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    try {
+      const id = uuidv4();
+      const now = new Date().toISOString();
+      const [row] = await trx('client_name_aliases')
+        .insert({
+          tenant,
+          id,
+          client_id: clientId,
+          alias,
+          created_at: now,
+          updated_at: now,
+        })
+        .returning(['id', 'client_id', 'alias', 'created_at']);
+      return row as any;
+    } catch (e: any) {
+      // Uniqueness (tenant, lower(alias))
+      if (String(e?.code ?? '') === '23505') {
+        const owner = await findAliasOwner(trx, tenant, alias);
+        if (owner && owner.client_id !== clientId) {
+          throw new Error(`Alias "${alias}" is already assigned to client "${owner.client_name}".`);
+        }
+        throw new Error(`Alias "${alias}" is already assigned to a client.`);
+      }
+      throw e;
+    }
+  });
+});
+
+export const removeClientNameAlias = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  aliasId: string
+): Promise<{ success: true }> => {
+  if (!await hasPermissionAsync(user, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update clients');
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    await trx('client_name_aliases')
+      .where({ tenant, client_id: clientId, id: aliasId })
+      .delete();
+    return { success: true as const };
+  });
+});

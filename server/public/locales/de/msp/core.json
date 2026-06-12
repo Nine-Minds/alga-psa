@@ -36,7 +36,8 @@
       "invoiceLayouts": "Rechnungslayouts",
       "billingCycles": "Abrechnungszyklen",
       "servicePeriods": "Leistungszeiträume",
-      "serviceCatalog": "Servicekatalog",
+      "serviceTypes": "Servicetypen",
+      "serviceCatalog": "Dienste",
       "products": "Produkte",
       "taxRates": "Steuersätze",
       "usageTracking": "Nutzungsverfolgung",
@@ -165,7 +166,12 @@
       "system": "System",
       "selected": "Ausgewahlt"
     },
-    "openUserMenu": "Benutzermenü öffnen"
+    "openUserMenu": "Benutzermenü öffnen",
+    "quickAsk": {
+      "ariaLabel": "KI zu diesem Workflow fragen",
+      "title": "KI fragen",
+      "shortcutHint": "Quick Ask für Workflow-Hilfe öffnen"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
@@ -230,5 +236,96 @@
         "loadFailed": "Benachrichtigungen konnten nicht geladen werden"
       }
     }
+  },
+  "search": {
+    "placeholder": "Search clients, tickets, documents...",
+    "shortcutHint": "Cmd/Ctrl+K",
+    "loading": "Searching...",
+    "pageTitle": "Search",
+    "helperText": "Search across the workspace.",
+    "resultSummary": "{{count}} results for \"{{query}}\"",
+    "resultsRegionLabel": "Search results",
+    "filtersLabel": "Search filters",
+    "sortLabel": "Sort results",
+    "paginationLabel": "Search pagination",
+    "seeAllResults": "See all {{count}} results",
+    "noResults": "No results for \"{{query}}\"",
+    "emptyBroadenQuery": "Try a broader query.",
+    "emptyRemoveFilter": "Try removing the type filter.",
+    "error": "Search failed. Try again.",
+    "filters": {
+      "all": "All",
+      "client": "Clients",
+      "contact": "Contacts",
+      "user": "Team members",
+      "ticket": "Tickets",
+      "ticket_comment": "Ticket comments",
+      "project": "Projects",
+      "project_phase": "Project phases",
+      "project_task": "Project tasks",
+      "project_task_comment": "Project task comments",
+      "asset": "Assets",
+      "invoice": "Invoices",
+      "invoice_item": "Invoice line items",
+      "invoice_annotation": "Invoice annotations",
+      "contract": "Contracts",
+      "client_contract": "Client contracts",
+      "document": "Documents",
+      "kb_article": "KB articles",
+      "service_catalog": "Service catalog",
+      "service_request_submission": "Service requests",
+      "service_request_definition": "Service request definitions",
+      "workflow_task": "Workflow tasks",
+      "interaction": "Interactions",
+      "schedule_entry": "Schedule entries",
+      "time_entry": "Time entries",
+      "board": "Boards",
+      "category": "Categories",
+      "tag": "Tags",
+      "status": "Status"
+    },
+    "groups": {
+      "client": "Clients",
+      "contact": "Contacts",
+      "user": "Team members",
+      "ticket": "Tickets",
+      "ticket_comment": "Ticket comments",
+      "project": "Projects",
+      "project_phase": "Project phases",
+      "project_task": "Project tasks",
+      "project_task_comment": "Project task comments",
+      "asset": "Assets",
+      "invoice": "Invoices",
+      "invoice_item": "Invoice line items",
+      "invoice_annotation": "Invoice annotations",
+      "contract": "Contracts",
+      "client_contract": "Client contracts",
+      "document": "Documents",
+      "kb_article": "KB articles",
+      "service_catalog": "Service catalog",
+      "service_request_submission": "Service requests",
+      "service_request_definition": "Service request definitions",
+      "workflow_task": "Workflow tasks",
+      "interaction": "Interactions",
+      "schedule_entry": "Schedule entries",
+      "time_entry": "Time entries",
+      "board": "Boards",
+      "category": "Categories",
+      "tag": "Tags",
+      "status": "Status"
+    },
+    "sort": {
+      "relevance": "Relevance",
+      "recent": "Recent"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "onboardingRedirect": {
+    "title": "Weiter zur Einrichtung",
+    "description": "Ihr Arbeitsbereich muss kurz eingerichtet werden, bevor Sie das Dashboard verwenden können.",
+    "action": "Mit der Einrichtung fortfahren"
   }
 }

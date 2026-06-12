@@ -25,7 +25,8 @@
     "teamManagement": "55555",
     "loadingTeam": "55555",
     "loadingExperimental": "55555",
-    "loadingInteractions": "55555"
+    "loadingInteractions": "55555",
+    "keyboardShortcuts": "55555"
   },
   "unsavedChanges": {
     "title": "55555",
@@ -90,10 +91,6 @@
         "name": "55555",
         "description": "55555",
         "restriction": "55555"
-      },
-      "workflowAutomation": {
-        "name": "55555",
-        "description": "55555"
       }
     },
     "actions": {
@@ -294,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "55555",
-        "userUpdated": "55555"
+        "userUpdated": "55555",
+        "roleAdded": "55555",
+        "roleRemoved": "55555"
       },
       "error": {
         "userNotFound": "55555",
@@ -308,7 +307,8 @@
         "reportsToCycle": "55555",
         "passwordTooShort": "55555",
         "passwordChangeFailed": "55555",
-        "passwordChangeError": "55555"
+        "passwordChangeError": "55555",
+        "permissionDenied": "55555"
       }
     },
     "loading": "55555"
@@ -382,7 +382,8 @@
       "boards": "55555",
       "statuses": "55555",
       "priorities": "55555",
-      "categories": "55555"
+      "categories": "55555",
+      "checklistTemplates": "55555"
     },
     "numbering": {
       "title": "55555",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "55555",
           "updateDefaultFailed": "55555"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "55555",
+        "enabledHelp": "55555",
+        "requireResolutionCommentLabel": "55555",
+        "requireResolutionCommentHelp": "55555",
+        "requireTimeEntryLabel": "55555",
+        "requireTimeEntryHelp": "55555",
+        "requireChecklistCompleteLabel": "55555",
+        "requireChecklistCompleteHelp": "55555",
+        "requireNoOpenChildrenLabel": "55555",
+        "requireNoOpenChildrenHelp": "55555",
+        "requiredFieldsLabel": "55555",
+        "requiredFieldsHelp": "55555",
+        "autoCloseLabel": "55555",
+        "autoCloseHelp": "55555",
+        "addAutoCloseRule": "55555",
+        "triggerStatusLabel": "55555",
+        "triggerStatusPlaceholder": "55555",
+        "targetStatusLabel": "55555",
+        "targetStatusPlaceholder": "55555",
+        "inactivityDaysLabel": "55555",
+        "warningDaysLabel": "55555",
+        "warningDaysPlaceholder": "55555",
+        "ruleEnabledLabel": "55555",
+        "removeRule": "55555",
+        "messages": {
+          "fetchFailed": "55555",
+          "autoCloseStatusRequired": "55555",
+          "autoCloseDaysInvalid": "55555",
+          "autoCloseWarningInvalid": "55555"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "55555"
+      }
+    },
+    "checklistTemplates": {
+      "title": "55555",
+      "alert": "55555",
+      "table": {
+        "name": "55555",
+        "description": "55555",
+        "items": "55555",
+        "status": "55555",
+        "actions": "55555"
+      },
+      "statusLabels": {
+        "active": "55555",
+        "inactive": "55555"
+      },
+      "actions": {
+        "addTemplate": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "close": "55555",
+        "create": "55555",
+        "update": "55555",
+        "up": "55555",
+        "down": "55555",
+        "remove": "55555",
+        "addItem": "55555",
+        "addRule": "55555"
+      },
+      "fields": {
+        "name": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "description": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "active": "55555",
+        "items": {
+          "label": "55555",
+          "help": "55555",
+          "itemName": "55555",
+          "required": "55555",
+          "newItemLabel": "55555",
+          "newItemPlaceholder": "55555"
+        },
+        "rules": {
+          "label": "55555",
+          "help": "55555",
+          "empty": "55555",
+          "board": "55555",
+          "category": "55555",
+          "subcategory": "55555",
+          "priority": "55555",
+          "any": "55555"
+        }
+      },
+      "dialog": {
+        "addTemplate": "55555",
+        "editTemplate": "55555",
+        "createFirstHelp": "55555",
+        "deleteTitle": "55555",
+        "deleteMessage": "55555 {{name}} 55555"
+      },
+      "messages": {
+        "success": {
+          "created": "55555",
+          "updated": "55555",
+          "deleted": "55555"
+        },
+        "error": {
+          "fetchFailed": "55555",
+          "fetchRulesFailed": "55555",
+          "nameRequired": "55555",
+          "saveFailed": "55555",
+          "deleteFailed": "55555",
+          "updateStatusFailed": "55555",
+          "itemSaveFailed": "55555",
+          "ruleSaveFailed": "55555"
+        }
       }
     }
   },

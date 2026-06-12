@@ -24,6 +24,7 @@ import {
   PrinterAssetData
 } from '../schemas/asset';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
 
 export class AssetService extends BaseService<any> {
   constructor() {
@@ -59,6 +60,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.client_id) {
         query.where(`${this.tableName}.client_id`, filters.client_id);
+      }
+      if (filters.location_id) {
+        query.where(`${this.tableName}.location_id`, filters.location_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -134,6 +138,9 @@ export class AssetService extends BaseService<any> {
       // Apply the same filters to count query
       if (filters.client_id) {
         countQuery.where(`${this.tableName}.client_id`, filters.client_id);
+      }
+      if (filters.location_id) {
+        countQuery.where(`${this.tableName}.location_id`, filters.location_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -230,6 +237,11 @@ export class AssetService extends BaseService<any> {
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
     const { extension_data, ...assetData } = data;
+    const knex = await this.getDbForContext(context);
+
+    if (assetData.location_id) {
+      await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
+    }
     
     const assetRecord = {
       ...assetData,
@@ -238,7 +250,6 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const knex = await this.getDbForContext(context);
     const [asset] = await knex(this.tableName)
       .insert(assetRecord)
       .returning('*');
@@ -263,12 +274,43 @@ export class AssetService extends BaseService<any> {
   }
 
   async update(id: string, data: UpdateAssetData, context: ServiceContext): Promise<any> {
-    const updateData = {
-      ...data,
-      updated_at: new Date()
-    };
-
     const knex = await this.getDbForContext(context);
+    const updateData: Record<string, unknown> = { ...data };
+
+    const needsCurrent =
+      data.location_id !== undefined ||
+      data.client_id !== undefined;
+
+    const current = needsCurrent
+      ? await knex(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .first('client_id', 'location_id')
+      : null;
+
+    if (needsCurrent && !current) {
+      throw new Error('Asset not found');
+    }
+
+    if (data.location_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) {
+        throw new Error('Asset not found');
+      }
+      await this.assertLocationBelongsToClient(knex, context.tenant, clientId, data.location_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      current.location_id &&
+      data.location_id === undefined
+    ) {
+      // Client changed without an explicit new location — clear the stale link
+      // so the asset doesn't keep pointing at the previous client's location.
+      updateData.location_id = null;
+    }
+
+    updateData.updated_at = new Date();
+
     await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .update(updateData);
@@ -286,6 +328,26 @@ export class AssetService extends BaseService<any> {
     });
 
     return this.getById(id, context);
+  }
+
+  private async assertLocationBelongsToClient(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    locationId: string
+  ): Promise<void> {
+    const location = await knex('client_locations')
+      .where({
+        tenant,
+        client_id: clientId,
+        location_id: locationId,
+        is_active: true,
+      })
+      .first('location_id');
+
+    if (!location) {
+      throw new Error('Selected location is not available for this client');
+    }
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -389,6 +451,121 @@ export class AssetService extends BaseService<any> {
         'related_assets.asset_type',
         'related_assets.status'
       );
+  }
+
+  /**
+   * List tickets linked to an asset (asset_associations -> tickets).
+   * Mirrors the assets.find_associated_tickets workflow action and the asset
+   * detail UI, reading the same asset_associations table.
+   */
+  async getAssetTickets(assetId: string, context: ServiceContext): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    return knex('asset_associations as aa')
+      .innerJoin('tickets as t', function joinTickets(this: Knex.JoinClause) {
+        this.on('t.ticket_id', '=', 'aa.entity_id')
+          .andOn('t.tenant', '=', 'aa.tenant');
+      })
+      .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+        this.on('t.status_id', '=', 's.status_id')
+          .andOn('t.tenant', '=', 's.tenant');
+      })
+      .where({
+        'aa.asset_id': assetId,
+        'aa.entity_type': 'ticket',
+        'aa.tenant': context.tenant,
+        't.tenant': context.tenant
+      })
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.status_id',
+        's.name as status_name',
+        't.is_closed',
+        't.priority_id',
+        't.assigned_to',
+        't.client_id',
+        't.board_id',
+        't.entered_at',
+        't.updated_at',
+        'aa.relationship_type',
+        'aa.notes as association_notes',
+        'aa.created_at as linked_at'
+      )
+      .orderBy('t.updated_at', 'desc');
+  }
+
+  /**
+   * Link a ticket to an asset by inserting an asset_associations row
+   * (entity_type='ticket'). Same table the asset detail UI and getAssetTickets
+   * read, so the link is immediately visible from both sides.
+   */
+  async linkTicket(
+    assetId: string,
+    data: { ticket_id: string; relationship_type?: string; notes?: string },
+    context: ServiceContext
+  ): Promise<any> {
+    const knex = await this.getDbForContext(context);
+
+    const asset = await knex('assets')
+      .where({ tenant: context.tenant, asset_id: assetId })
+      .first();
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    const ticket = await knex('tickets')
+      .where({ tenant: context.tenant, ticket_id: data.ticket_id })
+      .first();
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    const existing = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: data.ticket_id,
+        entity_type: 'ticket'
+      })
+      .first();
+    if (existing) {
+      throw new ConflictError('Ticket is already linked to this asset');
+    }
+
+    const [created] = await knex('asset_associations')
+      .insert({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: data.ticket_id,
+        entity_type: 'ticket',
+        relationship_type: data.relationship_type || 'affected',
+        notes: data.notes ?? null,
+        created_by: context.userId,
+        created_at: new Date().toISOString()
+      })
+      .returning('*');
+
+    return created;
+  }
+
+  /**
+   * Remove the asset_associations row linking a ticket to an asset.
+   */
+  async unlinkTicket(assetId: string, ticketId: string, context: ServiceContext): Promise<void> {
+    const knex = await this.getDbForContext(context);
+    const deleted = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset-ticket association not found');
+    }
   }
 
   async createRelationship(assetId: string, data: CreateAssetRelationshipData, context: ServiceContext): Promise<any> {

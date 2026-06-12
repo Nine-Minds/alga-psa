@@ -45,6 +45,13 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'credit', action: 'delete', msp: true, client: false, description: 'Delete credits' },
         { resource: 'credit', action: 'transfer', msp: true, client: false, description: 'Transfer credits' },
         { resource: 'credit', action: 'reconcile', msp: true, client: false, description: 'Reconcile credits' },
+
+        // Financial API permissions (v1 /api/v1/financial endpoints)
+        { resource: 'financial', action: 'create', msp: true, client: false, description: 'Create financial records (transactions, payment methods, prepayment invoices)' },
+        { resource: 'financial', action: 'read', msp: true, client: false, description: 'View financial data (transactions, credits, reports)' },
+        { resource: 'financial', action: 'update', msp: true, client: false, description: 'Update financial records (apply credits, reconciliation)' },
+        { resource: 'financial', action: 'delete', msp: true, client: false, description: 'Delete financial records' },
+        { resource: 'financial', action: 'transfer', msp: true, client: false, description: 'Transfer credits between clients' },
         
         // Document permissions
         { resource: 'document', action: 'create', msp: true, client: false, description: 'Create documents' },
@@ -94,6 +101,12 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'project', action: 'read', msp: true, client: false, description: 'View projects' },
         { resource: 'project', action: 'update', msp: true, client: false, description: 'Update projects' },
         { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects' },
+
+        // Report permissions
+        { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports' },
+        { resource: 'reports', action: 'read', msp: true, client: false, description: 'View reports' },
+        { resource: 'reports', action: 'update', msp: true, client: false, description: 'Update reports' },
+        { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports' },
         
         // Project task permissions
         { resource: 'project_task', action: 'create', msp: true, client: false, description: 'Create project tasks' },
@@ -118,6 +131,7 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'ticket', action: 'read', msp: true, client: false, description: 'View tickets' },
         { resource: 'ticket', action: 'update', msp: true, client: false, description: 'Update tickets' },
         { resource: 'ticket', action: 'delete', msp: true, client: false, description: 'Delete tickets' },
+        { resource: 'ticket', action: 'close_override', msp: true, client: false, description: 'Override ticket close rules' },
         
         // Time entry permissions
         { resource: 'timeentry', action: 'create', msp: true, client: false, description: 'Create time entries' },

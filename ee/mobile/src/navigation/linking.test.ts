@@ -25,4 +25,17 @@ describe("navigation deep link config", () => {
     expect(linking.config.screens.TicketDetail).toBe("ticket/:ticketId");
     expect(linking.config.screens.SignIn).toBe("signin");
   });
+
+  it("maps drawer routes to deep link paths", async () => {
+    const mod = await import("./linking");
+    const linking = mod.linking as any;
+    const drawerScreens = linking.config.screens.Tabs.screens;
+
+    expect(drawerScreens.TicketsTab.screens.TicketsList).toBe("tickets");
+    expect(drawerScreens.ScheduleTab).toBe("schedule");
+    expect(drawerScreens.TimeEntriesTab).toBe("time-entries");
+    expect(drawerScreens.ClientsTab).toBe("clients");
+    expect(drawerScreens.ContactsTab).toBe("contacts");
+    expect(drawerScreens.SettingsTab).toBe("settings");
+  });
 });

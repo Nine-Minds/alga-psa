@@ -23,8 +23,10 @@ import {
 } from '@alga-psa/workflow-streams';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
+import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -138,6 +140,9 @@ export const updateDraftInvoiceProperties = withAuth(async (
   invoiceId: string,
   input: DraftInvoicePropertiesUpdateInput
 ): Promise<DraftInvoicePropertiesUpdateResult> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const trimmedInvoiceNumber = input.invoiceNumber?.trim();
 
   if (!trimmedInvoiceNumber) {
@@ -237,6 +242,9 @@ export const finalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
@@ -289,13 +297,34 @@ export async function finalizeInvoiceWithKnex(
       throw new Error('Invoice is already finalized');
     }
 
+    // Financial-document identity is fixed at finalization: negative-total
+    // invoices become credit notes (CM-numbered), prepayments are tagged so
+    // downstream consumers (export validation, void guards) can rely on it.
+    const handlingKind = classifyInvoiceCreditHandling(invoice);
+    const identityUpdates: Record<string, unknown> = {};
+    if (handlingKind === 'negative_total') {
+      identityUpdates.invoice_type = 'credit_note';
+      const { SharedNumberingService } = await import('@alga-psa/shared/services/numberingService');
+      identityUpdates.invoice_number = await SharedNumberingService.getNextNumber('CREDIT_NOTE', {
+        knex: trx,
+        tenant
+      });
+    } else if (handlingKind === 'prepayment') {
+      identityUpdates.invoice_type = 'prepayment';
+    }
+
     await trx('invoices')
       .where({ invoice_id: invoiceId, tenant: tenant })
       .update({
         status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
-        updated_at: toISODate(Temporal.Now.plainDateISO())
+        updated_at: toISODate(Temporal.Now.plainDateISO()),
+        ...identityUpdates
       });
+
+    if (Object.keys(identityUpdates).length > 0) {
+      invoice = { ...invoice, ...identityUpdates };
+    }
 
     // Record audit log
     // await auditLog(
@@ -534,6 +563,9 @@ export async function finalizeInvoiceWithKnex(
       idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
     });
   }
+
+  // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
+  await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
 }
 
 export const unfinalizeInvoice = withAuth(async (
@@ -541,6 +573,9 @@ export const unfinalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -602,6 +637,9 @@ export const updateInvoiceManualItems = withAuth(async (
   invoiceId: string,
   changes: ManualItemsUpdate
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
   const billingEngine = new BillingEngine();
 
@@ -870,6 +908,9 @@ export const addManualItemsToInvoice = withAuth(async (
   invoiceId: string,
   items: IInvoiceCharge[]
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
 
   if (!session?.user?.id) {
@@ -986,13 +1027,34 @@ export const hardDeleteInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ) => {
+  if (!await hasPermission(user, 'invoice', 'delete')) {
+    throw new Error('Permission denied: invoice delete required');
+  }
   const { knex } = await createTenantKnex();
+
+  // Guard: block deletion if invoice is already exported to an accounting system
+  const existingMapping = await knex('tenant_external_entity_mappings')
+    .where({
+      tenant: tenant,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId
+    })
+    .first('id');
+  if (existingMapping) {
+    throw new Error('This invoice is synced to an accounting system — void it instead of deleting.');
+  }
+
   let voidedCreditNotes: Array<{
     creditNoteId: string;
     voidedAt: string;
     voidedByUserId: string;
     reason: string;
   }> = [];
+  let deletedInvoice = false;
+  let deletedClientId: string | undefined;
+  let deletedItemIds: string[] = [];
+  let deletedAnnotationIds: string[] = [];
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
@@ -1008,6 +1070,7 @@ export const hardDeleteInvoice = withAuth(async (
         console.warn(`Invoice ${invoiceId} not found for deletion.`);
         return; // Exit if invoice doesn't exist
     }
+    deletedClientId = invoice.client_id ?? undefined;
 
     const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
       trx,
@@ -1203,6 +1266,13 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     // 8. Delete invoice items
+    deletedItemIds = await trx('invoice_charges')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .pluck('item_id');
+
     await trx('invoice_charges')
       .where({
         invoice_id: invoiceId,
@@ -1211,6 +1281,13 @@ export const hardDeleteInvoice = withAuth(async (
       .delete();
 
     // 9. Delete invoice annotations (internal/external notes)
+    deletedAnnotationIds = await trx('invoice_annotations')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .pluck('annotation_id');
+
     await trx('invoice_annotations')
       .where({
         invoice_id: invoiceId,
@@ -1233,6 +1310,7 @@ export const hardDeleteInvoice = withAuth(async (
         tenant
       })
       .delete();
+    deletedInvoice = true;
 
      // TODO: Recalculate client balance after all deletions/reversals
   });
@@ -1252,6 +1330,55 @@ export const hardDeleteInvoice = withAuth(async (
         actor: { actorType: 'USER', actorUserId: event.voidedByUserId },
       },
       idempotencyKey: `credit_note_voided:${event.creditNoteId}:${invoiceId}`,
+    });
+  }
+
+  if (deletedInvoice) {
+    const occurredAt = new Date().toISOString();
+    const ctx = {
+      tenantId: tenant,
+      occurredAt,
+      actor: { actorType: 'USER', actorUserId: user.user_id },
+    };
+
+    for (const itemId of deletedItemIds) {
+      await publishWorkflowEvent({
+        eventType: 'INVOICE_ITEM_DELETED',
+        payload: {
+          invoiceId,
+          itemId,
+          userId: user.user_id,
+          timestamp: occurredAt,
+        },
+        ctx,
+        idempotencyKey: `invoice_item_deleted:${itemId}:${occurredAt}`,
+      });
+    }
+
+    for (const annotationId of deletedAnnotationIds) {
+      await publishWorkflowEvent({
+        eventType: 'INVOICE_ANNOTATION_DELETED',
+        payload: {
+          invoiceId,
+          annotationId,
+          userId: user.user_id,
+          timestamp: occurredAt,
+        },
+        ctx,
+        idempotencyKey: `invoice_annotation_deleted:${annotationId}:${occurredAt}`,
+      });
+    }
+
+    await publishWorkflowEvent({
+      eventType: 'INVOICE_DELETED',
+      payload: {
+        invoiceId,
+        clientId: deletedClientId,
+        userId: user.user_id,
+        timestamp: occurredAt,
+      },
+      ctx,
+      idempotencyKey: `invoice_deleted:${invoiceId}:${occurredAt}`,
     });
   }
 });

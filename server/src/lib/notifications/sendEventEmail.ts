@@ -401,6 +401,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       .trim();
 
     let replyPayload: ReplyMarkerPayload | null = null;
+    let effectiveReplyContext = params.replyContext;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {
       replyPayload = {
         token: params.replyContext.conversationToken || randomUUID(),
@@ -408,6 +409,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         projectId: params.replyContext.projectId,
         commentId: params.replyContext.commentId,
         threadId: params.replyContext.threadId,
+      };
+      effectiveReplyContext = {
+        ...params.replyContext,
+        conversationToken: replyPayload.token,
       };
 
       const augmented = applyReplyMarkers(html, text, replyPayload);
@@ -425,7 +430,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       entityId: params.entityId,
       contactId: params.contactId,
       notificationSubtypeId: params.notificationSubtypeId,
-      replyContext: params.replyContext,
+      replyContext: effectiveReplyContext,
       templateProcessor: processor,
       headers: params.headers,
       attachments: params.attachments,

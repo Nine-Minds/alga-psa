@@ -54,6 +54,16 @@ setup:
     enabled: false
     waitTimeoutSeconds: 300
     retryIntervalSeconds: 2
+    lockTimeoutSeconds: 1800
+    lockStaleSeconds: 120
+    lockHeartbeatSeconds: 10
+  waitForBootstrap:
+    image:
+      # Optional lightweight image with psql used by the app initContainer while
+      # the bootstrap job owns migrations/seeds. Empty values fall back to setup.image.
+      name: ""
+      tag: ""
+    pullPolicy: IfNotPresent
 
 server:
   image:
@@ -65,8 +75,12 @@ server:
   verify_email: true
   # Maximum body size for Next.js server actions (e.g., extension uploads)
   serverActionsBodyLimit: "200mb"
+  # App-wide search live indexing gate. Keep false during migration/backfill;
+  # set true after search:backfill completes so event subscribers write updates.
+  searchIndexLive: false
   pullPolicy: Always
   replicaCount: 2
+  progressDeadlineSeconds: null
   service:
     type: "ClusterIP"
     port: 3000
@@ -92,6 +106,14 @@ hocuspocus:
   service:
     type: "ClusterIP"
     port: 1234
+
+# OpenTelemetry app observability (traces). Off by default; opt-in per deployment.
+# When enabled, the app exports OTLP traces to otlpEndpoint (the Alloy collector
+# in production). See templates/deployment.yaml OBSERVABILITY block.
+observability:
+  enabled: false
+  otlpEndpoint: ""
+  # deploymentId: ""   # optional; sent as the X-Deployment-Id OTLP header
 
 temporal:
   address: "temporal-frontend.temporal.svc.cluster.local:7233"

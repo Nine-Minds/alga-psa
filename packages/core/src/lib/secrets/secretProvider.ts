@@ -1,5 +1,6 @@
 import { EnvSecretProvider } from './EnvSecretProvider';
 import { CompositeSecretProvider } from './CompositeSecretProvider';
+import { FileSystemSecretProvider } from './LazyFileSystemSecretProvider';
 import logger from '../logger';
 import type { ISecretProvider } from './ISecretProvider';
 
@@ -38,7 +39,6 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
 
     case 'filesystem':
       if (!filesystemProviderInstance) {
-        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;

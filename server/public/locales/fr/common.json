@@ -40,7 +40,15 @@
     "duplicate": "Dupliquer",
     "openMenu": "Ouvrir le menu",
     "confirmDeletion": "Confirmer la suppression",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "print": "Imprimer",
+    "printSelected_one": "Imprimer la sélection ({{count}})",
+    "printSelected_other": "Imprimer la sélection ({{count}})",
+    "printOptions": "Options d’impression",
+    "resetPrintOptions": "Réinitialiser les options d’impression",
+    "share": "Partager",
+    "done": "Terminé",
+    "continue": "Continuer"
   },
   "status": {
     "loading": "Chargement...",
@@ -267,6 +275,13 @@
         "description": "Cliquez sur \"Ajouter un emplacement\" pour commencer"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} réponse",
+    "replies_other": "{{count}} réponses",
+    "collapse": "Réduire",
+    "expand": "Développer",
+    "showInDrawer": "Afficher dans le panneau"
   },
   "pagination": {
     "previous": "Précédent",
@@ -1009,6 +1024,10 @@
     "noResults": "Aucun résultat trouvé",
     "searchPlaceholder": "Rechercher..."
   },
+  "pickers": {
+    "addNewClient": "Ajouter un nouveau client",
+    "addNewContact": "Ajouter un nouveau contact"
+  },
   "tagFilter": {
     "placeholder": "Filtrer par étiquettes...",
     "filter": "Filtrer",
@@ -1122,5 +1141,45 @@
   },
   "feedback": {
     "providePlaceholder": "Veuillez fournir un commentaire"
+  },
+  "presence": {
+    "noOneElseEditing": "Personne d’autre ne modifie",
+    "conflict": {
+      "changedField": "{{author}} vient de modifier ce champ {{time}}.",
+      "remoteValue": "Valeur distante :",
+      "keepYours": "Conserver la vôtre",
+      "takeTheirs": "Utiliser la distante"
+    }
+  },
+  "labels": {
+    "printColumns": "Colonnes à imprimer"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Vérification des dépendances",
+    "deleteTitle": "Supprimer {{entityName}}",
+    "cannotDeleteTitle": "Suppression impossible",
+    "deleting": "Suppression...",
+    "checkingDependenciesMessage": "Vérification des dépendances...",
+    "fallbackBlockMessage": "Veuillez supprimer ou réaffecter ces éléments avant la suppression.",
+    "confirmationMessage": "Êtes-vous sûr de vouloir supprimer \"{{entityName}}\" ? Cette action ne peut pas être annulée.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marquer comme inactif",
+        "description": "Désactive l’enregistrement sans supprimer ses données.",
+        "warning": "Les enregistrements inactifs ne pourront plus être sélectionnés dans les nouveaux flux de travail."
+      },
+      "archive": {
+        "label": "Archiver",
+        "description": "Retire l’enregistrement de l’usage actif tout en conservant l’historique.",
+        "warning": "Les enregistrements archivés sont masqués dans les vues par défaut."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} colonne masquée faute de place.",
+    "columnsHidden_other": "{{count}} colonnes masquées faute de place.",
+    "showAll": "Tout afficher",
+    "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
+    "showLess": "Afficher moins"
   }
 }

@@ -1,0 +1,112 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
+import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
+
+/**
+ * Trial / license expiry banner for self-hosted installs.
+ *
+ * Shown only in self-host mode (license_state row present).
+ * Displays trial countdown, upcoming license expiry, or expired state.
+ * Links to the in-app License page for renewal.
+ *
+ * Intentionally uses the server action for licensing status rather than
+ * TierContext so it remains accurate regardless of session freshness.
+ */
+export default function LicenseBanner() {
+  const router = useRouter();
+  const [status, setStatus] = useState<LicenseStatus | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    getLicenseStatus().then(setStatus).catch(() => {});
+  }, []);
+
+  if (!status?.selfHostMode || dismissed) return null;
+
+  const { state, daysRemaining, tier } = status;
+
+  // Determine whether to show the banner and with what urgency.
+  let message: string | null = null;
+  let urgency: 'info' | 'warning' | 'error' = 'info';
+
+  switch (state) {
+    case 'trial':
+      if (daysRemaining !== null && daysRemaining <= 7) {
+        message = `Enterprise trial expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Enter a license key to keep Enterprise features.`;
+        urgency = 'warning';
+      } else if (daysRemaining !== null) {
+        message = `Enterprise trial active — ${daysRemaining} days remaining.`;
+        urgency = 'info';
+      }
+      break;
+    case 'trial_available':
+      // Fresh install, trial not yet used — invite, don't warn.
+      message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+      urgency = 'info';
+      break;
+    case 'trial_expired':
+      message = 'Enterprise trial has expired. The install is now running Essentials features.';
+      urgency = 'warning';
+      break;
+    case 'licensed':
+      if (daysRemaining !== null && daysRemaining <= 14) {
+        message = `License expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Renew to avoid service interruption.`;
+        urgency = daysRemaining <= 3 ? 'error' : 'warning';
+      }
+      break;
+    case 'license_expired':
+      message = 'License has expired. The install is now running Essentials features.';
+      urgency = 'error';
+      break;
+    case 'license_wrong_tenant':
+      message = 'This license was issued for a different appliance and is not valid here. The install is running Essentials features.';
+      urgency = 'error';
+      break;
+    case 'ce':
+      // CE installs: only show if they haven't used their trial yet.
+      if (!status.trialUsed) {
+        message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+        urgency = 'info';
+      }
+      break;
+  }
+
+  if (!message) return null;
+
+  const bgColor = urgency === 'error' ? '#fef2f2' : urgency === 'warning' ? '#fffbeb' : '#eff6ff';
+  const borderColor = urgency === 'error' ? '#fecaca' : urgency === 'warning' ? '#fde68a' : '#bfdbfe';
+  const textColor = urgency === 'error' ? '#991b1b' : urgency === 'warning' ? '#92400e' : '#1e40af';
+
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.5rem 1rem', background: bgColor,
+        borderBottom: `1px solid ${borderColor}`, color: textColor,
+        fontSize: '0.875rem',
+      }}
+      role="banner"
+      aria-label="License status"
+    >
+      <span>{message}</span>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexShrink: 0, marginLeft: '1rem' }}>
+        <button
+          onClick={() => router.push('/msp/licenses')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'inherit', fontSize: 'inherit' }}
+        >
+          Manage License
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1rem', lineHeight: 1 }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}

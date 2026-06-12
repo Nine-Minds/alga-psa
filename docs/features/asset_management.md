@@ -13,10 +13,26 @@ The Asset Management System is a comprehensive solution for managing IT assets w
 ### Asset Tracking
 - Unique asset identification
 - Serial number tracking
-- Location management
+- Location management (free-text `location` field and structured `location_id` FK to `client_locations`)
 - Warranty tracking
 - Client association
 - Status management
+
+### Location Linking
+
+Assets can be linked to a saved client location record (`client_locations`) via the `location_id` UUID field, in addition to the free-text `location` string. When a saved location is selected in the UI, the formatted address is auto-populated into the free-text field but can be overridden with a more specific descriptor (e.g. "Server room — Rack 3").
+
+The REST API (`GET /api/v1/assets`, `POST /api/v1/assets`, `PUT /api/v1/assets/:id`) includes `location_id` as an optional nullable UUID on create, update, and read payloads. The list endpoint accepts `location_id` as a query filter to retrieve all assets at a specific site. The server validates that the supplied `location_id` belongs to the asset's client (active locations only); changing the client without supplying a new `location_id` automatically clears any stale location association.
+
+### Bulk Asset Actions
+
+The asset dashboard supports three bulk operations accessible from the action bar at the bottom of the asset list:
+
+- **Set Status** — update the status of up to 100 selected assets at once.
+- **Set Location** — assign a saved client location, enter a custom free-text location, or clear the location for up to 100 selected assets at once.
+- **Delete** — permanently delete up to 100 selected assets, with a confirmation dialog before proceeding.
+
+Bulk operations run with controlled concurrency (5 at a time) and produce a per-asset success/failure report via toast notifications.
 
 ### Asset Relationships
 - Parent/child relationship tracking
@@ -60,19 +76,21 @@ CREATE TABLE assets (
     tenant UUID NOT NULL REFERENCES tenants,
     asset_id UUID DEFAULT gen_random_uuid() NOT NULL,
     type_id UUID NOT NULL,
-    company_id UUID NOT NULL, -- Client association
+    client_id UUID NOT NULL, -- Client association
     asset_tag TEXT NOT NULL,
     serial_number TEXT,
     name TEXT NOT NULL,
     status TEXT NOT NULL,
     location TEXT,
+    location_id UUID,            -- Optional FK to client_locations; validated against the asset's client
     purchase_date DATE,
     warranty_end_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (tenant, asset_id),
     FOREIGN KEY (tenant, type_id) REFERENCES asset_types(tenant, type_id),
-    FOREIGN KEY (tenant, company_id) REFERENCES companies(tenant, company_id)
+    FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id),
+    FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id)
 );
 ```
 
@@ -209,6 +227,14 @@ CREATE TABLE asset_history (
   - Extension tables ✓
   - Specialized fields ✓
   - Efficient querying ✓
+- Location linking ✓
+  - Structured FK to client_locations ✓
+  - REST API location_id field and filter ✓
+  - Client validation on create/update ✓
+- Bulk asset actions ✓
+  - Set status ✓
+  - Set location ✓
+  - Delete ✓
 - Advanced reporting
   - Custom report builder
   - Dashboard integration
@@ -305,7 +331,6 @@ CREATE TABLE asset_history (
 - Extension table partitioning
 
 ### Integration Expansion
-- API development
 - Third-party integrations
 - Mobile access
 - Client portal features

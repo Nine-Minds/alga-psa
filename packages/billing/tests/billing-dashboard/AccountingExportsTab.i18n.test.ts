@@ -64,6 +64,23 @@ describe('AccountingExportsTab i18n wiring contract', () => {
     expect(source).toContain("t('accountingExports.states.batchNotFound', { defaultValue: 'Batch not found.' })");
   });
 
+  it('T020B: surfaces batch notes and per-error details in the batch-detail dialog through msp/billing translations', () => {
+    const source = read('../../src/components/billing-dashboard/accounting/AccountingExportsTab.tsx');
+    const pseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/billing.json'
+    );
+
+    expect(source).toContain("t('accountingExports.detailDialog.fields.notes', { defaultValue: 'Notes' })");
+    expect(source).toContain("t('accountingExports.detailDialog.errorDetails', { defaultValue: 'Error Details' })");
+    // The dialog must render the captured error payloads, not just a count.
+    expect(source).toContain('error.code');
+    expect(source).toContain('error.message');
+    expect(source).toContain('selectedBatch.notes');
+
+    expect(getLeaf(pseudo, 'accountingExports.detailDialog.fields.notes')).toBe('11111');
+    expect(getLeaf(pseudo, 'accountingExports.detailDialog.errorDetails')).toBe('11111');
+  });
+
   it('T020A: maps backend status codes through accountingExports.status.* keys instead of rendering raw codes', () => {
     const source = read('../../src/components/billing-dashboard/accounting/AccountingExportsTab.tsx');
     const pseudo = readJson<Record<string, unknown>>(

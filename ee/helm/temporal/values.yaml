@@ -10,6 +10,15 @@ server:
     tag: 1.27.2
     pullPolicy: IfNotPresent
   replicaCount: 1
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  livenessProbe:
+    initialDelaySeconds: 120
+    periodSeconds: 20
   resources:
     requests:
       cpu: 100m
@@ -50,6 +59,8 @@ db:
 temporal:
   db: postgres12
   namespace: default
+  namespaceRetention: 72h
+  createDefaultNamespace: true
   postgresSeeds: postgres
 
 podAnnotations: {}

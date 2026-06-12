@@ -40,7 +40,15 @@
     "duplicate": "Duplicar",
     "openMenu": "Abrir menú",
     "confirmDeletion": "Confirmar eliminación",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "print": "Imprimir",
+    "printSelected_one": "Imprimir seleccionado ({{count}})",
+    "printSelected_other": "Imprimir seleccionados ({{count}})",
+    "printOptions": "Opciones de impresión",
+    "resetPrintOptions": "Restablecer opciones de impresión",
+    "share": "Compartir",
+    "done": "Listo",
+    "continue": "Continuar"
   },
   "status": {
     "loading": "Cargando...",
@@ -311,6 +319,13 @@
         "description": "Haz clic en \"Agregar ubicación\" para comenzar"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} respuesta",
+    "replies_other": "{{count}} respuestas",
+    "collapse": "Contraer",
+    "expand": "Expandir",
+    "showInDrawer": "Mostrar en el panel"
   },
   "pagination": {
     "previous": "Anterior",
@@ -1009,6 +1024,10 @@
     "noResults": "No se encontraron resultados",
     "searchPlaceholder": "Buscar..."
   },
+  "pickers": {
+    "addNewClient": "Agregar nuevo cliente",
+    "addNewContact": "Añadir nuevo contacto"
+  },
   "tagFilter": {
     "placeholder": "Filtrar por etiquetas...",
     "filter": "Filtrar",
@@ -1122,5 +1141,45 @@
   },
   "feedback": {
     "providePlaceholder": "Por favor, proporcione comentarios"
+  },
+  "presence": {
+    "noOneElseEditing": "Nadie más está editando",
+    "conflict": {
+      "changedField": "{{author}} acaba de cambiar este campo {{time}}.",
+      "remoteValue": "Valor remoto:",
+      "keepYours": "Conservar el tuyo",
+      "takeTheirs": "Usar el remoto"
+    }
+  },
+  "labels": {
+    "printColumns": "Columnas de impresión"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Comprobando dependencias",
+    "deleteTitle": "Eliminar {{entityName}}",
+    "cannotDeleteTitle": "No se puede eliminar",
+    "deleting": "Eliminando...",
+    "checkingDependenciesMessage": "Comprobando dependencias...",
+    "fallbackBlockMessage": "Elimine o reasigne estos elementos antes de eliminar.",
+    "confirmationMessage": "¿Está seguro de que desea eliminar \"{{entityName}}\"? Esta acción no se puede deshacer.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marcar como inactivo",
+        "description": "Desactiva el registro sin eliminar sus datos.",
+        "warning": "Los registros inactivos ya no se podrán seleccionar en nuevos flujos de trabajo."
+      },
+      "archive": {
+        "label": "Archivar",
+        "description": "Mueve el registro fuera del uso activo y conserva el historial.",
+        "warning": "Los registros archivados se ocultan en las vistas predeterminadas."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} columna oculta por falta de espacio.",
+    "columnsHidden_other": "{{count}} columnas ocultas por falta de espacio.",
+    "showAll": "Mostrar todo",
+    "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
+    "showLess": "Mostrar menos"
   }
 }

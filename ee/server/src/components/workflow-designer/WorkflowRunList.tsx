@@ -2,11 +2,20 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Printer, RefreshCw, Settings2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -20,8 +29,7 @@ import {
   cancelWorkflowRunAction,
   exportWorkflowRunsAction,
   listWorkflowRunSummaryAction,
-  listWorkflowRunsAction,
-  resumeWorkflowRunAction
+  listWorkflowRunsAction
 } from '@alga-psa/workflows/actions';
 import {
   useFormatWorkflowRunStatus,
@@ -108,6 +116,7 @@ const DEFAULT_FILTERS: WorkflowRunFilters = {
   to: '',
   sort: 'started_at:desc'
 };
+const WORKFLOW_RUNS_PRINT_LIMIT = 5000;
 
 const useFormatDateTime = () => {
   const { formatDate } = useFormatters();
@@ -188,11 +197,13 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const workflowRunSortOptions = useWorkflowRunSortOptions();
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
+  const [printRuns, setPrintRuns] = useState<WorkflowRunListItem[]>([]);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<'resume' | 'cancel' | null>(null);
+  const [bulkAction, setBulkAction] = useState<'cancel' | null>(null);
   const [bulkReason, setBulkReason] = useState('');
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
@@ -278,6 +289,103 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     const tenants = new Set(runs.map((run) => run.tenant_id).filter(Boolean));
     return tenants.size > 1;
   }, [runs]);
+
+  const preparePrintRuns = useCallback(async () => {
+    if (selectedRunIds.size > 0) {
+      setPrintRuns(selectedRuns);
+      return;
+    }
+
+    const { from, to } = buildRunDateBounds(filters);
+    const data = (await listWorkflowRunsAction({
+      status: filters.status !== 'all' ? [filters.status as any] : undefined,
+      workflowId: filters.workflowId || undefined,
+      version: filters.workflowVersion || undefined,
+      search: filters.search || undefined,
+      from,
+      to,
+      limit: WORKFLOW_RUNS_PRINT_LIMIT,
+      cursor: 0,
+      sort: filters.sort as any
+    })) as WorkflowRunListResponse;
+    setPrintRuns(data.runs);
+  }, [filters, selectedRunIds.size, selectedRuns]);
+
+  const printColumns = useMemo<PrintColumnOption<WorkflowRunListItem>[]>(() => [
+    {
+      key: 'run',
+      label: t('runList.print.columns.run', { defaultValue: 'Run' }),
+      header: t('runList.print.columns.run', { defaultValue: 'Run' }),
+      render: (run) => run.run_id,
+    },
+    {
+      key: 'workflow',
+      label: t('runList.print.columns.workflow', { defaultValue: 'Workflow' }),
+      header: t('runList.print.columns.workflow', { defaultValue: 'Workflow' }),
+      render: (run) => run.workflow_name ?? workflowNameMap.get(run.workflow_id) ?? run.workflow_id,
+    },
+    {
+      key: 'version',
+      label: t('runList.print.columns.version', { defaultValue: 'Version' }),
+      header: t('runList.print.columns.version', { defaultValue: 'Version' }),
+      render: (run) => run.workflow_version,
+    },
+    ...(showTenantColumn ? [{
+      key: 'tenant',
+      label: t('runList.table.tenant', { defaultValue: 'Tenant' }),
+      header: t('runList.table.tenant', { defaultValue: 'Tenant' }),
+      render: (run: WorkflowRunListItem) => run.tenant_id ?? t('runList.table.emptyValue', { defaultValue: '—' }),
+    }] : []),
+    {
+      key: 'trigger_payload',
+      label: t('runList.table.triggerPayload', { defaultValue: 'Trigger payload' }),
+      header: t('runList.table.triggerPayload', { defaultValue: 'Trigger payload' }),
+      render: (run) => {
+        if (!run.source_payload_schema_ref) {
+          return t('runList.table.emptyValue', { defaultValue: '—' });
+        }
+        const mappingState = run.trigger_mapping_applied
+          ? t('runList.table.trigger.mapped', { defaultValue: 'Mapped' })
+          : t('runList.table.trigger.identity', { defaultValue: 'Identity' });
+        return `${run.source_payload_schema_ref} (${mappingState})`;
+      },
+    },
+    {
+      key: 'status',
+      label: t('runList.print.columns.status', { defaultValue: 'Status' }),
+      header: t('runList.print.columns.status', { defaultValue: 'Status' }),
+      render: (run) => formatWorkflowRunStatus(run.status),
+    },
+    {
+      key: 'started',
+      label: t('runList.print.columns.started', { defaultValue: 'Started' }),
+      header: t('runList.print.columns.started', { defaultValue: 'Started' }),
+      render: (run) => formatDateTime(run.started_at),
+    },
+    {
+      key: 'updated',
+      label: t('runList.print.columns.updated', { defaultValue: 'Updated' }),
+      header: t('runList.print.columns.updated', { defaultValue: 'Updated' }),
+      render: (run) => formatDateTime(run.updated_at),
+    },
+    {
+      key: 'duration',
+      label: t('runList.print.columns.duration', { defaultValue: 'Duration' }),
+      header: t('runList.print.columns.duration', { defaultValue: 'Duration' }),
+      render: (run) => formatDuration(run.started_at, run.completed_at),
+    },
+  ], [formatDateTime, formatWorkflowRunStatus, showTenantColumn, t, workflowNameMap]);
+  const {
+    selectedColumnKeys: selectedWorkflowRunPrintColumnKeys,
+    selectedColumns: selectedWorkflowRunPrintColumns,
+    setSelectedColumnKeys: setSelectedWorkflowRunPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedWorkflowRunPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:workflow-runs', printColumns);
+
+  const { triggerPrint: triggerPrintRuns, isPreparing: isPreparingRunPrint } = usePrintAction({
+    onBeforePrint: preparePrintRuns,
+    onAfterPrint: () => setPrintRuns([]),
+  });
 
   const fetchRuns = useCallback(
     async (cursor: number, append = false, overrideFilters?: WorkflowRunFilters) => {
@@ -490,19 +598,14 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     setSelectedRunIds(new Set(runs.map((run) => run.run_id)));
   };
 
-  const toggleRunSelection = (runId: string) => {
-    setSelectedRunIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(runId)) {
-        next.delete(runId);
-      } else {
-        next.add(runId);
-      }
-      return next;
-    });
-  };
+  const rangeSelect = useRangeSelection<WorkflowRunListItem>({
+    items: runs,
+    getId: (run) => run.run_id,
+    selectedIds: selectedRunIds,
+    onSelectedIdsChange: setSelectedRunIds,
+  });
 
-  const performBulkAction = async (action: 'resume' | 'cancel') => {
+  const performBulkAction = async (action: 'cancel') => {
     if (selectedRuns.length === 0) {
       toast.error(
         t('runList.toasts.selectRunsForBulkAction', {
@@ -521,9 +624,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       return;
     }
 
-    const eligible = selectedRuns.filter((run) =>
-      action === 'resume' ? run.status === 'WAITING' : !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status)
-    );
+    const eligible = selectedRuns.filter((run) => !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status));
     const skipped = selectedRuns.length - eligible.length;
 
     if (eligible.length === 0) {
@@ -539,41 +640,23 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     try {
       const responses = await Promise.all(
         eligible.map((run) =>
-          action === 'resume'
-            ? resumeWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
-            : cancelWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
+          cancelWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
         )
       );
       const failed = responses.filter((response: any) => !response?.ok).length;
       if (failed > 0) {
         toast.error(
-          t(
-            action === 'resume'
-              ? 'runList.toasts.bulkResumeFailedCount'
-              : 'runList.toasts.bulkCancelFailedCount',
-            {
-              defaultValue:
-                action === 'resume'
-                  ? 'Failed to resume {{count}} run(s).'
-                  : 'Failed to cancel {{count}} run(s).',
-              count: failed,
-            }
-          )
+          t('runList.toasts.bulkCancelFailedCount', {
+            defaultValue: 'Failed to cancel {{count}} run(s).',
+            count: failed,
+          })
         );
       } else {
         toast.success(
-          t(
-            action === 'resume'
-              ? 'runList.toasts.bulkResumeSuccessCount'
-              : 'runList.toasts.bulkCancelSuccessCount',
-            {
-              defaultValue:
-                action === 'resume'
-                  ? 'Resumed {{count}} run(s).'
-                  : 'Canceled {{count}} run(s).',
-              count: eligible.length,
-            }
-          )
+          t('runList.toasts.bulkCancelSuccessCount', {
+            defaultValue: 'Canceled {{count}} run(s).',
+            count: eligible.length,
+          })
         );
       }
       if (skipped > 0) {
@@ -754,9 +837,37 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             >
               {t('runList.actions.runNow', { defaultValue: 'Run now' })}
             </Button>
-            <Button id="workflow-runs-export" variant="outline" onClick={handleExport}>
-              {t('runList.actions.exportCsv', { defaultValue: 'Export CSV' })}
-            </Button>
+            <ShareActionsMenu
+              id="workflow-runs-share-actions"
+              tooltip={t('runList.shareTooltip', { defaultValue: 'Print and export' })}
+              actions={[
+                {
+                  id: 'workflow-runs-share-print',
+                  icon: Printer,
+                  label: selectedRunIds.size > 0
+                    ? t('actions.printSelected', {
+                        count: selectedRunIds.size,
+                        defaultValue: 'Print selected ({{count}})',
+                      })
+                    : t('actions.print', { defaultValue: 'Print' }),
+                  onSelect: () => { void triggerPrintRuns(); },
+                  disabled: isPreparingRunPrint,
+                },
+                {
+                  id: 'workflow-runs-share-print-options',
+                  icon: Settings2,
+                  label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                  onSelect: () => setIsPrintOptionsOpen(true),
+                },
+                {
+                  id: 'workflow-runs-share-export',
+                  icon: Download,
+                  label: t('runList.actions.exportCsv', { defaultValue: 'Export CSV' }),
+                  onSelect: () => { void handleExport(); },
+                  separator: true,
+                },
+              ] satisfies ShareAction[]}
+            />
             <Button
               id="workflow-runs-refresh"
               variant="ghost"
@@ -768,17 +879,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             </Button>
             {showSelection && selectedRunIds.size > 0 && (
               <>
-                <Button
-                  id="workflow-runs-bulk-resume"
-                  variant="outline"
-                  onClick={() => setBulkAction('resume')}
-                  disabled={isLoading}
-                >
-                  {t('runList.actions.resumeSelected', {
-                    defaultValue: 'Resume selected ({{count}})',
-                    count: selectedRunIds.size,
-                  })}
-                </Button>
                 <Button
                   id="workflow-runs-bulk-cancel"
                   variant="outline"
@@ -837,8 +937,18 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                     <TableCell>
                       <Checkbox
                         id={`workflow-runs-select-${run.run_id}`}
-                        checked={selectedRunIds.has(run.run_id)}
-                        onChange={() => toggleRunSelection(run.run_id)}
+                        checked={rangeSelect.isSelected(run.run_id)}
+                        onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                          event.stopPropagation();
+                          const isChecked = rangeSelect.isSelected(run.run_id);
+                          rangeSelect.handleSelect(run.run_id, {
+                            shiftKey: event.shiftKey,
+                            selected: !isChecked,
+                            preventDefault: () => event.preventDefault(),
+                          });
+                          event.preventDefault();
+                        }}
+                        onChange={() => { /* controlled via onClick for shift-range support */ }}
                         containerClassName="mb-0"
                       />
                     </TableCell>
@@ -959,7 +1069,49 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           )}
         </Card>
 
+        <div className="app-print-root app-print-only">
+          <PrintableTable
+            title={selectedRunIds.size > 0
+              ? t('runList.print.selectedTitle', {
+                  defaultValue: 'Selected Workflow Runs',
+                  count: selectedRunIds.size,
+                })
+              : t('runList.print.title', { defaultValue: 'Workflow Runs' })}
+            subtitle={t('runList.print.subtitle', {
+              defaultValue: '{{count}} runs',
+              count: printRuns.length,
+            })}
+            rows={printRuns}
+            columns={selectedWorkflowRunPrintColumns}
+            getRowKey={(run) => run.run_id}
+            emptyMessage={t('runList.print.noRuns', { defaultValue: 'No workflow runs to print' })}
+          />
+        </div>
+
       </div>
+
+      <PrintOptionsDialog
+        id="workflow-runs-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('runList.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('runList.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing workflow runs.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedWorkflowRunPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedWorkflowRunPrintColumnKeys}
+        onReset={resetSelectedWorkflowRunPrintColumnKeys}
+        onPrint={() => triggerPrintRuns()}
+        isPrinting={isPreparingRunPrint}
+        printLabel={selectedRunIds.size > 0
+          ? t('actions.printSelected', {
+              count: selectedRunIds.size,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
 
       <Drawer
         id="workflow-run-preview-drawer"
@@ -1032,33 +1184,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 
       {showSelection && (
         <>
-          <ConfirmationDialog
-            id="workflow-runs-bulk-resume-confirm"
-            isOpen={bulkAction === 'resume'}
-            title={t('runList.bulk.resumeTitle', { defaultValue: 'Resume Selected Runs' })}
-            message={(
-              <div className="space-y-3">
-                <p>
-                  {t('runList.bulk.resumeMessage', {
-                    defaultValue: 'Resume {{count}} selected run(s)?',
-                    count: selectedRunIds.size,
-                  })}
-                </p>
-                <TextArea
-                  id="workflow-runs-bulk-resume-reason"
-                  label={t('runList.bulk.reasonLabel', { defaultValue: 'Reason' })}
-                  value={bulkReason}
-                  onChange={(event) => setBulkReason(event.target.value)}
-                  placeholder={t('runList.bulk.resumeReasonPlaceholder', {
-                    defaultValue: 'Provide a reason for resuming',
-                  })}
-                />
-              </div>
-            )}
-            confirmLabel={t('runList.bulk.resumeConfirm', { defaultValue: 'Resume runs' })}
-            onConfirm={() => performBulkAction('resume')}
-            onClose={() => setBulkAction(null)}
-          />
           <ConfirmationDialog
             id="workflow-runs-bulk-cancel-confirm"
             isOpen={bulkAction === 'cancel'}

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 KUBECONFIG_PATH="${KUBECONFIG:-}"
-REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
-STORAGE_MANIFEST="$REPO_ROOT/ee/appliance/manifests/local-path-storage.yaml"
+APPLIANCE_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
 STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 SMOKE_NAMESPACE="storage-smoke"
 DRY_RUN=false
@@ -104,6 +104,34 @@ EOF
 
   printf '%s\n' "$manifest" | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n local-path-storage wait --for=condition=complete --timeout=5m job/local-path-storage-prepare
+}
+
+reconcile_existing_storage_class() {
+  if $DRY_RUN; then
+    echo "+ inspect existing local-path StorageClass and delete it only when it is incompatible and unused"
+    return 0
+  fi
+
+  if ! kubectl --kubeconfig "$KUBECONFIG_PATH" get storageclass local-path >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local reclaim_policy=""
+  reclaim_policy="$(kubectl --kubeconfig "$KUBECONFIG_PATH" get storageclass local-path -o jsonpath='{.reclaimPolicy}' 2>/dev/null || true)"
+  if [ "$reclaim_policy" = "Retain" ]; then
+    return 0
+  fi
+
+  local pv_count pvc_count
+  pv_count="$(kubectl --kubeconfig "$KUBECONFIG_PATH" get pv -o jsonpath='{range .items[?(@.spec.storageClassName=="local-path")]}x{end}' 2>/dev/null | wc -c | tr -d ' ')"
+  pvc_count="$(kubectl --kubeconfig "$KUBECONFIG_PATH" get pvc -A -o jsonpath='{range .items[?(@.spec.storageClassName=="local-path")]}x{end}' 2>/dev/null | wc -c | tr -d ' ')"
+  if [ "${pv_count:-0}" != "0" ] || [ "${pvc_count:-0}" != "0" ]; then
+    echo "Existing local-path StorageClass has reclaimPolicy=$reclaim_policy and is already in use; refusing to replace it automatically." >&2
+    exit 1
+  fi
+
+  echo "Replacing unused local-path StorageClass with appliance Retain policy."
+  kubectl --kubeconfig "$KUBECONFIG_PATH" delete storageclass local-path
 }
 
 run_smoke_test() {
@@ -222,7 +250,13 @@ if [ ! -f "$STORAGE_MANIFEST" ]; then
   exit 1
 fi
 
+reconcile_existing_storage_class
 kubectl_cmd apply -f "$STORAGE_MANIFEST"
+if $DRY_RUN; then
+  echo "+ kubectl --kubeconfig $KUBECONFIG_PATH create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig $KUBECONFIG_PATH apply -f -"
+else
+  kubectl --kubeconfig "$KUBECONFIG_PATH" create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+fi
 kubectl_cmd label namespace msp \
   pod-security.kubernetes.io/enforce=privileged \
   pod-security.kubernetes.io/audit=privileged \

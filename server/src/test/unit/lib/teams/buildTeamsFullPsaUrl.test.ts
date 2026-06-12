@@ -13,7 +13,7 @@ describe('buildTeamsFullPsaUrl', () => {
 
     expect(urls).toEqual([
       '/msp/tickets/ticket-123',
-      '/msp/projects/project-44?taskId=task-88',
+      '/msp/projects/project-44/tasks/task-88',
       '/msp/time-sheet-approvals?approvalId=approval-2',
       '/msp/time-entry?entryId=entry-9',
       '/msp/contacts/contact-5',
@@ -27,7 +27,7 @@ describe('buildTeamsFullPsaUrl', () => {
     });
   });
 
-  it('T204/T210: omits the full-PSA handoff for the default my-work landing destination so unsupported or fallback states stay on the safe Teams shell', () => {
-    expect(buildTeamsFullPsaUrl({ type: 'my_work' })).toBeNull();
+  it('T204/T210: returns the dashboard for the default my-work landing destination', () => {
+    expect(buildTeamsFullPsaUrl({ type: 'my_work' })).toBe('/msp/dashboard');
   });
 });

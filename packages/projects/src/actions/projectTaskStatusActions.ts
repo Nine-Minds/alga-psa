@@ -658,7 +658,7 @@ export const getTenantProjectStatuses = withAuth(async (
 
   // Fall back to standard_statuses table (old system)
   const standardStatuses = await knex('standard_statuses')
-    .where({ tenant, item_type: 'project_task' })
+    .where({ item_type: 'project_task' })
     .orderBy('display_order');
 
   console.log(`[getTenantProjectStatuses] Found ${standardStatuses.length} statuses in 'standard_statuses' table for tenant ${tenant}`);
@@ -666,7 +666,7 @@ export const getTenantProjectStatuses = withAuth(async (
   // Map standard_statuses to IStatus format for compatibility
   return standardStatuses.map((s: any) => ({
     status_id: s.standard_status_id,
-    tenant: s.tenant,
+    tenant,
     name: s.name,
     status_type: 'project_task',
     item_type: 'project_task',

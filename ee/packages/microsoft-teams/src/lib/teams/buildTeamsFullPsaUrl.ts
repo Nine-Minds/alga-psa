@@ -4,10 +4,8 @@ export function buildTeamsFullPsaUrl(destination: TeamsTabDestination): string |
   switch (destination.type) {
     case 'ticket':
       return `/msp/tickets/${destination.ticketId}`;
-    case 'project_task': {
-      const query = new URLSearchParams({ taskId: destination.taskId });
-      return `/msp/projects/${destination.projectId}?${query.toString()}`;
-    }
+    case 'project_task':
+      return `/msp/projects/${destination.projectId}/tasks/${destination.taskId}`;
     case 'approval': {
       const query = new URLSearchParams({ approvalId: destination.approvalId });
       return `/msp/time-sheet-approvals?${query.toString()}`;

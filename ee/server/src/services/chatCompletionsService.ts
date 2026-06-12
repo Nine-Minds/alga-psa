@@ -8,11 +8,24 @@ import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import { findCommentsByTicketId } from '@alga-psa/tickets/actions/comment-actions';
 import { getCurrentUser, findUserById } from '@alga-psa/user-composition/actions';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { searchRegistryEntries, type RegistrySearchResult } from '../chat/registry/search';
+import {
+  resolveSearchAclPrincipal,
+  verifyResultVisibility,
+  type ClientAccess,
+} from '@/lib/search/acl';
+import {
+  countSearchMatches,
+  countSearchMatchesByType,
+  encodeSearchCursor,
+  runSearchQuery,
+} from '@/lib/search/query';
+import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
@@ -21,6 +34,8 @@ import {
   type ChatProviderId,
   type ResolvedChatProvider,
 } from './chatProviderResolver';
+import { WORKFLOW_JSON_TRANSFORM_GUIDANCE } from './chatWorkflowJsonTransformGuidance';
+import { WORKFLOW_REGEX_TRANSFORM_GUIDANCE } from './chatWorkflowRegexTransformGuidance';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -35,6 +50,7 @@ const RATE_LIMIT_BASE_DELAY_MS = 500;
 const RATE_LIMIT_MAX_DELAY_MS = 5000;
 const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
+const BUSINESS_SEARCH_TOOL_NAME = 'search_business_data';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
 const FINISH_TOOL_NAME = 'finish_response';
 const MAX_TOOL_ITERATIONS = 6;
@@ -146,6 +162,21 @@ export type ChatCompletionStreamEvent =
       type: 'function_proposed';
     } & FunctionProposedResponse)
   | {
+      type: 'tool_executed';
+      function: FunctionMetadata;
+      assistantPreview: string;
+      assistantReasoning?: string;
+      functionCall: FunctionCallInfo;
+      nextMessages: ChatCompletionMessage[];
+      modelMessages: ChatCompletionMessage[];
+    }
+  | {
+      type: 'continuation_available';
+      reason: string;
+      nextMessages: ChatCompletionMessage[];
+      modelMessages: ChatCompletionMessage[];
+    }
+  | {
       type: 'done';
     };
 
@@ -155,6 +186,7 @@ interface InitialCompletionParams {
   baseUrl: string;
   tenantId: string;
   userId: string;
+  cookieHeader?: string;
   uiContext?: ChatUiContext;
 }
 
@@ -197,6 +229,11 @@ type ToolArgumentParseContext = {
   source: 'stream' | 'non_stream';
   functionName?: string;
   toolCallId?: string;
+};
+
+type AutoToolAppendResult = {
+  conversation: ChatCompletionMessage[];
+  events: ChatCompletionStreamEvent[];
 };
 
 type StreamedToolCallState = {
@@ -267,11 +304,26 @@ export class ChatCompletionsService {
 
   static async *createStructuredCompletionStream(
     messages: ChatCompletionMessage[],
-    options: { signal?: AbortSignal; uiContext?: ChatUiContext; mentions?: ChatMention[] } = {},
+    options: {
+      signal?: AbortSignal;
+      uiContext?: ChatUiContext;
+      mentions?: ChatMention[];
+      baseUrl?: string;
+      tenantId?: string;
+      userId?: string;
+      chatId?: string | null;
+      cookieHeader?: string;
+      currentUser?: Record<string, unknown>;
+    } = {},
   ): AsyncGenerator<ChatCompletionStreamEvent> {
     const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
     const promptContext = await this.buildPromptContext(options.uiContext, options.mentions);
+    const currentUser = options.currentUser ?? ((await getCurrentUser()) as unknown as Record<string, unknown> | null);
+    const tenantId = options.tenantId ?? (typeof currentUser?.tenant === 'string' ? currentUser.tenant : undefined);
+    const userId = options.userId ?? (typeof currentUser?.user_id === 'string' ? currentUser.user_id : undefined);
+    const baseUrl = options.baseUrl ?? '';
+    const chatId = options.chatId ?? null;
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       if (options.signal?.aborted) {
@@ -321,6 +373,30 @@ export class ChatCompletionsService {
       const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
 
       if (toolCalls.length > 1) {
+        const autoConversation = await this.tryAppendAutoToolResultsForMultipleCalls({
+          conversation,
+          parsedContent,
+          toolCalls,
+          source: 'stream',
+          baseUrl,
+          tenantId,
+          userId,
+          chatId,
+          cookieHeader: options.cookieHeader,
+          currentUser: currentUser ?? undefined,
+        });
+        if (autoConversation) {
+          this.logDebug('stream_tool_multiple_auto_executed', {
+            iteration,
+            toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          });
+          for (const event of autoConversation.events) {
+            yield event;
+          }
+          conversation = autoConversation.conversation;
+          continue;
+        }
+
         this.logWarn('stream_retry_multiple_tool_calls', {
           iteration,
           toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
@@ -400,6 +476,46 @@ export class ChatCompletionsService {
               tool_call_id: toolCallId,
             },
           ];
+          yield this.buildAutoToolExecutedEvent({
+            toolName: SEARCH_TOOL_NAME,
+            parsedArgs,
+            parsedContent,
+            toolCallId,
+            conversation,
+          });
+          continue;
+        }
+
+        if (functionName === BUSINESS_SEARCH_TOOL_NAME) {
+          this.logDebug('stream_tool_search_business_data', {
+            iteration,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            types: parsedArgs.types,
+            limit: parsedArgs.limit,
+          });
+          const results = await this.searchBusinessData(parsedArgs, {
+            tenantId,
+            userId,
+            currentUser: currentUser ?? undefined,
+          });
+          const replay = this.serializeToolResultForConversation(results);
+          conversation = [
+            ...conversation,
+            assistantMessage,
+            {
+              role: 'function',
+              name: BUSINESS_SEARCH_TOOL_NAME,
+              content: replay.content,
+              tool_call_id: toolCallId,
+            },
+          ];
+          yield this.buildAutoToolExecutedEvent({
+            toolName: BUSINESS_SEARCH_TOOL_NAME,
+            parsedArgs,
+            parsedContent,
+            toolCallId,
+            conversation,
+          });
           continue;
         }
 
@@ -443,6 +559,62 @@ export class ChatCompletionsService {
             method: entry.method.toUpperCase(),
             path: entry.path,
           });
+
+          if (this.isReadOnlyRegistryEntry(entry, preparedArgs) && baseUrl && tenantId && userId) {
+            try {
+              this.logDebug('stream_tool_execute_auto_get', {
+                iteration,
+                entryId: entry.id,
+                path: entry.path,
+              });
+              const resultPayload = await this.executeReadOnlyApiCall({
+                entry,
+                args: preparedArgs,
+                baseUrl,
+                tenantId,
+                userId,
+                chatId,
+                cookieHeader: options.cookieHeader,
+              });
+              const replay = this.serializeToolResultForConversation(resultPayload);
+              conversation = [
+                ...conversation,
+                {
+                  role: 'function',
+                  name: EXECUTE_TOOL_NAME,
+                  content: replay.content,
+                  tool_call_id: toolCallId,
+                },
+              ];
+              yield this.buildAutoToolExecutedEvent({
+                toolName: EXECUTE_TOOL_NAME,
+                parsedArgs: preparedArgs,
+                parsedContent,
+                toolCallId,
+                conversation,
+                entry,
+              });
+              continue;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Read-only API call failed.';
+              this.logWarn('stream_tool_execute_auto_get_failed', {
+                iteration,
+                entryId: entry.id,
+                error: message,
+              });
+              conversation = [
+                ...conversation,
+                {
+                  role: 'function',
+                  name: EXECUTE_TOOL_NAME,
+                  content: JSON.stringify({ error: message }),
+                  tool_call_id: toolCallId,
+                },
+              ];
+              continue;
+            }
+          }
+
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           yield {
@@ -534,6 +706,12 @@ export class ChatCompletionsService {
       maxIterations: MAX_TOOL_ITERATIONS,
       ...this.summarizeConversation(conversation),
     });
+    yield {
+      type: 'continuation_available',
+      reason: `Reached the ${MAX_TOOL_ITERATIONS}-step tool limit while gathering information.`,
+      nextMessages: this.sanitizeMessagesForClient(conversation),
+      modelMessages: conversation,
+    };
     yield { type: 'done' };
   }
 
@@ -577,6 +755,7 @@ export class ChatCompletionsService {
         baseUrl: req.nextUrl.origin,
         tenantId: user.tenant,
         userId: user.user_id,
+        cookieHeader: req.headers.get('cookie') ?? undefined,
         uiContext,
       });
 
@@ -695,6 +874,7 @@ export class ChatCompletionsService {
       tenantId: params.tenantId,
       userId: params.userId,
       uiContext: params.uiContext,
+      cookieHeader: params.cookieHeader,
     });
   }
 
@@ -759,6 +939,7 @@ export class ChatCompletionsService {
       tenantId,
       userId,
       uiContext,
+      cookieHeader,
     });
 
     if (response.type === 'assistant_message') {
@@ -804,9 +985,48 @@ export class ChatCompletionsService {
       {
         type: 'function' as const,
         function: {
+          name: BUSINESS_SEARCH_TOOL_NAME,
+          description:
+            'Search tenant-scoped business data across tickets, projects, clients, contacts, assets, companies, invoices, services, and knowledge/reference records. This is read-only and executes automatically. Use this to find relevant business records before calling exact API endpoints for details. Query should be a concise full-text search expression made from likely record words, identifiers, names, or quoted phrases — not a full sentence. If restricting types, omit redundant object-type words from the query. Use OR for alternatives, e.g. "laptop OR workstation OR desktop" with types=["ticket"], not "tickets related to laptops or workstations".',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Concise full-text query for business records. Use likely record words, identifiers, names, quoted phrases, and OR alternatives. Avoid filler phrases like "related to", "about", "show me", or redundant type words when types is set. Good: "laptop OR workstation OR desktop" with types=["ticket"]; bad: "tickets related to laptops or workstations".'
+              },
+              types: {
+                type: 'array',
+                description: 'Optional object types to restrict the search. Omit to search all visible business data.',
+                items: isVertex
+                  ? { type: 'string' }
+                  : { type: 'string', enum: [...SEARCH_OBJECT_TYPES] },
+              },
+              limit: {
+                type: isVertex ? 'number' : 'integer',
+                description: 'Maximum number of results to return (default 10, max 25).',
+              },
+              cursor: {
+                type: 'string',
+                description: 'Optional cursor from a prior search_business_data result.',
+              },
+              sort: {
+                type: 'string',
+                description: 'Sort by "relevance" or "recent" (default relevance).',
+                ...(isVertex ? {} : { enum: ['relevance', 'recent'] }),
+              },
+            },
+            required: ['query'],
+            ...(isVertex ? {} : { additionalProperties: false }),
+          },
+        },
+      },
+      {
+        type: 'function' as const,
+        function: {
           name: EXECUTE_TOOL_NAME,
           description:
-            'Invoke a documented API endpoint by its registry identifier. Include any path, query, header, or body parameters required by that endpoint. Prefer narrow list calls with limit/fields, then use detail endpoints when you have an ID. For large text fields, request byte windows with query parameters such as field_ranges[comment_text]=0-4095.',
+            'Invoke a documented API endpoint by its registry identifier. GET endpoints execute automatically and return results to you; POST/PUT/PATCH/DELETE endpoints are proposed to the user for approval. Include any path, query, header, or body parameters required by that endpoint. Prefer narrow list calls with limit/fields, then use detail endpoints when you have an ID. For large text fields, request byte windows with query parameters such as field_ranges[comment_text]=0-4095.',
           parameters: {
             type: 'object',
             properties: {
@@ -983,6 +1203,283 @@ export class ChatCompletionsService {
     return top;
   }
 
+  private static async searchBusinessData(args: Record<string, unknown>, context: {
+    tenantId?: string;
+    userId?: string;
+    currentUser?: Record<string, unknown>;
+  }) {
+    const query = typeof args.query === 'string' ? args.query.trim() : '';
+    if (!query) {
+      return { error: 'search_business_data requires a non-empty query string.' };
+    }
+
+    const tenantId = context.tenantId;
+    const userId = context.userId;
+    if (!tenantId || !userId) {
+      return { error: 'Unable to search business data without an authenticated tenant and user.' };
+    }
+
+    const requestedTypes = Array.isArray(args.types)
+      ? args.types.filter((value): value is SearchObjectType =>
+          typeof value === 'string' && (SEARCH_OBJECT_TYPES as readonly string[]).includes(value),
+        )
+      : [];
+    const allowedTypes = requestedTypes.length > 0 ? requestedTypes : [...SEARCH_OBJECT_TYPES];
+    const limit = Math.max(
+      1,
+      Math.min(
+        typeof args.limit === 'number' ? Math.floor(args.limit) : parseInt(String(args.limit ?? ''), 10) || 10,
+        25,
+      ),
+    );
+    const sort = args.sort === 'recent' ? 'recent' : 'relevance';
+    const cursor = typeof args.cursor === 'string' ? args.cursor : undefined;
+
+    try {
+      return await runWithTenant(tenantId, async () => {
+        const { knex } = await createTenantKnex(tenantId);
+        const currentUser =
+          context.currentUser && context.currentUser.user_id === userId && context.currentUser.tenant === tenantId
+            ? context.currentUser
+            : await getCurrentUser();
+        if (!currentUser || currentUser.user_id !== userId || currentUser.tenant !== tenantId) {
+          return { error: 'Unable to search business data without a matching authenticated user.' };
+        }
+
+        const clientAccess = this.resolveSearchClientAccess(currentUser as unknown as Record<string, unknown>);
+        const principal = await resolveSearchAclPrincipal(knex, currentUser as any, clientAccess);
+        const [hits, totalCount, countsByType] = await Promise.all([
+          runSearchQuery({
+            knex,
+            tenant: tenantId,
+            query,
+            allowedTypes,
+            limit: limit + 1,
+            cursor,
+            sort,
+            includeSnippets: true,
+            acl: principal,
+          }),
+          countSearchMatches({
+            knex,
+            tenant: tenantId,
+            query,
+            allowedTypes,
+            acl: principal,
+          }),
+          countSearchMatchesByType({
+            knex,
+            tenant: tenantId,
+            query,
+            allowedTypes,
+            acl: principal,
+          }),
+        ]);
+
+        const visible = await verifyResultVisibility(knex, principal, hits);
+        const pageHits = visible.slice(0, limit);
+        const last = pageHits[pageHits.length - 1];
+        const nextCursor = visible.length > limit && last ? encodeSearchCursor(last) : undefined;
+
+        return {
+          query,
+          sort,
+          totalCount,
+          countsByType: Object.fromEntries(
+            Object.entries(countsByType).filter(([, count]) => typeof count === 'number' && count > 0),
+          ),
+          results: pageHits.map((hit) => ({
+            id: hit.id,
+            type: hit.type,
+            parentId: hit.parentId,
+            title: hit.title,
+            subtitle: hit.subtitle,
+            preview: hit.snippet,
+            url: hit.url,
+            updatedAt: hit.updatedAt.toISOString(),
+            score: typeof hit.score === 'number' ? Number(hit.score.toFixed(4)) : hit.score,
+            metadata: hit.metadata ?? {},
+          })),
+          nextCursor,
+        };
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Business search failed.';
+      this.logWarn('tool_search_business_data_failed', { error: message });
+      return { error: message };
+    }
+  }
+
+  private static resolveSearchClientAccess(user: Record<string, unknown>): ClientAccess {
+    const clientId =
+      typeof user.clientId === 'string'
+        ? user.clientId
+        : typeof user.client_id === 'string'
+          ? user.client_id
+          : undefined;
+    if (user.user_type === 'client') {
+      return clientId ? { mode: 'scoped', clientIds: [clientId] } : { mode: 'scoped', clientIds: [] };
+    }
+    return { mode: 'all' };
+  }
+
+  private static async tryAppendAutoToolResultsForMultipleCalls(params: {
+    conversation: ChatCompletionMessage[];
+    parsedContent: ParsedAssistantContent;
+    toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[];
+    source: ToolArgumentParseContext['source'];
+    baseUrl: string;
+    tenantId?: string;
+    userId?: string;
+    chatId: string | null;
+    cookieHeader?: string;
+    currentUser?: Record<string, unknown>;
+  }): Promise<AutoToolAppendResult | null> {
+    const nextConversation = [...params.conversation];
+    const events: ChatCompletionStreamEvent[] = [];
+
+    for (const [index, toolCall] of params.toolCalls.entries()) {
+      const functionName = toolCall.function?.name;
+      const toolCallId = toolCall.id ?? uuid();
+      if (!functionName) {
+        return null;
+      }
+
+      const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments, {
+        source: params.source,
+        functionName,
+        toolCallId,
+      });
+      if (parsedArgsResult.ok === false) {
+        return null;
+      }
+
+      const parsedArgs = parsedArgsResult.value;
+      const assistantMessage = this.buildAssistantToolCallMessage(
+        functionName,
+        index === 0
+          ? params.parsedContent
+          : { raw: '', display: '', reasoning: undefined },
+        parsedArgs,
+        toolCallId,
+      );
+
+      if (functionName === SEARCH_TOOL_NAME) {
+        const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+        nextConversation.push(assistantMessage, {
+          role: 'function',
+          name: SEARCH_TOOL_NAME,
+          content: JSON.stringify({ results }),
+          tool_call_id: toolCallId,
+        });
+        events.push(this.buildAutoToolExecutedEvent({
+          toolName: SEARCH_TOOL_NAME,
+          parsedArgs,
+          parsedContent: index === 0 ? params.parsedContent : { raw: '', display: '', reasoning: undefined },
+          toolCallId,
+          conversation: [...nextConversation],
+        }));
+        continue;
+      }
+
+      if (functionName === BUSINESS_SEARCH_TOOL_NAME) {
+        const results = await this.searchBusinessData(parsedArgs, {
+          tenantId: params.tenantId,
+          userId: params.userId,
+          currentUser: params.currentUser,
+        });
+        const replay = this.serializeToolResultForConversation(results);
+        nextConversation.push(assistantMessage, {
+          role: 'function',
+          name: BUSINESS_SEARCH_TOOL_NAME,
+          content: replay.content,
+          tool_call_id: toolCallId,
+        });
+        events.push(this.buildAutoToolExecutedEvent({
+          toolName: BUSINESS_SEARCH_TOOL_NAME,
+          parsedArgs,
+          parsedContent: index === 0 ? params.parsedContent : { raw: '', display: '', reasoning: undefined },
+          toolCallId,
+          conversation: [...nextConversation],
+        }));
+        continue;
+      }
+
+      if (functionName === EXECUTE_TOOL_NAME) {
+        if (!params.baseUrl || !params.tenantId || !params.userId) {
+          return null;
+        }
+        const entry = this.resolveRegistryEntry(
+          parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+          parsedArgs,
+        );
+        if (!entry) {
+          return null;
+        }
+        const preparedArgs = { ...parsedArgs };
+        this.populatePathParameters(entry, preparedArgs);
+        assistantMessage.function_call!.arguments = preparedArgs;
+        if (!this.isReadOnlyRegistryEntry(entry, preparedArgs)) {
+          return null;
+        }
+        const resultPayload = await this.executeReadOnlyApiCall({
+          entry,
+          args: preparedArgs,
+          baseUrl: params.baseUrl,
+          tenantId: params.tenantId,
+          userId: params.userId,
+          chatId: params.chatId,
+          cookieHeader: params.cookieHeader,
+        });
+        const replay = this.serializeToolResultForConversation(resultPayload);
+        nextConversation.push(assistantMessage, {
+          role: 'function',
+          name: EXECUTE_TOOL_NAME,
+          content: replay.content,
+          tool_call_id: toolCallId,
+        });
+        events.push(this.buildAutoToolExecutedEvent({
+          toolName: EXECUTE_TOOL_NAME,
+          parsedArgs: preparedArgs,
+          parsedContent: index === 0 ? params.parsedContent : { raw: '', display: '', reasoning: undefined },
+          toolCallId,
+          conversation: [...nextConversation],
+          entry,
+        }));
+        continue;
+      }
+
+      return null;
+    }
+
+    return { conversation: nextConversation, events };
+  }
+
+  private static isReadOnlyRegistryEntry(entry: ChatApiRegistryEntry, args: Record<string, unknown>): boolean {
+    const requestedMethod = typeof args.method === 'string' ? args.method.toLowerCase() : undefined;
+    return (requestedMethod ?? entry.method.toLowerCase()) === 'get';
+  }
+
+  private static async executeReadOnlyApiCall(params: {
+    entry: ChatApiRegistryEntry;
+    args: Record<string, unknown>;
+    baseUrl: string;
+    tenantId: string;
+    userId: string;
+    chatId: string | null;
+    cookieHeader?: string;
+  }) {
+    return this.executeFunctionCall({
+      entry: params.entry,
+      args: params.args,
+      baseUrl: params.baseUrl,
+      tenantId: params.tenantId,
+      userId: params.userId,
+      chatId: params.chatId,
+      cookieHeader: params.cookieHeader,
+    });
+  }
+
   private static buildAssistantToolCallMessage(
     functionName: string,
     parsedContent: ParsedAssistantContent,
@@ -1034,7 +1531,7 @@ export class ChatCompletionsService {
       role: 'user',
       content:
         `${reason} Retry now with exactly one function call. ` +
-        `Use ${SEARCH_TOOL_NAME} to look up registry entries, ${EXECUTE_TOOL_NAME} to propose an API call, or ${FINISH_TOOL_NAME} when you are ready to respond to the user. ` +
+        `Use ${BUSINESS_SEARCH_TOOL_NAME} to search business data, ${SEARCH_TOOL_NAME} to look up registry entries, ${EXECUTE_TOOL_NAME} to call API endpoints, or ${FINISH_TOOL_NAME} when you are ready to respond to the user. ` +
         `Do not send plain assistant text outside ${FINISH_TOOL_NAME}. Put the final user-visible reply in ${FINISH_TOOL_NAME}.message.`,
     });
     return nextConversation;
@@ -1073,8 +1570,9 @@ export class ChatCompletionsService {
     tenantId: string;
     userId: string;
     uiContext?: ChatUiContext;
+    cookieHeader?: string;
   }): Promise<CompletionResponse> {
-    const { messages, chatId, baseUrl, tenantId, userId, uiContext } = params;
+    const { messages, chatId, baseUrl, tenantId, userId, uiContext, cookieHeader } = params;
     const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
     const promptContext = await this.buildPromptContext(uiContext);
@@ -1107,6 +1605,26 @@ export class ChatCompletionsService {
       }
 
       if (toolCalls.length > 1) {
+        const autoConversation = await this.tryAppendAutoToolResultsForMultipleCalls({
+          conversation,
+          parsedContent,
+          toolCalls,
+          source: 'non_stream',
+          baseUrl,
+          tenantId,
+          userId,
+          chatId,
+          cookieHeader,
+        });
+        if (autoConversation) {
+          this.logDebug('tool_multiple_auto_executed', {
+            iteration,
+            toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
+          });
+          conversation = autoConversation.conversation;
+          continue;
+        }
+
         this.logWarn('retry_multiple_tool_calls', {
           iteration,
           toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
@@ -1185,6 +1703,25 @@ export class ChatCompletionsService {
           continue;
         }
 
+        if (functionName === BUSINESS_SEARCH_TOOL_NAME) {
+          this.logDebug('tool_search_business_data', {
+            iteration,
+            query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
+            types: parsedArgs.types,
+            limit: parsedArgs.limit,
+          });
+          const results = await this.searchBusinessData(parsedArgs, { tenantId, userId });
+          const replay = this.serializeToolResultForConversation(results);
+          const functionMessage: ChatCompletionMessage = {
+            role: 'function',
+            name: BUSINESS_SEARCH_TOOL_NAME,
+            content: replay.content,
+            tool_call_id: toolCallId,
+          };
+          conversation = [...conversation, assistantMessage, functionMessage];
+          continue;
+        }
+
         if (functionName === EXECUTE_TOOL_NAME) {
           conversation = [...conversation, assistantMessage];
           this.logDebug('tool_execute_requested', {
@@ -1225,6 +1762,54 @@ export class ChatCompletionsService {
             method: entry.method.toUpperCase(),
             path: entry.path,
           });
+
+          if (this.isReadOnlyRegistryEntry(entry, preparedArgs)) {
+            try {
+              this.logDebug('tool_execute_auto_get', {
+                iteration,
+                entryId: entry.id,
+                path: entry.path,
+              });
+              const resultPayload = await this.executeReadOnlyApiCall({
+                entry,
+                args: preparedArgs,
+                baseUrl,
+                tenantId,
+                userId,
+                chatId,
+                cookieHeader,
+              });
+              const replay = this.serializeToolResultForConversation(resultPayload);
+              conversation = [
+                ...conversation,
+                {
+                  role: 'function',
+                  name: EXECUTE_TOOL_NAME,
+                  content: replay.content,
+                  tool_call_id: toolCallId,
+                },
+              ];
+              continue;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Read-only API call failed.';
+              this.logWarn('tool_execute_auto_get_failed', {
+                iteration,
+                entryId: entry.id,
+                error: message,
+              });
+              conversation = [
+                ...conversation,
+                {
+                  role: 'function',
+                  name: EXECUTE_TOOL_NAME,
+                  content: JSON.stringify({ error: message }),
+                  tool_call_id: toolCallId,
+                },
+              ];
+              continue;
+            }
+          }
+
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           return {
@@ -1529,6 +2114,29 @@ export class ChatCompletionsService {
           value: parsed as Record<string, unknown>,
         };
       } catch (error) {
+        const repairedArgs =
+          context.source === 'stream' ? this.tryRepairTruncatedJsonObjectString(args) : null;
+        if (repairedArgs) {
+          try {
+            const repairedParsed = JSON.parse(repairedArgs);
+            if (repairedParsed && typeof repairedParsed === 'object' && !Array.isArray(repairedParsed)) {
+              this.logWarn('repaired_truncated_tool_arguments', {
+                source: context.source,
+                functionName: context.functionName,
+                toolCallId: context.toolCallId,
+                rawArgumentsLength: args.length,
+                repairedArgumentsLength: repairedArgs.length,
+              });
+              return {
+                ok: true,
+                value: repairedParsed as Record<string, unknown>,
+              };
+            }
+          } catch {
+            // Fall through to the normal parse failure path below.
+          }
+        }
+
         this.logToolArgumentParseFailure(
           context,
           args,
@@ -1555,6 +2163,59 @@ export class ChatCompletionsService {
       message:
         'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
     };
+  }
+
+  private static tryRepairTruncatedJsonObjectString(args: string): string | null {
+    const trimmed = args.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return null;
+    }
+
+    let inString = false;
+    let escaped = false;
+    const stack: string[] = [];
+
+    for (const char of trimmed) {
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+      if (char === '{') {
+        stack.push('}');
+        continue;
+      }
+      if (char === '[') {
+        stack.push(']');
+        continue;
+      }
+      if (char === '}' || char === ']') {
+        const expected = stack.pop();
+        if (expected !== char) {
+          return null;
+        }
+      }
+    }
+
+    if (inString || escaped || stack.length === 0) {
+      return null;
+    }
+
+    return `${trimmed}${stack.reverse().join('')}`;
   }
 
   private static isLikelyTruncatedJsonObjectString(args: string): boolean {
@@ -2077,10 +2738,13 @@ export class ChatCompletionsService {
       role: 'system' as const,
       content:
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
-        `Every assistant turn must contain exactly one function call: ${SEARCH_TOOL_NAME}, ${EXECUTE_TOOL_NAME}, or ${FINISH_TOOL_NAME}. ` +
+        `Every assistant turn must contain exactly one function call: ${SEARCH_TOOL_NAME}, ${BUSINESS_SEARCH_TOOL_NAME}, ${EXECUTE_TOOL_NAME}, or ${FINISH_TOOL_NAME}. ` +
         `Do not return plain assistant text without a function call. When you are ready to answer the user, call ${FINISH_TOOL_NAME} and put the final user-visible reply in ${FINISH_TOOL_NAME}.message. ` +
+        `${BUSINESS_SEARCH_TOOL_NAME} searches tenant-scoped business data and is best for discovery questions like finding records, tickets, clients, projects, assets, invoices, or KB/reference content by natural language. ${SEARCH_TOOL_NAME} searches only the API registry and is best for discovering which endpoint to call. ` +
+        `${BUSINESS_SEARCH_TOOL_NAME} uses full-text search syntax. Build concise search queries from words likely to appear in records: nouns, product names, client names, ticket numbers, asset names, identifiers, and short quoted phrases. Do not send the user's whole sentence. Remove filler such as "show me", "give me", "related to", "about", "we've done", and redundant object type words when you set types. Use OR for synonyms/alternatives, e.g. query="laptop OR workstation OR desktop" with types=["ticket"], not query="tickets related to laptops or workstations". If the first search is too narrow, broaden with synonyms; if too broad, add a client/name/status term or quoted phrase. ` +
+        `Read-only ${BUSINESS_SEARCH_TOOL_NAME} calls and GET ${EXECUTE_TOOL_NAME} calls execute automatically; mutating API calls (POST, PUT, PATCH, DELETE) are proposed for user approval. ` +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
-        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources): for write operations (create, update, delete), proactively call the appropriate lookup endpoints to gather that information instead of asking the user; for read operations (list, get), call the endpoint directly and only look up prerequisite data if the user explicitly asks to filter by it. ' +
+        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources): for write operations (create, update, delete), proactively call the appropriate lookup endpoints to gather that information instead of asking the user; for read operations (list, get), use search_business_data for broad discovery or call the endpoint directly when you already know the exact registry entry and only look up prerequisite data if the user explicitly asks to filter by it. ' +
         'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
         'Never invent field names for a fields query parameter. Only send fields values that are explicitly documented in the registry description, parameters, or examples for that exact endpoint. If the registry does not enumerate exact field names, omit fields entirely. For GET /api/v1/tickets specifically, the only valid fields values are ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, and mobile_list. Do not use aliases like id, subject, status, priority, client, created_at, or description. ' +
         'When you only need discovery data, prefer list endpoints with small limits and explicit fields instead of full payloads. Once you have a resource ID, prefer the detail endpoint over repeatedly expanding list responses. ' +
@@ -2093,6 +2757,8 @@ export class ChatCompletionsService {
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.' +
+        `\n\n${WORKFLOW_JSON_TRANSFORM_GUIDANCE}` +
+        `\n\n${WORKFLOW_REGEX_TRANSFORM_GUIDANCE}` +
         (promptContext ? `\n\n${promptContext}` : ''),
     };
 
@@ -2569,6 +3235,65 @@ export class ChatCompletionsService {
         suggestions,
       }),
       tool_call_id: toolCallId,
+    };
+  }
+
+  private static buildAutoToolExecutedEvent(params: {
+    toolName: string;
+    parsedArgs: Record<string, unknown>;
+    parsedContent: ParsedAssistantContent;
+    toolCallId: string;
+    conversation: ChatCompletionMessage[];
+    entry?: ChatApiRegistryEntry;
+  }): ChatCompletionStreamEvent {
+    const metadata = params.entry
+      ? this.buildFunctionMetadata(params.entry, params.parsedArgs)
+      : this.buildSearchToolMetadata(params.toolName, params.parsedArgs);
+    const assistantPreview =
+      (params.parsedContent.display ?? '').trim() ||
+      (params.parsedContent.reasoning ?? '').trim() ||
+      `Automatically ran ${metadata.displayName}.`;
+
+    return {
+      type: 'tool_executed',
+      function: metadata,
+      assistantPreview,
+      assistantReasoning: params.parsedContent.reasoning,
+      functionCall: {
+        name: params.toolName,
+        arguments: params.parsedArgs,
+        toolCallId: params.toolCallId,
+        entryId: params.entry?.id ?? params.toolName,
+      },
+      nextMessages: this.sanitizeMessagesForClient(params.conversation),
+      modelMessages: params.conversation,
+    };
+  }
+
+  private static buildSearchToolMetadata(toolName: string, args: Record<string, unknown>): FunctionMetadata {
+    const query = typeof args.query === 'string' ? args.query.trim() : '';
+    const limit = typeof args.limit === 'number' || typeof args.limit === 'string' ? String(args.limit) : undefined;
+    const isBusinessSearch = toolName === BUSINESS_SEARCH_TOOL_NAME;
+    const displayName = isBusinessSearch ? 'Search business data' : 'Search API registry';
+    const path = query
+      ? `${isBusinessSearch ? 'business data' : 'API registry'}: ${query}`
+      : isBusinessSearch
+        ? 'business data'
+        : 'API registry';
+
+    return {
+      id: toolName,
+      displayName,
+      description: isBusinessSearch
+        ? 'Searches tenant-scoped business records with full-text search.'
+        : 'Searches available API operations.',
+      approvalRequired: false,
+      arguments: {
+        ...args,
+        method: 'SEARCH',
+        path,
+        ...(limit ? { limit } : {}),
+      },
     };
   }
 

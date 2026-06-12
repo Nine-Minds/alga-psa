@@ -48,7 +48,8 @@
       "servicePeriods": "Períodos de servicio",
       "usageTracking": "Seguimiento de uso",
       "reports": "Informes",
-      "serviceCatalog": "Catálogo de servicios",
+      "serviceTypes": "Tipos de servicio",
+      "serviceCatalog": "Servicios",
       "products": "Productos"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "Este servicio aparece en múltiples líneas de contrato. Seleccione contra qué línea de contrato facturar.",
       "tooltipNoClient": "Información del cliente no disponible. El uso se dirigirá al contrato predeterminado administrado por el sistema.",
-      "tooltipMultiple": "Este servicio aparece en múltiples líneas de contrato. Seleccione qué línea de contrato utilizar. Las líneas de contrato de depósito generalmente se usan primero hasta que se agotan.",
+      "tooltipMultiple": "Este servicio aparece en múltiples líneas de contrato. Seleccione qué línea de contrato utilizar. Cuando solo una de ellas es una línea de contrato de bucket, se selecciona de forma predeterminada.",
       "tooltipSingle": "Este uso se facturará bajo la línea de contrato \"{{name}}\".",
       "tooltipNone": "No se encontraron líneas de contrato elegibles para este servicio.",
       "placeholderNoClient": "Uso del contrato predeterminado administrado por el sistema",
@@ -630,7 +631,8 @@
       "open": "Abrir",
       "execute": "Ejecutar",
       "createBatch": "Crear lote",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "cancelBatch": "Cancelar lote"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
@@ -664,8 +666,10 @@
         "created": "Creado",
         "lines": "Líneas",
         "errors": "Errores",
-        "delivered": "Entregado"
-      }
+        "delivered": "Entregado",
+        "notes": "Notas"
+      },
+      "errorDetails": "Detalles de errores"
     },
     "toast": {
       "created": "Lote de exportación contable creado",
@@ -673,7 +677,9 @@
       "loadBatchesError": "No se pudieron cargar los lotes de exportación contable",
       "loadDetailError": "No se pudieron cargar los detalles del lote",
       "createError": "No se pudo crear el lote de exportación",
-      "executeError": "No se pudo ejecutar el lote"
+      "executeError": "No se pudo ejecutar el lote",
+      "cancelled": "Lote cancelado",
+      "cancelError": "No se pudo cancelar el lote"
     },
     "status": {
       "pending": "Pendiente",

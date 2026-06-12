@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Cog } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -39,6 +39,7 @@ interface CommentItemProps {
   onClose: () => void;
   onEdit: (conversation: IComment) => void;
   onDelete: (comment: IComment) => void;
+  onReply?: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   reactions?: IAggregatedReaction[];
@@ -116,6 +117,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onClose,
   onEdit,
   onDelete,
+  onReply,
   hideInternalTab = false,
   uploadFile,
   reactions,
@@ -127,6 +129,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
+  const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
     parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'initial')
   );
@@ -173,12 +176,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation]
   );
   const authorEmail = getAuthorEmail();
+  const isDeleted = Boolean(conversation.deleted_at);
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
+    if (isDeleted) return false;
     if (conversation.is_system_generated) return false;
     return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId]);
+  }, [conversation.user_id, currentUserId, isDeleted]);
 
   const handleSave = () => {
     const updates: Partial<IComment> = {
@@ -282,9 +287,47 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
   }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
+  useEffect(() => {
+    if (!conversation.comment_id || typeof window === 'undefined') {
+      return;
+    }
+
+    const expectedHash = `#comment-${conversation.comment_id}`;
+    if (window.location.hash !== expectedHash) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(commentId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setIsSearchHighlighted(true);
+    });
+
+    // Keep the highlight until the user actually does something, so it stays
+    // visible long enough to register no matter how long they take to look.
+    // A generous fallback clears it if they never interact. Deliberately not
+    // listening to 'scroll' — the smooth scrollIntoView above would otherwise
+    // dismiss it immediately.
+    const dismiss = () => setIsSearchHighlighted(false);
+    const fallback = window.setTimeout(dismiss, 15000);
+    window.addEventListener('pointerdown', dismiss, { once: true });
+    window.addEventListener('keydown', dismiss, { once: true });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+      window.removeEventListener('pointerdown', dismiss);
+      window.removeEventListener('keydown', dismiss);
+    };
+  }, [commentId, conversation.comment_id]);
 
   return (
-    <div {...withDataAutomationId({ id: commentId })} className="group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
+    <div
+      {...withDataAutomationId({ id: commentId })}
+      className={`group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))] ${
+        isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
+      }`}
+    >
       <div className="flex items-start mb-1 min-w-0 max-w-full">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
@@ -399,30 +442,52 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </p>
               </div>
             </div>
-            {canEdit && (
-              <div className="space-x-2">
-                <Button
-                  id={`edit-comment-${conversation.comment_id}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(conversation)}
-                  aria-label={t('conversation.editCommentAriaLabel')}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  id={`delete-comment-${conversation.comment_id}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(conversation)}
-                  aria-label={t('conversation.deleteCommentAriaLabel')}
-                >
-                  <Trash className="w-4 h-4" />
-                </Button>
+            {((onReply && !isDeleted) || canEdit) && (
+              <div className="c-actions space-x-2">
+                {onReply && !isDeleted && (
+                  <Button
+                    id={`reply-comment-${conversation.comment_id}-button`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onReply(conversation)}
+                    aria-label={t('conversation.replyCommentAriaLabel', 'Reply to comment')}
+                  >
+                    <CornerUpLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {canEdit && (
+                  <>
+                    <Button
+                      id={`edit-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(conversation)}
+                      aria-label={t('conversation.editCommentAriaLabel')}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      id={`delete-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(conversation)}
+                      aria-label={t('conversation.deleteCommentAriaLabel')}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
-            {isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            {isDeleted ? (
+              <div
+                {...withDataAutomationId({ id: `${commentId}-content` })}
+                className="mt-1 text-sm text-gray-500 opacity-70"
+              >
+                [deleted]
+              </div>
+            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
               editorContent
             ) : (
             (() => {

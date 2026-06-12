@@ -1112,6 +1112,7 @@ async function handleCreateTicketFromMessageSubmit(params: {
   activity: TeamsMessageExtensionActivity;
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  microsoftUserId?: string | null;
   preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
 }): Promise<TeamsMessageExtensionResponse> {
   if (!(await hasPermission(params.user, 'ticket', 'create'))) {
@@ -1151,6 +1152,7 @@ async function handleCreateTicketFromMessageSubmit(params: {
     surface: MESSAGE_EXTENSION_SURFACE,
     tenantId: params.tenantId,
     user: params.user,
+    microsoftUserId: params.microsoftUserId,
     idempotencyKey,
     input: {
       title,
@@ -1174,6 +1176,7 @@ async function handleUpdateFromMessageSubmit(params: {
   activity: TeamsMessageExtensionActivity;
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  microsoftUserId?: string | null;
   preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
 }): Promise<TeamsMessageExtensionResponse> {
   const targetEntityType = getActionDataUpdateTargetType(params.activity);
@@ -1196,6 +1199,7 @@ async function handleUpdateFromMessageSubmit(params: {
     surface: MESSAGE_EXTENSION_SURFACE,
     tenantId: params.tenantId,
     user: params.user,
+    microsoftUserId: params.microsoftUserId,
     idempotencyKey,
     input: {
       targetEntityType,
@@ -1265,6 +1269,7 @@ async function handleActionRequest(
         activity,
         tenantId,
         user: invokingUser.user,
+        microsoftUserId: getMicrosoftAccountId(activity),
         preview,
       });
     }
@@ -1273,6 +1278,7 @@ async function handleActionRequest(
       activity,
       tenantId,
       user: invokingUser.user,
+      microsoftUserId: getMicrosoftAccountId(activity),
       preview,
     });
   }

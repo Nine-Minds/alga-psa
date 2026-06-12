@@ -75,7 +75,8 @@ export function validateClientName(name: string): string | null {
   }
   
   // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
-  if (!/^[\p{L}\p{N}\s\-,\.&'()]+$/u.test(nameWithoutEmojis)) {
+  // (e.g. "C++ Solutions", "AT&T + Co", "Yahoo!", "#1 Plumbing", "Owner/Operator")
+  if (!/^[\p{L}\p{N}\s\-,\.&'()+#@!\/]+$/u.test(nameWithoutEmojis)) {
     return 'Client name contains invalid characters';
   }
   

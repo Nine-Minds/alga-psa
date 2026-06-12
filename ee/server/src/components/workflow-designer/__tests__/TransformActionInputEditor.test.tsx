@@ -4,6 +4,28 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// React 18 in this workspace does not expose React.act, while the installed
+// testing-library/react act compat path expects it when NODE_ENV selects the
+// react-dom/test-utils production wrapper.
+(React as unknown as { act?: (callback: () => unknown) => unknown }).act ??= async (callback: () => unknown) => {
+  const result = callback();
+  if (result && typeof (result as Promise<unknown>).then === 'function') {
+    await result;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn().mockResolvedValue({
+    getAppSecret: vi.fn().mockResolvedValue(null),
+    getTenantSecret: vi.fn().mockResolvedValue(null),
+    setTenantSecret: vi.fn().mockResolvedValue(undefined),
+  }),
+  getSecret: vi.fn().mockResolvedValue(null),
+  EnvSecretProvider: class {},
+  FileSystemSecretProvider: class {},
+}));
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getTicketFieldOptions: vi.fn().mockResolvedValue({
     options: {
@@ -25,7 +47,31 @@ vi.mock('@alga-psa/clients/actions', () => ({
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeamsBasic: vi.fn().mockResolvedValue([]),
+  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getAllUsersBasic: vi.fn().mockResolvedValue([]),
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/tickets/actions', () => ({
+  getTicketById: vi.fn().mockResolvedValue(null),
+  getTicketsForList: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProjectsWithPhases: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getProjectTaskData: vi.fn().mockResolvedValue({ tasks: [], statuses: [] }),
+}));
+
+vi.mock('@alga-psa/reference-data/actions', () => ({
+  getAllPriorities: vi.fn().mockResolvedValue([]),
+  getPrioritiesByBoardType: vi.fn().mockResolvedValue([]),
+}), { virtual: true });
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
@@ -59,6 +105,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
+import { QuickAskProvider } from 'server/src/components/layout/QuickAskContext';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 import type { InputMapping } from '@alga-psa/workflows/runtime/client';
 
@@ -170,6 +217,74 @@ describe('transform action input editor', () => {
       maxLength: 24,
       strategy: 'middle',
     });
+  });
+
+  it('shows contextual Ask AI guidance for JSONata query expressions when Quick Ask is available', async () => {
+    const openQuickAsk = vi.fn();
+
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk }}>
+        <InputMappingEditor
+          value={{ expression: '{"email": source.customer.email}' }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'expression',
+              type: 'string',
+              required: true,
+              description: 'JSONata expression to evaluate against source',
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-query-json"
+          actionId="transform.query_json"
+          positionsHandlers={positionsHandlers}
+        />
+      </QuickAskProvider>
+    );
+
+    const askAi = await screen.findByRole('button', { name: 'Ask AI for JSONata help' });
+    expect(askAi).toBeInTheDocument();
+
+    fireEvent.click(askAi);
+    expect(openQuickAsk).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows contextual Ask AI guidance for regex pattern fields when Quick Ask is available', async () => {
+    const openQuickAsk = vi.fn();
+
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk }}>
+        <InputMappingEditor
+          value={{ pattern: 'INC-(\\d{6})' }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'pattern',
+              type: 'string',
+              required: true,
+              description: 'Regex pattern body',
+              editor: {
+                kind: 'text',
+                inline: {
+                  mode: 'textarea',
+                },
+              },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-regex-match"
+          actionId="transform.regex_match"
+          positionsHandlers={positionsHandlers}
+        />
+      </QuickAskProvider>
+    );
+
+    const askAi = await screen.findByRole('button', { name: 'Ask AI for regex help' });
+    expect(askAi).toBeInTheDocument();
+
+    fireEvent.click(askAi);
+    expect(openQuickAsk).toHaveBeenCalledTimes(1);
   });
 
   it('T237: transform input fields show type-compatibility hints like business action fields', async () => {

@@ -16,7 +16,6 @@ import {
   Switch,
   Checkbox,
   DropdownMenu,
-  Drawer,
   TextArea,
   Label,
   Separator,
@@ -1456,7 +1455,7 @@ function ReportDetail({
           <Button variant="secondary" onClick={() => setIsEditing(true)}>
             Edit Report
           </Button>
-          <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
+          <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
             Delete Report
           </Button>
         </div>
@@ -1897,7 +1896,7 @@ function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: 
                     </div>
                     <Button
                       type="button"
-                      variant="danger"
+                      variant="destructive"
                       size="sm"
                       onClick={() => removeMetric(index)}
                     >
@@ -2065,7 +2064,7 @@ function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: 
                               <Badge tone="info">Join {joinIndex + 1}</Badge>
                               <Button
                                 type="button"
-                                variant="danger"
+                                variant="destructive"
                                 size="sm"
                                 onClick={() => removeJoin(index, joinIndex)}
                               >
@@ -2129,7 +2128,7 @@ function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: 
                                   {join.on.length > 1 && (
                                     <Button
                                       type="button"
-                                      variant="danger"
+                                      variant="destructive"
                                       size="sm"
                                       onClick={() => removeJoinCondition(index, joinIndex, conditionIndex)}
                                       style={{ padding: '2px 6px', fontSize: '0.75rem' }}
@@ -2351,7 +2350,7 @@ function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: 
                         />
                         <Button
                           type="button"
-                          variant="danger"
+                          variant="destructive"
                           size="sm"
                           onClick={() => removeFilter(index, filterIndex)}
                         >
@@ -2430,7 +2429,7 @@ function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: 
                             />
                             <Button
                               type="button"
-                              variant="danger"
+                              variant="destructive"
                               size="sm"
                               onClick={() => removeLabel(index, labelIndex)}
                             >
@@ -2933,7 +2932,38 @@ interface Tenant {
   portal_domain: string | null;
   subscription_status: string | null;
   plan: string | null;
+  product_code: string | null;
+  subscription?: TenantSubscription | null;
+  addons?: TenantAddOn[];
   created_at: string;
+}
+
+interface TenantSubscription {
+  stripe_subscription_external_id?: string | null;
+  status?: string | null;
+  quantity?: number | null;
+  current_period_end?: string | null;
+  billing_interval?: string | null;
+  price_billing_interval?: string | null;
+  stripe_price_external_id?: string | null;
+  unit_amount?: number | null;
+  currency?: string | null;
+  product_name?: string | null;
+  product_type?: string | null;
+}
+
+interface TenantAddOn {
+  addon_key: string;
+  label: string;
+  description?: string;
+  activated_at?: string | null;
+  expires_at?: string | null;
+}
+
+interface AddOnDefinition {
+  addon_key: string;
+  label: string;
+  description?: string;
 }
 
 interface PendingDeletion {
@@ -3036,6 +3066,7 @@ interface ConfirmAction {
 
 function TenantManagementView() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [availableAddOns, setAvailableAddOns] = useState<AddOnDefinition[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [pendingDeletions, setPendingDeletions] = useState<PendingDeletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3045,12 +3076,14 @@ function TenantManagementView() {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTenantForAddOns, setSelectedTenantForAddOns] = useState<Tenant | null>(null);
   const [createForm, setCreateForm] = useState({
     companyName: '',
     firstName: '',
     lastName: '',
     email: '',
     licenseCount: 5,
+    productCode: 'psa',
   });
   // Deletion dialog state
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
@@ -3122,11 +3155,23 @@ function TenantManagementView() {
     }
   }, []);
 
+  const fetchAvailableAddOns = useCallback(async () => {
+    try {
+      const result = await callTenantManagementApi<AddOnDefinition[]>('/addons');
+      if (result.success && result.data) {
+        setAvailableAddOns(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch available add-ons:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTenants();
+    fetchAvailableAddOns();
     fetchAuditLogs();
     fetchPendingDeletions();
-  }, [fetchTenants, fetchAuditLogs, fetchPendingDeletions]);
+  }, [fetchTenants, fetchAvailableAddOns, fetchAuditLogs, fetchPendingDeletions]);
 
   // Handle resend welcome email
   const handleResendWelcomeEmail = (tenantId: string, tenantName: string) => {
@@ -3192,7 +3237,7 @@ function TenantManagementView() {
 
   // Handle create tenant
   const handleCreateTenant = () => {
-    const { companyName, firstName, lastName, email, licenseCount } = createForm;
+    const { companyName, firstName, lastName, email, licenseCount, productCode } = createForm;
 
     if (!companyName.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
       setStatusMessage({ type: 'error', text: 'Please fill in all required fields' });
@@ -3220,6 +3265,7 @@ function TenantManagementView() {
               lastName: lastName.trim(),
               email: email.trim(),
               licenseCount,
+              productCode,
             }),
           });
 
@@ -3232,6 +3278,7 @@ function TenantManagementView() {
               lastName: '',
               email: '',
               licenseCount: 5,
+              productCode: 'psa',
             });
             fetchTenants();
             fetchAuditLogs();
@@ -3245,6 +3292,31 @@ function TenantManagementView() {
         }
       },
     });
+  };
+
+  const handleUpdateTenantAddOn = async (tenant: Tenant, addOnKey: string, action: 'grant' | 'revoke') => {
+    setActionInProgress(`${tenant.tenant}:${addOnKey}`);
+    try {
+      const result = await callTenantManagementApi<void>(
+        `/tenants/${encodeURIComponent(tenant.tenant)}/addons`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ addonKey: addOnKey, action }),
+        }
+      );
+
+      if (result.success) {
+        setStatusMessage({ type: 'success', text: result.message || `Add-on ${action === 'grant' ? 'granted' : 'revoked'}` });
+        await fetchTenants();
+        await fetchAuditLogs();
+      } else {
+        setStatusMessage({ type: 'error', text: `Failed: ${result.error}` });
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Error: ${err}` });
+    } finally {
+      setActionInProgress(null);
+    }
   };
 
   // Handle start tenant deletion
@@ -3512,6 +3584,21 @@ function TenantManagementView() {
     return 'info';
   };
 
+  const formatProductCode = (productCode: string | null): string => {
+    if (!productCode) return 'PSA';
+    if (productCode === 'psa') return 'PSA';
+    if (productCode === 'algadesk') return 'AlgaDesk';
+    return productCode;
+  };
+
+  const formatCurrency = (amount?: number | null, currency?: string | null): string | null => {
+    if (amount == null) return null;
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: (currency || 'usd').toUpperCase(),
+    }).format(amount / 100);
+  };
+
   const tenantColumns: Column<Tenant>[] = [
     {
       key: 'client_name',
@@ -3538,9 +3625,52 @@ function TenantManagementView() {
       key: 'plan',
       header: 'Plan',
       render: (row) => (
-        <Badge tone={row.plan === 'premium' ? 'info' : 'default'}>
-          {row.plan ? row.plan.charAt(0).toUpperCase() + row.plan.slice(1) : '—'}
-        </Badge>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <Badge tone={row.plan === 'premium' ? 'info' : 'default'}>
+            {row.plan ? row.plan.charAt(0).toUpperCase() + row.plan.slice(1) : '—'}
+          </Badge>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+            {formatProductCode(row.product_code)}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      key: 'subscription',
+      header: 'Subscription Product',
+      sortable: false,
+      render: (row) => {
+        const subscription = row.subscription;
+        const price = formatCurrency(subscription?.unit_amount, subscription?.currency);
+        return subscription ? (
+          <div>
+            <Text style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500 }}>
+              {subscription.product_name || subscription.product_type || 'Stripe product'}
+            </Text>
+            <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem' }}>
+              {price ? `${price}/${subscription.price_billing_interval || subscription.billing_interval || 'period'}` : subscription.stripe_price_external_id || 'No price'}
+              {subscription.quantity ? ` · ${subscription.quantity} seats` : ''}
+            </Text>
+          </div>
+        ) : (
+          <Text tone="muted" style={{ fontSize: '0.875rem' }}>Manual / none</Text>
+        );
+      },
+    },
+    {
+      key: 'addons',
+      header: 'Add-ons',
+      sortable: false,
+      render: (row) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {(row.addons || []).length === 0 ? (
+            <Text tone="muted" style={{ fontSize: '0.75rem' }}>None</Text>
+          ) : (
+            (row.addons || []).map((addOn) => (
+              <Badge key={addOn.addon_key} tone="info">{addOn.label || addOn.addon_key}</Badge>
+            ))
+          )}
+        </div>
       ),
     },
     {
@@ -3577,6 +3707,11 @@ function TenantManagementView() {
             key: 'export',
             label: 'Export Data',
             onClick: () => handleExportTenant(row),
+          },
+          {
+            key: 'addons',
+            label: 'Manage Add-ons',
+            onClick: () => setSelectedTenantForAddOns(row),
           },
           {
             key: 'premium-trial',
@@ -3687,6 +3822,15 @@ function TenantManagementView() {
     },
   ];
 
+  const productCodeOptions: SelectOption[] = [
+    { value: 'psa', label: 'Alga PSA' },
+    { value: 'algadesk', label: 'AlgaDesk' },
+  ];
+
+  const currentSelectedTenantForAddOns = selectedTenantForAddOns
+    ? tenants.find((tenant) => tenant.tenant === selectedTenantForAddOns.tenant) || selectedTenantForAddOns
+    : null;
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -3788,6 +3932,18 @@ function TenantManagementView() {
               </Text>
             </div>
 
+            <div>
+              <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Product Code</Text>
+              <CustomSelect
+                options={productCodeOptions}
+                value={createForm.productCode}
+                onValueChange={(value) => setCreateForm({ ...createForm, productCode: value })}
+              />
+              <Text tone="muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                Selects the product-specific onboarding bootstrap and welcome email flow.
+              </Text>
+            </div>
+
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
               <Button variant="secondary" onClick={() => setShowCreateForm(false)}>
                 Cancel
@@ -3799,6 +3955,66 @@ function TenantManagementView() {
                 {actionInProgress === 'create' ? 'Creating...' : 'Create Tenant'}
               </Button>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {currentSelectedTenantForAddOns && (
+        <Card style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Manage Add-ons</h3>
+              <Text tone="muted" style={{ display: 'block', fontSize: '0.875rem', marginTop: '4px' }}>
+                {currentSelectedTenantForAddOns.client_name} · {formatProductCode(currentSelectedTenantForAddOns.product_code)} · {currentSelectedTenantForAddOns.plan || 'No plan'}
+              </Text>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTenantForAddOns(null)}>X</Button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+            {availableAddOns.map((definition) => {
+              const active = (currentSelectedTenantForAddOns.addons || []).some(
+                (addOn) => addOn.addon_key === definition.addon_key
+              );
+              const progressKey = `${currentSelectedTenantForAddOns.tenant}:${definition.addon_key}`;
+
+              return (
+                <div
+                  key={definition.addon_key}
+                  style={{
+                    border: '1px solid var(--alga-border)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    background: active ? 'var(--alga-primary-50)' : 'var(--alga-card-bg)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <Text style={{ fontWeight: 600 }}>{definition.label}</Text>
+                    <Badge tone={active ? 'success' : 'default'}>{active ? 'Active' : 'Not granted'}</Badge>
+                  </div>
+                  {definition.description && (
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', minHeight: '34px' }}>
+                      {definition.description}
+                    </Text>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={active ? 'destructive' : 'primary'}
+                    style={{ marginTop: '12px' }}
+                    disabled={actionInProgress === progressKey}
+                    onClick={() => handleUpdateTenantAddOn(
+                      currentSelectedTenantForAddOns,
+                      definition.addon_key,
+                      active ? 'revoke' : 'grant'
+                    )}
+                  >
+                    {actionInProgress === progressKey
+                      ? 'Working...'
+                      : active ? 'Revoke' : 'Grant'}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}
@@ -3827,11 +4043,18 @@ function TenantManagementView() {
             {(() => {
               const filteredTenants = searchQuery.trim()
                 ? tenants.filter(t => {
-                    const query = searchQuery.toLowerCase();
-                    return t.client_name.toLowerCase().includes(query) ||
-                      t.tenant.toLowerCase().includes(query) ||
-                      (t.email && t.email.toLowerCase().includes(query));
-                  })
+                  const query = searchQuery.toLowerCase();
+                  return t.client_name.toLowerCase().includes(query) ||
+                    t.tenant.toLowerCase().includes(query) ||
+                    (t.email && t.email.toLowerCase().includes(query)) ||
+                    (t.product_code && t.product_code.toLowerCase().includes(query)) ||
+                    (t.plan && t.plan.toLowerCase().includes(query)) ||
+                    (t.addons || []).some((addOn) =>
+                      addOn.addon_key.toLowerCase().includes(query) ||
+                      addOn.label.toLowerCase().includes(query)
+                    ) ||
+                    Boolean(t.subscription?.product_name?.toLowerCase().includes(query));
+                })
                 : tenants;
 
               return filteredTenants.length === 0 ? (
@@ -4798,7 +5021,7 @@ function EditReport({
                   </div>
                   <Button
                     type="button"
-                    variant="danger"
+                    variant="destructive"
                     size="sm"
                     onClick={() => removeMetric(index)}
                   >
@@ -4966,7 +5189,7 @@ function EditReport({
                             <Badge tone="info">Join {joinIndex + 1}</Badge>
                             <Button
                               type="button"
-                              variant="danger"
+                              variant="destructive"
                               size="sm"
                               onClick={() => removeJoin(index, joinIndex)}
                             >
@@ -5030,7 +5253,7 @@ function EditReport({
                                 {join.on.length > 1 && (
                                   <Button
                                     type="button"
-                                    variant="danger"
+                                    variant="destructive"
                                     size="sm"
                                     onClick={() => removeJoinCondition(index, joinIndex, conditionIndex)}
                                     style={{ padding: '2px 6px', fontSize: '0.75rem' }}
@@ -5252,7 +5475,7 @@ function EditReport({
                       />
                       <Button
                         type="button"
-                        variant="danger"
+                        variant="destructive"
                         size="sm"
                         onClick={() => removeFilter(index, filterIndex)}
                       >
@@ -5331,7 +5554,7 @@ function EditReport({
                             />
                             <Button
                               type="button"
-                              variant="danger"
+                              variant="destructive"
                               size="sm"
                               onClick={() => removeLabel(index, labelIndex)}
                             >
@@ -5374,12 +5597,10 @@ function FeatureFlagsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFlag, setSelectedFlag] = useState<PostHogFeatureFlag | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [tenantFilter, setTenantFilter] = useState('');
-  const [expandedFlagIds, setExpandedFlagIds] = useState<Set<number>>(new Set());
   const [allTenants, setAllTenants] = useState<Record<string, Tenant>>({});
 
   // Get tenant IDs from a flag's release conditions
@@ -5417,6 +5638,10 @@ function FeatureFlagsView() {
     const result = await callFeatureFlagApi<PostHogFeatureFlag[]>('');
     if (result.success && result.data) {
       setFlags(result.data);
+      setSelectedFlag((current) => {
+        if (!current) return result.data?.[0] || null;
+        return result.data?.find((flag) => flag.id === current.id) || result.data?.[0] || null;
+      });
     } else {
       setError(result.error || 'Failed to fetch feature flags');
     }
@@ -5433,15 +5658,6 @@ function FeatureFlagsView() {
       }
     });
   }, []);
-
-  const toggleExpanded = (flagId: number) => {
-    setExpandedFlagIds(prev => {
-      const next = new Set(prev);
-      if (next.has(flagId)) next.delete(flagId);
-      else next.add(flagId);
-      return next;
-    });
-  };
 
   useEffect(() => {
     fetchFlags();
@@ -5461,98 +5677,20 @@ function FeatureFlagsView() {
     return `${flag.filters.groups.length} group(s)`;
   };
 
-  const columns: Column<PostHogFeatureFlag>[] = [
-    {
-      key: 'key',
-      header: 'Key',
-      render: (row) => (
-        <div>
-          <strong style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{row.key}</strong>
-          {row.name && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
-              {row.name}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'active',
-      header: 'Status',
-      render: (row) => (
-        <Badge tone={row.active ? 'success' : 'warning'}>
-          {row.active ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'filters',
-      header: 'Rollout',
-      sortable: false,
-      render: (row) => {
-        const tenantIds = getFlagTenants(row);
-        const isExpanded = expandedFlagIds.has(row.id);
-        if (tenantIds.length === 0) {
-          return (
-            <Text tone="muted" style={{ fontSize: '0.875rem' }}>
-              {getRolloutSummary(row)}
-            </Text>
-          );
-        }
-        return (
-          <div>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleExpanded(row.id); }}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: 'var(--alga-primary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '4px',
-              }}
-            >
-              <span style={{ display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>&#9654;</span>
-              {tenantIds.length} tenant{tenantIds.length !== 1 ? 's' : ''}
-            </button>
-            {isExpanded && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '6px' }}>
-                {tenantIds.map(tid => {
-                  const t = allTenants[tid];
-                  return (
-                    <Text key={tid} style={{ fontSize: '0.75rem', fontFamily: 'monospace' }} tone="muted">
-                      {t ? t.client_name : tid}
-                    </Text>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: 'created_at',
-      header: 'Created',
-      render: (row) => (
-        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
-          {new Date(row.created_at).toLocaleDateString()}
-        </Text>
-      ),
-    },
-    {
-      key: 'id',
-      header: 'Actions',
-      sortable: false,
-      render: (row) => (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setSelectedFlag(row);
-            setDrawerOpen(true);
-          }}
-        >
-          Manage
-        </Button>
-      ),
-    },
+  const tenantFilterOptions: SelectOption[] = [
+    { value: '__all__', label: 'All tenants' },
+    ...(() => {
+      const tenantIds = new Set<string>();
+      for (const flag of flags) {
+        for (const tid of getFlagTenants(flag)) tenantIds.add(tid);
+      }
+      return Array.from(tenantIds)
+        .map(tid => ({
+          value: tid,
+          label: allTenants[tid]?.client_name || tid.slice(0, 12) + '...',
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    })(),
   ];
 
   return (
@@ -5578,21 +5716,7 @@ function FeatureFlagsView() {
           style={{ flex: 1 }}
         />
         <CustomSelect
-          options={[
-            { value: '__all__', label: 'All tenants' },
-            ...(() => {
-              const tenantIds = new Set<string>();
-              for (const flag of flags) {
-                for (const tid of getFlagTenants(flag)) tenantIds.add(tid);
-              }
-              return Array.from(tenantIds)
-                .map(tid => ({
-                  value: tid,
-                  label: allTenants[tid]?.client_name || tid.slice(0, 12) + '...',
-                }))
-                .sort((a, b) => a.label.localeCompare(b.label));
-            })(),
-          ]}
+          options={tenantFilterOptions}
           value={tenantFilter || '__all__'}
           onValueChange={(v) => setTenantFilter(v === '__all__' ? '' : v)}
           placeholder="Filter by tenant..."
@@ -5643,41 +5767,94 @@ function FeatureFlagsView() {
           </Text>
         </Card>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filteredFlags}
-          paginate
-          defaultPageSize={10}
-          initialSortKey="created_at"
-        />
-      )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: '16px', alignItems: 'start' }}>
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--alga-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontWeight: 600 }}>Flags</Text>
+              <Badge tone="info">{filteredFlags.length}</Badge>
+            </div>
+            <div style={{ maxHeight: '680px', overflowY: 'auto' }}>
+              {filteredFlags.map((flag) => {
+                const tenantIds = getFlagTenants(flag);
+                const selected = selectedFlag?.id === flag.id;
+                return (
+                  <button
+                    key={flag.id}
+                    type="button"
+                    onClick={() => setSelectedFlag(flag)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 14px',
+                      border: 'none',
+                      borderBottom: '1px solid var(--alga-border)',
+                      background: selected ? 'var(--alga-primary-50)' : 'var(--alga-card-bg)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <Text style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.875rem' }}>
+                        {flag.key}
+                      </Text>
+                      <Badge tone={flag.active ? 'success' : 'warning'}>{flag.active ? 'Active' : 'Inactive'}</Badge>
+                    </div>
+                    {flag.name && (
+                      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '3px' }}>
+                        {flag.name}
+                      </Text>
+                    )}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      <Badge tone="default">{getRolloutSummary(flag)}</Badge>
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+                        Created {new Date(flag.created_at).toLocaleDateString()}
+                      </Text>
+                    </div>
+                    {tenantIds.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
+                        {tenantIds.slice(0, 3).map((tenantId) => (
+                          <Badge key={tenantId} tone="info">
+                            {allTenants[tenantId]?.client_name || tenantId.slice(0, 8)}
+                          </Badge>
+                        ))}
+                        {tenantIds.length > 3 && <Badge tone="default">+{tenantIds.length - 3}</Badge>}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
 
-      {/* Flag Detail Drawer */}
-      <Drawer
-        open={drawerOpen}
-        onClose={() => {
-          setDrawerOpen(false);
-          setSelectedFlag(null);
-        }}
-        title={selectedFlag ? selectedFlag.key : 'Flag Details'}
-        width="500px"
-      >
-        {selectedFlag && (
-          <FeatureFlagDetail
-            flag={selectedFlag}
-            onUpdate={() => {
-              fetchFlags();
-              setStatusMessage({ type: 'success', text: 'Flag updated successfully' });
-            }}
-            onDelete={() => {
-              setDrawerOpen(false);
-              setSelectedFlag(null);
-              fetchFlags();
-              setStatusMessage({ type: 'success', text: 'Flag deleted successfully' });
-            }}
-          />
-        )}
-      </Drawer>
+          <Card>
+            {selectedFlag ? (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700 }}>
+                    {selectedFlag.key}
+                  </Text>
+                  {selectedFlag.name && (
+                    <Text tone="muted" style={{ display: 'block', marginTop: '4px' }}>{selectedFlag.name}</Text>
+                  )}
+                </div>
+                <FeatureFlagDetail
+                  flag={selectedFlag}
+                  onUpdate={() => {
+                    fetchFlags();
+                    setStatusMessage({ type: 'success', text: 'Flag updated successfully' });
+                  }}
+                  onDelete={() => {
+                    setSelectedFlag(null);
+                    fetchFlags();
+                    setStatusMessage({ type: 'success', text: 'Flag deleted successfully' });
+                  }}
+                />
+              </>
+            ) : (
+              <Text tone="muted">Select a feature flag to manage rollout.</Text>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -6205,7 +6382,7 @@ function FeatureFlagDetail({
                       </Text>
                     </div>
                     <Button
-                      variant="danger"
+                      variant="destructive"
                       size="sm"
                       onClick={() => handleRemoveTenant(tenantId)}
                       disabled={removingTenant === tenantId}
@@ -6265,7 +6442,7 @@ function FeatureFlagDetail({
 
       {/* Delete */}
       <div>
-        <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
+        <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
           Delete Flag
         </Button>
       </div>
@@ -6404,8 +6581,8 @@ function NotificationStatsExpander({ notificationId }: { notificationId: string 
 
       {/* Tab toggle */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <Button size="sm" variant={tab === 'summary' ? 'default' : 'outline'} onClick={() => setTab('summary')}>By Tenant</Button>
-        <Button size="sm" variant={tab === 'users' ? 'default' : 'outline'} onClick={() => setTab('users')}>Per User</Button>
+        <Button size="sm" variant={tab === 'summary' ? 'primary' : 'outline'} onClick={() => setTab('summary')}>By Tenant</Button>
+        <Button size="sm" variant={tab === 'users' ? 'primary' : 'outline'} onClick={() => setTab('users')}>Per User</Button>
         {tab === 'users' && (
           <Input
             value={search}
@@ -6456,7 +6633,7 @@ function NotificationStatsExpander({ notificationId }: { notificationId: string 
                     <td style={{ padding: '0.4rem 0.5rem' }}>
                       {hasViewed ? <Badge tone="success">Viewed</Badge>
                         : hasDismissed ? <Badge tone="warning">Dismissed</Badge>
-                        : <Badge tone="muted">Pending</Badge>}
+                        : <Badge tone="default">Pending</Badge>}
                     </td>
                     <td style={{ padding: '0.4rem 0.5rem', color: hasDismissed ? 'inherit' : 'var(--alga-muted-fg, #999)' }}>
                       {hasDismissed ? new Date(r.dismissed_at!).toLocaleString() : '—'}
@@ -6614,7 +6791,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
   const [title, setTitle] = useState(notification?.title || '');
   const [bannerContent, setBannerContent] = useState(notification?.banner_content || '');
   const [detailContent, setDetailContent] = useState(notification?.detail_content || '');
-  const [variant, setVariant] = useState(notification?.variant || 'info');
+  const [variant, setVariant] = useState<PlatformNotification['variant']>(notification?.variant || 'info');
   const [startsAt, setStartsAt] = useState(notification?.starts_at ? notification.starts_at.slice(0, 16) : '');
   const [expiresAt, setExpiresAt] = useState(notification?.expires_at ? notification.expires_at.slice(0, 16) : '');
   const [isActive, setIsActive] = useState(notification?.is_active ?? true);
@@ -6843,7 +7020,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <div>
               <Label>Variant</Label>
-              <CustomSelect options={variantOptions} value={variant} onValueChange={setVariant} />
+              <CustomSelect options={variantOptions} value={variant} onValueChange={(value) => setVariant(value as PlatformNotification['variant'])} />
             </div>
             {isEdit && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
@@ -7096,7 +7273,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
                       <td style={{ padding: '0.4rem 0.5rem' }}>{r.product_name || '—'}</td>
                       <td style={{ padding: '0.4rem 0.5rem' }}>
                         {r.subscription_status
-                          ? <Badge tone={r.subscription_status === 'active' ? 'success' : r.subscription_status === 'trialing' ? 'info' : r.subscription_status === 'past_due' ? 'warning' : 'muted'}>
+                          ? <Badge tone={r.subscription_status === 'active' ? 'success' : r.subscription_status === 'trialing' ? 'info' : r.subscription_status === 'past_due' ? 'warning' : 'default'}>
                               {r.subscription_status}
                             </Badge>
                           : '—'}

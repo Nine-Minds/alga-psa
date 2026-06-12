@@ -73,7 +73,9 @@ async function assertOwnCommentOrInternalUser(
 export const createTaskComment = withAuth(async (
   user,
   { tenant },
-  comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'>
+  comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'> & {
+    parent_comment_id?: string | null;
+  }
 ): Promise<string> => {
   const { knex: db } = await createTenantKnex();
 
@@ -92,20 +94,7 @@ export const createTaskComment = withAuth(async (
     // Convert BlockNote to markdown
     const markdownContent = convertBlockNoteToMarkdown(comment.note);
 
-    // Insert comment (convert camelCase to snake_case for DB)
-    const [newComment] = await trx('project_task_comments')
-      .insert({
-        task_id: comment.taskId,
-        user_id: userId,
-        tenant,
-        author_type: 'internal',
-        note: comment.note,
-        markdown_content: markdownContent,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
-
-    // Get project context for notifications
+    // Get project context for notifications and validate task before inserting thread/comment rows
     const task = await trx('project_tasks')
       .join('project_phases', function() {
         this.on('project_tasks.phase_id', 'project_phases.phase_id')
@@ -120,6 +109,82 @@ export const createTaskComment = withAuth(async (
       throw new Error('Task not found');
     }
 
+    const now = new Date().toISOString();
+    const parentCommentId = comment.parentCommentId || comment.parent_comment_id || null;
+    const isReply = Boolean(parentCommentId);
+    let taskCommentId: string | undefined;
+    let threadId: string | undefined;
+
+    if (isReply) {
+      const parent = await trx('project_task_comments')
+        .select('task_comment_id', 'task_id', 'thread_id', 'deleted_at')
+        .where({ tenant, task_comment_id: parentCommentId })
+        .first();
+
+      if (!parent) {
+        throw new Error('Parent task comment not found');
+      }
+
+      if (parent.task_id !== comment.taskId) {
+        throw new Error('Parent task comment must belong to the same task');
+      }
+
+      if (parent.deleted_at) {
+        throw new Error('Cannot reply to a deleted task comment');
+      }
+
+      const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id');
+      taskCommentId = idsResult.rows?.[0]?.task_comment_id;
+      threadId = parent.thread_id;
+    } else {
+      const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id, gen_random_uuid() AS thread_id');
+      const generatedIds = idsResult.rows?.[0];
+      taskCommentId = generatedIds?.task_comment_id;
+      threadId = generatedIds?.thread_id;
+
+      await trx('comment_threads').insert({
+        tenant,
+        thread_id: threadId,
+        ticket_id: null,
+        project_task_id: comment.taskId,
+        root_comment_id: taskCommentId,
+        is_internal: false,
+        reply_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        created_by: userId,
+      });
+    }
+
+    if (!taskCommentId || !threadId) {
+      throw new Error('Failed to generate task comment/thread identifiers');
+    }
+
+    // Insert comment (convert camelCase to snake_case for DB)
+    const [newComment] = await trx('project_task_comments')
+      .insert({
+        task_comment_id: taskCommentId,
+        task_id: comment.taskId,
+        thread_id: threadId,
+        parent_comment_id: parentCommentId,
+        user_id: userId,
+        tenant,
+        author_type: 'internal',
+        note: comment.note,
+        markdown_content: markdownContent,
+        created_at: now
+      })
+      .returning('*');
+
+    if (isReply) {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: threadId })
+        .update({
+          reply_count: trx.raw('reply_count + 1'),
+          last_activity_at: now,
+        });
+    }
+
     // Publish event (mention extraction happens in event handler)
     await publishEvent({
       eventType: 'TASK_COMMENT_ADDED',
@@ -129,9 +194,29 @@ export const createTaskComment = withAuth(async (
         projectId: task.project_id,
         userId,
         taskCommentId: newComment.task_comment_id,
+        threadId,
+        parentCommentId,
+        isReply,
+        thread_id: threadId,
+        parent_comment_id: parentCommentId,
+        is_reply: isReply,
         taskName: task.task_name,
         commentContent: comment.note,  // BlockNote JSON with embedded mentions
         isUpdate: false  // Flag to indicate this is a new comment, not an update
+      }
+    });
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_CREATED',
+      payload: {
+        tenantId: tenant,
+        taskId: comment.taskId,
+        projectId: task.project_id,
+        userId,
+        taskCommentId: newComment.task_comment_id,
+        taskName: task.task_name,
+        commentContent: comment.note,
+        isUpdate: false
       }
     });
 
@@ -171,6 +256,8 @@ export const getTaskComments = withAuth(async (
   return comments.map((comment: any) => ({
     taskCommentId: comment.task_comment_id,
     taskId: comment.task_id,
+    threadId: comment.thread_id,
+    parentCommentId: comment.parent_comment_id,
     userId: comment.user_id,
     authorType: comment.author_type,
     note: comment.note,
@@ -178,6 +265,7 @@ export const getTaskComments = withAuth(async (
     createdAt: comment.created_at,
     updatedAt: comment.updated_at,
     editedAt: comment.edited_at,
+    deletedAt: comment.deleted_at,
     tenant: comment.tenant,
     firstName: comment.first_name,
     lastName: comment.last_name,
@@ -252,6 +340,21 @@ export const updateTaskComment = withAuth(async (
         isUpdate: true  // Flag to indicate this is an update
       }
     });
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        taskId: existingComment.task_id,
+        projectId: task.project_id,
+        userId,
+        taskCommentId: taskCommentId,
+        taskName: task.task_name,
+        oldCommentContent: existingComment.note,
+        newCommentContent: updates.note,
+        isUpdate: true
+      }
+    });
   });
 });
 
@@ -277,15 +380,85 @@ export const deleteTaskComment = withAuth(async (
 
     await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
-    // Delete reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
+    const task = await trx('project_tasks')
+      .join('project_phases', function() {
+        this.on('project_tasks.phase_id', 'project_phases.phase_id')
+          .andOn('project_tasks.tenant', 'project_phases.tenant');
+      })
+      .where('project_tasks.task_id', existingComment.task_id)
+      .where('project_tasks.tenant', tenant)
+      .select('project_phases.project_id', 'project_tasks.task_name')
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // If the comment still has replies, soft-delete it so the thread structure survives
+    const child = await trx('project_task_comments')
+      .select('task_comment_id')
+      .where({ parent_comment_id: taskCommentId, tenant })
+      .first();
+
+    if (child) {
+      const now = new Date().toISOString();
+      await trx('project_task_comments')
+        .where({ task_comment_id: taskCommentId, tenant })
+        .update({
+          note: '[deleted]',
+          markdown_content: '[deleted]',
+          deleted_at: now,
+          updated_at: now,
+        });
+
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_DELETED',
+        payload: {
+          tenantId: tenant,
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          userId,
+          taskCommentId,
+          taskName: task.task_name,
+          timestamp: new Date().toISOString(),
+        }
+      });
+      return;
+    }
+
+    // Delete reactions before hard-deleting the comment (CitusDB doesn't support ON DELETE CASCADE)
     await trx('project_task_comment_reactions')
       .where({ task_comment_id: taskCommentId, tenant })
       .del();
 
-    // Hard delete
     await trx('project_task_comments')
       .where({ task_comment_id: taskCommentId, tenant })
       .del();
+
+    if (existingComment.parent_comment_id) {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: existingComment.thread_id })
+        .update({
+          reply_count: trx.raw('GREATEST(reply_count - 1, 0)'),
+        });
+    } else {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: existingComment.thread_id })
+        .del();
+    }
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_DELETED',
+      payload: {
+        tenantId: tenant,
+        taskId: existingComment.task_id,
+        projectId: task.project_id,
+        userId,
+        taskCommentId,
+        taskName: task.task_name,
+        timestamp: new Date().toISOString(),
+      }
+    });
   });
 });
 

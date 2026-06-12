@@ -6,6 +6,7 @@ export default defineConfig({
   entry: [
     'src/index.ts',
     'src/events.ts',
+    'src/ticket-live-updates.ts',
     'src/publishers/index.ts',
     'src/publishers/*.ts',
   ],
@@ -22,4 +23,3 @@ export default defineConfig({
     'zod',
   ],
 });
-

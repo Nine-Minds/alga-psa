@@ -75,4 +75,12 @@ describe('assertAddOnAccess', () => {
 
     await expect(assertTenantAddOnAccess('tenant-123', ADD_ONS.AI_ASSISTANT)).resolves.toBeUndefined();
   });
+
+  it('supports Teams and Enterprise add-on checks', async () => {
+    getSession.mockResolvedValue({ user: { tenant: 'tenant-123', plan: 'premium' } });
+    getActiveAddOns.mockResolvedValue([ADD_ONS.TEAMS, ADD_ONS.ENTERPRISE]);
+
+    await expect(assertAddOnAccess(ADD_ONS.TEAMS)).resolves.toBeUndefined();
+    await expect(assertAddOnAccess(ADD_ONS.ENTERPRISE)).resolves.toBeUndefined();
+  });
 });

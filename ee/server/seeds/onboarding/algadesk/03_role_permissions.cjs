@@ -36,6 +36,7 @@ exports.seed = async function (knex, tenantId) {
                     'contact:read:msp',
                     'document:create:msp', 'document:read:msp', 'document:update:msp',
                     'profile:read:msp', 'profile:update:msp',
+                    'reports:read:msp',
                     'tag:create:msp', 'tag:read:msp', 'tag:update:msp',
                     'ticket:create:msp', 'ticket:read:msp', 'ticket:update:msp',
                     'ticket_settings:read:msp',

@@ -5,9 +5,36 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
 import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
+
+type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
+
+// Keeps the app-wide search index in sync when project / project_task statuses
+// change. Failures are swallowed: the daily search reconcile job is the backstop.
+async function publishStatusSearchEvent(
+  eventType: StatusSearchEventType,
+  tenant: string,
+  statusId: string,
+  statusType?: ItemType,
+  userId?: string,
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        statusId,
+        statusType,
+        userId,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[statusActions] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
 
 export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, boardId?: string | null) => {
   try {
@@ -148,6 +175,13 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
       return status;
     });
 
+    await publishStatusSearchEvent(
+      'STATUS_CREATED',
+      tenant,
+      newStatus.status_id,
+      newStatus.status_type,
+      user.user_id,
+    );
     return newStatus;
 
   } catch (error) {
@@ -170,7 +204,7 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
 
   const {knex: db} = await createTenantKnex();
   try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const updatedStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       const currentStatus = await trx<IStatus>('statuses')
         .where({
           tenant,
@@ -259,6 +293,15 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
 
       return updatedStatus;
     });
+
+    await publishStatusSearchEvent(
+      'STATUS_UPDATED',
+      tenant,
+      updatedStatus.status_id,
+      updatedStatus.status_type,
+      _user.user_id,
+    );
+    return updatedStatus;
   } catch (error) {
     console.error('Error updating status:', error);
     if (error instanceof Error) {
@@ -376,6 +419,16 @@ export const deleteStatus = withAuth(async (
         throw new Error('Status not found');
       }
     });
+
+    if (result.deleted === true) {
+      await publishStatusSearchEvent(
+        'STATUS_DELETED',
+        tenant,
+        statusId,
+        currentStatus?.status_type,
+        _user.user_id,
+      );
+    }
 
     return {
       ...result,

@@ -272,7 +272,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   async create(data: any, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         const planData = this.addCreateAuditFields(data, context);
         planData.contract_line_id = uuidv4();
 
@@ -300,21 +300,31 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
 
-        // Publish event
-        await publishEvent({
-          eventType: 'CONTRACT_LINE_CREATED',
-          payload: {
-            tenantId: context.tenant,
+        return {
+          contractLineId: contractLine.contract_line_id,
+          eventPayload: {
             contractLineId: contractLine.contract_line_id,
             contractLineName: data.contract_line_name,
             contractLineType: data.contract_line_type,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(contractLine.contract_line_id, context);
+          },
+        };
       });
+
+      await publishEvent({
+        eventType: 'CONTRACT_LINE_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          contractLineId: result.eventPayload.contractLineId,
+          contractLineName: result.eventPayload.contractLineName,
+          contractLineType: result.eventPayload.contractLineType,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit so the read uses a committed, tenant-scoped
+      // connection (getById does not run on the transaction connection).
+      return this.getById(result.contractLineId, context);
     }
 
 
@@ -888,6 +898,62 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
   // COMPANY ASSIGNMENT OPERATIONS
   // ============================================================================
+
+  /**
+   * List contract lines that belong to client contracts (the live, client-owned
+   * lines created by assignPlanToClient). A client contract line is a
+   * contract_lines row whose contract_id belongs to a client_contracts row, so
+   * we join the two and surface the client_id / client_contract_id alongside the
+   * line. Supports the clientContractLineFilterSchema filters and pagination.
+   */
+  async listClientContractLines(
+    options: ListOptions,
+    context: ServiceContext
+  ): Promise<ListResult<any>> {
+    const { knex } = await this.getKnex();
+    const { page = 1, limit = 25, filters = {} as any, sort, order } = options;
+
+    const buildQuery = () => {
+      let q = knex('contract_lines as cl')
+        .join('client_contracts as cc', function joinClientContracts(this: any) {
+          this.on('cl.contract_id', '=', 'cc.contract_id').andOn('cl.tenant', '=', 'cc.tenant');
+        })
+        .where('cl.tenant', context.tenant);
+
+      if (filters.client_id) q = q.where('cc.client_id', filters.client_id);
+      if (filters.contract_line_id) q = q.where('cl.contract_line_id', filters.contract_line_id);
+      if (filters.service_category) q = q.where('cl.service_category', filters.service_category);
+      if (filters.is_active !== undefined) q = q.where('cl.is_active', filters.is_active);
+      if (filters.has_custom_rate !== undefined) {
+        q = filters.has_custom_rate ? q.whereNotNull('cl.custom_rate') : q.whereNull('cl.custom_rate');
+      }
+      if (filters.start_date_from) q = q.where('cc.start_date', '>=', filters.start_date_from);
+      if (filters.start_date_to) q = q.where('cc.start_date', '<=', filters.start_date_to);
+      if (filters.end_date_from) q = q.where('cc.end_date', '>=', filters.end_date_from);
+      if (filters.end_date_to) q = q.where('cc.end_date', '<=', filters.end_date_to);
+      return q;
+    };
+
+    const SORTABLE = ['contract_line_name', 'service_category', 'display_order', 'created_at'];
+    const sortColumn = sort && SORTABLE.includes(sort) ? sort : 'created_at';
+    const sortOrder = order === 'asc' ? 'asc' : 'desc';
+
+    const [{ count }] = await buildQuery().count('* as count');
+    const data = await buildQuery()
+      .select(
+        'cl.*',
+        'cc.client_id',
+        'cc.client_contract_id',
+        'cc.start_date',
+        'cc.end_date',
+        'cc.is_active as contract_is_active'
+      )
+      .orderBy(`cl.${sortColumn}`, sortOrder)
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return { data, total: parseInt(count as string, 10) };
+  }
 
   /**
    * Assign contract line to client

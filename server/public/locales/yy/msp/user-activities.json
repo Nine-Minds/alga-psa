@@ -28,7 +28,8 @@
       "noDueDate": "55555",
       "emDash": "55555",
       "unread": "55555",
-      "recurringEvent": "55555"
+      "recurringEvent": "55555",
+      "adHocBadge": "55555"
     },
     "actions": {
       "refresh": "55555",
@@ -43,7 +44,8 @@
       "noMatching": "55555"
     },
     "errors": {
-      "loadFailed": "55555"
+      "loadFailed": "55555",
+      "addAdHocFailed": "55555"
     },
     "activityTypes": {
       "schedule": "55555",
@@ -54,6 +56,24 @@
       "notification": "55555",
       "unknown": "55555",
       "activity": "55555"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "adHoc": {
+      "addPlaceholder": "55555",
+      "addButton": "55555",
+      "markDone": "55555",
+      "markNotDone": "55555",
+      "convertToTicket": "55555",
+      "convertToTask": "55555"
+    },
+    "viewingUser": {
+      "label": "55555",
+      "me": "55555"
     }
   },
   "card": {
@@ -411,11 +431,27 @@
       "allProjects": "55555",
       "allPriorities": "55555",
       "selectPriority": "55555",
-      "search": "55555"
+      "search": "55555",
+      "searchBoards": "55555",
+      "searchStatuses": "55555",
+      "searchProjects": "55555"
     },
     "actions": {
       "reset": "55555"
     },
-    "statusClosedSuffix": "55555"
+    "statusClosedSuffix": "55555",
+    "summary": {
+      "boards_one": "55555 {{count}} 55555",
+      "boards_other": "55555 {{count}} 55555",
+      "statuses_one": "55555 {{count}} 55555",
+      "statuses_other": "55555 {{count}} 55555",
+      "projects_one": "55555 {{count}} 55555",
+      "projects_other": "55555 {{count}} 55555",
+      "phases_one": "55555 {{count}} 55555",
+      "phases_other": "55555 {{count}} 55555",
+      "excludingName": "55555 {{name}} 55555",
+      "excludingCount_one": "55555 {{count}} 55555",
+      "excludingCount_other": "55555 {{count}} 55555"
+    }
   }
 }

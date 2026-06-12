@@ -7,16 +7,17 @@ import { useEffect, useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   Home,
-  MessageSquare,
+  Ticket,
   LayoutTemplate,
   Calendar,
   Monitor,
   BookOpen,
-  Layers,
+  ListTodo,
   FileText,
   CreditCard,
   Settings,
   User,
+  KeyRound,
 } from 'lucide-react';
 import type { ProductCode } from '@alga-psa/types';
 import { useBranding } from '@alga-psa/tenancy/components';
@@ -34,6 +35,7 @@ const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
 interface SidebarPermissions {
   hasClientSettingsAccess: boolean;
   hasBillingAccess: boolean;
+  isLicenseDistributor: boolean;
 }
 
 interface SidebarProps {
@@ -99,13 +101,13 @@ export function ClientPortalSidebar({
   const workspaceItems: NavItem[] = isAlgaDeskPortal
     ? [
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
-        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
       ]
     : [
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
-        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
         { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
-        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: Layers },
+        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo },
         { key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar },
         { key: 'devices', href: '/client-portal/devices', label: t('nav.myDevices', 'My devices'), icon: Monitor },
       ];
@@ -146,6 +148,16 @@ export function ClientPortalSidebar({
                     href: '/client-portal/billing',
                     label: t('nav.billing'),
                     icon: CreditCard,
+                  }]
+                : []),
+              // Appliance-license purchase/management is only for the Nine Minds
+              // distribution tenant; hidden in every other tenant's portal.
+              ...(permissions.isLicenseDistributor
+                ? [{
+                    key: 'licenses',
+                    href: '/client-portal/licenses',
+                    label: t('nav.licenses', 'Licenses'),
+                    icon: KeyRound,
                   }]
                 : []),
             ]),

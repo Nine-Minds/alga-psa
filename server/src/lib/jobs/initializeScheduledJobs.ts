@@ -1,4 +1,5 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob } from './index';
+import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -90,8 +91,53 @@ export async function initializeScheduledJobs(): Promise<void> {
            returnedJobId: reconcileJobId
          });
        }
-     } catch (error) {
+      } catch (error) {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule auto-close scan (every 15 minutes; closes stale tickets per board auto-close rules)
+      try {
+        const cron = '*/15 * * * *';
+        const autoCloseJobId = await scheduleAutoCloseTicketsJob(tenantId); // Default cron used internally
+        if (autoCloseJobId) {
+          logger.info(`Scheduled auto-close tickets job for tenant ${tenantId} with job ID ${autoCloseJobId}`);
+        } else {
+          logger.info('Auto-close tickets job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: autoCloseJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule auto-close tickets job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily job to reconcile the app-wide search index (runs at 6:00 AM)
+      try {
+        const cron = '0 6 * * *';
+        const searchReconcileJobId = await scheduleSearchReconcileJob(tenantId, cron);
+        if (searchReconcileJobId) {
+          logger.info(`Scheduled search index reconciliation job for tenant ${tenantId} with job ID ${searchReconcileJobId}`);
+        } else {
+          logger.info('Search index reconciliation job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: searchReconcileJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule search index reconciliation job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule the accounting sync cycle (every 15 minutes, EE only; cheap
+      // no-op for tenants without a connected accounting integration)
+      try {
+        const syncJobId = await scheduleAccountingSyncCycleJob(tenantId);
+        if (syncJobId) {
+          logger.info(`Scheduled accounting sync cycle for tenant ${tenantId} with job ID ${syncJobId}`);
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule accounting sync cycle for tenant ${tenantId}`, error);
       }
 
       // Schedule Microsoft calendar webhook renewal (every 30 minutes)
@@ -114,6 +160,24 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } else {
         logger.info(`Skipping pg-boss calendar webhook renewal for tenant ${tenantId} (EE uses Temporal workflows)`);
+      }
+
+      if (isEnterpriseWorkflowEdition()) {
+        try {
+          const cron = '*/30 * * * *';
+          const renewalJobId = await scheduleTeamsMeetingArtifactSubscriptionRenewalJob(tenantId, cron);
+          if (renewalJobId) {
+            logger.info(`Scheduled Teams meeting artifact subscription renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
+          } else {
+            logger.info('Teams meeting artifact subscription renewal job already scheduled (singleton active)', {
+              tenantId,
+              cron,
+              returnedJobId: renewalJobId
+            });
+          }
+        } catch (error) {
+          logger.error(`Failed to schedule Teams meeting artifact subscription renewal job for tenant ${tenantId}`, error);
+        }
       }
 
       // Schedule Google Pub/Sub subscription verification (hourly)

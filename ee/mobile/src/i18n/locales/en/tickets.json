@@ -38,6 +38,9 @@
     "unableToLoadPriorities": "Unable to load priorities.",
     "priorityPlaceholder": "Priority name (e.g. High)",
     "priorityAccessibility": "Priority filter",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "tagsCount": "Tags ({{count}})",
     "updatedSince": "Updated since",
     "updatedSinceDateAccessibility": "Updated since date",
     "updatedSinceDatePlaceholder": "YYYY-MM-DD",
@@ -199,6 +202,11 @@
     "expandComposer": "Expand comment editor",
     "seeMore": "See more",
     "seeLess": "See less",
+    "reply": "Reply",
+    "repliesCount_one": "1 reply",
+    "repliesCount_other": "{{count}} replies",
+    "deletedPlaceholder": "[deleted]",
+    "hiddenPlaceholder": "[hidden]",
     "loadMore": "Load more ({{count}} remaining)",
     "loadMoreAccessibility": "Load more comments",
     "moderation": {
@@ -275,6 +283,28 @@
       "add": "Unable to add the material. Please try again.",
       "quantity": "Enter a quantity of at least 1.",
       "rate": "Enter a valid rate."
+    }
+  },
+  "tags": {
+    "title": "Tags",
+    "addTag": "Add tag",
+    "removeTag": "Remove tag {{tag}}",
+    "tagAccessibility": "Tag {{tag}}",
+    "empty": "No tags.",
+    "pickerTitle": "Add tag",
+    "searchPlaceholder": "Search tags…",
+    "selectTag": "Add tag {{tag}}",
+    "createNew": "Add \"{{tag}}\"",
+    "alreadyAdded": "Added",
+    "noResults": "No tags found.",
+    "errors": {
+      "load": "Unable to load tags.",
+      "suggestions": "Unable to load tags.",
+      "addPermission": "You don't have permission to add tags.",
+      "addValidation": "Tag was rejected by the server.",
+      "addGeneric": "Unable to add tag. Please try again.",
+      "removePermission": "You don't have permission to remove tags.",
+      "removeGeneric": "Unable to remove tag. Please try again."
     }
   },
   "statusPicker": {

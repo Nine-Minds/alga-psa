@@ -27,6 +27,7 @@
     "close": "Cerrar"
   },
   "runList": {
+    "shareTooltip": "Imprimir y exportar",
     "quickRanges": {
       "last24h": "Últimas 24 h",
       "last7d": "Últimos 7 días"
@@ -56,7 +57,6 @@
       "runNow": "Ejecutar ahora",
       "exportCsv": "Exportar CSV",
       "refresh": "Actualizar",
-      "resumeSelected": "Reanudar selección ({{count}})",
       "cancelSelected": "Cancelar selección ({{count}})",
       "clearSelection": "Borrar selección",
       "details": "Detalles",
@@ -84,14 +84,10 @@
       "empty": "Ninguna ejecución coincide con los filtros actuales."
     },
     "bulk": {
-      "resumeTitle": "Reanudar ejecuciones seleccionadas",
-      "resumeMessage": "¿Reanudar {{count}} ejecución(es) seleccionada(s)?",
       "cancelTitle": "Cancelar ejecuciones seleccionadas",
       "cancelMessage": "¿Cancelar {{count}} ejecución(es) seleccionada(s)? No se puede deshacer.",
       "reasonLabel": "Motivo",
-      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
       "cancelReasonPlaceholder": "Indique un motivo para cancelar",
-      "resumeConfirm": "Reanudar ejecuciones",
       "cancelConfirm": "Cancelar ejecuciones"
     },
     "toasts": {
@@ -105,12 +101,29 @@
       "selectRunsForBulkAction": "Seleccione ejecuciones para realizar esta acción.",
       "bulkReasonTooShort": "El motivo debe tener al menos 3 caracteres.",
       "noEligibleRuns": "Ninguna de las ejecuciones seleccionadas es elegible para esa acción.",
-      "bulkResumeFailedCount": "Error al reanudar {{count}} ejecución(es).",
       "bulkCancelFailedCount": "Error al cancelar {{count}} ejecución(es).",
-      "bulkResumeSuccessCount": "{{count}} ejecución(es) reanudada(s).",
       "bulkCancelSuccessCount": "{{count}} ejecución(es) cancelada(s).",
       "bulkSkippedIneligibleCount": "{{count}} ejecución(es) no elegible(s) omitida(s).",
       "bulkActionFailed": "Acción masiva fallida"
+    },
+    "print": {
+      "title": "Ejecuciones de workflows",
+      "selectedTitle": "Ejecuciones seleccionadas",
+      "subtitle": "{{count}} ejecuciones",
+      "noRuns": "No hay ejecuciones para imprimir",
+      "columns": {
+        "run": "Ejecución",
+        "workflow": "Workflow",
+        "version": "Versión",
+        "status": "Estado",
+        "started": "Iniciado",
+        "updated": "Actualizado",
+        "duration": "Duración"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir las ejecuciones de flujo de trabajo."
+      }
     }
   },
   "runDetails": {
@@ -123,12 +136,9 @@
       "triggerLabel": "Disparador:"
     },
     "actions": {
-      "resume": "Reanudar",
       "cancel": "Cancelar",
       "export": "Exportar",
-      "retry": "Reintentar",
       "replay": "Repetir",
-      "requeueEvent": "Reencolar evento",
       "close": "Cerrar",
       "view": "Ver",
       "apply": "Aplicar",
@@ -247,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motivo",
-      "resumeTitle": "Reanudar ejecución del flujo de trabajo",
-      "resumeMessage": "¿Reanudar esta ejecución ahora?",
-      "resumeReasonPlaceholder": "Indique un motivo para reanudar",
       "cancelTitle": "Cancelar la ejecución del flujo de trabajo",
       "cancelMessage": "¿Cancelar esta ejecución? No se puede deshacer.",
       "cancelReasonPlaceholder": "Indique un motivo para cancelar",
       "cancelConfirm": "Cancelar ejecución",
-      "retryTitle": "Reintentar ejecución del flujo de trabajo",
-      "retryMessage": "¿Reintentar esta ejecución desde el último paso fallido?",
-      "retryReasonPlaceholder": "Indique un motivo para reintentar",
-      "retryConfirm": "Reintentar ejecución",
       "replayTitle": "Repetir la ejecución del flujo de trabajo",
       "replayMessage": "Repetir esta ejecución con una nueva carga útil.",
       "replayReasonPlaceholder": "Indique un motivo para repetir",
       "payloadLabel": "Carga útil (JSON)",
-      "replayConfirm": "Repetir ejecución",
-      "requeueTitle": "Reencolar espera de evento",
-      "requeueMessage": "¿Reencolar la espera de evento más reciente de esta ejecución?",
-      "requeueReasonPlaceholder": "Indique un motivo para reencolar",
-      "requeueConfirm": "Reencolar espera"
+      "replayConfirm": "Repetir ejecución"
     },
     "toasts": {
       "loadRunDetailsFailed": "Error al cargar los detalles de la ejecución",
@@ -275,21 +274,19 @@
       "logExportReady": "Exportación de registros lista",
       "exportLogsFailed": "Error al exportar los registros",
       "reasonTooShort": "El motivo debe tener al menos 3 caracteres.",
-      "runResumed": "Ejecución reanudada",
-      "resumeRunFailed": "Error al reanudar la ejecución",
       "runCanceled": "Ejecución cancelada",
       "cancelRunFailed": "Error al cancelar la ejecución",
       "runExportReady": "Exportación de ejecución lista",
       "exportRunFailed": "Error al exportar la ejecución",
-      "runRetryStarted": "Reintento de ejecución iniciado",
-      "retryRunFailed": "Error al reintentar la ejecución",
       "replayPayloadInvalid": "La carga útil de la repetición debe ser JSON válido.",
       "runReplayStarted": "Repetición de ejecución iniciada",
       "replayRunFailed": "Error al repetir la ejecución",
-      "eventWaitRequeued": "Espera de evento reencolada",
-      "requeueEventWaitFailed": "Error al reencolar la espera de evento",
       "auditExportReady": "Exportación de auditoría lista",
       "exportAuditLogsFailed": "Error al exportar los registros de auditoría"
+    },
+    "queuedWarning": {
+      "title": "En cola — esperando a un worker de flujos de trabajo",
+      "description": "Esta ejecución comenzó hace más de un minuto, pero todavía no se ha ejecutado ningún paso. Comprueba que el servicio de worker de flujos de trabajo esté en ejecución y conectado a Temporal."
     }
   },
   "runDialog": {
@@ -767,6 +764,50 @@
       "ai.infer": {
         "label": "Inferir salida estructurada",
         "description": "Generar datos estructurados del flujo de trabajo a partir de una indicación usando el proveedor de IA configurado."
+      },
+      "store.get": {
+        "label": "Obtener valor almacenado",
+        "description": "Leer una entrada clave/valor de flujo de trabajo persistida."
+      },
+      "store.set": {
+        "label": "Establecer valor almacenado",
+        "description": "Conservar una entrada clave/valor de flujo de trabajo."
+      },
+      "store.delete": {
+        "label": "Eliminar valor almacenado",
+        "description": "Eliminar una entrada clave/valor de flujo de trabajo persistida."
+      },
+      "store.increment": {
+        "label": "Incrementar número almacenado",
+        "description": "Incrementar de forma atómica un número de flujo de trabajo persistido."
+      },
+      "store.list": {
+        "label": "Enumerar valores almacenados",
+        "description": "Enumerar las entradas clave/valor de flujo de trabajo persistidas en un espacio de nombres."
+      },
+      "store.list_namespaces": {
+        "label": "Enumerar espacios de nombres del almacén",
+        "description": "Enumerar los espacios de nombres del almacén de datos de flujo de trabajo usados por este inquilino."
+      },
+      "links.upsert": {
+        "label": "Crear o actualizar vínculo de entidad",
+        "description": "Crear o actualizar un vínculo persistido entre dos entidades de flujo de trabajo."
+      },
+      "links.lookup": {
+        "label": "Buscar vínculos de entidad",
+        "description": "Buscar vínculos de entidad persistidos por entidad de origen y dirección."
+      },
+      "links.delete": {
+        "label": "Eliminar vínculos de entidad",
+        "description": "Eliminar vínculos de entidad persistidos por lado y relación opcional."
+      },
+      "links.list": {
+        "label": "Enumerar vínculos de entidad",
+        "description": "Enumerar los vínculos de entidad persistidos en un espacio de nombres."
+      },
+      "links.list_namespaces": {
+        "label": "Enumerar espacios de nombres de vínculos",
+        "description": "Enumerar los espacios de nombres de vínculos de entidad de flujo de trabajo usados por este inquilino."
       }
     },
     "validation": {
@@ -911,6 +952,10 @@
         "ai": {
           "label": "IA",
           "description": "Acciones de IA"
+        },
+        "data-store": {
+          "label": "Almacén de datos",
+          "description": "Leer y escribir el estado duradero del flujo de trabajo entre ejecuciones."
         }
       }
     },
@@ -1383,7 +1428,16 @@
       "openEditor": "Abrir editor",
       "apply": "Aplicar",
       "cancel": "Cancelar"
-    }
+    },
+    "askAi": {
+      "ariaLabel": "Pedir ayuda a la IA para transformaciones",
+      "title": "Preguntar a la IA",
+      "shortcutHint": "Abrir Quick Ask para obtener ayuda con transformaciones"
+    },
+    "softEnumPlaceholder": "Seleccionar o introducir un valor",
+    "softEnumSearchPlaceholder": "Buscar o introducir un valor personalizado",
+    "softEnumNoResults": "Sin sugerencias",
+    "softEnumUseCustom": "Usar «{{value}}»"
   },
   "schemaReference": {
     "selectAction": "Seleccione una acción para ver su esquema de entrada/salida",
@@ -1959,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Fecha y hora específicas",
       "expression": "Expresión avanzada"
+    },
+    "workflowEntityType": {
+      "project_task": "Tarea de proyecto",
+      "ticket": "Ticket",
+      "contact": "Contacto",
+      "client": "Cliente",
+      "project": "Proyecto",
+      "appointment": "Cita",
+      "quote": "Presupuesto"
+    },
+    "workflowLinkRelation": {
+      "related": "Relacionado",
+      "mirrors": "Refleja",
+      "maps_to": "Se asigna a",
+      "blocks": "Bloquea",
+      "duplicate_of": "Duplicado de",
+      "synced_with": "Sincronizado con"
     }
   },
   "automation": {
@@ -2347,13 +2418,7 @@
     }
   },
   "automationGate": {
-    "loading": "Cargando automatización de flujos de trabajo...",
-    "featureName": "Automatización de flujos de trabajo",
-    "notEnabled": "Esta función es experimental y no está habilitada para su tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Habilite la automatización de flujos de trabajo en la configuración para acceder a ella.",
-    "goToExperimental": "Ir a funciones experimentales",
-    "openSettings": "Abrir configuración"
+    "loading": "Cargando automatización de flujos de trabajo..."
   },
   "flow": {
     "designer": {

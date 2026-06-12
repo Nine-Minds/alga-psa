@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from "@alga-psa/ui/components/Button";
+import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -315,24 +316,11 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const goForward = useCallback(() => {
     dispatch({ type: 'GO_FORWARD' });
   }, []);
-  
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (state.isOpen) {
-        if (event.key === 'Escape') {
-          dispatch({ type: 'CLOSE_DRAWER' });
-        } else if (event.altKey && event.key === 'ArrowLeft' && canGoBack) {
-          dispatch({ type: 'GO_BACK' });
-        } else if (event.altKey && event.key === 'ArrowRight' && canGoForward) {
-          dispatch({ type: 'GO_FORWARD' });
-        }
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.isOpen, canGoBack, canGoForward]);
+
+  useShortcutScope('panel', state.isOpen);
+  useCatalogShortcut('panel.close', closeDrawer, { enabled: state.isOpen });
+  useCatalogShortcut('drawer.historyBack', goBack, { enabled: state.isOpen && canGoBack });
+  useCatalogShortcut('drawer.historyForward', goForward, { enabled: state.isOpen && canGoForward });
 
   return (
     <DrawerContext value={{

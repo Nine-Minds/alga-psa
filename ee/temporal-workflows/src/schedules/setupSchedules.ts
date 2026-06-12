@@ -1,8 +1,10 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { ADD_ONS } from '@alga-psa/types';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
+  applianceCheckInWorkflow,
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   entraAllTenantsSyncWorkflow,
@@ -35,6 +37,7 @@ interface EntraScheduleConfigRow {
   syncEnabled: boolean;
   syncIntervalMinutes: number;
   hasActiveConnection: boolean;
+  hasEnterpriseAddOn: boolean;
 }
 
 interface NinjaOneBackfillRow {
@@ -199,11 +202,17 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
     .leftJoin('entra_partner_connections as c', function joinConnection() {
       this.on('s.tenant', '=', 'c.tenant').andOn(knex.raw('c.is_active = true'));
     })
+    .leftJoin('tenant_addons as a', function joinEnterpriseAddOn() {
+      this.on('s.tenant', '=', 'a.tenant')
+        .andOn(knex.raw('a.addon_key = ?', [ADD_ONS.ENTERPRISE]))
+        .andOn(knex.raw('(a.expires_at IS NULL OR a.expires_at > now())'));
+    })
     .select([
       's.tenant as tenantId',
       's.sync_enabled as syncEnabled',
       's.sync_interval_minutes as syncIntervalMinutes',
       'c.connection_id as activeConnectionId',
+      'a.addon_key as activeEnterpriseAddOn',
     ]);
 
   return rows.map((row: any) => ({
@@ -211,6 +220,7 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
     syncEnabled: Boolean(row.syncEnabled),
     syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
     hasActiveConnection: Boolean(row.activeConnectionId),
+    hasEnterpriseAddOn: Boolean(row.activeEnterpriseAddOn),
   }));
 }
 
@@ -281,12 +291,45 @@ export async function setupSchedules() {
       },
     });
 
+    // Appliance connected-license check-in (runs daily). Renews this install's
+    // connected license token before its ~31-day exp by calling the
+    // alga-license /check-in endpoint, and propagates soft-revocation. No-ops on
+    // SaaS/cloud (no license_state row) and on non-connected installs
+    // (essentials/airgap/CE/trial). Mirrors the premium-trial daily maintenance.
+    const applianceCheckInScheduleId = 'appliance-license-check-in-schedule';
+    await upsertSchedule(client, applianceCheckInScheduleId, {
+      spec: {
+        intervals: [{ every: '24h' }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: applianceCheckInWorkflow,
+        args: [],
+        taskQueue: 'tenant-workflows',
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    // Trigger one immediate check-in at boot so a box that was powered off (its
+    // token aging toward expiry) renews promptly rather than waiting up to 24h.
+    // Best-effort — a failed trigger must never block worker startup.
+    try {
+      await client.schedule.getHandle(applianceCheckInScheduleId).trigger();
+      logger.info('Triggered immediate appliance license check-in at boot');
+    } catch (error: any) {
+      logger.warn(`Failed to trigger boot-time appliance check-in: ${error?.message || 'unknown error'}`);
+    }
+
     // Entra recurring all-tenant sync schedules are created per tenant so each tenant
     // can honor its own configured sync cadence.
     const entraConfigs = await loadEntraScheduleConfigs();
     for (const config of entraConfigs) {
       const tenantScheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${config.tenantId}`;
-      if (!config.syncEnabled || !config.hasActiveConnection) {
+      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn) {
         await deleteScheduleIfExists(client, tenantScheduleId);
         continue;
       }

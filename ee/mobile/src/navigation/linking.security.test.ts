@@ -34,4 +34,24 @@ describe("deep link hardening", () => {
     const { linking } = await import("./linking");
     await expect(linking.getInitialURL?.()).resolves.toBe("alga://signin");
   });
+
+  it("allows the drawer section paths", async () => {
+    const ExpoLinking = await import("expo-linking");
+
+    for (const path of ["schedule", "time-entries", "clients", "contacts"]) {
+      (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(`alga://${path}`);
+      vi.resetModules();
+      const { linking } = await import("./linking");
+      await expect(linking.getInitialURL?.()).resolves.toBe(`alga://${path}`);
+    }
+  });
+
+  it("rejects detail-like paths that are not allowlisted", async () => {
+    const ExpoLinking = await import("expo-linking");
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce("alga://clients/123");
+
+    vi.resetModules();
+    const { linking } = await import("./linking");
+    await expect(linking.getInitialURL?.()).resolves.toBeNull();
+  });
 });

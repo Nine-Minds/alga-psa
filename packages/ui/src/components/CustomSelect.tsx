@@ -283,14 +283,11 @@ const CustomSelect = ({
             e.stopPropagation();
           }}
         >
-          <RadixSelect.Value
-            placeholder={resolvedPlaceholder}
-            className="flex-1 text-left min-w-0 overflow-hidden"
-          >
-            <span className={`block truncate ${!selectedOption || disabled ? 'text-muted-foreground' : ''}`}>
+          <span className={`flex-1 min-w-0 text-left truncate ${!selectedOption || disabled ? 'text-muted-foreground' : ''}`}>
+            <RadixSelect.Value placeholder={resolvedPlaceholder}>
               {selectedOption?.label || resolvedPlaceholder}
-            </span>
-          </RadixSelect.Value>
+            </RadixSelect.Value>
+          </span>
           <RadixSelect.Icon>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </RadixSelect.Icon>

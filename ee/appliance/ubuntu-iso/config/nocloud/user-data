@@ -1,0 +1,64 @@
+#cloud-config
+autoinstall:
+  version: 1
+  interactive-sections:
+    - network
+    - storage
+    - identity
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: UTC
+
+  apt:
+    geoip: true
+    preserve_sources_list: false
+
+  # identity is collected interactively on the Subiquity "Profile setup" screen:
+  # the operator creates their own login account (name, server name, username,
+  # password). No credential is baked into the image, and nothing downstream
+  # depends on a fixed username — systemd units run as root and the management
+  # password for the setup UI is a separate, in-app credential.
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  storage:
+    layout:
+      name: direct
+      sizing-policy: all
+
+  packages:
+    - ca-certificates
+    - curl
+    - git
+    - jq
+    - net-tools
+    - nodejs
+    - openssh-server
+    - unzip
+    - ufw
+
+  user-data:
+    disable_root: true
+
+  late-commands:
+    - mkdir -p /target/opt/alga-appliance /target/etc/alga-appliance /target/var/lib/alga-appliance /target/var/log/alga-appliance
+    - bash -lc 'if [ -d /cdrom/alga-overlay ]; then cp -a /cdrom/alga-overlay/. /target/; fi'
+    - curtin in-target --target=/target -- chown -R root:root /opt/alga-appliance /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance
+    - curtin in-target --target=/target -- chmod 0750 /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- find /opt/alga-appliance -type f -name '*.sh' -exec chmod 0755 {} \;
+    - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance/appliance
+    - curtin in-target --target=/target -- bash -lc 'if [ -x /opt/alga-appliance/bin/alga-appliance-reset-admin ]; then ln -sf /opt/alga-appliance/bin/alga-appliance-reset-admin /usr/local/bin/alga-appliance-reset-admin; fi'
+    - curtin in-target --target=/target -- bash -lc 'if command -v vgs >/dev/null 2>&1 && command -v lvextend >/dev/null 2>&1 && vgs --noheadings -o vg_free --units b --nosuffix ubuntu-vg 2>/dev/null | awk '\''{ exit !($1 > 0) }'\''; then lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv || true; fi'
+    - mkdir -p /target/etc/alga-appliance
+    - touch /target/etc/alga-appliance/booted-from-disk
+    - curtin in-target --target=/target -- bash -lc 'if command -v ssh-keygen >/dev/null 2>&1; then rm -f /etc/ssh/ssh_host_* && ssh-keygen -A; fi'
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance.service ] || [ -L /etc/systemd/system/alga-appliance.service ]; then systemctl disable alga-appliance.service || true; systemctl mask alga-appliance.service || true; fi'
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance-console.service ]; then systemctl enable alga-appliance-console.service; fi'
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance-bootstrap.service ]; then systemctl enable alga-appliance-bootstrap.service; fi'
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-host-agent.service ]; then systemctl enable alga-host-agent.service; fi'
+
+  shutdown: reboot

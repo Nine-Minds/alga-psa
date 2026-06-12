@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
@@ -15,6 +15,7 @@ import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
 import ViewSwitcher from "@alga-psa/ui/components/ViewSwitcher";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useRangeSelection } from "@alga-psa/ui/hooks";
 import {
   executeBulkSsoAssignmentAction,
   previewBulkSsoAssignmentAction,
@@ -267,18 +268,6 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
   const isAllOnPageSelected = currentPageIds.length > 0 && selectedOnPage.length === currentPageIds.length;
   const isSomeOnPageSelected = selectedOnPage.length > 0 && !isAllOnPageSelected;
 
-  const toggleUserSelection = (userId: string, checked: boolean) => {
-    setSelectedUserIds((prev) => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(userId);
-      } else {
-        next.delete(userId);
-      }
-      return next;
-    });
-  };
-
   const toggleCurrentPage = (checked: boolean) => {
     setSelectedUserIds((prev) => {
       const next = new Set(prev);
@@ -292,6 +281,13 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
       return next;
     });
   };
+
+  const rangeSelect = useRangeSelection<SsoAssignableUser>({
+    items: users,
+    getId: (user) => user.userId,
+    selectedIds: selectedUserIds,
+    onSelectedIdsChange: setSelectedUserIds,
+  });
 
   const clearSelection = () => setSelectedUserIds(new Set());
 
@@ -403,7 +399,16 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
             <Checkbox
               skipRegistration
               checked={isChecked}
-              onChange={(event) => toggleUserSelection(record.userId, event.target.checked)}
+              onClick={(event: MouseEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                rangeSelect.handleSelect(record.userId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                  preventDefault: () => event.preventDefault(),
+                });
+                event.preventDefault();
+              }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
             />
           </div>
         );

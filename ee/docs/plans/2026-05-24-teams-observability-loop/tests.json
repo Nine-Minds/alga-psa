@@ -1,0 +1,612 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration runs cleanly on a fresh CE database (no Citus).",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F009",
+      "F015"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration runs cleanly on a Citus-enabled database and create_distributed_table succeeds for all three new tables.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F013",
+      "F016"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "teams_notification_deliveries has expected columns with correct types (introspect via information_schema).",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "teams_notification_deliveries primary key is (tenant, delivery_id).",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "UNIQUE (tenant, idempotency_key) constraint exists on teams_notification_deliveries and rejects duplicate inserts.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "INSERT ... ON CONFLICT (tenant, idempotency_key) DO NOTHING is a safe no-op on duplicate and returns rowCount 0.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F017"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "CHECK constraint rejects status='nonsense' on teams_notification_deliveries.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "CHECK constraint accepts each of skipped, sent, delivered, failed for status.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "CHECK constraint rejects error_code='bogus' on teams_notification_deliveries.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "CHECK constraint accepts NULL error_code for status='delivered'.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Indexes (tenant, internal_notification_id) and (tenant, status, created_at DESC) exist (introspect pg_indexes).",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "teams_notification_deliveries is partitioned by RANGE on created_at (introspect pg_partitioned_table).",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Migration creates current month + next 2 months as child partitions.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Inserting a row with created_at in current month lands in the correct child partition.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "cleanup_teams_notification_deliveries('30 days') drops partitions older than 30 days and leaves newer ones intact.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "teams_audit_events has expected columns and PK (tenant, event_id).",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "CHECK constraint on teams_audit_events.surface accepts the four enum values and rejects others.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "CHECK constraint on teams_audit_events.action_id accepts each of the 7 mutation action ids and rejects others.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "cleanup_teams_audit_events('365 days') deletes rows older than 365 days only.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "teams_conversation_references has expected columns and PK (tenant, microsoft_user_id, conversation_id).",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Upsert into teams_conversation_references updates service_url and last_activity_at without inserting a duplicate.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "writeTeamsDeliveryRow computes idempotency_key deterministically from (notification_id, tenant, destination_type, destination_id, attempt_number).",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "writeTeamsDeliveryRow truncates error_message to 1024 chars.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='addon_inactive' when ADD_ONS.TEAMS is missing.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F022"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='integration_inactive' when teams_integrations.install_status != 'active'.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F022"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='user_not_mapped' when the recipient has no Microsoft account binding.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F022"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='package_misconfigured' when package metadata baseUrl is missing.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F022"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "deliverTeamsNotificationImpl writes one row with status='delivered', provider_message_id, sent_at set, error fields NULL on Graph 200 response.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_throttled' retryable=true on Graph 429.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_unauthorized' retryable=false on Graph 401.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_unauthorized' on Graph 403.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_not_found' on Graph 404.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_server_error' retryable=true on Graph 5xx.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "deliverTeamsNotificationImpl writes status='failed' error_code='transient' retryable=true on network/timeout error.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "deliverTeamsNotificationImpl populates provider_request_id when Graph response includes request-id header.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Calling deliverTeamsNotificationImpl twice with same input produces only one persisted row (idempotency).",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F017"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "writeTeamsAuditEvent never persists raw payload string — only payload_hash.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "writeTeamsAuditEvent canonicalizes JSON (sorted keys) so two equivalent payloads with different key order produce the same payload_hash.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "assign_ticket action writes audit row with surface='bot' (or message_extension/quick_action when invoked from those surfaces), result_status='success' on happy path.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F035"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "assign_ticket action writes audit row with result_status='failure' and error_code populated when underlying mutation throws.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "add_note action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "reply_to_contact action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "log_time action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "approval_response action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "create_ticket_from_message action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "update_from_message action writes audit rows on success and failure.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Audit row actor_user_id matches the PSA user resolved from the Teams turn token.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Audit row microsoft_user_id matches aadObjectId from turn context when available; NULL otherwise.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "First inbound activity from a (tenant, microsoft_user_id, conversation_id) inserts a teams_conversation_references row.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Subsequent activities update last_activity_at and service_url; no duplicate row inserted.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "conversation_type is correctly inferred and persisted as personal/groupChat/channel based on turn context conversation.conversationType.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Tenant-scoped writes: inserting delivery row with tenant=A from a session scoped to tenant=B is impossible via the helper (helper always derives tenant from runWithTenant context).",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F025",
+      "F036"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Tenant-scoped writes: every persisted row in teams_notification_deliveries, teams_audit_events, teams_conversation_references has tenant=<expected> for fixtures.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F025",
+      "F036"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Static check (grep-based) confirms every SQL statement against the three new tables in package code references 'tenant' in WHERE or PK insert columns.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F025",
+      "F036",
+      "F038",
+      "F039"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "listTeamsDeliveries returns rows only for the authenticated tenant; cross-tenant rows are not visible even when filter parameters would otherwise match.",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "listTeamsDeliveries throws permission error when caller lacks teams_integration:read.",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F041"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "listTeamsDeliveries respects limit cap (passing limit=1000 is clamped to 200).",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "listTeamsDeliveries cursor pagination returns a stable second page with no overlap and no skipped rows under concurrent inserts.",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F040"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "listTeamsDeliveries rejects malformed cursor with a clear error.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "listTeamsAuditEvents returns rows only for the authenticated tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "listTeamsAuditEvents filters by surface, action_id, actor_user_id, result_status as documented.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "listTeamsAuditEvents throws permission error when caller lacks teams_integration:read.",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F041"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "CRITICAL: tenant deletion integration test seeds rows into all three new tables and verifies they are removed after the deletion workflow completes.",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Tenant deletion test verifies new table entries appear in TENANT_TABLES_DELETION_ORDER BEFORE 'teams_integrations'.",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Tenant deletion test verifies DELETE on partitioned teams_notification_deliveries removes rows from all relevant partitions (not just current month).",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Tenant deletion test for a tenant that has zero rows in new tables completes without error (no-op deletes are safe).",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "TypeScript build of @alga-psa/microsoft-teams succeeds with new helpers and server actions; tsup dist exports include the new types.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F047"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "No raw payload text grep: rg \"raw_payload|payload_text|JSON.stringify.*payload\" returns no matches inside the new audit recorder code path.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Performance smoke test: 100 sequential deliverTeamsNotificationImpl calls add < 200ms total overhead from instrumentation (rough budget).",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Negative test: instrumentation failure (e.g., DB unreachable during writeTeamsDeliveryRow) does NOT prevent the notification from being sent — error is logged and swallowed.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Permission seeder grep: 'teams_integration' read permission is present after running seeders (either pre-existing or newly added in this PR).",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Workflow worker grep verification: confirmed whether services/workflow-worker imports deliverTeamsNotificationImpl, and deployment notes updated accordingly.",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  }
+]

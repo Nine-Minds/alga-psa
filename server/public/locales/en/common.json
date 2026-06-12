@@ -40,7 +40,15 @@
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "print": "Print",
+    "printSelected_one": "Print selected ({{count}})",
+    "printSelected_other": "Print selected ({{count}})",
+    "printOptions": "Print options",
+    "resetPrintOptions": "Reset print options",
+    "share": "Share",
+    "done": "Done",
+    "continue": "Continue"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -49,6 +57,10 @@
     "toDate": "To date",
     "noResults": "No results found",
     "searchPlaceholder": "Search..."
+  },
+  "pickers": {
+    "addNewClient": "Add new client",
+    "addNewContact": "Add new contact"
   },
   "tagFilter": {
     "placeholder": "Filter by tags...",
@@ -325,6 +337,13 @@
         "description": "Click \"Add Location\" to get started"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} reply",
+    "replies_other": "{{count}} replies",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "showInDrawer": "Show in drawer"
   },
   "pagination": {
     "previous": "Previous",
@@ -1122,5 +1141,45 @@
   },
   "feedback": {
     "providePlaceholder": "Please provide feedback"
+  },
+  "presence": {
+    "noOneElseEditing": "No one else is editing",
+    "conflict": {
+      "changedField": "{{author}} just changed this field {{time}}.",
+      "remoteValue": "Remote value:",
+      "keepYours": "Keep yours",
+      "takeTheirs": "Take theirs"
+    }
+  },
+  "labels": {
+    "printColumns": "Print columns"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Checking Dependencies",
+    "deleteTitle": "Delete {{entityName}}",
+    "cannotDeleteTitle": "Cannot Delete",
+    "deleting": "Deleting...",
+    "checkingDependenciesMessage": "Checking for dependencies...",
+    "fallbackBlockMessage": "Please remove or reassign these items before deleting.",
+    "confirmationMessage": "Are you sure you want to delete \"{{entityName}}\"? This action cannot be undone.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Mark as Inactive",
+        "description": "Deactivates the record without deleting its data.",
+        "warning": "Inactive records will no longer be selectable in new workflows."
+      },
+      "archive": {
+        "label": "Archive",
+        "description": "Moves the record out of active use while preserving history.",
+        "warning": "Archived records are hidden from default views."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} column hidden due to limited space.",
+    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "showAll": "Show all",
+    "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
+    "showLess": "Show less"
   }
 }

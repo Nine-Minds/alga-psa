@@ -25,7 +25,8 @@
     "teamManagement": "Gestión de equipo",
     "loadingTeam": "Cargando configuración del equipo...",
     "loadingExperimental": "Cargando configuración de funciones experimentales...",
-    "loadingInteractions": "Cargando configuración de interacciones..."
+    "loadingInteractions": "Cargando configuración de interacciones...",
+    "keyboardShortcuts": "Atajos de teclado"
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",
@@ -90,10 +91,6 @@
         "name": "Asistente de IA",
         "description": "Habilitar la consulta rápida y la barra lateral de chat con tecnología de IA.",
         "restriction": "Solo disponible para el inquilino de facturación principal."
-      },
-      "workflowAutomation": {
-        "name": "Automatización de flujos de trabajo",
-        "description": "Habilitar funciones experimentales de automatización de flujos de trabajo en el panel de control y el editor de flujos de trabajo."
       }
     },
     "actions": {
@@ -294,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Contraseña cambiada correctamente",
-        "userUpdated": "Usuario actualizado correctamente"
+        "userUpdated": "Usuario actualizado correctamente",
+        "roleAdded": "Rol añadido correctamente",
+        "roleRemoved": "Rol eliminado correctamente"
       },
       "error": {
         "userNotFound": "Usuario no encontrado",
@@ -308,7 +307,8 @@
         "passwordChangeError": "Se produjo un error al cambiar la contraseña",
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
-        "reportsToCycle": "Esto crearía una cadena de reporte circular"
+        "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
       }
     },
     "loading": "Cargando detalles del usuario..."
@@ -382,7 +382,8 @@
       "boards": "Tableros",
       "statuses": "Estados",
       "priorities": "Prioridades",
-      "categories": "Categorías"
+      "categories": "Categorías",
+      "checklistTemplates": "Plantillas de lista de verificación"
     },
     "numbering": {
       "title": "Formato de numeración",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "No se pudo actualizar el estado del tablero",
           "updateDefaultFailed": "No se pudo actualizar el tablero predeterminado"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Reglas de cierre",
+        "enabledHelp": "Requiere que se cumplan condiciones antes de poder cerrar los tickets de este tablero.",
+        "requireResolutionCommentLabel": "Requerir comentario de resolución",
+        "requireResolutionCommentHelp": "Debe existir un comentario de resolución antes de que el ticket pueda cerrarse.",
+        "requireTimeEntryLabel": "Requerir registro de tiempo",
+        "requireTimeEntryHelp": "Debe haber al menos un registro de tiempo antes de que el ticket pueda cerrarse.",
+        "requireChecklistCompleteLabel": "Requerir lista de verificación completada",
+        "requireChecklistCompleteHelp": "Todos los elementos obligatorios de la lista de verificación deben estar marcados antes de que el ticket pueda cerrarse.",
+        "requireNoOpenChildrenLabel": "Requerir tickets agrupados cerrados",
+        "requireNoOpenChildrenHelp": "Un ticket maestro no puede cerrarse mientras los tickets hijos agrupados sigan abiertos.",
+        "requiredFieldsLabel": "Campos obligatorios al cerrar",
+        "requiredFieldsHelp": "Estos campos del ticket deben completarse antes de que el ticket pueda cerrarse.",
+        "autoCloseLabel": "Reglas de cierre automático",
+        "autoCloseHelp": "Cierra automáticamente los tickets que permanecen en un estado sin actividad. Se puede enviar un correo de aviso al contacto antes del cierre.",
+        "addAutoCloseRule": "Agregar regla",
+        "triggerStatusLabel": "Cuando el ticket está en estado",
+        "triggerStatusPlaceholder": "Seleccionar estado",
+        "targetStatusLabel": "Cerrar con estado",
+        "targetStatusPlaceholder": "Seleccionar estado cerrado",
+        "inactivityDaysLabel": "Días de inactividad",
+        "warningDaysLabel": "Días de aviso antes del cierre",
+        "warningDaysPlaceholder": "Sin aviso",
+        "ruleEnabledLabel": "Habilitado",
+        "removeRule": "Eliminar",
+        "messages": {
+          "fetchFailed": "Error al cargar las reglas de cierre de este tablero",
+          "autoCloseStatusRequired": "Cada regla de cierre automático requiere un estado de activación y un estado de destino cerrado",
+          "autoCloseDaysInvalid": "Los días de inactividad del cierre automático deben ser un número entero positivo",
+          "autoCloseWarningInvalid": "El tiempo de aviso previo debe ser menor que los días de inactividad"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "esta prioridad"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Plantillas de lista de verificación",
+      "alert": "Las plantillas de lista de verificación definen listas reutilizables para tickets. Los elementos de la plantilla se copian en los tickets al aplicarse, por lo que editar una plantilla nunca modifica las listas ya añadidas a los tickets.",
+      "table": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "items": "Elementos",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "statusLabels": {
+        "active": "Activo",
+        "inactive": "Inactivo"
+      },
+      "actions": {
+        "addTemplate": "Agregar plantilla",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "create": "Crear",
+        "update": "Actualizar",
+        "up": "Subir",
+        "down": "Bajar",
+        "remove": "Eliminar",
+        "addItem": "Agregar elemento",
+        "addRule": "Agregar regla"
+      },
+      "fields": {
+        "name": {
+          "label": "Nombre de la plantilla",
+          "placeholder": "Ingrese el nombre de la plantilla"
+        },
+        "description": {
+          "label": "Descripción",
+          "placeholder": "Ingrese la descripción"
+        },
+        "active": "Activo",
+        "items": {
+          "label": "Elementos de la lista de verificación",
+          "help": "Los elementos se añaden a los tickets en este orden cuando se aplica la plantilla.",
+          "itemName": "Nombre del elemento",
+          "required": "Obligatorio",
+          "newItemLabel": "Nuevo elemento",
+          "newItemPlaceholder": "Ingrese el nombre del elemento"
+        },
+        "rules": {
+          "label": "Reglas de aplicación automática",
+          "help": "La plantilla se aplica automáticamente a los nuevos tickets que coincidan con alguna de estas reglas. Deje un campo como \"Cualquiera\" para coincidir con todos los valores.",
+          "empty": "Sin reglas de aplicación automática. Esta plantilla puede aplicarse manualmente a los tickets.",
+          "board": "Tablero",
+          "category": "Categoría",
+          "subcategory": "Subcategoría",
+          "priority": "Prioridad",
+          "any": "Cualquiera"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Agregar plantilla de lista de verificación",
+        "editTemplate": "Editar plantilla de lista de verificación",
+        "createFirstHelp": "Cree la plantilla primero y luego añada elementos de lista de verificación y reglas de aplicación automática.",
+        "deleteTitle": "Eliminar plantilla de lista de verificación",
+        "deleteMessage": "¿Está seguro de que desea eliminar \"{{name}}\"? Las listas de verificación ya añadidas a los tickets no se verán afectadas."
+      },
+      "messages": {
+        "success": {
+          "created": "Plantilla de lista de verificación creada correctamente",
+          "updated": "Plantilla de lista de verificación actualizada correctamente",
+          "deleted": "Plantilla de lista de verificación eliminada correctamente"
+        },
+        "error": {
+          "fetchFailed": "Error al obtener las plantillas de lista de verificación",
+          "fetchRulesFailed": "Error al obtener las reglas de aplicación automática",
+          "nameRequired": "El nombre de la plantilla es obligatorio",
+          "saveFailed": "Error al guardar la plantilla de lista de verificación",
+          "deleteFailed": "Error al eliminar la plantilla de lista de verificación",
+          "updateStatusFailed": "Error al actualizar el estado de la plantilla",
+          "itemSaveFailed": "Error al guardar el elemento de la lista de verificación",
+          "ruleSaveFailed": "Error al guardar la regla de aplicación automática"
+        }
       }
     }
   },

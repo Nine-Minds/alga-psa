@@ -74,7 +74,7 @@
     "addProject": "Aggiungi progetto",
     "createFromTemplate": "Crea da modello",
     "openMenu": "Apri menu",
-    "searchPlaceholder": "Cerca progetti",
+    "searchPlaceholder": "Cerca progetti, attività e commenti",
     "statusPlaceholder": "Seleziona stato",
     "contactPlaceholder": "Filtra per contatto",
     "managerPlaceholder": "Tutti i responsabili",
@@ -103,6 +103,8 @@
       "created": "Creato",
       "projectManager": "Responsabile progetto",
       "tags": "Tag",
+      "priority": "Priorità",
+      "taskType": "Tipo",
       "actions": "Azioni"
     },
     "unknownUser": "Sconosciuto"
@@ -240,7 +242,26 @@
     "dueLabel": "Scadenza",
     "noDueDate": "Nessuna data di scadenza",
     "hideTags": "Nascondi tag",
-    "criticalPath": "Percorso critico"
+    "criticalPath": "Percorso critico",
+    "selectTaskAria": "Seleziona attività {{taskName}}",
+    "bulkMoveSuccess": "{{count}} attività spostata/e con successo!",
+    "bulkMovePartial": "{{moved}} attività spostata/e, {{failed}} non riuscite.",
+    "bulkDeleteSuccess": "{{count}} attività eliminata/e con successo!",
+    "bulkDeletePartial": "{{deleted}} attività eliminata/e, {{failed}} non riuscite.",
+    "bulkAssignSuccess": "{{count}} attività assegnata/e con successo!",
+    "bulkAssignPartial": "{{success}} attività assegnata/e, {{failed}} non riuscite.",
+    "bulkAssignTeamSuccess": "{{count}} attività assegnata/e al team con successo!",
+    "bulkAssignTeamPartial": "{{success}} attività assegnata/e al team, {{failed}} non riuscite.",
+    "bulkDeleteTitle": "Elimina attività",
+    "bulkDeleteMessage": "Sei sicuro di voler eliminare {{count}} attività selezionata/e? Questa azione non può essere annullata.",
+    "bulkTasksMovedSuccess": "{{count}} attività spostate",
+    "bulkTasksMovedToPhase": "{{count}} attività spostate in {{phaseName}}",
+    "moveTasksTitle": "Sposta attività",
+    "confirmMoveTasksMessage": "Sei sicuro di voler spostare {{count}} attività selezionate nella fase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_other": "Tag aggiunti a {{count}} attività",
+    "bulkTagsPartial": "Impossibile aggiungere i tag ad alcune attività",
+    "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -415,6 +436,7 @@
     "selectFolderDescription": "Scegli dove salvare questo nuovo documento"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Dettagli limitati — non sei assegnato a questo ticket",
     "title": "Ticket associati",
     "linkExistingTitle": "Collega ticket esistente",
     "createTicket": "Crea ticket",
@@ -519,7 +541,9 @@
       "tags": "Tag",
       "createdAt": "Creato il",
       "updatedAt": "Aggiornato il"
-    }
+    },
+    "exportSelected": "Esporta {{count}} selezionata/e",
+    "selectedTasksNotice": "Esportazione di {{count}} attività selezionat{{plural}}."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -701,6 +725,7 @@
       "allPriorities": "Tutte le priorità"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Dettagli limitati — non sei assegnato a questa attività",
       "title": "Attività di progetto collegate",
       "loadFailed": "Impossibile caricare l'attività",
       "phaseNotFound": "Fase attività non trovata",
@@ -709,6 +734,22 @@
       "tasks": "Attività",
       "badgeCount": "{{count}} Attività",
       "badgeCount_other": "{{count}} Attività"
+    },
+    "bulkMoveTask": {
+      "title": "Sposta attività",
+      "message": "Sposta {{count}} attività selezionata/e in una nuova fase/stato:",
+      "confirm": "Sposta attività"
+    },
+    "bulkAssign": {
+      "title": "Assegna attività",
+      "message": "Assegna {{count}} attività selezionata/e a:",
+      "unassigned": "Non assegnato",
+      "assigning": "Assegnazione...",
+      "confirm": "Assegna attività",
+      "teamReplaceNotice": "Le attività già assegnate a un altro team verranno riassegnate al team selezionato."
+    },
+    "convertAdHocToTask": {
+      "title": "Converti in attività di progetto"
     }
   },
   "filters": {
@@ -1268,7 +1309,8 @@
     "templateCreatedSuccess": "Modello creato con successo",
     "notAvailable": "N/D",
     "saveAsTemplate": "Salva come modello",
-    "materials": "Materiali"
+    "materials": "Materiali",
+    "shareTooltip": "Stampa, importa ed esporta"
   },
   "projectPhases": {
     "addTask": "Aggiungi attività",
@@ -1382,5 +1424,55 @@
     "unknownTask": "Attività sconosciuta",
     "blocks": "Blocca"
   },
-  "columnsHidden": "colonna/e nascoste per spazio limitato. Ridimensiona il browser per vederne altre."
+  "columnsHidden": "colonna/e nascoste per spazio limitato. Ridimensiona il browser per vederne altre.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Attività del progetto",
+      "subtitle": "{{count}} attività",
+      "noTasks": "Nessuna attività del progetto da stampare",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Attività",
+        "phase": "Fase",
+        "status": "Stato",
+        "assignee": "Assegnatario",
+        "dueDate": "Scadenza",
+        "hours": "Ore"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle attività."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Stato",
+        "assignee": "Assegnatario",
+        "dueDate": "Data di scadenza",
+        "estimatedHours": "Ore stimate",
+        "wbsCode": "Codice WBS",
+        "description": "Descrizione"
+      },
+      "subtitleSelected": "{{count}} attività selezionate"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} selezionata/e",
+    "move": "Sposta",
+    "assign": "Assegna",
+    "delete": "Elimina",
+    "clear": "Cancella",
+    "tags": "Tag"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Aggiungi tag alle attività selezionate",
+      "message": "Aggiungi uno o più tag a {{count}} attività selezionata/e. I tag già presenti su un'attività vengono ignorati.",
+      "placeholder": "Digita un tag e premi Invio",
+      "submitting": "Aggiunta dei tag...",
+      "confirm_one": "Aggiungi tag a {{count}} attività",
+      "confirm_other": "Aggiungi tag a {{count}} attività",
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
+    }
+  }
 }

@@ -37,7 +37,9 @@ export default defineConfig({
       { find: /^@enterprise\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src')}/$1` },
 
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
+      { find: /^@\/lib\/db\/db$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/db.tsx')}` },
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
+      { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },
@@ -56,6 +58,7 @@ export default defineConfig({
       // Root shared + server imports.
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      { find: /^@alga-psa\/workflow-streams$/, replacement: `${path.resolve(__dirname, '../../packages/workflow-streams/src/streams/index.ts')}` },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/billing$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src/index.ts')}` },

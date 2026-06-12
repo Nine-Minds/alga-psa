@@ -1,0 +1,15 @@
+{
+  "releaseVersion": "1.0",
+  "generatedAt": "2026-06-04T22:00:00Z",
+  "app": {
+    "version": "1.0",
+    "releaseBranch": "release/1.0.0",
+    "valuesProfile": "single-node",
+    "images": {
+      "algaCore": "eaec6253",
+      "workflowWorker": "a2cbb43",
+      "emailService": "61e4a00e",
+      "temporalWorker": "a2cbb43"
+    }
+  }
+}

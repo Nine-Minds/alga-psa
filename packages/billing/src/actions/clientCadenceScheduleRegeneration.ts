@@ -375,6 +375,41 @@ async function persistRecurringServicePeriodRegeneration(
   }
 }
 
+/**
+ * A client-cadence obligation that starts or ends inside a schedule period is
+ * only active for part of that period. The invoice engine derives coverage
+ * (and proration / canonical detail periods) from the persisted activity
+ * window, so regeneration must clip the first/last periods to the assignment
+ * bounds; otherwise mid-period contract starts are billed for the full period.
+ */
+function clipRecordActivityWindowToObligationBounds(
+  record: IRecurringServicePeriodRecord,
+  obligationStart: ISO8601String,
+  obligationEnd: ISO8601String | null,
+): IRecurringServicePeriodRecord {
+  const clipStart =
+    compareIsoDateOnly(obligationStart, record.servicePeriod.start) > 0
+      ? obligationStart
+      : null;
+  const clipEnd =
+    obligationEnd && compareIsoDateOnly(obligationEnd, record.servicePeriod.end) < 0
+      ? obligationEnd
+      : null;
+
+  if (!clipStart && !clipEnd) {
+    return record;
+  }
+
+  return {
+    ...record,
+    activityWindow: {
+      start: clipStart ?? record.servicePeriod.start,
+      end: clipEnd ?? record.servicePeriod.end,
+      semantics: record.servicePeriod.semantics,
+    },
+  };
+}
+
 export async function regenerateClientCadenceServicePeriodsForScheduleChange(
   trx: Knex.Transaction,
   params: {
@@ -426,7 +461,9 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       sourceRunKey,
       anchorSettings: params.anchor,
       recordIdFactory: recurringServicePeriodRecordIdFactory,
-    }).records;
+    }).records.map((record) =>
+      clipRecordActivityWindowToObligationBounds(record, obligationStart, obligationEnd),
+    );
 
     const regenerationPlan = backfillRecurringServicePeriods({
       candidateRecords,

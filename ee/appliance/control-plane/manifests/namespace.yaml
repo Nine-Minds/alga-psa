@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: alga-appliance-control-plane
+  labels:
+    app.kubernetes.io/name: alga-appliance-control-plane
+    app.kubernetes.io/part-of: alga-appliance
+    alga.nineminds.com/appliance-plane: control

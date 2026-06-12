@@ -354,7 +354,7 @@ export const getServiceTypesForSelectionAsync = withAuth(async (
   _user,
   { tenant }
 ): Promise<
-  Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }>
+  Array<{ id: string; name: string; is_standard: boolean }>
 > => {
   const { knex } = await createTenantKnex();
 

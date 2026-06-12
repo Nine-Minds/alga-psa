@@ -78,6 +78,28 @@ describe('workflow step properties basics', () => {
     expect(onCopyPath).toHaveBeenLastCalledWith('vars.tickets_create');
   });
 
+  it('shows scoped save output paths without prepending vars', () => {
+    const onSaveAsChange = vi.fn();
+    const onCopyPath = vi.fn();
+
+    render(
+      <WorkflowStepSaveOutputSection
+        stepId="scoped-step"
+        actionId="transform.query_json"
+        saveAs="payload.normalizedInbound"
+        onSaveAsChange={onSaveAsChange}
+        onCopyPath={onCopyPath}
+        generateSaveAsName={generateSaveAsName}
+      />
+    );
+
+    expect(screen.getByText('payload.normalizedInbound')).toBeInTheDocument();
+    expect(screen.queryByText('vars.payload.normalizedInbound')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Copy full path'));
+    expect(onCopyPath).toHaveBeenLastCalledWith('payload.normalizedInbound');
+  });
+
   it('T296/T320: read-only grouped steps can still inspect step naming and transform outputs without editing them', () => {
     const onStepNameChange = vi.fn();
     const onSaveAsChange = vi.fn();

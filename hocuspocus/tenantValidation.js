@@ -1,3 +1,6 @@
+import jwt from 'jsonwebtoken'
+import { getHocuspocusJwtSecret } from './hocuspocusJwtSecret.js'
+
 export function parseDocumentRoom(roomName) {
   if (!roomName || !roomName.startsWith('document:')) {
     return null;
@@ -11,6 +14,24 @@ export function parseDocumentRoom(roomName) {
     return null;
   }
   return { tenantId, documentId };
+}
+
+export function parseTicketRoom(roomName) {
+  if (!roomName || !roomName.startsWith('ticket:')) {
+    return null;
+  }
+
+  const parts = roomName.split(':');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [, tenantId, ticketId] = parts;
+  if (!tenantId || !ticketId) {
+    return null;
+  }
+
+  return { tenantId, ticketId };
 }
 
 export function getTenantFromRequest(request) {
@@ -29,6 +50,48 @@ export function getTenantFromRequest(request) {
 export function validateDocumentRoomAccess(roomName, request) {
   if (roomName?.startsWith('notifications:')) {
     return { status: 'bypass', reason: 'notifications' };
+  }
+
+  const parsedTicketRoom = parseTicketRoom(roomName);
+  if (parsedTicketRoom) {
+    if (!request?.url) {
+      throw new Error('Ticket validation failed: missing request URL');
+    }
+
+    let token = null;
+    try {
+      const url = new URL(request.url, 'http://localhost');
+      token = url.searchParams.get('token');
+    } catch (error) {
+      console.error('[Hocuspocus] Failed to parse request URL for ticket validation:', error);
+      throw new Error('Ticket validation failed: invalid request URL');
+    }
+
+    if (!token) {
+      throw new Error('Ticket validation failed: missing token');
+    }
+
+    let claims;
+    try {
+      claims = jwt.verify(token, getHocuspocusJwtSecret());
+    } catch (error) {
+      throw new Error(`Ticket validation failed: ${error instanceof Error ? error.message : 'invalid token'}`);
+    }
+
+    if (claims?.tenantId !== parsedTicketRoom.tenantId) {
+      throw new Error('Ticket validation failed: room tenant mismatch');
+    }
+
+    if (claims?.ticketId !== parsedTicketRoom.ticketId) {
+      throw new Error('Ticket validation failed: room ticket mismatch');
+    }
+
+    return {
+      status: 'ok',
+      tenantId: parsedTicketRoom.tenantId,
+      ticketId: parsedTicketRoom.ticketId,
+      userId: claims.userId,
+    };
   }
 
   const parsedRoom = parseDocumentRoom(roomName);

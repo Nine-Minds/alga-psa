@@ -11,6 +11,7 @@ const STATUS_PRIORITY: Record<string, number> = {
   unpaid: 3,
 };
 const TIER_DEFAULT_LIMITS: Record<TenantTier, number> = {
+  essentials: 150,
   solo: 150,
   pro: 750,
   premium: 10000,
@@ -369,7 +370,7 @@ export class WorkflowStepQuotaService {
 
     const ledgerRow = await knex('workflow_run_steps as s')
       .join('workflow_runs as r', 'r.run_id', 's.run_id')
-      .where('r.tenant_id', tenant)
+      .where('r.tenant', tenant)
       .andWhere('s.started_at', '>=', periodStart)
       .andWhere('s.started_at', '<', periodEnd)
       .count<{ count: string }>('s.step_id as count')

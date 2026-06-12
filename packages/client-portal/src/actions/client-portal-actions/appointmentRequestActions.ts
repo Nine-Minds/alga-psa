@@ -31,6 +31,7 @@ import {
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
+import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import { isValidEmail } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
@@ -62,6 +63,7 @@ export interface IAppointmentRequest {
   declined_reason?: string;
   created_at: Date;
   updated_at: Date;
+  online_meeting_artifacts?: OnlineMeetingPortalArtifact[];
 }
 
 export interface AppointmentRequestResult<T> {
@@ -71,52 +73,80 @@ export interface AppointmentRequestResult<T> {
   teamsMeetingWarning?: string;
 }
 
+export interface OnlineMeetingPortalArtifact {
+  artifact_id: string;
+  artifact_type: 'recording' | 'transcript';
+  document_id: string | null;
+  created_date_time: Date | null;
+}
+
+async function areOnlineMeetingArtifactsVisibleInPortal(trx: Knex.Transaction, tenant: string): Promise<boolean> {
+  try {
+    const row = await trx('teams_integrations')
+      .where({ tenant })
+      .first('expose_recordings_in_portal');
+    return row?.expose_recordings_in_portal === true;
+  } catch (error) {
+    console.warn('[ClientPortalAppointmentRequests] Recording portal visibility setting unavailable', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+async function loadVisibleOnlineMeetingArtifactsForAppointments(
+  trx: Knex.Transaction,
+  tenant: string,
+  appointmentRequestIds: string[],
+): Promise<Map<string, OnlineMeetingPortalArtifact[]>> {
+  const result = new Map<string, OnlineMeetingPortalArtifact[]>();
+  const ids = [...new Set(appointmentRequestIds.filter(Boolean))];
+  if (ids.length === 0) {
+    return result;
+  }
+
+  const visible = await areOnlineMeetingArtifactsVisibleInPortal(trx, tenant);
+  if (!visible) {
+    return result;
+  }
+
+  const rows = await trx('online_meeting_artifacts as artifact')
+    .join('online_meetings as meeting', function joinMeeting() {
+      this.on('artifact.tenant', '=', 'meeting.tenant')
+        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
+    })
+    .where('meeting.tenant', tenant)
+    .whereIn('meeting.appointment_request_id', ids)
+    .select(
+      'meeting.appointment_request_id',
+      'artifact.artifact_id',
+      'artifact.artifact_type',
+      'artifact.document_id',
+      'artifact.created_date_time',
+    )
+    .orderBy('artifact.created_date_time', 'desc');
+
+  for (const row of rows) {
+    const appointmentRequestId = row.appointment_request_id as string;
+    const artifacts = result.get(appointmentRequestId) ?? [];
+    artifacts.push({
+      artifact_id: row.artifact_id,
+      artifact_type: row.artifact_type,
+      document_id: row.document_id ?? null,
+      created_date_time: row.created_date_time ?? null,
+    });
+    result.set(appointmentRequestId, artifacts);
+  }
+
+  return result;
+}
+
 type TenantSettings = {
   contactEmail: string;
   contactPhone: string;
   tenantName: string;
   defaultLocale: string;
 };
-
-type ScheduleApprover = {
-  user_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-};
-
-async function getScheduleApprovers(tenant: string): Promise<ScheduleApprover[]> {
-  const { knex: db } = await createTenantKnex();
-
-  return await withTransaction(db, async (trx) => {
-    const approvers = await trx('users as u')
-      .join('user_roles as ur', function () {
-        this.on('u.user_id', 'ur.user_id').andOn('u.tenant', 'ur.tenant');
-      })
-      .join('roles as r', function () {
-        this.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
-      })
-      .join('role_permissions as rp', function () {
-        this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant');
-      })
-      .join('permissions as p', function () {
-        this.on('rp.permission_id', 'p.permission_id').andOn('rp.tenant', 'p.tenant');
-      })
-      .where({
-        'u.tenant': tenant,
-        'u.user_type': 'internal',
-        'p.resource': 'user_schedule',
-        'p.action': 'update',
-      })
-      .where(function () {
-        this.where('u.is_inactive', false).orWhereNull('u.is_inactive');
-      })
-      .select('u.user_id', 'u.email', 'u.first_name', 'u.last_name')
-      .distinct();
-
-    return approvers;
-  });
-}
 
 async function getTenantSettings(tenant: string): Promise<TenantSettings> {
   const { knex: db } = await createTenantKnex();
@@ -224,6 +254,7 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
 async function deleteTeamsMeetingIfAvailable(params: {
   tenantId: string;
   meetingId: string;
+  eventId?: string | null;
   appointmentRequestId: string;
 }): Promise<boolean> {
   if (!isEnterprise) {
@@ -239,6 +270,7 @@ async function deleteTeamsMeetingIfAvailable(params: {
     return teamsModule.deleteTeamsMeeting({
       tenantId: params.tenantId,
       meetingId: params.meetingId,
+      eventId: params.eventId ?? null,
       appointmentRequestId: params.appointmentRequestId,
     });
   } catch (error) {
@@ -429,27 +461,10 @@ export const createAppointmentRequest = withAuth(async (
       status: appointmentRequest.status
     });
 
-    // Determine who should be assigned this appointment
-    let assignedUserId = validatedData.preferred_assigned_user_id;
-
-    // If no preferred technician, assign to the default approver
-    if (!assignedUserId) {
-      // Get the default approver from general settings
-      const approverSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
-        // Fall back to general default approver
-        const generalSetting = await trx('availability_settings')
-          .where({
-            tenant,
-            setting_type: 'general_settings'
-          })
-          .whereNotNull('config_json')
-          .first();
-
-        return generalSetting?.config_json?.default_approver_id || null;
-      });
-
-      assignedUserId = approverSetting;
-    }
+    // Determine who should be assigned this appointment.
+    // Only a client-specified preferred technician is auto-assigned. When none is
+    // specified the request is left unassigned for an approver to claim on approval.
+    const assignedUserId = validatedData.preferred_assigned_user_id || null;
 
     // ALWAYS create a schedule entry for this appointment request
     // If no assigned user, it will still appear on the calendar as unassigned
@@ -590,27 +605,23 @@ export const createAppointmentRequest = withAuth(async (
         tenantId: tenant
       });
 
-      // Get default approver for notifications
-      const defaultApproverId = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const generalSetting = await trx('availability_settings')
-          .where({
-            tenant,
-            setting_type: 'general_settings'
-          })
-          .whereNotNull('config_json')
-          .first();
-
-        return generalSetting?.config_json?.default_approver_id || null;
+      // Resolve the configured approvers (multiple users and/or teams, expanded to
+      // their current members). Falls back to the company-wide approvers when the
+      // preferred technician has no per-technician override configured.
+      const approverUserIds = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return resolveAppointmentApproverUserIds(trx, tenant, {
+          preferredTechnicianId: validatedData.preferred_assigned_user_id || null
+        });
       });
 
-      // Determine which staff users should receive notifications
-      // Only notify: assigned user and default approver (if different)
+      // Determine which staff users should receive notifications:
+      // the preferred technician (if any) plus every resolved approver.
       const notifyUserIds = new Set<string>();
       if (assignedUserId) {
         notifyUserIds.add(assignedUserId);
       }
-      if (defaultApproverId) {
-        notifyUserIds.add(defaultApproverId);
+      for (const approverId of approverUserIds) {
+        notifyUserIds.add(approverId);
       }
 
       // Get user details for notifications
@@ -629,7 +640,7 @@ export const createAppointmentRequest = withAuth(async (
         count: staffUsers.length,
         userIds: staffUsers.map(u => u.user_id),
         assignedUserId,
-        defaultApproverId
+        approverUserIds
       });
 
       // Resolve preferred technician name
@@ -880,31 +891,19 @@ export const updateAppointmentRequest = withAuth(async (
             updated_at: new Date(),
           });
 
-        // Update assignee if changed
+        // Update assignee if changed. Only a preferred technician is auto-assigned;
+        // clearing it leaves the request unassigned for an approver to claim.
         if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
-          // Determine new assignee (preferred tech or default approver)
-          let newAssigneeId = validatedData.preferred_assigned_user_id;
+          const newAssigneeId = validatedData.preferred_assigned_user_id || null;
 
-          if (!newAssigneeId) {
-            const generalSetting = await trx('availability_settings')
-              .where({
-                tenant,
-                setting_type: 'general_settings',
-              })
-              .whereNotNull('config_json')
-              .first();
-
-            newAssigneeId = generalSetting?.config_json?.default_approver_id || null;
-          }
+          await trx('schedule_entry_assignees')
+            .where({
+              entry_id: existingRequest.schedule_entry_id,
+              tenant,
+            })
+            .delete();
 
           if (newAssigneeId) {
-            await trx('schedule_entry_assignees')
-              .where({
-                entry_id: existingRequest.schedule_entry_id,
-                tenant,
-              })
-              .delete();
-
             await trx('schedule_entry_assignees').insert({
               entry_id: existingRequest.schedule_entry_id,
               user_id: newAssigneeId,
@@ -1052,7 +1051,7 @@ export const getMyAppointmentRequests = withAuth(async (
     // Validate filters if provided (all fields are already optional in the schema)
     const validatedFilters = filters ? appointmentRequestFilterSchema.parse(filters) : {};
 
-    const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const { requests, artifactsByAppointmentRequestId } = await withTransaction(db, async (trx: Knex.Transaction) => {
       let query = trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
@@ -1096,7 +1095,17 @@ export const getMyAppointmentRequests = withAuth(async (
         query = query.where('ar.requested_date', '<=', validatedFilters.end_date);
       }
 
-      return await query;
+      const rows = await query;
+      const artifacts = await loadVisibleOnlineMeetingArtifactsForAppointments(
+        trx,
+        tenant,
+        rows.map((row: any) => row.appointment_request_id),
+      );
+
+      return {
+        requests: rows,
+        artifactsByAppointmentRequestId: artifacts,
+      };
     });
 
     console.log('[getMyAppointmentRequests] Found appointments:', requests.length);
@@ -1106,7 +1115,8 @@ export const getMyAppointmentRequests = withAuth(async (
       ...request,
       preferred_assigned_user_name: request.preferred_technician_first_name && request.preferred_technician_last_name
         ? `${request.preferred_technician_first_name} ${request.preferred_technician_last_name}`
-        : undefined
+        : undefined,
+      online_meeting_artifacts: artifactsByAppointmentRequestId.get(request.appointment_request_id) ?? [],
     }));
 
     console.log('[getMyAppointmentRequests] Returning appointments:', mappedRequests.length);
@@ -1156,7 +1166,7 @@ export const getAppointmentRequestDetails = withAuth(async (
     const clientId = contact.client_id;
 
     const request = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests as ar')
+      const row = await trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
             .andOn('ar.tenant', 'sc.tenant');
@@ -1189,6 +1199,21 @@ export const getAppointmentRequestDetails = withAuth(async (
           't.title as ticket_title'
         )
         .first();
+
+      if (!row) {
+        return row;
+      }
+
+      const artifacts = await loadVisibleOnlineMeetingArtifactsForAppointments(
+        trx,
+        tenant,
+        [row.appointment_request_id],
+      );
+
+      return {
+        ...row,
+        online_meeting_artifacts: artifacts.get(row.appointment_request_id) ?? [],
+      };
     });
 
     if (!request) {
@@ -1261,6 +1286,12 @@ export const cancelAppointmentRequest = withAuth(async (
       }
 
       const now = new Date();
+      const onlineMeeting = await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .first();
 
       if (request.schedule_entry_id) {
         await trx('schedule_entry_assignees')
@@ -1292,6 +1323,16 @@ export const cancelAppointmentRequest = withAuth(async (
           online_meeting_url: null,
           online_meeting_id: null,
           updated_at: now
+        });
+
+      await trx('online_meetings')
+        .where({
+          appointment_request_id: request.appointment_request_id,
+          tenant,
+        })
+        .update({
+          status: 'cancelled',
+          updated_at: now,
         });
 
       try {
@@ -1368,12 +1409,20 @@ export const cancelAppointmentRequest = withAuth(async (
           });
         }
 
-        // Send internal notifications to MSP STAFF
-        const staffUsers = await getScheduleApprovers(tenant);
-        for (const staffUser of staffUsers) {
+        // Send internal notifications to MSP STAFF.
+        // Notify the configured approvers (users + teams, expanded to members) plus the
+        // assigned technician, mirroring who was notified when the request was created.
+        const cancellationApproverIds = await resolveAppointmentApproverUserIds(trx, tenant, {
+          preferredTechnicianId: request.preferred_assigned_user_id || null
+        });
+        const cancellationNotifyIds = new Set<string>(cancellationApproverIds);
+        if (request.preferred_assigned_user_id) {
+          cancellationNotifyIds.add(request.preferred_assigned_user_id);
+        }
+        for (const staffUserId of cancellationNotifyIds) {
           await createNotificationFromTemplateInternal(trx, {
             tenant: tenant,
-            user_id: staffUser.user_id,
+            user_id: staffUserId,
             template_name: 'appointment-request-cancelled-staff',
             type: 'info',
             category: 'appointments',
@@ -1397,10 +1446,12 @@ export const cancelAppointmentRequest = withAuth(async (
 
       return {
         appointmentRequestId: request.appointment_request_id,
-        meetingId:
-          request.online_meeting_provider === 'teams' && request.online_meeting_id
+        meetingId: onlineMeeting?.provider === 'teams'
+          ? onlineMeeting.provider_meeting_id
+          : request.online_meeting_provider === 'teams' && request.online_meeting_id
             ? request.online_meeting_id
             : null,
+        eventId: onlineMeeting?.provider_event_id ?? null,
       };
     });
 
@@ -1410,6 +1461,7 @@ export const cancelAppointmentRequest = withAuth(async (
       const deletedMeeting = await deleteTeamsMeetingIfAvailable({
         tenantId: tenant,
         meetingId: cancellationContext.meetingId,
+        eventId: cancellationContext.eventId,
         appointmentRequestId: cancellationContext.appointmentRequestId,
       });
 

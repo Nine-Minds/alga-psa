@@ -32,6 +32,144 @@
         "title": "Teamprestaties",
         "placeholder": "[Teamprestaties grafiekplaceholder]"
       }
+    },
+    "description": "Vooraf ingestelde operationele rapporten voor de huidige werkruimte. Meer aanpassing wordt later aan deze catalogus toegevoegd.",
+    "categories": {
+      "helpdesk": "Helpdesk",
+      "operations": "Operaties",
+      "billing": "Facturatie"
+    },
+    "badges": {
+      "planned": "Gepland"
+    },
+    "actions": {
+      "viewReport": "Rapport bekijken",
+      "openInBilling": "Openen in facturatie",
+      "requiresTier": "Vereist {{tier}}",
+      "comingSoon": "Binnenkort"
+    },
+    "errors": {
+      "loadReport": "Rapport kon niet worden geladen."
+    },
+    "empty": {
+      "noData": "Geen gegevens voor dit rapport.",
+      "noOpenTicketsInRange": "Geen open tickets in deze periode.",
+      "noDate": "Geen datum",
+      "notAvailable": "n.v.t.",
+      "noEmailChannels": "Er zijn geen e-mailkanalen geconfigureerd."
+    },
+    "fallbackTitle": "Rapport",
+    "dateRange": {
+      "lastDays": "Laatste {{count}} dagen"
+    },
+    "units": {
+      "daysWithCount": "{{count}} dagen"
+    },
+    "metrics": {
+      "created": "Aangemaakt",
+      "closed": "Gesloten",
+      "openNow": "Nu open",
+      "awaitingCustomer": "Wacht op klant",
+      "awaitingInternal": "Wacht intern",
+      "under2Days": "Minder dan 2 dagen",
+      "days2To7": "2 tot 7 dagen",
+      "days8To30": "8 tot 30 dagen",
+      "over30Days": "Meer dan 30 dagen",
+      "activeChannels": "Actieve kanalen",
+      "healthyChannels": "Gezonde kanalen",
+      "problemChannels": "Kanalen met problemen",
+      "emailsProcessed": "Verwerkte e-mails",
+      "ticketsFromEmail": "Tickets uit e-mail",
+      "failedEmails": "Mislukte e-mails",
+      "avgProcessingTime": "Gem. verwerkingstijd",
+      "avgTicketCreationTime": "Gem. e-mail-naar-ticket tijd",
+      "totalHours": "Totale uren",
+      "billableHours": "Factureerbare uren",
+      "nonBillableHours": "Niet-factureerbare uren",
+      "billablePercent": "% factureerbaar",
+      "timeEntries": "Tijdregistraties",
+      "activeContracts": "Actieve contracten",
+      "monthlyRecurring": "Maandelijks terugkerend",
+      "renewalsDue": "Vernieuwingen verwacht",
+      "bucketUsedHours": "Gebruikte bundeluren",
+      "bucketOverageHours": "Bundeloverschrijding",
+      "openAssigned": "Open toegewezen",
+      "activeAssignees": "Actieve toegewezenen",
+      "avgResolutionTime": "Gem. oplostijd"
+    },
+    "sections": {
+      "openByStatus": "Open per status",
+      "openByPriority": "Open per prioriteit",
+      "openByAssignee": "Open per toegewezene",
+      "ageDistribution": "Leeftijdsverdeling",
+      "responseOwnership": "Reactie-eigenaar",
+      "oldestOpenTickets": "Oudste open tickets",
+      "emailProcessingStatus": "Verwerkingsstatus",
+      "emailChannels": "E-mailkanalen",
+      "timeByUser": "Tijd per gebruiker",
+      "billableHoursByService": "Factureerbare uren per service",
+      "entriesByWorkType": "Registraties per werktype",
+      "contractRevenue": "Contractomzet",
+      "upcomingRenewals": "Aankomende vernieuwingen",
+      "bucketUsage": "Bundelgebruik",
+      "performanceByAssignee": "Prestaties per toegewezene",
+      "closedByAssignee": "Gesloten per toegewezene"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Ticketbelasting",
+        "description": "Aangemaakte, gesloten en momenteel open tickets gegroepeerd op status, prioriteit en toegewezene."
+      },
+      "ticketAging": {
+        "title": "Ticketleeftijd",
+        "description": "Leeftijdsgroepen van open tickets, reactie-eigenaar en oudste actieve tickets."
+      },
+      "emailChannelHealth": {
+        "title": "Status van e-mailkanalen",
+        "description": "Volume van inkomende e-mail, snelheid van ticketaanmaak en verbindingsstatus van mailboxen."
+      },
+      "timeUtilization": {
+        "title": "Tijdsbesteding",
+        "description": "Geregistreerd werk per persoon en servicegebied voor PSA-operaties."
+      },
+      "teamPerformance": {
+        "title": "Teamprestaties",
+        "description": "Teamdoorvoer en reactie-eigenaarschap voor werkruimten met meerdere gebruikers."
+      },
+      "contractReports": {
+        "title": "Contractrapporten",
+        "description": "Contractomzet, verlengingen, bundelgebruik en eenvoudige winstgevendheid."
+      }
+    },
+    "table": {
+      "channel": "Kanaal",
+      "status": "Status",
+      "processed": "Verwerkt",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Gem. e-mail naar ticket",
+      "assignee": "Toegewezene",
+      "created": "Aangemaakt",
+      "closed": "Gesloten",
+      "open": "Open",
+      "avgResolution": "Gem. oplossing",
+      "user": "Gebruiker",
+      "totalHours": "Totaal uren",
+      "billableHours": "Factureerbare uren",
+      "entries": "Vermeldingen",
+      "ticket": "Ticket",
+      "entered": "Ingevoerd",
+      "age": "Leeftijd"
+    },
+    "statusValues": {
+      "connected": "Verbonden",
+      "disconnected": "Verbroken",
+      "error": "Fout",
+      "configuring": "Configureren",
+      "unknown": "Onbekend",
+      "success": "Geslaagd",
+      "failed": "Mislukt",
+      "partial": "Gedeeltelijk",
+      "processing": "Wordt verwerkt"
     }
   },
   "contractReports": {

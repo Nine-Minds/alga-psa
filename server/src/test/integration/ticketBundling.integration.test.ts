@@ -69,11 +69,36 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
 let mockSessionUserId: string | null = null;
 let mockCurrentUser: any = null;
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: mockSessionUserId ? { id: mockSessionUserId } : undefined,
-  })),
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const rbac = await vi.importActual<typeof import('@alga-psa/auth/rbac')>('@alga-psa/auth/rbac');
+  const requireMockUser = () => {
+    if (!mockCurrentUser) {
+      throw new Error('User not authenticated');
+    }
+    return mockCurrentUser;
+  };
+  return {
+    ...rbac,
+    getSession: vi.fn(async () => ({
+      user: mockSessionUserId ? { id: mockSessionUserId } : undefined,
+    })),
+    withAuth: (action: any) => async (...args: any[]) => {
+      const user = requireMockUser();
+      const { runWithTenant } = await import('@alga-psa/db');
+      return runWithTenant(user.tenant, () => action(user, { tenant: user.tenant }, ...args));
+    },
+    withOptionalAuth: (action: any) => async (...args: any[]) => {
+      const user = mockCurrentUser;
+      if (!user) return action(null, null, ...args);
+      const { runWithTenant } = await import('@alga-psa/db');
+      return runWithTenant(user.tenant, () => action(user, { tenant: user.tenant }, ...args));
+    },
+    withAuthCheck: (action: any) => async (...args: any[]) => {
+      const user = requireMockUser();
+      return action(user, ...args);
+    },
+  };
+});
 
 vi.mock('@alga-psa/users/actions', async () => {
   return {
@@ -144,8 +169,8 @@ describe('Ticket bundling integration', () => {
       '@alga-psa/tickets/actions/optimizedTicketActions'
     ));
 
-    ({ updateComment, createComment } = await import('@/lib/actions/comment-actions/commentActions'));
-    ({ saveTimeEntry } = await import('@/lib/actions/timeEntryCrudActions'));
+    ({ updateComment, createComment } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
+    ({ saveTimeEntry } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
 
     tenantId = await ensureTenant(db, 'Ticket bundling test tenant');
     otherTenantId = await createTenant(db, 'Other tenant');
@@ -240,20 +265,25 @@ describe('Ticket bundling integration', () => {
       is_inactive: false,
     };
 
-    await expect(
-      runWithTenant(tenantId, async () => {
+    mockCurrentUser = noPermUser;
+    try {
+      await expect(
+        runWithTenant(tenantId, async () => {
+          await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
+        })
+      ).rejects.toThrow(/permission denied/i);
+
+      await grantUserPermissions(db, tenantId, noPermUserId, [
+        { resource: 'ticket', action: 'update' },
+        { resource: 'ticket', action: 'read' },
+      ]);
+
+      await runWithTenant(tenantId, async () => {
         await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
-      })
-    ).rejects.toThrow(/permission denied/i);
-
-    await grantUserPermissions(db, tenantId, noPermUserId, [
-      { resource: 'ticket', action: 'update' },
-      { resource: 'ticket', action: 'read' },
-    ]);
-
-    await runWithTenant(tenantId, async () => {
-      await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
-    });
+      });
+    } finally {
+      mockCurrentUser = internalUser;
+    }
 
     const linkedChild = await db('tickets').where({ tenant: tenantId, ticket_id: childId }).first();
     expect(linkedChild?.master_ticket_id).toBe(masterId);
@@ -495,8 +525,20 @@ describe('Ticket bundling integration', () => {
       } as any);
     });
 
+    // The reopen utility resets the master to the tenant's default open ticket
+    // status (tenant-wide, not board-scoped), so compute that expectation the
+    // same way rather than assuming it matches this suite's chosen status.
+    const tenantDefaultOpenStatus = await db('statuses')
+      .where({ tenant: tenantId, is_closed: false })
+      .andWhere(function () {
+        this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+      })
+      .orderBy('is_default', 'desc')
+      .orderBy('order_number', 'asc')
+      .first<{ status_id: string }>('status_id');
+
     const reopenedMaster = await db('tickets').where({ tenant: tenantId, ticket_id: masterId }).first();
-    expect(reopenedMaster?.status_id).toBe(statusOpenId);
+    expect(reopenedMaster?.status_id).toBe(tenantDefaultOpenStatus?.status_id);
     expect(reopenedMaster?.closed_at).toBeNull();
     expect(reopenedMaster?.is_closed).toBe(false);
   });
@@ -535,9 +577,36 @@ describe('Ticket bundling integration', () => {
     expect(masterCommentHasChild).toBe(false);
   });
 
-  it('blocks time entries on bundled children and allows time entries on masters', async () => {
+  it('allows time entries on both bundled children and masters', async () => {
     const clientA = await createClient(db, tenantId, `Client A ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `a-${uuidv4().slice(0, 6)}@example.com`);
+
+    const existingService = await db('service_catalog')
+      .where({ tenant: tenantId, is_active: true })
+      .first('service_id');
+    let serviceId = existingService?.service_id as string | undefined;
+    if (!serviceId) {
+      const serviceTypeId = uuidv4();
+      serviceId = uuidv4();
+      await db('service_types').insert({
+        id: serviceTypeId,
+        tenant: tenantId,
+        name: `Hourly Type ${uuidv4().slice(0, 6)}`,
+        is_active: true,
+        order_number: 9999,
+      });
+      await db('service_catalog').insert({
+        service_id: serviceId,
+        tenant: tenantId,
+        service_name: `Time Entry Service ${uuidv4().slice(0, 6)}`,
+        custom_service_type_id: serviceTypeId,
+        billing_method: 'per_unit',
+        item_kind: 'service',
+        is_active: true,
+        default_rate: 10000,
+        unit_of_measure: 'hour',
+      });
+    }
 
     const masterId = uuidv4();
     const childId = uuidv4();
@@ -552,44 +621,30 @@ describe('Ticket bundling integration', () => {
     const start = new Date();
     const end = new Date(start.getTime() + 30 * 60_000);
 
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await saveTimeEntry({
-          work_item_id: childId,
-          work_item_type: 'ticket',
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          created_at: start.toISOString(),
-          updated_at: start.toISOString(),
-          billable_duration: 30,
-          notes: 'test',
-          user_id: internalUser.user_id,
-          approval_status: 'DRAFT',
-        } as any);
-      })
-    ).rejects.toThrow(/must be added on the master/i);
+    for (const ticketId of [childId, masterId]) {
+      await expect(
+        runWithTenant(tenantId, async () => {
+          await saveTimeEntry({
+            work_item_id: ticketId,
+            work_item_type: 'ticket',
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            created_at: start.toISOString(),
+            updated_at: start.toISOString(),
+            billable_duration: 30,
+            notes: 'test',
+            user_id: internalUser.user_id,
+            approval_status: 'DRAFT',
+            service_id: serviceId,
+          } as any);
+        })
+      ).resolves.toBeUndefined();
 
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await saveTimeEntry({
-          work_item_id: masterId,
-          work_item_type: 'ticket',
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          created_at: start.toISOString(),
-          updated_at: start.toISOString(),
-          billable_duration: 30,
-          notes: 'test',
-          user_id: internalUser.user_id,
-          approval_status: 'DRAFT',
-        } as any);
-      })
-    ).resolves.toBeUndefined();
-
-    const entry = await db('time_entries')
-      .where({ tenant: tenantId, user_id: internalUser.user_id, work_item_id: masterId, work_item_type: 'ticket' })
-      .first();
-    expect(entry).toBeTruthy();
+      const entry = await db('time_entries')
+        .where({ tenant: tenantId, user_id: internalUser.user_id, work_item_id: ticketId, work_item_type: 'ticket' })
+        .first();
+      expect(entry).toBeTruthy();
+    }
   });
 });
 
@@ -602,11 +657,15 @@ async function ensureTenant(connection: Knex, name: string): Promise<string> {
 }
 
 async function ensureTicketReferenceData(connection: Knex, tenant: string, createdByUserId: string): Promise<void> {
-  const existingBoard = await connection('boards').where({ tenant }).first<{ board_id: string }>('board_id');
-  if (!existingBoard?.board_id) {
+  let boardId = (await connection('boards')
+    .where({ tenant })
+    .orderBy('is_default', 'desc')
+    .first<{ board_id: string }>('board_id'))?.board_id;
+  if (!boardId) {
+    boardId = uuidv4();
     await connection('boards').insert({
       tenant,
-      board_id: uuidv4(),
+      board_id: boardId,
       board_name: 'Test Board',
       display_order: 0,
       is_default: true,
@@ -616,8 +675,9 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
     });
   }
 
+  // Ticket statuses are board-scoped; ensure the chosen board has open and closed statuses.
   const hasTicketStatuses = await connection('statuses')
-    .where({ tenant, status_type: 'ticket', is_closed: false })
+    .where({ tenant, status_type: 'ticket', is_closed: false, board_id: boardId })
     .first<{ status_id: string }>('status_id');
   if (!hasTicketStatuses?.status_id) {
     await connection('statuses').insert({
@@ -625,6 +685,7 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
       status_id: uuidv4(),
       name: 'Open',
       status_type: 'ticket',
+      board_id: boardId,
       order_number: 1,
       created_by: createdByUserId,
       created_at: connection.fn.now(),
@@ -634,7 +695,7 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
   }
 
   const hasClosedTicketStatus = await connection('statuses')
-    .where({ tenant, status_type: 'ticket', is_closed: true })
+    .where({ tenant, status_type: 'ticket', is_closed: true, board_id: boardId })
     .first<{ status_id: string }>('status_id');
   if (!hasClosedTicketStatus?.status_id) {
     await connection('statuses').insert({
@@ -642,6 +703,7 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
       status_id: uuidv4(),
       name: 'Closed',
       status_type: 'ticket',
+      board_id: boardId,
       order_number: 99,
       created_by: createdByUserId,
       created_at: connection.fn.now(),
@@ -666,20 +728,40 @@ async function ensureTicketReferenceData(connection: Knex, tenant: string, creat
 }
 
 async function loadTicketReferenceData(connection: Knex, tenant: string) {
-  const board = await connection('boards').where({ tenant }).first<{ board_id: string }>('board_id');
-  const openStatus = await connection('statuses')
-    .where({ tenant, is_closed: false })
-    .andWhere(function () {
-      this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+  // Ticket statuses are board-scoped, so pick a board that has both an open
+  // and a closed ticket status, then select statuses from that board only.
+  const ticketStatusFilter = function (this: Knex.QueryBuilder) {
+    this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+  };
+  const board = await connection('boards as b')
+    .where('b.tenant', tenant)
+    .whereExists(function () {
+      this.select(connection.raw('1'))
+        .from('statuses as s_open')
+        .whereRaw('s_open.tenant = b.tenant')
+        .whereRaw('s_open.board_id = b.board_id')
+        .where('s_open.is_closed', false)
+        .andWhere(ticketStatusFilter);
     })
+    .whereExists(function () {
+      this.select(connection.raw('1'))
+        .from('statuses as s_closed')
+        .whereRaw('s_closed.tenant = b.tenant')
+        .whereRaw('s_closed.board_id = b.board_id')
+        .where('s_closed.is_closed', true)
+        .andWhere(ticketStatusFilter);
+    })
+    .orderBy('b.is_default', 'desc')
+    .first<{ board_id: string }>('b.board_id as board_id');
+  const openStatus = await connection('statuses')
+    .where({ tenant, is_closed: false, board_id: board?.board_id })
+    .andWhere(ticketStatusFilter)
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');
   const closedStatus = await connection('statuses')
-    .where({ tenant, is_closed: true })
-    .andWhere(function () {
-      this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
-    })
+    .where({ tenant, is_closed: true, board_id: board?.board_id })
+    .andWhere(ticketStatusFilter)
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
     .first<{ status_id: string }>('status_id');

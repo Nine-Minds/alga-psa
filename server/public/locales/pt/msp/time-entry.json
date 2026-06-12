@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} user",
       "additionalUsersOther": "{{name}}, +{{count}} users"
     },
-    "bundledTicket": "Bundled ticket — log time on the master ticket{{suffix}}.",
+    "bundledUnder": "Agrupado → {{number}}",
+    "bundled": "Agrupado",
     "pagination": {
       "previous": "Previous",
       "next": "Next",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Falha ao salvar as alterações",
     "changesSaved": "Alterações salvas com sucesso",
     "workItemDeleted": "Item de trabalho excluído com sucesso"
+  },
+  "bundleNotice": {
+    "withNumber": "Este ticket está agrupado sob {{number}}. O tempo do grupo geralmente é registrado no ticket mestre.",
+    "withoutNumber": "Este ticket faz parte de um grupo. O tempo do grupo geralmente é registrado no ticket mestre."
   }
 }

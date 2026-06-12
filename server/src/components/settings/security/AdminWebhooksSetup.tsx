@@ -5,21 +5,31 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import Drawer from '@alga-psa/ui/components/Drawer';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
 } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
+import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isEnterprise } from '@alga-psa/core/features';
+import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
   deleteWebhook,
   getWebhookStatsSnapshot,
@@ -35,7 +45,31 @@ import {
   type WebhookDeliveryView,
   type WebhookSettingsView,
 } from '@/lib/actions/webhookActions';
-import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
+import {
+  captureSamplePayload,
+  listInboundWebhookActions,
+  listInboundDeliveries,
+  listInboundWorkflowOptions,
+  listInboundWebhooks,
+  replayInboundDelivery,
+  rotateInboundWebhookSecret,
+  sendInboundWebhookTest,
+  setInboundWebhookActiveState,
+  upsertInboundWebhook,
+  type InboundActionDefinitionView,
+  type InboundWorkflowOptionView,
+} from '@/lib/actions/inboundWebhookActions';
+import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/webhooks/payloadFields';
+import type {
+  InboundWebhookConfig,
+  InboundWebhookDelivery,
+  InboundWebhookDispatchStatus,
+} from '@/lib/inboundWebhooks/types';
+import { InboundWebhookMappingField } from './inbound/InboundWebhookMappingField';
+import { InboundWebhookMappingFieldRow } from './inbound/InboundWebhookMappingFieldRow';
+import { parseFieldMappingValue } from '@/lib/inboundWebhooks/fieldMappingMode';
+
+const inboundWebhookWorkflowHandlersEnabled = isEnterprise;
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.
@@ -69,6 +103,30 @@ type WebhookFormState = {
    */
   payloadFieldSelection: Record<string, string[]>;
   isActive: boolean;
+};
+
+type InboundWebhookIdentityFormState = {
+  inboundWebhookId?: string;
+  name: string;
+  slug: string;
+  description: string;
+  authType: InboundWebhookConfig['authType'];
+  hmacSignatureHeader: string;
+  bearerToken: string;
+  ipCidrs: string;
+  pathTokenQueryParam: string;
+  pathToken: string;
+  idempotencyType: 'header' | 'jsonata';
+  idempotencyValue: string;
+  idempotencyWindowSeconds: number;
+  handlerType: InboundWebhookConfig['handlerType'];
+  directActionName: string;
+  workflowId: string;
+  fieldMapping: Record<string, string>;
+  samplePayload: unknown | null;
+  sampleCaptureExpiresAt: string | Date | null;
+  isActive: boolean;
+  autoDisabledAt: string | Date | null;
 };
 
 type WebhookStatsSnapshot = {
@@ -105,6 +163,18 @@ function formatDateTime(value: string | null, neverLabel: string): string {
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatJsonForDisplay(value: unknown): string {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return JSON.stringify(value, null, 2);
 }
 
 function buildFormState(webhook: WebhookSettingsView): WebhookFormState {
@@ -232,7 +302,1730 @@ function getDeliveryBadgeClasses(status: string): string {
   return 'bg-gray-100 text-gray-800';
 }
 
+function getInboundDeliveryStatusBadgeVariant(status: InboundWebhookDispatchStatus): BadgeVariant {
+  if (status === 'dispatched') {
+    return 'success';
+  }
+  if (status === 'failed') {
+    return 'error';
+  }
+  if (status === 'pending') {
+    return 'warning';
+  }
+  return 'info';
+}
+
 export default function AdminWebhooksSetup() {
+  const { t } = useTranslation('msp/profile');
+  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('outbound');
+
+  const viewOptions: ViewSwitcherOption<'inbound' | 'outbound'>[] = [
+    { value: 'inbound', label: t('security.webhooks.tabs.inbound'), id: 'webhooks-inbound-view-btn' },
+    { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
+  ];
+
+  return (
+    <div>
+      <div className="mb-6 inline-block">
+        <ViewSwitcher
+          currentView={activeTab}
+          onChange={setActiveTab}
+          options={viewOptions}
+          className="inline-flex"
+          aria-label={t('security.webhooks.title')}
+        />
+      </div>
+      {activeTab === 'inbound' ? (
+        <InboundWebhooksListView />
+      ) : (
+        <OutboundWebhooksSetup />
+      )}
+    </div>
+  );
+}
+
+function buildInboundWebhookUrl(webhook: InboundWebhookConfig): string {
+  const tenantSlug = buildTenantPortalSlug(webhook.tenant);
+  return `/api/inbound/${tenantSlug}/${webhook.slug}`;
+}
+
+function slugifyInboundWebhookName(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+function splitLines(input: string): string[] {
+  return input
+    .split(/[\n,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function buildInboundWebhookUpsertPayload(form: InboundWebhookIdentityFormState): Record<string, unknown> {
+  const authConfig = (() => {
+    switch (form.authType) {
+      case 'hmac_sha256':
+        return {
+          type: 'hmac_sha256',
+          signature_header: form.hmacSignatureHeader,
+        };
+      case 'bearer':
+        return {
+          type: 'bearer',
+          ...(form.bearerToken.trim() ? { token: form.bearerToken.trim() } : {}),
+        };
+      case 'ip_allowlist':
+        return {
+          type: 'ip_allowlist',
+          ip_cidrs: splitLines(form.ipCidrs),
+        };
+      case 'path_token':
+        return {
+          type: 'path_token',
+          query_param: form.pathTokenQueryParam.trim() || 'token',
+          ...(form.pathToken.trim() ? { token: form.pathToken.trim() } : {}),
+        };
+      default:
+        return { type: form.authType };
+    }
+  })();
+
+  const handlerConfig = form.handlerType === 'workflow'
+    ? {
+        type: 'workflow',
+        workflow_id: form.workflowId,
+      }
+    : {
+        type: 'direct_action',
+        action: form.directActionName,
+        // Drop empty entries so optional fields don't trip the server's min(1) value check.
+        field_mapping: Object.fromEntries(
+          Object.entries(form.fieldMapping).filter(([, value]) => typeof value === 'string' && value.trim() !== ''),
+        ),
+      };
+
+  return {
+    ...(form.inboundWebhookId ? { inbound_webhook_id: form.inboundWebhookId } : {}),
+    name: form.name,
+    slug: form.slug,
+    description: form.description || null,
+    auth_type: form.authType,
+    auth_config: authConfig,
+    idempotency_source: form.idempotencyValue.trim()
+      ? {
+          type: form.idempotencyType,
+          value: form.idempotencyValue.trim(),
+        }
+      : null,
+    idempotency_window_seconds: form.idempotencyWindowSeconds,
+    handler_type: form.handlerType,
+    handler_config: handlerConfig,
+    is_active: form.isActive,
+  };
+}
+
+function validateInboundWebhookForm(
+  form: InboundWebhookIdentityFormState,
+  selectedAction: InboundActionDefinitionView | null,
+  t: ReturnType<typeof useTranslation>['t'],
+): string | null {
+  if (!form.name.trim()) {
+    return t('security.webhooks.inbound.messages.nameRequired');
+  }
+  if (!form.slug.trim()) {
+    return t('security.webhooks.inbound.messages.slugRequired');
+  }
+  if (form.handlerType === 'workflow') {
+    if (!form.workflowId.trim()) {
+      return t('security.webhooks.inbound.messages.workflowRequired');
+    }
+    return null;
+  }
+  if (form.handlerType === 'direct_action') {
+    if (!form.directActionName.trim()) {
+      return t('security.webhooks.inbound.messages.actionRequired');
+    }
+    if (selectedAction) {
+      const missingRequired = selectedAction.targetFields
+        .filter((field) => field.required)
+        .filter((field) => {
+          const raw = form.fieldMapping[field.name];
+          return !raw || (typeof raw === 'string' && raw.trim() === '');
+        });
+      if (missingRequired.length > 0) {
+        return t('security.webhooks.inbound.messages.missingRequiredFields', {
+          fields: missingRequired.map((field) => field.name).join(', '),
+        });
+      }
+    }
+  }
+  return null;
+}
+
+function formatInboundUpsertError(
+  error: unknown,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  if (error instanceof Error) {
+    const message = error.message;
+    // Server actions surface Zod validation as a JSON array string.
+    if (message.trim().startsWith('[')) {
+      try {
+        const issues = JSON.parse(message) as Array<{ path?: unknown[]; message?: string }>;
+        if (Array.isArray(issues) && issues.length > 0) {
+          return issues
+            .map((issue) => {
+              const path = Array.isArray(issue.path) && issue.path.length > 0
+                ? issue.path.join('.')
+                : '';
+              return path ? `${path}: ${issue.message}` : issue.message ?? '';
+            })
+            .filter(Boolean)
+            .join('\n');
+        }
+      } catch {
+        // fall through to raw message
+      }
+    }
+    return message;
+  }
+  return t('security.webhooks.messages.saveFailed');
+}
+
+function formatInboundHandlerLabel(
+  webhook: InboundWebhookConfig,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  if (webhook.handlerType === 'direct_action') {
+    return t('security.webhooks.inbound.handlers.directAction');
+  }
+
+  return t('security.webhooks.inbound.handlers.workflow');
+}
+
+function InboundWebhooksListView() {
+  const { t } = useTranslation('msp/profile');
+  const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
+  const [inboundActions, setInboundActions] = useState<InboundActionDefinitionView[]>([]);
+  const [workflowOptions, setWorkflowOptions] = useState<InboundWorkflowOptionView[]>([]);
+  const [inboundDeliveryPage, setInboundDeliveryPage] = useState<{
+    data: InboundWebhookDelivery[];
+    page: number;
+    limit: number;
+    total: number;
+  } | null>(null);
+  const [inboundDeliveryPageNumber, setInboundDeliveryPageNumber] = useState(1);
+  const [inboundDeliveryStatusFilter, setInboundDeliveryStatusFilter] = useState<InboundWebhookDispatchStatus | 'all'>('all');
+  const [selectedInboundDelivery, setSelectedInboundDelivery] = useState<InboundWebhookDelivery | null>(null);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testBodyText, setTestBodyText] = useState('{\n  "id": "sample-1"\n}');
+  const [testHeadersText, setTestHeadersText] = useState('Content-Type: application/json');
+  const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tableCurrentPage, setTableCurrentPage] = useState(1);
+  const [tablePageSize, setTablePageSize] = useState(10);
+  const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
+  const [identityForm, setIdentityForm] = useState<InboundWebhookIdentityFormState>({
+    name: '',
+    slug: '',
+    description: '',
+    authType: 'hmac_sha256',
+    hmacSignatureHeader: 'X-Alga-Signature',
+    bearerToken: '',
+    ipCidrs: '',
+    pathTokenQueryParam: 'token',
+    pathToken: '',
+    idempotencyType: 'header',
+    idempotencyValue: 'X-Idempotency-Key',
+    idempotencyWindowSeconds: 86400,
+    handlerType: 'direct_action',
+    directActionName: '',
+    workflowId: '',
+    fieldMapping: {},
+    samplePayload: null,
+    sampleCaptureExpiresAt: null,
+    isActive: true,
+    autoDisabledAt: null,
+  });
+  const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
+    webhookName: string;
+    secret: string;
+  } | null>(null);
+  const [focusedMappingField, setFocusedMappingField] = useState<string | null>(null);
+  const [inboundViewMode, setInboundViewMode] = useState<'list' | 'deliveries'>('list');
+  const [viewWebhookId, setViewWebhookId] = useState<string | null>(null);
+  const [replayConfirmDeliveryId, setReplayConfirmDeliveryId] = useState<string | null>(null);
+  const [isReplayInFlight, setIsReplayInFlight] = useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const neverLabel = t('security.webhooks.common.never');
+
+  const loadInboundWebhooks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [configs, actionDefinitions, workflows] = await Promise.all([
+        listInboundWebhooks(),
+        listInboundWebhookActions(),
+        inboundWebhookWorkflowHandlersEnabled ? listInboundWorkflowOptions() : Promise.resolve([]),
+      ]);
+      setWebhooks(configs);
+      setInboundActions(actionDefinitions);
+      setWorkflowOptions(workflows);
+      setError(null);
+
+      const deliveryEntries = await Promise.all(
+        configs.map(async (webhook) => {
+          const page = await listInboundDeliveries(
+            { inboundWebhookId: webhook.inboundWebhookId },
+            1,
+            1,
+          );
+          return [webhook.inboundWebhookId, page.data[0] ?? null] as const;
+        }),
+      );
+      setLastDeliveries(Object.fromEntries(deliveryEntries));
+    } catch (loadError) {
+      console.error('Failed to load inbound webhooks:', loadError);
+      setError(loadError instanceof Error ? loadError.message : t('security.webhooks.inbound.messages.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadInboundWebhooks();
+  }, [loadInboundWebhooks]);
+
+  const loadInboundDialogDeliveries = useCallback(async (
+    webhookId: string,
+    page: number,
+    status: InboundWebhookDispatchStatus | 'all',
+  ) => {
+    try {
+      const deliveriesPage = await listInboundDeliveries({
+        inboundWebhookId: webhookId,
+        status: status === 'all' ? undefined : status,
+      }, page, 10);
+      setInboundDeliveryPage(deliveriesPage);
+      setError(null);
+    } catch (deliveryError) {
+      console.error('Failed to load inbound webhook deliveries:', deliveryError);
+      setError(deliveryError instanceof Error ? deliveryError.message : t('security.webhooks.inbound.deliveryLog.loadFailed'));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    const activeWebhookId =
+      inboundViewMode === 'deliveries'
+        ? viewWebhookId
+        : identityDialogOpen
+          ? identityForm.inboundWebhookId
+          : null;
+
+    if (!activeWebhookId) {
+      setInboundDeliveryPage(null);
+      setInboundDeliveryPageNumber(1);
+      setInboundDeliveryStatusFilter('all');
+      return;
+    }
+
+    void loadInboundDialogDeliveries(activeWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, inboundViewMode, loadInboundDialogDeliveries, viewWebhookId]);
+
+  const handleInboundViewClick = useCallback(async (webhook: InboundWebhookConfig) => {
+    setViewWebhookId(webhook.inboundWebhookId);
+    setInboundViewMode('deliveries');
+    setInboundDeliveryPageNumber(1);
+    setInboundDeliveryStatusFilter('all');
+    try {
+      await loadInboundDialogDeliveries(webhook.inboundWebhookId, 1, 'all');
+      setError(null);
+    } catch (loadError) {
+      console.error('Failed to load inbound webhook deliveries:', loadError);
+      setError(t('security.webhooks.inbound.messages.loadFailed'));
+    }
+  }, [loadInboundDialogDeliveries, t]);
+
+  const handleBackToInboundList = useCallback(() => {
+    setInboundViewMode('list');
+    setViewWebhookId(null);
+    setSelectedInboundDelivery(null);
+  }, []);
+
+  const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>(() => [
+    {
+      title: t('security.webhooks.inbound.list.columns.name'),
+      dataIndex: 'name',
+      render: (_value, webhook) => (
+        <div>
+          <div className="font-medium text-gray-900">{webhook.name}</div>
+          <div className="mt-1 break-all text-xs text-gray-500">{buildInboundWebhookUrl(webhook)}</div>
+          {webhook.description ? (
+            <div className="mt-1 text-xs text-gray-500">{webhook.description}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.handler'),
+      dataIndex: 'handlerType',
+      render: (_value, webhook) => (
+        <div>
+          <div className="text-sm text-gray-900">{formatInboundHandlerLabel(webhook, t)}</div>
+          {webhook.handlerConfig.type === 'direct_action' ? (
+            <div className="mt-1 text-xs text-gray-500">{webhook.handlerConfig.action}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.lastDelivery'),
+      dataIndex: 'updatedAt',
+      render: (_value, webhook) => formatDateTime(
+        (lastDeliveries[webhook.inboundWebhookId]?.receivedAt as string | undefined) ?? null,
+        neverLabel,
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.active'),
+      dataIndex: 'isActive',
+      render: (_value, webhook) => (
+        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+          webhook.isActive
+            ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
+            : 'bg-gray-100 text-gray-700 ring-1 ring-gray-500/20'
+        }`}>
+          {webhook.isActive
+            ? t('security.webhooks.inbound.status.active')
+            : t('security.webhooks.inbound.status.inactive')}
+        </span>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.actions'),
+      dataIndex: 'inboundWebhookId',
+      sortable: false,
+      width: '64px',
+      render: (_value, webhook) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`inbound-webhook-actions-${webhook.inboundWebhookId}`}
+              variant="ghost"
+              className="h-8 w-8 p-0"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`inbound-webhook-view-${webhook.inboundWebhookId}`}
+              onClick={() => void handleInboundViewClick(webhook)}
+            >
+              {t('security.webhooks.list.actions.view')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`inbound-webhook-edit-${webhook.inboundWebhookId}`}
+              onClick={() => {
+                setIdentityForm({
+                  inboundWebhookId: webhook.inboundWebhookId,
+                  name: webhook.name,
+                  slug: webhook.slug,
+                  description: webhook.description ?? '',
+                  authType: webhook.authType,
+                  hmacSignatureHeader: webhook.authConfig.type === 'hmac_sha256'
+                    ? webhook.authConfig.signatureHeader
+                    : 'X-Alga-Signature',
+                  bearerToken: '',
+                  ipCidrs: webhook.authConfig.type === 'ip_allowlist'
+                    ? webhook.authConfig.ipCidrs.join('\n')
+                    : '',
+                  pathTokenQueryParam: webhook.authConfig.type === 'path_token'
+                    ? webhook.authConfig.queryParam
+                    : 'token',
+                  pathToken: '',
+                  idempotencyType: webhook.idempotencySource?.type ?? 'header',
+                  idempotencyValue: webhook.idempotencySource?.value ?? 'X-Idempotency-Key',
+                  idempotencyWindowSeconds: webhook.idempotencyWindowSeconds,
+                  handlerType: webhook.handlerType,
+                  directActionName: webhook.handlerConfig.type === 'direct_action'
+                    ? webhook.handlerConfig.action
+                    : '',
+                  workflowId: webhook.handlerConfig.type === 'workflow'
+                    ? webhook.handlerConfig.workflowId
+                    : '',
+                  fieldMapping: webhook.handlerConfig.type === 'direct_action'
+                    ? webhook.handlerConfig.fieldMapping
+                    : {},
+                  samplePayload: webhook.samplePayload,
+                  sampleCaptureExpiresAt: webhook.sampleCaptureExpiresAt,
+                  isActive: webhook.isActive,
+                  autoDisabledAt: webhook.autoDisabledAt,
+                });
+                setSlugManuallyEdited(true);
+                setIdentityDialogOpen(true);
+              }}
+            >
+              {t('security.webhooks.list.actions.edit')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ], [handleInboundViewClick, lastDeliveries, neverLabel, t]);
+
+  const handleTablePageSizeChange = useCallback((newPageSize: number) => {
+    setTablePageSize(newPageSize);
+    setTableCurrentPage(1);
+  }, []);
+
+  const handleNewInboundWebhook = useCallback(() => {
+    setSlugManuallyEdited(false);
+    setIdentityForm({
+      name: '',
+      slug: '',
+      description: '',
+      authType: 'hmac_sha256',
+      hmacSignatureHeader: 'X-Alga-Signature',
+      bearerToken: '',
+      ipCidrs: '',
+      pathTokenQueryParam: 'token',
+      pathToken: '',
+      idempotencyType: 'header',
+      idempotencyValue: 'X-Idempotency-Key',
+      idempotencyWindowSeconds: 86400,
+      handlerType: 'direct_action',
+      directActionName: '',
+      workflowId: '',
+      fieldMapping: {},
+      samplePayload: null,
+      sampleCaptureExpiresAt: null,
+      isActive: true,
+      autoDisabledAt: null,
+    });
+    setIdentityDialogOpen(true);
+  }, []);
+
+  const authTypeOptions = useMemo(() => [
+    { value: 'hmac_sha256', label: t('security.webhooks.inbound.auth.types.hmacSha256') },
+    { value: 'bearer', label: t('security.webhooks.inbound.auth.types.bearer') },
+    { value: 'ip_allowlist', label: t('security.webhooks.inbound.auth.types.ipAllowlist') },
+    { value: 'path_token', label: t('security.webhooks.inbound.auth.types.pathToken') },
+  ], [t]);
+
+  const idempotencySourceOptions = useMemo(() => [
+    { value: 'header', label: t('security.webhooks.inbound.idempotency.types.header') },
+    { value: 'jsonata', label: t('security.webhooks.inbound.idempotency.types.jsonata') },
+  ], [t]);
+
+  const handlerTypeOptions = useMemo(() => {
+    const options = [
+      { value: 'direct_action', label: t('security.webhooks.inbound.handler.types.directAction') },
+    ];
+
+    if (inboundWebhookWorkflowHandlersEnabled) {
+      options.push({ value: 'workflow', label: t('security.webhooks.inbound.handler.types.workflow') });
+    }
+
+    return options;
+  }, [t]);
+
+  const inboundActionOptions = useMemo(() => inboundActions.map((action) => ({
+    value: action.name,
+    label: `${action.entityType}: ${action.displayName}`,
+  })), [inboundActions]);
+
+  const workflowSelectOptions = useMemo(() => workflowOptions.map((workflow) => ({
+    value: workflow.workflowId,
+    label: workflow.name,
+    dropdownHint: workflow.description ?? workflow.status ?? undefined,
+  })), [workflowOptions]);
+
+  const selectedInboundAction = useMemo(
+    () => inboundActions.find((action) => action.name === identityForm.directActionName) ?? null,
+    [identityForm.directActionName, inboundActions],
+  );
+
+  const resolveStaticFieldValue = useCallback(
+    (fieldName: string): string | undefined => {
+      const field = selectedInboundAction?.targetFields.find((entry) => entry.name === fieldName);
+      const raw = identityForm.fieldMapping[fieldName];
+      if (!raw || !field) {
+        return undefined;
+      }
+      const parsed = parseFieldMappingValue(raw, field.type);
+      return parsed.mode === 'static' && parsed.staticValue ? parsed.staticValue : undefined;
+    },
+    [identityForm.fieldMapping, selectedInboundAction],
+  );
+
+  const inboundDeliveryColumns = useMemo<ColumnDefinition<InboundWebhookDelivery>[]>(() => [
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.received'),
+      dataIndex: 'receivedAt',
+      render: (value) => formatDateTime(value as string | null, neverLabel),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.status'),
+      dataIndex: 'dispatchStatus',
+      render: (value) => (
+        <Badge
+          variant={getInboundDeliveryStatusBadgeVariant(value as InboundWebhookDispatchStatus)}
+          size="sm"
+        >
+          {t(`security.webhooks.inbound.deliveryLog.status.${value as string}`, { defaultValue: value as string })}
+        </Badge>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.response'),
+      dataIndex: 'responseStatus',
+      render: (value) => value ?? t('security.webhooks.deliveries.noResponseCode'),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.duration'),
+      dataIndex: 'durationMs',
+      render: (value) => value == null
+        ? t('security.webhooks.deliveries.noResponseCode')
+        : t('security.webhooks.inbound.deliveryLog.durationMs', { duration: value as number }),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.actions'),
+      dataIndex: 'deliveryId',
+      sortable: false,
+      width: '80px',
+      render: (_value, delivery) => (
+        <Button
+          id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedInboundDelivery(delivery)}
+        >
+          {t('security.webhooks.inbound.deliveryLog.view')}
+        </Button>
+      ),
+    },
+  ], [neverLabel, t]);
+
+  const inboundDeliveryStatusOptions = useMemo(() => [
+    { value: 'all', label: t('security.webhooks.inbound.deliveryLog.allStatuses') },
+    { value: 'pending', label: t('security.webhooks.inbound.deliveryLog.status.pending') },
+    { value: 'dispatched', label: t('security.webhooks.inbound.deliveryLog.status.dispatched') },
+    { value: 'duplicate', label: t('security.webhooks.inbound.deliveryLog.status.duplicate') },
+    { value: 'failed', label: t('security.webhooks.inbound.deliveryLog.status.failed') },
+  ], [t]);
+
+  const samplePathOptions = useMemo(
+    () => buildWebhookPayloadExpressionPathOptions(identityForm.samplePayload, { includeRootPaths: true }),
+    [identityForm.samplePayload],
+  );
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!identityForm.sampleCaptureExpiresAt) {
+      return undefined;
+    }
+    const expiresAt = new Date(identityForm.sampleCaptureExpiresAt).getTime();
+    if (expiresAt <= Date.now()) {
+      return undefined;
+    }
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [identityForm.sampleCaptureExpiresAt]);
+
+  const sampleCaptureActive = identityForm.sampleCaptureExpiresAt
+    ? new Date(identityForm.sampleCaptureExpiresAt).getTime() > now
+    : false;
+
+  const handleCaptureSample = useCallback(async () => {
+    if (!identityForm.inboundWebhookId) {
+      return;
+    }
+
+    try {
+      const updated = await captureSamplePayload(identityForm.inboundWebhookId);
+      setIdentityForm((current) => ({
+        ...current,
+        sampleCaptureExpiresAt: updated.sampleCaptureExpiresAt,
+        samplePayload: updated.samplePayload,
+      }));
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === updated.inboundWebhookId ? updated : webhook
+      )));
+      setError(null);
+    } catch (captureError) {
+      console.error('Failed to enable inbound webhook sample capture:', captureError);
+      setError(captureError instanceof Error ? captureError.message : t('security.webhooks.inbound.sample.captureFailed'));
+    }
+  }, [identityForm.inboundWebhookId, t]);
+
+  const handleInsertSamplePath = useCallback((path: string) => {
+    if (!focusedMappingField) {
+      return;
+    }
+
+    setIdentityForm((current) => ({
+      ...current,
+      fieldMapping: {
+        ...current.fieldMapping,
+        [focusedMappingField]: path,
+      },
+    }));
+  }, [focusedMappingField]);
+
+  const handleInboundActiveChange = useCallback(async (checked: boolean) => {
+    if (!identityForm.inboundWebhookId) {
+      setIdentityForm((current) => ({
+        ...current,
+        isActive: checked,
+      }));
+      return;
+    }
+
+    try {
+      const updated = await setInboundWebhookActiveState(identityForm.inboundWebhookId, checked);
+      setIdentityForm((current) => ({
+        ...current,
+        isActive: updated.isActive,
+        autoDisabledAt: updated.autoDisabledAt,
+      }));
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === updated.inboundWebhookId ? updated : webhook
+      )));
+      setError(null);
+    } catch (toggleError) {
+      console.error('Failed to update inbound webhook active state:', toggleError);
+      setError(toggleError instanceof Error ? toggleError.message : t('security.webhooks.inbound.active.updateFailed'));
+    }
+  }, [identityForm.inboundWebhookId, t]);
+
+  const handleReplayInboundDelivery = useCallback((deliveryId: string) => {
+    setReplayConfirmDeliveryId(deliveryId);
+  }, []);
+
+  const handleConfirmReplay = useCallback(async () => {
+    if (!replayConfirmDeliveryId) {
+      return;
+    }
+    setIsReplayInFlight(true);
+    try {
+      const replayed = await replayInboundDelivery(replayConfirmDeliveryId);
+      setSelectedInboundDelivery(replayed);
+      const reloadTargetId = viewWebhookId ?? identityForm.inboundWebhookId;
+      if (reloadTargetId) {
+        await loadInboundDialogDeliveries(reloadTargetId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+      }
+      setError(null);
+      setReplayConfirmDeliveryId(null);
+    } catch (replayError) {
+      console.error('Failed to replay inbound webhook delivery:', replayError);
+      setError(replayError instanceof Error ? replayError.message : t('security.webhooks.inbound.deliveryDetail.replayFailed'));
+    } finally {
+      setIsReplayInFlight(false);
+    }
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, replayConfirmDeliveryId, t, viewWebhookId]);
+
+  const handleSendInboundTest = useCallback(async () => {
+    if (!identityForm.inboundWebhookId) {
+      return;
+    }
+
+    try {
+      const body = testBodyText.trim() ? JSON.parse(testBodyText) : {};
+      const headers = parseCustomHeaders(
+        testHeadersText,
+        (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),
+      );
+      const delivery = await sendInboundWebhookTest(identityForm.inboundWebhookId, { body, headers });
+      setSelectedInboundDelivery(delivery);
+      setTestDialogOpen(false);
+      await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+      setError(null);
+    } catch (testError) {
+      console.error('Failed to send inbound webhook test:', testError);
+      setError(testError instanceof Error ? testError.message : t('security.webhooks.inbound.test.sendFailed'));
+    }
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
+
+  const handleSaveInboundWebhook = useCallback(async () => {
+    // Pre-submit validation surfaces friendly errors instead of raw Zod issue arrays.
+    const validationError = validateInboundWebhookForm(identityForm, selectedInboundAction, t);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    try {
+      const result = await upsertInboundWebhook(buildInboundWebhookUpsertPayload(identityForm));
+      setIdentityForm((current) => ({
+        ...current,
+        inboundWebhookId: result.webhook.inboundWebhookId,
+        samplePayload: result.webhook.samplePayload,
+        sampleCaptureExpiresAt: result.webhook.sampleCaptureExpiresAt,
+        autoDisabledAt: result.webhook.autoDisabledAt,
+      }));
+      setWebhooks((current) => {
+        const existingIndex = current.findIndex((webhook) => webhook.inboundWebhookId === result.webhook.inboundWebhookId);
+        if (existingIndex === -1) {
+          return [...current, result.webhook];
+        }
+        return current.map((webhook) => (
+          webhook.inboundWebhookId === result.webhook.inboundWebhookId ? result.webhook : webhook
+        ));
+      });
+      setIdentityDialogOpen(false);
+      if (result.secret) {
+        setRevealedInboundSecret({
+          webhookName: result.webhook.name,
+          secret: result.secret,
+        });
+      }
+      setError(null);
+    } catch (saveError) {
+      console.error('Failed to save inbound webhook:', saveError);
+      setError(formatInboundUpsertError(saveError, t));
+    }
+  }, [identityForm, selectedInboundAction, t]);
+
+  const handleRotateInboundSecret = useCallback(async () => {
+    if (!identityForm.inboundWebhookId || identityForm.authType === 'ip_allowlist') {
+      return;
+    }
+
+    try {
+      const result = await rotateInboundWebhookSecret(identityForm.inboundWebhookId);
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === result.webhook.inboundWebhookId ? result.webhook : webhook
+      )));
+      setRevealedInboundSecret({
+        webhookName: result.webhook.name,
+        secret: result.secret,
+      });
+      setError(null);
+    } catch (rotateError) {
+      console.error('Failed to rotate inbound webhook secret:', rotateError);
+      setError(rotateError instanceof Error ? rotateError.message : t('security.webhooks.messages.rotateFailed'));
+    }
+  }, [identityForm.authType, identityForm.inboundWebhookId, t]);
+
+  const viewingWebhook = useMemo(
+    () => (viewWebhookId ? webhooks.find((w) => w.inboundWebhookId === viewWebhookId) ?? null : null),
+    [viewWebhookId, webhooks],
+  );
+
+  return (
+    <div className="space-y-6">
+      {inboundViewMode === 'list' ? (
+        <>
+      <Card className="p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold">{t('security.webhooks.inbound.title')}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-gray-600">
+              {t('security.webhooks.inbound.description')}
+            </p>
+          </div>
+          <Button
+            id="inbound-webhooks-new"
+            onClick={handleNewInboundWebhook}
+          >
+            {t('security.webhooks.inbound.newWebhook')}
+          </Button>
+        </div>
+
+        {error ? (
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            {error}
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{t('security.webhooks.inbound.list.title')}</h3>
+          <div className="text-sm text-gray-500">
+            {loading
+              ? t('security.webhooks.inbound.list.loading')
+              : t('security.webhooks.inbound.list.configuredCount', { count: webhooks.length })}
+          </div>
+        </div>
+
+        {webhooks.length === 0 && !loading ? (
+          <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+            {t('security.webhooks.inbound.list.empty')}
+          </div>
+        ) : (
+          <DataTable<InboundWebhookConfig>
+            id="inbound-webhooks-table"
+            data={webhooks}
+            columns={columns}
+            pagination
+            currentPage={tableCurrentPage}
+            onPageChange={setTableCurrentPage}
+            pageSize={tablePageSize}
+            onItemsPerPageChange={handleTablePageSizeChange}
+          />
+        )}
+      </Card>
+        </>
+      ) : (
+        <Card className="p-6">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-3">
+              <Button
+                id="inbound-webhook-deliveries-back"
+                variant="ghost"
+                onClick={handleBackToInboundList}
+                className="h-9 w-9 p-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {t('security.webhooks.inbound.deliveryLog.title')}
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {viewingWebhook?.name ?? ''}
+                </p>
+                {viewingWebhook ? (
+                  <p className="mt-1 font-mono text-xs text-gray-500">{viewingWebhook.slug}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="max-w-xs">
+              <CustomSelect
+                id="inbound-webhook-deliveries-status-filter"
+                label={t('security.webhooks.inbound.deliveryLog.columns.status')}
+                value={inboundDeliveryStatusFilter}
+                onValueChange={(value) => {
+                  setInboundDeliveryStatusFilter(value as InboundWebhookDispatchStatus | 'all');
+                  setInboundDeliveryPageNumber(1);
+                }}
+                options={inboundDeliveryStatusOptions}
+              />
+            </div>
+          </div>
+
+          {error ? (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+              {error}
+            </div>
+          ) : null}
+
+          {inboundDeliveryPage && inboundDeliveryPage.data.length > 0 ? (
+            <DataTable<InboundWebhookDelivery>
+              id="inbound-webhook-deliveries-page-table"
+              data={inboundDeliveryPage.data}
+              columns={inboundDeliveryColumns}
+              pagination
+              currentPage={inboundDeliveryPageNumber}
+              onPageChange={setInboundDeliveryPageNumber}
+              pageSize={inboundDeliveryPage.limit}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+              {t('security.webhooks.inbound.deliveryLog.empty')}
+            </div>
+          )}
+        </Card>
+      )}
+
+      <Dialog
+        id="inbound-webhook-secret"
+        isOpen={revealedInboundSecret !== null}
+        onClose={() => setRevealedInboundSecret(null)}
+        title={t('security.webhooks.inbound.secret.label')}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              {t('security.webhooks.inbound.secret.warning')}
+            </p>
+            <div className="rounded-md bg-gray-50 p-4">
+              <code className="break-all text-sm">{revealedInboundSecret?.secret ?? ''}</code>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                id="inbound-webhook-secret-copy"
+                className="w-full"
+                onClick={async () => {
+                  if (!revealedInboundSecret?.secret) return;
+                  try {
+                    await navigator.clipboard.writeText(revealedInboundSecret.secret);
+                  } catch (copyError) {
+                    console.error('Failed to copy inbound webhook secret:', copyError);
+                  }
+                }}
+              >
+                {t('security.webhooks.inbound.secret.copy')}
+              </Button>
+              <Button
+                id="inbound-webhook-secret-download"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  if (!revealedInboundSecret?.secret) return;
+                  const safeName = (revealedInboundSecret.webhookName || 'inbound-webhook')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-_]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    || 'inbound-webhook';
+                  const blob = new Blob([revealedInboundSecret.secret], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${safeName}-secret.txt`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                {t('security.webhooks.inbound.secret.download')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-secret-close"
+            variant="ghost"
+            onClick={() => setRevealedInboundSecret(null)}
+          >
+            {t('security.webhooks.inbound.secret.close')}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog
+        id="inbound-webhook-identity"
+        isOpen={identityDialogOpen}
+        onClose={() => setIdentityDialogOpen(false)}
+        title={
+          identityForm.inboundWebhookId
+            ? t('security.webhooks.inbound.dialog.editTitle')
+            : t('security.webhooks.inbound.dialog.createTitle')
+        }
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.identity.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.identity.help')}
+              </p>
+            </div>
+            <Input
+              id="inbound-webhook-name"
+              label={t('security.webhooks.inbound.identity.name')}
+              value={identityForm.name}
+              required
+              placeholder={t('security.webhooks.inbound.identity.namePlaceholder')}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setIdentityForm((current) => ({
+                  ...current,
+                  name: nextName,
+                  slug: slugManuallyEdited ? current.slug : slugifyInboundWebhookName(nextName),
+                }));
+              }}
+            />
+            <Input
+              id="inbound-webhook-slug"
+              label={t('security.webhooks.inbound.identity.slug')}
+              value={identityForm.slug}
+              required
+              placeholder={t('security.webhooks.inbound.identity.slugPlaceholder')}
+              onChange={(event) => {
+                setSlugManuallyEdited(true);
+                setIdentityForm((current) => ({
+                  ...current,
+                  slug: slugifyInboundWebhookName(event.target.value),
+                }));
+              }}
+            />
+            <TextArea
+              id="inbound-webhook-description"
+              label={t('security.webhooks.inbound.identity.description')}
+              value={identityForm.description}
+              placeholder={t('security.webhooks.inbound.identity.descriptionPlaceholder')}
+              onChange={(event) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }));
+              }}
+            />
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.auth.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.auth.help')}
+              </p>
+            </div>
+            <CustomSelect
+              id="inbound-webhook-auth-type"
+              label={t('security.webhooks.inbound.auth.method')}
+              value={identityForm.authType}
+              onValueChange={(value) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  authType: value as InboundWebhookConfig['authType'],
+                }));
+              }}
+              options={authTypeOptions}
+            />
+            {identityForm.authType === 'hmac_sha256' ? (
+              <Input
+                id="inbound-webhook-auth-hmac-header"
+                label={t('security.webhooks.inbound.auth.signatureHeader')}
+                value={identityForm.hmacSignatureHeader}
+                required
+                placeholder={t('security.webhooks.inbound.auth.signatureHeaderPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    hmacSignatureHeader: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'bearer' ? (
+              <Input
+                id="inbound-webhook-auth-bearer-token"
+                label={t('security.webhooks.inbound.auth.bearerToken')}
+                value={identityForm.bearerToken}
+                type="password"
+                placeholder={identityForm.inboundWebhookId
+                  ? t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')
+                  : t('security.webhooks.inbound.auth.bearerTokenPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    bearerToken: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'ip_allowlist' ? (
+              <TextArea
+                id="inbound-webhook-auth-ip-cidrs"
+                label={t('security.webhooks.inbound.auth.ipCidrs')}
+                value={identityForm.ipCidrs}
+                required
+                placeholder={t('security.webhooks.inbound.auth.ipCidrsPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    ipCidrs: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'path_token' ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  id="inbound-webhook-auth-path-token-param"
+                  label={t('security.webhooks.inbound.auth.queryParam')}
+                  value={identityForm.pathTokenQueryParam}
+                  required
+                  placeholder={t('security.webhooks.inbound.auth.queryParamPlaceholder')}
+                  onChange={(event) => {
+                    setIdentityForm((current) => ({
+                      ...current,
+                      pathTokenQueryParam: event.target.value,
+                    }));
+                  }}
+                />
+                <Input
+                  id="inbound-webhook-auth-path-token"
+                  label={t('security.webhooks.inbound.auth.pathToken')}
+                  value={identityForm.pathToken}
+                  type="password"
+                  placeholder={identityForm.inboundWebhookId
+                    ? t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')
+                    : t('security.webhooks.inbound.auth.pathTokenPlaceholder')}
+                  onChange={(event) => {
+                    setIdentityForm((current) => ({
+                      ...current,
+                      pathToken: event.target.value,
+                    }));
+                  }}
+                />
+              </div>
+            ) : null}
+            {identityForm.inboundWebhookId && identityForm.authType !== 'ip_allowlist' ? (
+              <Button
+                id="inbound-webhook-auth-rotate-secret"
+                variant="outline"
+                onClick={() => void handleRotateInboundSecret()}
+              >
+                {t('security.webhooks.detail.rotateSecret')}
+              </Button>
+            ) : null}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.idempotency.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.idempotency.help')}
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <CustomSelect
+                id="inbound-webhook-idempotency-type"
+                label={t('security.webhooks.inbound.idempotency.source')}
+                value={identityForm.idempotencyType}
+                onValueChange={(value) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    idempotencyType: value as 'header' | 'jsonata',
+                    idempotencyValue: value === 'header' ? 'X-Idempotency-Key' : 'id',
+                  }));
+                }}
+                options={idempotencySourceOptions}
+              />
+              <Input
+                id="inbound-webhook-idempotency-value"
+                label={identityForm.idempotencyType === 'header'
+                  ? t('security.webhooks.inbound.idempotency.headerName')
+                  : t('security.webhooks.inbound.idempotency.jsonataExpression')}
+                value={identityForm.idempotencyValue}
+                placeholder={identityForm.idempotencyType === 'header'
+                  ? t('security.webhooks.inbound.idempotency.headerNamePlaceholder')
+                  : t('security.webhooks.inbound.idempotency.jsonataExpressionPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    idempotencyValue: event.target.value,
+                  }));
+                }}
+              />
+            </div>
+            <Input
+              id="inbound-webhook-idempotency-window"
+              label={t('security.webhooks.inbound.idempotency.windowSeconds')}
+              type="number"
+              min={60}
+              value={identityForm.idempotencyWindowSeconds}
+              onChange={(event) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  idempotencyWindowSeconds: Number(event.target.value) || 86400,
+                }));
+              }}
+            />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {t('security.webhooks.inbound.active.title')}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {t('security.webhooks.inbound.active.help')}
+                  </p>
+                </div>
+                <Switch
+                  id="inbound-webhook-active"
+                  label={t('security.webhooks.inbound.active.toggle')}
+                  checked={identityForm.isActive}
+                  onCheckedChange={(checked) => void handleInboundActiveChange(checked)}
+                />
+              </div>
+              {identityForm.autoDisabledAt ? (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  {t('security.webhooks.inbound.active.autoDisabled', {
+                    date: formatDateTime(identityForm.autoDisabledAt as string, neverLabel),
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.handler.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.handler.help')}
+              </p>
+            </div>
+            <CustomSelect
+              id="inbound-webhook-handler-type"
+              label={t('security.webhooks.inbound.handler.type')}
+              value={identityForm.handlerType}
+              onValueChange={(value) => {
+                const nextType = value as InboundWebhookConfig['handlerType'];
+                if (nextType === 'workflow' && !inboundWebhookWorkflowHandlersEnabled) {
+                  return;
+                }
+                setIdentityForm((current) => {
+                  if (current.handlerType === nextType) {
+                    return current;
+                  }
+                  return {
+                    ...current,
+                    handlerType: nextType,
+                    directActionName: nextType === 'direct_action' ? current.directActionName : '',
+                    fieldMapping: nextType === 'direct_action' ? current.fieldMapping : {},
+                    workflowId: nextType === 'workflow' ? current.workflowId : '',
+                  };
+                });
+              }}
+              options={handlerTypeOptions}
+            />
+            <div className="rounded-md border border-gray-200 bg-white p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    {t('security.webhooks.inbound.sample.title')}
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {identityForm.inboundWebhookId
+                      ? t('security.webhooks.inbound.sample.help')
+                      : t('security.webhooks.inbound.sample.createFirst')}
+                  </p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    {sampleCaptureActive
+                      ? t('security.webhooks.inbound.sample.captureActive', {
+                        expiresAt: formatDateTime(identityForm.sampleCaptureExpiresAt as string, neverLabel),
+                      })
+                      : identityForm.samplePayload
+                        ? t('security.webhooks.inbound.sample.sampleAvailable')
+                        : t('security.webhooks.inbound.sample.noSample')}
+                  </div>
+                </div>
+                <Button
+                  id="inbound-webhook-capture-sample"
+                  variant="outline"
+                  disabled={!identityForm.inboundWebhookId}
+                  onClick={() => void handleCaptureSample()}
+                >
+                  {t('security.webhooks.inbound.sample.captureButton')}
+                </Button>
+                <Button
+                  id="inbound-webhook-open-test"
+                  variant="outline"
+                  disabled={!identityForm.inboundWebhookId}
+                  onClick={() => setTestDialogOpen(true)}
+                >
+                  {t('security.webhooks.inbound.test.openButton')}
+                </Button>
+              </div>
+            </div>
+            {identityForm.handlerType === 'direct_action' || !inboundWebhookWorkflowHandlersEnabled ? (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-900">
+                  {t('security.webhooks.inbound.handler.directActionTitle')}
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  {t('security.webhooks.inbound.handler.directActionHelp')}
+                </p>
+                <div className="mt-4">
+                  <CustomSelect
+                    id="inbound-webhook-direct-action"
+                    label={t('security.webhooks.inbound.handler.action')}
+                    value={identityForm.directActionName}
+                    placeholder={t('security.webhooks.inbound.handler.actionPlaceholder')}
+                    onValueChange={(value) => {
+                      setIdentityForm((current) => ({
+                        ...current,
+                        directActionName: value,
+                        fieldMapping: current.directActionName === value ? current.fieldMapping : {},
+                      }));
+                    }}
+                    options={inboundActionOptions}
+                  />
+                  {inboundActionOptions.length === 0 ? (
+                    <p
+                      id="inbound-webhook-direct-action-empty"
+                      className="mt-2 text-xs text-amber-700"
+                    >
+                      {t('security.webhooks.inbound.handler.actionEmpty')}
+                    </p>
+                  ) : null}
+                </div>
+                {selectedInboundAction ? (
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
+                    <div className="space-y-3">
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-900">
+                          {t('security.webhooks.inbound.handler.targetFields')}
+                        </h5>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {selectedInboundAction.description}
+                        </p>
+                      </div>
+                      {selectedInboundAction.targetFields.map((field) => {
+                        const isMissingRequired =
+                          field.required && !(identityForm.fieldMapping[field.name] ?? '').trim();
+                        return (
+                        <div
+                          key={field.name}
+                          className={`rounded-md border bg-white p-3 ${
+                            isMissingRequired ? 'border-red-300' : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <label
+                              htmlFor={`inbound-webhook-mapping-${field.name}`}
+                              className="text-sm font-medium text-gray-900"
+                            >
+                              {field.name}
+                              {field.required ? (
+                                <span aria-hidden="true" className="ml-1 text-red-600">*</span>
+                              ) : null}
+                            </label>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                              {t(`security.webhooks.inbound.handler.fieldTypes.${field.type}`, {
+                                defaultValue: field.type,
+                              })}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs ${
+                                field.required ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {field.required
+                                ? t('security.webhooks.inbound.handler.required')
+                                : t('security.webhooks.inbound.handler.optional')}
+                            </span>
+                          </div>
+                          <p className="mb-2 text-xs text-gray-500">{field.description}</p>
+                          <InboundWebhookMappingFieldRow
+                            field={field}
+                            value={identityForm.fieldMapping[field.name] ?? ''}
+                            samplePayload={identityForm.samplePayload}
+                            onFocusExpression={(fieldName) => setFocusedMappingField(fieldName)}
+                            scope={{
+                              board_id: resolveStaticFieldValue('board_id'),
+                              client_id: resolveStaticFieldValue('client_id'),
+                              parent_category_id: resolveStaticFieldValue('category_id'),
+                            }}
+                            onChange={(value) => {
+                              setIdentityForm((current) => ({
+                                ...current,
+                                fieldMapping: {
+                                  ...current.fieldMapping,
+                                  [field.name]: value,
+                                },
+                              }));
+                            }}
+                          />
+                        </div>
+                        );
+                      })}
+                    </div>
+                    <div className="rounded-md border border-gray-200 bg-white p-3">
+                      <h5 className="text-sm font-medium text-gray-900">
+                        {t('security.webhooks.inbound.sampleTree.title')}
+                      </h5>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {focusedMappingField
+                          ? t('security.webhooks.inbound.sampleTree.help', { field: focusedMappingField })
+                          : t('security.webhooks.inbound.sampleTree.focusHelp')}
+                      </p>
+                      {samplePathOptions.length === 0 ? (
+                        <div className="mt-3 rounded-md border border-dashed border-gray-300 p-3 text-xs text-gray-500">
+                          {t('security.webhooks.inbound.sampleTree.empty')}
+                        </div>
+                      ) : (
+                        <div className="mt-3 max-h-80 space-y-1 overflow-y-auto pr-1">
+                          {samplePathOptions.map((option) => (
+                            <button
+                              key={option.path}
+                              id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
+                              type="button"
+                              className="block w-full rounded px-2 py-1 text-left font-mono text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                              style={{ paddingLeft: `${Math.max(0, option.path.split('.').length - 1) * 12 + 8}px` }}
+                              disabled={!focusedMappingField}
+                              onClick={() => handleInsertSamplePath(option.path)}
+                            >
+                              {option.path}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-900">
+                  {t('security.webhooks.inbound.handler.workflowTitle')}
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  {t('security.webhooks.inbound.handler.workflowHelp')}
+                </p>
+                <div className="mt-4">
+                  <CustomSelect
+                    id="inbound-webhook-workflow"
+                    label={t('security.webhooks.inbound.handler.workflow')}
+                    value={identityForm.workflowId}
+                    placeholder={t('security.webhooks.inbound.handler.workflowPlaceholder')}
+                    onValueChange={(value) => {
+                      setIdentityForm((current) => ({
+                        ...current,
+                        workflowId: value,
+                      }));
+                    }}
+                    options={workflowSelectOptions}
+                  />
+                  {workflowSelectOptions.length === 0 ? (
+                    <p
+                      id="inbound-webhook-workflow-empty"
+                      className="mt-2 text-xs text-amber-700"
+                    >
+                      {t('security.webhooks.inbound.handler.workflowEmpty')}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+                  <h5 className="text-sm font-medium text-blue-950">
+                    {t('security.webhooks.inbound.handler.envelopeTitle')}
+                  </h5>
+                  <pre className="mt-2 overflow-x-auto rounded bg-white p-3 text-xs text-blue-950">
+{`{
+  "source": "<webhook_slug>",
+  "body": { },
+  "headers": { },
+  "verified": true,
+  "delivery_id": "<delivery_id>",
+  "idempotency_key": "<key>",
+  "received_at": "<iso_timestamp>"
+}`}
+                  </pre>
+                </div>
+              </div>
+            )}
+            {identityForm.inboundWebhookId ? (
+              <div className="border-t border-gray-200 pt-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {t('security.webhooks.inbound.deliveryLog.title')}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {t('security.webhooks.inbound.deliveryLog.help')}
+                    </p>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {inboundDeliveryPage
+                      ? t('security.webhooks.inbound.deliveryLog.pageSummary', {
+                        page: inboundDeliveryPage.page,
+                        total: Math.max(1, Math.ceil(inboundDeliveryPage.total / inboundDeliveryPage.limit)),
+                      })
+                      : null}
+                  </div>
+                </div>
+                <div className="mb-3 max-w-xs">
+                  <CustomSelect
+                    id="inbound-webhook-delivery-status-filter"
+                    label={t('security.webhooks.inbound.deliveryLog.columns.status')}
+                    value={inboundDeliveryStatusFilter}
+                    onValueChange={(value) => {
+                      setInboundDeliveryStatusFilter(value as InboundWebhookDispatchStatus | 'all');
+                      setInboundDeliveryPageNumber(1);
+                    }}
+                    options={inboundDeliveryStatusOptions}
+                  />
+                </div>
+                {inboundDeliveryPage && inboundDeliveryPage.data.length > 0 ? (
+                  <DataTable<InboundWebhookDelivery>
+                    id="inbound-webhook-deliveries-table"
+                    data={inboundDeliveryPage.data}
+                    columns={inboundDeliveryColumns}
+                    pagination
+                    currentPage={inboundDeliveryPageNumber}
+                    onPageChange={setInboundDeliveryPageNumber}
+                    pageSize={inboundDeliveryPage.limit}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    {t('security.webhooks.inbound.deliveryLog.empty')}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-identity-cancel"
+            variant="ghost"
+            onClick={() => setIdentityDialogOpen(false)}
+          >
+            {t('security.webhooks.inbound.dialog.cancel')}
+          </Button>
+          <Button
+            id="inbound-webhook-identity-save"
+            onClick={() => void handleSaveInboundWebhook()}
+          >
+            {t(
+              identityForm.inboundWebhookId
+                ? 'security.webhooks.inbound.dialog.save'
+                : 'security.webhooks.inbound.dialog.create',
+            )}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Drawer
+        id="inbound-webhook-delivery-detail"
+        isOpen={selectedInboundDelivery !== null}
+        onClose={() => setSelectedInboundDelivery(null)}
+        hideCloseButton
+        width="min(720px, 100vw)"
+      >
+        {selectedInboundDelivery ? (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('security.webhooks.inbound.deliveryDetail.title')}
+                </h3>
+                <p className="mt-1 break-all text-sm text-gray-500">
+                  {selectedInboundDelivery.deliveryId}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  id="inbound-webhook-delivery-detail-replay"
+                  variant="outline"
+                  onClick={() => void handleReplayInboundDelivery(selectedInboundDelivery.deliveryId)}
+                >
+                  {t('security.webhooks.inbound.deliveryDetail.replay')}
+                </Button>
+                <Button
+                  id="inbound-webhook-delivery-detail-close"
+                  variant="ghost"
+                  onClick={() => setSelectedInboundDelivery(null)}
+                >
+                  {t('security.webhooks.inbound.deliveryDetail.close')}
+                </Button>
+              </div>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.received')}</dt>
+                <dd className="text-sm text-gray-900">{formatDateTime(selectedInboundDelivery.receivedAt as string, neverLabel)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.status')}</dt>
+                <dd className="mt-1">
+                  <Badge
+                    variant={getInboundDeliveryStatusBadgeVariant(selectedInboundDelivery.dispatchStatus)}
+                    size="sm"
+                  >
+                    {t(`security.webhooks.inbound.deliveryLog.status.${selectedInboundDelivery.dispatchStatus}`, {
+                      defaultValue: selectedInboundDelivery.dispatchStatus,
+                    })}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.responseStatus')}</dt>
+                <dd className="text-sm text-gray-900">{selectedInboundDelivery.responseStatus ?? t('security.webhooks.deliveries.noResponseCode')}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.duration')}</dt>
+                <dd className="text-sm text-gray-900">
+                  {selectedInboundDelivery.durationMs == null
+                    ? t('security.webhooks.deliveries.noResponseCode')
+                    : t('security.webhooks.inbound.deliveryLog.durationMs', { duration: selectedInboundDelivery.durationMs })}
+                </dd>
+              </div>
+            </dl>
+            {selectedInboundDelivery.handlerOutcome?.error ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                {String(selectedInboundDelivery.handlerOutcome.error)}
+              </div>
+            ) : null}
+            {[
+              ['headers', selectedInboundDelivery.requestHeaders],
+              ['requestBody', selectedInboundDelivery.requestBody],
+              ['responseBody', selectedInboundDelivery.responseBody],
+              ['handlerOutcome', selectedInboundDelivery.handlerOutcome],
+            ].map(([key, value]) => (
+              <div key={key as string}>
+                <h4 className="mb-2 text-sm font-medium text-gray-900">
+                  {t(`security.webhooks.inbound.deliveryDetail.sections.${key as string}`)}
+                </h4>
+                <pre className="max-h-80 overflow-auto rounded-md bg-gray-950 p-3 text-xs text-gray-100">
+                  {formatJsonForDisplay(value)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Drawer>
+
+      <Dialog
+        id="inbound-webhook-test"
+        isOpen={testDialogOpen}
+        onClose={() => setTestDialogOpen(false)}
+        title={t('security.webhooks.inbound.test.title')}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <TextArea
+              id="inbound-webhook-test-body"
+              label={t('security.webhooks.inbound.test.body')}
+              value={testBodyText}
+              onChange={(event) => setTestBodyText(event.target.value)}
+              className="font-mono text-sm"
+            />
+            <TextArea
+              id="inbound-webhook-test-headers"
+              label={t('security.webhooks.inbound.test.headers')}
+              value={testHeadersText}
+              onChange={(event) => setTestHeadersText(event.target.value)}
+              className="font-mono text-sm"
+            />
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-test-cancel"
+            variant="ghost"
+            onClick={() => setTestDialogOpen(false)}
+          >
+            {t('security.webhooks.inbound.test.cancel')}
+          </Button>
+          <Button
+            id="inbound-webhook-test-send"
+            onClick={() => void handleSendInboundTest()}
+          >
+            {t('security.webhooks.inbound.test.send')}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <ConfirmationDialog
+        id="inbound-webhook-replay-confirm"
+        isOpen={replayConfirmDeliveryId !== null}
+        onClose={() => {
+          if (!isReplayInFlight) {
+            setReplayConfirmDeliveryId(null);
+          }
+        }}
+        onConfirm={handleConfirmReplay}
+        title={t('security.webhooks.inbound.deliveryDetail.replay')}
+        message={t('security.webhooks.inbound.deliveryDetail.replayConfirm')}
+        confirmLabel={t('security.webhooks.inbound.deliveryDetail.replay')}
+        cancelLabel={t('security.webhooks.inbound.dialog.cancel')}
+        isConfirming={isReplayInFlight}
+      />
+    </div>
+  );
+}
+
+function OutboundWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
   const [webhooks, setWebhooks] = useState<WebhookSettingsView[]>([]);
   const [eventOptions, setEventOptions] = useState<string[]>([]);

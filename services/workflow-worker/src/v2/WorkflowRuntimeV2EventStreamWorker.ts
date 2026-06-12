@@ -154,7 +154,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
     const processedAt = new Date().toISOString();
 
     // Idempotency: if we already ingested this event_id, do not start runs again.
-    const existing = await WorkflowRuntimeEventModelV2.getById(knex, event.event_id).catch(() => null);
+    const existing = await WorkflowRuntimeEventModelV2.getById(knex, event.event_id, event.tenant).catch(() => null);
     if (existing) {
       logger.debug('[WorkflowRuntimeV2EventStreamWorker] Duplicate event ignored', {
         workerId: this.workerId,
@@ -190,7 +190,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const eventRecord = await WorkflowRuntimeEventModelV2.create(knex, {
       event_id: event.event_id,
-      tenant_id: event.tenant,
+      tenant: event.tenant,
       event_name: event.event_type,
       correlation_key: correlation.key,
       payload,
@@ -214,13 +214,13 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const waitsByRun = new Map<string, Awaited<ReturnType<typeof WorkflowRunModelV2.getById>>>();
       const getRun = async (candidateRunId: string) => {
         if (!waitsByRun.has(candidateRunId)) {
-          waitsByRun.set(candidateRunId, await WorkflowRunModelV2.getById(knex, candidateRunId));
+          waitsByRun.set(candidateRunId, await WorkflowRunModelV2.getById(knex, candidateRunId, event.tenant));
         }
         return waitsByRun.get(candidateRunId) ?? null;
       };
       for (const wait of candidateWaits) {
         const matchedRun = await getRun(wait.run_id);
-        if (matchedRun?.engine !== 'temporal') {
+        if (!matchedRun) {
           continue;
         }
         try {

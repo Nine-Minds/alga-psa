@@ -1,0 +1,319 @@
+.app-print-only,
+.app-print-section {
+  display: none;
+}
+
+@media print {
+  html.app-print-mode,
+  html.app-print-mode body {
+    background: #fff !important;
+  }
+
+  /* The print hook marks the ancestor path to the print region and marks all
+     sibling branches as hidden. Use display:none for those sibling branches so
+     invisible app chrome cannot paginate into trailing blank pages. */
+  html.app-print-mode {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode body * {
+    visibility: hidden;
+    /* Neutralize positioned ancestors so the absolutely-positioned print
+       region anchors to the page origin instead of a stray parent. */
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+
+  html.app-print-mode [data-app-print-hidden] {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-app-print-preserve] {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  html.app-print-mode [data-print-hide],
+  html.app-print-mode .toast-region,
+  html.app-print-mode .tooltip {
+    display: none !important;
+  }
+
+  /* Hide tab navigation, accordion chevrons, and other interactive chrome
+     inside print regions; keep tab content visible. */
+  html.app-print-mode [data-print-region] [role="tablist"],
+  html.app-print-mode .app-print-root [role="tablist"],
+  html.app-print-mode [data-print-region] [data-print-hide],
+  html.app-print-mode .app-print-root [data-print-hide] {
+    display: none !important;
+  }
+
+  html.app-print-mode .app-print-section {
+    display: block !important;
+  }
+
+  /* Strip the "app shell" feel: drop borders, shadows, and backgrounds
+     from form-style elements so printed detail pages read as documents. */
+  html.app-print-mode [data-print-region] input,
+  html.app-print-mode [data-print-region] textarea,
+  html.app-print-mode [data-print-region] select,
+  html.app-print-mode .app-print-root input,
+  html.app-print-mode .app-print-root textarea,
+  html.app-print-mode .app-print-root select {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+    color: #000 !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    resize: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  html.app-print-mode [data-print-region] button,
+  html.app-print-mode .app-print-root button {
+    display: none !important;
+  }
+
+  /* Flatten every container chrome inside print regions: kill backgrounds,
+     borders, shadows, and rounded corners; reset padding/margin so the
+     content reads as plain prose, not as a stack of cards. */
+  html.app-print-mode [data-print-region] *,
+  html.app-print-mode .app-print-root * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html.app-print-mode [data-print-region] *:not(table):not(thead):not(tbody):not(tr):not(td):not(th):not(.app-print-detail-header):not(.app-print-detail-header *):not(.app-print-table-section):not(.app-print-table-section *),
+  html.app-print-mode .app-print-root *:not(table):not(thead):not(tbody):not(tr):not(td):not(th):not(.app-print-detail-header):not(.app-print-detail-header *):not(.app-print-table-section):not(.app-print-table-section *) {
+    background: transparent !important;
+    border-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    color: #000 !important;
+  }
+
+  /* Tighten common padding/margin/gap utilities. */
+  html.app-print-mode [data-print-region] [class*="p-2"],
+  html.app-print-mode [data-print-region] [class*="p-3"],
+  html.app-print-mode [data-print-region] [class*="p-4"],
+  html.app-print-mode [data-print-region] [class*="p-5"],
+  html.app-print-mode [data-print-region] [class*="p-6"],
+  html.app-print-mode [data-print-region] [class*="p-8"],
+  html.app-print-mode [data-print-region] [class*="py-2"],
+  html.app-print-mode [data-print-region] [class*="py-3"],
+  html.app-print-mode [data-print-region] [class*="py-4"],
+  html.app-print-mode [data-print-region] [class*="py-6"],
+  html.app-print-mode [data-print-region] [class*="px-2"],
+  html.app-print-mode [data-print-region] [class*="px-3"],
+  html.app-print-mode [data-print-region] [class*="px-4"],
+  html.app-print-mode [data-print-region] [class*="px-6"],
+  html.app-print-mode .app-print-root [class*="p-4"],
+  html.app-print-mode .app-print-root [class*="p-6"] {
+    padding: 0 !important;
+  }
+
+  html.app-print-mode [data-print-region] [class*="space-y-6"] > * + *,
+  html.app-print-mode [data-print-region] [class*="space-y-4"] > * + *,
+  html.app-print-mode [data-print-region] [class*="space-y-3"] > * + *,
+  html.app-print-mode [data-print-region] [class*="space-y-2"] > * + * {
+    margin-top: 4pt !important;
+  }
+
+  html.app-print-mode [data-print-region] [class*="gap-6"],
+  html.app-print-mode [data-print-region] [class*="gap-4"],
+  html.app-print-mode [data-print-region] [class*="gap-3"] {
+    gap: 6pt !important;
+  }
+
+  html.app-print-mode [data-print-region] [class*="mb-6"],
+  html.app-print-mode [data-print-region] [class*="mb-4"],
+  html.app-print-mode [data-print-region] [class*="mt-6"],
+  html.app-print-mode [data-print-region] [class*="mt-4"] {
+    margin-top: 0 !important;
+    margin-bottom: 4pt !important;
+  }
+
+  /* Hide interactive form widgets (radios, switches, checkboxes, toggles,
+     drag handles, icon-only chrome) — keep their accompanying text. */
+  html.app-print-mode [data-print-region] [role="radio"],
+  html.app-print-mode [data-print-region] [role="radiogroup"] > [data-state],
+  html.app-print-mode [data-print-region] [role="switch"],
+  html.app-print-mode [data-print-region] [role="checkbox"],
+  html.app-print-mode [data-print-region] [role="separator"],
+  html.app-print-mode [data-print-region] [data-state][data-radix-collection-item],
+  html.app-print-mode .app-print-root [role="radio"],
+  html.app-print-mode .app-print-root [role="switch"],
+  html.app-print-mode .app-print-root [role="checkbox"] {
+    display: none !important;
+  }
+
+  /* Hide avatars and decorative icons within print regions. The printable
+     detail header still gets normal icon rendering inside its own scope. */
+  html.app-print-mode [data-print-region] svg:not(.app-print-detail-header svg):not(.app-print-table-section svg),
+  html.app-print-mode [data-print-region] img:not(.app-print-detail-header img):not(.app-print-table-section img):not([data-print-keep]) {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-print-region],
+  html.app-print-mode [data-print-region] *,
+  html.app-print-mode .app-print-root,
+  html.app-print-mode .app-print-root * {
+    visibility: visible;
+  }
+
+  html.app-print-mode [data-print-region],
+  html.app-print-mode .app-print-root {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16pt;
+    color: #000;
+    background: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  html.app-print-mode table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  html.app-print-mode thead {
+    display: table-header-group;
+  }
+
+  html.app-print-mode tr,
+  html.app-print-mode td,
+  html.app-print-mode th {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  html.app-print-mode th,
+  html.app-print-mode td {
+    border-bottom: 1pt solid #d4d4d4;
+    padding: 5pt 6pt;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  html.app-print-mode th {
+    font-weight: 700;
+    color: #111;
+  }
+
+  html.app-print-mode .app-print-table-header {
+    margin-bottom: 10pt;
+    border-bottom: 1pt solid #000;
+    padding-bottom: 6pt;
+  }
+
+  html.app-print-mode .app-print-table-header h2 {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  html.app-print-mode .app-print-table-header p {
+    margin: 3pt 0 0;
+    color: #444;
+    font-size: 9pt;
+  }
+
+  html.app-print-mode .app-print-table-empty {
+    color: #555;
+    font-style: italic;
+  }
+
+  html.app-print-mode .app-print-detail-header {
+    margin-bottom: 14pt;
+    padding-bottom: 8pt;
+    border-bottom: 1pt solid #000;
+  }
+
+  html.app-print-mode .app-print-detail-header h1 {
+    margin: 0;
+    font-size: 18pt;
+    font-weight: 700;
+    color: #000;
+  }
+
+  html.app-print-mode .app-print-detail-subtitle {
+    margin: 4pt 0 0;
+    color: #444;
+    font-size: 10pt;
+  }
+
+  html.app-print-mode .app-print-detail-fields {
+    margin: 10pt 0 0;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 12pt;
+    row-gap: 4pt;
+  }
+
+  html.app-print-mode .app-print-detail-field {
+    display: contents;
+  }
+
+  html.app-print-mode .app-print-detail-field dt {
+    font-weight: 600;
+    color: #555;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  html.app-print-mode .app-print-detail-field dd {
+    margin: 0;
+    color: #000;
+    font-size: 10pt;
+  }
+
+  html.app-print-mode .print-muted {
+    color: #444 !important;
+  }
+
+  html.app-print-mode .tickets-print-number-column {
+    width: 10%;
+    white-space: nowrap;
+  }
+
+  html.app-print-mode .tickets-print-title-column {
+    width: 30%;
+  }
+
+  html.app-print-mode .tickets-print-date-column {
+    width: 12%;
+    white-space: nowrap;
+  }
+}

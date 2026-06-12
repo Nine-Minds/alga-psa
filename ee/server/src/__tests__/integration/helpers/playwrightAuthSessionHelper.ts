@@ -42,7 +42,6 @@ export type TenantPreparationOptions = {
   permissions?: TenantRolePermissionConfig[];
   experimentalFeatures?: {
     aiAssistant?: boolean;
-    workflowAutomation?: boolean;
   };
 };
 

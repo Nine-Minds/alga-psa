@@ -41,7 +41,7 @@ export async function mapCeOAuthProfileToExtendedUser(
     email: user.email,
     name: buildDisplayName(user),
     username: user.username || user.email,
-    image: typeof input.image === 'string' ? input.image : user.image,
+    image: typeof input.image === 'string' ? input.image : user.icon,
     proToken: user.hashed_password || '',
     tenant: user.tenant,
     user_type: 'internal',

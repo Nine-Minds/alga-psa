@@ -161,7 +161,8 @@
         "step3": "Tax is calculated by the accounting system based on its tax rules",
         "step4": "Tax amounts are imported back to Alga PSA",
         "step5": "Invoice totals are updated with the imported tax",
-        "note": "The accounting system used is determined automatically based on which system you export the invoice to."
+        "note": "The accounting system used is determined automatically based on which system you export the invoice to.",
+        "warning": "Importante: as faturas de clientes que usam imposto externo não podem ser finalizadas até que o imposto seja importado de volta do seu sistema contábil. Isso requer uma integração contábil conectada (QuickBooks ou Xero) e a exportação prévia da fatura para ela. Sem isso, essas faturas ficarão presas em Rascunho — altere uma fatura individual de volta para imposto interno para finalizá-la no Alga."
       },
       "loading": "Loading settings...",
       "actions": {

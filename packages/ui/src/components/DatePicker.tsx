@@ -113,7 +113,7 @@ export function DatePicker({
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
-          <span className="flex-1 text-left">
+          <span className="flex-1 min-w-0 text-left truncate">
             {value ? format(value, 'MM/dd/yyyy') : placeholder}
           </span>
           {clearValue && value && !disabled && (

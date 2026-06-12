@@ -9,6 +9,7 @@ import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'boards';
 
@@ -38,7 +39,7 @@ async function seedBoardTicketStatusesFromStandards(
   }
 
   const standardStatuses = await trx('standard_statuses')
-    .where({ tenant, item_type: 'ticket' })
+    .where({ item_type: 'ticket' })
     .orderBy('display_order', 'asc')
     .orderBy('name', 'asc');
 
@@ -122,7 +123,6 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     targetTable: 'service_types',
     mapFields: (source: IStandardServiceType, tenantId: string, userId: string, options?: any) => ({
       name: source.name,
-      billing_method: source.billing_method,
       tenant: tenantId,
       is_active: true,
       description: null,
@@ -608,6 +608,31 @@ export const importReferenceData = withAuth(async (
 	        await seedBoardTicketStatusesFromStandards(trx, tenant, savedItem.board_id, user.user_id);
 	      }
 
+	      if (dataType === 'boards') {
+	        await publishEvent({
+	          eventType: 'BOARD_CREATED',
+	          payload: {
+	            tenantId: tenant,
+	            boardId: savedItem.board_id,
+	            userId: user.user_id,
+	            changes: { after: savedItem },
+	            timestamp: new Date().toISOString(),
+	          },
+	        });
+	      } else if (dataType === 'categories') {
+	        await publishEvent({
+	          eventType: 'CATEGORY_CREATED',
+	          payload: {
+	            tenantId: tenant,
+	            categoryId: savedItem.category_id,
+	            boardId: savedItem.board_id ?? null,
+	            userId: user.user_id,
+	            changes: { after: savedItem },
+	            timestamp: new Date().toISOString(),
+	          },
+	        });
+	      }
+
 	      importedItems.push(savedItem);
     } catch (insertError: any) {
       console.error('Error inserting item:', insertError);
@@ -712,6 +737,30 @@ export const deleteReferenceDataItem = withAuth(async (
           throw new Error('Item not found or access denied');
         }
       });
+
+      if (result.deleted === true) {
+        if (dataType === 'boards') {
+          await publishEvent({
+            eventType: 'BOARD_DELETED',
+            payload: {
+              tenantId: tenant,
+              boardId: itemId,
+              userId: _user.user_id,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } else if (dataType === 'categories') {
+          await publishEvent({
+            eventType: 'CATEGORY_DELETED',
+            payload: {
+              tenantId: tenant,
+              categoryId: itemId,
+              userId: _user.user_id,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      }
 
       return {
         ...result,

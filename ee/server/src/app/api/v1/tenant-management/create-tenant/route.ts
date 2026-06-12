@@ -22,6 +22,20 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
+const SUPPORTED_PRODUCT_CODES = ['psa', 'algadesk'] as const;
+type SupportedProductCode = typeof SUPPORTED_PRODUCT_CODES[number];
+
+function normalizeProductCode(input: unknown): SupportedProductCode {
+  if (input === undefined || input === null || input === '') {
+    return 'psa';
+  }
+
+  if (typeof input === 'string' && SUPPORTED_PRODUCT_CODES.includes(input as SupportedProductCode)) {
+    return input as SupportedProductCode;
+  }
+
+  throw new Error(`Invalid productCode. Supported product codes: ${SUPPORTED_PRODUCT_CODES.join(', ')}`);
+}
 
 /**
  * Check if this is an internal request from ext-proxy with trusted user info.
@@ -109,6 +123,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body = await request.json();
     const { companyName, firstName, lastName, email, licenseCount, productCode } = body;
+    const normalizedProductCode = normalizeProductCode(productCode);
 
     // Validate required fields
     if (!companyName || !firstName || !lastName || !email) {
@@ -133,6 +148,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       action: 'create_tenant',
       company_name: companyName,
       admin_email: email,
+      product_code: normalizedProductCode,
       triggered_by: userId,
       triggered_by_email: userEmail,
     });
@@ -154,6 +170,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           company_name: companyName,
           admin_email: email,
           license_count: licenseCount || 5,
+          product_code: normalizedProductCode,
         }),
       })
       .returning('log_id');
@@ -169,7 +186,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       companyName,
       clientName: companyName,
       licenseCount: licenseCount || 5,
-      productCode: productCode === 'algadesk' ? 'algadesk' : productCode === 'psa' ? 'psa' : undefined,
+      productCode: normalizedProductCode,
       // No checkout session - this is manual creation
     };
 
@@ -202,6 +219,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           company_name: companyName,
           admin_email: email,
           license_count: licenseCount || 5,
+          product_code: normalizedProductCode,
           workflow_id: workflowId,
           run_id: runId,
         }),
@@ -228,6 +246,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             source: 'ninemindsreporting_extension',
             company_name: companyName,
             admin_email: email,
+            product_code: normalizedProductCode,
             result: tenantResult,
             duration_ms: Date.now() - startTime,
           }),
@@ -276,6 +295,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             company_name: companyName,
             admin_email: email,
             license_count: licenseCount || 5,
+            product_code: normalizedProductCode,
             workflow_id: workflowId,
             run_id: runId,
             note: 'Workflow still running after 2 minute timeout',
@@ -302,6 +322,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       errorMessage.includes('Authentication')
     ) {
       return NextResponse.json({ success: false, error: errorMessage }, { status: 403 });
+    }
+
+    if (errorMessage.includes('Invalid productCode')) {
+      return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
     }
 
     return NextResponse.json({

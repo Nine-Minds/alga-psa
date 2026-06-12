@@ -40,7 +40,15 @@
     "duplicate": "Duplizieren",
     "openMenu": "Menü öffnen",
     "confirmDeletion": "Löschung bestätigen",
-    "saving": "Speichern..."
+    "saving": "Speichern...",
+    "print": "Drucken",
+    "printSelected_one": "Auswahl drucken ({{count}})",
+    "printSelected_other": "Auswahl drucken ({{count}})",
+    "printOptions": "Druckoptionen",
+    "resetPrintOptions": "Druckoptionen zurücksetzen",
+    "share": "Teilen",
+    "done": "Fertig",
+    "continue": "Weiter"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -267,6 +275,13 @@
         "description": "Klicke auf \"Standort hinzufügen\", um zu beginnen"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} Antwort",
+    "replies_other": "{{count}} Antworten",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen",
+    "showInDrawer": "In Seitenleiste anzeigen"
   },
   "pagination": {
     "previous": "Zurück",
@@ -1009,6 +1024,10 @@
     "noResults": "Keine Ergebnisse gefunden",
     "searchPlaceholder": "Suchen..."
   },
+  "pickers": {
+    "addNewClient": "Neuen Kunden hinzufügen",
+    "addNewContact": "Neuen Kontakt hinzufügen"
+  },
   "tagFilter": {
     "placeholder": "Nach Tags filtern...",
     "filter": "Filter",
@@ -1122,5 +1141,45 @@
   },
   "feedback": {
     "providePlaceholder": "Bitte geben Sie Feedback"
+  },
+  "presence": {
+    "noOneElseEditing": "Niemand sonst bearbeitet gerade",
+    "conflict": {
+      "changedField": "{{author}} hat dieses Feld gerade {{time}} geändert.",
+      "remoteValue": "Remote-Wert:",
+      "keepYours": "Eigene behalten",
+      "takeTheirs": "Remote übernehmen"
+    }
+  },
+  "labels": {
+    "printColumns": "Druckspalten"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Abhängigkeiten werden geprüft",
+    "deleteTitle": "{{entityName}} löschen",
+    "cannotDeleteTitle": "Kann nicht gelöscht werden",
+    "deleting": "Wird gelöscht...",
+    "checkingDependenciesMessage": "Abhängigkeiten werden geprüft...",
+    "fallbackBlockMessage": "Bitte entfernen Sie diese Elemente oder weisen Sie sie neu zu, bevor Sie löschen.",
+    "confirmationMessage": "Sind Sie sicher, dass Sie \"{{entityName}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Als inaktiv markieren",
+        "description": "Deaktiviert den Datensatz, ohne seine Daten zu löschen.",
+        "warning": "Inaktive Datensätze können in neuen Workflows nicht mehr ausgewählt werden."
+      },
+      "archive": {
+        "label": "Archivieren",
+        "description": "Entfernt den Datensatz aus der aktiven Nutzung und bewahrt den Verlauf auf.",
+        "warning": "Archivierte Datensätze werden in Standardansichten ausgeblendet."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} Spalte aus Platzgründen ausgeblendet.",
+    "columnsHidden_other": "{{count}} Spalten aus Platzgründen ausgeblendet.",
+    "showAll": "Alle anzeigen",
+    "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
+    "showLess": "Weniger anzeigen"
   }
 }

@@ -74,7 +74,7 @@
     "addProject": "Agregar proyecto",
     "createFromTemplate": "Crear desde plantilla",
     "openMenu": "Abrir menú",
-    "searchPlaceholder": "Buscar proyectos",
+    "searchPlaceholder": "Buscar proyectos, tareas y comentarios",
     "statusPlaceholder": "Seleccionar estado",
     "contactPlaceholder": "Filtrar por contacto",
     "managerPlaceholder": "Todos los responsables",
@@ -103,6 +103,8 @@
       "created": "Creado",
       "projectManager": "Gestor del proyecto",
       "tags": "Etiquetas",
+      "priority": "Prioridad",
+      "taskType": "Tipo",
       "actions": "Acciones"
     },
     "unknownUser": "Desconocido"
@@ -240,7 +242,26 @@
     "dueLabel": "Vencimiento",
     "noDueDate": "Sin fecha de vencimiento",
     "hideTags": "Ocultar etiquetas",
-    "criticalPath": "Ruta crítica"
+    "criticalPath": "Ruta crítica",
+    "selectTaskAria": "Seleccionar tarea {{taskName}}",
+    "bulkMoveSuccess": "¡{{count}} tarea(s) movida(s) correctamente!",
+    "bulkMovePartial": "{{moved}} tarea(s) movida(s), {{failed}} con errores.",
+    "bulkDeleteSuccess": "¡{{count}} tarea(s) eliminada(s) correctamente!",
+    "bulkDeletePartial": "{{deleted}} tarea(s) eliminada(s), {{failed}} con errores.",
+    "bulkAssignSuccess": "¡{{count}} tarea(s) asignada(s) correctamente!",
+    "bulkAssignPartial": "{{success}} tarea(s) asignada(s), {{failed}} con errores.",
+    "bulkAssignTeamSuccess": "¡{{count}} tarea(s) asignada(s) al equipo correctamente!",
+    "bulkAssignTeamPartial": "{{success}} tarea(s) asignada(s) al equipo, {{failed}} con errores.",
+    "bulkDeleteTitle": "Eliminar tareas",
+    "bulkDeleteMessage": "¿Seguro que quieres eliminar {{count}} tarea(s) seleccionada(s)? Esta acción no se puede deshacer.",
+    "bulkTasksMovedSuccess": "{{count}} tareas movidas",
+    "bulkTasksMovedToPhase": "{{count}} tareas movidas a {{phaseName}}",
+    "moveTasksTitle": "Mover tareas",
+    "confirmMoveTasksMessage": "¿Seguro que quieres mover {{count}} tareas seleccionadas a la fase \"{{targetPhase}}\"?",
+    "bulkTagsSuccess_one": "Etiquetas añadidas a {{count}} tarea",
+    "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
+    "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
+    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -415,6 +436,7 @@
     "selectFolderDescription": "Elija dónde guardar este nuevo documento"
   },
   "taskTicketLinks": {
+    "restrictedTooltip": "Detalles limitados — no estás asignado a este ticket",
     "title": "Tickets asociados",
     "linkExistingTitle": "Vincular ticket existente",
     "createTicket": "Crear ticket",
@@ -519,7 +541,9 @@
       "tags": "Etiquetas",
       "createdAt": "Creado el",
       "updatedAt": "Actualizado el"
-    }
+    },
+    "exportSelected": "Exportar {{count}} seleccionada(s)",
+    "selectedTasksNotice": "Exportando {{count}} tarea{{plural}} seleccionada(s)."
   },
   "import": {
     "title": "Importar fases y tareas",
@@ -701,6 +725,7 @@
       "allPriorities": "Todas las prioridades"
     },
     "ticketLinkedTasks": {
+      "restrictedTooltip": "Detalles limitados — no estás asignado a esta tarea",
       "title": "Tareas de proyecto vinculadas",
       "loadFailed": "No se pudo cargar la tarea",
       "phaseNotFound": "No se encontró la fase de la tarea",
@@ -709,6 +734,22 @@
       "tasks": "Tareas",
       "badgeCount": "{{count}} Tarea",
       "badgeCount_other": "{{count}} Tareas"
+    },
+    "bulkMoveTask": {
+      "title": "Mover tareas",
+      "message": "Mover {{count}} tarea(s) seleccionada(s) a una nueva fase/estado:",
+      "confirm": "Mover tareas"
+    },
+    "bulkAssign": {
+      "title": "Asignar tareas",
+      "message": "Asignar {{count}} tarea(s) seleccionada(s) a:",
+      "unassigned": "Sin asignar",
+      "assigning": "Asignando...",
+      "confirm": "Asignar tareas",
+      "teamReplaceNotice": "Las tareas ya asignadas a otro equipo se reasignarán al equipo seleccionado."
+    },
+    "convertAdHocToTask": {
+      "title": "Convertir en tarea de proyecto"
     }
   },
   "filters": {
@@ -1268,7 +1309,8 @@
     "templateCreatedSuccess": "Plantilla creada correctamente",
     "notAvailable": "N/D",
     "saveAsTemplate": "Guardar como plantilla",
-    "materials": "Materiales"
+    "materials": "Materiales",
+    "shareTooltip": "Imprimir, importar y exportar"
   },
   "projectPhases": {
     "addTask": "Agregar tarea",
@@ -1382,5 +1424,55 @@
     "unknownTask": "Tarea desconocida",
     "blocks": "Bloquea"
   },
-  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más."
+  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tareas del proyecto",
+      "subtitle": "{{count}} tareas",
+      "noTasks": "No hay tareas del proyecto para imprimir",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tarea",
+        "phase": "Fase",
+        "status": "Estado",
+        "assignee": "Asignado a",
+        "dueDate": "Fecha límite",
+        "hours": "Horas"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir las tareas del proyecto."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Estado",
+        "assignee": "Asignado a",
+        "dueDate": "Fecha de vencimiento",
+        "estimatedHours": "Horas estimadas",
+        "wbsCode": "Código WBS",
+        "description": "Descripción"
+      },
+      "subtitleSelected": "{{count}} tareas seleccionadas"
+    }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} seleccionada(s)",
+    "move": "Mover",
+    "assign": "Asignar",
+    "delete": "Eliminar",
+    "clear": "Borrar",
+    "tags": "Etiquetas"
+  },
+  "bulk": {
+    "tags": {
+      "dialogTitle": "Añadir etiquetas a las tareas seleccionadas",
+      "message": "Añade una o más etiquetas a {{count}} tarea(s) seleccionada(s). Las etiquetas que ya están en una tarea se omiten.",
+      "placeholder": "Escribe una etiqueta y pulsa Enter",
+      "submitting": "Añadiendo etiquetas...",
+      "confirm_one": "Añadir etiquetas a {{count}} tarea",
+      "confirm_other": "Añadir etiquetas a {{count}} tareas",
+      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
+    }
+  }
 }

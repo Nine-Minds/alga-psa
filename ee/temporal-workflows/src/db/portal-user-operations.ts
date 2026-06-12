@@ -1,5 +1,9 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import {
+  getAdminConnection,
+  retryOnAdminReadOnly,
+  withAdminTransactionRetryReadOnly,
+} from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import { generateSecurePassword } from '@alga-psa/core/encryption';
 import { 
@@ -29,8 +33,6 @@ export async function createPortalUserInDB(
   });
 
   try {
-    const knex = await getAdminConnection();
-
     // If no password provided, generate a secure temporary password
     const password = input.password || generateSecurePassword();
 
@@ -47,8 +49,16 @@ export async function createPortalUserInDB(
       isClientAdmin: input.isClientAdmin
     };
 
-    // Use the shared model to create the portal user
-    const result = await createPortalUserInSharedModel(knex, sharedModelInput);
+    // Use the shared model to create the portal user.
+    // Wrap in retryOnAdminReadOnly so a stale Citus loopback "worker" connection
+    // (PgBouncer/Patroni post-failover) refreshes the admin pool and retries once.
+    const result = await retryOnAdminReadOnly(
+      async () => {
+        const knex = await getAdminConnection();
+        return await createPortalUserInSharedModel(knex, sharedModelInput);
+      },
+      { logLabel: 'createPortalUserInDB' }
+    );
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to create portal user');
@@ -81,9 +91,7 @@ export async function rollbackPortalUserInDB(userId: string, tenantId: string): 
   log.info('Rolling back portal user creation', { userId, tenantId });
 
   try {
-    const knex = await getAdminConnection();
-
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Delete user associations in reverse order
       await trx('user_roles')
         .where({ user_id: userId, tenant: tenantId })

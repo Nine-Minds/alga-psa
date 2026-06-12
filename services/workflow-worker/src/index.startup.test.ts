@@ -5,13 +5,13 @@ const {
   initializeWorkflowRuntimeV2Mock,
   registerWorkflowEmailProviderMock,
   registerEnterpriseStorageProvidersMock,
-  runtimeWorkerStartMock,
-  runtimeWorkerStopMock,
+  sweepWorkerStartMock,
+  sweepWorkerStopMock,
   eventWorkerStartMock,
   eventWorkerStopMock,
   temporalWorkerStartMock,
   temporalWorkerStopMock,
-  runtimeWorkerCtorMock,
+  sweepWorkerCtorMock,
   eventWorkerCtorMock,
   temporalWorkerCtorMock,
   loggerInfoMock,
@@ -21,13 +21,13 @@ const {
   initializeWorkflowRuntimeV2Mock: vi.fn(),
   registerWorkflowEmailProviderMock: vi.fn(),
   registerEnterpriseStorageProvidersMock: vi.fn(async () => undefined),
-  runtimeWorkerStartMock: vi.fn(async () => undefined),
-  runtimeWorkerStopMock: vi.fn(async () => undefined),
+  sweepWorkerStartMock: vi.fn(async () => undefined),
+  sweepWorkerStopMock: vi.fn(async () => undefined),
   eventWorkerStartMock: vi.fn(async () => undefined),
   eventWorkerStopMock: vi.fn(async () => undefined),
   temporalWorkerStartMock: vi.fn(async () => undefined),
   temporalWorkerStopMock: vi.fn(async () => undefined),
-  runtimeWorkerCtorMock: vi.fn(),
+  sweepWorkerCtorMock: vi.fn(),
   eventWorkerCtorMock: vi.fn(),
   temporalWorkerCtorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
@@ -46,17 +46,17 @@ vi.mock('@alga-psa/workflows/runtime/worker', () => ({
 }));
 
 vi.mock('@alga-psa/workflows/workers', () => ({
-  WorkflowRuntimeV2Worker: class {
+  WorkflowDataStoreSweepWorker: class {
     constructor(workerId: string) {
-      runtimeWorkerCtorMock(workerId);
+      sweepWorkerCtorMock(workerId);
     }
 
     async start() {
-      return runtimeWorkerStartMock();
+      return sweepWorkerStartMock();
     }
 
     async stop() {
-      return runtimeWorkerStopMock();
+      return sweepWorkerStopMock();
     }
   }
 }));
@@ -97,6 +97,15 @@ vi.mock('./registerEnterpriseStorageProviders.js', () => ({
   registerEnterpriseStorageProviders: (...args: unknown[]) => registerEnterpriseStorageProvidersMock(...args)
 }));
 
+vi.mock('./healthServer.js', () => ({
+  HealthServer: class {
+    async start() {}
+    async stop() {}
+    setWorker() {}
+    markReady() {}
+  }
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: (...args: unknown[]) => loggerInfoMock(...args),
@@ -120,20 +129,20 @@ describe('workflow worker startup', () => {
     initializeWorkflowRuntimeV2Mock.mockReset();
     registerWorkflowEmailProviderMock.mockReset();
     registerEnterpriseStorageProvidersMock.mockReset();
-    runtimeWorkerStartMock.mockReset();
-    runtimeWorkerStopMock.mockReset();
+    sweepWorkerStartMock.mockReset();
+    sweepWorkerStopMock.mockReset();
     eventWorkerStartMock.mockReset();
     eventWorkerStopMock.mockReset();
     temporalWorkerStartMock.mockReset();
     temporalWorkerStopMock.mockReset();
-    runtimeWorkerCtorMock.mockReset();
+    sweepWorkerCtorMock.mockReset();
     eventWorkerCtorMock.mockReset();
     temporalWorkerCtorMock.mockReset();
     loggerInfoMock.mockReset();
     loggerErrorMock.mockReset();
   });
 
-  it('T024: imports the worker entrypoint and starts authored Temporal polling plus event ingress by default (DB polling worker disabled)', async () => {
+  it('T024: starts the Temporal worker, event ingress, and data-store sweep unconditionally', async () => {
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
@@ -142,57 +151,35 @@ describe('workflow worker startup', () => {
         expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
         expect(registerWorkflowEmailProviderMock).toHaveBeenCalledTimes(1);
         expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
-        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
         expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(runtimeWorkerStartMock).not.toHaveBeenCalled();
-        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(sweepWorkerCtorMock).toHaveBeenCalledTimes(1);
         expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+        expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
       });
 
-      expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-      expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();
     }
   });
 
-  it('starts DB polling worker only when WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING is enabled', async () => {
+  it('ignores the retired engine-selection env flags', async () => {
     process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING = 'true';
-    const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
-
-    try {
-      await import('./index.ts');
-      await vi.waitFor(() => {
-        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(runtimeWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
-        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
-      });
-
-      expect(loggerErrorMock).not.toHaveBeenCalled();
-    } finally {
-      processOnSpy.mockRestore();
-    }
-  });
-
-  it('does not start authored Temporal polling when WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING is disabled', async () => {
     process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING = 'false';
     const processOnSpy = vi.spyOn(process, 'on').mockReturnValue(process);
 
     try {
       await import('./index.ts');
       await vi.waitFor(() => {
-        expect(runtimeWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);
-        expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
+        expect(temporalWorkerStartMock).toHaveBeenCalledTimes(1);
         expect(eventWorkerStartMock).toHaveBeenCalledTimes(1);
+        expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
       });
 
-      expect(temporalWorkerStartMock).not.toHaveBeenCalled();
       expect(loggerErrorMock).not.toHaveBeenCalled();
     } finally {
       processOnSpy.mockRestore();

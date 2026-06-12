@@ -11,12 +11,21 @@ import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getEventBus } from 'server/src/lib/eventBus';
+import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { getEmailEventChannel } from '@alga-psa/notifications';
-import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
-import { ServerEventPublisher } from '@alga-psa/event-bus';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  buildCuratedTicketDiffWithLabels,
+  hasCuratedChanges,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
@@ -79,6 +88,24 @@ function applyDefaultContactPhoneJoin(
     });
 }
 
+export type BundleMode = 'link_only' | 'sync_updates';
+
+export interface BundleMemberTicket {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  status_id: string | null;
+  client_id: string | null;
+}
+
+export interface BundleView {
+  role: 'master' | 'child' | 'standalone';
+  master_ticket_id: string;
+  master: BundleMemberTicket | null;
+  children: BundleMemberTicket[];
+  settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -88,6 +115,62 @@ export class TicketService extends BaseService<ITicket> {
       searchableFields: ['title', 'ticket_number'],
       defaultSort: 'entered_at',
       defaultOrder: 'desc'
+    });
+  }
+
+  /**
+   * Delete a ticket and all of its dependent rows.
+   *
+   * BaseService.delete() issues a bare `DELETE FROM tickets`, which both trips
+   * the foreign keys on child tables (CitusDB has no ON DELETE CASCADE) and
+   * would let the API force-delete a ticket that still has blocking records
+   * such as time entries. We override it to run the same dependency validation
+   * and child-row cleanup as the MSP server-action delete path: deletion is
+   * refused (409) when blocking dependencies exist, otherwise the dependent
+   * rows are cleaned up before the ticket is removed.
+   */
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const result = await deleteEntityWithValidation(
+      'ticket',
+      id,
+      knex,
+      context.tenant,
+      async (trx, tenant) => {
+        const ticket = await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .first();
+
+        if (!ticket) {
+          throw new NotFoundError('Ticket not found');
+        }
+
+        await deleteTicketChildRecords(trx, id, tenant, ticket);
+
+        await trx('tickets')
+          .where({ ticket_id: id, tenant })
+          .delete();
+      }
+    );
+
+    if (!result.deleted) {
+      throw new ConflictError(
+        result.message || 'Ticket cannot be deleted while dependent records exist',
+        {
+          code: result.code,
+          dependencies: result.dependencies,
+          alternatives: result.alternatives,
+        }
+      );
+    }
+
+    // Mirror the MSP server-action delete path: notify downstream consumers
+    // (e.g. the search indexer removes the ticket from the index) once the
+    // delete has committed. Publishing is best-effort and never fails the request.
+    await this.safePublishEvent('TICKET_DELETED', context, {
+      ticketId: id,
+      userId: context.userId,
     });
   }
 
@@ -388,6 +471,116 @@ export class TicketService extends BaseService<ITicket> {
     return documents as IDocument[];
   }
 
+  /**
+   * List assets linked to a ticket (asset_associations -> assets).
+   */
+  async getTicketAssets(ticketId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const assets = await knex('asset_associations as aa')
+      .join('assets as a', function joinAssets(this: Knex.JoinClause) {
+        this.on('aa.asset_id', '=', 'a.asset_id')
+          .andOn('aa.tenant', '=', 'a.tenant');
+      })
+      .leftJoin('clients as c', function joinClients(this: Knex.JoinClause) {
+        this.on('a.client_id', '=', 'c.client_id')
+          .andOn('a.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'aa.entity_id': ticketId,
+        'aa.entity_type': 'ticket',
+        'aa.tenant': context.tenant,
+        'a.tenant': context.tenant
+      })
+      .select(
+        'a.*',
+        'c.client_name',
+        'aa.relationship_type',
+        'aa.notes as association_notes',
+        'aa.created_at as linked_at'
+      )
+      .orderBy('aa.created_at', 'desc');
+
+    return assets;
+  }
+
+  /**
+   * Link an asset to a ticket by inserting an asset_associations row
+   * (entity_type='ticket'). Same table getTicketAssets and the asset detail UI
+   * read, so the link is visible from both sides.
+   */
+  async linkAsset(
+    ticketId: string,
+    data: { asset_id: string; relationship_type?: string; notes?: string },
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const ticket = await knex('tickets')
+      .where({ tenant: context.tenant, ticket_id: ticketId })
+      .first();
+    if (!ticket) {
+      throw new NotFoundError('Ticket not found');
+    }
+
+    const asset = await knex('assets')
+      .where({ tenant: context.tenant, asset_id: data.asset_id })
+      .first();
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    const existing = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: data.asset_id,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .first();
+    if (existing) {
+      throw new ConflictError('Asset is already linked to this ticket');
+    }
+
+    const [created] = await knex('asset_associations')
+      .insert({
+        tenant: context.tenant,
+        asset_id: data.asset_id,
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        relationship_type: data.relationship_type || 'affected',
+        notes: data.notes ?? null,
+        created_by: context.userId,
+        created_at: new Date().toISOString()
+      })
+      .returning('*');
+
+    return created;
+  }
+
+  /**
+   * Remove the asset_associations row linking an asset to a ticket.
+   */
+  async unlinkAsset(ticketId: string, assetId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const deleted = await knex('asset_associations')
+      .where({
+        tenant: context.tenant,
+        asset_id: assetId,
+        entity_id: ticketId,
+        entity_type: 'ticket'
+      })
+      .del();
+
+    if (!deleted) {
+      throw new NotFoundError('Asset-ticket association not found');
+    }
+  }
+
   async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
@@ -452,6 +645,27 @@ export class TicketService extends BaseService<ITicket> {
         entity_id: ticketId,
         entity_type: 'ticket',
         tenant: context.tenant,
+      });
+
+      // Activity-timeline entry for the document attachment. Stored inside
+      // the same transaction so the timeline row never appears unless the
+      // document and its association were also persisted.
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          document_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        },
       });
     });
 
@@ -538,6 +752,22 @@ export class TicketService extends BaseService<ITicket> {
           .where({ document_id: documentId, tenant: context.tenant })
           .del();
       }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_REMOVED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          association_id: doc.association_id,
+        },
+      });
     });
   }
 
@@ -773,7 +1003,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      return withTransaction(knex, async (trx) => {
+      const fullTicket = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -806,17 +1036,17 @@ export class TicketService extends BaseService<ITicket> {
           ticket_origin: TICKET_ORIGINS.API,
         };
 
-        // Create adapters for API service context
-        const eventPublisher = new ServerEventPublisher();
+        // Publish after the transaction commits so notification subscribers can
+        // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
-        // Use shared TicketModel with retry logic, events, and analytics
+        // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
           context.tenant,
           trx,
           {}, // validation options
-          eventPublisher,
+          undefined,
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -841,8 +1071,46 @@ export class TicketService extends BaseService<ITicket> {
           (fullTicket as any).tags = data.tags;
         }
 
+        // Activity-timeline row for REST API ticket creation.
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: ticketResult.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.CREATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: ticketResult.ticket_id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.API,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          details: {
+            title: fullTicket.title,
+            board_id: fullTicket.board_id,
+            status_id: fullTicket.status_id,
+            priority_id: fullTicket.priority_id,
+            assigned_to: fullTicket.assigned_to,
+            client_id: fullTicket.client_id,
+            ticket_origin: TICKET_ORIGINS.API,
+          },
+        });
+
         return fullTicket as ITicket;
       });
+
+      await this.safePublishEvent('TICKET_CREATED', context, {
+        ticketId: fullTicket.ticket_id,
+        userId: context.userId,
+        createdByUserId: context.userId,
+        createdAt: fullTicket.entered_at
+          ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+          : new Date().toISOString(),
+        source: 'api',
+        board_id: fullTicket.board_id,
+        priority_id: fullTicket.priority_id,
+        client_id: fullTicket.client_id,
+      });
+
+      return fullTicket;
     }
 
 
@@ -869,6 +1137,12 @@ export class TicketService extends BaseService<ITicket> {
           delete (cleanedData as any)[key];
         }
       });
+
+      // Close-rule override flags are request options, not ticket columns.
+      const overrideCloseRules = (cleanedData as any).override_close_rules === true;
+      const overrideCloseRulesReason = (cleanedData as any).override_close_rules_reason ?? null;
+      delete (cleanedData as any).override_close_rules;
+      delete (cleanedData as any).override_close_rules_reason;
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -901,6 +1175,55 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
       
+      // Pre-close validation gates: when this update flips the ticket from an
+      // open to a closed status, enforce the board's close rules before any
+      // writes. Surfaces as a 422 with structured failure details.
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
+        const nextStatus = await trx('statuses')
+          .where({ status_id: cleanedData.status_id, tenant: context.tenant })
+          .first();
+        const previousStatus = await trx('statuses')
+          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+          .first();
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          const merged = { ...currentTicket, ...cleanedData };
+          try {
+            await enforceTicketCloseRules(trx, context.tenant, {
+              ticket: {
+                ticket_id: id,
+                board_id: merged.board_id ?? null,
+                category_id: merged.category_id ?? null,
+                subcategory_id: merged.subcategory_id ?? null,
+                priority_id: merged.priority_id ?? null,
+                assigned_to: merged.assigned_to ?? null,
+              },
+              override: overrideCloseRules
+                ? {
+                    requested: true,
+                    reason: overrideCloseRulesReason,
+                    user: { user_id: context.userId, user_type: 'internal', tenant: context.tenant },
+                  }
+                : undefined,
+              actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+              source: TICKET_ACTIVITY_SOURCE.API,
+            });
+          } catch (error) {
+            if (error instanceof TicketCloseValidationError) {
+              throw new ValidationError(
+                'Ticket close rules not satisfied',
+                error.failures.map((f) => ({
+                  path: ['status_id'],
+                  rule: f.rule,
+                  message: f.message,
+                  ...(f.meta ?? {}),
+                }))
+              );
+            }
+            throw error;
+          }
+        }
+      }
+
       const updateData = {
         ...cleanedData,
         updated_by: context.userId,
@@ -982,6 +1305,46 @@ export class TicketService extends BaseService<ITicket> {
         changes: structuredChanges,
       });
 
+      // Activity-timeline row for REST API updates. Uses curated diff so
+      // only user-meaningful field changes produce a timeline entry; no-op
+      // updates result in no row.
+      const curated = await buildCuratedTicketDiffWithLabels(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as Record<string, unknown>,
+      );
+      if (hasCuratedChanges(curated)) {
+        const changedKeys = Object.keys(curated);
+        let activityEventType: string = TICKET_ACTIVITY_EVENT.UPDATED;
+        if (changedKeys.length === 1) {
+          const key = changedKeys[0];
+          if (key === 'status_id') activityEventType = TICKET_ACTIVITY_EVENT.STATUS_CHANGED;
+          else if (key === 'priority_id') activityEventType = TICKET_ACTIVITY_EVENT.PRIORITY_CHANGED;
+          else if (key === 'assigned_to') {
+            activityEventType =
+              (cleanedData as Record<string, unknown>).assigned_to == null
+                ? TICKET_ACTIVITY_EVENT.UNASSIGNED
+                : TICKET_ACTIVITY_EVENT.ASSIGNED;
+          } else if (key === 'board_id') activityEventType = TICKET_ACTIVITY_EVENT.BOARD_MOVED;
+          else if (key === 'response_state') activityEventType = TICKET_ACTIVITY_EVENT.RESPONSE_STATE_CHANGED;
+        }
+
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          eventType: activityEventType,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          changes: curated,
+        });
+      }
+
       return this.withDescriptionHtml(ticket as ITicket);
     });
   }
@@ -999,7 +1362,7 @@ export class TicketService extends BaseService<ITicket> {
   async createFromAsset(data: CreateTicketFromAssetData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
       const asset = await trx('assets')
         .where({ asset_id: data.asset_id, tenant: context.tenant })
@@ -1022,8 +1385,8 @@ export class TicketService extends BaseService<ITicket> {
         ]);
       }
 
-      // Create adapters for API service context
-      const eventPublisher = new ServerEventPublisher();
+      // Publish after the transaction commits so notification subscribers can
+      // read the newly-created ticket on their own connections.
       const analyticsTracker = new ServerAnalyticsTracker();
 
       // Use shared TicketModel for asset ticket creation
@@ -1040,16 +1403,21 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        eventPublisher,
+        undefined,
         analyticsTracker
       );
 
-      // Create API-specific asset association (additional to shared model association)
-      await trx('asset_ticket_associations').insert({
-        asset_id: data.asset_id,
-        ticket_id: ticketResult.ticket_id,
+      // Link the asset to the new ticket in asset_associations — the same table
+      // the UI and the ticket/asset association endpoints read. (The shared model
+      // only records created_from_asset in the ticket attributes.)
+      await trx('asset_associations').insert({
         tenant: context.tenant,
-        created_at: knex.raw('now()')
+        asset_id: data.asset_id,
+        entity_id: ticketResult.ticket_id,
+        entity_type: 'ticket',
+        relationship_type: 'affected',
+        created_by: context.userId,
+        created_at: new Date().toISOString()
       });
 
       // Get the full ticket data for return
@@ -1063,6 +1431,21 @@ export class TicketService extends BaseService<ITicket> {
 
       return fullTicket as ITicket;
     });
+
+    await this.safePublishEvent('TICKET_CREATED', context, {
+      ticketId: fullTicket.ticket_id,
+      userId: context.userId,
+      createdByUserId: context.userId,
+      createdAt: fullTicket.entered_at
+        ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+        : new Date().toISOString(),
+      source: 'api',
+      board_id: fullTicket.board_id,
+      priority_id: fullTicket.priority_id,
+      client_id: fullTicket.client_id,
+    });
+
+    return fullTicket;
   }
 
   /**
@@ -1162,9 +1545,16 @@ export class TicketService extends BaseService<ITicket> {
           created_by_name: comment.created_by_name || comment.author_contact_name || null,
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
+          // Threading fields (mobile threaded comments) — explicitly enumerated
+          // here since the compact branch does not spread the raw row.
+          thread_id: comment.thread_id ?? null,
+          parent_comment_id: comment.parent_comment_id ?? null,
+          deleted_at: comment.deleted_at ?? null,
         };
       }
 
+      // Full branch: select('tc.*') above means ...comment already carries
+      // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
         comment_text: comment.note,
@@ -1192,7 +1582,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
       const ticket = await trx('tickets')
         .where({ ticket_id: ticketId, tenant: context.tenant })
@@ -1202,20 +1592,109 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
+      const apiNowIso = new Date().toISOString();
+      const apiParentCommentId = data.parent_comment_id || null;
+      const apiIsReply = Boolean(apiParentCommentId);
+
+      let apiCommentId: string;
+      let apiThreadId: string;
+      let apiIsInternal: boolean;
+
+      if (apiIsReply) {
+        // Reply: attach to the parent's existing thread and inherit its
+        // visibility. Mirrors Comment.insert's parent/thread invariant — the
+        // native composer never sends is_internal for replies, so the
+        // schema-defaulted false is intentionally ignored here and the thread
+        // root's visibility is inherited instead.
+        const parent = await trx('comments as parent')
+          .join('comment_threads as thread', function () {
+            this.on('parent.tenant', 'thread.tenant')
+              .andOn('parent.thread_id', 'thread.thread_id');
+          })
+          .select(
+            'parent.ticket_id',
+            'parent.thread_id',
+            'parent.deleted_at',
+            'thread.is_internal as thread_is_internal'
+          )
+          .where('parent.tenant', context.tenant)
+          .where('parent.comment_id', apiParentCommentId)
+          .first();
+
+        if (!parent) {
+          throw new NotFoundError('Parent comment not found');
+        }
+        if (parent.ticket_id !== ticketId) {
+          throw new ValidationError('Parent comment must belong to the same ticket');
+        }
+        if (parent.deleted_at) {
+          throw new ValidationError('Cannot reply to a deleted comment');
+        }
+
+        const replyIds = await trx.raw('SELECT gen_random_uuid() AS comment_id');
+        const replyGeneratedId = replyIds.rows?.[0]?.comment_id as string | undefined;
+        if (!replyGeneratedId) {
+          throw new Error('Failed to generate comment identifier');
+        }
+
+        apiCommentId = replyGeneratedId;
+        apiThreadId = parent.thread_id;
+        apiIsInternal = Boolean(parent.thread_is_internal);
+      } else {
+        // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
+        const apiCommentIds = await trx.raw(
+          'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+        );
+        const apiGeneratedIds = apiCommentIds.rows?.[0] as
+          | { comment_id: string; thread_id: string }
+          | undefined;
+        if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
+          throw new Error('Failed to generate comment/thread identifiers');
+        }
+
+        apiCommentId = apiGeneratedIds.comment_id;
+        apiThreadId = apiGeneratedIds.thread_id;
+        apiIsInternal = data.is_internal || false;
+
+        await trx('comment_threads').insert({
+          tenant: context.tenant,
+          thread_id: apiThreadId,
+          ticket_id: ticketId,
+          project_task_id: null,
+          root_comment_id: apiCommentId,
+          is_internal: apiIsInternal,
+          reply_count: 0,
+          last_activity_at: apiNowIso,
+          created_at: apiNowIso,
+          created_by: context.userId || null,
+        });
+      }
+
       const commentData = {
-        comment_id: knex.raw('gen_random_uuid()'),
+        comment_id: apiCommentId,
+        thread_id: apiThreadId,
+        parent_comment_id: apiParentCommentId,
         ticket_id: ticketId,
         note: data.comment_text,
-        is_internal: data.is_internal || false,
+        is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
         tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()'),
+        created_at: apiNowIso,
+        updated_at: apiNowIso,
         metadata: data.metadata,
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
+
+      if (apiIsReply) {
+        await trx('comment_threads')
+          .where({ tenant: context.tenant, thread_id: apiThreadId })
+          .update({
+            reply_count: trx.raw('reply_count + 1'),
+            last_activity_at: apiNowIso,
+          });
+      }
 
       if (!comment.is_internal) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
@@ -1237,20 +1716,8 @@ export class TicketService extends BaseService<ITicket> {
 
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
-      // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
-        ticketId: ticketId,
-        userId: context.userId,
-        comment: {
-          id: comment.comment_id,
-          content: comment.note,
-          author: authorName,
-          isInternal: comment.is_internal
-        }
-      });
-
       // Map database fields to API response format
-      return {
+      const response = {
         ...comment,
         comment_text: comment.note,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -1259,7 +1726,27 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_name: null,
         author_contact_email: null
       };
+
+      return {
+        response,
+        eventPayload: {
+          ticketId: ticketId,
+          userId: context.userId,
+          comment: {
+            id: comment.comment_id,
+            content: comment.note,
+            author: authorName,
+            isInternal: comment.is_internal
+          }
+        }
+      };
     });
+
+    // Publish after the transaction commits so email and in-app notification
+    // subscribers can load the ticket/comment rows reliably.
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+
+    return result.response;
   }
 
   /**
@@ -1636,6 +2123,26 @@ export class TicketService extends BaseService<ITicket> {
                 .andWhere('cat.category_name', value);
           });
           break;
+        case 'tags':
+          if (Array.isArray(value) && value.length > 0) {
+            const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
+            query.whereExists(function() {
+              this.select('*')
+                  .from('tag_mappings as tm')
+                  .join('tag_definitions as td', function() {
+                    this.on('tm.tenant', '=', 'td.tenant')
+                        .andOn('tm.tag_id', '=', 'td.tag_id');
+                  })
+                  .whereRaw('tm.tagged_id = t.ticket_id')
+                  .andWhere('tm.tenant', query.client.raw('t.tenant'))
+                  .andWhere('tm.tagged_type', 'ticket')
+                  .whereRaw(
+                    `LOWER(td.tag_text) IN (${tagTexts.map(() => '?').join(', ')})`,
+                    tagTexts
+                  );
+            });
+          }
+          break;
         case 'search':
           if (this.searchableFields.length > 0) {
             query.where(subQuery => {
@@ -1743,5 +2250,418 @@ export class TicketService extends BaseService<ITicket> {
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Ticket bundling
+  //
+  // Mirrors the behaviour of the in-app bundle server actions
+  // (packages/tickets/src/actions/ticketBundleActions.ts) for the public REST
+  // surface. Permission is enforced by the controller (ticket:update / :read);
+  // these methods own tenant-scoped persistence, invariants, and workflow events.
+  // -------------------------------------------------------------------------
+
+  private async findBundleMasterIds(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<string[]> {
+    if (ticketIds.length === 0) return [];
+    const rows = await trx('tickets')
+      .distinct('master_ticket_id')
+      .where({ tenant })
+      .whereIn('master_ticket_id', ticketIds);
+    return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
+  }
+
+  private async assertChildrenAreNotMasters(trx: Knex.Transaction, tenant: string, childIds: string[]): Promise<void> {
+    const offending = await this.findBundleMasterIds(trx, tenant, childIds);
+    if (offending.length === 0) return;
+
+    const rows = await trx('tickets')
+      .select('ticket_number')
+      .where({ tenant })
+      .whereIn('ticket_id', offending);
+    const labels = rows
+      .map((r: any) => r.ticket_number)
+      .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
+    const listText = labels.length > 0 ? labels.join(', ') : offending.join(', ');
+    const prefix = offending.length === 1
+      ? `Ticket ${listText} is already a bundle master`
+      : `Tickets ${listText} are already bundle masters`;
+    throw new ConflictError(
+      `${prefix} and cannot be added as children. Unbundle them first, or use one of them as the master.`
+    );
+  }
+
+  async bundleTickets(
+    context: ServiceContext,
+    params: { masterTicketId: string; childTicketIds: string[]; mode: BundleMode }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[]; mode: BundleMode }> {
+    const uniqueChildIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
+    if (uniqueChildIds.length === 0) {
+      throw new ValidationError('Select at least one child ticket different from the master.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const tickets = await trx('tickets')
+        .select('ticket_id', 'ticket_number', 'master_ticket_id')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
+
+      const byId = new Map(tickets.map((t: any) => [t.ticket_id, t]));
+      if (!byId.has(params.masterTicketId)) {
+        throw new NotFoundError('Master ticket not found.');
+      }
+      for (const childId of uniqueChildIds) {
+        if (!byId.has(childId)) {
+          throw new NotFoundError(`Child ticket not found: ${childId}`);
+        }
+      }
+
+      const master = byId.get(params.masterTicketId);
+      if (master.master_ticket_id) {
+        throw new ValidationError('Cannot select a child ticket as the master.');
+      }
+
+      await this.assertChildrenAreNotMasters(trx, context.tenant, uniqueChildIds);
+
+      for (const childId of uniqueChildIds) {
+        const child = byId.get(childId);
+        if (child.master_ticket_id) {
+          throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
+        }
+      }
+
+      const updatedChildrenCount = await trx('tickets')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', uniqueChildIds)
+        .whereNull('master_ticket_id')
+        .update({
+          master_ticket_id: params.masterTicketId,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        });
+      if (updatedChildrenCount !== uniqueChildIds.length) {
+        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+      }
+
+      await trx('ticket_bundle_settings')
+        .insert({
+          tenant: context.tenant,
+          master_ticket_id: params.masterTicketId,
+          mode: params.mode,
+          reopen_on_child_reply: false,
+        })
+        .onConflict(['tenant', 'master_ticket_id'])
+        .merge({ mode: params.mode });
+
+      return { masterTicketId: params.masterTicketId, childTicketIds: uniqueChildIds, mode: params.mode };
+    });
+
+    const occurredAt = new Date().toISOString();
+    for (const childTicketId of result.childTicketIds) {
+      await this.safePublishEvent('TICKET_MERGED', context, {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: `bundle:${result.mode}`,
+      });
+    }
+
+    return result;
+  }
+
+  async addBundleChildren(
+    context: ServiceContext,
+    params: { masterTicketId: string; childTicketIds: string[] }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
+    const childIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
+    if (childIds.length === 0) {
+      throw new ValidationError('No child tickets provided.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const master = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .first();
+      if (!master) throw new NotFoundError('Master ticket not found.');
+      if (master.master_ticket_id) throw new ValidationError('Cannot add children to a bundled child ticket.');
+
+      const children = await trx('tickets')
+        .select('ticket_id', 'ticket_number', 'master_ticket_id')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', childIds);
+      const byId = new Map(children.map((t: any) => [t.ticket_id, t]));
+      for (const childId of childIds) {
+        const child = byId.get(childId);
+        if (!child) throw new NotFoundError(`Child ticket not found: ${childId}`);
+        if (child.master_ticket_id) throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
+      }
+
+      await this.assertChildrenAreNotMasters(trx, context.tenant, childIds);
+
+      const updatedChildrenCount = await trx('tickets')
+        .where({ tenant: context.tenant })
+        .whereIn('ticket_id', childIds)
+        .whereNull('master_ticket_id')
+        .update({
+          master_ticket_id: params.masterTicketId,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        });
+      if (updatedChildrenCount !== childIds.length) {
+        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
+      }
+
+      return { masterTicketId: params.masterTicketId, childTicketIds: childIds };
+    });
+
+    const occurredAt = new Date().toISOString();
+    for (const childTicketId of result.childTicketIds) {
+      await this.safePublishEvent('TICKET_MERGED', context, {
+        sourceTicketId: childTicketId,
+        targetTicketId: result.masterTicketId,
+        mergedAt: occurredAt,
+        reason: 'bundle:added_children',
+      });
+    }
+
+    return result;
+  }
+
+  async promoteBundleMaster(
+    context: ServiceContext,
+    params: { oldMasterTicketId: string; newMasterTicketId: string }
+  ): Promise<{ oldMasterTicketId: string; newMasterTicketId: string }> {
+    if (params.oldMasterTicketId === params.newMasterTicketId) {
+      throw new ValidationError('New master ticket must be different from the current master.');
+    }
+
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const oldMaster = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .first();
+      if (!oldMaster) throw new NotFoundError('Old master ticket not found');
+      if (oldMaster.master_ticket_id) throw new ValidationError('Old master ticket is not a master');
+
+      const newMaster = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .first();
+      if (!newMaster) throw new NotFoundError('New master ticket not found');
+      if (newMaster.master_ticket_id !== params.oldMasterTicketId) {
+        throw new ValidationError('New master ticket must be a child of the current master');
+      }
+
+      const promotedMasterConflicts = await this.findBundleMasterIds(trx, context.tenant, [params.newMasterTicketId]);
+      if (promotedMasterConflicts.length > 0) {
+        throw new ConflictError('Promoted ticket already has children of its own.');
+      }
+
+      const now = new Date().toISOString();
+
+      const settings = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        .first();
+      if (settings) {
+        await trx('ticket_bundle_settings')
+          .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+          .delete();
+        await trx('ticket_bundle_settings')
+          .insert({ ...settings, master_ticket_id: params.newMasterTicketId })
+          .onConflict(['tenant', 'master_ticket_id'])
+          .merge({ mode: settings.mode, reopen_on_child_reply: settings.reopen_on_child_reply });
+      }
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: params.oldMasterTicketId })
+        .andWhereNot({ ticket_id: params.newMasterTicketId })
+        .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.newMasterTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: now });
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.oldMasterTicketId })
+        .update({ master_ticket_id: params.newMasterTicketId, updated_by: context.userId, updated_at: now });
+
+      return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
+    });
+
+    await this.safePublishEvent('TICKET_MERGED', context, {
+      sourceTicketId: result.oldMasterTicketId,
+      targetTicketId: result.newMasterTicketId,
+      mergedAt: new Date().toISOString(),
+      reason: 'bundle:promote_master',
+    });
+
+    return result;
+  }
+
+  async updateBundleSettings(
+    context: ServiceContext,
+    params: { masterTicketId: string; mode?: BundleMode; reopenOnChildReply?: boolean }
+  ): Promise<{ master_ticket_id: string; mode: BundleMode; reopen_on_child_reply: boolean }> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .first();
+      if (!existing) throw new NotFoundError('Bundle settings not found');
+
+      const update: any = {};
+      if (params.mode) update.mode = params.mode;
+      if (params.reopenOnChildReply !== undefined) update.reopen_on_child_reply = params.reopenOnChildReply;
+
+      if (Object.keys(update).length === 0) {
+        return {
+          master_ticket_id: existing.master_ticket_id,
+          mode: existing.mode,
+          reopen_on_child_reply: existing.reopen_on_child_reply,
+        };
+      }
+
+      const [updated] = await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .update(update)
+        .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
+
+      return updated;
+    });
+  }
+
+  async removeBundleChild(
+    context: ServiceContext,
+    params: { childTicketId: string }
+  ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const child = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .first();
+
+      if (!child) throw new NotFoundError('Ticket not found');
+      if (!child.master_ticket_id) throw new ValidationError('Ticket is not bundled');
+
+      const masterTicketId = child.master_ticket_id;
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: params.childTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      const [{ count }] = await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .count('ticket_id as count');
+      const remaining = Number.parseInt(String(count), 10) || 0;
+      if (remaining === 0) {
+        await trx('ticket_bundle_settings')
+          .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+          .delete();
+      }
+
+      return { masterTicketId, childTicketId: params.childTicketId, remainingChildren: remaining };
+    });
+
+    await this.safePublishEvent('TICKET_SPLIT', context, {
+      originalTicketId: result.masterTicketId,
+      newTicketIds: [result.childTicketId],
+      splitAt: new Date().toISOString(),
+      reason: 'bundle:remove_child',
+    });
+
+    return result;
+  }
+
+  async unbundleMaster(
+    context: ServiceContext,
+    params: { masterTicketId: string }
+  ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
+    const { knex } = await this.getKnex();
+    const result = await withTransaction(knex, async (trx) => {
+      const master = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: params.masterTicketId })
+        .first();
+      if (!master) throw new NotFoundError('Master ticket not found');
+      if (master.master_ticket_id) throw new ValidationError('Cannot unbundle from a child ticket id');
+
+      const childTicketRows = await trx('tickets')
+        .select('ticket_id')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId });
+      const childTicketIds = childTicketRows.map((r: any) => r.ticket_id);
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      await trx('ticket_bundle_settings')
+        .where({ tenant: context.tenant, master_ticket_id: params.masterTicketId })
+        .delete();
+
+      return { masterTicketId: params.masterTicketId, childTicketIds };
+    });
+
+    if (result.childTicketIds.length > 0) {
+      await this.safePublishEvent('TICKET_SPLIT', context, {
+        originalTicketId: result.masterTicketId,
+        newTicketIds: result.childTicketIds,
+        splitAt: new Date().toISOString(),
+        reason: 'bundle:unbundle_master',
+      });
+    }
+
+    return result;
+  }
+
+  async getBundle(context: ServiceContext, ticketId: string): Promise<BundleView> {
+    const { knex } = await this.getKnex();
+    const memberColumns = ['ticket_id', 'ticket_number', 'title', 'status_id', 'client_id'];
+
+    return withTransaction(knex, async (trx) => {
+      const ticket = await trx('tickets')
+        .select('ticket_id', 'master_ticket_id')
+        .where({ tenant: context.tenant, ticket_id: ticketId })
+        .first();
+      if (!ticket) throw new NotFoundError('Ticket not found');
+
+      const masterTicketId: string = ticket.master_ticket_id || ticket.ticket_id;
+
+      const master = await trx('tickets')
+        .select(memberColumns)
+        .where({ tenant: context.tenant, ticket_id: masterTicketId })
+        .first();
+
+      const children = await trx('tickets')
+        .select(memberColumns)
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .orderBy('ticket_number', 'asc');
+
+      const settingsRow = await trx('ticket_bundle_settings')
+        .select('mode', 'reopen_on_child_reply')
+        .where({ tenant: context.tenant, master_ticket_id: masterTicketId })
+        .first();
+
+      let role: BundleView['role'];
+      if (ticket.master_ticket_id) {
+        role = 'child';
+      } else {
+        role = children.length > 0 ? 'master' : 'standalone';
+      }
+
+      return {
+        role,
+        master_ticket_id: masterTicketId,
+        master: master ?? null,
+        children,
+        settings: settingsRow
+          ? { mode: settingsRow.mode, reopen_on_child_reply: settingsRow.reopen_on_child_reply }
+          : null,
+      };
+    });
   }
 }

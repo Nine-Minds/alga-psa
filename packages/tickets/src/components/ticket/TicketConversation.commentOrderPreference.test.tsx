@@ -14,7 +14,13 @@ vi.mock('next/dynamic', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback?: string | Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    },
   }),
 }));
 
@@ -76,6 +82,12 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
   uploadDocument: vi.fn(),
 }));
 
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({
+    deleteDocument: vi.fn(),
+  }),
+}));
+
 vi.mock('react-hot-toast', () => ({
   toast: {
     error: vi.fn(),
@@ -115,8 +127,20 @@ const defaultProps: TicketConversationProps = {
   id: 'ticket-conversation',
   ticket: { ticket_id: 'ticket-1', tenant: 'tenant-1' } as any,
   conversations: [
-    { comment_id: 'comment-1', note: 'Oldest', is_internal: false, is_resolution: false } as any,
-    { comment_id: 'comment-2', note: 'Newest', is_internal: false, is_resolution: false } as any,
+    {
+      comment_id: 'comment-1',
+      note: 'Oldest',
+      is_internal: false,
+      is_resolution: false,
+      created_at: '2026-05-13T09:00:00.000Z',
+    } as any,
+    {
+      comment_id: 'comment-2',
+      note: 'Newest',
+      is_internal: false,
+      is_resolution: false,
+      created_at: '2026-05-13T10:00:00.000Z',
+    } as any,
   ],
   documents: [],
   userMap: {},
@@ -156,6 +180,17 @@ describe('TicketConversation comment order preference', () => {
       value: localStorageMock,
       configurable: true,
     });
+    Object.defineProperty(window, 'IntersectionObserver', {
+      // Must be constructible: the component calls `new IntersectionObserver(...)`.
+      value: class {
+        observe = vi.fn();
+        unobserve = vi.fn();
+        disconnect = vi.fn();
+        takeRecords = vi.fn(() => []);
+        constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
+      },
+      configurable: true,
+    });
     vi.clearAllMocks();
   });
 
@@ -180,5 +215,55 @@ describe('TicketConversation comment order preference', () => {
 
     expect(window.localStorage.getItem(TICKET_CONVERSATION_ORDER_STORAGE_KEY)).toBe('true');
     expect(getRenderedCommentOrder()).toEqual(['comment-2', 'comment-1']);
+  });
+
+  it('T056: toggles thread order by last activity while replies stay chronological', () => {
+    renderConversation({
+      defaultNewestFirst: false,
+      conversations: [
+        {
+          comment_id: 'old-thread-root',
+          thread_id: 'old-thread',
+          parent_comment_id: null,
+          note: 'Old thread root',
+          is_internal: false,
+          is_resolution: false,
+          created_at: '2026-05-13T09:00:00.000Z',
+        } as any,
+        {
+          comment_id: 'old-thread-reply',
+          thread_id: 'old-thread',
+          parent_comment_id: 'old-thread-root',
+          note: 'Old thread reply',
+          is_internal: false,
+          is_resolution: false,
+          created_at: '2026-05-13T13:00:00.000Z',
+        } as any,
+        {
+          comment_id: 'new-thread-root',
+          thread_id: 'new-thread',
+          parent_comment_id: null,
+          note: 'New thread root',
+          is_internal: false,
+          is_resolution: false,
+          created_at: '2026-05-13T10:00:00.000Z',
+        } as any,
+      ],
+    });
+
+    expect(getRenderedCommentOrder()).toEqual([
+      'new-thread-root',
+      'old-thread-root',
+      'old-thread-reply',
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /oldest first/i }));
+
+    expect(window.localStorage.getItem(TICKET_CONVERSATION_ORDER_STORAGE_KEY)).toBe('true');
+    expect(getRenderedCommentOrder()).toEqual([
+      'old-thread-root',
+      'old-thread-reply',
+      'new-thread-root',
+    ]);
   });
 });

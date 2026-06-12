@@ -26,7 +26,26 @@ type StreamFunctionProposalPayload = {
   modelMessages?: Array<Record<string, unknown>>;
 };
 
+type StreamToolExecutedPayload = {
+  type: 'tool_executed';
+  function: StreamFunctionMetadata;
+  assistantPreview: string;
+  assistantReasoning?: string;
+  functionCall: StreamFunctionCallInfo;
+  nextMessages: Array<Record<string, unknown>>;
+  modelMessages?: Array<Record<string, unknown>>;
+};
+
+type StreamContinuationPayload = {
+  type: 'continuation_available';
+  reason: string;
+  nextMessages: Array<Record<string, unknown>>;
+  modelMessages?: Array<Record<string, unknown>>;
+};
+
 export type SseFunctionProposal = StreamFunctionProposalPayload;
+export type SseToolExecuted = StreamToolExecutedPayload;
+export type SseContinuationAvailable = StreamContinuationPayload;
 
 type StreamEventPayload = {
   type?: unknown;
@@ -46,6 +65,8 @@ export type SseReadHandlers = {
   onToken?: (token: string, accumulated: string) => void;
   onReasoning?: (token: string, accumulated: string) => void;
   onToolCalls?: (proposal: StreamFunctionProposalPayload) => void;
+  onToolExecuted?: (event: StreamToolExecutedPayload) => void;
+  onContinuationAvailable?: (event: StreamContinuationPayload) => void;
   onDone?: (accumulated: string) => void;
 };
 
@@ -100,7 +121,7 @@ export async function readAssistantContentFromSse(
         continue;
       }
 
-      if (eventType === 'function_proposed') {
+      if (eventType === 'function_proposed' || eventType === 'tool_executed') {
         const fn = payload.function;
         const functionCall = payload.functionCall;
         const nextMessages = payload.nextMessages;
@@ -113,7 +134,19 @@ export async function readAssistantContentFromSse(
           !Array.isArray(functionCall) &&
           Array.isArray(nextMessages)
         ) {
-          handlers.onToolCalls?.(payload as StreamFunctionProposalPayload);
+          if (eventType === 'function_proposed') {
+            handlers.onToolCalls?.(payload as StreamFunctionProposalPayload);
+          } else {
+            handlers.onToolExecuted?.(payload as StreamToolExecutedPayload);
+          }
+        }
+        continue;
+      }
+
+      if (eventType === 'continuation_available') {
+        const nextMessages = payload.nextMessages;
+        if (Array.isArray(nextMessages)) {
+          handlers.onContinuationAvailable?.(payload as StreamContinuationPayload);
         }
         continue;
       }

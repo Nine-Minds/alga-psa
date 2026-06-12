@@ -92,6 +92,16 @@ const nullProjects = await knex.raw(`
 exports.config = { transaction: false };
 ```
 
+### Issue 4: ALTER ... SET NOT NULL Fails After Distributing a Non-Empty Table
+
+**Symptom**: `ALTER TABLE x ALTER COLUMN c SET NOT NULL` fails with `column "c" of relation "x" contains null values`, even though every `SELECT ... WHERE c IS NULL` (including per-shard checks and backfills) returns zero rows and the distributed data is fully populated.
+
+**Cause**: `create_distributed_table('x', ...)` was run while `x` already contained rows, and the official follow-up was **not** run. Citus copies the existing rows into the shard tables (`x_<shardid>`) but **leaves the originals in the coordinator's physical heap for the parent relation**. Those shadow rows are unreachable by every Citus-routed statement (all DML is rewritten to the shards), so backfills and `SELECT` checks correctly see them as gone. But `ALTER TABLE ... SET NOT NULL` is core PostgreSQL DDL — `ATRewriteTable` scans the parent relation's physical heap directly and trips over the stranded rows' NULL values.
+
+**Solution**: Run Citus's supported cleanup, `truncate_local_data_after_distributing_table('x')`, after distributing the table. It empties only the coordinator-local parent heap of distributed tables — never shard data. If a **non-distributed** table holds an FK referencing `x`, the function refuses to run (it will not implicitly TRUNCATE-cascade a local table). The correct fix is to make that referrer a proper distributed table co-located with `x` (not to drop/recreate the FK, and never to mutate `pg_dist_*` catalogs). See `server/migrations/20260513100800_distribute_email_reply_tokens.cjs`.
+
+**The rule**: any migration that runs `create_distributed_table()` on a table that may already contain rows MUST immediately follow with `truncate_local_data_after_distributing_table()` on that table. Skipping it is invisible until the first parent-heap-scanning DDL (like `SET NOT NULL`) runs — possibly many migrations later.
+
 ## Best Practices
 
 ### 1. Always Check for Citus (Safely)
@@ -193,6 +203,18 @@ console.log('Waiting for distributed changes to propagate...');
 await new Promise(resolve => setTimeout(resolve, 5000));
 ```
 
+### 7. Truncate Local Data After Distributing a Non-Empty Table
+
+Whenever a migration distributes a table that may already hold rows, follow it immediately with the official cleanup:
+
+```javascript
+await knex.raw("SELECT create_distributed_table('x', 'tenant', colocate_with => 'y')");
+// REQUIRED follow-up — strands no shadow rows in the coordinator parent heap:
+await knex.raw('SELECT truncate_local_data_after_distributing_table(?::regclass)', ['x']);
+```
+
+Guard it so it stays a no-op on clean installs and re-runs: skip when Citus is absent, when the table is not distributed, or when `pg_relation_size('x'::regclass)` is already 0 (a cleanly-distributed table has a 0-byte parent heap). See Issue 4 for why omitting this surfaces as a confusing `SET NOT NULL` failure later.
+
 ## Testing Migrations
 
 ### Test on Both PostgreSQL and Citus
@@ -223,6 +245,7 @@ if (isCitus.rows[0]?.is_distributed) {
 Before deploying a migration:
 
 - [ ] Migration is idempotent (can be run multiple times safely)
+- [ ] If it distributes a possibly-non-empty table, it calls `truncate_local_data_after_distributing_table()` right after (see Issue 4)
 - [ ] Tested on both PostgreSQL and CitusDB
 - [ ] Large backfills include delays for propagation
 - [ ] DDL changes check for Citus and handle appropriately

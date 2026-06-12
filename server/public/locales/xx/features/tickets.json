@@ -39,7 +39,8 @@
     "breached": "11111",
     "paused": "11111",
     "allResponseStatuses": "11111",
-    "responseStatus": "11111"
+    "responseStatus": "11111",
+    "board": "11111"
   },
   "create": {
     "title": "11111",
@@ -334,6 +335,7 @@
   "dashboard": {
     "title": "11111",
     "addTicket": "11111",
+    "shareTooltip": "11111",
     "exportCsv": "11111",
     "bundledToggle": "11111",
     "exportSelectedTooltip_one": "11111 {{count}} 11111",
@@ -376,7 +378,10 @@
       "onTrack": "11111",
       "breached": "11111",
       "paused": "11111",
-      "bundled": "11111"
+      "bundled": "11111",
+      "activeBoards": "11111",
+      "inactiveBoards": "11111",
+      "allBoards": "11111"
     },
     "selection": {
       "pageSelected_one": "11111 {{count}} 11111",
@@ -393,13 +398,60 @@
       "decrease": "11111",
       "increase": "11111",
       "reset": "11111"
-    }
+    },
+    "print": {
+      "action": "11111",
+      "selectedAction_one": "11111 {{count}} 11111",
+      "selectedAction_other": "11111 {{count}} 11111",
+      "title": "11111",
+      "selectedTitle_one": "11111 {{count}} 11111",
+      "selectedTitle_other": "11111 {{count}} 11111",
+      "subtitle_one": "11111 {{count}} 11111",
+      "subtitle_other": "11111 {{count}} 11111",
+      "noTickets": "11111",
+      "columns": {
+        "ticket": "11111",
+        "title": "11111",
+        "client": "11111",
+        "status": "11111",
+        "priority": "11111",
+        "assigned": "11111",
+        "dueDate": "11111"
+      },
+      "emptyValue": "11111",
+      "noDueDate": "11111",
+      "values": {
+        "hasSla": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "selectedTitle": "11111 {{count}} 11111",
+        "description": "11111"
+      }
+    },
+    "exportSelectedAction": "11111 {{count}} 11111",
+    "exportAction": "11111",
+    "importAction": "11111"
   },
   "bulk": {
-    "moveToBoard": "11111",
-    "deleteSelected_one": "11111 {{count}} 11111",
-    "deleteSelected_other": "11111 {{count}} 11111",
     "bundleTickets": "11111",
+    "actionBar": {
+      "selectedCount_one": "11111 {{count}} 11111",
+      "selectedCount_other": "11111 {{count}} 11111",
+      "move": "11111",
+      "bundle": "11111",
+      "delete": "11111",
+      "clear": "11111",
+      "bundleNeedsTwo": "11111",
+      "assign": "11111",
+      "status": "11111",
+      "priority": "11111",
+      "tags": "11111",
+      "dueDate": "11111",
+      "statusDisabledMultiBoard": "11111",
+      "statusResolvingBoards": "11111",
+      "more": "11111"
+    },
     "moveDialogTitle": "11111",
     "moveDialogDescription": "11111",
     "destinationBoard": "11111",
@@ -499,7 +551,81 @@
     },
     "auth": {
       "moveRequired": "11111",
-      "deleteRequired": "11111"
+      "deleteRequired": "11111",
+      "assignRequired": "11111",
+      "tagsRequired": "11111",
+      "dueDateRequired": "11111",
+      "statusRequired": "11111",
+      "priorityRequired": "11111"
+    },
+    "assign": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "unassigned": "11111",
+      "teamHint": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "submitting": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111",
+      "partialFailure": "11111",
+      "failure": "11111",
+      "failedHeading": "11111"
+    },
+    "tags": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "placeholder": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "submitting": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111",
+      "partialFailure": "11111",
+      "failure": "11111",
+      "failedHeading": "11111"
+    },
+    "dueDate": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "modeSet": "11111",
+      "modeClear": "11111",
+      "placeholder": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "submitting": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111",
+      "partialFailure": "11111",
+      "failure": "11111",
+      "failedHeading": "11111"
+    },
+    "status": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "placeholder": "11111",
+      "loading": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "submitting": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111",
+      "partialFailure": "11111",
+      "failure": "11111",
+      "failedHeading": "11111"
+    },
+    "priority": {
+      "dialogTitle": "11111",
+      "message": "11111 {{count}} 11111",
+      "placeholder": "11111",
+      "confirm_one": "11111 {{count}} 11111",
+      "confirm_other": "11111 {{count}} 11111",
+      "submitting": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111",
+      "partialFailure": "11111",
+      "failure": "11111",
+      "failedHeading": "11111"
     }
   },
   "quickAdd": {
@@ -1127,5 +1253,34 @@
       "hrs": "11111",
       "min": "11111"
     }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "11111 {{name}} 11111",
+      "multiple_one": "11111 {{name}} 11111 {{count}} 11111",
+      "multiple_other": "11111 {{name}} 11111 {{count}} 11111"
+    },
+    "remoteFieldUpdated": "11111 {{name}} 11111 {{field}} 11111",
+    "connection": {
+      "reconnecting": "11111",
+      "unavailable": "11111"
+    }
+  },
+  "delete": {
+    "success": "11111 {{number}} 11111",
+    "error": "11111",
+    "validationError": "11111"
+  },
+  "boardPicker": {
+    "inactiveBadge": "11111",
+    "noBoard": "11111",
+    "selectedCount_one": "11111 {{count}} 11111",
+    "selectedCount_other": "11111 {{count}} 11111",
+    "excludingPrefix": "11111 {{name}} 11111",
+    "excludingCount_one": "11111 {{count}} 11111",
+    "excludingCount_other": "11111 {{count}} 11111",
+    "placeholder": "11111",
+    "title": "11111",
+    "searchPlaceholder": "11111"
   }
 }

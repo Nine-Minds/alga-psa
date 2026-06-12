@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect } from 'vitest';
+import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
 import { TestContext } from '../../../../test-utils/testContext';
@@ -22,6 +22,10 @@ describe('CSV export invoice selection', () => {
 
   beforeEach(async () => {
     ctx = await helpers.beforeEach();
+
+    // The billing-package selector resolves tenant via @alga-psa/db.
+    const algaDbModule = await import('@alga-psa/db');
+    vi.spyOn(algaDbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
     await ctx.db('tenant_external_entity_mappings').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();

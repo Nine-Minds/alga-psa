@@ -55,13 +55,89 @@ const Comment = {
         }
       }
 
+      if (!comment.ticket_id) {
+        throw new Error('ticket_id is required for comments');
+      }
+
+      const now = new Date().toISOString();
+      const parentCommentId = comment.parent_comment_id || null;
+      const isReply = Boolean(parentCommentId);
+      let commentId = comment.comment_id;
+      let threadId = comment.thread_id;
+
+      if (isReply) {
+        const parent = await knexOrTrx('comments as parent')
+          .join('comment_threads as thread', function() {
+            this.on('parent.tenant', 'thread.tenant')
+              .andOn('parent.thread_id', 'thread.thread_id');
+          })
+          .select(
+            'parent.comment_id',
+            'parent.ticket_id',
+            'parent.thread_id',
+            'parent.deleted_at',
+            'thread.is_internal as thread_is_internal'
+          )
+          .where('parent.tenant', tenant)
+          .where('parent.comment_id', parentCommentId)
+          .first();
+
+        if (!parent) {
+          throw new Error('Parent comment not found');
+        }
+
+        if (parent.ticket_id !== comment.ticket_id) {
+          throw new Error('Parent comment must belong to the same ticket');
+        }
+
+        if (parent.deleted_at) {
+          throw new Error('Cannot reply to a deleted comment');
+        }
+
+        const threadIsInternal = Boolean(parent.thread_is_internal);
+        if (comment.is_internal == null) {
+          comment.is_internal = threadIsInternal;
+        } else if (Boolean(comment.is_internal) !== threadIsInternal) {
+          throw new Error('Reply visibility must match the thread root visibility');
+        }
+
+        const idsResult = await knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id');
+        commentId = commentId || idsResult.rows?.[0]?.comment_id;
+        threadId = parent.thread_id;
+      } else {
+        const idsResult = await knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
+        const generatedIds = idsResult.rows?.[0];
+        commentId = commentId || generatedIds?.comment_id;
+        threadId = threadId || generatedIds?.thread_id;
+
+        await knexOrTrx('comment_threads').insert({
+          tenant,
+          thread_id: threadId,
+          ticket_id: comment.ticket_id,
+          project_task_id: null,
+          root_comment_id: commentId,
+          is_internal: Boolean(comment.is_internal),
+          reply_count: 0,
+          last_activity_at: now,
+          created_at: now,
+          created_by: comment.user_id || null,
+        });
+      }
+
+      if (!commentId || !threadId) {
+        throw new Error('Failed to generate comment/thread identifiers');
+      }
+
       // Explicitly include markdown_content in the insert operation
       const result = await knexOrTrx<IComment>('comments')
         .insert({
           ...comment,
+          comment_id: commentId,
+          thread_id: threadId,
+          parent_comment_id: parentCommentId,
           tenant: tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: now,
+          updated_at: now,
           is_system_generated: Boolean((comment as any).is_system_generated),
           markdown_content: comment.markdown_content || '[No markdown content]',
         })
@@ -70,6 +146,15 @@ const Comment = {
       const inserted = result[0] as any;
       if (!inserted || !inserted.comment_id) {
         throw new Error('Failed to get comment_id from inserted record');
+      }
+
+      if (isReply) {
+        await knexOrTrx('comment_threads')
+          .where({ tenant, thread_id: threadId })
+          .update({
+            reply_count: knexOrTrx.raw('reply_count + 1'),
+            last_activity_at: now,
+          });
       }
 
       return inserted.comment_id as string;
@@ -133,7 +218,49 @@ const Comment = {
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => {
     try {
+      const existingComment = await knexOrTrx<IComment>('comments')
+        .select('comment_id', 'parent_comment_id', 'thread_id')
+        .where('comment_id', id)
+        .andWhere('tenant', tenant)
+        .first();
+
+      if (!existingComment) {
+        return;
+      }
+
+      const child = await knexOrTrx<IComment>('comments')
+        .select('comment_id')
+        .where('parent_comment_id', id)
+        .andWhere('tenant', tenant)
+        .first();
+
+      if (child) {
+        const now = new Date().toISOString();
+        await knexOrTrx<IComment>('comments')
+          .where('comment_id', id)
+          .andWhere('tenant', tenant)
+          .update({
+            note: '[deleted]',
+            markdown_content: '[deleted]',
+            deleted_at: now,
+            updated_at: now,
+          });
+        return;
+      }
+
       await knexOrTrx<IComment>('comments').where('comment_id', id).andWhere('tenant', tenant).del();
+
+      if (existingComment.parent_comment_id) {
+        await knexOrTrx('comment_threads')
+          .where({ tenant, thread_id: existingComment.thread_id })
+          .update({
+            reply_count: knexOrTrx.raw('GREATEST(reply_count - 1, 0)'),
+          });
+      } else {
+        await knexOrTrx('comment_threads')
+          .where({ tenant, thread_id: existingComment.thread_id })
+          .del();
+      }
     } catch (error) {
       console.error(`Error deleting comment with id ${id}:`, error);
       throw error;
@@ -142,4 +269,3 @@ const Comment = {
 };
 
 export default Comment;
-

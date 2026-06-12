@@ -110,7 +110,7 @@ describe('workflow-runtime-v2 activities', () => {
     });
     mocks.getRunById.mockResolvedValue({
       run_id: 'run-1',
-      tenant_id: 'tenant-1',
+      tenant: 'tenant-1',
     });
     mocks.getLatestStepByPath.mockResolvedValue(null);
     mocks.createRunStep.mockResolvedValue({ step_id: 'step-1' });

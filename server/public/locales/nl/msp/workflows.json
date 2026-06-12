@@ -27,6 +27,7 @@
     "close": "Sluiten"
   },
   "runList": {
+    "shareTooltip": "Afdrukken en exporteren",
     "quickRanges": {
       "last24h": "Laatste 24 uur",
       "last7d": "Laatste 7 dagen"
@@ -56,7 +57,6 @@
       "runNow": "Nu uitvoeren",
       "exportCsv": "CSV exporteren",
       "refresh": "Vernieuwen",
-      "resumeSelected": "Selectie hervatten ({{count}})",
       "cancelSelected": "Selectie annuleren ({{count}})",
       "clearSelection": "Selectie wissen",
       "details": "Details",
@@ -84,14 +84,10 @@
       "empty": "Geen uitvoeringen voldoen aan de huidige filters."
     },
     "bulk": {
-      "resumeTitle": "Geselecteerde uitvoeringen hervatten",
-      "resumeMessage": "{{count}} geselecteerde uitvoering(en) hervatten?",
       "cancelTitle": "Geselecteerde uitvoeringen annuleren",
       "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
       "reasonLabel": "Reden",
-      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
-      "resumeConfirm": "Uitvoeringen hervatten",
       "cancelConfirm": "Uitvoeringen annuleren"
     },
     "toasts": {
@@ -105,12 +101,29 @@
       "selectRunsForBulkAction": "Selecteer uitvoeringen om deze actie uit te voeren.",
       "bulkReasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
       "noEligibleRuns": "Geen van de geselecteerde uitvoeringen komt in aanmerking voor die actie.",
-      "bulkResumeFailedCount": "Kan {{count}} uitvoering(en) niet hervatten.",
       "bulkCancelFailedCount": "Kan {{count}} uitvoering(en) niet annuleren.",
-      "bulkResumeSuccessCount": "{{count}} uitvoering(en) hervat.",
       "bulkCancelSuccessCount": "{{count}} uitvoering(en) geannuleerd.",
       "bulkSkippedIneligibleCount": "{{count}} niet-geschikte uitvoering(en) overgeslagen.",
       "bulkActionFailed": "Bulkactie mislukt"
+    },
+    "print": {
+      "title": "Workflow-runs",
+      "selectedTitle": "Geselecteerde workflow-runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "Geen workflow-runs om af te drukken",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Versie",
+        "status": "Status",
+        "started": "Gestart",
+        "updated": "Bijgewerkt",
+        "duration": "Duur"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van workflow-uitvoeringen."
+      }
     }
   },
   "runDetails": {
@@ -123,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Hervatten",
       "cancel": "Annuleren",
       "export": "Exporteren",
-      "retry": "Opnieuw proberen",
       "replay": "Opnieuw afspelen",
-      "requeueEvent": "Gebeurtenis opnieuw in de wachtrij plaatsen",
       "close": "Sluiten",
       "view": "Bekijken",
       "apply": "Toepassen",
@@ -247,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Reden",
-      "resumeTitle": "Workflow-uitvoering hervatten",
-      "resumeMessage": "Deze uitvoering nu hervatten?",
-      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
       "cancelTitle": "Workflowuitvoering annuleren",
       "cancelMessage": "Deze uitvoering annuleren? Dit kan niet ongedaan worden gemaakt.",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
       "cancelConfirm": "Uitvoering annuleren",
-      "retryTitle": "Workflow-uitvoering opnieuw proberen",
-      "retryMessage": "Deze uitvoering hervatten vanaf de laatste mislukte stap?",
-      "retryReasonPlaceholder": "Geef een reden voor opnieuw proberen",
-      "retryConfirm": "Uitvoering opnieuw proberen",
       "replayTitle": "Workflowuitvoering opnieuw afspelen",
       "replayMessage": "Deze uitvoering herhalen met een nieuwe payload.",
       "replayReasonPlaceholder": "Geef een reden voor herhaling",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Uitvoering herhalen",
-      "requeueTitle": "Gebeurteniswacht opnieuw in de wachtrij plaatsen",
-      "requeueMessage": "De meest recente gebeurteniswacht voor deze uitvoering opnieuw in de wachtrij plaatsen?",
-      "requeueReasonPlaceholder": "Geef een reden voor opnieuw in de wachtrij plaatsen",
-      "requeueConfirm": "Wacht opnieuw in de wachtrij plaatsen"
+      "replayConfirm": "Uitvoering herhalen"
     },
     "toasts": {
       "loadRunDetailsFailed": "Kan uitvoeringsdetails niet laden",
@@ -275,21 +274,19 @@
       "logExportReady": "Logexport gereed",
       "exportLogsFailed": "Kan logs niet exporteren",
       "reasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
-      "runResumed": "Uitvoering hervat",
-      "resumeRunFailed": "Kan uitvoering niet hervatten",
       "runCanceled": "Uitvoering geannuleerd",
       "cancelRunFailed": "Kan uitvoering niet annuleren",
       "runExportReady": "Uitvoeringsexport gereed",
       "exportRunFailed": "Kan uitvoering niet exporteren",
-      "runRetryStarted": "Nieuwe poging gestart",
-      "retryRunFailed": "Kan uitvoering niet opnieuw proberen",
       "replayPayloadInvalid": "Herhalingspayload moet geldige JSON zijn.",
       "runReplayStarted": "Herhaling van uitvoering gestart",
       "replayRunFailed": "Kan uitvoering niet herhalen",
-      "eventWaitRequeued": "Gebeurteniswacht opnieuw in de wachtrij geplaatst",
-      "requeueEventWaitFailed": "Kan gebeurteniswacht niet opnieuw in de wachtrij plaatsen",
       "auditExportReady": "Auditexport gereed",
       "exportAuditLogsFailed": "Kan auditlogs niet exporteren"
+    },
+    "queuedWarning": {
+      "title": "In wachtrij — wachten op een workflow-worker",
+      "description": "Deze uitvoering is meer dan een minuut geleden gestart, maar er zijn nog geen stappen uitgevoerd. Controleer of de workflow-workerservice actief is en verbonden met Temporal."
     }
   },
   "runDialog": {
@@ -767,6 +764,50 @@
       "ai.infer": {
         "label": "Gestructureerde uitvoer afleiden",
         "description": "Gestructureerde workflowgegevens genereren vanuit een prompt via de geconfigureerde AI-provider."
+      },
+      "store.get": {
+        "label": "Opgeslagen waarde ophalen",
+        "description": "Een persistente workflow-sleutel/waarde-vermelding lezen."
+      },
+      "store.set": {
+        "label": "Opgeslagen waarde instellen",
+        "description": "Een workflow-sleutel/waarde-vermelding persistent maken."
+      },
+      "store.delete": {
+        "label": "Opgeslagen waarde verwijderen",
+        "description": "Een persistente workflow-sleutel/waarde-vermelding verwijderen."
+      },
+      "store.increment": {
+        "label": "Opgeslagen getal verhogen",
+        "description": "Een persistent workflow-getal atomair verhogen."
+      },
+      "store.list": {
+        "label": "Opgeslagen waarden weergeven",
+        "description": "Persistente workflow-sleutel/waarde-vermeldingen in een naamruimte weergeven."
+      },
+      "store.list_namespaces": {
+        "label": "Opslagnaamruimten weergeven",
+        "description": "Workflow-gegevensopslagnaamruimten weergeven die door deze tenant worden gebruikt."
+      },
+      "links.upsert": {
+        "label": "Entiteitskoppeling maken/bijwerken",
+        "description": "Een persistente koppeling tussen twee workflow-entiteiten maken of bijwerken."
+      },
+      "links.lookup": {
+        "label": "Entiteitskoppelingen opzoeken",
+        "description": "Persistente entiteitskoppelingen zoeken op bronentiteit en richting."
+      },
+      "links.delete": {
+        "label": "Entiteitskoppelingen verwijderen",
+        "description": "Persistente entiteitskoppelingen verwijderen op zijde en optionele relatie."
+      },
+      "links.list": {
+        "label": "Entiteitskoppelingen weergeven",
+        "description": "Persistente entiteitskoppelingen in een naamruimte weergeven."
+      },
+      "links.list_namespaces": {
+        "label": "Koppelingsnaamruimten weergeven",
+        "description": "Workflow-entiteitskoppelingsnaamruimten weergeven die door deze tenant worden gebruikt."
       }
     },
     "validation": {
@@ -911,6 +952,10 @@
         "ai": {
           "label": "AI",
           "description": "AI-acties"
+        },
+        "data-store": {
+          "label": "Gegevensopslag",
+          "description": "Duurzame workflow-status lezen en schrijven over uitvoeringen heen."
         }
       }
     },
@@ -1383,7 +1428,16 @@
       "openEditor": "Editor openen",
       "apply": "Toepassen",
       "cancel": "Annuleren"
-    }
+    },
+    "askAi": {
+      "ariaLabel": "Vraag AI om hulp bij transformaties",
+      "title": "Vraag AI",
+      "shortcutHint": "Open Quick Ask voor transformatiehulp"
+    },
+    "softEnumPlaceholder": "Selecteer of voer een waarde in",
+    "softEnumSearchPlaceholder": "Zoek of voer een aangepaste waarde in",
+    "softEnumNoResults": "Geen suggesties",
+    "softEnumUseCustom": "\"{{value}}\" gebruiken"
   },
   "schemaReference": {
     "selectAction": "Selecteer een actie om het invoer-/uitvoerschema ervan te zien",
@@ -1959,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Specifieke datum en tijd",
       "expression": "Geavanceerde expressie"
+    },
+    "workflowEntityType": {
+      "project_task": "Projecttaak",
+      "ticket": "Ticket",
+      "contact": "Contact",
+      "client": "Klant",
+      "project": "Project",
+      "appointment": "Afspraak",
+      "quote": "Offerte"
+    },
+    "workflowLinkRelation": {
+      "related": "Gerelateerd",
+      "mirrors": "Weerspiegelt",
+      "maps_to": "Gekoppeld aan",
+      "blocks": "Blokkeert",
+      "duplicate_of": "Duplicaat van",
+      "synced_with": "Gesynchroniseerd met"
     }
   },
   "automation": {
@@ -2347,13 +2418,7 @@
     }
   },
   "automationGate": {
-    "loading": "Workflowautomatisering wordt geladen...",
-    "featureName": "Workflowautomatisering",
-    "notEnabled": "Deze functie is experimenteel en niet ingeschakeld voor uw tenant.",
-    "experimental": "Experimenteel",
-    "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
-    "goToExperimental": "Ga naar experimentele functies",
-    "openSettings": "Instellingen openen"
+    "loading": "Workflowautomatisering wordt geladen..."
   },
   "flow": {
     "designer": {

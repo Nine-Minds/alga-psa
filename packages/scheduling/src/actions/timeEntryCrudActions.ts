@@ -31,12 +31,48 @@ import {
   markTimeEntryChangeRequestsHandled,
 } from './timeEntryChangeRequestActions';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
+
+type TimeEntrySearchEventType =
+  | 'TIME_ENTRY_CREATED'
+  | 'TIME_ENTRY_UPDATED'
+  | 'TIME_ENTRY_DELETED'
+  | 'TIME_ENTRY_SUBMITTED'
+  | 'TIME_ENTRY_APPROVED'
+  | 'TIME_ENTRY_CHANGES_REQUESTED';
+
+async function publishTimeEntrySearchEvent(
+  eventType: TimeEntrySearchEventType,
+  payload: {
+    tenantId: string;
+    timeEntryId: string;
+    userId?: string;
+    workItemId?: string | null;
+    workItemType?: string | null;
+    approvedBy?: string;
+    requestedBy?: string;
+    reason?: string;
+    changes?: Record<string, unknown>;
+  },
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        ...payload,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[TimeEntryActions] Failed to publish ${eventType} event`, eventError);
+  }
+}
 
 function normalizeFetchedWorkItemId(entry: Pick<ITimeEntry, 'work_item_id' | 'work_item_type'>): string {
   if (entry.work_item_type === 'non_billable_category' && !entry.work_item_id) {
@@ -304,16 +340,6 @@ export const saveTimeEntry = withAuth(async (
     }
 
     await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
-
-    if (validatedTimeEntry.work_item_type === 'ticket') {
-      const ticket = await db('tickets')
-        .select('ticket_id', 'master_ticket_id')
-        .where({ tenant, ticket_id: validatedTimeEntry.work_item_id })
-        .first();
-      if (ticket?.master_ticket_id) {
-        throw new Error('This ticket is bundled; time entries must be added on the master ticket.');
-      }
-    }
 
     // Extract only the fields that exist in the database schema
     const {
@@ -740,6 +766,18 @@ export const saveTimeEntry = withAuth(async (
 
     // Ensure resultingEntry is treated as ITimeEntry
     const entry = resultingEntry as ITimeEntry;
+    if (!entry.entry_id) {
+      throw new Error('Failed to save time entry: Saved entry is missing an ID');
+    }
+
+    await publishTimeEntrySearchEvent(entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', {
+      tenantId: tenant,
+      timeEntryId: entry.entry_id,
+      userId: entry.user_id,
+      workItemId: entry.work_item_id,
+      workItemType: entry.work_item_type,
+      changes: entry_id ? validatedTimeEntry : undefined,
+    });
 
     // Fetch work item details based on the saved entry
     let workItemDetails: IWorkItem;
@@ -920,7 +958,7 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       entry_id: validatedParams.entryId,
       tenant,
     })
-    .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id')
+    .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
     .first();
 
   if (!existingEntry) {
@@ -979,6 +1017,29 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       });
     }
   });
+
+  const eventType =
+    validatedParams.approvalStatus === 'APPROVED'
+      ? 'TIME_ENTRY_APPROVED'
+      : validatedParams.approvalStatus === 'CHANGES_REQUESTED'
+        ? 'TIME_ENTRY_CHANGES_REQUESTED'
+        : validatedParams.approvalStatus === 'SUBMITTED'
+          ? 'TIME_ENTRY_SUBMITTED'
+          : 'TIME_ENTRY_UPDATED';
+
+  await publishTimeEntrySearchEvent(eventType, {
+    tenantId: tenant,
+    timeEntryId: validatedParams.entryId,
+    userId: existingEntry.user_id,
+    workItemId: existingEntry.work_item_id,
+    workItemType: existingEntry.work_item_type,
+    approvedBy: validatedParams.approvalStatus === 'APPROVED' ? user.user_id : undefined,
+    requestedBy: validatedParams.approvalStatus === 'CHANGES_REQUESTED' ? user.user_id : undefined,
+    reason: validatedParams.changeRequestComment,
+    changes: {
+      approvalStatus: validatedParams.approvalStatus,
+    },
+  });
 });
 
 export const deleteTimeEntry = withAuth(async (
@@ -994,7 +1055,7 @@ export const deleteTimeEntry = withAuth(async (
   }
 
   try {
-    await db.transaction(async (trx) => {
+    const deletedTimeEntry = await db.transaction(async (trx) => {
       // Get the time entry to be deleted
       const timeEntry = await trx('time_entries')
         .where({
@@ -1110,6 +1171,20 @@ export const deleteTimeEntry = withAuth(async (
           });
          console.log(`Updated actual_hours for project task ${timeEntry.work_item_id}`);
       }
+
+      return timeEntry as ITimeEntry;
+    });
+
+    if (!deletedTimeEntry.entry_id) {
+      throw new Error('Failed to delete time entry: Deleted entry is missing an ID');
+    }
+
+    await publishTimeEntrySearchEvent('TIME_ENTRY_DELETED', {
+      tenantId: tenant,
+      timeEntryId: deletedTimeEntry.entry_id,
+      userId: deletedTimeEntry.user_id,
+      workItemId: deletedTimeEntry.work_item_id,
+      workItemType: deletedTimeEntry.work_item_type,
     });
   } catch (error) {
     console.error('Error deleting time entry:', error);

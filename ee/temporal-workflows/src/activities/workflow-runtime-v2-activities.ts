@@ -33,21 +33,6 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
-export async function executeWorkflowRuntimeV2Run(input: {
-  runId: string;
-  executionKey: string;
-}): Promise<void> {
-  return retryOnAdminReadOnly(
-    async () => {
-      const knex = await getAdminConnection();
-      initializeWorkflowRuntimeV2();
-      const runtime = new WorkflowRuntimeV2();
-      await runtime.executeRun(knex, input.runId, `temporal:${input.executionKey}`);
-    },
-    { logLabel: 'executeWorkflowRuntimeV2Run' }
-  );
-}
-
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
   runId: string;
   workflowId: string;
@@ -102,7 +87,7 @@ export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
         runId: input.runId,
         workflowId: input.workflowId,
         workflowVersion: input.workflowVersion,
-        tenantId: typeof run.tenant_id === 'string' ? run.tenant_id : null,
+        tenantId: typeof run.tenant === 'string' ? run.tenant : null,
         definitionHash: typeof run.definition_hash === 'string' ? run.definition_hash : null,
         runtimeSemanticsVersion: typeof run.runtime_semantics_version === 'string'
           ? run.runtime_semantics_version
@@ -145,8 +130,8 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
         throw new Error(`Run ${input.runId} not found`);
       }
 
-      if (run.tenant_id) {
-        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant_id);
+      if (run.tenant) {
+        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant);
         if (!reservation.allowed) {
           const existingWait = await knex('workflow_run_waits')
             .where({
@@ -174,6 +159,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
           } else {
             await WorkflowRunWaitModelV2.create(knex, {
               run_id: input.runId,
+              tenant: run.tenant ?? undefined,
               step_path: input.stepPath,
               wait_type: 'quota',
               timeout_at: reservation.summary.periodEnd,
@@ -204,6 +190,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
       const attempt = (latest?.attempt ?? 0) + 1;
       const step = await WorkflowRunStepModelV2.create(knex, {
         run_id: input.runId,
+        tenant: run.tenant ?? undefined,
         step_path: input.stepPath,
         definition_step_id: input.definitionStepId,
         status: 'STARTED',
@@ -275,8 +262,10 @@ export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
       const wait = await WorkflowRunWaitModelV2.create(knex, {
         run_id: input.runId,
+        tenant: run?.tenant ?? undefined,
         step_path: input.stepPath,
         wait_type: 'time',
         timeout_at: input.dueAt,
@@ -326,8 +315,10 @@ export async function projectWorkflowRuntimeV2EventWaitStart(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
       const wait = await WorkflowRunWaitModelV2.create(knex, {
         run_id: input.runId,
+        tenant: run?.tenant ?? undefined,
         step_path: input.stepPath,
         wait_type: 'event',
         event_name: input.eventName,
@@ -401,6 +392,7 @@ export async function startWorkflowRuntimeV2HumanTaskWait(input: {
       const formSchema = await resolveTaskFormSchema(knex, input.tenantId, input.taskType);
       const wait = await WorkflowRunWaitModelV2.create(knex, {
         run_id: input.runId,
+        tenant: input.tenantId ?? undefined,
         step_path: input.stepPath,
         wait_type: 'human',
         key: taskId,
@@ -656,7 +648,7 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     throw new Error(`Parent workflow run not found: ${input.parentRunId}`);
   }
 
-  const childTenantId = input.tenantId ?? parentRun.tenant_id ?? null;
+  const childTenantId = input.tenantId ?? parentRun.tenant ?? null;
   const childDefinition = await WorkflowDefinitionModelV2.getById(knex, childTenantId ?? '', input.workflowId);
   if (!childDefinition) {
     throw new Error(`Child workflow definition not found: ${input.workflowId}`);
@@ -689,7 +681,6 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     },
     definitionHash,
     runtimeSemanticsVersion: parentRun.runtime_semantics_version ?? null,
-    engine: 'temporal',
     parentRunId: parentRun.run_id,
     rootRunId,
   });
@@ -842,6 +833,7 @@ async function executeActionInvocation(input: {
 
   const invocation = await WorkflowActionInvocationModelV2.create(input.knex, {
     run_id: input.runId,
+    tenant: input.tenantId ?? undefined,
     step_path: input.stepPath,
     action_id: input.actionId,
     action_version: input.version,

@@ -38,7 +38,7 @@ describe('tierFeatures', () => {
       ]);
     });
 
-    it('pro tier includes solo features plus Teams integration', () => {
+    it('pro tier includes solo features without add-on-only Teams integration', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
@@ -48,11 +48,10 @@ describe('tierFeatures', () => {
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
         TIER_FEATURES.WORKFLOW_DESIGNER,
         TIER_FEATURES.MOBILE_ACCESS,
-        TIER_FEATURES.TEAMS_INTEGRATION,
       ]);
     });
 
-    it('premium tier includes all features', () => {
+    it('premium tier excludes add-on-only Teams and Entra Sync features', () => {
       expect(TIER_FEATURE_MAP.premium).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
@@ -62,9 +61,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
         TIER_FEATURES.WORKFLOW_DESIGNER,
         TIER_FEATURES.MOBILE_ACCESS,
-        TIER_FEATURES.ENTRA_SYNC,
         TIER_FEATURES.CIPP,
-        TIER_FEATURES.TEAMS_INTEGRATION,
         TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
       ]);
     });
@@ -86,21 +83,21 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
     });
 
-    it('pro has access to Teams integration', () => {
-      expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
+    it('pro cannot access add-on-only Teams integration by tier', () => {
+      expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
     });
 
-    it('pro cannot access Premium-only features', () => {
+    it('pro cannot access premium or add-on-only features', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.CIPP)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(false);
     });
 
-    it('premium has access to all features', () => {
+    it('premium has access to premium tier features but not add-on-only features', () => {
       expect(tierHasFeature('premium', TIER_FEATURES.INTEGRATIONS)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
-      expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
+      expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
+      expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
       expect(tierHasFeature('premium', TIER_FEATURES.CIPP)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
     });
@@ -118,11 +115,11 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.MOBILE_ACCESS]).toBe('solo');
     });
 
-    it('moves Teams integration to pro', () => {
+    it('keeps historical minimum tier metadata for add-on-only Teams integration', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.TEAMS_INTEGRATION]).toBe('pro');
     });
 
-    it('keeps ENTRA_SYNC and CIPP at premium', () => {
+    it('keeps historical minimum tier metadata for Entra/CIPP premium features', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CIPP]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('premium');

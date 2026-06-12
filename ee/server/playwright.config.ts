@@ -233,6 +233,21 @@ const resolvedPlaywrightRedisPort = resolveServicePortSync('REDIS_PORT', Number(
 process.env.REDIS_PORT = String(resolvedPlaywrightRedisPort);
 process.env.REDIS_PORT_LOCKED = 'true';
 
+const resolvedPlaywrightHocuspocusPort = resolveServicePortSync(
+  'PLAYWRIGHT_HOCUSPOCUS_PORT',
+  Number(process.env.PLAYWRIGHT_HOCUSPOCUS_PORT || process.env.EXPOSE_HOCUSPOCUS_PORT || 1234)
+);
+process.env.PLAYWRIGHT_HOCUSPOCUS_PORT = String(resolvedPlaywrightHocuspocusPort);
+process.env.PLAYWRIGHT_HOCUSPOCUS_PORT_LOCKED = 'true';
+process.env.EXPOSE_HOCUSPOCUS_PORT = String(resolvedPlaywrightHocuspocusPort);
+process.env.NEXT_PUBLIC_HOCUSPOCUS_URL =
+  process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || `ws://localhost:${resolvedPlaywrightHocuspocusPort}`;
+process.env.HOCUSPOCUS_JWT_SECRET =
+  process.env.HOCUSPOCUS_JWT_SECRET || 'dev-hocuspocus-jwt-secret';
+process.env.REDIS_PASSWORD = process.env.REDIS_PASSWORD || 'sebastian123';
+
+const skipWorkflowWorker = parseTruthyEnv(process.env.PLAYWRIGHT_SKIP_WORKFLOW_WORKER);
+
 // Apply Playwright-specific database configuration (after port resolution).
 applyPlaywrightDatabaseEnv();
 
@@ -373,9 +388,11 @@ export default defineConfig({
     // Reset DB once per session before starting the dev server.
     command:
       'cd ../../' +
-      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
+      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} PLAYWRIGHT_HOCUSPOCUS_PORT=${resolvedPlaywrightHocuspocusPort} REDIS_PASSWORD=${process.env.REDIS_PASSWORD} HOCUSPOCUS_JWT_SECRET=${process.env.HOCUSPOCUS_JWT_SECRET} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --wait --wait-timeout 60 postgres-playwright redis-playwright` +
       ' && node --import tsx/esm scripts/bootstrap-playwright-db.ts' +
-      ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --build workflow-worker-playwright` +
+      (skipWorkflowWorker
+        ? ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} PLAYWRIGHT_HOCUSPOCUS_PORT=${resolvedPlaywrightHocuspocusPort} REDIS_PASSWORD=${process.env.REDIS_PASSWORD} HOCUSPOCUS_JWT_SECRET=${process.env.HOCUSPOCUS_JWT_SECRET} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --build --wait --wait-timeout 120 hocuspocus-playwright`
+        : ` && PLAYWRIGHT_DB_PORT=${resolvedPlaywrightDbPort} REDIS_PORT=${resolvedPlaywrightRedisPort} PLAYWRIGHT_HOCUSPOCUS_PORT=${resolvedPlaywrightHocuspocusPort} REDIS_PASSWORD=${process.env.REDIS_PASSWORD} HOCUSPOCUS_JWT_SECRET=${process.env.HOCUSPOCUS_JWT_SECRET} docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${dockerComposeEnvFile} up -d --build --wait --wait-timeout 120 workflow-worker-playwright hocuspocus-playwright`) +
       ' && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: resolvedBaseUrl,
     // Default to starting a fresh server (we also need to bring up dockerized deps + reset the DB).
@@ -405,8 +422,10 @@ export default defineConfig({
       NEXT_PUBLIC_EXTERNAL_APP_URL: resolvedBaseUrl,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
-      // Playwright Redis deps run without auth; override any developer env so node-redis won't AUTH.
-      REDIS_PASSWORD: '',
+      NEXT_PUBLIC_HOCUSPOCUS_URL:
+        process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || `ws://localhost:${resolvedPlaywrightHocuspocusPort}`,
+      HOCUSPOCUS_JWT_SECRET: process.env.HOCUSPOCUS_JWT_SECRET || 'dev-hocuspocus-jwt-secret',
+      REDIS_PASSWORD: process.env.REDIS_PASSWORD || 'sebastian123',
       // Explicitly set DB config for Playwright - override server/.env settings
       DB_HOST: process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost',
       DB_PORT: process.env.PLAYWRIGHT_DB_PORT || process.env.DB_PORT || '5439',

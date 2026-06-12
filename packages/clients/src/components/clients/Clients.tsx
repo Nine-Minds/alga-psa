@@ -1,14 +1,28 @@
 'use client';
-import React, { useState, useEffect, useCallback, memo } from 'react';
-import type { IClient } from '@alga-psa/types';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import type { DeletionValidationResult, IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import {
+  DropdownMenuContent as StyledDropdownMenuContent,
+  DropdownMenuItem as StyledDropdownMenuItem,
+  DropdownMenuSeparator as StyledDropdownMenuSeparator,
+} from '@alga-psa/ui/components/DropdownMenu';
 import QuickAddClient from './QuickAddClient';
 import { getAllClients } from '@alga-psa/clients/actions';
 import {
   getAllClientsPaginated,
   deleteClient,
+  validateClientDeletion,
   importClientsFromCSV,
   exportClientsToCSV,
   markClientInactiveWithContacts,
@@ -21,7 +35,7 @@ import { useSearchParams } from 'next/navigation';
 import ClientsGrid from './ClientsGrid';
 import ClientsList from './ClientsList';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw, Printer, Settings2, Share2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
@@ -33,14 +47,27 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
-import { handleError, useClientDrawer } from '@alga-psa/ui';
+import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
+const CLIENTS_PRINT_PAGE_SIZE = 5000;
+
+const formatClientPrintAddress = (client: IClient): string => {
+  return [
+    client.address_line1 ?? client.address,
+    client.address_line2 ?? client.address_2,
+    client.city,
+    client.state_province ?? client.state,
+    client.postal_code ?? client.zip,
+    client.country_name ?? client.country,
+  ].filter(Boolean).join(', ');
+};
 
 // Memoized search input component to prevent re-renders
 const SearchInput = memo(({
@@ -79,6 +106,7 @@ interface ClientResultsProps {
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
+  onSelectionChange: (clientIds: string[]) => void;
   onCheckboxChange: (clientId: string) => void;
   onEditClient: (clientId: string) => void;
   onDeleteClient: (client: IClient) => void;
@@ -105,6 +133,7 @@ const ClientResults = memo(({
   selectedTags,
   viewMode,
   selectedClients,
+  onSelectionChange,
   onCheckboxChange,
   onEditClient,
   onDeleteClient,
@@ -224,7 +253,7 @@ const ClientResults = memo(({
   }
 
   return (
-    <div className="flex-1">
+    <ShortcutActiveRegion id="clients-shortcut-region" className="flex-1 outline-none">
       {viewMode === 'grid' ? (
         <ClientsGrid
           filteredClients={filteredClients}
@@ -246,8 +275,7 @@ const ClientResults = memo(({
         <ClientsList
           selectedClients={selectedClients}
           filteredClients={filteredClients}
-          setSelectedClients={() => {}} // This prop seems unused in the component
-          handleCheckboxChange={onCheckboxChange}
+          setSelectedClients={onSelectionChange}
           handleEditClient={onEditClient}
           handleDeleteClient={onDeleteClient}
           onQuickView={onQuickView}
@@ -264,7 +292,7 @@ const ClientResults = memo(({
           onSortChange={onSortChange}
         />
       )}
-    </div>
+    </ShortcutActiveRegion>
   );
 });
 
@@ -304,6 +332,8 @@ const Clients: React.FC = () => {
    });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const openCreateClient = useCallback(() => setIsDialogOpen(true), []);
+  usePageCreateShortcut(openCreateClient);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -339,7 +369,8 @@ const Clients: React.FC = () => {
   // Use user preferences for page sizes (separate for grid and list views)
   const {
     value: gridPageSize,
-    setValue: setGridPageSize
+    setValue: setGridPageSize,
+    isLoading: isGridPageSizeLoading
   } = useUserPreference<number>(
     CLIENTS_GRID_PAGE_SIZE_SETTING,
     {
@@ -351,7 +382,8 @@ const Clients: React.FC = () => {
 
   const {
     value: listPageSize,
-    setValue: setListPageSize
+    setValue: setListPageSize,
+    isLoading: isListPageSizeLoading
   } = useUserPreference<number>(
     CLIENTS_LIST_PAGE_SIZE_SETTING,
     {
@@ -363,32 +395,25 @@ const Clients: React.FC = () => {
 
   // Current page size based on view mode
   const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
+  const areClientPreferencesLoading = isViewModeLoading || isGridPageSizeLoading || isListPageSizeLoading;
 
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
+  const [printClients, setPrintClients] = useState<IClient[]>([]);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [multiDeleteResults, setMultiDeleteResults] = useState<{
     successCount: number;
     failedClients: Array<{ clientId: string; clientName: string; reason: string }>;
   } | null>(null);
-  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
-  const [deleteDependencies, setDeleteDependencies] = useState<{
-    contacts?: number;
-    tickets?: number;
-    projects?: number;
-    invoices?: number;
-    documents?: number;
-    interactions?: number;
-    assets?: number;
-    service_usage?: number;
-    bucket_usage?: number;
-  } | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
 
   // Quick View state
@@ -440,105 +465,82 @@ const Clients: React.FC = () => {
     });
   }, [t]);
 
-  const formatDependencyItem = useCallback((
-    count: number,
-    singularKey: string,
-    singularDefault: string,
-    pluralKey: string,
-    pluralDefault: string,
-  ) => {
-    const label = count === 1
-      ? t(singularKey, { defaultValue: singularDefault })
-      : t(pluralKey, { defaultValue: pluralDefault });
+  const localizeClientDeleteValidation = useCallback((result: DeletionValidationResult): DeletionValidationResult => {
+    const hasClientOnlyAlternative = result.alternatives.some((alternative) => alternative.action === 'deactivate_client_only');
+    const dependencyLabel = (type: string, count: number, fallback: string) => {
+      const dependencyKeys: Record<string, [string, string, string, string]> = {
+        contact: ['clientsPage.dependency.contact', 'contact', 'clientsPage.dependency.contacts', 'contacts'],
+        ticket: ['clientsPage.dependency.ticket', 'ticket', 'clientsPage.dependency.tickets', 'tickets'],
+        project: ['clientsPage.dependency.project', 'project', 'clientsPage.dependency.projects', 'projects'],
+        invoice: ['clientsPage.dependency.invoice', 'invoice', 'clientsPage.dependency.invoices', 'invoices'],
+        document: ['clientsPage.dependency.document', 'document', 'clientsPage.dependency.documents', 'documents'],
+        interaction: ['clientsPage.dependency.interaction', 'interaction', 'clientsPage.dependency.interactions', 'interactions'],
+        asset: ['clientsPage.dependency.asset', 'asset', 'clientsPage.dependency.assets', 'assets'],
+        usage: ['clientsPage.dependency.serviceUsageRecord', 'service usage record', 'clientsPage.dependency.serviceUsageRecords', 'service usage records'],
+        bucket_usage: ['clientsPage.dependency.bucketUsageRecord', 'bucket usage record', 'clientsPage.dependency.bucketUsageRecords', 'bucket usage records'],
+      };
+      const keys = dependencyKeys[type];
+      if (!keys) return fallback;
+      const [singularKey, singularDefault, pluralKey, pluralDefault] = keys;
+      return count === 1
+        ? t(singularKey, { defaultValue: singularDefault })
+        : t(pluralKey, { defaultValue: pluralDefault });
+    };
 
-    return `${count} ${label}`;
+    const message = (() => {
+      if (result.code === 'DEPENDENCIES_EXIST') {
+        return t('clientsPage.deleteClientUnable', { defaultValue: 'Unable to delete this client.' });
+      }
+      if (result.code === 'IS_DEFAULT') {
+        return t('clientsPage.defaultClientDeleteError', {
+          defaultValue: 'Cannot delete the default client. Please set another client as default in General Settings first.',
+        });
+      }
+      if (result.code === 'NOT_FOUND') {
+        return t('clientsPage.clientNotFound', { defaultValue: 'Client not found.' });
+      }
+      if (result.code === 'PERMISSION_DENIED') {
+        return t('clientsPage.deletePermissionDenied', {
+          defaultValue: 'Permission denied: Cannot delete clients.',
+        });
+      }
+      return result.message;
+    })();
+
+    return {
+      ...result,
+      message,
+      dependencies: result.dependencies.map((dependency) => ({
+        ...dependency,
+        label: dependencyLabel(dependency.type, dependency.count, dependency.label),
+      })),
+      alternatives: result.alternatives.map((alternative) => {
+        if (alternative.action === 'deactivate_client_only') {
+          return {
+            ...alternative,
+            label: t('clientDetails.clientOnly', { defaultValue: 'Client Only' }),
+            description: t('clientDetails.deactivateClientOnlyDescription', {
+              defaultValue: 'Deactivate the client but leave its contacts active.',
+            }),
+          };
+        }
+
+        if (alternative.action === 'deactivate') {
+          return {
+            ...alternative,
+            label: hasClientOnlyAlternative
+              ? t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })
+              : t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' }),
+            description: t('clientDetails.deactivateClientDescription', {
+              defaultValue: 'Deactivates the record without deleting its data.',
+            }),
+          };
+        }
+
+        return alternative;
+      }),
+    };
   }, [t]);
-
-  const renderDependencyItems = useCallback((dependencies: NonNullable<typeof deleteDependencies>) => {
-    return [
-      dependencies.contacts
-        ? formatDependencyItem(
-            dependencies.contacts,
-            'clientsPage.dependency.contact',
-            'contact',
-            'clientsPage.dependency.contacts',
-            'contacts',
-          )
-        : null,
-      dependencies.tickets
-        ? formatDependencyItem(
-            dependencies.tickets,
-            'clientsPage.dependency.ticket',
-            'ticket',
-            'clientsPage.dependency.tickets',
-            'tickets',
-          )
-        : null,
-      dependencies.projects
-        ? formatDependencyItem(
-            dependencies.projects,
-            'clientsPage.dependency.project',
-            'project',
-            'clientsPage.dependency.projects',
-            'projects',
-          )
-        : null,
-      dependencies.invoices
-        ? formatDependencyItem(
-            dependencies.invoices,
-            'clientsPage.dependency.invoice',
-            'invoice',
-            'clientsPage.dependency.invoices',
-            'invoices',
-          )
-        : null,
-      dependencies.documents
-        ? formatDependencyItem(
-            dependencies.documents,
-            'clientsPage.dependency.document',
-            'document',
-            'clientsPage.dependency.documents',
-            'documents',
-          )
-        : null,
-      dependencies.interactions
-        ? formatDependencyItem(
-            dependencies.interactions,
-            'clientsPage.dependency.interaction',
-            'interaction',
-            'clientsPage.dependency.interactions',
-            'interactions',
-          )
-        : null,
-      dependencies.assets
-        ? formatDependencyItem(
-            dependencies.assets,
-            'clientsPage.dependency.asset',
-            'asset',
-            'clientsPage.dependency.assets',
-            'assets',
-          )
-        : null,
-      dependencies.service_usage
-        ? formatDependencyItem(
-            dependencies.service_usage,
-            'clientsPage.dependency.serviceUsageRecord',
-            'service usage record',
-            'clientsPage.dependency.serviceUsageRecords',
-            'service usage records',
-          )
-        : null,
-      dependencies.bucket_usage
-        ? formatDependencyItem(
-            dependencies.bucket_usage,
-            'clientsPage.dependency.bucketUsageRecord',
-            'bucket usage record',
-            'clientsPage.dependency.bucketUsageRecords',
-            'bucket usage records',
-          )
-        : null,
-    ].filter(Boolean) as string[];
-  }, [formatDependencyItem]);
 
 
   // Debounce search input
@@ -688,43 +690,72 @@ const Clients: React.FC = () => {
 
 
 
+  const runDeleteValidation = useCallback(async (clientId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await validateClientDeletion(clientId);
+      setDeleteValidation(localizeClientDeleteValidation(result));
+    } catch (error) {
+      console.error('Failed to validate client deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: t('clientsPage.singleDeleteError', {
+          defaultValue: 'An error occurred while deleting the client. Please try again.',
+        }),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, [localizeClientDeleteValidation, t]);
+
   const handleDeleteClient = async (client: IClient) => {
     setClientToDelete(client);
-    setDeleteError(null);
-    setShowDeactivateOption(false);
+    setDeleteValidation(null);
     setIsDeleteDialogOpen(true);
+    void runDeleteValidation(client.client_id);
   };
 
   const confirmDelete = async () => {
     if (!clientToDelete) return;
-    
+    setIsDeleteProcessing(true);
     try {
       const result = await deleteClient(clientToDelete.client_id);
-      
+
       if (!result.success) {
-        if (!result.canDelete && result.dependencies.length > 0) {
-          handleDependencyError(result);
-          setShowDeactivateOption(result.alternatives.length > 0);
-          return;
-        }
-        throw new Error(result.message || t('clientDetails.deleteError', {
-          defaultValue: 'Failed to delete client. Please try again.',
-        }));
+        setDeleteValidation(localizeClientDeleteValidation(result));
+        return;
       }
 
-      // Show success toast
       toast.success(t('clientsPage.deleteSingleSuccess', {
         defaultValue: '{{name}} has been deleted successfully.',
         name: clientToDelete.client_name,
       }));
-      
+
       setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting client:', error);
-      setDeleteError(t('clientsPage.singleDeleteError', {
+      toast.error(t('clientsPage.singleDeleteError', {
         defaultValue: 'An error occurred while deleting the client. Please try again.',
       }));
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    setIsDeleteProcessing(true);
+    try {
+      if (action === 'deactivate') {
+        await handleMarkClientInactiveAll();
+      } else if (action === 'deactivate_client_only') {
+        await handleMarkClientInactiveOnly();
+      }
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -975,7 +1006,7 @@ const Clients: React.FC = () => {
               ? client.client_name
               : t('clientsPage.unknownClient', { defaultValue: 'Unknown Client' });
 
-          if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+          if ('code' in result && result.code === 'DEPENDENCIES_EXIST' && result.dependencies?.length > 0) {
             const reason = formatDependencyText(result);
             failedClients.push({ clientId, clientName, reason });
           } else {
@@ -1080,83 +1111,16 @@ const Clients: React.FC = () => {
     }
   };
 
-  interface DependencyResult {
-    dependencies?: Array<{ count: number; label: string } | string>;
-    counts?: Record<string, number>; // Changed from string to number to match backend
-    code?: string;
-    message?: string;
-  }
-
-  const formatDependencyText = (result: DependencyResult): string => {
-    const dependencies = result.dependencies || [];
-    const counts = result.counts || {};
-
-    if (dependencies.length > 0 && typeof dependencies[0] !== 'string') {
-      return dependencies
-        .map((dep) => {
-          if (typeof dep === 'string') return dep;
-          return `${dep.count} ${dep.label}`;
-        })
-        .join(', ');
-    }
-    
-    // Map the base keys to their full dependency names
-    const keyMap: Record<string, string> = {
-      'contact': 'contacts',
-      'ticket': 'active tickets',
-      'project': 'active projects',
-      'document': 'documents',
-      'invoice': 'invoices',
-      'interaction': 'interactions',
-      'location': 'locations',
-      'service_usage': 'service usage records',
-      'bucket_usage': 'bucket usage records',
-      'contract_line': 'contract lines',
-      'tax_rate': 'tax rates',
-      'tax_setting': 'tax settings'
-    };
-
-    // Create a reverse mapping from full names to base keys
-    const reverseKeyMap: Record<string, string> = {};
-    Object.entries(keyMap).forEach(([key, value]) => {
-      reverseKeyMap[value] = key;
-    });
-
-    return dependencies
-    .map((dep): string => {
-      const depStr = typeof dep === 'string' ? dep : dep.label;
-      // Get the base key for this dependency
-      const baseKey = reverseKeyMap[depStr];
-      const count = baseKey ? counts[baseKey] || 0 : (typeof dep !== 'string' ? dep.count : 0);
-      return `${count} ${depStr}`;
-    })
-    .join(', ');
+  const formatDependencyText = (result: DeletionValidationResult): string => {
+    return result.dependencies.map((dep) => `${dep.count} ${dep.label}`).join(', ');
   };
-
-  const handleDependencyError = (result: DependencyResult) => {
-    // Store the dependency counts for structured display
-    // Only include counts that are > 0
-    const counts = result.counts || {};
-    setDeleteDependencies({
-      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
-      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
-      projects: counts['project'] > 0 ? counts['project'] : undefined,
-      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
-      documents: counts['document'] > 0 ? counts['document'] : undefined,
-      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
-      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
-      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
-      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
-    });
-  };
-
 
   const resetDeleteState = () => {
     setIsDeleteDialogOpen(false);
     setClientToDelete(null);
-    setDeleteError(null);
-    setShowDeactivateOption(false);
-    setDeleteDependencies(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
   };
 
   const handleExportToCSV = async () => {
@@ -1200,6 +1164,158 @@ const Clients: React.FC = () => {
     }
   };
 
+  const hydratePrintClientTags = useCallback(async (clientsToPrint: IClient[]) => {
+    if (clientsToPrint.length === 0) return;
+
+    try {
+      const tags = await findTagsByEntityIds(
+        clientsToPrint.map((client) => client.client_id),
+        'client'
+      );
+      const nextClientTags: Record<string, ITag[]> = {};
+      tags.forEach((tag) => {
+        if (!nextClientTags[tag.tagged_id]) {
+          nextClientTags[tag.tagged_id] = [];
+        }
+        nextClientTags[tag.tagged_id].push(tag);
+      });
+      setClientTags((current) => ({ ...current, ...nextClientTags }));
+    } catch (error) {
+      console.error('Error fetching print client tags:', error);
+    }
+  }, []);
+
+  const preparePrintClients = useCallback(async () => {
+    if (selectedClients.length > 0) {
+      const selectedClientSet = new Set(selectedClients);
+      const loadedSelectedClients = loadedClients.filter((client) => selectedClientSet.has(client.client_id));
+
+      if (loadedSelectedClients.length === selectedClients.length) {
+        await hydratePrintClientTags(loadedSelectedClients);
+        setPrintClients(loadedSelectedClients);
+        return;
+      }
+
+      const response = await getAllClientsPaginated({
+        page: 1,
+        pageSize: CLIENTS_PRINT_PAGE_SIZE,
+        includeInactive: true,
+        loadLogos: false,
+        sortBy,
+        sortDirection,
+      });
+      const clientsToPrint = response.clients.filter((client) => selectedClientSet.has(client.client_id));
+      await hydratePrintClientTags(clientsToPrint);
+      setPrintClients(clientsToPrint);
+      return;
+    }
+
+    const response = await getAllClientsPaginated({
+      page: 1,
+      pageSize: CLIENTS_PRINT_PAGE_SIZE,
+      includeInactive: filterStatus !== 'active',
+      statusFilter: filterStatus,
+      searchTerm,
+      clientTypeFilter,
+      selectedTags,
+      loadLogos: false,
+      sortBy,
+      sortDirection,
+    });
+
+    await hydratePrintClientTags(response.clients);
+    setPrintClients(response.clients);
+  }, [
+    clientTypeFilter,
+    filterStatus,
+    hydratePrintClientTags,
+    loadedClients,
+    searchTerm,
+    selectedClients,
+    selectedTags,
+    sortBy,
+    sortDirection,
+  ]);
+
+  const clientPrintColumns = useMemo<PrintColumnOption<IClient>[]>(() => [
+    {
+      key: 'client_name',
+      label: t('clientsList.name', { defaultValue: 'Name' }),
+      header: t('clientsList.name', { defaultValue: 'Name' }),
+      render: (client) => client.client_name,
+    },
+    {
+      key: 'created_at',
+      label: t('clientsList.created', { defaultValue: 'Created' }),
+      header: t('clientsList.created', { defaultValue: 'Created' }),
+      render: (client) => client.created_at
+        ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'client_type',
+      label: t('clientsList.type', { defaultValue: 'Type' }),
+      header: t('clientsList.type', { defaultValue: 'Type' }),
+      render: (client) => client.client_type
+        ? t(`clientsPage.clientTypes.${client.client_type}`, { defaultValue: client.client_type })
+        : t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'phone_no',
+      label: t('clientsList.phone', { defaultValue: 'Phone' }),
+      header: t('clientsList.phone', { defaultValue: 'Phone' }),
+      render: (client) => client.location_phone ?? client.phone_no ?? t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'address',
+      label: t('clientsList.address', { defaultValue: 'Address' }),
+      header: t('clientsList.address', { defaultValue: 'Address' }),
+      render: (client) => formatClientPrintAddress(client) || t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'account_manager_full_name',
+      label: t('clientsList.accountManager', { defaultValue: 'Account Manager' }),
+      header: t('clientsList.accountManager', { defaultValue: 'Account Manager' }),
+      render: (client) => client.account_manager_full_name || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'url',
+      label: t('clientsList.url', { defaultValue: 'URL' }),
+      header: t('clientsList.url', { defaultValue: 'URL' }),
+      render: (client) => client.url || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'tags',
+      label: t('clientsList.tags', { defaultValue: 'Tags' }),
+      header: t('clientsList.tags', { defaultValue: 'Tags' }),
+      render: (client) => {
+        const tags = clientTags[client.client_id] ?? [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('clientsPage.print.emptyValue', { defaultValue: '-' });
+      },
+    },
+    {
+      key: 'status',
+      label: t('clientsPage.print.columns.status', { defaultValue: 'Status' }),
+      header: t('clientsPage.print.columns.status', { defaultValue: 'Status' }),
+      render: (client) => client.is_inactive
+        ? t('common.states.inactive', { defaultValue: 'Inactive' })
+        : t('common.states.active', { defaultValue: 'Active' }),
+    },
+  ], [clientTags, t]);
+  const {
+    selectedColumnKeys: selectedClientPrintColumnKeys,
+    selectedColumns: selectedClientPrintColumns,
+    setSelectedColumnKeys: setSelectedClientPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedClientPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:clients-list', clientPrintColumns);
+
+  const { triggerPrint: triggerPrintClients, isPreparing: isPreparingClientPrint } = usePrintAction({
+    onBeforePrint: preparePrintClients,
+    onAfterPrint: () => setPrintClients([]),
+  });
+
   const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
     try {
       await importClientsFromCSV(clients, updateExisting);
@@ -1210,7 +1326,7 @@ const Clients: React.FC = () => {
     }
   };
 
-  if (viewMode === null) {
+  if (viewMode === null || areClientPreferencesLoading) {
     return (
       <div className="w-full">
         <div className="flex justify-end mb-4 flex-wrap gap-6">
@@ -1237,55 +1353,81 @@ const Clients: React.FC = () => {
           <div className="flex gap-2">
             <Button
               id="create-client-button"
-              onClick={() => setIsDialogOpen(true)}
+              onClick={openCreateClient}
             >
               {t('clientsPage.createClientShort', { defaultValue: '+ Create Client' })}
             </Button>
 
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <Button
-                  id="clients-actions-button"
-                  variant="outline"
-                  className="flex items-center gap-2"
+              <Tooltip content={t('clientsPage.shareTooltip', { defaultValue: 'Print, import and export' })}>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    id="clients-actions-button"
+                    variant="outline"
+                    size="default"
+                    className="w-10 px-0"
+                    aria-label={t('clientsPage.shareTooltip', { defaultValue: 'Print, import and export' })}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenu.Trigger>
+              </Tooltip>
+              <StyledDropdownMenuContent align="end" className="w-56">
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); void triggerPrintClients(); }}
+                  disabled={isPreparingClientPrint}
+                  className="gap-2"
                 >
-                  <MoreVertical size={16} />
-                  {t('clientsPage.actions', { defaultValue: 'Actions' })}
-                </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                <DropdownMenu.Item
-                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  <Printer className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">
+                    {selectedClients.length > 0
+                      ? t('actions.printSelected', {
+                          count: selectedClients.length,
+                          defaultValue: 'Print selected ({{count}})',
+                        })
+                      : t('actions.print', { defaultValue: 'Print' })}
+                  </span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); setIsPrintOptionsOpen(true); }}
+                  className="gap-2"
+                >
+                  <Settings2 className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.printOptions', { defaultValue: 'Print options' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
                   onSelect={() => setIsImportDialogOpen(true)}
+                  className="gap-2"
                 >
-                  <Upload size={14} className="mr-2" />
-                  {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  <Upload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
                   onSelect={() => void handleExportToCSV()}
+                  className="gap-2"
                 >
-                  <CloudDownload size={14} className="mr-2" />
-                  {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
-                <DropdownMenu.Item
-                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
                   onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
                   disabled={selectedClients.length === 0}
+                  className="gap-2"
                 >
-                  <Power size={14} className="mr-2" />
-                  {t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  <Power className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
                   onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
                   disabled={selectedClients.length === 0}
+                  className="gap-2"
                 >
-                  <RotateCcw size={14} className="mr-2" />
-                  {t('common.actions.reactivate', { defaultValue: 'Reactivate' })}
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
+                  <RotateCcw className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.reactivate', { defaultValue: 'Reactivate' })}</span>
+                </StyledDropdownMenuItem>
+              </StyledDropdownMenuContent>
             </DropdownMenu.Root>
           </div>
 
@@ -1301,7 +1443,7 @@ const Clients: React.FC = () => {
             <SearchInput
               value={searchInput}
               onChange={handleSearchInputChange}
-              placeholder={t('clientsPage.searchPlaceholder', { defaultValue: 'Search clients' })}
+              placeholder={t('clientsPage.searchPlaceholder', { defaultValue: 'Search clients, notes, documents, and interactions' })}
             />
 
             <div className="w-48 shrink-0">
@@ -1400,6 +1542,48 @@ const Clients: React.FC = () => {
         </Button>
       </div>
 
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={selectedClients.length > 0
+            ? t('clientsPage.print.selectedTitle', {
+                count: selectedClients.length,
+                defaultValue: 'Selected Clients',
+              })
+            : t('clientsPage.print.title', { defaultValue: 'Clients' })}
+          subtitle={t('clientsPage.print.subtitle', {
+            count: printClients.length,
+            defaultValue: '{{count}} clients',
+          })}
+          rows={printClients}
+          columns={selectedClientPrintColumns}
+          getRowKey={(client) => client.client_id}
+          emptyMessage={t('clientsPage.print.noClients', { defaultValue: 'No clients to print' })}
+        />
+      </div>
+
+      <PrintOptionsDialog
+        id="clients-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('clientsPage.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('clientsPage.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing clients.',
+        })}
+        columns={clientPrintColumns}
+        selectedColumnKeys={selectedClientPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedClientPrintColumnKeys}
+        onReset={resetSelectedClientPrintColumnKeys}
+        onPrint={() => triggerPrintClients()}
+        isPrinting={isPreparingClientPrint}
+        printLabel={selectedClients.length > 0
+          ? t('actions.printSelected', {
+              count: selectedClients.length,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
+
       {/* Clients */}
       <ClientResults
         key={refreshKey}
@@ -1409,6 +1593,10 @@ const Clients: React.FC = () => {
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}
+        onSelectionChange={(clientIds) => {
+          setSelectedClients(clientIds);
+          setIsSelectAllMode(false);
+        }}
         onCheckboxChange={handleCheckboxChange}
         onEditClient={handleEditClient}
         onDeleteClient={handleDeleteClient}
@@ -1576,144 +1764,17 @@ const Clients: React.FC = () => {
       </Dialog>
 
       {/* Single client delete confirmation dialog */}
-      <Dialog
+      <DeleteEntityDialog
+        id="single-delete-confirmation-dialog"
         isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
-        id="single-delete-confirmation-dialog"
-        title={t('clientsPage.deleteClient', { defaultValue: 'Delete Client' })}
-      >
-        <DialogContent>
-          <div className="space-y-4">
-            {clientToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
-              <>
-                <Alert variant="warning">
-                  <AlertDescription>
-                    {t('clientsPage.alreadyInactive', {
-                      defaultValue: 'This client is already marked as inactive.',
-                    })}
-                  </AlertDescription>
-                </Alert>
-                <p className="text-gray-700">
-                  {t('clientsPage.deleteBlockedSingle', {
-                    defaultValue: 'Unable to delete this client due to the following associated records:',
-                  })}
-                </p>
-                <div>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {renderDependencyItems(deleteDependencies).map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="text-gray-700">
-                  {t('clientsPage.deleteBlockedHelp', {
-                    defaultValue: 'Please remove or reassign these items before the client can be deleted.',
-                  })}
-                </p>
-              </>
-            ) : showDeactivateOption && deleteDependencies ? (
-              <>
-                <p className="text-gray-700">
-                  {t('clientsPage.deleteClientUnable', {
-                    defaultValue: 'Unable to delete this client.',
-                  })}
-                </p>
-                <div>
-                  <p className="text-gray-700 mb-2">
-                    {t('clientsPage.singleDeletePrompt', {
-                      defaultValue: 'This client has the following associated records:',
-                    })}
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {renderDependencyItems(deleteDependencies).map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                <Alert variant="info">
-                  <AlertDescription>
-                    <p>
-                      {t('clientsPage.inactiveAlternative', {
-                        defaultValue: 'You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.',
-                      })}
-                    </p>
-                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                      <p className="mt-2">
-                        {t('clientsPage.deactivateContactsPrompt', {
-                          defaultValue: 'Would you like to also deactivate the {{count}} associated contact(s)?',
-                          count: deleteDependencies.contacts,
-                        })}
-                      </p>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              </>
-            ) : deleteError ? (
-              <div className="text-gray-600 whitespace-pre-line">
-                {deleteError}
-              </div>
-            ) : (
-              <p className="text-gray-600">
-                {t('clientsPage.deleteSinglePrompt', {
-                  defaultValue: 'Are you sure you want to delete {{name}}? This action cannot be undone.',
-                  name: clientToDelete?.client_name ?? '',
-                })}
-              </p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <div className="mt-4 flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={resetDeleteState}
-                id="single-delete-cancel"
-              >
-                {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-              </Button>
-
-              {clientToDelete?.is_inactive && showDeactivateOption ? (
-                <Button
-                  variant="default"
-                  onClick={resetDeleteState}
-                  id="single-delete-close"
-                >
-                  {t('common.actions.close', { defaultValue: 'Close' })}
-                </Button>
-              ) : showDeactivateOption ? (
-                <>
-                  {deleteDependencies?.contacts && deleteDependencies.contacts > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => void handleMarkClientInactiveOnly()}
-                      id="single-delete-client-only"
-                    >
-                      {t('clientDetails.clientOnly', { defaultValue: 'Client Only' })}
-                    </Button>
-                  )}
-                  <Button
-                    variant="default"
-                    onClick={() => void handleMarkClientInactiveAll()}
-                    id="single-delete-mark-inactive"
-                  >
-                    {deleteDependencies?.contacts && deleteDependencies.contacts > 0
-                      ? t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })
-                      : t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}
-                  </Button>
-                </>
-              ) : !deleteError && (
-                <Button
-                  onClick={() => void confirmDelete()}
-                  id="single-delete-confirm"
-                  variant="destructive"
-                >
-                  {t('common.actions.delete', { defaultValue: 'Delete' })}
-                </Button>
-              )}
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirmDelete={confirmDelete}
+        onAlternativeAction={handleDeleteAlternativeAction}
+        entityName={clientToDelete?.client_name ?? ''}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
 
       {/* CSV Import Dialog */}
       <ClientsImportDialog

@@ -21,14 +21,15 @@ spec:
       retries: 0
   chart:
     spec:
-      chart: ./ee/helm/temporal-worker
+      chart: temporal-worker
+      version: 0.1.0
       interval: 10m
       reconcileStrategy: Revision
       sourceRef:
-        kind: GitRepository
-        name: alga-appliance
+        kind: HelmRepository
+        name: alga-charts
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-temporal-worker
-      valuesKey: temporal-worker.talos-single-node.yaml
+      valuesKey: temporal-worker.single-node.yaml

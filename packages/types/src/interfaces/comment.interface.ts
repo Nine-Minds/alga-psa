@@ -38,6 +38,8 @@ export interface CommentMetadata {
 export interface IComment extends TenantEntity {
   comment_id?: string;
   ticket_id?: string;
+  thread_id?: string;
+  parent_comment_id?: string | null;
   user_id?: string | null;
   contact_id?: string | null;
   author_type: CommentAuthorType;
@@ -47,6 +49,7 @@ export interface IComment extends TenantEntity {
   is_system_generated?: boolean;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
   markdown_content?: string;
   metadata?: CommentMetadata | null;
   response_source?: CommentResponseSource;

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-PROFILE="talos-single-node"
+PROFILE="single-node"
 PROFILE_DIR=""
 KUBECONFIG_PATH="${KUBECONFIG:-}"
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"

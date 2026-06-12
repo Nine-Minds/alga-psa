@@ -83,8 +83,8 @@ async function runScheduledWorkflow(
   data: WorkflowScheduledRunJobData
 ): Promise<void> {
   const { knex, tenant } = await createTenantKnex(data.tenantId);
-  const schedule = await WorkflowScheduleStateModel.getById(knex, data.scheduleId);
-  if (!schedule || schedule.workflow_id !== data.workflowId || schedule.tenant_id !== tenant) {
+  const schedule = await WorkflowScheduleStateModel.getById(knex, data.scheduleId, tenant);
+  if (!schedule || schedule.workflow_id !== data.workflowId || schedule.tenant !== tenant) {
     return;
   }
   if (!schedule.enabled || schedule.trigger_type !== expectedTriggerType) {
@@ -185,7 +185,6 @@ async function runScheduledWorkflow(
         fireKey
       },
       triggerFireKey: fireKey,
-      execute: true,
       executionKey: fireKey
     });
 

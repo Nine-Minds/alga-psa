@@ -155,6 +155,20 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: AI_DOCUMENT_API_KEY
+          # ----------- Collaborative Doc Persistence ----------------
+          - name: COLLAB_PERSIST_API_URL
+            value: "https://{{ .Values.host }}/api/internal/collab/persist"
+          - name: COLLAB_PERSIST_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: COLLAB_PERSIST_API_KEY
+          # ----------- HOCUSPOCUS JWT ----------------
+          - name: HOCUSPOCUS_JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: HOCUSPOCUS_JWT_SECRET
           ports:
             - name: http
               containerPort: {{ .Values.hocuspocus.service.port }}

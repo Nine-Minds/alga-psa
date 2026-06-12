@@ -92,12 +92,13 @@ export const WORKFLOW_AI_SCHEMA_TYPE_LABEL_DEFAULTS: Record<WorkflowAiSchemaType
   array: 'Array',
 };
 
-export const WORKFLOW_INPUT_SOURCE_MODE_VALUES = ['reference', 'fixed'] as const;
+export const WORKFLOW_INPUT_SOURCE_MODE_VALUES = ['reference', 'fixed', 'expression'] as const;
 export type WorkflowInputSourceMode = (typeof WORKFLOW_INPUT_SOURCE_MODE_VALUES)[number];
 
 export const WORKFLOW_INPUT_SOURCE_MODE_LABEL_DEFAULTS: Record<WorkflowInputSourceMode, string> = {
   reference: 'Reference',
   fixed: 'Fixed value',
+  expression: 'Expression',
 };
 
 export const WORKFLOW_REFERENCE_SECTION_VALUES = [
@@ -155,4 +156,44 @@ export type WorkflowWaitTiming = (typeof WORKFLOW_WAIT_TIMING_VALUES)[number];
 export const WORKFLOW_WAIT_TIMING_LABEL_DEFAULTS: Record<WorkflowWaitTiming, string> = {
   fixed: 'Specific date & time',
   expression: 'Advanced expression',
+};
+
+export const WORKFLOW_ENTITY_TYPE_VALUES = [
+  'project_task',
+  'ticket',
+  'contact',
+  'client',
+  'project',
+  'appointment',
+  'quote',
+] as const;
+export type WorkflowEntityType = (typeof WORKFLOW_ENTITY_TYPE_VALUES)[number];
+
+export const WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS: Record<WorkflowEntityType, string> = {
+  project_task: 'Project task',
+  ticket: 'Ticket',
+  contact: 'Contact',
+  client: 'Client',
+  project: 'Project',
+  appointment: 'Appointment',
+  quote: 'Quote',
+};
+
+export const WORKFLOW_LINK_RELATION_VALUES = [
+  'related',
+  'mirrors',
+  'maps_to',
+  'blocks',
+  'duplicate_of',
+  'synced_with',
+] as const;
+export type WorkflowLinkRelation = (typeof WORKFLOW_LINK_RELATION_VALUES)[number];
+
+export const WORKFLOW_LINK_RELATION_LABEL_DEFAULTS: Record<WorkflowLinkRelation, string> = {
+  related: 'Related',
+  mirrors: 'Mirrors',
+  maps_to: 'Maps to',
+  blocks: 'Blocks',
+  duplicate_of: 'Duplicate of',
+  synced_with: 'Synced with',
 };

@@ -56,6 +56,14 @@ const ContractLine = {
         throw new Error('Cannot delete contract line that is in use by clients');
       }
 
+      await knexOrTrx('contract_line_service_configuration')
+        .where({ contract_line_id: planId, tenant })
+        .delete();
+
+      await knexOrTrx('contract_line_services')
+        .where({ contract_line_id: planId, tenant })
+        .delete();
+
       const deletedCount = await knexOrTrx('contract_lines')
         .where({
           contract_line_id: planId,

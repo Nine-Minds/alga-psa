@@ -13,8 +13,39 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
+type ServiceCatalogSearchEventType =
+  | 'SERVICE_CATALOG_CREATED'
+  | 'SERVICE_CATALOG_UPDATED'
+  | 'SERVICE_CATALOG_DELETED';
 
+async function publishServiceCatalogSearchEvent(
+  eventType: ServiceCatalogSearchEventType,
+  tenant: string,
+  serviceId: string,
+  options: {
+    userId?: string;
+    itemKind?: 'service' | 'product';
+    changedFields?: string[];
+  } = {},
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        serviceId,
+        userId: options.userId,
+        itemKind: options.itemKind,
+        changedFields: options.changedFields,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[serviceActions] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -125,11 +156,12 @@ export const searchServiceCatalogForPicker = withAuth(async (
       );
 
     if (options.currency_code) {
+      const currencyCode = options.currency_code;
       query
         .leftJoin('service_prices as sp', function () {
           this.on('sp.service_id', 'sc.service_id')
             .andOn('sp.tenant', 'sc.tenant')
-            .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
+            .andOn('sp.currency_code', trx.raw('?', [currencyCode]));
         })
         .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
         .select(trx.raw(
@@ -424,6 +456,11 @@ export const createService = withAuth(async (
 
             // 4. Create the service using the model
             const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, service.service_id, {
+                userId: user.user_id,
+                itemKind: service.item_kind,
+                changedFields: Object.keys(finalServiceData),
+            });
             console.log('[serviceActions] Service created successfully:', service);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
             return service; // Assuming Service.create returns the full IService object
@@ -459,6 +496,12 @@ export const updateService = withAuth(async (
                 throw new Error(`Service with id ${serviceId} not found or couldn't be updated`);
             }
 
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, serviceId, {
+                userId: user.user_id,
+                itemKind: updatedService.item_kind,
+                changedFields: Object.keys(serviceData),
+            });
+
             return updatedService as IService;
         });
     } catch (error) {
@@ -471,14 +514,30 @@ export const deleteService = withAuth(async (
     _user,
     { tenant },
     serviceId: string
-  ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean } | ActionPermissionError> => {
+    if (!await hasPermission(_user, 'service', 'delete')) {
+      return permissionError('Permission denied: Cannot delete services');
+    }
+
     try {
         const { knex } = await createTenantKnex();
+        const existing = await knex('service_catalog')
+            .where({ service_id: serviceId, tenant })
+            .select('item_kind')
+            .first();
+
         const result = await deleteEntityWithValidation('service', serviceId, knex, tenant, async (trx) => {
             await Service.delete(trx, serviceId);
             safeRevalidate('/msp/billing');
             safeRevalidate('/msp/settings/billing');
         });
+
+        if (result.deleted === true) {
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
+                userId: _user.user_id,
+                itemKind: existing?.item_kind,
+            });
+        }
 
         return {
             ...result,
@@ -680,6 +739,10 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
                 throw new Error('Product not found');
             }
 
+            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
+                userId: user.user_id,
+            });
+
             safeRevalidate('/msp/billing');
             safeRevalidate('/msp/settings/billing');
         });
@@ -706,7 +769,7 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; is_standard: boolean }[]> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -726,7 +789,11 @@ export const createServiceType = withAuth(async (
   user,
   { tenant },
   data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'>
-): Promise<IServiceType> => {
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'create')) {
+    return permissionError('Permission denied: Cannot create service types');
+  }
+
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
@@ -748,7 +815,11 @@ export const updateServiceType = withAuth(async (
   { tenant },
   id: string,
   data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
-): Promise<IServiceType> => {
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'update')) {
+    return permissionError('Permission denied: Cannot update service types');
+  }
+
   try {
       // ServiceTypeModel is imported at the top of the file
       // Tenant context is handled within the model method
@@ -782,7 +853,11 @@ export const getAllServiceTypes = withAuth(async (user, { tenant }): Promise<ISe
   }
 });
 
-export const deleteServiceType = withAuth(async (user, { tenant }, id: string): Promise<void> => {
+export const deleteServiceType = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'delete')) {
+    return permissionError('Permission denied: Cannot delete service types');
+  }
+
   try {
     // ServiceTypeModel is imported at the top of the file
 
@@ -834,14 +909,17 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
 /**
  * Create a new service type with just a name (inline creation)
- * Creates with the provided billing_method and generates next order number
+ * Generates the next order number
  */
 export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
-  name: string,
-  billing_method: 'fixed' | 'hourly' | 'usage' = 'usage'
-): Promise<IServiceType> => {
+  name: string
+): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'create')) {
+    return permissionError('Permission denied: Cannot create service types');
+  }
+
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -871,7 +949,6 @@ export const createServiceTypeInline = withAuth(async (
         .insert({
           tenant,
           name: normalizedName,
-          billing_method,
           description: null,
           is_active: true,
           order_number: nextOrder,
@@ -909,7 +986,11 @@ export const createServiceTypeInline = withAuth(async (
 /**
  * Update a service type name (inline editing)
  */
-export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType> => {
+export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'update')) {
+    return permissionError('Permission denied: Cannot update service types');
+  }
+
   try {
     // ServiceTypeModel is imported at the top of the file
     const { knex: db } = await createTenantKnex();
@@ -933,7 +1014,11 @@ export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: str
 /**
  * Delete a service type (inline deletion with usage check)
  */
-export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: string): Promise<void> => {
+export const deleteServiceTypeInline = withAuth(async (user, { tenant }, id: string): Promise<void | ActionPermissionError> => {
+  if (!await hasPermission(user, 'service', 'delete')) {
+    return permissionError('Permission denied: Cannot delete service types');
+  }
+
   // This is the same as deleteServiceType but renamed for clarity
   return deleteServiceType(id);
 });

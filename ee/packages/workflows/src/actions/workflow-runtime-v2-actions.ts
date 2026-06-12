@@ -11,7 +11,6 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { withAuth, hasPermission, getCurrentUser } from '@alga-psa/auth';
 import {
-  WorkflowRuntimeV2,
   getActionRegistryV2,
   getNodeTypeRegistry,
   getSchemaRegistry,
@@ -23,6 +22,7 @@ import {
   isWorkflowTimeTrigger,
   resolveActionCallOutputSchema,
   buildWorkflowDesignerActionCatalog,
+  getWorkflowIntegrationModuleRegistry,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -35,8 +35,10 @@ import {
 import { createTenantSecretProvider } from '@alga-psa/workflows/secrets';
 import {
   WorkflowActionInvocationModelV2,
+  WorkflowDataStoreModel,
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
+  WorkflowEntityLinkModel,
   WorkflowRunLogModelV2,
   WorkflowRunModelV2,
   WorkflowRunSnapshotModelV2,
@@ -203,6 +205,30 @@ const loadAvailableWorkflowDesignerAppKeys = async (
   }
 
   return availableKeys;
+};
+
+const loadAvailableFirstPartyIntegrationAppKeys = async (
+  knex: Knex,
+  tenantId: string | null | undefined
+): Promise<Set<string>> => {
+  if (!tenantId) return new Set();
+  const available = new Set<string>();
+  const registry = getWorkflowIntegrationModuleRegistry();
+  for (const module of registry.list()) {
+    if (!module.availabilityKey) continue;
+    if (module.availabilityKey === 'rmm:ninjaone') {
+      const row = await knex('rmm_integrations')
+        .where({
+          tenant: tenantId,
+          provider: 'ninjaone',
+          is_active: true
+        })
+        .whereNotNull('connected_at')
+        .first();
+      if (row) available.add(module.groupKey);
+    }
+  }
+  return available;
 };
 
 const isEnterpriseEdition = (): boolean => {
@@ -655,10 +681,6 @@ const computeValidation = async (params: {
 
   const resolveSchemaNode = (node: any, rootSchema: any, seenRefs = new Set<string>()): any => {
     if (!node || typeof node !== 'object') return node;
-    if (node.anyOf && Array.isArray(node.anyOf)) {
-      const nonNull = node.anyOf.find((s: any) => s && s.type !== 'null') ?? node.anyOf[0];
-      return resolveSchemaNode(nonNull, rootSchema, seenRefs);
-    }
     if (node.$ref && typeof node.$ref === 'string' && !seenRefs.has(node.$ref)) {
       seenRefs.add(node.$ref);
       const resolved = resolveLocalSchemaRef(node.$ref, rootSchema);
@@ -669,26 +691,36 @@ const computeValidation = async (params: {
 
   const resolveSchemaAtPath = (schema: any, path: string[]): any | null => {
     if (!schema || typeof schema !== 'object') return null;
-    let current: any = resolveSchemaNode(schema, schema);
-    for (const seg of path) {
+    const root = schema;
+
+    const descend = (node: any, remaining: string[]): any | null => {
+      const current = resolveSchemaNode(node, root);
       if (!current) return null;
-      current = resolveSchemaNode(current, schema);
+      if (remaining.length === 0) return current;
+
+      if (current.anyOf && Array.isArray(current.anyOf)) {
+        for (const variant of current.anyOf) {
+          const resolved = descend(variant, remaining);
+          if (resolved) return resolved;
+        }
+        return null;
+      }
+
+      const [seg, ...rest] = remaining;
       if (current.type === 'object' && current.properties && typeof current.properties === 'object') {
-        current = resolveSchemaNode((current.properties as any)[seg] ?? null, schema);
-        continue;
+        return descend((current.properties as any)[seg] ?? null, rest);
       }
       if (current.type === 'array' && current.items) {
         // Only support `.items.<prop>` lookup if seg is 'items'
         if (seg === 'items') {
-          current = resolveSchemaNode(current.items, schema);
-          continue;
+          return descend(current.items, rest);
         }
-        // Unknown array access
         return null;
       }
       return null;
-    }
-    return resolveSchemaNode(current, schema);
+    };
+
+    return descend(schema, path);
   };
 
   const literalTypes = (value: unknown): Set<string> => {
@@ -707,6 +739,61 @@ const computeValidation = async (params: {
         return new Set(['unknown']);
     }
   };
+
+  const cloneJsonSchema = (schema: any): any => JSON.parse(JSON.stringify(schema ?? {}));
+
+  const normalizeAssignmentPath = (path: string): string => {
+    const trimmed = path.trim();
+    if (!trimmed) return trimmed;
+    const scoped = trimmed.startsWith('payload.')
+      || trimmed.startsWith('vars.')
+      || trimmed.startsWith('meta.')
+      || trimmed.startsWith('error.')
+      || trimmed.startsWith('/');
+    return scoped ? trimmed : `vars.${trimmed}`;
+  };
+
+  const assignmentPathParts = (path: string): { scope: 'payload' | 'vars' | 'meta' | 'error'; parts: string[] } | null => {
+    const normalized = normalizeAssignmentPath(path);
+    if (normalized.startsWith('/')) {
+      return {
+        scope: 'payload',
+        parts: normalized
+          .replace(/^\//, '')
+          .split('/')
+          .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+          .filter(Boolean),
+      };
+    }
+
+    const [scope, ...parts] = normalized.split('.').filter(Boolean);
+    if (scope === 'payload' || scope === 'vars' || scope === 'meta' || scope === 'error') {
+      return { scope, parts };
+    }
+    return null;
+  };
+
+  const setSchemaAtPath = (root: any, parts: string[], schema: any): void => {
+    if (!root || typeof root !== 'object' || parts.length === 0) return;
+    root.type = 'object';
+    root.properties = root.properties && typeof root.properties === 'object' ? root.properties : {};
+    let cursor = root;
+    parts.forEach((part, index) => {
+      cursor.properties = cursor.properties && typeof cursor.properties === 'object' ? cursor.properties : {};
+      const isLeaf = index === parts.length - 1;
+      if (isLeaf) {
+        cursor.properties[part] = cloneJsonSchema(schema);
+        return;
+      }
+      const existing = cursor.properties[part];
+      if (!existing || typeof existing !== 'object' || existing.type !== 'object') {
+        cursor.properties[part] = { type: 'object', properties: {} };
+      }
+      cursor = cursor.properties[part];
+    });
+  };
+
+  const inferredPayloadSchemaJson = payloadSchemaJson ? cloneJsonSchema(payloadSchemaJson) : null;
 
   const exprPathToSchemaTypes = (expr: string, ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> }): Set<string> => {
     const trimmed = String(expr ?? '').trim();
@@ -917,16 +1004,19 @@ const computeValidation = async (params: {
                 mapping: inputMapping,
                 targetSchema: inputSchemaJson,
                 options: { stepPath: `root.steps.${String(step.id)}.config.inputMapping`, stepId: String(step.id), fieldName: 'inputMapping' },
-                ctx: { payload: payloadSchemaJson, vars: varsSchemas, eventPayload: null }
+                ctx: { payload: inferredPayloadSchemaJson, vars: varsSchemas, eventPayload: null }
               });
             }
           }
 
-          // Track outputs for vars.* typing
-          if (saveAs) {
-            if (step.type === 'action.call' && actionId) {
-              const out = resolveActionCallOutputSchema(registry as any, cfg as any);
-              if (out) varsSchemas.set(saveAs, out);
+          // Track outputs for downstream type checks. Unscoped saveAs values remain vars.* for compatibility.
+          if (saveAs && step.type === 'action.call' && actionId) {
+            const out = resolveActionCallOutputSchema(registry as any, cfg as any);
+            const parsedSaveAs = assignmentPathParts(saveAs);
+            if (out && parsedSaveAs?.scope === 'vars' && parsedSaveAs.parts.length === 1) {
+              varsSchemas.set(parsedSaveAs.parts[0], out);
+            } else if (out && parsedSaveAs?.scope === 'payload' && inferredPayloadSchemaJson) {
+              setSchemaAtPath(inferredPayloadSchemaJson, parsedSaveAs.parts, out);
             }
           }
         }
@@ -1139,39 +1229,11 @@ const requireRunTenantAccess = async (
     return throwHttpError(404, 'Not found');
   }
   if (tenant) {
-    if (!run.tenant_id || run.tenant_id !== tenant) {
+    if (!run.tenant || run.tenant !== tenant) {
       return throwHttpError(404, 'Not found');
     }
   }
   return run;
-};
-
-const TEMPORAL_UNSUPPORTED_ACTION_CODE = 'WORKFLOW_TEMPORAL_ACTION_UNSUPPORTED';
-
-const throwUnsupportedTemporalRunControlAction = (
-  runId: string,
-  action: string
-): never => {
-  return throwHttpError(
-    409,
-    `Unsupported action "${action}" for Temporal-backed workflow run`,
-    {
-      code: TEMPORAL_UNSUPPORTED_ACTION_CODE,
-      action,
-      engine: 'temporal',
-      runId,
-      hint: 'Workflow Runtime V2 Temporal runs are controlled by Temporal; legacy DB runtime control actions are disabled during hard cutover.'
-    }
-  );
-};
-
-const assertLegacyRunControlSupported = (
-  run: { run_id: string; engine?: string | null },
-  action: string
-) => {
-  if (run.engine === 'temporal') {
-    throwUnsupportedTemporalRunControlAction(run.run_id, action);
-  }
 };
 
 const requireWorkflowPermission = async (
@@ -1200,19 +1262,26 @@ const requireWorkflowPermission = async (
   throwHttpError(403, 'Forbidden');
 };
 
+const hasWorkflowScheduleTable = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
+): Promise<boolean> => knex.schema.hasTable('tenant_workflow_schedule');
+
 const loadWorkflowScheduleStateMap = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
   workflowIds: string[],
   tenant?: string | null
 ): Promise<Map<string, WorkflowScheduleStateRecord>> => {
   if (!workflowIds.length) return new Map();
+  if (!(await hasWorkflowScheduleTable(knex))) {
+    return new Map();
+  }
 
   const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
     .select('*')
     .whereIn('workflow_id', workflowIds);
 
   if (tenant) {
-    query.andWhere('tenant_id', tenant);
+    query.andWhere('tenant', tenant);
   }
 
   const rows = await query;
@@ -1321,7 +1390,7 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   }
 
   const applyVisibilityFilter = (qb: any) => {
-    qb.where('wd.tenant_id', tenantId);
+    qb.where('wd.tenant', tenantId);
     if (!canAdmin) {
       qb.whereRaw('coalesce(wd.is_visible, true) = true');
     }
@@ -1364,15 +1433,17 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
 
   const versionsSubquery = knex('workflow_definition_versions')
-    .select('workflow_id')
+    .select('tenant', 'workflow_id')
     .max('version as published_version')
-    .groupBy('workflow_id')
+    .groupBy('tenant', 'workflow_id')
     .as('pv');
 
   const itemsQuery = knex('workflow_definitions as wd')
     .select('wd.*')
     .select(knex.raw('pv.published_version as published_version'))
-    .leftJoin(versionsSubquery, 'pv.workflow_id', 'wd.workflow_id');
+    .leftJoin(versionsSubquery, function () {
+      this.on('pv.workflow_id', 'wd.workflow_id').andOn('pv.tenant', 'wd.tenant');
+    });
 
   applyFilters(itemsQuery);
 
@@ -1405,34 +1476,27 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
     schedule_state: scheduleStateMap.get(row.workflow_id) ?? null
   }));
 
-  // Aggregate counts (unfiltered, but respecting visibility rules).
+  // Aggregate counts (unfiltered, but respecting visibility rules) in a single pass.
   const countBase = knex('workflow_definitions as wd');
   applyVisibilityFilter(countBase);
 
-  const totalRow = await countBase.clone().count<{ count: number | string }[]>({ count: '*' }).first();
-  const activeRow = await countBase.clone()
-    .whereIn('wd.status', ['active', 'published'])
-    .andWhereRaw('coalesce(wd.is_paused, false) = false')
-    .count<{ count: number | string }[]>({ count: '*' })
-    .first();
-  const draftRow = await countBase.clone()
-    .where('wd.status', 'draft')
-    .andWhereRaw('coalesce(wd.is_paused, false) = false')
-    .count<{ count: number | string }[]>({ count: '*' })
-    .first();
-  const pausedRow = await countBase.clone()
-    .whereRaw('coalesce(wd.is_paused, false) = true')
-    .count<{ count: number | string }[]>({ count: '*' })
-    .first();
+  const countsRow = await countBase
+    .select(
+      knex.raw('count(*) as total'),
+      knex.raw("count(*) FILTER (WHERE wd.status IN ('active', 'published') AND coalesce(wd.is_paused, false) = false) as active"),
+      knex.raw("count(*) FILTER (WHERE wd.status = 'draft' AND coalesce(wd.is_paused, false) = false) as draft"),
+      knex.raw('count(*) FILTER (WHERE coalesce(wd.is_paused, false) = true) as paused')
+    )
+    .first<{ total: number | string; active: number | string; draft: number | string; paused: number | string }>();
 
   return {
     items,
     totalItems,
     counts: {
-      total: totalRow?.count == null ? 0 : Number(totalRow.count),
-      active: activeRow?.count == null ? 0 : Number(activeRow.count),
-      draft: draftRow?.count == null ? 0 : Number(draftRow.count),
-      paused: pausedRow?.count == null ? 0 : Number(pausedRow.count)
+      total: countsRow?.total == null ? 0 : Number(countsRow.total),
+      active: countsRow?.active == null ? 0 : Number(countsRow.active),
+      draft: countsRow?.draft == null ? 0 : Number(countsRow.draft),
+      paused: countsRow?.paused == null ? 0 : Number(countsRow.paused)
     }
   };
 });
@@ -1701,7 +1765,7 @@ export const preCheckWorkflowDefinitionDeletion = withAuth(async (
   }
 
   const activeRuns = await knex('workflow_runs')
-    .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
+    .where({ workflow_id: parsed.workflowId, tenant: tenant })
     .whereIn('status', ['RUNNING', 'WAITING'])
     .count('* as count')
     .first();
@@ -1753,7 +1817,7 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
   }
 
   const activeRuns = await knex('workflow_runs')
-    .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
+    .where({ workflow_id: parsed.workflowId, tenant: tenant })
     .whereIn('status', ['RUNNING', 'WAITING'])
     .count('* as count')
     .first();
@@ -1785,16 +1849,16 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
 
   const result = await deleteEntityWithValidation('workflow', parsed.workflowId, knex, tenant, async (trx) => {
     const runIds = await trx('workflow_runs')
-      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
+      .where({ workflow_id: parsed.workflowId, tenant: tenant })
       .pluck('run_id');
 
     if (runIds.length > 0) {
-      await trx('workflow_run_logs').whereIn('run_id', runIds).del();
-      await trx('workflow_action_invocations').whereIn('run_id', runIds).del();
-      await trx('workflow_run_snapshots').whereIn('run_id', runIds).del();
-      await trx('workflow_run_waits').whereIn('run_id', runIds).del();
-      await trx('workflow_run_steps').whereIn('run_id', runIds).del();
-      await trx('workflow_runs').whereIn('run_id', runIds).del();
+      await trx('workflow_run_logs').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_action_invocations').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_snapshots').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_waits').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_run_steps').where('tenant', tenant).whereIn('run_id', runIds).del();
+      await trx('workflow_runs').where('tenant', tenant).whereIn('run_id', runIds).del();
     }
 
     await trx('workflow_definition_versions')
@@ -1802,11 +1866,11 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       .del();
 
     await trx('tenant_workflow_schedule')
-      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
+      .where({ workflow_id: parsed.workflowId, tenant: tenant })
       .del();
 
     await trx('workflow_definitions')
-      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
+      .where({ workflow_id: parsed.workflowId, tenant: tenant })
       .del();
   });
 
@@ -1910,6 +1974,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
   try {
     record = await WorkflowDefinitionVersionModelV2.create(knex, {
       workflow_id: parsed.workflowId,
+      tenant: workflow.tenant ?? tenant ?? null,
       version: versionToPublish,
       definition_json: definition,
       payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
@@ -1948,7 +2013,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     updated_by: user.user_id
   });
 
-  if (tenant) {
+  if (tenant && await hasWorkflowScheduleTable(knex)) {
     const nextTriggerIsTimeTrigger = isWorkflowTimeTrigger((definition as any)?.trigger);
     const previousTriggerIsTimeTrigger = isWorkflowTimeTrigger((workflow as any)?.trigger);
 
@@ -2187,8 +2252,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     tenantId: tenant,
     eventType: parsed.eventType ?? null,
     sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
-    triggerMappingApplied: triggerMappingApplied,
-    execute: true
+    triggerMappingApplied: triggerMappingApplied
   });
 
   try {
@@ -2260,12 +2324,15 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
   const [sortField, sortDir] = parsed.sort.split(':') as ['started_at' | 'updated_at', 'asc' | 'desc'];
 
   const query = knex('workflow_runs')
-    .leftJoin('workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
+    .leftJoin('workflow_definitions', function () {
+      this.on('workflow_runs.workflow_id', 'workflow_definitions.workflow_id')
+        .andOn('workflow_runs.tenant', 'workflow_definitions.tenant');
+    })
     .select(
       'workflow_runs.run_id',
       'workflow_runs.workflow_id',
       'workflow_runs.workflow_version',
-      'workflow_runs.tenant_id',
+      'workflow_runs.tenant',
       'workflow_runs.status',
       'workflow_runs.node_path',
       'workflow_runs.trigger_type',
@@ -2279,7 +2346,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
     );
 
   if (tenant) {
-    query.where('workflow_runs.tenant_id', tenant);
+    query.where('workflow_runs.tenant', tenant);
   }
   if (parsed.status?.length) {
     query.whereIn('workflow_runs.status', parsed.status);
@@ -2302,6 +2369,7 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
           knex('workflow_run_waits')
             .select(1)
             .whereRaw('workflow_run_waits.run_id = workflow_runs.run_id')
+            .whereRaw('workflow_run_waits.tenant = workflow_runs.tenant')
             .where('workflow_run_waits.key', 'ilike', searchValue)
         );
     });
@@ -2340,7 +2408,7 @@ export async function exportWorkflowRunsAction(input: unknown) {
     'workflow_id',
     'workflow_version',
     'status',
-    'tenant_id',
+    'tenant',
     'started_at',
     'updated_at',
     'completed_at'
@@ -2352,7 +2420,7 @@ export async function exportWorkflowRunsAction(input: unknown) {
     run.workflow_id,
     run.workflow_version,
     run.status,
-    run.tenant_id ?? '',
+    run.tenant ?? '',
     run.started_at,
     run.updated_at,
     run.completed_at ?? ''
@@ -2368,14 +2436,18 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
   await requireWorkflowPermission(user, 'admin', knex);
 
   const query = knex('workflow_runs as runs')
-    .leftJoin('workflow_definitions as defs', 'runs.workflow_id', 'defs.workflow_id')
-    .leftJoin('workflow_run_steps as steps', 'runs.run_id', 'steps.run_id')
+    .leftJoin('workflow_definitions as defs', function () {
+      this.on('runs.workflow_id', 'defs.workflow_id').andOn('runs.tenant', 'defs.tenant');
+    })
+    .leftJoin('workflow_run_steps as steps', function () {
+      this.on('runs.run_id', 'steps.run_id').andOn('runs.tenant', 'steps.tenant');
+    })
     .where('runs.status', 'FAILED')
     .select(
       'runs.run_id',
       'runs.workflow_id',
       'runs.workflow_version',
-      'runs.tenant_id',
+      'runs.tenant',
       'runs.status',
       'runs.started_at',
       'runs.updated_at',
@@ -2388,7 +2460,7 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
       'runs.run_id',
       'runs.workflow_id',
       'runs.workflow_version',
-      'runs.tenant_id',
+      'runs.tenant',
       'runs.status',
       'runs.started_at',
       'runs.updated_at',
@@ -2398,7 +2470,7 @@ export const listWorkflowDeadLetterRunsAction = withAuth(async (user, { tenant }
     .havingRaw('max(steps.attempt) >= ?', [parsed.minRetries]);
 
   if (tenant) {
-    query.where('runs.tenant_id', tenant);
+    query.where('runs.tenant', tenant);
   }
 
   const rows = await query
@@ -2422,7 +2494,7 @@ export const listWorkflowRunSummaryAction = withAuth(async (user, { tenant }, in
   const query = knex('workflow_runs').select('status').count('* as count');
 
   if (tenant) {
-    query.where('tenant_id', tenant);
+    query.where('tenant', tenant);
   }
   if (parsed.workflowId) {
     query.where('workflow_id', parsed.workflowId);
@@ -2447,6 +2519,27 @@ export const listWorkflowRunSummaryAction = withAuth(async (user, { tenant }, in
   });
 
   return { total, byStatus: summary };
+});
+
+export const getWorkflowStepQuotaSummaryAction = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant context required');
+  }
+
+  const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
+  const summary = await workflowStepQuotaService.resolveQuotaSummary(knex, tenant);
+  return {
+    periodStart: summary.periodStart,
+    periodEnd: summary.periodEnd,
+    periodSource: summary.periodSource,
+    effectiveLimit: summary.effectiveLimit,
+    usedCount: summary.usedCount,
+    remaining: summary.remaining,
+    tier: summary.tier,
+    limitSource: summary.limitSource,
+  };
 });
 
 export const getWorkflowRunSummaryMetadataAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -2492,7 +2585,7 @@ export const getLatestWorkflowRunAction = withAuth(async (user, { tenant }, inpu
     .limit(1);
 
   if (tenant) {
-    query.where('tenant_id', tenant);
+    query.where('tenant', tenant);
   }
   if (parsed.eventType) {
     query.where('event_type', parsed.eventType);
@@ -2611,7 +2704,7 @@ export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, inp
   }
   if (parsed.tableName === 'workflow_runs') {
     const run = await WorkflowRunModelV2.getById(knex, parsed.recordId);
-    if (!run || (tenant && run.tenant_id !== tenant)) {
+    if (!run || (tenant && run.tenant !== tenant)) {
       return throwHttpError(404, 'Not found');
     }
   }
@@ -2681,7 +2774,7 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
   if (parsed.tableName === 'workflow_definitions') {
     const workflowQuery = knex('workflow_definitions').where({ workflow_id: parsed.recordId });
     if (tenantForEnrichment) {
-      workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
+      workflowQuery.andWhere({ tenant: tenantForEnrichment });
     }
     const workflow = await workflowQuery.first();
     if (workflow) {
@@ -2705,7 +2798,7 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
     if (context.workflowId) {
       const workflowQuery = knex('workflow_definitions').where({ workflow_id: context.workflowId });
       if (tenantForEnrichment) {
-        workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
+        workflowQuery.andWhere({ tenant: tenantForEnrichment });
       }
       const workflow = await workflowQuery.first();
       if (workflow) {
@@ -2773,7 +2866,7 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   if (!run) {
     return throwHttpError(404, 'Not found');
   }
-  if (tenant && run.tenant_id && run.tenant_id !== tenant) {
+  if (tenant && run.tenant && run.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
 
@@ -2822,26 +2915,24 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   await requireWorkflowPermission(user, 'admin', knex);
 
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  if (runRecord.engine === 'temporal') {
-    try {
-      await cancelWorkflowRuntimeV2TemporalRun({
+  try {
+    await cancelWorkflowRuntimeV2TemporalRun({
+      runId: parsed.runId,
+    });
+  } catch (error) {
+    return throwHttpError(
+      409,
+      'Failed to cancel Temporal-backed workflow run',
+      {
+        code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
+        action: 'cancel',
+        engine: 'temporal',
         runId: parsed.runId,
-      });
-    } catch (error) {
-      return throwHttpError(
-        409,
-        'Failed to cancel Temporal-backed workflow run',
-        {
-          code: 'WORKFLOW_TEMPORAL_CANCEL_FAILED',
-          action: 'cancel',
-          engine: 'temporal',
-          runId: parsed.runId,
-          reason: parsed.reason ?? null,
-          hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
-          error: error instanceof Error ? error.message : String(error)
-        }
-      );
-    }
+        reason: parsed.reason ?? null,
+        hint: 'Cancel is Temporal-authoritative; projection state was not updated because Temporal cancel did not succeed.',
+        error: error instanceof Error ? error.message : String(error)
+      }
+    );
   }
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
@@ -2860,7 +2951,7 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
 
   await WorkflowRunLogModelV2.create(knex, {
     run_id: parsed.runId,
-    tenant_id: runRecord?.tenant_id ?? null,
+    tenant: runRecord?.tenant ?? null,
     level: 'WARN',
     message: 'Run canceled by operator',
     context_json: { reason: parsed.reason },
@@ -2872,86 +2963,6 @@ export const cancelWorkflowRunAction = withAuth(async (user, { tenant }, input: 
     tableName: 'workflow_runs',
     recordId: parsed.runId,
     changedData: { status: 'CANCELED' },
-    details: { reason: parsed.reason },
-    source: parsed.source ?? 'api'
-  });
-
-  return { ok: true };
-});
-
-export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(runRecord, 'resume');
-
-  const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
-  const waiting = waits.filter((wait) => wait.status === 'WAITING');
-  const primaryWait = waiting[0] ?? null;
-  if (waiting.length > 0) {
-    const resolvedAt = new Date().toISOString();
-    for (const wait of waiting) {
-      await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
-        status: 'RESOLVED',
-        resolved_at: resolvedAt
-      });
-    }
-  }
-
-  const resumePayload = {
-    __admin_override: true,
-    reason: parsed.reason,
-    waitId: primaryWait?.wait_id ?? null,
-    waitType: primaryWait?.wait_type ?? null
-  };
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'RUNNING',
-    resume_event_name: primaryWait?.event_name ?? 'ADMIN_RESUME',
-    resume_event_payload: resumePayload,
-    resume_error: null
-  });
-
-  const processedAt = new Date().toISOString();
-  await WorkflowRuntimeEventModelV2.create(knex, {
-    tenant_id: runRecord?.tenant_id ?? null,
-    event_name: 'ADMIN_RESUME',
-    correlation_key: parsed.runId,
-    payload: resumePayload,
-    processed_at: processedAt,
-    matched_run_id: parsed.runId,
-    matched_wait_id: primaryWait?.wait_id ?? null,
-    matched_step_path: primaryWait?.step_path ?? null
-  });
-
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    resume_event_name: primaryWait?.event_name ?? 'ADMIN_RESUME',
-    resume_event_payload: resumePayload
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant_id: runRecord?.tenant_id ?? null,
-    level: 'INFO',
-    message: 'Run resumed by operator',
-    context_json: {
-      reason: parsed.reason,
-      waitId: primaryWait?.wait_id ?? null,
-      waitType: primaryWait?.wait_type ?? null
-    },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_resume',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'RUNNING' },
     details: { reason: parsed.reason },
     source: parsed.source ?? 'api'
   });
@@ -2987,7 +2998,7 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
   }
 
   const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
-  const quotaSummary = await workflowStepQuotaService.resolveQuotaSummary(knex, runRecord.tenant_id ?? tenant);
+  const quotaSummary = await workflowStepQuotaService.resolveQuotaSummary(knex, runRecord.tenant ?? tenant);
   const quotaExhausted = quotaSummary.effectiveLimit != null && quotaSummary.usedCount >= quotaSummary.effectiveLimit;
 
   if (quotaExhausted) {
@@ -3021,15 +3032,15 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
     status: 'RUNNING',
-    resume_event_name: runRecord.engine === 'temporal' ? null : 'ADMIN_RESUME',
-    resume_event_payload: runRecord.engine === 'temporal' ? null : resumePayload,
+    resume_event_name: null,
+    resume_event_payload: null,
     resume_error: null,
     error_json: null,
   });
 
   await WorkflowRunLogModelV2.create(knex, {
     run_id: parsed.runId,
-    tenant_id: runRecord?.tenant_id ?? null,
+    tenant: runRecord?.tenant ?? null,
     step_path: quotaWait.step_path ?? null,
     level: 'INFO',
     message: 'Quota-paused run resumed by operator',
@@ -3050,75 +3061,14 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
     source: parsed.source ?? 'api'
   });
 
-  if (runRecord.engine === 'temporal') {
-    await signalWorkflowRuntimeV2QuotaResume({
-      runId: parsed.runId,
-      waitId: quotaWait.wait_id,
-      reason: parsed.reason,
-      resumedBy: `admin-${user.user_id}`,
-    });
-  } else {
-    const runtime = new WorkflowRuntimeV2();
-    await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
-  }
+  await signalWorkflowRuntimeV2QuotaResume({
+    runId: parsed.runId,
+    waitId: quotaWait.wait_id,
+    reason: parsed.reason,
+    resumedBy: `admin-${user.user_id}`,
+  });
 
   return { ok: true, resumed: true };
-});
-
-export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-
-  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(run, 'retry');
-  if (run.status !== 'FAILED') {
-    return throwHttpError(409, 'Run is not failed');
-  }
-
-  const failedStep = await knex('workflow_run_steps')
-    .where({ run_id: parsed.runId, status: 'FAILED' })
-    .orderBy('completed_at', 'desc')
-    .first();
-  const nodePath =
-    failedStep?.step_path ?? (run.error_json as { nodePath?: string } | null)?.nodePath ?? null;
-  if (!nodePath) {
-    return throwHttpError(409, 'Failed step not found');
-  }
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'RUNNING',
-    node_path: nodePath,
-    completed_at: null,
-    error_json: null,
-    resume_error: null,
-    resume_event_name: null,
-    resume_event_payload: null
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant_id: run.tenant_id ?? null,
-    level: 'INFO',
-    message: 'Run retry requested',
-    context_json: { reason: parsed.reason, nodePath },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_retry',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'RUNNING' },
-    details: { reason: parsed.reason, nodePath },
-    source: parsed.source ?? 'api'
-  });
-
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, parsed.runId, `admin-retry-${user.user_id}`);
-
-  return { ok: true };
 });
 
 export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3127,15 +3077,14 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   await requireWorkflowPermission(user, 'admin', knex);
 
   const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  const hasExplicitReplayPayload = parsed.payload && Object.keys(parsed.payload).length > 0;
-  const replayPayload = hasExplicitReplayPayload
+  const replayPayload = parsed.payload !== undefined
     ? parsed.payload
     : (isObjectRecord(run.input_json) ? run.input_json : {});
   const launched = await launchPublishedWorkflowRun(knex, {
     workflowId: run.workflow_id,
     workflowVersion: run.workflow_version,
     payload: replayPayload,
-    tenantId: run.tenant_id ?? tenant,
+    tenantId: run.tenant ?? tenant,
     triggerType: null,
     triggerMetadata: {
       replayOfRunId: run.run_id,
@@ -3149,7 +3098,7 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
 
   await WorkflowRunLogModelV2.create(knex, {
     run_id: newRunId,
-    tenant_id: run.tenant_id ?? tenant,
+    tenant: run.tenant ?? tenant,
     level: 'INFO',
     message: 'Run replayed from previous run',
     context_json: { sourceRunId: run.run_id, reason: parsed.reason },
@@ -3158,7 +3107,7 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
 
   await WorkflowRunLogModelV2.create(knex, {
     run_id: run.run_id,
-    tenant_id: run.tenant_id ?? null,
+    tenant: run.tenant ?? null,
     level: 'INFO',
     message: 'Run replay created',
     context_json: { newRunId, reason: parsed.reason },
@@ -3177,59 +3126,6 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   return { ok: true, runId: newRunId };
 });
 
-export const requeueWorkflowRunEventWaitAction = withAuth(async (user, { tenant }, input: unknown) => {
-  initializeWorkflowRuntimeV2();
-  const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'admin', knex);
-
-  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(run, 'requeue_event_wait');
-
-  const wait = await knex('workflow_run_waits')
-    .where({ run_id: parsed.runId, wait_type: 'event' })
-    .orderBy('created_at', 'desc')
-    .first();
-  if (!wait) {
-    return throwHttpError(409, 'No event wait found for run');
-  }
-
-  await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
-    status: 'WAITING',
-    resolved_at: null
-  });
-
-  await WorkflowRunModelV2.update(knex, parsed.runId, {
-    status: 'WAITING',
-    node_path: wait.step_path ?? run.node_path ?? null,
-    completed_at: null,
-    error_json: null,
-    resume_error: null,
-    resume_event_name: null,
-    resume_event_payload: null
-  });
-
-  await WorkflowRunLogModelV2.create(knex, {
-    run_id: parsed.runId,
-    tenant_id: run.tenant_id ?? null,
-    level: 'INFO',
-    message: 'Event wait requeued by operator',
-    context_json: { reason: parsed.reason, waitId: wait.wait_id },
-    source: parsed.source ?? 'api'
-  });
-
-  await auditWorkflowEvent(knex, user, {
-    operation: 'workflow_run_requeue_event',
-    tableName: 'workflow_runs',
-    recordId: parsed.runId,
-    changedData: { status: 'WAITING' },
-    details: { reason: parsed.reason, waitId: wait.wait_id },
-    source: parsed.source ?? 'api'
-  });
-
-  return { ok: true };
-});
-
 export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
@@ -3242,6 +3138,21 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
     examples: node.examples ?? null,
     defaultRetry: node.defaultRetry ?? null
   }));
+});
+
+// Designer soft-enum support: the namespace combobox suggests namespaces already
+// used by this tenant across both the data-store and entity-link tables.
+export const listWorkflowDataStoreNamespacesAction = withAuth(async (user, { tenant }): Promise<string[]> => {
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const [storeNamespaces, linkNamespaces] = await Promise.all([
+    WorkflowDataStoreModel.listNamespaces(knex, tenant),
+    WorkflowEntityLinkModel.listNamespaces(knex, tenant),
+  ]);
+  const namespaces = new Set<string>();
+  for (const entry of storeNamespaces) namespaces.add(entry.namespace);
+  for (const entry of linkNamespaces) namespaces.add(entry.namespace);
+  return Array.from(namespaces).sort((a, b) => a.localeCompare(b));
 });
 
 const applyWorkflowDesignerInputPresentationMetadata = (
@@ -3306,9 +3217,19 @@ export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { t
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
-  const catalog = buildWorkflowDesignerActionCatalog(registry.list().map(serializeWorkflowRegistryAction));
+  const integrationModules = getWorkflowIntegrationModuleRegistry().list();
+  const catalog = buildWorkflowDesignerActionCatalog(
+    registry.list().map(serializeWorkflowRegistryAction),
+    { modules: integrationModules }
+  );
   const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
-  return catalog.filter((record) => record.tileKind !== 'app' || availableAppKeys.has(record.groupKey));
+  const availableFirstPartyKeys = await loadAvailableFirstPartyIntegrationAppKeys(knex, tenant);
+  const firstPartyModuleKeys: Set<string> = new Set(integrationModules.map((module) => module.groupKey));
+  return catalog.filter((record) => {
+    if (record.tileKind !== 'app') return true;
+    if (firstPartyModuleKeys.has(record.groupKey)) return availableFirstPartyKeys.has(record.groupKey);
+    return availableAppKeys.has(record.groupKey);
+  });
 });
 
 export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3410,7 +3331,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   await knex.transaction(async (trx) => {
     const createdEventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
-      tenant_id: tenant,
+      tenant: tenant,
       event_name: parsed.eventName,
       correlation_key: correlation.key,
       payload,
@@ -3444,7 +3365,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
       for (const wait of waits) {
         const matchedRun = await getRun(wait.run_id);
-        if (matchedRun?.engine !== 'temporal') {
+        if (!matchedRun) {
           continue;
         }
         if (wait.wait_type === 'human') {
@@ -3604,7 +3525,6 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
         eventType: parsed.eventName,
         sourcePayloadSchemaRef: effectiveSourceSchemaRef,
         triggerMappingApplied: mappingApplied,
-        execute: true,
         executionKey: `event-${Date.now()}`
       });
       startedRuns.push(launched.runId);
@@ -3697,7 +3617,7 @@ export const listWorkflowEventsPagedAction = withAuth(async (user, { tenant }, i
 
   const query = knex('workflow_runtime_events').select(
     'event_id',
-    'tenant_id',
+    'tenant',
     'event_name',
     'correlation_key',
     'payload',
@@ -3712,7 +3632,7 @@ export const listWorkflowEventsPagedAction = withAuth(async (user, { tenant }, i
   );
 
   if (tenant) {
-    query.where('tenant_id', tenant);
+    query.where('tenant', tenant);
   }
   if (parsed.eventName) {
     query.where('event_name', parsed.eventName);
@@ -3843,7 +3763,7 @@ export const listWorkflowEventSummaryAction = withAuth(async (user, { tenant }, 
     );
 
   if (tenant) {
-    query.where('tenant_id', tenant);
+    query.where('tenant', tenant);
   }
   if (parsed.eventName) {
     query.where('event_name', parsed.eventName);
@@ -3876,7 +3796,7 @@ export const getWorkflowEventAction = withAuth(async (user, { tenant }, input: u
   if (!event) {
     return throwHttpError(404, 'Event not found');
   }
-  if (tenant && event.tenant_id && event.tenant_id !== tenant) {
+  if (tenant && event.tenant && event.tenant !== tenant) {
     return throwHttpError(404, 'Event not found');
   }
 

@@ -3,8 +3,12 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
-export const resolveClientBillingCurrency = withAuth(async (_user, { tenant }, clientId: string, asOfDate?: string): Promise<string> => {
+export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, clientId: string, asOfDate?: string): Promise<string> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: Cannot resolve client billing currency');
+  }
   const { knex } = await createTenantKnex();
   const effectiveDate = asOfDate || Temporal.Now.plainDateISO().toString();
 

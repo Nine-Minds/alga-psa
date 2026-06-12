@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@alga-psa/authorization": "*",
+    "@alga-psa/types": "*",
     "google-auth-library": "^10.6.1",
     "openai": "^4.104.0"
   }

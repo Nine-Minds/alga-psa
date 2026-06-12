@@ -1,6 +1,9 @@
-# Talos Appliance Assets
+# Appliance Assets (Ubuntu v1, Talos Legacy)
 
 This directory owns appliance-specific assets and automation for Alga PSA.
+
+Supported customer appliance path for v1 is Ubuntu Server 24.04 LTS with host setup/status service on port `8080`.
+Talos assets in this tree are legacy/internal unless explicitly used by support or engineering.
 
 For user-facing appliance installation and operation guides, start with:
 
@@ -9,7 +12,7 @@ For user-facing appliance installation and operation guides, start with:
 - `ee/docs/appliance/operators-manual.md`
 - `ee/docs/appliance/technical-reference.md`
 
-For the stable operating model and generic Talos appliance assumptions, start with:
+Legacy Talos reference docs (internal/support only):
 
 - `ee/docs/premise/README.md`
 - `ee/docs/premise/talos-release-model.md`
@@ -20,17 +23,18 @@ For the stable operating model and generic Talos appliance assumptions, start wi
 
 Current responsibilities:
 
+- Ubuntu appliance ISO workspace under `ubuntu-iso/`
+- host setup/status/update service under `host-service/`
 - Flux deployment profiles under `flux/`
-- Talos Image Factory schematics under `schematics/`
-- Talos/appliance release metadata under `releases/`
+- appliance release metadata under `releases/`
 - Storage prerequisites under `manifests/`
-- Appliance helper scripts under `scripts/`
+- legacy/internal Talos helper scripts under `scripts/` and `schematics/`
 
-## Talos image scaffolding
+## Legacy Talos image scaffolding
 
-The repository generates real Talos boot artifacts through the public Image Factory instead of local Packer templates.
+The repository still contains Talos boot artifact scaffolding for support/engineering reference. It is not the supported customer install path for Ubuntu v1.
 
-First-pass supported outputs:
+Historical outputs:
 
 - `metal-amd64.iso`
 - matching `factory.talos.dev/metal-installer/<schematic-id>:<talos-version>` reference
@@ -72,17 +76,19 @@ The build script writes:
 - ISO artifacts under `dist/appliance/<release-version>/`
 - release metadata under `ee/appliance/releases/<release-version>/release.json`
 
-The release manifest couples the Talos version, schematic ID, ISO URL/checksum, and installer image so later bootstrap flows can consume one deterministic contract.
+Historically, Talos release manifests coupled the Talos version, schematic ID, ISO URL/checksum, and installer image. Current Ubuntu appliance release manifests intentionally carry only the application release metadata and pinned image tags used by the supported install/upgrade path.
 
-## Preferred operator workflow (TUI + CLI)
+## Legacy Talos operator workflow (internal only)
 
-Use `ee/appliance/appliance` as the primary operator entrypoint for appliance lifecycle actions:
+The `ee/appliance/appliance` Talos operator is gated by `ALGA_APPLIANCE_ALLOW_LEGACY_TALOS=1` and is retained for support/engineering only. Supported customer installs use the Ubuntu setup/status service on port `8080`.
+
+Legacy TUI entrypoint:
 
 ```bash
 ee/appliance/appliance tui
 ```
 
-The same operator core is available for non-interactive usage:
+Legacy non-interactive usage:
 
 ```bash
 ee/appliance/appliance bootstrap --bootstrap-mode recover --release-version 1.0-rc5
@@ -92,11 +98,11 @@ ee/appliance/appliance status
 ee/appliance/appliance support-bundle --output-dir ./bundles
 ```
 
-The shell scripts below remain supported internals and advanced fallbacks.
+The shell scripts below are legacy Talos internals and support fallbacks.
 
-## Guided appliance bootstrap (script-level fallback)
+## Legacy Talos bootstrap (script-level fallback)
 
-Use `ee/appliance/scripts/bootstrap-appliance.sh` as the primary operator entrypoint.
+`ee/appliance/scripts/bootstrap-appliance.sh` is not the Ubuntu v1 customer bootstrap path.
 
 It can:
 
@@ -126,7 +132,7 @@ ee/appliance/scripts/bootstrap-appliance.sh \
 
 `--app-url` controls the public URLs injected into the app runtime, including `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL`, and `NEXT_PUBLIC_APP_URL`.
 
-The appliance release manifest now carries the customer-facing app release branch and exact component image tags. `bootstrap-appliance.sh` consumes those values by default, and the per-service tag flags are only needed for one-off overrides.
+The current appliance release manifest carries the customer-facing app release branch and exact component image tags. `bootstrap-appliance.sh` can consume those values when used as a legacy support fallback with an existing kubeconfig, but it is not the supported Ubuntu first-install path.
 
 ## Customer-controlled upgrades
 
@@ -136,8 +142,8 @@ Example:
 
 ```bash
 ee/appliance/scripts/upgrade-appliance.sh \
-  --release-version 1.0-rc5 \
-  --kubeconfig ~/.alga-psa-appliance/appliance-single-node/kubeconfig
+  --release-version 1.0 \
+  --kubeconfig /etc/rancher/k3s/k3s.yaml
 ```
 
 The script:
@@ -149,7 +155,7 @@ The script:
 
 Appliance `HelmRelease`s are configured with remediation retries disabled. Failed upgrades stop in place for support investigation instead of auto-rolling back through multiple attempts.
 
-If you already have a running cluster and kubeconfig, the same script can be used with `--kubeconfig` to skip Talos first-boot work.
+For support/automation cases with an already running cluster and kubeconfig, the same script can be used with `--kubeconfig` without invoking the legacy Talos first-boot path.
 
 Bootstrap mode semantics:
 
@@ -168,7 +174,7 @@ ee/appliance/scripts/reset-appliance-data.sh \
 
 ## Support bundles
 
-Use `ee/appliance/scripts/collect-support-bundle.sh` to export the standard diagnostics package for support.
+Use `ee/appliance/scripts/collect-support-bundle.sh` to export the standard diagnostics package for support. The `--talosconfig` and `--node-ip` flags are optional legacy Talos diagnostics inputs, not required for the supported Ubuntu appliance path.
 
 Example:
 

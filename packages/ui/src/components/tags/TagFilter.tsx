@@ -7,24 +7,31 @@ import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
 import { filterTagsByText } from '../../lib/utils';
 import { ITag } from '@alga-psa/types';
-import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '../Button';
 import { useTranslation } from '../../lib/i18n/client';
 
 interface TagFilterProps {
+  id?: string;
   tags: ITag[];
   selectedTags: string[];
   onToggleTag: (tagText: string) => void;
   onClearTags: () => void;
   placeholder?: string;
+  triggerLabel?: string;
+  selectedLabel?: string;
+  triggerClassName?: string;
 }
 
 export function TagFilter({
+  id = 'tag-filter',
   tags,
   selectedTags,
   onToggleTag,
   onClearTags,
   placeholder,
+  triggerLabel,
+  selectedLabel,
+  triggerClassName = '',
 }: TagFilterProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('tagFilter.placeholder', { defaultValue: 'Filter by tags...' });
@@ -36,12 +43,12 @@ export function TagFilter({
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
-        <Button id="tag-filter-trigger" variant="outline" className="h-9 gap-2">
+        <Button id={`${id}-trigger`} variant="outline" className={`h-9 gap-2 whitespace-nowrap ${triggerClassName}`}>
           <TagIcon className="h-4 w-4" />
           <span>
             {selectedTags.length > 0
-              ? t('tagFilter.selectedCount', { count: selectedTags.length, defaultValue: '{{count}} selected' })
-              : t('tagFilter.filter', { defaultValue: 'Filter' })}
+              ? selectedLabel ?? t('tagFilter.selectedCount', { count: selectedTags.length, defaultValue: '{{count}} selected' })
+              : triggerLabel ?? t('tagFilter.filter', { defaultValue: 'Filter' })}
           </span>
         </Button>
       </Popover.Trigger>
@@ -64,7 +71,7 @@ export function TagFilter({
             />
             {selectedTags.length > 0 && (
               <div className="pt-2 border-t flex justify-end">
-                <Button id="tag-filter-clear" variant="ghost" size="sm" onClick={onClearTags}>
+                <Button id={`${id}-clear`} variant="ghost" size="sm" onClick={onClearTags}>
                   {t('tagFilter.clearAll', { defaultValue: 'Clear all' })}
                 </Button>
               </div>

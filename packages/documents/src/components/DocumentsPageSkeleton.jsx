@@ -136,4 +136,3 @@ export default function DocumentsPageSkeleton() {
       </div>
     </div>);
 }
-//# sourceMappingURL=DocumentsPageSkeleton.jsx.map

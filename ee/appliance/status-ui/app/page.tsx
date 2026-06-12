@@ -1,496 +1,591 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, Boxes, ScrollText, Server, SlidersHorizontal } from 'lucide-react';
+import { AlgaLogo } from './AlgaLogo';
+import { LogoutButton } from './auth/LogoutButton';
 import styles from './status.module.css';
 
-type Blocker = {
-  severity?: 'critical' | 'background' | string;
-  component?: string;
-  layer?: string;
-  reason?: string;
-  nextAction?: string;
-  loginBlocking?: boolean;
-};
-
-type PodRow = {
-  namespace: string;
-  name: string;
-  status: string;
-  readyText: string;
-  restarts: number;
-  ageSeconds?: number | null;
-  nodeName?: string | null;
-  containers?: string[];
-};
-
-type UpdateJob = {
-  name?: string | null;
-  action?: string | null;
-  channel?: string | null;
-  state?: string;
-  createdAt?: string | null;
-  startedAt?: string | null;
-  completedAt?: string | null;
-};
-
-type UpdateStatus = {
-  latest?: UpdateJob | null;
-  active?: UpdateJob[];
-  history?: UpdateJob[];
-  logs?: { available?: boolean; lines?: string[]; pod?: string | null; container?: string | null };
-};
-
+type RawTierMap = Record<string, boolean | { ready?: boolean; status?: string }>;
+type Blocker = { severity?: string; component?: string; layer?: string; reason?: string; nextAction?: string; loginBlocking?: boolean };
+type EventItem = { type?: string; reason?: string; namespace?: string; involvedObject?: string; message?: string; timestamp?: string | null };
 type StatusResponse = {
   status?: string;
-  timestamp?: string;
-  rollup?: { state?: string; message?: string; nextAction?: string };
+  // True when setup is blocked on a correctable install code; the UI offers a
+  // "re-enter your install code" action and the /setup form is reachable again.
+  setupReEditable?: boolean;
+  rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
-  activeOperations?: Array<{
-    component?: string;
-    image?: string | null;
-    message?: string;
-    estimatedSizeHuman?: string | null;
-    elapsedSeconds?: number | null;
-    progressAvailable?: boolean;
-    progressPercent?: number | null;
-  }>;
-  tiers?: Record<string, { ready?: boolean; status?: string }>;
+  activeOperations?: Array<{ component?: string; image?: string | null; message?: string; elapsedSeconds?: number | null }>;
+  tiers?: RawTierMap;
+  readinessTiers?: RawTierMap;
   topBlockers?: Blocker[];
-  bootstrap?: {
-    job?: { name?: string | null; state?: string; failed?: boolean; completed?: boolean };
-    logs?: { available?: boolean; pod?: string | null; container?: string | null; tail?: string[]; detectedErrors?: string[] };
-  };
-  recentEvents?: Array<{ type?: string; reason?: string; namespace?: string; involvedObject?: string; message?: string }>;
-  release?: {
-    selectedReleaseVersion?: string | null;
-    appVersion?: string | null;
-    channel?: string | null;
-    selectedChannel?: string | null;
-    gitRevision?: string | null;
-  };
+  failures?: Array<{ category?: string; phase?: string; suspectedCause?: string; suggestedNextStep?: string }>;
+  bootstrap?: { job?: { name?: string | null; state?: string; failed?: boolean; completed?: boolean }; logs?: { available?: boolean; tail?: string[]; detectedErrors?: string[] } };
+  recentEvents?: EventItem[];
+  installState?: { status?: string; phase?: string; lastAction?: string; updatedAt?: string };
+  kubernetes?: { nodes?: Array<{ name?: string; ready?: boolean }>; podCount?: number; jobCount?: number; helmReleaseCount?: number; warnings?: string[] };
+  diagnostics?: Array<{ name?: string; ok?: boolean; status?: number; command?: string; stdout?: string; stderr?: string }>;
 };
 
-function formatSeconds(value?: number | null) {
-  if (value == null) return 'unknown';
-  if (value < 60) return `${value}s`;
-  return `${Math.floor(value / 60)}m ${value % 60}s`;
+type NamespaceItem = { name: string; phase?: string };
+type Deployment = {
+  namespace: string; name: string; readyReplicas: number; replicas: number; updatedReplicas: number; availableReplicas: number;
+  generation: number; observedGeneration: number; strategy?: string; images?: string[]; revision?: string | null;
+  conditions?: Array<{ type?: string; status?: string; reason?: string; message?: string }>;
+  replicaSets?: Array<{ name: string; revision?: string | null; replicas: number; readyReplicas: number; availableReplicas: number; createdAt?: string | null; images?: string[] }>;
+};
+type Pod = {
+  namespace: string; name: string; phase: string; reason?: string | null; ready: boolean; readyContainers: number; totalContainers: number;
+  restarts: number; node?: string | null; podIP?: string | null; createdAt?: string | null;
+  containers: Array<{ name: string; image?: string; ready?: boolean; restarts?: number; state?: Record<string, unknown> | null }>;
+};
+
+type Tab = 'overview' | 'deployments' | 'pods' | 'logs';
+type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
+
+function apiPath(path: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== null && value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `${path}?${qs}` : path;
 }
 
-function badgeClass(value?: string) {
-  const normalized = value || 'unknown';
-  if (['fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded'].includes(normalized)) return styles.ready;
-  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'degraded'].includes(normalized)) return styles.installing;
+function badgeClass(value?: string | boolean) {
+  const normalized = String(value ?? 'unknown');
+  if (['loading'].includes(normalized)) return styles.loading;
+  if (['true', 'fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded', 'ready', 'True'].includes(normalized)) return styles.ready;
+  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'setup-queued', 'not_fully_healthy'].includes(normalized)) return styles.installing;
+  if (['false', 'not ready', 'warning', 'background', 'degraded_background_services', 'Unknown'].includes(normalized)) return styles.warning;
   return styles.failed;
 }
 
-function tokenQuery() {
-  if (typeof window === 'undefined') return '';
-  return window.location.search;
+function tierEntries(status: StatusResponse | null) {
+  const source = status?.readinessTiers || status?.tiers || {};
+  return Object.entries(source).map(([name, value]) => {
+    if (typeof value === 'boolean') return [name, { ready: value, status: value ? 'ready' : 'not ready' }] as const;
+    return [name, { ready: Boolean(value?.ready), status: value?.status || (value?.ready ? 'ready' : 'not ready') }] as const;
+  });
 }
 
-function withToken(path: string, query: string) {
-  if (!query) return path;
-  return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
+function blockers(status: StatusResponse | null): Blocker[] {
+  if (status?.topBlockers?.length) return status.topBlockers;
+  return (status?.failures || []).map((failure) => ({
+    severity: failure.category === 'background-services' ? 'background' : 'critical',
+    component: failure.category,
+    layer: failure.phase,
+    reason: failure.suspectedCause,
+    nextAction: failure.suggestedNextStep,
+    loginBlocking: failure.category !== 'background-services'
+  }));
 }
 
-const INITIAL_LOG_LINES = 300;
-const LOG_LOAD_INCREMENT = 300;
-const MAX_LOG_LINES = 5000;
+function ageFrom(date?: string | null) {
+  if (!date) return '—';
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return `${Math.floor(seconds / 86400)}d`;
+}
+
+function elapsedLabel(seconds?: number | null) {
+  if (seconds === null || seconds === undefined) return 'elapsed time unavailable';
+  if (seconds < 60) return `${Math.max(0, Math.floor(seconds))}s elapsed`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m elapsed`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m elapsed`;
+}
+
+const statusTabs = [
+  { value: 'overview', label: 'Overview', Icon: Activity },
+  { value: 'deployments', label: 'Deployments', Icon: Boxes },
+  { value: 'pods', label: 'Pods', Icon: Server },
+  { value: 'logs', label: 'Logs', Icon: ScrollText }
+] satisfies Array<{ value: Tab; label: string; Icon: typeof Activity }>;
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightLine(line: string, search: string) {
+  if (!search) return line;
+  const parts = line.split(new RegExp(`(${escapeRegExp(search)})`, 'ig'));
+  return <>{parts.map((part, index) => part.toLowerCase() === search.toLowerCase() ? <mark key={index}>{part}</mark> : part)}</>;
+}
+
+function SkeletonRows({ rows = 6, columns = 6 }: { rows?: number; columns?: number }) {
+  return <>{Array.from({ length: rows }).map((_, row) => <tr key={row} className={styles.skeletonRow}>{Array.from({ length: columns }).map((__, col) => <td key={col}><span className={styles.skeletonCell} /></td>)}</tr>)}</>;
+}
+
+function SkeletonBlock({ lines = 6 }: { lines?: number }) {
+  return <div className={styles.skeletonBlock}>{Array.from({ length: lines }).map((_, index) => <span key={index} className={styles.skeletonLineDark} />)}</div>;
+}
 
 export default function StatusPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'updates' | 'pods' | 'diagnostics'>('overview');
-  const [namespaceScope, setNamespaceScope] = useState('appliance');
-  const [pods, setPods] = useState<PodRow[]>([]);
-  const [selectedPod, setSelectedPod] = useState<PodRow | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
+  const [confirmRecover, setConfirmRecover] = useState(false);
+  const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
+  const [namespace, setNamespace] = useState('msp');
+  const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [pods, setPods] = useState<Pod[]>([]);
+  const [selectedPod, setSelectedPod] = useState('');
   const [selectedContainer, setSelectedContainer] = useState('');
-  const [podLog, setPodLog] = useState<string[]>([]);
-  const [podLogTailLines, setPodLogTailLines] = useState(INITIAL_LOG_LINES);
-  const [loadingOlderLogs, setLoadingOlderLogs] = useState(false);
-  const [podStatus, setPodStatus] = useState('Loading pods...');
-  const [logStatus, setLogStatus] = useState('Select a pod to view logs.');
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
-  const [updateChannel, setUpdateChannel] = useState('stable');
-  const [updateMessage, setUpdateMessage] = useState('');
-  const [updateBusy, setUpdateBusy] = useState(false);
-  const logPreRef = useRef<HTMLPreElement | null>(null);
-  const pendingScrollRestoreRef = useRef<{ previousHeight: number } | null>(null);
-  const query = useMemo(tokenQuery, []);
+  const [deploymentFilter, setDeploymentFilter] = useState('');
+  const [podFilter, setPodFilter] = useState('');
+  const [logFilter, setLogFilter] = useState('');
+  const [logSearch, setLogSearch] = useState('');
+  const [activeMatch, setActiveMatch] = useState(0);
+  const [logTail, setLogTail] = useState(200);
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [logError, setLogError] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [loadingNamespaces, setLoadingNamespaces] = useState(true);
+  const [loadingDeployments, setLoadingDeployments] = useState(false);
+  const [loadingPods, setLoadingPods] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const logPaneRef = useRef<HTMLPreElement | null>(null);
+  const lineRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const pendingLogScroll = useRef<null | { mode: 'preserve' | 'end'; previousScrollHeight: number; previousScrollTop: number }>(null);
+  const statusRequestInFlight = useRef(false);
+  const statusAbortController = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const response = await fetch(`/api/status${query}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unauthorized or status API unavailable');
-        const data = (await response.json()) as StatusResponse;
-        if (!cancelled) {
-          setStatus(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      }
-    }
-    load();
-    const timer = setInterval(load, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [query]);
+  const loadStatus = useCallback(async () => {
+    if (statusRequestInFlight.current) return;
 
-  useEffect(() => {
-    const selected = status?.release?.selectedChannel || status?.release?.channel;
-    if (selected === 'stable' || selected === 'nightly') setUpdateChannel(selected);
-  }, [status?.release?.channel, status?.release?.selectedChannel]);
-
-  useEffect(() => {
-    if (activeTab !== 'updates') return undefined;
-    let cancelled = false;
-    async function loadUpdateStatus() {
-      try {
-        const response = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load update status');
-        const data = (await response.json()) as UpdateStatus;
-        if (!cancelled) setUpdateStatus(data);
-      } catch (err) {
-        if (!cancelled) setUpdateMessage(err instanceof Error ? err.message : String(err));
-      }
-    }
-    loadUpdateStatus();
-    const timer = setInterval(loadUpdateStatus, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, query]);
-
-  useEffect(() => {
-    if (activeTab !== 'pods') return undefined;
-    let cancelled = false;
-    async function loadPods() {
-      try {
-        const response = await fetch(withToken(`/api/pods?namespace=${encodeURIComponent(namespaceScope)}`, query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load pods');
-        const data = (await response.json()) as { pods?: PodRow[] };
-        if (!cancelled) {
-          const rows = data.pods || [];
-          setPods(rows);
-          setPodStatus(`${rows.length} pods loaded.`);
-          if (selectedPod && !rows.some((pod) => pod.namespace === selectedPod.namespace && pod.name === selectedPod.name)) {
-            setSelectedPod(null);
-            setPodLog([]);
-            setPodLogTailLines(INITIAL_LOG_LINES);
-            setLogStatus('Select a pod to view logs.');
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setPodStatus(err instanceof Error ? err.message : String(err));
-      }
-    }
-    loadPods();
-    const timer = setInterval(loadPods, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, namespaceScope, query, selectedPod]);
-
-  useEffect(() => {
-    if (activeTab !== 'pods' || !selectedPod) return undefined;
-    let cancelled = false;
-    async function loadLogs() {
-      const pod = selectedPod;
-      if (!pod) return;
-      const container = selectedContainer || pod.containers?.[0] || '';
-      const params = new URLSearchParams({
-        namespace: pod.namespace,
-        pod: pod.name,
-        container,
-        tailLines: String(podLogTailLines),
-      });
-      try {
-        const response = await fetch(withToken(`/api/pods/logs?${params.toString()}`, query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load pod logs');
-        const data = (await response.json()) as { available?: boolean; lines?: string[] };
-        if (!cancelled) {
-          setPodLog(data.lines || []);
-          const lineCount = data.lines?.length || 0;
-          const limitMessage = podLogTailLines >= MAX_LOG_LINES ? ' Reached log history limit.' : '';
-          setLogStatus(`${data.available ? `Loaded ${lineCount} log lines` : 'No logs available'} for ${pod.namespace}/${pod.name}${container ? ` / ${container}` : ''}.${limitMessage}`);
-          const restore = pendingScrollRestoreRef.current;
-          if (restore) {
-            pendingScrollRestoreRef.current = null;
-            requestAnimationFrame(() => {
-              const pre = logPreRef.current;
-              if (pre) {
-                pre.scrollTop = Math.max(0, pre.scrollHeight - restore.previousHeight);
-              }
-            });
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setLogStatus(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!cancelled) setLoadingOlderLogs(false);
-      }
-    }
-    loadLogs();
-    const timer = setInterval(loadLogs, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, podLogTailLines, query, selectedContainer, selectedPod]);
-
-  const state = status?.rollup?.state || status?.status || 'loading';
-  const operations = status?.activeOperations || [];
-  const logs = status?.bootstrap?.logs;
-  const detectedError = logs?.detectedErrors?.at(-1);
-
-  function choosePod(pod: PodRow) {
-    setSelectedPod(pod);
-    setSelectedContainer(pod.containers?.[0] || '');
-    setPodLog([]);
-    setPodLogTailLines(INITIAL_LOG_LINES);
-    pendingScrollRestoreRef.current = null;
-    setLogStatus(`Loading logs for ${pod.namespace}/${pod.name}...`);
-  }
-
-  function chooseContainer(container: string) {
-    setSelectedContainer(container);
-    setPodLog([]);
-    setPodLogTailLines(INITIAL_LOG_LINES);
-    pendingScrollRestoreRef.current = null;
-    if (selectedPod) {
-      setLogStatus(`Loading logs for ${selectedPod.namespace}/${selectedPod.name}${container ? ` / ${container}` : ''}...`);
-    }
-  }
-
-  async function startUpdate(action: 'check' | 'apply') {
-    setUpdateBusy(true);
-    setUpdateMessage(action === 'check' ? 'Starting update check…' : `Starting ${updateChannel} upgrade…`);
+    const controller = new AbortController();
+    statusRequestInFlight.current = true;
+    statusAbortController.current = controller;
+    setLoadingStatus(true);
     try {
-      const response = await fetch(withToken(`/api/update/${action === 'check' ? 'check' : 'apply'}`, query), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: action === 'apply' ? JSON.stringify({ channel: updateChannel }) : '{}',
-      });
-      const data = (await response.json()) as { status?: UpdateStatus; error?: string };
-      if (!response.ok) {
-        if (response.status === 409 && data.status) setUpdateStatus(data.status);
-        throw new Error(data.error || (response.status === 409 ? 'Another update job is already running.' : 'Unable to start update job'));
-      }
-      setUpdateMessage(action === 'check' ? 'Update check submitted.' : 'Upgrade submitted. Progress will appear below.');
-      const statusResponse = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
-      if (statusResponse.ok) setUpdateStatus(await statusResponse.json() as UpdateStatus);
+      const response = await fetch(apiPath('/api/status'), { cache: 'no-store', signal: controller.signal });
+      if (response.status === 401) { window.location.reload(); return; }
+      if (!response.ok) throw new Error('Status API unavailable.');
+      setStatus(await response.json());
+      setError(null);
     } catch (err) {
-      setUpdateMessage(err instanceof Error ? err.message : String(err));
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setUpdateBusy(false);
+      if (statusAbortController.current === controller) {
+        statusRequestInFlight.current = false;
+        statusAbortController.current = null;
+        setLoadingStatus(false);
+      }
     }
+  }, []);
+
+  const recoverBootstrap = useCallback(async () => {
+    if (recovering) return;
+    setRecovering(true);
+    setRecoverMsg(null);
+    try {
+      const response = await fetch(apiPath('/api/recover'), { method: 'POST', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to trigger recovery.');
+      setRecoverMsg(data.message || 'Recovery triggered.');
+      loadStatus();
+    } catch (err) {
+      setRecoverMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecovering(false);
+    }
+  }, [recovering, loadStatus]);
+
+  const loadNamespaces = useCallback(async () => {
+    setLoadingNamespaces(true);
+    try {
+      const response = await fetch(apiPath('/api/k8s/namespaces'), { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      setNamespaces(data.namespaces || []);
+    } catch { /* cluster may not exist yet */ }
+    finally { setLoadingNamespaces(false); }
+  }, []);
+
+  const loadPods = useCallback(async () => {
+    setLoadingPods(true);
+    try {
+      const response = await fetch(apiPath('/api/k8s/pods', { namespace }), { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const nextPods = data.pods || [];
+      setPods(nextPods);
+      if (!selectedPod && nextPods.length) {
+        setSelectedPod(nextPods[0].name);
+        setSelectedContainer(nextPods[0].containers?.[0]?.name || '');
+      }
+    } catch { /* ignore transient Kubernetes failures */ }
+    finally { setLoadingPods(false); }
+  }, [namespace, selectedPod]);
+
+  const loadDeployments = useCallback(async () => {
+    setLoadingDeployments(true);
+    try {
+      const response = await fetch(apiPath('/api/k8s/deployments', { namespace }), { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      setDeployments(data.deployments || []);
+    } catch { /* ignore transient Kubernetes failures */ }
+    finally { setLoadingDeployments(false); }
+  }, [namespace]);
+
+  function applyPendingLogScroll() {
+    const pending = pendingLogScroll.current;
+    const pane = logPaneRef.current;
+    if (!pending || !pane) return;
+    if (pending.mode === 'end') {
+      pane.scrollTop = pane.scrollHeight;
+    } else {
+      pane.scrollTop = pane.scrollHeight - pending.previousScrollHeight + pending.previousScrollTop;
+    }
+    pendingLogScroll.current = null;
   }
+
+  const loadLogs = useCallback(async (tail = logTail, options: LogLoadOptions = {}) => {
+    if (!selectedPod) return;
+    const pane = logPaneRef.current;
+    const previousScrollHeight = pane?.scrollHeight || 0;
+    const previousScrollTop = pane?.scrollTop || 0;
+    setLoadingLogs(true);
+    try {
+      setLogError(null);
+      const response = await fetch(apiPath('/api/k8s/logs', { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
+      if (!response.ok) throw new Error((await response.json()).error || 'Unable to read logs.');
+      const data = await response.json();
+      if (options.preserveScroll) {
+        pendingLogScroll.current = { mode: 'preserve', previousScrollHeight, previousScrollTop };
+      } else if (options.scrollToEnd) {
+        pendingLogScroll.current = { mode: 'end', previousScrollHeight, previousScrollTop };
+      }
+      setLogLines(data.lines || []);
+      setLogTail(tail);
+      window.setTimeout(applyPendingLogScroll, 50);
+      window.setTimeout(applyPendingLogScroll, 250);
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [logTail, namespace, selectedContainer, selectedPod]);
+
+  useEffect(() => {
+    loadStatus();
+    loadNamespaces();
+    const timer = setInterval(loadStatus, 15000);
+    return () => {
+      clearInterval(timer);
+      statusAbortController.current?.abort();
+    };
+  }, [loadNamespaces, loadStatus]);
+
+  useEffect(() => {
+    if (activeTab === 'deployments') loadDeployments();
+    if (activeTab === 'pods' || activeTab === 'logs') loadPods();
+  }, [activeTab, loadDeployments, loadPods]);
+
+  useEffect(() => {
+    if (activeTab === 'logs') loadLogs(200, { scrollToEnd: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, namespace, selectedPod, selectedContainer]);
+
+  useEffect(() => {
+    requestAnimationFrame(applyPendingLogScroll);
+  }, [logLines, loadingLogs, activeTab]);
+
+  const selectedPodData = pods.find((pod) => pod.name === selectedPod);
+  const visibleDeployments = deployments.filter((deployment) => `${deployment.namespace}/${deployment.name} ${deployment.images?.join(' ')}`.toLowerCase().includes(deploymentFilter.toLowerCase()));
+  const visiblePods = pods.filter((pod) => `${pod.namespace}/${pod.name} ${pod.phase} ${pod.containers.map((c) => c.image).join(' ')}`.toLowerCase().includes(podFilter.toLowerCase()));
+  const filteredLogLines = logLines.filter((line) => !logFilter || line.toLowerCase().includes(logFilter.toLowerCase()));
+  const matchLineIndexes = useMemo(() => logSearch ? filteredLogLines.reduce<number[]>((matches, line, index) => {
+    if (line.toLowerCase().includes(logSearch.toLowerCase())) matches.push(index);
+    return matches;
+  }, []) : [], [filteredLogLines, logSearch]);
+  const searchMatches = matchLineIndexes.length;
+  const state = status?.rollup?.state || status?.status || status?.installState?.status || 'loading';
+  const blockerList = blockers(status);
+  const runningOperations = status?.activeOperations || [];
+  const primaryOperation = runningOperations[0];
+  const currentPhase = status?.currentPhase || status?.installState?.phase || 'loading';
+  const nextAction = status?.rollup?.nextAction || status?.installState?.lastAction || 'Waiting for the next appliance update';
+
+  useEffect(() => {
+    setActiveMatch(0);
+  }, [logSearch, logFilter, logLines]);
 
   function handleLogScroll() {
-    const pre = logPreRef.current;
-    if (!pre || loadingOlderLogs || podLogTailLines >= MAX_LOG_LINES || pre.scrollTop > 0) return;
-    pendingScrollRestoreRef.current = { previousHeight: pre.scrollHeight };
-    setLoadingOlderLogs(true);
-    setPodLogTailLines((current) => Math.min(MAX_LOG_LINES, current + LOG_LOAD_INCREMENT));
+    const pane = logPaneRef.current;
+    if (!pane || loadingLogs || pane.scrollTop > 80 || logTail >= 10000) return;
+    loadLogs(logTail + 200, { preserveScroll: true });
+  }
+
+  function jumpMatch(direction: 1 | -1) {
+    if (searchMatches === 0) return;
+    const next = (activeMatch + direction + searchMatches) % searchMatches;
+    setActiveMatch(next);
+    window.setTimeout(() => {
+      lineRefs.current[matchLineIndexes[next]]?.scrollIntoView({ block: 'center' });
+    }, 0);
   }
 
   return (
     <main className={styles.shell}>
-      <section className={styles.hero}>
-        <div className={styles.eyebrow}>Alga PSA Appliance</div>
-        <h1>Install status</h1>
-        <p>{error || status?.rollup?.message || 'Loading status...'}</p>
+      <aside className={styles.sidebar}>
+        <div className={styles.brand}>
+          <span className={styles.logo}><AlgaLogo className={styles.logoSvg} /></span>
+          <span className={styles.brandText}><span>Alga PSA</span><small>Setup status</small></span>
+        </div>
+        <nav className={styles.nav} aria-label="Alga PSA setup status tabs" role="tablist">
+          {statusTabs.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`appliance-tab-${value}`}
+              aria-selected={activeTab === value}
+              aria-controls={`appliance-panel-${value}`}
+              className={activeTab === value ? styles.activeTab : ''}
+              onClick={() => setActiveTab(value)}
+            >
+              <Icon className={styles.navIcon} aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <a className={styles.setupLink} href="/setup/"><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
+        <LogoutButton />
+      </aside>
+
+      <section className={styles.workspace}>
+        <header className={styles.commandBar}>
+          <div>
+            <div className={styles.eyebrow}>Alga PSA appliance</div>
+            <h1>{status?.rollup?.message || error || 'Reading live appliance status…'}</h1>
+          </div>
+          <span className={`${styles.statusPill} ${badgeClass(state)}`}>{state}</span>
+        </header>
+
+        {status?.setupReEditable ? (
+          <div className={styles.alert} role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <span>The install code could not be redeemed — it may be invalid, expired, or already used. Re-issue a fresh code from the portal, then re-enter it to continue.</span>
+            <a className={styles.actionButton} href="/setup/">Re-enter your install code</a>
+          </div>
+        ) : null}
+
+        {activeTab === 'overview' ? (
+          <div id="appliance-panel-overview" role="tabpanel" aria-labelledby="appliance-tab-overview" className={styles.grid}>
+            <article className={`${styles.panel} ${styles.wide}`}>
+              <h2>What is running now</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={4} /> : (
+                <div className={styles.runSummary}>
+                  <div className={styles.runHeader}>
+                    <div>
+                      <strong>{primaryOperation?.component || currentPhase}</strong>
+                      <p className={styles.runMessage}>{primaryOperation?.message || nextAction}</p>
+                    </div>
+                    <span className={`${styles.statusPill} ${badgeClass(state)}`}>{state}</span>
+                  </div>
+                  <div className={styles.runMeta}>
+                    <span>Phase: {currentPhase}</span>
+                    <span>{elapsedLabel(primaryOperation?.elapsedSeconds)}</span>
+                    <span>Login: {status?.urls?.loginUrl ? 'available' : 'not available yet'}</span>
+                    <span>{status?.kubernetes?.podCount ?? 0} pods</span>
+                  </div>
+                  {runningOperations.length > 1 ? (
+                    <ul className={styles.runList} aria-label="Other active operations">
+                      {runningOperations.slice(1, 4).map((op, index) => <li key={`${op.component}-${index}`}>{op.component}: {op.message}</li>)}
+                    </ul>
+                  ) : null}
+                </div>
+              )}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Next checkpoint</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={4} /> : <dl className={styles.kv}>
+                <div><dt>Current phase</dt><dd>{currentPhase}</dd></div>
+                <div><dt>Next action</dt><dd>{nextAction}</dd></div>
+                <div><dt>Login URL</dt><dd>{status?.urls?.loginUrl || 'Not available yet'}</dd></div>
+                <div><dt>Cluster objects</dt><dd>{status?.kubernetes?.podCount ?? 0} pods · {status?.kubernetes?.helmReleaseCount ?? 0} releases</dd></div>
+              </dl>}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Blockers</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : blockerList.length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : blockerList.map((blocker, index) => (
+                <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={index}>
+                  <strong>{blocker.component || blocker.layer}</strong><p>{blocker.reason}</p><small>{blocker.nextAction}</small>
+                </div>
+              ))}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Readiness tiers</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={6} /> : <div className={styles.tiers}>{tierEntries(status).map(([name, tier]) => (
+                <div className={styles.tier} key={name}><strong>{name}</strong><span className={`${styles.badge} ${badgeClass(tier.ready)}`}>{tier.ready ? 'ready' : 'not ready'}</span><small>{tier.status}</small></div>
+              ))}</div>}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Active operations</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : runningOperations.length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : runningOperations.map((op, index) => (
+                <div className={styles.operation} key={index}><strong>{op.component}</strong><p>{op.message}</p></div>
+              ))}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Recovery</h2>
+              <p className={styles.muted}>Re-runs the application bootstrap — database migrations, onboarding seeds, and creation of the initial tenant and admin user (only when no user exists yet). Use this if setup finished but you cannot log in because the initial account was never created.</p>
+              <div className={styles.toolbar}>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  disabled={recovering}
+                  onClick={() => { if (!confirmRecover) { setConfirmRecover(true); } else { setConfirmRecover(false); recoverBootstrap(); } }}
+                >
+                  {recovering ? 'Triggering…' : confirmRecover ? 'Confirm re-run' : 'Re-run application bootstrap'}
+                </button>
+                {confirmRecover && !recovering ? <button type="button" onClick={() => setConfirmRecover(false)}>Cancel</button> : null}
+              </div>
+              {recoverMsg ? <p className={styles.helpText}>{recoverMsg}</p> : null}
+            </article>
+
+            <article className={`${styles.panel} ${styles.wide}`}>
+              <h2>Recent Kubernetes events</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={5} /> : <div className={styles.eventList}>{(status?.recentEvents || []).slice(-10).reverse().map((event, index) => (
+                <div className={styles.event} key={index}><b>{event.type} {event.reason}</b><span>{event.namespace} · {event.involvedObject}</span><p>{event.message}</p></div>
+              ))}{(status?.recentEvents || []).length === 0 ? <p className={styles.muted}>Kubernetes events are not available yet.</p> : null}</div>}
+            </article>
+
+            <details className={styles.advancedSupport}>
+              <summary className={styles.advancedSummary}>Advanced support diagnostics</summary>
+              <p className={styles.helpText}>Use this raw payload when support asks for exact appliance state.</p>
+              {loadingStatus && !status ? <SkeletonBlock lines={12} /> : <pre className={styles.raw}>{JSON.stringify(status || { error }, null, 2)}</pre>}
+            </details>
+          </div>
+        ) : null}
+
+        {activeTab === 'deployments' ? (
+          <section id="appliance-panel-deployments" role="tabpanel" aria-labelledby="appliance-tab-deployments" className={styles.panel}>
+            <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={deploymentFilter} onFilter={setDeploymentFilter} onRefresh={loadDeployments} />
+            <div className={styles.tableWrap}><table><thead><tr><th>Deployment</th><th>Ready</th><th>Revision</th><th>Strategy</th><th>Images</th><th>History</th></tr></thead><tbody>{loadingDeployments ? <SkeletonRows columns={6} rows={7} /> : visibleDeployments.length === 0 ? <tr><td colSpan={6} className={styles.emptyCell}>No deployments found.</td></tr> : visibleDeployments.map((deployment) => (
+              <tr key={`${deployment.namespace}/${deployment.name}`}><td><b>{deployment.name}</b><small>{deployment.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(deployment.readyReplicas === deployment.replicas)}`}>{deployment.readyReplicas}/{deployment.replicas}</span></td><td>{deployment.revision || '—'}</td><td>{deployment.strategy}</td><td>{deployment.images?.map((image) => <code key={image}>{image}</code>)}</td><td><div className={styles.history}>{deployment.replicaSets?.slice(0, 4).map((rs) => <span key={rs.name}>r{rs.revision || '?'} {rs.readyReplicas}/{rs.replicas} · {ageFrom(rs.createdAt)}</span>)}</div></td></tr>
+            ))}</tbody></table></div>
+          </section>
+        ) : null}
+
+        {activeTab === 'pods' ? (
+          <section id="appliance-panel-pods" role="tabpanel" aria-labelledby="appliance-tab-pods" className={styles.panel}>
+            <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={podFilter} onFilter={setPodFilter} onRefresh={loadPods} />
+            <div className={styles.tableWrap}><table><thead><tr><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Node/IP</th><th>Containers</th><th>Action</th></tr></thead><tbody>{loadingPods ? <SkeletonRows columns={7} rows={8} /> : visiblePods.length === 0 ? <tr><td colSpan={7} className={styles.emptyCell}>No pods found.</td></tr> : visiblePods.map((pod) => (
+              <tr key={`${pod.namespace}/${pod.name}`} onClick={() => { setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}><td><b>{pod.name}</b><small>{pod.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(pod.phase)}`}>{pod.phase}</span></td><td>{pod.readyContainers}/{pod.totalContainers}</td><td>{pod.restarts}</td><td><small>{pod.node || '—'}<br />{pod.podIP || '—'}</small></td><td>{pod.containers.map((container) => <code key={container.name}>{container.name}</code>)}</td><td><button type="button" onClick={(event) => { event.stopPropagation(); setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}>View logs</button></td></tr>
+            ))}</tbody></table></div>
+          </section>
+        ) : null}
+
+        {activeTab === 'logs' ? (
+          <section id="appliance-panel-logs" role="tabpanel" aria-labelledby="appliance-tab-logs" className={styles.panel}>
+            <div className={styles.logControls}>
+              <Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(value) => { setNamespace(value); setSelectedPod(''); }} options={[{ value: 'msp', label: 'msp' }, ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))]} />
+              <Dropdown ariaLabel="Pod" value={selectedPod} disabled={loadingPods} placeholder="Select pod" onChange={(value) => { setSelectedPod(value); setSelectedContainer(''); }} options={pods.map((pod) => ({ value: pod.name, label: pod.name }))} />
+              <Dropdown ariaLabel="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} placeholder="Select container" onChange={setSelectedContainer} options={(selectedPodData?.containers || []).map((container) => ({ value: container.name, label: container.name }))} />
+              <button type="button" onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
+              <span className={styles.muted}>tail {logTail} · scroll up for older lines</span>
+            </div>
+            <div className={styles.logControls}>
+              <input aria-label="Filter visible log lines" value={logFilter} onChange={(event) => setLogFilter(event.target.value)} placeholder="Filter visible log lines" />
+              <input aria-label="Search and highlight log lines" value={logSearch} onChange={(event) => setLogSearch(event.target.value)} placeholder="Search and highlight" />
+              <button type="button" disabled={searchMatches === 0} onClick={() => jumpMatch(-1)}>Previous</button>
+              <button type="button" disabled={searchMatches === 0} onClick={() => jumpMatch(1)}>Next</button>
+              <span className={styles.matchCount}>{searchMatches ? `${activeMatch + 1}/${searchMatches}` : '0 matches'}</span>
+            </div>
+            {logError ? <div className={styles.alert}>{logError}</div> : null}
+            {loadingLogs && logLines.length === 0 ? <div className={styles.logPane}><SkeletonBlock lines={18} /></div> : <pre className={styles.logPane} ref={logPaneRef} onScroll={handleLogScroll}>{filteredLogLines.map((line, index) => {
+              const matchIndex = matchLineIndexes.indexOf(index);
+              const isMatch = matchIndex >= 0;
+              const isActive = isMatch && matchIndex === activeMatch;
+              return <div ref={(el) => { lineRefs.current[index] = el; }} key={`${index}-${line.slice(0, 20)}`} className={`${isMatch ? styles.matchLine : ''} ${isActive ? styles.activeMatchLine : ''}`}>{highlightLine(line, logSearch)}</div>;
+            })}</pre>}
+          </section>
+        ) : null}
+
       </section>
-
-      <nav className={styles.tabs} aria-label="Appliance status tabs">
-        <button className={activeTab === 'overview' ? styles.activeTab : ''} onClick={() => setActiveTab('overview')}>Overview</button>
-        <button className={activeTab === 'updates' ? styles.activeTab : ''} onClick={() => setActiveTab('updates')}>Updates</button>
-        <button className={activeTab === 'pods' ? styles.activeTab : ''} onClick={() => setActiveTab('pods')}>Pods</button>
-        <button className={activeTab === 'diagnostics' ? styles.activeTab : ''} onClick={() => setActiveTab('diagnostics')}>Diagnostics</button>
-      </nav>
-
-      {activeTab === 'overview' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.overview}`}>
-            <h2>Overview</h2>
-            <dl className={styles.kv}>
-              <div><dt>Install state</dt><dd><span className={`${styles.badge} ${badgeClass(state)}`}>{state}</span></dd></div>
-              <div><dt>Current phase</dt><dd>{status?.currentPhase || state}</dd></div>
-              <div><dt>Login URL</dt><dd>{status?.urls?.loginUrl || 'Not available yet'}</dd></div>
-              <div><dt>Next action</dt><dd>{status?.rollup?.nextAction || '-'}</dd></div>
-            </dl>
-          </article>
-
-          <article className={`${styles.card} ${styles.operation}`}>
-            <h2>Current operation</h2>
-            {operations.length === 0 ? <p className={styles.muted}>No active image pull or long-running operation detected.</p> : operations.map((op, index) => (
-              <div className={styles.operationBox} key={`${op.component}-${index}`}>
-                <strong>{op.component || 'component'}</strong>
-                <p>{op.message}</p>
-                <p><code>{op.image || 'unknown image'}</code></p>
-                <p className={styles.muted}>Estimated size: {op.estimatedSizeHuman || 'unknown'} · elapsed {formatSeconds(op.elapsedSeconds)}</p>
-                <p className={styles.muted}>Pull progress: {op.progressAvailable ? `${op.progressPercent}%` : 'not available from Kubernetes'}</p>
-              </div>
-            ))}
-          </article>
-
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Readiness tiers</h2>
-            <div className={styles.tiers}>
-              {Object.entries(status?.tiers || {}).map(([name, tier]) => (
-                <div className={styles.tier} key={name}>
-                  <strong>{name}</strong>
-                  <span className={`${styles.badge} ${badgeClass(tier.status)}`}>{tier.ready ? 'ready' : 'not ready'}</span>
-                  <span className={styles.muted}>{tier.status}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className={styles.card}>
-            <h2>Blockers</h2>
-            {(status?.topBlockers || []).length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : status?.topBlockers?.map((blocker, index) => (
-              <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={`${blocker.component}-${index}`}>
-                <strong>{blocker.component || blocker.layer}</strong>
-                <p>{blocker.reason}</p>
-                <p className={styles.muted}>{blocker.nextAction}</p>
-                {blocker.loginBlocking === false ? <p className={styles.muted}>background / non-login-blocking</p> : null}
-              </div>
-            ))}
-          </article>
-
-          <article className={styles.card}>
-            <h2>Bootstrap log</h2>
-            {logs?.available ? (
-              <>
-                <p className={styles.muted}>{logs.pod} / {logs.container}</p>
-                {detectedError ? <div className={styles.blocker}><strong>Detected error</strong><p>{detectedError}</p></div> : null}
-                <pre className={styles.log}>{(logs.tail || []).join('\n')}</pre>
-              </>
-            ) : <p className={styles.muted}>{status?.bootstrap?.job?.name ? `No log excerpt available for ${status.bootstrap.job.name}.` : 'No bootstrap job log available yet.'}</p>}
-          </article>
-
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Recent events</h2>
-            <div className={styles.events}>
-              {(status?.recentEvents || []).slice(-8).reverse().map((event, index) => (
-                <div className={styles.event} key={`${event.reason}-${index}`}>
-                  <strong>{event.type} {event.reason}</strong>
-                  <span>{event.namespace} {event.involvedObject}</span>
-                  <p>{event.message}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-      ) : null}
-
-      {activeTab === 'updates' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Updates</h2>
-            <dl className={styles.kv}>
-              <div><dt>Selected channel</dt><dd>{status?.release?.selectedChannel || status?.release?.channel || 'unknown'}</dd></div>
-              <div><dt>Resolved release</dt><dd>{status?.release?.selectedReleaseVersion || 'unknown'}</dd></div>
-              <div><dt>Flux revision</dt><dd>{status?.release?.gitRevision || 'unknown'}</dd></div>
-            </dl>
-            <div className={styles.toolbar}>
-              <label className={styles.muted}>Channel{' '}
-                <select value={updateChannel} onChange={(event) => setUpdateChannel(event.target.value)} disabled={updateBusy}>
-                  <option value="stable">stable</option>
-                  <option value="nightly">nightly</option>
-                </select>
-              </label>
-              <button className={styles.actionButton} onClick={() => startUpdate('check')} disabled={updateBusy}>Check for updates</button>
-              <button className={styles.actionButton} onClick={() => startUpdate('apply')} disabled={updateBusy}>Apply channel upgrade</button>
-            </div>
-            {updateMessage ? <p className={styles.muted}>{updateMessage}</p> : null}
-          </article>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Update job</h2>
-            {updateStatus?.latest ? (
-              <dl className={styles.kv}>
-                <div><dt>Job</dt><dd>{updateStatus.latest.name}</dd></div>
-                <div><dt>Action</dt><dd>{updateStatus.latest.action || '-'}</dd></div>
-                <div><dt>Channel</dt><dd>{updateStatus.latest.channel || '-'}</dd></div>
-                <div><dt>State</dt><dd><span className={`${styles.badge} ${badgeClass(updateStatus.latest.state)}`}>{updateStatus.latest.state}</span></dd></div>
-                <div><dt>Started</dt><dd>{updateStatus.latest.startedAt || updateStatus.latest.createdAt || '-'}</dd></div>
-              </dl>
-            ) : <p className={styles.muted}>No update job has run yet.</p>}
-            {updateStatus?.logs?.available ? <pre className={styles.log}>{(updateStatus.logs.lines || []).join('\n')}</pre> : null}
-          </article>
-        </section>
-      ) : null}
-
-      {activeTab === 'pods' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <div className={styles.toolbar}>
-              <h2>Pods</h2>
-              <label className={styles.muted}>Namespace{' '}
-                <select value={namespaceScope} onChange={(event) => setNamespaceScope(event.target.value)}>
-                  <option value="appliance">Appliance namespaces</option>
-                  <option value="all">All namespaces</option>
-                  <option value="msp">msp</option>
-                  <option value="alga-system">alga-system</option>
-                  <option value="appliance-system">appliance-system</option>
-                  <option value="flux-system">flux-system</option>
-                  <option value="local-path-storage">local-path-storage</option>
-                  <option value="kube-system">kube-system</option>
-                </select>
-              </label>
-            </div>
-            <p className={styles.muted}>{podStatus}</p>
-            <div className={styles.tableWrap}>
-              <table>
-                <thead><tr><th>Namespace</th><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>Node</th></tr></thead>
-                <tbody>
-                  {pods.map((pod) => (
-                    <tr key={`${pod.namespace}/${pod.name}`} onClick={() => choosePod(pod)} className={selectedPod?.namespace === pod.namespace && selectedPod?.name === pod.name ? styles.selectedRow : ''}>
-                      <td>{pod.namespace}</td>
-                      <td>{pod.name}</td>
-                      <td><span className={`${styles.badge} ${badgeClass(pod.status)}`}>{pod.status}</span></td>
-                      <td>{pod.readyText}</td>
-                      <td>{pod.restarts}</td>
-                      <td>{formatSeconds(pod.ageSeconds)}</td>
-                      <td>{pod.nodeName || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-          <article className={`${styles.card} ${styles.full}`}>
-            <div className={styles.toolbar}>
-              <h2>{selectedPod ? `Logs: ${selectedPod.namespace}/${selectedPod.name}` : 'Pod logs'}</h2>
-              <label className={styles.muted}>Container{' '}
-                <select value={selectedContainer} onChange={(event) => chooseContainer(event.target.value)} disabled={!selectedPod}>
-                  {(selectedPod?.containers || []).map((container) => <option key={container} value={container}>{container}</option>)}
-                </select>
-              </label>
-            </div>
-            <p className={styles.muted}>{loadingOlderLogs ? 'Loading previous 300 log lines… ' : ''}{logStatus}</p>
-            {selectedPod ? <pre ref={logPreRef} onScroll={handleLogScroll} className={styles.log}>{podLog.join('\n')}</pre> : null}
-          </article>
-        </section>
-      ) : null}
-
-      {activeTab === 'diagnostics' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Diagnostics</h2>
-            <pre className={styles.log}>{JSON.stringify(status, null, 2)}</pre>
-          </article>
-        </section>
-      ) : null}
     </main>
   );
+}
+
+type DropdownOption = { value: string; label: string };
+
+// Custom dropdown used instead of a native <select>. Native select popups are
+// unreliable inside the Electron browser pane (they fail to open or are
+// dismissed by the 15s status-poll re-render). This renders the option list in
+// the page DOM and keeps its open state across parent re-renders.
+function Dropdown({ value, options, onChange, disabled, ariaLabel, placeholder }: {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
+
+  return (
+    <div className={styles.dropdown} ref={ref}>
+      <button type="button" className={styles.dropdownButton} aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} disabled={disabled} onClick={() => setOpen((prev) => !prev)}>
+        <span className={styles.dropdownLabel}>{selected?.label ?? (value || placeholder || '—')}</span>
+        <span className={styles.dropdownCaret} aria-hidden="true">▾</span>
+      </button>
+      {open && !disabled ? (
+        <ul className={styles.dropdownMenu} role="listbox" aria-label={ariaLabel}>
+          {options.length === 0 ? (
+            <li className={styles.dropdownOption} aria-disabled="true">No options</li>
+          ) : options.map((option) => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              className={`${styles.dropdownOption} ${option.value === value ? styles.dropdownOptionActive : ''}`}
+              onClick={() => { onChange(option.value); setOpen(false); }}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function Toolbar({ namespace, namespaces, loadingNamespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; loadingNamespaces?: boolean; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
+  const options: DropdownOption[] = [
+    { value: 'all', label: 'all namespaces' },
+    { value: 'msp', label: 'msp' },
+    ...namespaces.filter((ns) => ns.name !== 'msp').map((ns) => ({ value: ns.name, label: ns.name }))
+  ];
+  return <div className={styles.toolbar}><Dropdown ariaLabel="Namespace" value={namespace} disabled={loadingNamespaces} onChange={onNamespace} options={options} /><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
 }

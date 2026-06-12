@@ -37,7 +37,7 @@
     "heading": "Kontakty",
     "addContact": "+ Dodaj kontakt",
     "actions": "Akcje",
-    "searchPlaceholder": "Szukaj kontaktów",
+    "searchPlaceholder": "Szukaj kontaktów, notatek i interakcji",
     "resetFilters": "Resetuj",
     "unknownClient": "Nieznany klient",
     "noClient": "Brak klienta",
@@ -68,7 +68,25 @@
       "message": "Niestandardowy typ telefonu{{suffix}} nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu{{definitionSuffix}} czy zachować ją na przyszłość?",
       "deleteType": "Usuń typ",
       "keepType": "Zachowaj typ"
-    }
+    },
+    "print": {
+      "title": "Kontakty",
+      "subtitle": "{{count}} kontaktów",
+      "noContacts": "Brak kontaktów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nazwa",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "client": "Klient",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania kontaktów."
+      }
+    },
+    "shareTooltip": "Drukuj, importuj i eksportuj"
   },
   "contactDetails": {
     "title": "Szczegóły kontaktu",
@@ -96,7 +114,8 @@
       "useClientDestination": "Użyj docelowego miejsca klienta",
       "inboundTicketDestinationHelp": "Jeśli ustawione, nadpisuje docelowe miejsce klienta dla dokładnie tego kontaktu nadawcy. Kolejność: nadpisanie kontaktu -> docelowe miejsce klienta -> domyślne ustawienie dostawcy.",
       "tags": "Tagi",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

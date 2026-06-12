@@ -68,7 +68,7 @@ describe('UsageTracking i18n wiring contract', () => {
 
     expect(source).toContain("t('usage.contractLineGuidance.multipleLines', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to bill against.' })");
     expect(source).toContain("t('usage.contractLineGuidance.tooltipNoClient', { defaultValue: 'Client information not available. Usage will route to the system-managed default contract.' })");
-    expect(source).toContain("t('usage.contractLineGuidance.tooltipMultiple', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted.' })");
+    expect(source).toContain("t('usage.contractLineGuidance.tooltipMultiple', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to use. When only one of them is a bucket contract line, it is selected by default.' })");
     expect(source).toContain("t('usage.contractLineGuidance.tooltipSingle', { defaultValue: 'This usage will be billed under the \"{{name}}\" contract line.', name: eligibleContractLines[0].contract_line_name })");
     expect(source).toContain("t('usage.contractLineGuidance.tooltipNone', { defaultValue: 'No eligible contract lines found for this service.' })");
     expect(source).toContain("t('usage.contractLineGuidance.wrongContractLineWarning', { defaultValue: 'Selecting the wrong contract line may result in incorrect billing' })");

@@ -12,7 +12,7 @@
     "allOpen": "Alle offenen Tickets",
     "allClosed": "Alle geschlossenen Tickets",
     "allPriorities": "Alle Prioritäten",
-    "search": "Tickets suchen...",
+    "search": "Tickets und Kommentare suchen...",
     "category": "Nach Kategorie filtern",
     "clearFilters": "Filter löschen",
     "assignee": "Zuständiger",
@@ -39,7 +39,8 @@
     "breached": "Verletzt",
     "paused": "Pausiert",
     "allResponseStatuses": "Alle Antwortstatus",
-    "responseStatus": "Antwortstatus"
+    "responseStatus": "Antwortstatus",
+    "board": "Nach Board filtern"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -334,6 +335,7 @@
   "dashboard": {
     "title": "Ticket-Dashboard",
     "addTicket": "Ticket hinzufügen",
+    "shareTooltip": "Drucken, importieren und exportieren",
     "exportCsv": "CSV exportieren",
     "bundledToggle": "Gebündelt",
     "exportSelectedTooltip_one": "{{count}} ausgewähltes Ticket als CSV exportieren",
@@ -376,7 +378,10 @@
       "onTrack": "Im Plan",
       "breached": "Verletzt",
       "paused": "Pausiert",
-      "bundled": "Gebündelt"
+      "bundled": "Gebündelt",
+      "activeBoards": "Aktive Boards",
+      "inactiveBoards": "Inaktive Boards",
+      "allBoards": "Alle Boards"
     },
     "selection": {
       "pageSelected_one": "Alle {{count}} Tickets auf dieser Seite sind ausgewählt.",
@@ -393,12 +398,42 @@
       "decrease": "Abstand in der Ticketliste verringern",
       "increase": "Abstand in der Ticketliste vergrößern",
       "reset": "Abstand in der Ticketliste zurücksetzen"
-    }
+    },
+    "print": {
+      "action": "Drucken",
+      "selectedAction_one": "Auswahl drucken ({{count}})",
+      "selectedAction_other": "Auswahl drucken ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Ausgewählte Tickets ({{count}})",
+      "selectedTitle_other": "Ausgewählte Tickets ({{count}})",
+      "subtitle_one": "{{count}} Ticket",
+      "subtitle_other": "{{count}} Tickets",
+      "noTickets": "Keine Tickets zum Drucken",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titel",
+        "client": "Kunde",
+        "status": "Status",
+        "priority": "Priorität",
+        "assigned": "Zugewiesen",
+        "dueDate": "Fälligkeitsdatum"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Kein Fälligkeitsdatum",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "selectedTitle": "Druckoptionen ({{count}} ausgewählt)",
+        "description": "Wählen Sie die beim Drucken von Tickets enthaltenen Spalten."
+      }
+    },
+    "exportSelectedAction": "Auswahl exportieren ({{count}})",
+    "exportAction": "CSV exportieren",
+    "importAction": "CSV importieren"
   },
   "bulk": {
-    "moveToBoard": "In Board verschieben",
-    "deleteSelected_one": "Ausgewählte Tickets löschen ({{count}})",
-    "deleteSelected_other": "Ausgewählte Tickets löschen ({{count}})",
     "bundleTickets": "Tickets bündeln",
     "moveDialogTitle": "Ausgewählte Tickets verschieben",
     "moveDialogDescription": "Wähle ein Ziel-Board und einen Status aus und bestätige dann das Verschieben der ausgewählten Tickets.",
@@ -499,7 +534,98 @@
     },
     "auth": {
       "moveRequired": "Du musst angemeldet sein, um Tickets zu verschieben",
-      "deleteRequired": "Du musst angemeldet sein, um Tickets zu löschen"
+      "deleteRequired": "Du musst angemeldet sein, um Tickets zu löschen",
+      "assignRequired": "Sie müssen angemeldet sein, um Tickets zuzuweisen",
+      "tagsRequired": "Sie müssen angemeldet sein, um Tags hinzuzufügen",
+      "dueDateRequired": "Sie müssen angemeldet sein, um Tickets zu aktualisieren",
+      "statusRequired": "Sie müssen angemeldet sein, um Tickets zu aktualisieren",
+      "priorityRequired": "Sie müssen angemeldet sein, um Tickets zu aktualisieren"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} ausgewählt",
+      "selectedCount_other": "{{count}} ausgewählt",
+      "move": "In Board verschieben",
+      "bundle": "Bündeln",
+      "delete": "Löschen",
+      "clear": "Auswahl aufheben",
+      "bundleNeedsTwo": "Wählen Sie mindestens 2 Tickets zum Bündeln aus",
+      "assign": "Zuweisen",
+      "status": "Status",
+      "priority": "Priorität",
+      "tags": "Tags",
+      "dueDate": "Fälligkeitsdatum",
+      "statusDisabledMultiBoard": "Ausgewählte Tickets liegen auf verschiedenen Boards",
+      "statusResolvingBoards": "Boards der ausgewählten Tickets werden geprüft…",
+      "more": "Mehr"
+    },
+    "assign": {
+      "dialogTitle": "Ausgewählte Tickets zuweisen",
+      "message": "{{count}} ausgewählte(s) Ticket zuweisen an:",
+      "unassigned": "Nicht zugewiesen",
+      "teamHint": "Der Teamleiter wird zum Hauptverantwortlichen; weitere Teammitglieder werden als zusätzliche Bearbeiter hinzugefügt.",
+      "confirm_one": "{{count}} Ticket zuweisen",
+      "confirm_other": "{{count}} Tickets zuweisen",
+      "submitting": "Wird zugewiesen...",
+      "success_one": "{{count}} Ticket zugewiesen",
+      "success_other": "{{count}} Tickets zugewiesen",
+      "partialFailure": "Einige Tickets konnten nicht zugewiesen werden",
+      "failure": "Fehler beim Zuweisen ausgewählter Tickets",
+      "failedHeading": "Folgende Tickets konnten nicht zugewiesen werden:"
+    },
+    "tags": {
+      "dialogTitle": "Tags zu ausgewählten Tickets hinzufügen",
+      "message": "Fügen Sie einem oder mehreren Tags zu {{count}} ausgewählten Ticket(s) hinzu. Bereits vorhandene Tags werden übersprungen.",
+      "placeholder": "Tag eingeben und Enter drücken",
+      "confirm_one": "Tags zu {{count}} Ticket hinzufügen",
+      "confirm_other": "Tags zu {{count}} Tickets hinzufügen",
+      "submitting": "Tags werden hinzugefügt...",
+      "success_one": "Tags zu {{count}} Ticket hinzugefügt",
+      "success_other": "Tags zu {{count}} Tickets hinzugefügt",
+      "partialFailure": "Bei einigen Tickets konnten Tags nicht hinzugefügt werden",
+      "failure": "Fehler beim Hinzufügen von Tags",
+      "failedHeading": "Bei folgenden Tickets konnten Tags nicht hinzugefügt werden:"
+    },
+    "dueDate": {
+      "dialogTitle": "Fälligkeitsdatum für ausgewählte Tickets festlegen",
+      "message": "Fälligkeitsdatum für {{count}} ausgewählte(s) Ticket setzen oder entfernen.",
+      "modeSet": "Setzen auf",
+      "modeClear": "Fälligkeitsdatum entfernen",
+      "placeholder": "Datum auswählen",
+      "confirm_one": "{{count}} Ticket aktualisieren",
+      "confirm_other": "{{count}} Tickets aktualisieren",
+      "submitting": "Wird aktualisiert...",
+      "success_one": "Fälligkeitsdatum bei {{count}} Ticket aktualisiert",
+      "success_other": "Fälligkeitsdatum bei {{count}} Tickets aktualisiert",
+      "partialFailure": "Fälligkeitsdatum konnte bei einigen Tickets nicht aktualisiert werden",
+      "failure": "Fehler beim Aktualisieren des Fälligkeitsdatums",
+      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
+    },
+    "status": {
+      "dialogTitle": "Status für ausgewählte Tickets ändern",
+      "message": "Status für {{count}} ausgewählte(s) Ticket festlegen:",
+      "placeholder": "Status auswählen",
+      "loading": "Status werden geladen...",
+      "confirm_one": "{{count}} Ticket aktualisieren",
+      "confirm_other": "{{count}} Tickets aktualisieren",
+      "submitting": "Wird aktualisiert...",
+      "success_one": "Status bei {{count}} Ticket aktualisiert",
+      "success_other": "Status bei {{count}} Tickets aktualisiert",
+      "partialFailure": "Status konnte bei einigen Tickets nicht aktualisiert werden",
+      "failure": "Fehler beim Aktualisieren des Status",
+      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
+    },
+    "priority": {
+      "dialogTitle": "Priorität für ausgewählte Tickets ändern",
+      "message": "Priorität für {{count}} ausgewählte(s) Ticket festlegen:",
+      "placeholder": "Priorität auswählen",
+      "confirm_one": "{{count}} Ticket aktualisieren",
+      "confirm_other": "{{count}} Tickets aktualisieren",
+      "submitting": "Wird aktualisiert...",
+      "success_one": "Priorität bei {{count}} Ticket aktualisiert",
+      "success_other": "Priorität bei {{count}} Tickets aktualisiert",
+      "partialFailure": "Priorität konnte bei einigen Tickets nicht aktualisiert werden",
+      "failure": "Fehler beim Aktualisieren der Priorität",
+      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
     }
   },
   "quickAdd": {
@@ -1127,5 +1253,34 @@
       "hrs": "Std.",
       "min": "Min."
     }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} bearbeitet gerade",
+      "multiple_one": "{{name}} und {{count}} weitere Person bearbeiten gerade",
+      "multiple_other": "{{name}} und {{count}} weitere Personen bearbeiten gerade"
+    },
+    "remoteFieldUpdated": "{{name}} hat {{field}} aktualisiert",
+    "connection": {
+      "reconnecting": "Live-Aktualisierungen offline - Verbindung wird wiederhergestellt...",
+      "unavailable": "Live-Aktualisierungen nicht verfügbar"
+    }
+  },
+  "delete": {
+    "success": "Ticket #{{number}} erfolgreich gelöscht.",
+    "error": "Ticket konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    "validationError": "Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut."
+  },
+  "boardPicker": {
+    "inactiveBadge": "Inaktiv",
+    "noBoard": "Kein Board",
+    "selectedCount_one": "{{count}} Board",
+    "selectedCount_other": "{{count}} Boards",
+    "excludingPrefix": "ohne {{name}}",
+    "excludingCount_one": "ohne {{count}} Board",
+    "excludingCount_other": "ohne {{count}} Boards",
+    "placeholder": "Nach Board filtern",
+    "title": "Board-Auswahl",
+    "searchPlaceholder": "Boards suchen..."
   }
 }

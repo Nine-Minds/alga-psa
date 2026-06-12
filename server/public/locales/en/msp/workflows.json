@@ -27,6 +27,7 @@
     "close": "Close"
   },
   "runList": {
+    "shareTooltip": "Print and export",
     "quickRanges": {
       "last24h": "Last 24h",
       "last7d": "Last 7d"
@@ -56,7 +57,6 @@
       "runNow": "Run now",
       "exportCsv": "Export CSV",
       "refresh": "Refresh",
-      "resumeSelected": "Resume selected ({{count}})",
       "cancelSelected": "Cancel selected ({{count}})",
       "clearSelection": "Clear selection",
       "details": "Details",
@@ -84,14 +84,10 @@
       "empty": "No workflow runs match the current filters."
     },
     "bulk": {
-      "resumeTitle": "Resume Selected Runs",
-      "resumeMessage": "Resume {{count}} selected run(s)?",
       "cancelTitle": "Cancel Selected Runs",
       "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
       "reasonLabel": "Reason",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "resumeConfirm": "Resume runs",
       "cancelConfirm": "Cancel runs"
     },
     "toasts": {
@@ -105,12 +101,29 @@
       "selectRunsForBulkAction": "Select runs to perform this action.",
       "bulkReasonTooShort": "Reason must be at least 3 characters.",
       "noEligibleRuns": "No selected runs are eligible for that action.",
-      "bulkResumeFailedCount": "Failed to resume {{count}} run(s).",
       "bulkCancelFailedCount": "Failed to cancel {{count}} run(s).",
-      "bulkResumeSuccessCount": "Resumed {{count}} run(s).",
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
+    },
+    "print": {
+      "title": "Workflow Runs",
+      "selectedTitle": "Selected Workflow Runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "No workflow runs to print",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "started": "Started",
+        "updated": "Updated",
+        "duration": "Duration"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing workflow runs."
+      }
     }
   },
   "runDetails": {
@@ -123,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Resume",
       "cancel": "Cancel",
       "export": "Export",
-      "retry": "Retry",
       "replay": "Replay",
-      "requeueEvent": "Requeue Event",
       "close": "Close",
       "view": "View",
       "apply": "Apply",
@@ -247,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Reason",
-      "resumeTitle": "Resume Workflow Run",
-      "resumeMessage": "Resume this workflow run now?",
-      "resumeReasonPlaceholder": "Provide a reason for resuming",
       "cancelTitle": "Cancel Workflow Run",
       "cancelMessage": "Cancel this workflow run? This cannot be undone.",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
       "cancelConfirm": "Cancel run",
-      "retryTitle": "Retry Workflow Run",
-      "retryMessage": "Retry this run from the last failed step?",
-      "retryReasonPlaceholder": "Provide a reason for retrying",
-      "retryConfirm": "Retry run",
       "replayTitle": "Replay Workflow Run",
       "replayMessage": "Replay this run with a new payload.",
       "replayReasonPlaceholder": "Provide a reason for replaying",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Replay run",
-      "requeueTitle": "Requeue Event Wait",
-      "requeueMessage": "Requeue the most recent event wait for this run?",
-      "requeueReasonPlaceholder": "Provide a reason for requeuing",
-      "requeueConfirm": "Requeue wait"
+      "replayConfirm": "Replay run"
     },
     "toasts": {
       "loadRunDetailsFailed": "Failed to load run details",
@@ -275,21 +274,19 @@
       "logExportReady": "Log export ready",
       "exportLogsFailed": "Failed to export logs",
       "reasonTooShort": "Reason must be at least 3 characters.",
-      "runResumed": "Run resumed",
-      "resumeRunFailed": "Failed to resume run",
       "runCanceled": "Run canceled",
       "cancelRunFailed": "Failed to cancel run",
       "runExportReady": "Run export ready",
       "exportRunFailed": "Failed to export run",
-      "runRetryStarted": "Run retry started",
-      "retryRunFailed": "Failed to retry run",
       "replayPayloadInvalid": "Replay payload must be valid JSON.",
       "runReplayStarted": "Run replay started",
       "replayRunFailed": "Failed to replay run",
-      "eventWaitRequeued": "Event wait requeued",
-      "requeueEventWaitFailed": "Failed to requeue event wait",
       "auditExportReady": "Audit export ready",
       "exportAuditLogsFailed": "Failed to export audit logs"
+    },
+    "queuedWarning": {
+      "title": "Queued — waiting for a workflow worker",
+      "description": "This run started over a minute ago but no steps have executed yet. Check that the workflow worker service is running and connected to Temporal."
     }
   },
   "runDialog": {
@@ -767,6 +764,50 @@
       "ai.infer": {
         "label": "Infer Structured Output",
         "description": "Generate structured workflow data from a prompt using the configured AI provider."
+      },
+      "store.get": {
+        "label": "Get Stored Value",
+        "description": "Read a persisted workflow key/value entry."
+      },
+      "store.set": {
+        "label": "Set Stored Value",
+        "description": "Persist a workflow key/value entry."
+      },
+      "store.delete": {
+        "label": "Delete Stored Value",
+        "description": "Delete a persisted workflow key/value entry."
+      },
+      "store.increment": {
+        "label": "Increment Stored Number",
+        "description": "Atomically increment a persisted workflow number."
+      },
+      "store.list": {
+        "label": "List Stored Values",
+        "description": "List persisted workflow key/value entries in a namespace."
+      },
+      "store.list_namespaces": {
+        "label": "List Store Namespaces",
+        "description": "List workflow data-store namespaces used by this tenant."
+      },
+      "links.upsert": {
+        "label": "Upsert Entity Link",
+        "description": "Create or update a persisted link between two workflow entities."
+      },
+      "links.lookup": {
+        "label": "Lookup Entity Links",
+        "description": "Find persisted entity links by source entity and direction."
+      },
+      "links.delete": {
+        "label": "Delete Entity Links",
+        "description": "Delete persisted entity links by side and optional relation."
+      },
+      "links.list": {
+        "label": "List Entity Links",
+        "description": "List persisted entity links in a namespace."
+      },
+      "links.list_namespaces": {
+        "label": "List Link Namespaces",
+        "description": "List workflow entity-link namespaces used by this tenant."
       }
     },
     "validation": {
@@ -911,6 +952,10 @@
         "ai": {
           "label": "AI",
           "description": "AI actions"
+        },
+        "data-store": {
+          "label": "Data Store",
+          "description": "Read and write durable workflow state across runs."
         }
       }
     },
@@ -1340,6 +1385,11 @@
     "addItem": "Add item",
     "fill": "Fill",
     "clearValues": "Clear values",
+    "askAi": {
+      "ariaLabel": "Ask AI for transform help",
+      "title": "Ask AI",
+      "shortcutHint": "Open Quick Ask for transform guidance"
+    },
     "applySuggestions": "Apply suggestions ({{count}})",
     "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
     "fuzzySuffix": "(fuzzy)",
@@ -1383,7 +1433,11 @@
       "openEditor": "Open editor",
       "apply": "Apply",
       "cancel": "Cancel"
-    }
+    },
+    "softEnumPlaceholder": "Select or enter value",
+    "softEnumSearchPlaceholder": "Search or enter a custom value",
+    "softEnumNoResults": "No suggestions",
+    "softEnumUseCustom": "Use \"{{value}}\""
   },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
@@ -1959,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Specific date & time",
       "expression": "Advanced expression"
+    },
+    "workflowEntityType": {
+      "project_task": "Project task",
+      "ticket": "Ticket",
+      "contact": "Contact",
+      "client": "Client",
+      "project": "Project",
+      "appointment": "Appointment",
+      "quote": "Quote"
+    },
+    "workflowLinkRelation": {
+      "related": "Related",
+      "mirrors": "Mirrors",
+      "maps_to": "Maps to",
+      "blocks": "Blocks",
+      "duplicate_of": "Duplicate of",
+      "synced_with": "Synced with"
     }
   },
   "automation": {
@@ -2347,13 +2418,7 @@
     }
   },
   "automationGate": {
-    "loading": "Loading workflow automation...",
-    "featureName": "Workflow Automation",
-    "notEnabled": "This feature is experimental and is not enabled for your tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Enable Workflow Automation in Settings to access workflow automation features.",
-    "goToExperimental": "Go to Experimental Features",
-    "openSettings": "Open settings"
+    "loading": "Loading workflow automation..."
   },
   "flow": {
     "designer": {

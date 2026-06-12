@@ -82,6 +82,10 @@
       "import": "./src/lib/sso/clientPortalSsoResolution.ts",
       "types": "./src/lib/sso/clientPortalSsoResolution.ts"
     },
+    "./lib/security/captcha": {
+      "import": "./src/lib/security/captcha.ts",
+      "types": "./src/lib/security/captcha.ts"
+    },
     "./nextauth/edge-auth": {
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"

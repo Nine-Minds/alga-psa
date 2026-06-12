@@ -50,7 +50,7 @@ export const importWorkflowBundleV1 = async (
     for (const wf of bundle.workflows) {
       const existing = await trx('workflow_definitions')
         .select('workflow_id', 'key')
-        .where({ tenant_id: tenantId, key: wf.key })
+        .where({ tenant: tenantId, key: wf.key })
         .first() as { workflow_id: string; key: string } | undefined;
 
       if (existing) {

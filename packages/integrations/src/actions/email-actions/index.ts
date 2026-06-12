@@ -3,6 +3,7 @@ export { getEmailProviders, upsertEmailProvider, createEmailProvider, updateEmai
 export { getEmailDomains, addEmailDomain, verifyEmailDomain, deleteEmailDomain } from './emailDomainActions';
 export { getEmailSettings, updateEmailSettings } from './emailSettingsActions';
 export { getInboundTicketDefaults, createInboundTicketDefaults, updateInboundTicketDefaults, deleteInboundTicketDefaults } from './inboundTicketDefaultsActions';
+export { getInboundEmailRules, createInboundEmailRule, updateInboundEmailRule, setInboundEmailRuleActive, deleteInboundEmailRule, reorderInboundEmailRules, testInboundEmailRule } from './inboundEmailRulesActions';
 export { getTicketFieldOptions } from './ticketFieldOptionsActions';
 export { setupPubSub } from './setupPubSub';
 // oauthActions and emailActions are omitted if not needed by server runtime or if they pull in too much.

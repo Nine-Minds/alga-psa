@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { FocusScope } from '@radix-ui/react-focus-scope';
+import { RemoveScroll } from 'react-remove-scroll';
 import { ChevronDown, Plus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
 import type { IClient } from '@alga-psa/types';
@@ -12,6 +13,7 @@ import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
 import type { EntityAvatarProps } from './EntityAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -47,22 +49,45 @@ interface ClientPickerProps {
 interface OptionButtonProps {
   id: string;
   label: string;
-  onClick: (e: React.MouseEvent) => void;
+  onSelect: () => void;
+  disabled?: boolean;
+  selected?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
-const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children }) => {
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onSelect, disabled = false, selected = false, className, children }) => {
   const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
     type: 'button',
     id,
     label,
+    disabled,
   });
 
   return (
-    <div {...automationIdProps} data-automation-type="button" className={className} onClick={onClick}>
+    <button
+      {...automationIdProps}
+      type="button"
+      role="option"
+      aria-selected={selected}
+      disabled={disabled}
+      data-automation-type="button"
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelect();
+        }
+      }}
+    >
       {children}
-    </div>
+    </button>
   );
 };
 
@@ -89,11 +114,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   disabled = false,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedClient = useMemo(
@@ -197,10 +224,19 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     };
   }, [isOpen, updateDropdownPosition]);
 
-  const handleSelect = (clientId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    if (!isOpen) return;
 
+    const animationFrame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [isOpen]);
+
+  const handleSelect = (clientId: string) => {
     if (disabledClientIds?.has(clientId)) return;
 
     if (clientId !== selectedClientId) {
@@ -278,110 +314,124 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       updateMetadata(metadata);
       prevMetadataRef.current = metadata;
     }
-  }, [mappedOptions, placeholder, selectedClientId, updateMetadata]);
+  }, [disabled, mappedOptions, placeholder, selectedClientId, updateMetadata]);
 
   const dropdown = (
-    <FocusScope
-      asChild
-      loop
-      trapped
-      onMountAutoFocus={(event) => {
-        event.preventDefault();
-      }}
-      onUnmountAutoFocus={(event) => {
-        event.preventDefault();
-        triggerRef.current?.querySelector('button')?.focus();
-      }}
-    >
-    <div
-      ref={dropdownRef}
-      className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
-      style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width, pointerEvents: 'auto' }}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      data-radix-popper-content-wrapper=""
-    >
-      <div className="p-3 border-b border-gray-100 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search clients..."
-            autoFocus
-            className="h-9"
-          />
+    <RemoveScroll allowPinchZoom>
+      <FocusScope
+        asChild
+        loop
+        trapped
+        onMountAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+        onUnmountAutoFocus={(event) => {
+          event.preventDefault();
+          triggerRef.current?.querySelector('button')?.focus();
+        }}
+      >
+      <div
+        ref={dropdownRef}
+        className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
+        style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width, pointerEvents: 'auto' }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        data-radix-popper-content-wrapper=""
+      >
+        <div className="p-3 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <Input
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search clients..."
+              autoFocus
+              className="h-9"
+            />
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <CustomSelect
+              value={filterState}
+              onValueChange={(value) => onFilterStateChange(value as any)}
+              options={opts}
+              placeholder="Filter"
+              className="flex-1"
+            />
+            <CustomSelect
+              value={clientTypeFilter}
+              onValueChange={(value) => onClientTypeFilterChange(value as any)}
+              options={clientTypes}
+              placeholder="Type"
+              className="flex-1"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-2">
-          <CustomSelect
-            value={filterState}
-            onValueChange={(value) => onFilterStateChange(value as any)}
-            options={opts}
-            placeholder="Filter"
-            className="flex-1"
-          />
-          <CustomSelect
-            value={clientTypeFilter}
-            onValueChange={(value) => onClientTypeFilterChange(value as any)}
-            options={clientTypes}
-            placeholder="Type"
-            className="flex-1"
-          />
-        </div>
-      </div>
 
-      <div className="max-h-[320px] overflow-y-auto">
-        {filteredClients.length === 0 ? (
-          <div className="p-4 text-sm text-gray-500">No clients found.</div>
-        ) : (
-          filteredClients.map((client) => {
-            const isDisabled = disabledClientIds?.has(client.client_id) ?? false;
-            return (
-              <OptionButton
-                key={client.client_id}
-                id={`${id}-option-${client.client_id}`}
-                label={client.client_name}
-                onClick={(e) => handleSelect(client.client_id, e)}
-                className={`flex items-center gap-2 p-3 ${
-                  isDisabled
-                    ? 'opacity-50 cursor-not-allowed'
-                    : `cursor-pointer hover:bg-gray-50 ${client.client_id === selectedClientId ? 'bg-gray-50' : ''}`
-                }`}
-              >
-                <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {client.client_type ? client.client_type : '—'}
-                    {client.is_inactive ? ' • Inactive' : ''}
+        <div
+          id={`${id}-listbox`}
+          role="listbox"
+          aria-label={placeholder}
+          className="max-h-[320px] overflow-y-auto"
+          style={{ overscrollBehavior: 'contain' }}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          {filteredClients.length === 0 ? (
+            <div className="p-4 text-sm text-gray-500">No clients found.</div>
+          ) : (
+            filteredClients.map((client) => {
+              const isDisabled = disabledClientIds?.has(client.client_id) ?? false;
+              const isSelected = client.client_id === selectedClientId;
+              return (
+                <OptionButton
+                  key={client.client_id}
+                  id={`${id}-option-${client.client_id}`}
+                  label={client.client_name}
+                  onSelect={() => handleSelect(client.client_id)}
+                  disabled={isDisabled}
+                  selected={isSelected}
+                  className={`flex w-full items-center gap-2 p-3 text-left ${
+                    isDisabled
+                      ? 'opacity-50 cursor-not-allowed'
+                      : `cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-gray-50' : ''}`
+                  }`}
+                >
+                  <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {client.client_type ? client.client_type : '—'}
+                      {client.is_inactive ? ' • Inactive' : ''}
+                    </div>
                   </div>
-                </div>
-                {isDisabled && (
-                  <span className="text-xs text-gray-400 whitespace-nowrap">{disabledTooltip}</span>
-                )}
-              </OptionButton>
-            );
-          })
+                  {isDisabled && (
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{disabledTooltip}</span>
+                  )}
+                </OptionButton>
+              );
+            })
+          )}
+        </div>
+        {onAddNew && (
+          <>
+            <div className="border-t border-gray-200" />
+            <Button
+              id="client-picker-add-new-btn"
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 rounded-none text-primary"
+              onClick={handleAddNew}
+            >
+              <Plus className="h-4 w-4" />
+              {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
+            </Button>
+          </>
         )}
       </div>
-      {onAddNew && (
-        <>
-          <div className="border-t border-gray-200" />
-          <Button
-            id="client-picker-add-new-btn"
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 rounded-none text-primary"
-            onClick={handleAddNew}
-          >
-            <Plus className="h-4 w-4" />
-            Add new client
-          </Button>
-        </>
-      )}
-    </div>
-    </FocusScope>
+      </FocusScope>
+    </RemoveScroll>
   );
 
   return (
@@ -399,7 +449,17 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             size={triggerSize}
             className={`${fitContent ? 'w-auto' : 'w-full'} justify-between ${triggerButtonClassName}`}
             onClick={() => { if (!disabled) setIsOpen((prev) => !prev); }}
+            onKeyDown={(event) => {
+              if (disabled) return;
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setIsOpen(true);
+              }
+            }}
             disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            aria-controls={`${id}-listbox`}
             data-automation-type={dataAutomationType}
           >
             <div className="flex items-center gap-2 min-w-0">

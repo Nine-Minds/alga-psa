@@ -22,6 +22,9 @@ interface UsageBasedServicesStepProps {
 export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
+  // Legacy default_rate (untagged), shown as a hint when no service_prices row exists for the contract currency.
+  const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number | null>>({});
+  const [missingCurrencyPrice, setMissingCurrencyPrice] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const inputs: Record<number, string> = {};
@@ -55,15 +58,25 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
   const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...(data.usage_services ?? [])];
+    const currencyRate =
+      typeof item.currency_rate === 'number' && item.currency_rate > 0
+        ? item.currency_rate
+        : undefined;
     next[index] = {
       ...next[index],
       service_id: item.service_id,
       service_name: item.service_name,
-      // Use default_rate from catalog if available
-      unit_rate: item.default_rate > 0 ? item.default_rate : undefined,
+      // Only prefill when a price exists in the contract's currency. Legacy default_rate is
+      // untagged and likely USD — don't paste it into a non-USD contract.
+      unit_rate: currencyRate,
       unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || 'unit',
     };
     updateData({ usage_services: next });
+    setLegacyDefaultRates((prev) => ({
+      ...prev,
+      [index]: item.default_rate > 0 ? item.default_rate : null,
+    }));
+    setMissingCurrencyPrice((prev) => ({ ...prev, [index]: currencyRate === undefined }));
   };
 
   const handleRateChange = (index: number, cents: number) => {
@@ -160,6 +173,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   selectedLabel={service.service_name}
                   onSelect={(item) => handleServiceChange(index, item)}
                   itemKinds={['service']}
+                  currencyCode={data.currency_code}
                   placeholder={t('wizardUsage.labels.selectServicePlaceholder', {
                     defaultValue: 'Select a service',
                   })}
@@ -168,7 +182,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
+                  <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2 h-5">
                     <Coins className="h-3 w-3" />
                     {t('wizardUsage.labels.ratePerUnit', { defaultValue: 'Rate per Unit' })}
                   </Label>
@@ -213,10 +227,26 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                       })
                       : t('wizardUsage.labels.enterUnitRate', { defaultValue: 'Enter the unit rate' })}
                   </p>
+                  {service.service_id && missingCurrencyPrice[index] ? (
+                    <p className="text-xs text-amber-700">
+                      {legacyDefaultRates[index]
+                        ? t('wizardUsage.labels.noCurrencyPriceWithLegacyHint', {
+                            defaultValue:
+                              'No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}.',
+                            currency: data.currency_code,
+                            rate: ((legacyDefaultRates[index] ?? 0) / 100).toFixed(2),
+                          })
+                        : t('wizardUsage.labels.noCurrencyPriceEnterRate', {
+                            defaultValue:
+                              'No {{currency}} price in the catalog. Enter a unit rate.',
+                            currency: data.currency_code,
+                          })}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor={`unit-measure-${index}`} className="text-sm">
+                  <Label htmlFor={`unit-measure-${index}`} className="text-sm flex items-center gap-2 h-5">
                     {t('wizardUsage.labels.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
                   </Label>
                   <Input

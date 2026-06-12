@@ -107,6 +107,16 @@
       "reviewAndApprove": "11111",
       "completedNoDetails": "11111",
       "emDash": "11111"
+    },
+    "continuation": {
+      "badge": "11111",
+      "endpoint": "11111",
+      "title": "11111",
+      "description": "11111",
+      "status": "11111",
+      "continue": "11111",
+      "continueAriaLabel": "11111",
+      "defaultPrompt": "11111"
     }
   },
   "quickAsk": {

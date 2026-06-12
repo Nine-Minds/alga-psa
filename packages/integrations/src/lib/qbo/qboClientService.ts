@@ -1,8 +1,14 @@
 import axios, { type AxiosRequestConfig } from 'axios';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
-import type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
+import type {
+  AccountingChangeSet,
+  AccountingExternalChange,
+  AccountingExternalChangeEntity,
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '@alga-psa/types';
 
 const logger = {
   debug: (...args: any[]) => console.debug('[QboClientService]', ...args),
@@ -11,86 +17,287 @@ const logger = {
   error: (...args: any[]) => console.error('[QboClientService]', ...args)
 };
 
+// Intuit returns an `intuit_tid` header on every API response; their support
+// team uses it to locate a request when troubleshooting, so capture it in
+// logs and error details.
+function extractIntuitTid(headers: unknown): string | undefined {
+  if (!headers || typeof headers !== 'object') {
+    return undefined;
+  }
+  const value = (headers as Record<string, unknown>)['intuit_tid'];
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+// Never log or store a raw AxiosError: its request config carries the
+// Authorization header (Bearer/Basic credentials) and request body (refresh
+// token), and these logs ship to a shared aggregator. Reduce it to the safe,
+// useful fields.
+function describeAxiosError(error: unknown): Record<string, unknown> {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      intuitTid: extractIntuitTid(error.response?.headers)
+    };
+  }
+  return { message: error instanceof Error ? error.message : String(error) };
+}
+
 const QBO_TOKEN_ENDPOINT = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const QBO_SANDBOX_API_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 const QBO_PRODUCTION_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 const TOKEN_EXPIRY_BUFFER_SECONDS = 300;
-const QBO_CREDENTIALS_SECRET_NAME = 'qbo_credentials';
+const QBO_CREDENTIALS_SECRET = 'qbo_credentials';
+const QBO_CLIENT_ID_SECRET = 'qbo_client_id';
+const QBO_CLIENT_SECRET_SECRET = 'qbo_client_secret';
 const QBO_MINOR_VERSION = process.env.QBO_MINOR_VERSION?.trim() || null;
+const DEFAULT_QBO_SCOPES = ['com.intuit.quickbooks.accounting'];
 
-async function getTenantQboCredentials(tenantId: string, realmId: string): Promise<QboTenantCredentials | null> {
+export const QBO_TOKEN_URL = QBO_TOKEN_ENDPOINT;
+export const QBO_CREDENTIALS_SECRET_NAME = QBO_CREDENTIALS_SECRET;
+export const QBO_CLIENT_ID_SECRET_NAME = QBO_CLIENT_ID_SECRET;
+export const QBO_CLIENT_SECRET_SECRET_NAME = QBO_CLIENT_SECRET_SECRET;
+
+const QBO_CLIENT_ID_ENV_FALLBACKS = [
+  QBO_CLIENT_ID_SECRET,
+  'QBO_CLIENT_ID',
+  'QBO_OAUTH_CLIENT_ID'
+];
+
+const QBO_CLIENT_SECRET_ENV_FALLBACKS = [
+  QBO_CLIENT_SECRET_SECRET,
+  'QBO_CLIENT_SECRET',
+  'QBO_OAUTH_CLIENT_SECRET'
+];
+
+function readTrimmedSecret(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function resolveEnvSecret(candidateKeys: string[]): string | undefined {
+  for (const key of candidateKeys) {
+    const value = typeof process !== 'undefined' ? process.env?.[key] : undefined;
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+async function resolveAppSecret(
+  secretProvider: ISecretProvider,
+  secretName: string,
+  envKeys: string[]
+): Promise<string | undefined> {
+  const secretValue = await secretProvider.getAppSecret(secretName);
+  if (typeof secretValue === 'string' && secretValue.trim().length > 0) {
+    return secretValue.trim();
+  }
+  return resolveEnvSecret(envKeys);
+}
+
+export async function getQboClientId(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, QBO_CLIENT_ID_SECRET, QBO_CLIENT_ID_ENV_FALLBACKS);
+}
+
+export async function getQboClientSecret(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, QBO_CLIENT_SECRET_SECRET, QBO_CLIENT_SECRET_ENV_FALLBACKS);
+}
+
+export async function getTenantOwnedQboClientId(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return readTrimmedSecret(await provider.getTenantSecret(tenantId, QBO_CLIENT_ID_SECRET));
+}
+
+export async function getTenantOwnedQboClientSecret(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return readTrimmedSecret(await provider.getTenantSecret(tenantId, QBO_CLIENT_SECRET_SECRET));
+}
+
+export type QboCredentialSource = 'tenant' | 'app';
+
+export interface ResolvedQboOAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+  source: QboCredentialSource;
+}
+
+export async function resolveQboOAuthCredentials(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<ResolvedQboOAuthCredentials> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  const [tenantClientId, tenantClientSecret] = await Promise.all([
+    getTenantOwnedQboClientId(tenantId, provider),
+    getTenantOwnedQboClientSecret(tenantId, provider)
+  ]);
+
+  if (tenantClientId && tenantClientSecret) {
+    return {
+      clientId: tenantClientId,
+      clientSecret: tenantClientSecret,
+      source: 'tenant'
+    };
+  }
+
+  if (tenantClientId || tenantClientSecret) {
+    throw new AppError(
+      'QBO_CONFIG_MISSING',
+      'QuickBooks client ID and client secret must both be configured for this tenant before connecting.'
+    );
+  }
+
+  const [appClientId, appClientSecret] = await Promise.all([
+    getQboClientId(provider),
+    getQboClientSecret(provider)
+  ]);
+
+  if (!appClientId || !appClientSecret) {
+    throw new AppError(
+      'QBO_CONFIG_MISSING',
+      'QuickBooks client credentials are not configured for this tenant or the application fallback.'
+    );
+  }
+
+  return {
+    clientId: appClientId,
+    clientSecret: appClientSecret,
+    source: 'app'
+  };
+}
+
+export type QboEnvironment = 'sandbox' | 'production';
+
+export function getQboEnvironment(): QboEnvironment {
+  const configured = readTrimmedSecret(process.env.QBO_ENVIRONMENT)?.toLowerCase();
+  if (configured === 'sandbox' || configured === 'production') {
+    return configured;
+  }
+  if (configured) {
+    logger.warn(`Ignoring invalid QBO_ENVIRONMENT value "${configured}"; expected "sandbox" or "production"`);
+  }
+  return process.env.NODE_ENV === 'production' ? 'production' : 'sandbox';
+}
+
+function computeBaseUrl(envValue?: string | null): string {
+  const raw = (envValue || '').trim();
+  if (!raw) {
+    return 'http://localhost:3000';
+  }
+
+  try {
+    const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.protocol}//${parsed.host}${pathname}`;
+  } catch {
+    return 'http://localhost:3000';
+  }
+}
+
+export async function getQboDeploymentBaseUrl(secretProvider?: ISecretProvider): Promise<string> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (await provider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+    process.env.NEXTAUTH_URL ||
+    (await provider.getAppSecret('NEXTAUTH_URL')) ||
+    'http://localhost:3000';
+
+  return computeBaseUrl(base);
+}
+
+export async function getQboRedirectUri(secretProvider?: ISecretProvider): Promise<string> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  const override =
+    readTrimmedSecret(process.env.QBO_REDIRECT_URI) ??
+    readTrimmedSecret(await provider.getAppSecret('QBO_REDIRECT_URI'));
+  if (override) {
+    return override;
+  }
+  return `${await getQboDeploymentBaseUrl(provider)}/api/integrations/qbo/callback`;
+}
+
+export function getQboOAuthScopes(): string[] {
+  const configured = readTrimmedSecret(process.env.QBO_OAUTH_SCOPES);
+  if (!configured) {
+    return DEFAULT_QBO_SCOPES;
+  }
+
+  return configured
+    .split(/\s+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+}
+
+export function getQboOAuthScopesString(): string {
+  return getQboOAuthScopes().join(' ');
+}
+
+export async function getStoredQboCredentialsMap(tenantId: string): Promise<Record<string, QboTenantCredentials>> {
   const secretProvider = await getSecretProviderInstance();
-  const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+  const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET);
   if (!secret) {
-    logger.warn(`QBO credentials secret not found for tenant ${tenantId}`);
-    return null;
+    return {};
   }
 
   try {
     const allCredentials = JSON.parse(secret) as Record<string, QboTenantCredentials>;
     if (typeof allCredentials !== 'object' || allCredentials === null) {
       logger.warn(`Invalid QBO credentials structure: not an object for tenant ${tenantId}`);
-      return null;
+      return {};
     }
-
-    const credentials = allCredentials[realmId];
-    if (
-      credentials &&
-      credentials.accessToken &&
-      credentials.refreshToken &&
-      credentials.realmId === realmId &&
-      credentials.accessTokenExpiresAt &&
-      credentials.refreshTokenExpiresAt
-    ) {
-      return credentials;
-    }
-
-    logger.warn(`Invalid or missing QBO credentials for tenant ${tenantId}, realm ${realmId}`);
-    return null;
+    return allCredentials;
   } catch (error) {
-    logger.error(`Error parsing QBO credentials for tenant ${tenantId}, realm ${realmId}:`, error);
-    return null;
+    logger.error(`Error parsing QBO credentials for tenant ${tenantId}:`, error);
+    return {};
   }
 }
 
-async function storeTenantQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
-  const secretProvider = await getSecretProviderInstance();
+export async function getDefaultQboRealmId(tenantId: string): Promise<string | null> {
+  const allCredentials = await getStoredQboCredentialsMap(tenantId);
+  const firstRealmId = Object.keys(allCredentials)[0];
+  return firstRealmId ?? null;
+}
 
-  let allCredentials: Record<string, QboTenantCredentials> = {};
-  try {
-    const existingSecret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
-    if (existingSecret) {
-      allCredentials = JSON.parse(existingSecret);
-    }
-  } catch (error) {
-    logger.warn(`Could not parse existing credentials for tenant ${tenantId}, starting fresh:`, error);
+function isValidQboCredentials(credentials: QboTenantCredentials | undefined, realmId: string): credentials is QboTenantCredentials {
+  return Boolean(
+    credentials &&
+    credentials.accessToken &&
+    credentials.refreshToken &&
+    credentials.realmId === realmId &&
+    credentials.accessTokenExpiresAt &&
+    credentials.refreshTokenExpiresAt
+  );
+}
+
+async function getTenantQboCredentials(tenantId: string, realmId: string): Promise<QboTenantCredentials | null> {
+  const allCredentials = await getStoredQboCredentialsMap(tenantId);
+  const credentials = allCredentials[realmId];
+  if (isValidQboCredentials(credentials, realmId)) {
+    return credentials;
   }
+
+  logger.warn(`Invalid or missing QBO credentials for tenant ${tenantId}, realm ${realmId}`);
+  return null;
+}
+
+export async function upsertStoredQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
+  const secretProvider = await getSecretProviderInstance();
+  const allCredentials = await getStoredQboCredentialsMap(tenantId);
 
   allCredentials[credentials.realmId] = credentials;
 
-  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, JSON.stringify(allCredentials));
+  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
   logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
-}
-
-async function getAppSecrets(): Promise<{ clientId: string; clientSecret: string } | null> {
-  const secretProvider = await getSecretProviderInstance();
-  try {
-    const clientId = await secretProvider.getAppSecret('qbo_client_id');
-    const clientSecret = await secretProvider.getAppSecret('qbo_client_secret');
-
-    if (clientId && clientSecret) {
-      return {
-        clientId: typeof clientId === 'string' ? clientId : String(clientId),
-        clientSecret: typeof clientSecret === 'string' ? clientSecret : String(clientSecret)
-      };
-    }
-
-    logger.error('QBO Client ID or Secret not found in app secrets');
-    return null;
-  } catch (error) {
-    logger.error('Error retrieving QBO app secrets:', error);
-    return null;
-  }
 }
 
 export class QboClientService {
@@ -103,7 +310,14 @@ export class QboClientService {
     this.realmId = realmId;
   }
 
-  public static async create(tenantId: string, realmId: string): Promise<QboClientService> {
+  public static async create(tenantId: string, realmId?: string | null): Promise<QboClientService> {
+    if (!realmId) {
+      realmId = await getDefaultQboRealmId(tenantId);
+      if (!realmId) {
+        throw new AppError('QBO_SETUP_INCOMPLETE', `No QuickBooks Online connections configured for tenant ${tenantId}`);
+      }
+    }
+
     const credentials = await getTenantQboCredentials(tenantId, realmId);
     if (!credentials) {
       throw new AppError('QBO_SETUP_INCOMPLETE', `QBO credentials not found for tenant ${tenantId}, realm ${realmId}`);
@@ -127,24 +341,22 @@ export class QboClientService {
       try {
         await this.refreshToken();
       } catch (error) {
-        logger.error({ tenantId: this.tenantId, realmId: this.realmId, error }, 'Failed to refresh QBO token');
+        const errorInfo = describeAxiosError(error);
+        logger.error({ tenantId: this.tenantId, realmId: this.realmId, ...errorInfo }, 'Failed to refresh QBO token');
         if (axios.isAxiosError(error) && error.response?.status === 400) {
-          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: error });
+          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
         }
-        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: error });
+        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
       }
     }
 
-    const qboAppSecrets = await getAppSecrets();
-    if (!qboAppSecrets || !qboAppSecrets.clientId || !qboAppSecrets.clientSecret) {
-      throw new AppError('CONFIG_ERROR', 'QBO Client ID or Secret not configured.');
-    }
+    await resolveQboOAuthCredentials(this.tenantId);
 
     logger.debug(
       {
         tenantId: this.tenantId,
         realmId: this.realmId,
-        environment: this.isProductionEnvironment() ? 'production' : 'sandbox',
+        environment: getQboEnvironment(),
         minorVersion: QBO_MINOR_VERSION
       },
       'QBO client initialized'
@@ -161,12 +373,9 @@ export class QboClientService {
   }
 
   private async refreshToken(): Promise<void> {
-    const qboAppSecrets = await getAppSecrets();
-    if (!qboAppSecrets || !qboAppSecrets.clientId || !qboAppSecrets.clientSecret) {
-      throw new AppError('CONFIG_ERROR', 'QBO Client ID or Secret not configured for token refresh.');
-    }
+    const { clientId, clientSecret } = await resolveQboOAuthCredentials(this.tenantId);
 
-    const basicAuth = Buffer.from(`${qboAppSecrets.clientId}:${qboAppSecrets.clientSecret}`).toString('base64');
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
     try {
       const response = await axios.post(
@@ -194,17 +403,20 @@ export class QboClientService {
       };
 
       this.credentials = { ...this.credentials, ...newCredentialsUpdate };
-      await storeTenantQboCredentials(this.tenantId, this.credentials);
+      await upsertStoredQboCredentials(this.tenantId, this.credentials);
 
       logger.info({ tenantId: this.tenantId, realmId: this.realmId }, 'Successfully refreshed QBO token.');
     } catch (error) {
-      logger.error({ tenantId: this.tenantId, realmId: this.realmId, error }, 'Error refreshing QBO token');
+      logger.error(
+        { tenantId: this.tenantId, realmId: this.realmId, ...describeAxiosError(error) },
+        'Error refreshing QBO token'
+      );
       throw error;
     }
   }
 
   private isProductionEnvironment(): boolean {
-    return process.env.NODE_ENV === 'production';
+    return getQboEnvironment() === 'production';
   }
 
   private getApiBaseUrl(): string {
@@ -249,26 +461,48 @@ export class QboClientService {
         }
       });
 
+      logger.debug(
+        {
+          tenantId: this.tenantId,
+          realmId: this.realmId,
+          operation,
+          entityType,
+          intuitTid: extractIntuitTid(response.headers)
+        },
+        'QBO request completed'
+      );
+
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
+        const intuitTid = extractIntuitTid(error.response?.headers);
 
         if (status === 401 && attempt === 0) {
+          logger.info(
+            { tenantId: this.tenantId, realmId: this.realmId, operation, entityType, intuitTid },
+            'QBO request returned 401, refreshing token and retrying'
+          );
           await this.refreshToken();
           return this.requestQbo<T>(config, operation, entityType, attempt + 1);
         }
 
+        logger.error(
+          { tenantId: this.tenantId, realmId: this.realmId, operation, entityType, status, intuitTid },
+          'QBO request failed'
+        );
+
         if (status === 404) {
           throw new AppError('QBO_NOT_FOUND', `QBO ${entityType ?? 'entity'} not found.`, {
-            originalError: error,
+            originalError: describeAxiosError(error),
             qboOperation: operation,
-            qboEntityType: entityType
+            qboEntityType: entityType,
+            intuitTid
           });
         }
 
-        const payload = error.response?.data ?? error;
-        throw this.mapQboError(payload, operation, entityType);
+        const payload = error.response?.data ?? describeAxiosError(error);
+        throw this.mapQboError(payload, operation, entityType, intuitTid);
       }
 
       if (error instanceof AppError) {
@@ -281,6 +515,68 @@ export class QboClientService {
         qboEntityType: entityType
       });
     }
+  }
+
+  /**
+   * QuickBooks Change Data Capture: every Customer/Payment/Invoice/CreditMemo
+   * changed (or deleted) since the given ISO timestamp, in one call.
+   * QBO caps CDC at 1000 rows per entity; `truncated` signals the caller to
+   * poll again soon with the same cursor.
+   */
+  public async fetchChanges(since: string): Promise<AccountingChangeSet> {
+    const CDC_ENTITIES: AccountingExternalChangeEntity[] = ['Customer', 'Payment', 'Invoice', 'CreditMemo', 'RefundReceipt'];
+    const url = this.buildCompanyUrl('/cdc');
+
+    const data = await this.requestQbo<any>(
+      {
+        method: 'GET',
+        url,
+        params: this.getDefaultParams({
+          entities: CDC_ENTITIES.join(','),
+          changedSince: since
+        })
+      },
+      'changeDataCapture'
+    );
+
+    const changes: AccountingExternalChange[] = [];
+    let truncated = false;
+
+    const cdcResponses = Array.isArray(data?.CDCResponse) ? data.CDCResponse : [];
+    for (const cdcResponse of cdcResponses) {
+      const queryResponses = Array.isArray(cdcResponse?.QueryResponse) ? cdcResponse.QueryResponse : [];
+      for (const queryResponse of queryResponses) {
+        for (const entityType of CDC_ENTITIES) {
+          const rows = queryResponse?.[entityType];
+          if (!Array.isArray(rows)) {
+            continue;
+          }
+          if (rows.length >= 1000) {
+            truncated = true;
+          }
+          for (const row of rows) {
+            if (!row?.Id) {
+              continue;
+            }
+            changes.push({
+              entityType,
+              externalId: String(row.Id),
+              syncToken: row.SyncToken !== undefined && row.SyncToken !== null ? String(row.SyncToken) : undefined,
+              deleted: row.status === 'Deleted',
+              updatedAt: row.MetaData?.LastUpdatedTime,
+              payload: row
+            });
+          }
+        }
+      }
+    }
+
+    logger.debug(
+      { tenantId: this.tenantId, realmId: this.realmId, since, count: changes.length, truncated },
+      'QBO change data capture fetched'
+    );
+
+    return { changes, truncated, fetchedAt: new Date().toISOString() };
   }
 
   public async query<T>(selectQuery: string): Promise<T[]> {
@@ -335,6 +631,17 @@ export class QboClientService {
     );
 
     return results;
+  }
+
+  /**
+   * Company Preferences singleton (Account and Settings). Lets sync surfaces
+   * detect company settings that conflict with Alga-driven flows — e.g.
+   * SalesFormsPrefs.AutoApplyCredit (ON by default for new QBO companies)
+   * races Alga's explicit credit application.
+   */
+  public async getPreferences<T = any>(): Promise<T | null> {
+    const results = await this.query<T>('SELECT * FROM Preferences');
+    return results[0] ?? null;
   }
 
   private async getClientInfo<T>(): Promise<T[]> {
@@ -492,6 +799,47 @@ export class QboClientService {
     return this.extractEntityPayload<T>(payload, entityType);
   }
 
+  /**
+   * Void a QBO Invoice (sets DocStatus=Voided in place).
+   */
+  public async voidInvoice(id: string, syncToken: string): Promise<any> {
+    const url = this.buildCompanyUrl('/invoice');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, id }, 'Voiding QBO Invoice');
+    const payload = await this.requestQbo<any>(
+      {
+        method: 'POST',
+        url,
+        data: { Id: id, SyncToken: syncToken },
+        params: this.getDefaultParams({ operation: 'void' }),
+        headers: { 'Content-Type': 'application/json' }
+      },
+      'voidInvoice',
+      'Invoice'
+    );
+    return this.extractEntityPayload<any>(payload, 'Invoice');
+  }
+
+  /**
+   * Delete a QBO CreditMemo (QBO has no void for credit memos; delete is the
+   * equivalent operation).
+   */
+  public async deleteCreditMemo(id: string, syncToken: string): Promise<any> {
+    const url = this.buildCompanyUrl('/creditmemo');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, id }, 'Deleting QBO CreditMemo');
+    const payload = await this.requestQbo<any>(
+      {
+        method: 'POST',
+        url,
+        data: { Id: id, SyncToken: syncToken },
+        params: this.getDefaultParams({ operation: 'delete' }),
+        headers: { 'Content-Type': 'application/json' }
+      },
+      'deleteCreditMemo',
+      'CreditMemo'
+    );
+    return this.extractEntityPayload<any>(payload, 'CreditMemo');
+  }
+
   public async read<T>(entityType: string, id: string): Promise<T | null> {
     const normalizedEntityType = this.normalizeEntityType(entityType);
     const url = this.buildCompanyUrl(`/${normalizedEntityType}/${id}`);
@@ -525,7 +873,7 @@ export class QboClientService {
     }
   }
 
-  private mapQboError(err: any, operation: string, entityType?: string): AppError {
+  private mapQboError(err: any, operation: string, entityType?: string, intuitTid?: string): AppError {
     let message = `QBO API Error during ${operation}`;
     if (entityType) {
       message += ` on ${entityType}`;
@@ -540,9 +888,15 @@ export class QboClientService {
     if (qboError) {
       message += `: ${qboError.Message ?? 'Unknown QBO Error'} (Code: ${qboError.code ?? 'N/A'}, Detail: ${qboError.Detail ?? 'N/A'})`;
 
-      if (qboError.code === '6240') {
+      // Intuit error codes: 5010 = Stale Object (SyncToken mismatch),
+      // 6240 = Duplicate Name Exists. 5010 must be matched before the
+      // generic startsWith('5') auth bucket below.
+      if (qboError.code === '5010') {
         code = 'QBO_STALE_OBJECT';
         message = `QBO ${entityType || 'entity'} has been updated since it was last read. Please refresh and try again. (SyncToken mismatch)`;
+      } else if (qboError.code === '6240') {
+        code = 'QBO_DUPLICATE_NAME';
+        message = `A QBO ${entityType || 'entity'} with this name already exists. Please use a different name. (Duplicate Name Exists)`;
       } else if (qboError.code?.startsWith('2')) {
         code = 'QBO_VALIDATION_ERROR';
       } else if (qboError.code?.startsWith('4') || qboError.code?.startsWith('5')) {
@@ -560,15 +914,20 @@ export class QboClientService {
       message += ': An unknown error occurred.';
     }
 
+    if (intuitTid) {
+      message += ` (intuit_tid: ${intuitTid})`;
+    }
+
     return new AppError(code, message, {
       originalError: err,
       qboOperation: operation,
-      qboEntityType: entityType
+      qboEntityType: entityType,
+      intuitTid
     });
   }
 }
 
-export async function getQboClient(tenantId: string, realmId: string): Promise<QboClientService> {
+export async function getQboClient(tenantId: string, realmId?: string | null): Promise<QboClientService> {
   try {
     return await QboClientService.create(tenantId, realmId);
   } catch (error) {

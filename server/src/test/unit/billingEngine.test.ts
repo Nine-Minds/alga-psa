@@ -153,6 +153,7 @@ describe('BillingEngine', () => {
               service_id: 'service1',
               service_name: 'Managed Support (Contract: Acme Corp)',
               default_rate: 12000,
+              currency_rate: 12000,
               tax_rate_id: null,
               service_quantity: 1,
               configuration_quantity: 1,
@@ -168,6 +169,7 @@ describe('BillingEngine', () => {
               service_id: 'service1',
               service_name: 'Managed Support (Contract: Acme Corp)',
               default_rate: 12000,
+              currency_rate: 12000,
               tax_rate_id: null,
               service_quantity: 1,
               configuration_quantity: 1,
@@ -1219,6 +1221,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-01T12:00:00.000Z'),
             user_rate: 50,
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null,
             contract_line_id: 'contract_line_1'
           },
@@ -1232,6 +1235,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-02T17:00:00.000Z'),
             user_rate: null,
             default_rate: 60,
+            currency_rate: 60,
             tax_rate_id: null,
             contract_line_id: 'contract_line_2'
           },
@@ -1245,6 +1249,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-03T11:00:00.000Z'),
             user_rate: null,
             default_rate: 70,
+            currency_rate: 70,
             tax_rate_id: null,
             contract_line_id: null
           },
@@ -1292,6 +1297,65 @@ describe('BillingEngine', () => {
         expect(timeEntriesBuilder.where).toHaveBeenCalled();
       });
 
+      it('bills fractional hours for partial-hour entries instead of rounding up to a whole hour', async () => {
+        // Regression for the hourly over-billing bug: a 2h15m entry must bill
+        // 2.25h, not a whole-hour Math.ceil to 3h. The hourly rate is per hour,
+        // so the partial hour has to be carried into the quantity/total.
+        const mockTimeEntries = [
+          {
+            entry_id: 'entry-partial-hour',
+            work_item_id: 'service1',
+            service_id: 'service1',
+            service_name: 'Service 1',
+            user_id: 'user1',
+            start_time: new Date('2023-01-01T10:00:00.000Z'),
+            end_time: new Date('2023-01-01T12:15:00.000Z'), // 135 minutes = 2.25 hours
+            user_rate: null,
+            default_rate: 120,
+            currency_rate: 120,
+            tax_rate_id: null,
+            contract_line_id: 'contract_line_1',
+          },
+        ];
+
+        const baseKnex = (billingEngine as any).knex;
+        const timeEntriesBuilder = buildChainableQuery();
+        timeEntriesBuilder.select.mockImplementation(() => {
+          timeEntriesBuilder.__setResolveValue(
+            mockTimeEntries.filter(
+              (entry) => entry.contract_line_id === 'contract_line_1'
+            )
+          );
+          return timeEntriesBuilder;
+        });
+
+        const contractLineBuilder = buildChainableQuery({
+          selectResult: [],
+          firstResult: { contract_line_id: 'test_contract_line_id', contract_line_type: 'Bucket' },
+          thenResult: []
+        });
+
+        (billingEngine as any).knex = vi.fn((table: string) => {
+          if (table === 'time_entries') return timeEntriesBuilder;
+          if (table === 'contract_lines') return contractLineBuilder;
+          return baseKnex(table);
+        });
+        (billingEngine as any).knex.raw = baseKnex.raw;
+
+        const result = await (billingEngine as any).calculateTimeBasedCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          { service_category: 'test_category', contract_line_id: 'test_contract_line_id', client_contract_line_id: 'contract_line_1' }
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].duration).toBeCloseTo(2.25, 5);
+        expect(result[0].total).toBe(270); // 2.25h * 120/hr
+        // Must NOT round each entry up to a whole hour.
+        expect(result[0].duration).not.toBe(3);
+        expect(result[0].total).not.toBe(360);
+      });
+
       it('T032: unassigned time entry with a single eligible service-line match is allocated once', async () => {
         const baseKnex = (billingEngine as any).knex;
         const timeEntriesBuilder = buildChainableQuery({
@@ -1305,6 +1369,7 @@ describe('BillingEngine', () => {
               start_time: new Date('2023-01-01T10:00:00.000Z'),
               end_time: new Date('2023-01-01T12:00:00.000Z'),
               default_rate: 40,
+              currency_rate: 40,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1319,6 +1384,7 @@ describe('BillingEngine', () => {
               start_time: new Date('2023-01-01T10:00:00.000Z'),
               end_time: new Date('2023-01-01T12:00:00.000Z'),
               default_rate: 40,
+              currency_rate: 40,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1385,6 +1451,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 1',
             quantity: 10,
             default_rate: 5,
+            currency_rate: 5,
             contract_line_id: 'contract_line_1'
           },
           {
@@ -1392,6 +1459,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 2',
             quantity: 20,
             default_rate: 3,
+            currency_rate: 3,
             contract_line_id: 'contract_line_2'
           },
           {
@@ -1399,6 +1467,7 @@ describe('BillingEngine', () => {
             service_name: 'Service 3',
             quantity: 15,
             default_rate: 4,
+            currency_rate: 4,
             contract_line_id: null
           },
         ];
@@ -1453,6 +1522,7 @@ describe('BillingEngine', () => {
               service_name: 'Service 1',
               quantity: 8,
               default_rate: 5,
+              currency_rate: 5,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1464,6 +1534,7 @@ describe('BillingEngine', () => {
               service_name: 'Service 1',
               quantity: 8,
               default_rate: 5,
+              currency_rate: 5,
               tax_rate_id: null,
               contract_line_id: null,
             },
@@ -1535,6 +1606,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-01T12:00:00.000Z'),
             user_rate: 50,
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null
           },
           {
@@ -1547,6 +1619,7 @@ describe('BillingEngine', () => {
             end_time: new Date('2023-01-02T17:00:00.000Z'),
             user_rate: null,
             default_rate: 60,
+            currency_rate: 60,
             tax_rate_id: null
           },
         ];
@@ -1624,12 +1697,14 @@ describe('BillingEngine', () => {
             service_name: 'Service 1',
             quantity: 10,
             default_rate: 5,
+            currency_rate: 5,
           },
           {
             service_id: 'service2',
             service_name: 'Service 2',
             quantity: 20,
             default_rate: 3,
+            currency_rate: 3,
           },
         ];
 
@@ -1698,6 +1773,7 @@ describe('BillingEngine', () => {
             start_time: new Date('2025-02-14T10:00:00.000Z'),
             end_time: new Date('2025-02-14T12:00:00.000Z'),
             default_rate: 40,
+            currency_rate: 40,
             tax_rate_id: null,
           },
         ];
@@ -1708,6 +1784,7 @@ describe('BillingEngine', () => {
             service_name: 'Usage Service',
             quantity: 6,
             default_rate: 9,
+            currency_rate: 9,
             tax_rate_id: null,
           },
         ];

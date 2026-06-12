@@ -26,6 +26,9 @@ import {
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
+const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -477,10 +480,219 @@ export interface BillingCycleDateRange {
   to?: string;
 }
 
+function buildClientListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function applyClientListIndexedSearchFilter(
+  baseQuery: Knex.QueryBuilder,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  rawSearchInput: string | undefined,
+  permissions: string[]
+): Knex.QueryBuilder {
+  const rawSearch = rawSearchInput?.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return baseQuery;
+  }
+
+  const prefixTsquery = buildClientListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const ilikePattern = `%${rawSearch}%`;
+
+  // Citus cannot push down an OR that mixes correlated EXISTS across multiple
+  // distributed tables (app_search_index, interactions, document_associations,
+  // client_locations). Rewrite as UNION ALL of single-distributed-table legs
+  // producing (client_id, tenant); each leg is independently pushdown-safe and
+  // the outer INNER JOIN is co-located on the distribution column. Mirrors the
+  // ticket search rewrite in optimizedTicketActions.ts (PR #2547).
+  const qCte = `
+    CROSS JOIN (
+      SELECT
+        websearch_to_tsquery('english', ?) AS tsq,
+        CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+        ?::text AS raw,
+        ?::text AS identifier
+    ) q
+  `;
+  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier];
+
+  const siFilters = `
+    AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+    AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+    AND (si.is_internal_only = false OR ?::boolean = true)
+    AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+    AND ${clientScopePredicate}
+    AND (
+      si.search_vector @@ q.tsq
+      OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+      OR si.title ILIKE '%' || q.raw || '%'
+      OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+      OR si.title % q.raw
+      OR coalesce(si.subtitle, '') % q.raw
+      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+    )
+  `;
+  const siFilterBindings: Knex.RawBinding[] = [
+    permissions,
+    user.user_id,
+    isInternalUser,
+    user.user_id,
+    ...clientScopeBindings,
+  ];
+
+  const legA = `
+    SELECT si.object_id::uuid AS client_id, si.tenant
+    FROM app_search_index si
+    ${qCte}
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'client'
+      ${siFilters}
+  `;
+  const legABindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legB = `
+    SELECT im.client_id AS client_id, im.tenant
+    FROM app_search_index si
+    ${qCte}
+    JOIN interactions im
+      ON im.tenant = si.tenant
+     AND im.interaction_id::text = si.object_id
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'interaction'
+      ${siFilters}
+  `;
+  const legBBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legC = `
+    SELECT da.entity_id::uuid AS client_id, da.tenant
+    FROM app_search_index si
+    ${qCte}
+    JOIN document_associations da
+      ON da.tenant = si.tenant
+     AND da.document_id::text = si.object_id
+     AND da.entity_type = 'client'
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'document'
+      ${siFilters}
+  `;
+  const legCBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legD = `
+    SELECT c2.client_id, c2.tenant
+    FROM clients c2
+    WHERE c2.tenant = ?::uuid
+      AND (
+        c2.client_name ILIKE ?
+        OR c2.billing_email ILIKE ?
+        OR c2.url ILIKE ?
+        OR c2.notes ILIKE ?
+      )
+  `;
+  const legDBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern, ilikePattern, ilikePattern];
+
+  const legE = `
+    SELECT cl_search.client_id, cl_search.tenant
+    FROM client_locations cl_search
+    WHERE cl_search.tenant = ?::uuid
+      AND (
+        cl_search.phone ILIKE ?
+        OR cl_search.email ILIKE ?
+        OR cl_search.address_line1 ILIKE ?
+        OR cl_search.address_line2 ILIKE ?
+        OR cl_search.city ILIKE ?
+        OR cl_search.state_province ILIKE ?
+        OR cl_search.postal_code ILIKE ?
+        OR cl_search.country_name ILIKE ?
+      )
+  `;
+  const legEBindings: Knex.RawBinding[] = [
+    tenant,
+    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
+    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
+  ];
+
+  const unionSql = `
+    INNER JOIN (
+      SELECT DISTINCT client_id, tenant FROM (
+        ${legA}
+        UNION ALL
+        ${legB}
+        UNION ALL
+        ${legC}
+        UNION ALL
+        ${legD}
+        UNION ALL
+        ${legE}
+      ) u
+    ) as sm ON sm.client_id = c.client_id AND sm.tenant = c.tenant
+  `;
+
+  return baseQuery.joinRaw(unionSql, [
+    ...legABindings,
+    ...legBBindings,
+    ...legCBindings,
+    ...legDBindings,
+    ...legEBindings,
+  ] as unknown as Knex.Value[]);
+}
+
+function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
+  return trx('client_locations')
+    .select(
+      'tenant',
+      'client_id',
+      'phone',
+      'email',
+      'address_line1',
+      'address_line2',
+      'city',
+      'state_province',
+      'postal_code',
+      'country_name'
+    )
+    .select(
+      trx.raw(`
+        ROW_NUMBER() OVER (
+          PARTITION BY tenant, client_id
+          ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, location_id
+        ) as rn
+      `)
+    )
+    .where({ tenant, is_default: true })
+    .as('cl');
+}
+
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
   if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
+  }
+  const searchPermissions = ['client:read'];
+  if (await hasPermissionAsync(user, 'document', 'read')) {
+    searchPermissions.push('document:read');
+  }
+  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+    searchPermissions.push('interaction:read');
   }
 
   const {
@@ -509,10 +721,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
         })
-        .leftJoin('client_locations as cl', function() {
+        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+              .andOn('cl.rn', '=', trx.raw('1'));
         })
         .where({ 'c.tenant': tenant });
 
@@ -525,15 +737,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Apply filters
-      if (searchTerm) {
-        baseQuery = baseQuery.where(function() {
-          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
-        });
-      }
+      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
@@ -555,7 +759,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Get total count
-      const countResult = await baseQuery.clone().count('* as count').first();
+      const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated clients with location data and default flag
@@ -659,6 +863,13 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
+  const searchPermissions = ['client:read'];
+  if (await hasPermissionAsync(user, 'document', 'read')) {
+    searchPermissions.push('document:read');
+  }
+  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+    searchPermissions.push('interaction:read');
+  }
 
   const {
     page = 1,
@@ -685,10 +896,10 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
         })
-        .leftJoin('client_locations as cl', function() {
+        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+              .andOn('cl.rn', '=', trx.raw('1'));
         })
         .where({ 'c.tenant': tenant });
 
@@ -700,15 +911,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      if (searchTerm) {
-        baseQuery = baseQuery.where(function() {
-          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
-        });
-      }
+      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
@@ -887,8 +1090,41 @@ export const validateClientDeletion = withAuth(async (
     };
   }
 
-  return preCheckDeletion('client', clientId);
+  const result = await preCheckDeletion('client', clientId);
+  return tailorClientDeleteAlternatives(result, client.is_inactive);
 });
+
+// Tailor the generic "Mark as Inactive" alternative for client-specific UX:
+// - drop it when the client is already inactive (no-op)
+// - split into "Client Only" + "Client & Contacts" when active contacts exist
+// Applied to both validateClientDeletion (precheck) and deleteClient (post-check)
+// so dependency surfaces always get the right buttons.
+function tailorClientDeleteAlternatives(
+  result: DeletionValidationResult,
+  clientIsInactive: boolean
+): DeletionValidationResult {
+  const contactDependency = result.dependencies.find((d) => d.type === 'contact');
+  const hasContacts = (contactDependency?.count ?? 0) > 0;
+
+  const alternatives = result.alternatives.flatMap((alt) => {
+    if (alt.action !== 'deactivate') return [alt];
+    if (clientIsInactive) return [];
+    if (hasContacts) {
+      return [
+        {
+          action: 'deactivate_client_only',
+          label: 'Client Only',
+          description: 'Deactivate the client but leave its contacts active.',
+          warning: alt.warning
+        },
+        { ...alt, label: 'Client & Contacts' }
+      ];
+    }
+    return [alt];
+  });
+
+  return { ...result, alternatives };
+}
 
 export const deleteClient = withAuth(async (user, { tenant }, clientId: string): Promise<DeletionValidationResult & {
   success: boolean;
@@ -1039,8 +1275,27 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       return acc;
     }, {});
 
+    const tailored = tailorClientDeleteAlternatives(result, client.is_inactive);
+    if (result.deleted) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_DELETED',
+        payload: {
+          clientId,
+          deletedByUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `client_deleted:${clientId}:${occurredAt}`,
+      });
+    }
+
     return {
-      ...result,
+      ...tailored,
       deleted: result.deleted,
       success: result.deleted === true,
       counts

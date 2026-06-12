@@ -92,6 +92,24 @@
         "future": "Questo e gli eventi futuri",
         "all": "Tutti gli eventi"
       }
+    },
+    "print": {
+      "title": "Agenda pianificata",
+      "subtitle": "{{count}} voci pianificate",
+      "noEntries": "Nessuna voce pianificata da stampare",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titolo",
+        "type": "Tipo",
+        "start": "Inizio",
+        "end": "Fine",
+        "assigned": "Assegnato",
+        "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa del calendario."
+      }
     }
   },
   "weeklyEvent": {
@@ -231,7 +249,7 @@
         "deleting": "Eliminazione..."
       },
       "defaultApprover": {
-        "placeholder": "Seleziona un approvatore"
+        "placeholder": "Seleziona gli approvatori"
       },
       "teamSelect": {
         "label": "Seleziona Squadra",
@@ -254,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Approvatore predefinito",
-        "help": "Approvatore predefinito a livello aziendale per le richieste di appuntamento che richiedono l'approvazione manuale. Questo può essere sovrascritto per tecnico nelle impostazioni Orario utente."
+        "label": "Approvatori",
+        "help": "Approvatori a livello aziendale per le richieste di appuntamento che richiedono l'approvazione manuale. Aggiungi più utenti e/o team: tutte le persone selezionate vengono avvisate e possono approvare. Questo può essere sovrascritto per tecnico nelle impostazioni Orario utente."
       },
       "advanceBookingDays": {
         "label": "Prenotazione anticipata predefinita (giorni)"
@@ -297,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Approvatore predefinito",
-          "help": "Chi deve esaminare e approvare le richieste di appuntamento per questo tecnico che richiedono l'approvazione manuale"
+          "label": "Approvatori",
+          "help": "Chi deve esaminare e approvare le richieste di appuntamento per questo tecnico che richiedono l'approvazione manuale? Aggiungi più utenti e/o team. Lascia vuoto per utilizzare gli approvatori a livello aziendale."
         },
         "allowClientPreference": {
           "label": "Consenti preferenza cliente",

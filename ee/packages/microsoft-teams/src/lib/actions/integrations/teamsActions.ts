@@ -1,6 +1,10 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
+import logger from '@alga-psa/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
+import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
+import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   TEAMS_ALLOWED_ACTIONS,
   TEAMS_CAPABILITIES,
@@ -28,6 +32,10 @@ interface TeamsIntegrationRow {
   bot_id?: string | null;
   package_metadata?: unknown;
   last_error: string | null;
+  default_meeting_organizer_upn?: string | null;
+  default_meeting_organizer_object_id?: string | null;
+  download_recordings?: boolean | null;
+  expose_recordings_in_portal?: boolean | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string | Date;
@@ -43,6 +51,19 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
+const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
+  selectedProfileId: null,
+  installStatus: 'not_configured',
+  enabledCapabilities: ['personal_tab', 'personal_bot', 'message_extension', 'activity_notifications'],
+  allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
+  appId: null,
+  packageMetadata: null,
+  defaultMeetingOrganizerUpn: null,
+  defaultMeetingOrganizerObjectId: null,
+  downloadRecordings: false,
+  exposeRecordingsInPortal: false,
+};
+
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
@@ -56,16 +77,29 @@ function isTeamsInstallStatus(value: string): value is TeamsInstallStatus {
 }
 
 function normalizeEnumArray<T extends string>(values: unknown, supported: readonly T[]): T[] {
-  if (!Array.isArray(values)) {
+  let normalizedValues = values;
+  if (typeof normalizedValues === 'string') {
+    try {
+      normalizedValues = JSON.parse(normalizedValues);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(normalizedValues)) {
     return [];
   }
 
-  const requested = new Set(values.filter((value): value is T => typeof value === 'string' && supported.includes(value as T)));
+  const requested = new Set(normalizedValues.filter((value): value is T => typeof value === 'string' && supported.includes(value as T)));
   return supported.filter((value) => requested.has(value));
 }
 
 function toJsonbValue<T>(value: T): string {
   return JSON.stringify(value);
+}
+
+function normalizeNullableString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 // Capabilities that default to disabled for new tenants. `group_chat_bot`
@@ -87,6 +121,10 @@ function defaultTeamsIntegrationState() {
     botId: null as string | null,
     packageMetadata: null as Record<string, unknown> | null,
     lastError: null as string | null,
+    defaultMeetingOrganizerUpn: null as string | null,
+    defaultMeetingOrganizerObjectId: null as string | null,
+    downloadRecordings: false,
+    exposeRecordingsInPortal: false,
   };
 }
 
@@ -107,6 +145,10 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<T
       ? row.package_metadata as Record<string, unknown>
       : null,
     lastError: row.last_error || null,
+    defaultMeetingOrganizerUpn: normalizeNullableString(row.default_meeting_organizer_upn),
+    defaultMeetingOrganizerObjectId: normalizeNullableString(row.default_meeting_organizer_object_id),
+    downloadRecordings: Boolean(row.download_recordings),
+    exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
   };
 }
 
@@ -118,6 +160,47 @@ async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsI
 async function getMicrosoftProfileRow(knex: any, tenant: string, profileId: string): Promise<MicrosoftProfileRow | undefined> {
   const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
   return row || undefined;
+}
+
+async function resolveOrganizerObjectId(
+  tenant: string,
+  profile: MicrosoftProfileRow,
+  organizerUpn: string
+): Promise<{ objectId?: string; error?: string }> {
+  const secretProvider = await getSecretProviderInstance();
+  const clientSecret = profile.client_secret_ref
+    ? await secretProvider.getTenantSecret(tenant, profile.client_secret_ref)
+    : null;
+
+  if (!profile.client_id || !profile.tenant_id || !clientSecret) {
+    return { error: 'Selected Microsoft profile is not ready for Teams organizer lookup' };
+  }
+
+  const accessToken = await fetchMicrosoftGraphAppToken({
+    tenantAuthority: profile.tenant_id,
+    clientId: profile.client_id,
+    clientSecret,
+  });
+
+  const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    return {
+      error: response.status === 404
+        ? 'Microsoft could not find the configured meeting organizer'
+        : 'Microsoft Graph could not resolve the configured meeting organizer',
+    };
+  }
+
+  const payload = await response.json() as { id?: unknown };
+  const objectId = normalizeNullableString(payload.id);
+  return objectId
+    ? { objectId }
+    : { error: 'Microsoft Graph returned no object id for the configured meeting organizer' };
 }
 
 async function validateSelectedProfile(
@@ -162,6 +245,14 @@ export async function getTeamsIntegrationStatusImpl(
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
+
     const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
@@ -176,6 +267,11 @@ export async function getTeamsIntegrationStatusImpl(
 export async function getTeamsIntegrationExecutionStateImpl(
   tenant: string
 ): Promise<TeamsIntegrationExecutionState> {
+  const availability = await getTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return DEFAULT_EXECUTION_STATE;
+  }
+
   const { knex } = await createTenantKnex();
   const row = await getTeamsIntegrationRow(knex, tenant);
   const integration = mapTeamsIntegrationRow(row);
@@ -187,7 +283,58 @@ export async function getTeamsIntegrationExecutionStateImpl(
     allowedActions: integration.allowedActions,
     appId: integration.appId,
     packageMetadata: integration.packageMetadata,
+    defaultMeetingOrganizerUpn: integration.defaultMeetingOrganizerUpn,
+    defaultMeetingOrganizerObjectId: integration.defaultMeetingOrganizerObjectId,
+    downloadRecordings: integration.downloadRecordings,
+    exposeRecordingsInPortal: integration.exposeRecordingsInPortal,
   };
+}
+
+// The "Online Meeting" interaction type is the surface MSP users pick to schedule Teams
+// meetings. Rather than backfilling it into every tenant, we provision it lazily into a
+// tenant's own interaction_types the first time they activate Teams. Idempotent and linked
+// to the system type so the QuickAdd toggle and detail views resolve it reliably.
+async function ensureOnlineMeetingInteractionType(
+  knex: any,
+  tenant: string,
+  userId: string | null
+): Promise<void> {
+  try {
+    const systemType = await knex('system_interaction_types')
+      .where({ type_name: 'Online Meeting' })
+      .first('type_id', 'icon');
+    if (!systemType) {
+      return;
+    }
+
+    const existing = await knex('interaction_types')
+      .where({ tenant })
+      .andWhere((builder: any) => {
+        builder.where({ system_type_id: systemType.type_id }).orWhere({ type_name: 'Online Meeting' });
+      })
+      .first('type_id');
+    if (existing) {
+      return;
+    }
+
+    const maxRow = await knex('interaction_types').where({ tenant }).max('display_order as max').first();
+    const nextOrder = (typeof maxRow?.max === 'number' ? maxRow.max : -1) + 1;
+
+    await knex('interaction_types').insert({
+      tenant,
+      type_name: 'Online Meeting',
+      icon: systemType.icon || 'video',
+      system_type_id: systemType.type_id,
+      display_order: nextOrder,
+      created_by: userId,
+    });
+  } catch (error: any) {
+    // Non-fatal: the integration save must still succeed; an admin can add the type manually.
+    logger.warn('[TeamsIntegration] Failed to ensure Online Meeting interaction type', {
+      tenant,
+      error: error?.message || String(error),
+    });
+  }
 }
 
 export async function saveTeamsIntegrationSettingsImpl(
@@ -198,6 +345,14 @@ export async function saveTeamsIntegrationSettingsImpl(
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
+
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
 
     const { knex } = await createTenantKnex();
 
@@ -243,6 +398,31 @@ export async function saveTeamsIntegrationSettingsImpl(
       : input.lastError === undefined
         ? next.lastError
         : input.lastError;
+    const defaultMeetingOrganizerUpn = input.defaultMeetingOrganizerUpn === undefined
+      ? next.defaultMeetingOrganizerUpn
+      : normalizeNullableString(input.defaultMeetingOrganizerUpn);
+    let defaultMeetingOrganizerObjectId = defaultMeetingOrganizerUpn
+      ? next.defaultMeetingOrganizerObjectId
+      : null;
+
+    if (input.defaultMeetingOrganizerUpn !== undefined && defaultMeetingOrganizerUpn) {
+      if (!profileValidation.profile) {
+        return { success: false, error: 'A Microsoft profile must be selected before saving a Teams meeting organizer' };
+      }
+
+      const organizerLookup = await resolveOrganizerObjectId(tenant, profileValidation.profile, defaultMeetingOrganizerUpn);
+      if (organizerLookup.error) {
+        return { success: false, error: organizerLookup.error };
+      }
+      defaultMeetingOrganizerObjectId = organizerLookup.objectId || null;
+    }
+
+    const downloadRecordings = input.downloadRecordings === undefined
+      ? next.downloadRecordings
+      : Boolean(input.downloadRecordings);
+    const exposeRecordingsInPortal = input.exposeRecordingsInPortal === undefined
+      ? next.exposeRecordingsInPortal
+      : Boolean(input.exposeRecordingsInPortal);
     const now = new Date();
 
     const row: TeamsIntegrationRow = {
@@ -258,6 +438,10 @@ export async function saveTeamsIntegrationSettingsImpl(
         ? null
         : toJsonbValue(next.packageMetadata),
       last_error: lastError || null,
+      default_meeting_organizer_upn: defaultMeetingOrganizerUpn,
+      default_meeting_organizer_object_id: defaultMeetingOrganizerObjectId,
+      download_recordings: downloadRecordings,
+      expose_recordings_in_portal: exposeRecordingsInPortal,
       created_by: existing?.created_by || (user as any)?.user_id || null,
       updated_by: (user as any)?.user_id || null,
       created_at: existing?.created_at || now,
@@ -271,6 +455,11 @@ export async function saveTeamsIntegrationSettingsImpl(
       await knex('teams_integrations').where({ tenant }).update(updatePayload);
     } else {
       await knex('teams_integrations').insert(row);
+    }
+
+    // Provision the Online Meeting interaction type once the tenant activates Teams.
+    if (installStatus === 'active') {
+      await ensureOnlineMeetingInteractionType(knex, tenant, (user as any)?.user_id ?? null);
     }
 
     return {

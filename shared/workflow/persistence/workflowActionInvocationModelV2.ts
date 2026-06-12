@@ -3,6 +3,8 @@ import { Knex } from 'knex';
 export type WorkflowActionInvocationRecord = {
   invocation_id: string;
   run_id: string;
+  // uuid Citus distribution column (backfilled from the parent run).
+  tenant?: string | null;
   step_path: string;
   action_id: string;
   action_version: number;
@@ -30,9 +32,10 @@ const WorkflowActionInvocationModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, invocationId: string, data: Partial<WorkflowActionInvocationRecord>): Promise<WorkflowActionInvocationRecord> => {
-    const [record] = await knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
-      .where({ invocation_id: invocationId })
+  update: async (knex: Knex, invocationId: string, data: Partial<WorkflowActionInvocationRecord>, tenant?: string | null): Promise<WorkflowActionInvocationRecord> => {
+    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations').where({ invocation_id: invocationId });
+    if (tenant) query.andWhere({ tenant });
+    const [record] = await query
       .update({
         ...data
       })
@@ -44,22 +47,24 @@ const WorkflowActionInvocationModelV2 = {
     knex: Knex,
     actionId: string,
     actionVersion: number,
-    idempotencyKey: string
+    idempotencyKey: string,
+    tenant?: string | null
   ): Promise<WorkflowActionInvocationRecord | null> => {
-    const record = await knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
+    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
       .where({
         action_id: actionId,
         action_version: actionVersion,
         idempotency_key: idempotencyKey
-      })
-      .first();
+      });
+    if (tenant) query.andWhere({ tenant });
+    const record = await query.first();
     return record || null;
   },
 
-  listByRun: async (knex: Knex, runId: string): Promise<WorkflowActionInvocationRecord[]> => {
-    return knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
-      .where({ run_id: runId })
-      .orderBy('created_at', 'asc');
+  listByRun: async (knex: Knex, runId: string, tenant?: string | null): Promise<WorkflowActionInvocationRecord[]> => {
+    const query = knex<WorkflowActionInvocationRecord>('workflow_action_invocations').where({ run_id: runId });
+    if (tenant) query.andWhere({ tenant });
+    return query.orderBy('created_at', 'asc');
   }
 };
 

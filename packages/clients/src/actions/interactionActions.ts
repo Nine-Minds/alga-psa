@@ -5,36 +5,16 @@
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
+import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
+import {
+  createInteractionWithSideEffects,
+  publishInteractionSearchEvent,
+} from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
-
-// Helper function to get default status ID for interactions
-async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<string> {
-  const defaultStatus = await trx('statuses')
-    .where({
-      tenant,
-      is_default: true,
-      status_type: 'interaction'
-    })
-    .first();
-
-  if (!defaultStatus) {
-    throw new Error('No default status found for interactions');
-  }
-
-  return defaultStatus.status_id;
-}
-
-function maybeUserActor(user: any) {
-  const userId = user?.user_id;
-  if (typeof userId !== 'string' || !userId) return undefined;
-  return { actorType: 'USER' as const, actorUserId: userId };
-}
 
 export const addInteraction = withAuth(async (
   user,
@@ -54,64 +34,20 @@ export const addInteraction = withAuth(async (
       throw new Error('Either client_id or contact_name_id must be provided');
     }
 
+    let publishSideEffects: (() => Promise<void>) | undefined;
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Set default status if none provided
-      const status_id = interactionData.status_id || await getDefaultInteractionStatusId(trx, tenant);
-
-      let resolvedClientId = interactionData.client_id;
-      if (!resolvedClientId && interactionData.contact_name_id) {
-        const contact = await trx('contacts')
-          .where({ tenant, contact_name_id: interactionData.contact_name_id })
-          .select('client_id')
-          .first();
-        resolvedClientId = contact?.client_id ?? null;
-      }
-
-      if (!resolvedClientId) {
-        throw new Error('Interactions must be linked to a client');
-      }
-
-      return await InteractionModel.addInteraction({
-        ...interactionData,
-        client_id: resolvedClientId,
-        status_id,
+      const result = await createInteractionWithSideEffects({
         tenant,
-        interaction_date: new Date(),
-      }, tenant);
+        trx,
+        user,
+        interactionData,
+      });
+      publishSideEffects = result.publishSideEffects;
+      return result.interaction;
     });
 
     console.log('New interaction created:', newInteraction);
-
-    const occurredAt =
-      newInteraction.interaction_date instanceof Date
-        ? newInteraction.interaction_date.toISOString()
-        : new Date(newInteraction.interaction_date as any).toISOString();
-
-    const interactionType =
-      typeof (newInteraction as any).type_name === 'string' && (newInteraction as any).type_name
-        ? String((newInteraction as any).type_name)
-        : 'interaction';
-
-    await publishWorkflowEvent({
-      eventType: 'INTERACTION_LOGGED',
-      payload: buildInteractionLoggedPayload({
-        interactionId: newInteraction.interaction_id,
-        clientId: newInteraction.client_id as string,
-        ...(newInteraction.contact_name_id ? { contactId: newInteraction.contact_name_id } : {}),
-        interactionType,
-        interactionOccurredAt: occurredAt,
-        loggedByUserId: newInteraction.user_id,
-        ...(typeof newInteraction.title === 'string' && newInteraction.title ? { subject: newInteraction.title } : {}),
-        ...(typeof (newInteraction as any).status_name === 'string' && (newInteraction as any).status_name
-          ? { outcome: String((newInteraction as any).status_name) }
-          : {}),
-      }),
-      ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
-      idempotencyKey: `interaction_logged:${newInteraction.interaction_id}:${occurredAt}`,
-    });
-
-    revalidatePath('/msp/contacts/[id]', 'page')
-    revalidatePath('/msp/clients/[id]', 'page')
+    await publishSideEffects?.();
     return newInteraction;
   } catch (error) {
     console.error('Error adding interaction:', error)
@@ -171,7 +107,7 @@ export const getRecentInteractions = withAuth(async (
 });
 
 export const updateInteraction = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string,
   updateData: Partial<IInteraction>
@@ -180,6 +116,12 @@ export const updateInteraction = withAuth(async (
     const { knex } = await createTenantKnex();
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+    });
+    await publishInteractionSearchEvent('INTERACTION_UPDATED', tenant, interactionId, {
+      clientId: updatedInteraction.client_id,
+      contactId: updatedInteraction.contact_name_id,
+      userId: user?.user_id,
+      changedFields: Object.keys(updateData),
     });
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
@@ -207,11 +149,61 @@ export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promis
   }
 });
 
-export const deleteInteraction = withAuth(async (_user, { tenant }, interactionId: string): Promise<void> => {
+// Online meetings (and their recording/transcript artifacts) hang off an interaction
+// via interaction_id with application-level integrity only (Citus, no FK cascade), so
+// they must be cleaned up explicitly when the interaction is deleted — otherwise they
+// orphan when a client/contact is removed. Returns stored recording file_ids to delete
+// from object storage after the DB transaction commits.
+async function cleanupInteractionOnlineMeetings(
+  trx: Knex.Transaction,
+  tenant: string,
+  interactionId: string,
+): Promise<string[]> {
+  const meetings = await trx('online_meetings')
+    .where({ tenant, interaction_id: interactionId })
+    .select('meeting_id');
+  if (meetings.length === 0) {
+    return [];
+  }
+  const meetingIds = meetings.map((m) => m.meeting_id);
+
+  const artifacts = await trx('online_meeting_artifacts')
+    .where({ tenant })
+    .whereIn('meeting_id', meetingIds)
+    .select('document_id', 'file_id');
+
+  const documentIds = artifacts.map((a) => a.document_id).filter((id): id is string => Boolean(id));
+  const fileIds = artifacts.map((a) => a.file_id).filter((id): id is string => Boolean(id));
+
+  await trx('online_meeting_artifacts').where({ tenant }).whereIn('meeting_id', meetingIds).del();
+  await trx('online_meetings').where({ tenant }).whereIn('meeting_id', meetingIds).del();
+
+  // Transcript content is stored as internal documents; remove them with the meeting.
+  if (documentIds.length > 0) {
+    await trx('document_block_content').where({ tenant }).whereIn('document_id', documentIds).del();
+    await trx('document_associations').where({ tenant }).whereIn('document_id', documentIds).del();
+    await trx('documents').where({ tenant }).whereIn('document_id', documentIds).del();
+  }
+
+  return fileIds;
+}
+
+export const deleteInteraction = withAuth(async (user, { tenant }, interactionId: string): Promise<void> => {
   try {
     const { knex } = await createTenantKnex();
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existingRow = await trx('interactions')
+        .where({
+          interaction_id: interactionId,
+          tenant
+        })
+        .select('interaction_id', 'client_id', 'contact_name_id', 'user_id')
+        .first();
+
+      // Cascade-delete the linked online meeting, its artifacts, and transcript documents.
+      const fileIds = await cleanupInteractionOnlineMeetings(trx, tenant, interactionId);
+
       // Delete the interaction
       const deletedCount = await trx('interactions')
         .where({
@@ -224,8 +216,28 @@ export const deleteInteraction = withAuth(async (_user, { tenant }, interactionI
         throw new Error('Interaction not found or could not be deleted');
       }
 
-      revalidatePath('/'); // Revalidate to update any cached data
+      return { existing: existingRow, recordingFileIds: fileIds };
     });
+
+    const deletedInteraction = existing;
+
+    // Stored recording blobs live in object storage, not the DB; remove them after commit
+    // (best-effort: a storage failure must not roll back the interaction deletion).
+    for (const fileId of recordingFileIds) {
+      try {
+        await StorageService.deleteFile(fileId, user.user_id);
+      } catch (storageError) {
+        console.warn(`[deleteInteraction] Failed to delete recording file ${fileId}:`, storageError);
+      }
+    }
+
+    await publishInteractionSearchEvent('INTERACTION_DELETED', tenant, interactionId, {
+      clientId: deletedInteraction?.client_id,
+      contactId: deletedInteraction?.contact_name_id,
+      userId: user?.user_id,
+    });
+
+    revalidatePath('/'); // Revalidate to update any cached data
   } catch (error) {
     console.error('Error deleting interaction:', error);
     throw new Error('Failed to delete interaction');

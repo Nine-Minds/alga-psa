@@ -690,7 +690,6 @@ const ProjectModel = {
     try {
       const standardStatuses = await knexOrTrx<IStandardStatus>('standard_statuses')
         .where('item_type', itemType)
-        .andWhere('tenant', tenant)
         .orderBy('display_order');
       return standardStatuses;
     } catch (error) {
@@ -733,7 +732,6 @@ const ProjectModel = {
     try {
       const standardStatus = await knexOrTrx<IStandardStatus>('standard_statuses')
         .where('standard_status_id', standardStatusId)
-        .andWhere('tenant', tenant)
         .first();
       return standardStatus || null;
     } catch (error) {

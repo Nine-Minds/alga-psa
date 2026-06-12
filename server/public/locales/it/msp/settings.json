@@ -25,7 +25,8 @@
     "teamManagement": "Gestione team",
     "loadingTeam": "Caricamento configurazione team...",
     "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
-    "loadingInteractions": "Caricamento impostazioni interazioni..."
+    "loadingInteractions": "Caricamento impostazioni interazioni...",
+    "keyboardShortcuts": "Scorciatoie da tastiera"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -90,10 +91,6 @@
         "name": "Assistente IA",
         "description": "Abilita Quick Ask e barra laterale Chat basati sull'intelligenza artificiale.",
         "restriction": "Disponibile solo per il tenant di fatturazione principale."
-      },
-      "workflowAutomation": {
-        "name": "Automazione dei flussi di lavoro",
-        "description": "Abilita le funzionalità sperimentali di automazione dei flussi di lavoro nel pannello di controllo e nell'editor."
       }
     },
     "actions": {
@@ -294,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Password modificata con successo",
-        "userUpdated": "Utente aggiornato con successo"
+        "userUpdated": "Utente aggiornato con successo",
+        "roleAdded": "Ruolo aggiunto con successo",
+        "roleRemoved": "Ruolo rimosso con successo"
       },
       "error": {
         "userNotFound": "Utente non trovato",
@@ -308,7 +307,8 @@
         "passwordChangeError": "Si e verificato un errore durante la modifica della password",
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
-        "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
+        "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
       }
     },
     "loading": "Caricamento dettagli utente..."
@@ -382,7 +382,8 @@
       "boards": "Bacheche",
       "statuses": "Stati",
       "priorities": "Priorita",
-      "categories": "Categorie"
+      "categories": "Categorie",
+      "checklistTemplates": "Modelli di checklist"
     },
     "numbering": {
       "title": "Formato numerico",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
           "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Regole di chiusura",
+        "enabledHelp": "Richiede che determinate condizioni siano soddisfatte prima che i ticket su questa bacheca possano essere chiusi.",
+        "requireResolutionCommentLabel": "Richiedi un commento di risoluzione",
+        "requireResolutionCommentHelp": "Deve essere presente un commento di risoluzione prima che il ticket possa essere chiuso.",
+        "requireTimeEntryLabel": "Richiedi una registrazione ore",
+        "requireTimeEntryHelp": "Almeno una registrazione ore deve essere inserita prima che il ticket possa essere chiuso.",
+        "requireChecklistCompleteLabel": "Richiedi completamento della checklist",
+        "requireChecklistCompleteHelp": "Tutti gli elementi obbligatori della checklist devono essere completati prima che il ticket possa essere chiuso.",
+        "requireNoOpenChildrenLabel": "Richiedi chiusura dei ticket aggregati",
+        "requireNoOpenChildrenHelp": "Un ticket principale non può essere chiuso finché i ticket figlio aggregati sono ancora aperti.",
+        "requiredFieldsLabel": "Campi obbligatori alla chiusura",
+        "requiredFieldsHelp": "Questi campi del ticket devono essere compilati prima che il ticket possa essere chiuso.",
+        "autoCloseLabel": "Regole di chiusura automatica",
+        "autoCloseHelp": "Chiude automaticamente i ticket che rimangono in uno stato senza attività. Un'email di avviso opzionale viene inviata al contatto prima della chiusura.",
+        "addAutoCloseRule": "Aggiungi regola",
+        "triggerStatusLabel": "Quando il ticket è nello stato",
+        "triggerStatusPlaceholder": "Seleziona stato",
+        "targetStatusLabel": "Chiudi allo stato",
+        "targetStatusPlaceholder": "Seleziona stato di chiusura",
+        "inactivityDaysLabel": "Giorni di inattività",
+        "warningDaysLabel": "Giorni di preavviso prima della chiusura",
+        "warningDaysPlaceholder": "Nessun avviso",
+        "ruleEnabledLabel": "Abilitato",
+        "removeRule": "Rimuovi",
+        "messages": {
+          "fetchFailed": "Impossibile caricare le regole di chiusura per questa bacheca",
+          "autoCloseStatusRequired": "Ogni regola di chiusura automatica richiede uno stato di attivazione e uno stato di chiusura target",
+          "autoCloseDaysInvalid": "I giorni di inattività per la chiusura automatica devono essere un numero intero positivo",
+          "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "questa priorità"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Modelli di checklist",
+      "alert": "I modelli di checklist definiscono checklist riutilizzabili per i ticket. Gli elementi del modello vengono copiati sui ticket quando applicati, pertanto la modifica di un modello non influisce sulle checklist già presenti sui ticket.",
+      "table": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "items": "Elementi",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "statusLabels": {
+        "active": "Attivo",
+        "inactive": "Inattivo"
+      },
+      "actions": {
+        "addTemplate": "Aggiungi modello",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "close": "Chiudi",
+        "create": "Crea",
+        "update": "Aggiorna",
+        "up": "Su",
+        "down": "Giù",
+        "remove": "Rimuovi",
+        "addItem": "Aggiungi elemento",
+        "addRule": "Aggiungi regola"
+      },
+      "fields": {
+        "name": {
+          "label": "Nome modello",
+          "placeholder": "Inserisca il nome del modello"
+        },
+        "description": {
+          "label": "Descrizione",
+          "placeholder": "Inserisca la descrizione"
+        },
+        "active": "Attivo",
+        "items": {
+          "label": "Elementi della checklist",
+          "help": "Gli elementi vengono aggiunti ai ticket in questo ordine quando il modello viene applicato.",
+          "itemName": "Nome elemento",
+          "required": "Obbligatorio",
+          "newItemLabel": "Nuovo elemento",
+          "newItemPlaceholder": "Inserisca il nome dell'elemento"
+        },
+        "rules": {
+          "label": "Regole di applicazione automatica",
+          "help": "Il modello viene applicato automaticamente ai nuovi ticket che corrispondono a una qualsiasi di queste regole. Lasci un campo come \"Qualsiasi\" per corrispondere a tutti i valori.",
+          "empty": "Nessuna regola di applicazione automatica. Questo modello può comunque essere applicato ai ticket manualmente.",
+          "board": "Bacheca",
+          "category": "Categoria",
+          "subcategory": "Sottocategoria",
+          "priority": "Priorità",
+          "any": "Qualsiasi"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Aggiungi modello di checklist",
+        "editTemplate": "Modifica modello di checklist",
+        "createFirstHelp": "Crea prima il modello, poi aggiungi gli elementi della checklist e le regole di applicazione automatica.",
+        "deleteTitle": "Elimina modello di checklist",
+        "deleteMessage": "Eliminare davvero \"{{name}}\"? Le checklist già aggiunte ai ticket non saranno interessate."
+      },
+      "messages": {
+        "success": {
+          "created": "Modello di checklist creato con successo",
+          "updated": "Modello di checklist aggiornato con successo",
+          "deleted": "Modello di checklist eliminato con successo"
+        },
+        "error": {
+          "fetchFailed": "Impossibile recuperare i modelli di checklist",
+          "fetchRulesFailed": "Impossibile recuperare le regole di applicazione automatica",
+          "nameRequired": "Il nome del modello è obbligatorio",
+          "saveFailed": "Impossibile salvare il modello di checklist",
+          "deleteFailed": "Impossibile eliminare il modello di checklist",
+          "updateStatusFailed": "Impossibile aggiornare lo stato del modello",
+          "itemSaveFailed": "Impossibile salvare l'elemento della checklist",
+          "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica"
+        }
       }
     }
   },

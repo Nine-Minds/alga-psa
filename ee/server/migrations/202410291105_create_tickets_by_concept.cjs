@@ -1,4 +1,14 @@
 exports.up = async function(knex) {
+    // get_tickets_by_concept takes a pgvector argument; skip where the
+    // extension isn't available (e.g. the Citus migration smoke job).
+    const vectorCheck = await knex.raw(
+        "SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector') AS available"
+    );
+    if (!vectorCheck.rows?.[0]?.available) {
+        console.log('[tickets-by-concept] pgvector not available; skipping');
+        return;
+    }
+
     // Create get_tickets_by_concept function
     await knex.schema.raw(`
         CREATE OR REPLACE FUNCTION public.get_tickets_by_concept(

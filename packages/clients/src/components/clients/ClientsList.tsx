@@ -12,18 +12,17 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { TagManager } from '@alga-psa/tags/components';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
- import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
- import { useRegisterChild } from '@alga-psa/ui/ui-reflection/useRegisterChild';
- import { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
- import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
- import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRegisterChild } from '@alga-psa/ui/ui-reflection/useRegisterChild';
+import { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
+import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 
 interface ClientsListProps {
     selectedClients: string[];
     filteredClients: IClient[];
     setSelectedClients: (clients: string[]) => void;
-    handleCheckboxChange: (clientId: string) => void;
     handleEditClient: (clientId: string) => void;
     handleDeleteClient: (client: IClient) => void;
     onQuickView?: (client: IClient) => void;
@@ -44,10 +43,10 @@ interface ClientsListProps {
 interface ClientCheckboxProps {
   clientId: string;
   checked: boolean;
-  onChange: () => void;
+  onClick: (event: React.MouseEvent<HTMLInputElement>) => void;
 }
 
-const ClientCheckbox: React.FC<ClientCheckboxProps> = ({ clientId, checked, onChange }) => {
+const ClientCheckbox: React.FC<ClientCheckboxProps> = ({ clientId, checked, onClick }) => {
   const checkboxId = `client-checkbox-${clientId}`;
   const { t } = useTranslation('msp/clients');
 
@@ -65,7 +64,8 @@ const ClientCheckbox: React.FC<ClientCheckboxProps> = ({ clientId, checked, onCh
       <Checkbox
         id={checkboxId}
         checked={checked}
-        onChange={onChange}
+        onClick={onClick}
+        onChange={() => { /* controlled via onClick for shift-range support */ }}
         className="cursor-pointer"
         skipRegistration={true}  // We handle registration above with useRegisterChild
       />
@@ -124,7 +124,6 @@ const ClientsList = ({
   selectedClients,
   filteredClients,
   setSelectedClients,
-  handleCheckboxChange,
   handleEditClient,
   handleDeleteClient,
   onQuickView,
@@ -142,6 +141,13 @@ const ClientsList = ({
 }: ClientsListProps) => {
   const router = useRouter(); // Get router instance
   const { t } = useTranslation('msp/clients');
+  const selectedClientSet = React.useMemo(() => new Set(selectedClients), [selectedClients]);
+  const rangeSelect = useRangeSelection<IClient>({
+    items: filteredClients,
+    getId: (client) => client.client_id,
+    selectedIds: selectedClientSet,
+    onSelectedIdsChange: (next) => setSelectedClients(Array.from(next)),
+  });
 
 
   const handleRowClick = (client: IClient) => {
@@ -153,15 +159,26 @@ const ClientsList = ({
             title: '',
             dataIndex: 'checkbox',
             width: '5%',
-            render: (value: string, record: IClient) => (
-                <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
-                  <ClientCheckbox
-                    clientId={record.client_id}
-                    checked={selectedClients.includes(record.client_id)}
-                    onChange={() => handleCheckboxChange(record.client_id)}
-                  />
-                </div>
-            ),
+            render: (value: string, record: IClient) => {
+                const isChecked = rangeSelect.isSelected(record.client_id);
+                return (
+                    <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
+                      <ClientCheckbox
+                        clientId={record.client_id}
+                        checked={isChecked}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          rangeSelect.handleSelect(record.client_id, {
+                            shiftKey: event.shiftKey,
+                            selected: !isChecked,
+                            preventDefault: () => event.preventDefault(),
+                          });
+                          event.preventDefault();
+                        }}
+                      />
+                    </div>
+                );
+            },
         },
         {
             title: t('clientsList.name', { defaultValue: 'Name' }),

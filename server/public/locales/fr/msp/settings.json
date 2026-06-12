@@ -25,7 +25,8 @@
     "teamManagement": "Gestion d'équipe",
     "loadingTeam": "Chargement de la configuration de l'équipe...",
     "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
-    "loadingInteractions": "Chargement des paramètres d'interaction..."
+    "loadingInteractions": "Chargement des paramètres d'interaction...",
+    "keyboardShortcuts": "Raccourcis clavier"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -90,10 +91,6 @@
         "name": "Assistant IA",
         "description": "Activez la fonction Question rapide et la barre latérale de discussion alimentées par l'IA.",
         "restriction": "Disponible uniquement pour le locataire de facturation principal."
-      },
-      "workflowAutomation": {
-        "name": "Automatisation des flux de travail",
-        "description": "Activez les fonctionnalités expérimentales d'automatisation des flux de travail dans le panneau de contrôle et l'éditeur de flux de travail."
       }
     },
     "actions": {
@@ -294,7 +291,9 @@
     "messages": {
       "success": {
         "passwordChanged": "Mot de passe modifié avec succès",
-        "userUpdated": "Utilisateur mis à jour avec succès"
+        "userUpdated": "Utilisateur mis à jour avec succès",
+        "roleAdded": "Rôle ajouté avec succès",
+        "roleRemoved": "Rôle supprimé avec succès"
       },
       "error": {
         "userNotFound": "Utilisateur introuvable",
@@ -308,7 +307,8 @@
         "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe",
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."
@@ -382,7 +382,8 @@
       "boards": "Tableaux",
       "statuses": "Statuts",
       "priorities": "Priorités",
-      "categories": "Catégories"
+      "categories": "Catégories",
+      "checklistTemplates": "Modèles de checklist"
     },
     "numbering": {
       "title": "Format de numérotation",
@@ -676,6 +677,38 @@
           "updateStatusFailed": "Échec de la mise à jour du statut du tableau",
           "updateDefaultFailed": "Échec de la mise à jour du tableau par défaut"
         }
+      },
+      "closeRules": {
+        "enabledLabel": "Règles de clôture",
+        "enabledHelp": "Exiger que des conditions soient remplies avant que les tickets de ce tableau puissent être clôturés.",
+        "requireResolutionCommentLabel": "Exiger un commentaire de résolution",
+        "requireResolutionCommentHelp": "Un commentaire de résolution doit exister avant que le ticket puisse être clôturé.",
+        "requireTimeEntryLabel": "Exiger une saisie du temps",
+        "requireTimeEntryHelp": "Au moins une saisie du temps doit être enregistrée avant que le ticket puisse être clôturé.",
+        "requireChecklistCompleteLabel": "Exiger la complétion de la checklist",
+        "requireChecklistCompleteHelp": "Tous les éléments obligatoires de la checklist doivent être cochés avant que le ticket puisse être clôturé.",
+        "requireNoOpenChildrenLabel": "Exiger la clôture des tickets groupés",
+        "requireNoOpenChildrenHelp": "Un ticket maître de groupe ne peut pas être clôturé tant que des tickets enfants groupés sont encore ouverts.",
+        "requiredFieldsLabel": "Champs obligatoires à la clôture",
+        "requiredFieldsHelp": "Ces champs de ticket doivent être renseignés avant que le ticket puisse être clôturé.",
+        "autoCloseLabel": "Règles de clôture automatique",
+        "autoCloseHelp": "Clôture automatiquement les tickets restant dans un statut sans activité. Un courriel d'avertissement facultatif est envoyé au contact avant la clôture.",
+        "addAutoCloseRule": "Ajouter une règle",
+        "triggerStatusLabel": "Lorsque le ticket est dans le statut",
+        "triggerStatusPlaceholder": "Sélectionner un statut",
+        "targetStatusLabel": "Clôturer vers le statut",
+        "targetStatusPlaceholder": "Sélectionner un statut fermé",
+        "inactivityDaysLabel": "Jours d'inactivité",
+        "warningDaysLabel": "Avertir avant clôture (jours)",
+        "warningDaysPlaceholder": "Aucun avertissement",
+        "ruleEnabledLabel": "Activée",
+        "removeRule": "Supprimer",
+        "messages": {
+          "fetchFailed": "Échec du chargement des règles de clôture pour ce tableau",
+          "autoCloseStatusRequired": "Chaque règle de clôture automatique nécessite un statut déclencheur et un statut cible fermé",
+          "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
+          "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité"
+        }
       }
     },
     "priorities": {
@@ -756,6 +789,88 @@
       },
       "entity": {
         "fallback": "cette priorité"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Modèles de checklist",
+      "alert": "Les modèles de checklist définissent des checklists réutilisables pour les tickets. Les éléments du modèle sont copiés sur les tickets lors de l'application, de sorte que la modification d'un modèle ne change jamais les checklists déjà ajoutées aux tickets.",
+      "table": {
+        "name": "Nom",
+        "description": "Description",
+        "items": "Éléments",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "actions": {
+        "addTemplate": "Ajouter un modèle",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "create": "Créer",
+        "update": "Mettre à jour",
+        "up": "Monter",
+        "down": "Descendre",
+        "remove": "Supprimer",
+        "addItem": "Ajouter un élément",
+        "addRule": "Ajouter une règle"
+      },
+      "fields": {
+        "name": {
+          "label": "Nom du modèle",
+          "placeholder": "Saisir le nom du modèle"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "Saisir la description"
+        },
+        "active": "Actif",
+        "items": {
+          "label": "Éléments de la checklist",
+          "help": "Les éléments sont ajoutés aux tickets dans cet ordre lors de l'application du modèle.",
+          "itemName": "Nom de l'élément",
+          "required": "Obligatoire",
+          "newItemLabel": "Nouvel élément",
+          "newItemPlaceholder": "Saisir le nom de l'élément"
+        },
+        "rules": {
+          "label": "Règles d'application automatique",
+          "help": "Le modèle est automatiquement appliqué aux nouveaux tickets correspondant à l'une de ces règles. Laissez un champ à « Tous » pour correspondre à toutes les valeurs.",
+          "empty": "Aucune règle d'application automatique. Ce modèle peut toujours être appliqué manuellement aux tickets.",
+          "board": "Tableau",
+          "category": "Catégorie",
+          "subcategory": "Sous-catégorie",
+          "priority": "Priorité",
+          "any": "Tous"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Ajouter un modèle de checklist",
+        "editTemplate": "Modifier le modèle de checklist",
+        "createFirstHelp": "Créez d'abord le modèle, puis ajoutez des éléments de checklist et des règles d'application automatique.",
+        "deleteTitle": "Supprimer le modèle de checklist",
+        "deleteMessage": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Les checklists déjà ajoutées aux tickets ne seront pas affectées."
+      },
+      "messages": {
+        "success": {
+          "created": "Modèle de checklist créé avec succès",
+          "updated": "Modèle de checklist mis à jour avec succès",
+          "deleted": "Modèle de checklist supprimé avec succès"
+        },
+        "error": {
+          "fetchFailed": "Échec de la récupération des modèles de checklist",
+          "fetchRulesFailed": "Échec de la récupération des règles d'application automatique",
+          "nameRequired": "Le nom du modèle est obligatoire",
+          "saveFailed": "Échec de l'enregistrement du modèle de checklist",
+          "deleteFailed": "Échec de la suppression du modèle de checklist",
+          "updateStatusFailed": "Échec de la mise à jour du statut du modèle",
+          "itemSaveFailed": "Échec de l'enregistrement de l'élément de checklist",
+          "ruleSaveFailed": "Échec de l'enregistrement de la règle d'application automatique"
+        }
       }
     }
   },

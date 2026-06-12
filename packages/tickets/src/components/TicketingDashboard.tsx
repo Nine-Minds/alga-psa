@@ -3,10 +3,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, DeletionValidationResult } from '@alga-psa/types';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
+import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
+import BulkTicketActionBar from './BulkTicketActionBar';
+import BulkAssignTicketsDialog from './BulkAssignTicketsDialog';
+import BulkAddTagsDialog from './BulkAddTagsDialog';
+import BulkSetDueDateDialog from './BulkSetDueDateDialog';
+import BulkChangeStatusDialog from './BulkChangeStatusDialog';
+import BulkChangePriorityDialog from './BulkChangePriorityDialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -15,39 +22,54 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagFilter } from '@alga-psa/ui/components';
+import type { TagSize } from '@alga-psa/ui/components/tags';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
-import { deleteTicket, deleteTickets, moveTicketsToBoard } from '../actions/ticketActions';
+import {
+  deleteTickets,
+  moveTicketsToBoard,
+  bulkAssignTickets,
+  bulkAddTagsToTickets,
+  bulkUpdateTicketDueDate,
+  bulkUpdateTicketStatus,
+  bulkUpdateTicketPriority,
+  type BulkTicketAssignSelection,
+} from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import TicketImportDialog from './TicketImportDialog';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { XCircle, Clock, Download, Upload, ChevronDown } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from '@alga-psa/ui/hooks';
+import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
@@ -107,17 +129,86 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
-const TICKET_LIST_DENSITY_PRESETS = [0, 25, 50, 75, 100] as const;
+const TICKET_LIST_DENSITY_STEP = 10;
+const TICKET_LIST_DENSITY_DEFAULT = 50;
+const TICKET_PRINT_FALLBACK_PAGE_SIZE = 500;
 
-type TicketListDensityPreset = (typeof TICKET_LIST_DENSITY_PRESETS)[number];
-
-const normalizeTicketListDensityLevel = (value: number): TicketListDensityPreset => {
+const normalizeTicketListDensityLevel = (value: number): number => {
   const clamped = Math.min(100, Math.max(0, value));
-
-  return TICKET_LIST_DENSITY_PRESETS.reduce((closest, preset) => {
-    return Math.abs(preset - clamped) < Math.abs(closest - clamped) ? preset : closest;
-  }, TICKET_LIST_DENSITY_PRESETS[0]);
+  return Math.round(clamped / TICKET_LIST_DENSITY_STEP) * TICKET_LIST_DENSITY_STEP;
 };
+
+// Indexed by zoom/10; `[&>td_*]:!text-[Xpx]` forces descendant elements to follow the row font-size.
+// `tagSize` scales tag padding/gap/icons (font already tracks the row override); sm for the compact
+// half, md for the spacious half — md matches the look tags have at the spacious end today.
+// `filterControlClass` scales the filter controls' height + font via a cascade on the filter rows.
+// These MUST be literal strings so Tailwind's scanner generates the arbitrary utilities — do not
+// build them via interpolation. Applied to Row 1 directly and to a `display:contents` wrapper around
+// Row 2's filter controls so the Bundled toggle / density control stay untouched.
+// 5 bands change every ~2 zoom steps; spacious anchors at ~38px/14px (today's size).
+const FILTER_CONTROL_SHARED =
+  '[&_button]:!min-h-0 [&_button]:!py-0 [&_button]:!items-center';
+const FILTER_CONTROL_30_12 = `[&_button]:!h-[30px] [&_input]:!h-[30px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_32_12 = `[&_button]:!h-[32px] [&_input]:!h-[32px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_34_13 = `[&_button]:!h-[34px] [&_input]:!h-[34px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_36_13 = `[&_button]:!h-[36px] [&_input]:!h-[36px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_38_14 = `[&_button]:!h-[38px] [&_input]:!h-[38px] [&_button]:!text-[14px] [&_input]:!text-[14px] ${FILTER_CONTROL_SHARED}`;
+
+const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
+  filterPadding: string;
+  filterGap: string;
+  bodyPadding: string;
+  tableRowDensity: string;
+  tagSize: TagSize;
+  filterControlClass: string;
+}> = [
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+];
+
+function formatPrintDate(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatPrintDateTime(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | string[]): unknown {
+  const path = Array.isArray(dataIndex) ? dataIndex : [dataIndex];
+  return path.reduce<unknown>((value, key) => (
+    value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined
+  ), ticket);
+}
+
+function formatTicketPrintValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date) return value.toLocaleString();
+  if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -160,12 +251,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
   const [allMatchingMode, setAllMatchingMode] = useState(false);
+  // Boards resolved on demand for selected tickets that aren't on the current page
+  // (paginate-then-select / select-all-matching). Maps ticket_id -> board_id (or null).
+  const [offPageBoardById, setOffPageBoardById] = useState<Record<string, string | null>>({});
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
-  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
-  const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
-  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
-  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
-  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -190,6 +279,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
+  const [isBulkAssigning, setIsBulkAssigning] = useState(false);
+  const [bulkAssignErrors, setBulkAssignErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkTagsDialogOpen, setIsBulkTagsDialogOpen] = useState(false);
+  const [isBulkAddingTags, setIsBulkAddingTags] = useState(false);
+  const [bulkTagsErrors, setBulkTagsErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkDueDateDialogOpen, setIsBulkDueDateDialogOpen] = useState(false);
+  const [isBulkUpdatingDueDate, setIsBulkUpdatingDueDate] = useState(false);
+  const [bulkDueDateErrors, setBulkDueDateErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkStatusDialogOpen, setIsBulkStatusDialogOpen] = useState(false);
+  const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
+  const [bulkStatusErrors, setBulkStatusErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [bulkStatusOptions, setBulkStatusOptions] = useState<SelectOption[]>([]);
+  const [isLoadingBulkStatusOptions, setIsLoadingBulkStatusOptions] = useState(false);
+  const [isBulkPriorityDialogOpen, setIsBulkPriorityDialogOpen] = useState(false);
+  const [isBulkUpdatingPriority, setIsBulkUpdatingPriority] = useState(false);
+  const [bulkPriorityErrors, setBulkPriorityErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -198,15 +307,40 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   // Filter values derived from props (single source of truth is Container's activeFilters)
-  const selectedBoard = filterValues.boardId ?? null;
+  const selectedBoards = useMemo(() => {
+    if (filterValues.boardIds && filterValues.boardIds.length > 0) {
+      return filterValues.boardIds;
+    }
+    // Fall back to the legacy single-board field (e.g. deep links)
+    return filterValues.boardId ? [filterValues.boardId] : EMPTY_STRING_ARRAY;
+  }, [filterValues.boardIds, filterValues.boardId]);
+  const excludedBoards = useMemo(() =>
+    filterValues.excludeBoardIds && filterValues.excludeBoardIds.length > 0
+      ? filterValues.excludeBoardIds
+      : EMPTY_STRING_ARRAY,
+    [filterValues.excludeBoardIds]
+  );
+  // Single board id for board-scoped UI (status options, quick-add prefill) — only
+  // meaningful when exactly one real board is selected.
+  const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
+    ? selectedBoards[0]
+    : null;
   const selectedClient = filterValues.clientId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
-  const selectedCategories = useMemo(() =>
-    filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY,
-    [filterValues.categoryId]
+  const selectedCategories = useMemo(() => {
+    if (filterValues.categoryIds && filterValues.categoryIds.length > 0) {
+      return filterValues.categoryIds;
+    }
+    // Fall back to the legacy single-category field (e.g. deep links)
+    return filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY;
+  }, [filterValues.categoryIds, filterValues.categoryId]);
+  const excludedCategories = useMemo(() =>
+    filterValues.excludeCategoryIds && filterValues.excludeCategoryIds.length > 0
+      ? filterValues.excludeCategoryIds
+      : EMPTY_STRING_ARRAY,
+    [filterValues.excludeCategoryIds]
   );
-  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
   const boardFilterState = filterValues.boardFilterState ?? 'active';
 
@@ -228,12 +362,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<TicketListDensityPreset>(50);
+  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(TICKET_LIST_DENSITY_DEFAULT);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const openQuickAddTicket = useCallback(() => setIsQuickAddOpen(true), []);
+  usePageCreateShortcut(openQuickAddTicket);
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -242,11 +378,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
-    return selectedBoard !== null ||
+    return selectedBoards.length > 0 ||
+      excludedBoards.length > 0 ||
       selectedClient !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
+      excludedCategories.length > 0 ||
       searchQuery !== '' ||
       selectedTags.length > 0 ||
       selectedAssignees.length > 0 ||
@@ -255,7 +393,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -354,46 +492,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const densityClasses = useMemo(() => {
-    const densityPresetClasses: Record<TicketListDensityPreset, {
-      filterPadding: string;
-      filterGap: string;
-      bodyPadding: string;
-      tableRowDensity: string;
-    }> = {
-      0: {
-        filterPadding: 'p-3',
-        filterGap: 'gap-2',
-        bodyPadding: 'p-3',
-        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
-      },
-      25: {
-        filterPadding: 'p-4',
-        filterGap: 'gap-3',
-        bodyPadding: 'p-4',
-        tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
-      },
-      50: {
-        filterPadding: 'p-5',
-        filterGap: 'gap-4',
-        bodyPadding: 'p-5',
-        tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[14px]',
-      },
-      75: {
-        filterPadding: 'p-6',
-        filterGap: 'gap-5',
-        bodyPadding: 'p-7',
-        tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[15px]',
-      },
-      100: {
-        filterPadding: 'p-8',
-        filterGap: 'gap-6',
-        bodyPadding: 'p-9',
-        tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[16px]',
-      },
-    };
-
-    return densityPresetClasses[ticketListDensityLevel];
+    const index = Math.min(
+      TICKET_LIST_DENSITY_PRESETS.length - 1,
+      Math.max(0, Math.round(ticketListDensityLevel / TICKET_LIST_DENSITY_STEP))
+    );
+    return TICKET_LIST_DENSITY_PRESETS[index];
   }, [ticketListDensityLevel]);
+
 
   const statusOptions = useMemo(
     () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
@@ -406,11 +511,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const f = filterValues;
 
     // Only add non-default/non-empty values to URL
-    if (f.boardId) params.set('boardId', f.boardId);
+    if (f.boardIds && f.boardIds.length > 0) {
+      params.set('boardIds', f.boardIds.join(','));
+    } else if (f.boardId) {
+      params.set('boardId', f.boardId);
+    }
+    if (f.excludeBoardIds && f.excludeBoardIds.length > 0) {
+      params.set('excludeBoardIds', f.excludeBoardIds.join(','));
+    }
     if (f.clientId) params.set('clientId', f.clientId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
-    if (f.categoryId) params.set('categoryId', f.categoryId);
+    if (f.categoryIds && f.categoryIds.length > 0) {
+      params.set('categoryIds', f.categoryIds.join(','));
+    } else if (f.categoryId) {
+      params.set('categoryId', f.categoryId);
+    }
+    if (f.excludeCategoryIds && f.excludeCategoryIds.length > 0) {
+      params.set('excludeCategoryIds', f.excludeCategoryIds.join(','));
+    }
     if (f.searchQuery) params.set('searchQuery', f.searchQuery);
     if (f.boardFilterState && f.boardFilterState !== 'active') {
       params.set('boardFilterState', f.boardFilterState);
@@ -453,39 +572,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return params.toString();
   }, [allowSlaStatusFilter, filterValues, sortBy, sortDirection, currentPage, pageSize]);
 
-  const resetDeleteState = () => {
-    setTicketToDelete(null);
-    setTicketToDeleteName(null);
-    setDeleteValidation(null);
-    setIsDeleteValidating(false);
-    setIsDeleteProcessing(false);
-  };
-
-  const runDeleteValidation = useCallback(async (ticketId: string) => {
-    setIsDeleteValidating(true);
-    try {
-      const result = await preCheckDeletion('ticket', ticketId);
-      setDeleteValidation(result);
-    } catch (error) {
-      console.error('Failed to validate ticket deletion:', error);
-      setDeleteValidation({
-        canDelete: false,
-        code: 'VALIDATION_FAILED',
-        message: t('errors.validateDeletionFailed', 'Failed to validate deletion. Please try again.'),
-        dependencies: [],
-        alternatives: []
-      });
-    } finally {
-      setIsDeleteValidating(false);
-    }
-  }, [t]);
-
-  const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
-    setTicketToDelete(ticketId);
-    setTicketToDeleteName(ticketNameOrNumber);
-    void runDeleteValidation(ticketId);
-  };
-  
   const onQuickViewClient = useCallback(async (clientId: string) => {
     if (!clientId) return;
 
@@ -529,42 +615,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
-
-  const confirmDeleteTicket = async () => {
-    if (!ticketToDelete) return;
-
-    try {
-      setIsDeleteProcessing(true);
-      const result = await deleteTicket(ticketToDelete);
-
-      if (!result.success) {
-        setDeleteValidation(result);
-        return;
-      }
-
-      setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-      setSelectedTicketIds(prev => {
-        if (!ticketToDelete || !prev.has(ticketToDelete)) {
-          return prev;
-        }
-        const next = new Set(prev);
-        next.delete(ticketToDelete);
-        return next;
-      });
-      resetDeleteState();
-    } catch (error: any) {
-      console.error('Failed to delete ticket:', error);
-      setDeleteValidation({
-        canDelete: false,
-        code: 'VALIDATION_FAILED',
-        message: error?.message || t('errors.deleteTicketUnexpected', 'An unexpected error occurred while deleting the ticket.'),
-        dependencies: [],
-        alternatives: []
-      });
-    } finally {
-      setIsDeleteProcessing(false);
-    }
-  };
 
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
@@ -735,32 +785,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [selectableTicketIds]);
 
-  const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
-    if (!isChecked) {
-      setAllMatchingMode(false);
-    }
-    setSelectedTicketIds(prev => {
-      const alreadySelected = prev.has(ticketId);
-
-      if (isChecked && alreadySelected) {
-        return prev;
+  const rangeSelect = useRangeSelection<string>({
+    items: visibleTicketIds,
+    getId: (id) => id,
+    selectedIds: selectedTicketIds,
+    onSelectedIdsChange: (next) => {
+      let shrank = false;
+      for (const id of selectedTicketIds) {
+        if (!next.has(id)) { shrank = true; break; }
       }
-
-      if (!isChecked && !alreadySelected) {
-        return prev;
-      }
-
-      const next = new Set(prev);
-
-      if (isChecked) {
-        next.add(ticketId);
-      } else {
-        next.delete(ticketId);
-      }
-
-      return next;
-    });
-  }, []);
+      if (shrank) setAllMatchingMode(false);
+      setSelectedTicketIds(next);
+    },
+  });
 
   const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
     if (!shouldSelect) {
@@ -799,10 +836,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleSelectAllMatchingTickets = useCallback(async () => {
     try {
       const filters: ITicketListFilters = {
-        boardId: selectedBoard ?? undefined,
+        boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+        excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
-        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+        excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
         clientId: selectedClient ?? undefined,
         searchQuery: debouncedSearchQuery,
         boardFilterState: boardFilterState,
@@ -826,7 +865,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setAllMatchingMode(true);
     }
   }, [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
@@ -874,6 +913,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
     setAllMatchingMode(false);
+    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
   }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
@@ -886,7 +926,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string }>;
+      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string; board_id?: string | null }>;
     }
 
     const selectedSet = new Set(selectedTicketIds);
@@ -899,6 +939,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         title: ticket.title,
         client_id: ticket.client_id ?? null,
         client_name: ticket.client_name,
+        board_id: ticket.board_id ?? null,
       }))
       .sort((a, b) => {
         if (a.ticket_number && b.ticket_number) {
@@ -919,6 +960,75 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     );
     return uniqueClientIds.size > 1;
   }, [selectedTicketDetails]);
+
+  // Board id for every ticket currently rendered on the page.
+  const onPageBoardById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const ticket of tickets) {
+      if (ticket.ticket_id) {
+        map.set(ticket.ticket_id, ticket.board_id ?? null);
+      }
+    }
+    return map;
+  }, [tickets]);
+
+  // Selected tickets whose board we don't yet know (not on this page, not yet fetched).
+  const unresolvedBoardTicketIds = useMemo(
+    () => selectedTicketIdsArray.filter(
+      id => !onPageBoardById.has(id) && !(id in offPageBoardById)
+    ),
+    [selectedTicketIdsArray, onPageBoardById, offPageBoardById]
+  );
+
+  // While any selected board is still unknown the shared board can't be determined.
+  const isResolvingSelectedBoards = unresolvedBoardTicketIds.length > 0;
+
+  // Fetch boards for off-page selected rows so paginate-then-select and select-all-matching
+  // can still determine a shared board. Both success and failure populate every requested id
+  // (failures resolve to null) so the effect terminates and never refetches in a loop.
+  useEffect(() => {
+    if (unresolvedBoardTicketIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      let resolved: Array<{ ticket_id: string; board_id: string | null }> = [];
+      try {
+        resolved = await getTicketBoardIds(unresolvedBoardTicketIds);
+      } catch (error) {
+        console.error('[TicketingDashboard] Failed to resolve selected ticket boards:', error);
+      }
+      if (cancelled) return;
+      setOffPageBoardById(prev => {
+        const next = { ...prev };
+        for (const row of resolved) {
+          next[row.ticket_id] = row.board_id ?? null;
+        }
+        // Any id not returned (unauthorized or fetch failed) resolves to null so it is
+        // treated as "no shared board" rather than being requested again indefinitely.
+        for (const id of unresolvedBoardTicketIds) {
+          if (!(id in next)) next[id] = null;
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [unresolvedBoardTicketIds]);
+
+  const selectedTicketsSharedBoardId = useMemo<string | null>(() => {
+    if (selectedTicketIds.size === 0) return null;
+    // Wait until every selected ticket's board is known.
+    if (isResolvingSelectedBoards) return null;
+    const uniqueBoardIds = new Set<string>();
+    for (const id of selectedTicketIdsArray) {
+      const boardId = onPageBoardById.has(id) ? onPageBoardById.get(id) : offPageBoardById[id];
+      // A selected ticket with no board (or one we couldn't resolve) means there's no
+      // single board to scope the status change to.
+      if (typeof boardId !== 'string' || boardId.length === 0) return null;
+      uniqueBoardIds.add(boardId);
+    }
+    return uniqueBoardIds.size === 1 ? Array.from(uniqueBoardIds)[0] : null;
+  }, [selectedTicketIds.size, selectedTicketIdsArray, isResolvingSelectedBoards, onPageBoardById, offPageBoardById]);
 
   const hasSelection = selectedTicketIds.size > 0;
   const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allMatchingMode && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
@@ -942,9 +1052,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
+      tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
       additionalAgentAvatarUrls,
@@ -1000,7 +1110,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dataIndex: 'selection',
       width: '4%',
       headerClassName: 'text-center px-4',
-      cellClassName: 'text-center px-4',
+      cellClassName: 'relative text-center px-4',
       sortable: false,
       render: (_value: string, record: ITicketListItem) => {
         const ticketId = record.ticket_id;
@@ -1008,23 +1118,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           return null;
         }
 
-        const isChecked = selectedTicketIds.has(ticketId);
+        const isChecked = rangeSelect.isSelected(ticketId);
 
         return (
+          // Overlay fills the whole cell (incl. padding) so clicking anywhere in the
+          // column toggles selection instead of navigating into the ticket.
           <div
-            className="flex justify-center"
-            onClick={(event) => event.stopPropagation()}
+            className="absolute inset-0 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              rangeSelect.handleSelect(ticketId, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
+            }}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <Checkbox
               id={`${id}-select-${ticketId}`}
               checked={isChecked}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
                 event.stopPropagation();
-                handleTicketSelectionChange(ticketId, event.target.checked);
+                rangeSelect.handleSelect(ticketId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                  preventDefault: () => event.preventDefault(),
+                });
+                event.preventDefault();
               }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
               containerClassName="mb-0"
-              className="m-0"
+              className="m-0 pointer-events-none"
               skipRegistration
             />
           </div>
@@ -1038,7 +1164,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     boards,
     displaySettings,
     handleTicketClick,
-    handleDeleteTicket,
     handleTagsChange,
     ticketTagsRef,
     onQuickViewClient,
@@ -1046,7 +1171,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
     handleSelectAllVisibleTickets,
-    handleTicketSelectionChange,
+    rangeSelect,
     selectedTicketIds,
     clearSelection,
     handleSelectAllMatchingTickets,
@@ -1056,6 +1181,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     isBundleExpanded,
     toggleBundleExpanded,
     bundleView,
+    densityClasses.tagSize,
     t,
   ]);
 
@@ -1196,6 +1322,256 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
+  const handleConfirmBulkAssign = useCallback(async (selection: BulkTicketAssignSelection) => {
+    if (selectedTicketIdsArray.length === 0) return;
+    if (!currentUser) {
+      toast.error(t('bulk.auth.assignRequired', 'You must be logged in to reassign tickets'));
+      return;
+    }
+
+    setIsBulkAssigning(true);
+    setBulkAssignErrors([]);
+
+    try {
+      const result = await bulkAssignTickets(selectedTicketIdsArray, selection);
+
+      if (result.updatedIds.length > 0) {
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkAssignErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error(t('bulk.assign.partialFailure', 'Some tickets could not be reassigned'));
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.assign.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
+          }));
+        }
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.assign.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
+          }));
+        }
+        // Keep the selection so the user can run more bulk actions on the same tickets.
+        setIsBulkAssignDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('bulk.assign.failure', 'Failed to reassign selected tickets'));
+    } finally {
+      setIsBulkAssigning(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
+
+  const handleConfirmBulkAddTags = useCallback(async (tagTexts: string[]) => {
+    if (selectedTicketIdsArray.length === 0 || tagTexts.length === 0) return;
+    if (!currentUser) {
+      toast.error(t('bulk.auth.tagsRequired', 'You must be logged in to add tags'));
+      return;
+    }
+
+    setIsBulkAddingTags(true);
+    setBulkTagsErrors([]);
+
+    try {
+      const result = await bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts);
+
+      if (result.updatedIds.length > 0) {
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkTagsErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error(t('bulk.tags.partialFailure', 'Tags could not be added to some tickets'));
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.tags.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
+          }));
+        }
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.tags.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
+          }));
+        }
+        // Keep the selection so the user can run more bulk actions on the same tickets.
+        setIsBulkTagsDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('bulk.tags.failure', 'Failed to add tags to selected tickets'));
+    } finally {
+      setIsBulkAddingTags(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
+
+  const handleConfirmBulkDueDate = useCallback(async (dueDateIso: string | null) => {
+    if (selectedTicketIdsArray.length === 0) return;
+    if (!currentUser) {
+      toast.error(t('bulk.auth.dueDateRequired', 'You must be logged in to update tickets'));
+      return;
+    }
+
+    setIsBulkUpdatingDueDate(true);
+    setBulkDueDateErrors([]);
+
+    try {
+      const result = await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso);
+
+      if (result.updatedIds.length > 0) {
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkDueDateErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error(t('bulk.dueDate.partialFailure', 'Due date could not be updated on some tickets'));
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.dueDate.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
+          }));
+        }
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.dueDate.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
+          }));
+        }
+        // Keep the selection so the user can run more bulk actions on the same tickets.
+        setIsBulkDueDateDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('bulk.dueDate.failure', 'Failed to update due date on selected tickets'));
+    } finally {
+      setIsBulkUpdatingDueDate(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
+
+  // Load statuses for the selected tickets' shared board when the Status dialog opens.
+  useEffect(() => {
+    if (!isBulkStatusDialogOpen) return;
+    if (!selectedTicketsSharedBoardId) {
+      setBulkStatusOptions([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingBulkStatusOptions(true);
+    getBoardTicketStatuses(selectedTicketsSharedBoardId)
+      .then(statuses => {
+        if (cancelled) return;
+        setBulkStatusOptions(statuses.map((s: { status_id: string; name: string }) => ({
+          value: s.status_id,
+          label: s.name,
+        })));
+      })
+      .catch(error => {
+        if (cancelled) return;
+        console.error('[TicketingDashboard] Failed to load bulk status options:', error);
+        setBulkStatusOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingBulkStatusOptions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isBulkStatusDialogOpen, selectedTicketsSharedBoardId]);
+
+  const handleConfirmBulkStatus = useCallback(async (statusId: string) => {
+    if (selectedTicketIdsArray.length === 0) return;
+    if (!currentUser) {
+      toast.error(t('bulk.auth.statusRequired', 'You must be logged in to update tickets'));
+      return;
+    }
+
+    setIsBulkUpdatingStatus(true);
+    setBulkStatusErrors([]);
+
+    try {
+      const result = await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
+
+      if (result.updatedIds.length > 0) {
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkStatusErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error(t('bulk.status.partialFailure', 'Status could not be updated on some tickets'));
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.status.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
+          }));
+        }
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.status.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
+          }));
+        }
+        // Keep the selection so the user can run more bulk actions on the same tickets.
+        setIsBulkStatusDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('bulk.status.failure', 'Failed to update status on selected tickets'));
+    } finally {
+      setIsBulkUpdatingStatus(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
+
+  const handleConfirmBulkPriority = useCallback(async (priorityId: string) => {
+    if (selectedTicketIdsArray.length === 0) return;
+    if (!currentUser) {
+      toast.error(t('bulk.auth.priorityRequired', 'You must be logged in to update tickets'));
+      return;
+    }
+
+    setIsBulkUpdatingPriority(true);
+    setBulkPriorityErrors([]);
+
+    try {
+      const result = await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
+
+      if (result.updatedIds.length > 0) {
+        onFilterChange({});
+      }
+
+      if (result.failed.length > 0) {
+        setBulkPriorityErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+        toast.error(t('bulk.priority.partialFailure', 'Priority could not be updated on some tickets'));
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.priority.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
+          }));
+        }
+      } else {
+        if (result.updatedIds.length > 0) {
+          toast.success(t('bulk.priority.success', {
+            count: result.updatedIds.length,
+            defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
+          }));
+        }
+        // Keep the selection so the user can run more bulk actions on the same tickets.
+        setIsBulkPriorityDialogOpen(false);
+      }
+    } catch (error) {
+      handleError(error, t('bulk.priority.failure', 'Failed to update priority on selected tickets'));
+    } finally {
+      setIsBulkUpdatingPriority(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, onFilterChange, clearSelection, t]);
+
   // When the bundle dialog opens, check which of the selected tickets are already
   // bundle masters of other bundles. Masters can't be added as children, so we must
   // either force them to BE the master or block the operation entirely.
@@ -1303,10 +1679,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [isSelectedBundleMultiClient, performBundleTickets]);
 
   const exportFilters = useMemo((): ITicketListFilters => ({
-    boardId: selectedBoard ?? undefined,
+    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
     statusId: selectedStatus,
     priorityId: selectedPriority,
-    categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
     clientId: selectedClient ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
@@ -1316,17 +1694,166 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
     includeUnassigned: includeUnassigned || undefined,
     dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    dueDateFrom: filterValues.dueDateFrom,
+    dueDateTo: filterValues.dueDateTo,
     responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
     slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
     sortBy,
     sortDirection,
     bundleView,
   }), [
-    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
   ]);
+
+  const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
+    const availableColumns = createTicketColumns({
+      categories,
+      boards,
+      displaySettings: {
+        ...displaySettings,
+        list: {
+          ...displaySettings?.list,
+          tagsInlineUnderTitle: false,
+        },
+      },
+      onTicketClick: handleTicketClick,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showTags: true,
+      showClient: true,
+      onClientClick: onQuickViewClient,
+      additionalAgentAvatarUrls,
+      teamAvatarUrls,
+      isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
+      onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
+      showAllAvailableColumns: true,
+      t,
+    });
+
+    const renderByDataIndex: Partial<Record<string, (ticket: ITicketListItem) => React.ReactNode>> = {
+      ticket_number: (ticket) => ticket.ticket_number,
+      title: (ticket) => ticket.title,
+      status_name: (ticket) => ticket.status_name || t('dashboard.print.emptyValue', '—'),
+      priority_name: (ticket) => ticket.priority_name || t('dashboard.print.emptyValue', '—'),
+      sla_policy_id: (ticket) => ticket.sla_policy_id ? t('dashboard.print.values.hasSla', 'SLA') : t('dashboard.print.emptyValue', '—'),
+      board_name: (ticket) => ticket.board_name || t('dashboard.print.emptyValue', '—'),
+      category_name: (ticket) => {
+        if (ticket.subcategory_id) {
+          const subcategory = categories.find((category) => category.category_id === ticket.subcategory_id);
+          const parent = subcategory?.parent_category
+            ? categories.find((category) => category.category_id === subcategory.parent_category)
+            : null;
+          if (subcategory && parent) return `${parent.category_name} → ${subcategory.category_name}`;
+          if (subcategory) return subcategory.category_name;
+        }
+        return ticket.category_name || t('dashboard.print.emptyValue', '—');
+      },
+      client_name: (ticket) => ticket.client_name || t('dashboard.print.emptyValue', '—'),
+      assigned_to_name: (ticket) => {
+        const primary = ticket.assigned_to_name || ticket.assigned_team_name || t('dashboard.print.emptyValue', '—');
+        const additionalAgents = ticket.additional_agents?.map((agent) => agent.name).filter(Boolean) ?? [];
+        return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
+      },
+      due_date: (ticket) => formatPrintDate(ticket.due_date) || t('dashboard.print.noDueDate', 'No due date'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at) || t('dashboard.print.emptyValue', '—'),
+      entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      tags: (ticket) => {
+        const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('dashboard.print.emptyValue', '—');
+      },
+    };
+
+    return availableColumns.map((column) => {
+      const dataIndexKey = Array.isArray(column.dataIndex) ? column.dataIndex.join('.') : column.dataIndex;
+      const knownRenderer = renderByDataIndex[dataIndexKey];
+
+      return {
+        key: dataIndexKey,
+        label: column.title,
+        header: column.title,
+        className: dataIndexKey === 'ticket_number'
+          ? 'tickets-print-number-column'
+          : dataIndexKey === 'title'
+            ? 'tickets-print-title-column'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+              ? 'tickets-print-date-column'
+              : undefined,
+        render: knownRenderer ?? ((ticket) => (
+          formatTicketPrintValue(getTicketColumnValue(ticket, column.dataIndex))
+          || t('dashboard.print.emptyValue', '—')
+        )),
+      };
+    });
+  }, [
+    additionalAgentAvatarUrls,
+    boards,
+    bundleView,
+    categories,
+    displaySettings,
+    handleTagsChange,
+    handleTicketClick,
+    isBundleExpanded,
+    onQuickViewClient,
+    t,
+    teamAvatarUrls,
+    ticketTagsRef,
+    toggleBundleExpanded,
+  ]);
+  const {
+    selectedColumnKeys: selectedTicketPrintColumnKeys,
+    selectedColumns: selectedTicketPrintColumns,
+    setSelectedColumnKeys: setSelectedTicketPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedTicketPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
+
+  const preparePrintTickets = useCallback(async () => {
+    if (hasSelection && !allMatchingMode) {
+      const selectedRows = displayedTickets.filter((ticket) => (
+        Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id))
+      ));
+      setPrintTickets(selectedRows);
+      return;
+    }
+
+    const printPageSize = Math.max(
+      totalCount,
+      selectedTicketIds.size,
+      pageSize,
+      TICKET_PRINT_FALLBACK_PAGE_SIZE
+    );
+    const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    ticketTagsRef.current = {
+      ...ticketTagsRef.current,
+      ...result.metadata.ticketTags,
+    };
+    const rows = hasSelection
+      ? result.tickets.filter((ticket) => Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id)))
+      : result.tickets;
+    setPrintTickets(rows);
+  }, [
+    allMatchingMode,
+    displayedTickets,
+    exportFilters,
+    hasSelection,
+    pageSize,
+    selectedTicketIds,
+    totalCount,
+  ]);
+
+  const cleanupPrintTickets = useCallback(() => {
+    setPrintTickets(null);
+  }, []);
+
+  const { triggerPrint: triggerPrintTickets, isPreparing: isPreparingPrint } = usePrintAction({
+    onBeforePrint: preparePrintTickets,
+    onAfterPrint: cleanupPrintTickets,
+  });
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Store tags for the new ticket if provided
@@ -1401,21 +1928,29 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsQuickAddOpen(false);
   }, [rawStatusOptions, priorityOptions, boards, categories, currentUser, initialClients, t]);
 
-  const handleBoardSelect = useCallback((boardId: string) => {
-    const nextBoardId = boardId || undefined;
-    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, nextBoardId, selectedStatus);
+  const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
+    // Status options are board-scoped; only scope when exactly one real board is selected.
+    const scopedBoardId = newSelectedBoards.length === 1 && newSelectedBoards[0] !== NO_BOARD_VALUE
+      ? newSelectedBoards[0]
+      : undefined;
+    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, scopedBoardId, selectedStatus);
     const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
 
     onFilterChange({
-      boardId: nextBoardId,
+      boardId: undefined, // clear legacy single-board field; arrays are the source of truth
+      boardIds: newSelectedBoards.length > 0 ? newSelectedBoards : undefined,
+      excludeBoardIds: newExcludedBoards.length > 0 ? newExcludedBoards : undefined,
       statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
       showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
     });
   }, [onFilterChange, rawStatusOptions, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
-    setExcludedCategories(newExcludedCategories);
-    onFilterChange({ categoryId: newSelectedCategories.length > 0 ? newSelectedCategories[0] : undefined });
+    onFilterChange({
+      categoryId: undefined, // clear legacy single-category field; arrays are the source of truth
+      categoryIds: newSelectedCategories.length > 0 ? newSelectedCategories : undefined,
+      excludeCategoryIds: newExcludedCategories.length > 0 ? newExcludedCategories : undefined,
+    });
   }, [onFilterChange]);
 
   const handleClientSelect = useCallback((clientId: string | null) => {
@@ -1431,7 +1966,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const handleResetFilters = useCallback(() => {
-    setExcludedCategories([]);
     setSearchQuery('');
     lastEmittedSearchRef.current = '';
     setClientFilterState('active');
@@ -1440,10 +1974,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     onFilterChange({
       boardId: undefined,
+      boardIds: undefined,
+      excludeBoardIds: undefined,
       clientId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
+      categoryIds: undefined,
+      excludeCategoryIds: undefined,
       searchQuery: '',
       boardFilterState: 'active',
       showOpenOnly: true,
@@ -1468,86 +2006,51 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           {t('dashboard.title', 'Ticketing Dashboard')}
         </h1>
         <div className="flex items-center gap-3">
-          {hasSelection && canUpdateTickets && (
-            <Button
-              id={`${id}-bulk-move-button`}
-              onClick={() => {
-                setBulkMoveErrors([]);
-                setSelectedDestinationBoardId('');
-                setDestinationBoardStatuses([]);
-                setSelectedDestinationStatusId('');
-                setDestinationStatusError('');
-                setIsBulkMoveDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              {t('bulk.moveToBoard', 'Move to Board')}
-            </Button>
-          )}
-          {hasSelection && (
-            <Button
-              id={`${id}-bulk-delete-button`}
-              variant="destructive"
-              onClick={() => {
-                setBulkDeleteErrors([]);
-                setIsBulkDeleteDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              {t('bulk.deleteSelected', {
-                count: selectedTicketIds.size,
-                defaultValue: 'Delete Selected ({{count}})',
-              })}
-            </Button>
-          )}
-          {selectedTicketIds.size >= 2 && (
-            <Button
-              id={`${id}-bundle-tickets-button`}
-              onClick={() => {
-                setBundleError(null);
-                const first = Array.from(selectedTicketIds)[0] || null;
-                setBundleMasterTicketId(first);
-                setBundleSyncUpdates(true);
-                setIsBundleDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-              disabled={!canUpdateTickets}
-            >
-              {t('bulk.bundleTickets', 'Bundle Tickets')}
-            </Button>
-          )}
-          <Button
-            id={`${id}-import-csv-button`}
-            variant="outline"
-            onClick={() => setIsImportDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Import CSV
-          </Button>
-          <Tooltip content={hasSelection
-            ? t('dashboard.exportSelectedTooltip', {
-              count: selectedTicketIds.size,
-              defaultValue: selectedTicketIds.size === 1
-                ? 'Export {{count}} selected ticket to CSV'
-                : 'Export {{count}} selected tickets to CSV',
-            })
-            : t('dashboard.exportDisabledTooltip', 'Select ticket(s) to export')
-          }>
-            <span>
-              <Button
-                id={`${id}-export-csv-button`}
-                variant="outline"
-                onClick={() => setIsExportDialogOpen(true)}
-                disabled={!hasSelection}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </span>
-          </Tooltip>
-          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
+          <ShareActionsMenu
+            id={`${id}-share-actions`}
+            disabled={isLoadingMore && !hasSelection}
+            tooltip={t('dashboard.shareTooltip', { defaultValue: 'Print, import and export' })}
+            actions={[
+              {
+                id: `${id}-share-print`,
+                icon: Printer,
+                label: hasSelection
+                  ? t('dashboard.print.selectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Print selected ({{count}})',
+                    })
+                  : t('dashboard.print.action', 'Print'),
+                onSelect: () => { void triggerPrintTickets(); },
+                disabled: isPreparingPrint || (!hasSelection && totalCount === 0),
+              },
+              {
+                id: `${id}-share-print-options`,
+                icon: Settings2,
+                label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                onSelect: () => setIsPrintOptionsOpen(true),
+              },
+              {
+                id: `${id}-share-export`,
+                icon: Download,
+                label: hasSelection
+                  ? t('dashboard.exportSelectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Export selected ({{count}})',
+                    })
+                  : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
+                onSelect: () => setIsExportDialogOpen(true),
+                disabled: !hasSelection,
+                separator: true,
+              },
+              {
+                id: `${id}-share-import`,
+                icon: Upload,
+                label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
+                onSelect: () => setIsImportDialogOpen(true),
+              },
+            ] satisfies ShareAction[]}
+          />
+          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
         </div>
@@ -1557,14 +2060,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center ${densityClasses.filterGap}`}>
-                <BoardPicker
+              <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+                <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
+                  selectedBoards={selectedBoards}
+                  excludedBoards={excludedBoards}
                   onSelect={handleBoardSelect}
-                  selectedBoardId={selectedBoard}
                   filterState={boardFilterState}
-                  onFilterStateChange={(state: 'active' | 'inactive' | 'all') => onFilterChange({ boardFilterState: state })}
+                  onFilterStateChange={(state) => onFilterChange({ boardFilterState: state })}
+                  placeholder={t('filters.board', 'Filter by board')}
+                  multiSelect={true}
+                  showExclude={true}
+                  showReset={true}
+                  allowEmpty={true}
+                  className="text-sm min-w-[200px]"
                 />
                 <ClientPicker
                   id='client-picker'
@@ -1687,6 +2197,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
               {/* Row 2: Category, search, tags, reset, bundled, density */}
               <div className={`flex items-center ${densityClasses.filterGap}`}>
+                <div className={`contents ${densityClasses.filterControlClass}`}>
                 <CategoryPicker
                   id={`${id}-category-picker`}
                   categories={categories}
@@ -1714,8 +2225,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       }
                       return [...prevCategories, newCategory];
                     });
-                    onFilterChange({ categoryId: newCategory.category_id });
-                    setExcludedCategories((prevExcluded) => prevExcluded.filter((categoryId) => categoryId !== newCategory.category_id));
+                    onFilterChange({
+                      categoryId: undefined,
+                      categoryIds: [newCategory.category_id],
+                      excludeCategoryIds: excludedCategories.filter((categoryId) => categoryId !== newCategory.category_id),
+                    });
                     setIsQuickAddCategoryOpen(false);
                   }}
                   preselectedBoardId={selectedBoard || undefined}
@@ -1724,7 +2238,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 />
                 <Input
                   id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets...')}
+                  placeholder={t('filters.search', 'Search tickets and comments...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-[38px] min-w-[350px] text-sm"
@@ -1741,6 +2255,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1754,13 +2269,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </Button>
                 <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
                 <div className="flex items-center gap-2 shrink-0">
-                  <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-600">
+                  <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
                     {t('dashboard.bundledToggle', 'Bundled')}
                   </Label>
                   <Switch
                     id={`${id}-bundle-view-toggle`}
                     checked={bundleView === 'bundled'}
                     onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
+                    size={densityClasses.tagSize}
                   />
                 </div>
                 <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
@@ -1769,7 +2285,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     idPrefix={`${id}-list-density`}
                     value={ticketListDensityLevel}
                     onChange={handleTicketListDensityChange}
-                    step={25}
+                    step={TICKET_LIST_DENSITY_STEP}
                     compactLabel={t('dashboard.spacing.compact', 'Compact')}
                     spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
                     decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
@@ -1830,37 +2346,89 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </AlertDescription>
               </Alert>
             )}
-            <DataTable
-              key={`${currentPage}-${pageSize}`}
-              {...withDataAutomationId({ id: `${id}-tickets-table` })}
-              data={ticketsWithIds}
-              columns={columns}
-              pagination={true}
-              currentPage={currentPage}
-              onPageChange={onPageChange}
-              pageSize={pageSize}
-              totalItems={totalCount}
-              onItemsPerPageChange={onPageSizeChange}
-              rowClassName={(record: ITicketListItem) =>
-                `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
-                  ? '!bg-table-selected'
-                  : ''}`
-              }
-              onRowClick={(record: ITicketListItem) => {
-                if (record.ticket_id) {
-                  handleTicketClick(record.ticket_id);
+            <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+              <DataTable
+                key={`${currentPage}-${pageSize}`}
+                {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                data={ticketsWithIds}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={onPageChange}
+                pageSize={pageSize}
+                totalItems={totalCount}
+                onItemsPerPageChange={onPageSizeChange}
+                rowClassName={(record: ITicketListItem) =>
+                  `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                    ? '!bg-table-selected'
+                    : ''}`
                 }
-              }}
-              onVisibleRowsChange={handleVisibleRowsChange}
-              manualSorting={true}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSortChange={handleTableSortChange}
-            />
+                onRowClick={(record: ITicketListItem) => {
+                  if (record.ticket_id) {
+                    handleTicketClick(record.ticket_id);
+                  }
+                }}
+                onVisibleRowsChange={handleVisibleRowsChange}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={handleTableSortChange}
+              />
+            </ShortcutActiveRegion>
           </>
         )}
         </div>
       </div>
+
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={hasSelection
+            ? t('dashboard.print.selectedTitle', {
+                count: selectedTicketIds.size,
+                defaultValue: 'Selected Tickets ({{count}})',
+              })
+            : t('dashboard.print.title', 'Tickets')
+          }
+          subtitle={t('dashboard.print.subtitle', {
+            count: printTickets?.length ?? 0,
+            defaultValue: '{{count}} tickets',
+          })}
+          rows={printTickets ?? []}
+          columns={selectedTicketPrintColumns}
+          getRowKey={(ticket) => ticket.ticket_id ?? ticket.ticket_number}
+          emptyMessage={t('dashboard.print.noTickets', 'No tickets to print')}
+          className="tickets-print-table"
+        />
+      </div>
+
+      <PrintOptionsDialog
+        id={`${id}-print-options-dialog`}
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={hasSelection
+          ? t('dashboard.print.optionsDialog.selectedTitle', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print options ({{count}} selected)',
+            })
+          : t('dashboard.print.optionsDialog.title', { defaultValue: 'Print options' })
+        }
+        description={t('dashboard.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing tickets.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedTicketPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTicketPrintColumnKeys}
+        onReset={resetSelectedTicketPrintColumnKeys}
+        onPrint={() => triggerPrintTickets()}
+        isPrinting={isPreparingPrint}
+        printLabel={hasSelection
+          ? t('dashboard.print.selectedAction', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('dashboard.print.action', 'Print')
+        }
+      />
 
       <QuickAddTicket
         id={`${id}-quick-add`}
@@ -1868,16 +2436,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onOpenChange={setIsQuickAddOpen}
         onTicketAdded={handleTicketAdded}
         isAlgaDeskMode={useAlgaDeskQuickAddForm}
-      />
-      <DeleteEntityDialog
-        id={`${id}-delete-ticket-dialog`}
-        isOpen={!!ticketToDelete}
-        onClose={resetDeleteState}
-        onConfirmDelete={confirmDeleteTicket}
-        entityName={ticketToDeleteName || ticketToDelete || t('bulk.delete.entityFallback', 'this ticket')}
-        validationResult={deleteValidation}
-        isValidating={isDeleteValidating}
-        isDeleting={isDeleteProcessing}
       />
       <ConfirmationDialog
         id={`${id}-bundle-multi-client-confirm`}
@@ -2222,6 +2780,126 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         filters={exportFilters}
         totalCount={totalCount}
         selectedTicketIds={selectedTicketIdsArray}
+      />
+      <BulkTicketActionBar
+        idPrefix={`${id}-bulk`}
+        count={selectedTicketIds.size}
+        showMove={canUpdateTickets}
+        showBundle={canUpdateTickets}
+        showAssign={canUpdateTickets}
+        showStatus={canUpdateTickets}
+        showPriority={canUpdateTickets}
+        showTags={canUpdateTickets}
+        showDueDate={canUpdateTickets}
+        statusDisabled={!selectedTicketsSharedBoardId}
+        statusDisabledTitle={isResolvingSelectedBoards
+          ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')
+          : t('bulk.actionBar.statusDisabledMultiBoard', 'Selected tickets are on different boards')}
+        onMove={() => {
+          setBulkMoveErrors([]);
+          setSelectedDestinationBoardId('');
+          setDestinationBoardStatuses([]);
+          setSelectedDestinationStatusId('');
+          setDestinationStatusError('');
+          setIsBulkMoveDialogOpen(true);
+        }}
+        onBundle={() => {
+          setBundleError(null);
+          const first = Array.from(selectedTicketIds)[0] || null;
+          setBundleMasterTicketId(first);
+          setBundleSyncUpdates(true);
+          setIsBundleDialogOpen(true);
+        }}
+        onAssign={() => {
+          setBulkAssignErrors([]);
+          setIsBulkAssignDialogOpen(true);
+        }}
+        onStatus={() => {
+          setBulkStatusErrors([]);
+          setBulkStatusOptions([]);
+          setIsBulkStatusDialogOpen(true);
+        }}
+        onPriority={() => {
+          setBulkPriorityErrors([]);
+          setIsBulkPriorityDialogOpen(true);
+        }}
+        onTags={() => {
+          setBulkTagsErrors([]);
+          setIsBulkTagsDialogOpen(true);
+        }}
+        onDueDate={() => {
+          setBulkDueDateErrors([]);
+          setIsBulkDueDateDialogOpen(true);
+        }}
+        onDelete={() => {
+          setBulkDeleteErrors([]);
+          setIsBulkDeleteDialogOpen(true);
+        }}
+        onClear={clearSelection}
+      />
+      <BulkAssignTicketsDialog
+        idPrefix={`${id}-bulk-assign`}
+        isOpen={isBulkAssignDialogOpen && hasSelection}
+        onClose={() => setIsBulkAssignDialogOpen(false)}
+        ticketCount={selectedTicketIds.size}
+        users={initialUsers}
+        failed={bulkAssignErrors.map(err => ({
+          ...err,
+          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
+        }))}
+        isSubmitting={isBulkAssigning}
+        onConfirm={handleConfirmBulkAssign}
+      />
+      <BulkAddTagsDialog
+        idPrefix={`${id}-bulk-tags`}
+        isOpen={isBulkTagsDialogOpen && hasSelection}
+        onClose={() => setIsBulkTagsDialogOpen(false)}
+        ticketCount={selectedTicketIds.size}
+        failed={bulkTagsErrors.map(err => ({
+          ...err,
+          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
+        }))}
+        isSubmitting={isBulkAddingTags}
+        onConfirm={handleConfirmBulkAddTags}
+      />
+      <BulkSetDueDateDialog
+        idPrefix={`${id}-bulk-due-date`}
+        isOpen={isBulkDueDateDialogOpen && hasSelection}
+        onClose={() => setIsBulkDueDateDialogOpen(false)}
+        ticketCount={selectedTicketIds.size}
+        failed={bulkDueDateErrors.map(err => ({
+          ...err,
+          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
+        }))}
+        isSubmitting={isBulkUpdatingDueDate}
+        onConfirm={handleConfirmBulkDueDate}
+      />
+      <BulkChangeStatusDialog
+        idPrefix={`${id}-bulk-status`}
+        isOpen={isBulkStatusDialogOpen && hasSelection && !!selectedTicketsSharedBoardId}
+        onClose={() => setIsBulkStatusDialogOpen(false)}
+        ticketCount={selectedTicketIds.size}
+        statuses={bulkStatusOptions}
+        isLoadingStatuses={isLoadingBulkStatusOptions}
+        failed={bulkStatusErrors.map(err => ({
+          ...err,
+          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
+        }))}
+        isSubmitting={isBulkUpdatingStatus}
+        onConfirm={handleConfirmBulkStatus}
+      />
+      <BulkChangePriorityDialog
+        idPrefix={`${id}-bulk-priority`}
+        isOpen={isBulkPriorityDialogOpen && hasSelection}
+        onClose={() => setIsBulkPriorityDialogOpen(false)}
+        ticketCount={selectedTicketIds.size}
+        options={priorityOptions}
+        failed={bulkPriorityErrors.map(err => ({
+          ...err,
+          label: selectedTicketDetails.find(d => d.ticket_id === err.ticketId)?.ticket_number,
+        }))}
+        isSubmitting={isBulkUpdatingPriority}
+        onConfirm={handleConfirmBulkPriority}
       />
     </ReflectionContainer>
     {isImportDialogOpen && (

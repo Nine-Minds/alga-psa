@@ -4,6 +4,7 @@ import {
   emailProviderDisconnectedEventPayloadSchema,
   inboundEmailReceivedEventPayloadSchema,
 } from './emailWorkflowSchemas';
+import { inboundWebhookReceivedEventPayloadSchema } from './inboundWebhookSchemas';
 import {
   appointmentRequestApprovedEventPayloadSchema,
   appointmentRequestCancelledEventPayloadSchema,
@@ -41,6 +42,7 @@ import {
   projectTaskDependencyBlockedEventPayloadSchema,
   projectTaskDependencyUnblockedEventPayloadSchema,
   projectTaskStatusChangedEventPayloadSchema,
+  projectTaskUpdatedEventPayloadSchema,
   projectUpdatedEventPayloadSchema,
   taskCommentAddedEventPayloadSchema,
   taskCommentUpdatedEventPayloadSchema,
@@ -177,6 +179,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.InvoiceGenerated.v1': invoiceGeneratedEventPayloadSchema,
   'payload.InvoiceFinalized.v1': invoiceFinalizedEventPayloadSchema,
   'payload.InboundEmailReceived.v1': inboundEmailReceivedEventPayloadSchema,
+  'payload.InboundWebhookReceived.v1': inboundWebhookReceivedEventPayloadSchema,
   'payload.EmailProviderConnected.v1': emailProviderConnectedEventPayloadSchema,
   'payload.EmailProviderDisconnected.v1': emailProviderDisconnectedEventPayloadSchema,
 
@@ -232,6 +235,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.ProjectUpdated.v1': projectUpdatedEventPayloadSchema,
   'payload.ProjectStatusChanged.v1': projectStatusChangedEventPayloadSchema,
   'payload.ProjectTaskCreated.v1': projectTaskCreatedEventPayloadSchema,
+  'payload.ProjectTaskUpdated.v1': projectTaskUpdatedEventPayloadSchema,
   'payload.ProjectTaskAssigned.v1': projectTaskAssignedEventPayloadSchema,
   'payload.ProjectTaskAdditionalAgentAssigned.v1': projectTaskAdditionalAgentAssignedEventPayloadSchema,
   'payload.ProjectTaskStatusChanged.v1': projectTaskStatusChangedEventPayloadSchema,

@@ -252,5 +252,14 @@
       "Rollout / Migration",
       "Observability"
     ]
+  },
+  {
+    "id": "F031",
+    "description": "Expose current workflow action usage in the Workflow Control Panel header, including consumed count, remaining count, limit, and reset date.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   }
 ]

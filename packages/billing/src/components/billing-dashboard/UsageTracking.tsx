@@ -623,7 +623,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                       title={!newUsage.client_id
                         ? t('usage.contractLineGuidance.tooltipNoClient', { defaultValue: 'Client information not available. Usage will route to the system-managed default contract.' })
                         : eligibleContractLines.length > 1
-                          ? t('usage.contractLineGuidance.tooltipMultiple', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted.' })
+                          ? t('usage.contractLineGuidance.tooltipMultiple', { defaultValue: 'This service appears in multiple contract lines. Please select which contract line to use. When only one of them is a bucket contract line, it is selected by default.' })
                           : eligibleContractLines.length === 1
                             ? t('usage.contractLineGuidance.tooltipSingle', { defaultValue: 'This usage will be billed under the "{{name}}" contract line.', name: eligibleContractLines[0].contract_line_name })
                             : t('usage.contractLineGuidance.tooltipNone', { defaultValue: 'No eligible contract lines found for this service.' })}

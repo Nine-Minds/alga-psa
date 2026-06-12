@@ -900,15 +900,108 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "11111",
-        "errorDetail": "11111 {{error}} 11111",
-        "errored": "11111",
-        "failed": "11111",
-        "realmId": "11111 {{realmId}} 11111",
-        "returnButton": "11111",
-        "success": "11111",
+      "live": {
+        "defaultCompany": "11111"
+      },
+      "settings": {
+        "actions": {
+          "connect": "11111",
+          "disconnect": "11111",
+          "disconnecting": "11111",
+          "reconnect": "11111",
+          "refresh": "11111",
+          "saveCredentials": "11111",
+          "saving": "11111"
+        },
+        "badges": {
+          "connectionExpired": "11111",
+          "credentialsReady": "11111",
+          "credentialsRequired": "11111",
+          "defaultConnected": "11111",
+          "noCompany": "11111"
+        },
+        "callback": {
+          "accessDenied": "11111",
+          "configMissing": "11111",
+          "generic": "11111 {{code}} 11111",
+          "invalidState": "11111",
+          "missingParams": "11111",
+          "oauthFailed": "11111",
+          "tokenExchangeFailed": "11111"
+        },
+        "clientIdLabel": "11111",
+        "clientIdPlaceholder": "11111",
+        "clientSecretLabel": "11111",
+        "clientSecretPlaceholder": "11111",
+        "connectSuccess": "11111",
+        "connection": {
+          "defaultCompany": "11111",
+          "description": "11111",
+          "notConnected": "11111",
+          "realmId": "11111 {{id}} 11111",
+          "title": "11111",
+          "unknown": "11111"
+        },
+        "credentialsSaved": "11111",
+        "csvAvailableMiddle": "11111",
+        "csvAvailablePrefix": "11111",
+        "csvAvailableTitle": "11111",
+        "description": "11111",
+        "disconnectSuccess": "11111",
+        "environment": "11111",
+        "environmentProduction": "11111",
+        "environmentSandbox": "11111",
+        "errors": {
+          "disconnect": "11111",
+          "load": "11111",
+          "saveCredentials": "11111"
+        },
+        "howItWorksDescription": "11111",
+        "howItWorksTitle": "11111",
+        "loading": "11111",
+        "mapping": {
+          "alert": "11111",
+          "descriptionPrefix": "11111",
+          "placeholderAlert": "11111",
+          "placeholderDescription": "11111",
+          "title": "11111"
+        },
+        "noClientId": "11111",
+        "noClientSecret": "11111",
+        "quickbooksCsv": "11111",
+        "redirectUri": "11111",
+        "requiredScopes": "11111",
+        "storedClientId": "11111 {{value}} 11111",
+        "storedClientSecret": "11111 {{value}} 11111",
+        "tenantOauthDescription": "11111",
+        "tenantOauthTitle": "11111",
         "title": "11111"
+      },
+      "sync": {
+        "healthCardTitle": "11111",
+        "healthCardDescription": "11111",
+        "lastCycleTitle": "11111",
+        "lastCycleStatus": "11111",
+        "lastCycleFinishedAt": "11111",
+        "lastCycleStats": "11111",
+        "statOpsProcessed": "11111 {{count}} 11111",
+        "statDriftFound": "11111 {{count}} 11111",
+        "statPaymentsApplied": "11111 {{count}} 11111",
+        "noLastCycle": "11111",
+        "nextRunHint": "11111",
+        "pendingOps": "11111",
+        "erroredOps": "11111",
+        "driftCount": "11111",
+        "openExceptions": "11111",
+        "refreshTokenExpiry": "11111 {{date}} 11111",
+        "refreshTokenExpired": "11111",
+        "autoSyncLabel": "11111",
+        "syncNowButton": "11111",
+        "syncNowRunning": "11111",
+        "syncNowSuccess": "11111",
+        "syncNowSkipped": "11111 {{reason}} 11111",
+        "syncNowError": "11111 {{error}} 11111",
+        "viewExceptionsLink": "11111"
       }
     },
     "rmm": {
@@ -1466,7 +1559,88 @@
           "packageGenerated": "11111",
           "saved": "11111"
         },
-        "title": "11111"
+        "title": "11111",
+        "diagnostics": {
+          "title": "11111",
+          "description": "11111",
+          "run": "11111",
+          "running": "11111",
+          "sendTest": "11111",
+          "sending": "11111",
+          "disabled": "11111",
+          "completedAt": "11111 {{time}} 11111",
+          "lastSuccess": "11111",
+          "lastFailure": "11111",
+          "noneRecorded": "11111",
+          "recommendations": "11111",
+          "status": {
+            "pass": "11111",
+            "warn": "11111",
+            "fail": "11111",
+            "skip": "11111"
+          },
+          "errors": {
+            "run": "11111",
+            "testMessage": "11111"
+          },
+          "test": {
+            "sent": "11111",
+            "failed": "11111",
+            "addonInactive": "11111",
+            "integrationInactive": "11111",
+            "capabilityDisabled": "11111",
+            "botNotConfigured": "11111",
+            "missingUserLinkage": "11111",
+            "missingConversationReference": "11111",
+            "skipped": "11111"
+          },
+          "steps": {
+            "addonEntitlement": "11111",
+            "integrationStatus": "11111",
+            "capabilities": "11111",
+            "microsoftProfile": "11111",
+            "recordingPermissions": "11111",
+            "packageMetadata": "11111",
+            "botConnector": "11111",
+            "userLinkage": "11111",
+            "conversationReference": "11111",
+            "recentDeliveryHealth": "11111"
+          },
+          "recommendation": {
+            "addon": "11111",
+            "activate": "11111",
+            "capabilities": "11111",
+            "profile": "11111",
+            "activeProfile": "11111",
+            "profileCredentials": "11111",
+            "meetingOrganizer": "11111",
+            "meetingOrganizerObjectId": "11111",
+            "package": "11111",
+            "baseUrl": "11111",
+            "botEnv": "11111",
+            "userLinkage": "11111",
+            "conversationReference": "11111",
+            "deliveryFailure": "11111"
+          }
+        },
+        "meetings": {
+          "title": "11111",
+          "description": "11111",
+          "organizer": {
+            "label": "11111",
+            "placeholder": "11111",
+            "help": "11111",
+            "resolved": "11111 {{objectId}} 11111"
+          },
+          "downloadRecordings": {
+            "label": "11111",
+            "description": "11111"
+          },
+          "exposeRecordingsInPortal": {
+            "label": "11111",
+            "description": "11111"
+          }
+        }
       }
     },
     "xero": {

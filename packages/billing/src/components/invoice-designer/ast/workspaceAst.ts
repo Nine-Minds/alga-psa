@@ -446,6 +446,7 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.fontSize) inline.fontSize = style.fontSize;
   if (style.fontWeight !== undefined) inline.fontWeight = style.fontWeight;
   if (style.fontFamily) inline.fontFamily = style.fontFamily;
+  if (style.fontStyle) inline.fontStyle = style.fontStyle;
   if (style.lineHeight !== undefined) inline.lineHeight = style.lineHeight;
   if (style.textAlign) inline.textAlign = style.textAlign;
   if (style.display) inline.display = style.display;
@@ -485,6 +486,57 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   }
 
   return Object.keys(styleRef).length > 0 ? styleRef : undefined;
+};
+
+const mapTemplateNodeStyleRef = (value: unknown): TemplateNodeStyleRef | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const mapped: TemplateNodeStyleRef = {};
+
+  if (Array.isArray(value.tokenIds)) {
+    const tokenIds = value.tokenIds.filter(
+      (tokenId: unknown): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0
+    );
+    if (tokenIds.length > 0) {
+      mapped.tokenIds = tokenIds;
+    }
+  }
+
+  if (isRecord(value.inline)) {
+    const inline = Object.fromEntries(
+      Object.entries(value.inline as Record<string, unknown>).filter(([, entryValue]) => {
+        if (entryValue === null || entryValue === undefined) {
+          return false;
+        }
+        return typeof entryValue !== 'string' || entryValue.trim().length > 0;
+      })
+    );
+    if (Object.keys(inline).length > 0) {
+      mapped.inline = inline;
+    }
+  }
+
+  return Object.keys(mapped).length > 0 ? mapped : undefined;
+};
+
+const resolveLabelStyleRef = (metadata: UnknownRecord): TemplateNodeStyleRef | undefined => {
+  const explicitLabelStyle = mapTemplateNodeStyleRef(metadata.labelStyle);
+  if (explicitLabelStyle) {
+    return explicitLabelStyle;
+  }
+
+  const legacyFontWeight = metadata.labelFontWeight ?? metadata.fontWeight;
+  if (typeof legacyFontWeight === 'string' || typeof legacyFontWeight === 'number') {
+    return {
+      inline: {
+        fontWeight: legacyFontWeight,
+      },
+    };
+  }
+
+  return undefined;
 };
 
 const coerceCssLength = (value: unknown): string | undefined => {
@@ -711,6 +763,9 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   const fontFamily = coerceString(inline.fontFamily);
   if (fontFamily) style.fontFamily = fontFamily;
 
+  const fontStyle = coerceString(inline.fontStyle);
+  if (fontStyle) style.fontStyle = fontStyle;
+
   const lineHeight = coerceNumberish(inline.lineHeight);
   if (lineHeight !== undefined) style.lineHeight = lineHeight;
 
@@ -752,29 +807,6 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
-  const mapColumnStyle = (value: unknown): TemplateNodeStyleRef | undefined => {
-    if (!isRecord(value)) {
-      return undefined;
-    }
-
-    const mapped: TemplateNodeStyleRef = {};
-
-    if (Array.isArray(value.tokenIds)) {
-      const tokenIds = value.tokenIds.filter(
-        (tokenId: unknown): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0
-      );
-      if (tokenIds.length > 0) {
-        mapped.tokenIds = tokenIds;
-      }
-    }
-
-    if (isRecord(value.inline)) {
-      mapped.inline = { ...(value.inline as Record<string, unknown>) };
-    }
-
-    return Object.keys(mapped).length > 0 ? mapped : undefined;
-  };
-
   const mappedColumns = columns
     .map((column, index): TemplateTableColumn | null => {
       if (!isRecord(column)) {
@@ -802,7 +834,7 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
         header: header.length > 0 ? header : undefined,
         value: resolvedValue,
       };
-      const style = mapColumnStyle(column.style);
+      const style = mapTemplateNodeStyleRef(column.style);
       if (style) {
         mapped.style = style;
       }
@@ -1017,6 +1049,7 @@ const mapDesignerNodeToAstNode = (
       const hadImportedFormat = metadata.__astFieldHadFormat === true;
       const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
       const hadImportedPlaceholder = metadata.__astFieldHadPlaceholder === true;
+      const hadImportedBorderStyle = metadata.__astFieldHadBorderStyle === true;
       const hasExplicitEmptyValue = typeof metadata.emptyValue === 'string';
       const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
       const hasExplicitPlaceholder = typeof metadata.placeholder === 'string';
@@ -1050,7 +1083,11 @@ const mapDesignerNodeToAstNode = (
       if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
         mapped.displayFormat = displayFormat;
       }
-      if (hasExplicitBorderStyle && borderStyle) {
+      const labelStyle = resolveLabelStyleRef(metadata);
+      if (labelStyle) {
+        mapped.labelStyle = labelStyle;
+      }
+      if (hasExplicitBorderStyle && borderStyle && (!astImported || hadImportedBorderStyle)) {
         mapped.borderStyle = borderStyle;
       }
       return mapped;
@@ -1125,14 +1162,13 @@ const mapDesignerNodeToAstNode = (
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
               }
-              if (isRecord(row.style) && Object.keys(row.style).length > 0) {
-                const rowStyleRef: TemplateNodeStyleRef = {};
-                if (isRecord(row.style.inline)) {
-                  rowStyleRef.inline = { ...(row.style.inline as Record<string, unknown>) };
-                }
-                if (Object.keys(rowStyleRef).length > 0) {
-                  mappedRow.style = rowStyleRef;
-                }
+              const labelStyle = mapTemplateNodeStyleRef(row.labelStyle);
+              if (labelStyle) {
+                mappedRow.labelStyle = labelStyle;
+              }
+              const rowStyle = mapTemplateNodeStyleRef(row.style);
+              if (rowStyle) {
+                mappedRow.style = rowStyle;
               }
               return mappedRow;
             })
@@ -1815,6 +1851,9 @@ export const importTemplateAstToWorkspace = (
           if (inputNode.label) {
             metadata.label = inputNode.label;
           }
+          if (inputNode.labelStyle) {
+            metadata.labelStyle = cloneJson(inputNode.labelStyle);
+          }
           if (typeof inputNode.emptyValue === 'string') {
             metadata.emptyValue = inputNode.emptyValue;
           }
@@ -1879,7 +1918,8 @@ export const importTemplateAstToWorkspace = (
             type: row.format,
             format: row.format,
             emphasize: row.emphasize === true,
-            ...(row.style ? { style: row.style } : {}),
+            ...(row.style ? { style: cloneJson(row.style) } : {}),
+            ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
           }));
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;

@@ -600,7 +600,6 @@ export class FinancialService extends BaseService<ITransaction> {
         .where({ invoice_id: request.invoice_id, tenant })
         .update({
           credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
-          total_amount: Number(currentInvoice.total_amount) - totalApplied
         });
 
       // Update client balance
@@ -1198,23 +1197,23 @@ export class FinancialService extends BaseService<ITransaction> {
       })
       .sum('amount as total');
 
-    // Get pending invoices
-    const pendingInvoices = await knex('invoices')
+    // Get pending invoices (balance due is derived: total − credit applied)
+    const pendingInvoices = (await knex('invoices')
       .where({
         client_id: clientId,
         tenant: client.tenant,
         status: 'sent'
       })
-      .sum('total_amount as total');
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get overdue invoices
-    const overdueInvoices = await knex('invoices')
+    const overdueInvoices = (await knex('invoices')
       .where({
         client_id: clientId,
         tenant: client.tenant,
         status: 'overdue'
       })
-      .sum('total_amount as total');
+      .sum(knex.raw('total_amount - COALESCE(credit_applied, 0) as total'))) as Array<{ total: string | number | null }>;
 
     // Get last payment
     const lastPayment = await knex('transactions')
@@ -1782,6 +1781,285 @@ export class FinancialService extends BaseService<ITransaction> {
         ]
       };
     });
+  }
+
+  /**
+   * Bulk approve / reject / reverse existing transactions.
+   *
+   * `approve` and `reject` set the transaction status. `reverse` posts a
+   * compensating transaction (negated amount, linked to the original via
+   * related_transaction_id), recomputes the running balance, marks the original
+   * reversed, and keeps the client's credit_balance in sync for credit types.
+   * Each id is processed independently; one failure does not abort the rest.
+   */
+  async bulkTransactionOperation(
+    operation: BulkTransactionOperation,
+    context: ServiceContext
+  ): Promise<FinancialResponse<BulkOperationResult>> {
+    await this.validatePermissions('update', 'transaction', context);
+
+    const { knex } = await this.getKnex();
+    const CREDIT_TYPES = ['credit_issuance', 'credit_application', 'credit_adjustment', 'credit_transfer', 'credit_expiration'];
+
+    return withTransaction(knex, async (trx) => {
+      const results: Array<{ id: string; success: boolean; error?: string; result?: any }> = [];
+
+      for (const transactionId of operation.transaction_ids) {
+        try {
+          const existing = await trx('transactions')
+            .where({ transaction_id: transactionId, tenant: context.tenant })
+            .first();
+          if (!existing) {
+            throw new Error('Transaction not found');
+          }
+
+          let result: any;
+          switch (operation.operation) {
+            case 'approve':
+              [result] = await trx('transactions')
+                .where({ transaction_id: transactionId, tenant: context.tenant })
+                .update({ status: 'completed' })
+                .returning('*');
+              break;
+
+            case 'reject':
+              [result] = await trx('transactions')
+                .where({ transaction_id: transactionId, tenant: context.tenant })
+                .update({ status: 'rejected' })
+                .returning('*');
+              break;
+
+            case 'reverse': {
+              if (existing.status === 'reversed') {
+                throw new Error('Transaction is already reversed');
+              }
+              const reversalAmount = -Number(existing.amount);
+              const lastTransaction = await trx('transactions')
+                .where({ client_id: existing.client_id, tenant: context.tenant })
+                .orderBy('created_at', 'desc')
+                .first();
+              const balanceAfter = Number(lastTransaction?.balance_after || 0) + reversalAmount;
+              // Mirror the original family so the ledger stays self-describing.
+              const reversalType =
+                ['payment', 'partial_payment', 'prepayment'].includes(existing.type) ? 'payment_reversal'
+                : ['refund_full', 'refund_partial'].includes(existing.type) ? 'refund_reversal'
+                : 'credit_adjustment';
+
+              const [reversal] = await trx('transactions')
+                .insert({
+                  transaction_id: uuidv4(),
+                  client_id: existing.client_id,
+                  invoice_id: existing.invoice_id ?? null,
+                  amount: reversalAmount,
+                  type: reversalType,
+                  status: 'completed',
+                  description: operation.reason || `Reversal of transaction ${transactionId}`,
+                  created_at: new Date().toISOString(),
+                  balance_after: balanceAfter,
+                  tenant: context.tenant,
+                  related_transaction_id: transactionId,
+                  currency_code: existing.currency_code
+                })
+                .returning('*');
+
+              await trx('transactions')
+                .where({ transaction_id: transactionId, tenant: context.tenant })
+                .update({ status: 'reversed' });
+
+              if (CREDIT_TYPES.includes(existing.type)) {
+                await trx('clients')
+                  .where({ client_id: existing.client_id, tenant: context.tenant })
+                  .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
+              }
+              result = reversal;
+              break;
+            }
+
+            default:
+              throw new Error(`Unsupported operation: ${operation.operation}`);
+          }
+
+          results.push({ id: transactionId, success: true, result });
+        } catch (error) {
+          results.push({
+            id: transactionId,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      await auditLog(trx, {
+        userId: context.userId,
+        operation: 'bulk_transaction_operation',
+        tableName: 'transactions',
+        recordId: 'bulk',
+        changedData: operation,
+        details: {
+          action: `Bulk ${operation.operation} operation`,
+          total_requested: operation.transaction_ids.length,
+          successful: results.filter(r => r.success).length,
+          failed: results.filter(r => !r.success).length
+        }
+      });
+
+      const bulkResult: BulkOperationResult = {
+        total_requested: operation.transaction_ids.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+        results
+      };
+
+      return {
+        data: bulkResult,
+        links: [
+          { rel: 'transactions', href: `/api/v1/financial/transactions`, method: 'GET', description: 'List transactions' }
+        ]
+      };
+    });
+  }
+
+  /**
+   * Bulk expire / extend-expiration / transfer existing credits.
+   *
+   * `expire` forfeits the unused remainder (credit_expiration transaction +
+   * client balance reduction) and flags the credit. `extend_expiration` moves
+   * the expiration date. `transfer` reuses transferCredit() to move the
+   * remaining amount to another client. Each credit is processed in its own
+   * transaction so a single failure is isolated (transferCredit manages its own
+   * transaction, so the batch must not share one).
+   */
+  async bulkCreditOperation(
+    operation: BulkCreditOperation,
+    context: ServiceContext
+  ): Promise<FinancialResponse<BulkOperationResult>> {
+    await this.validatePermissions('update', 'credit', context);
+
+    const { knex } = await this.getKnex();
+    const results: Array<{ id: string; success: boolean; error?: string; result?: any }> = [];
+
+    for (const creditId of operation.credit_ids) {
+      try {
+        let result: any;
+
+        if (operation.operation === 'transfer') {
+          const targetClientId = operation.parameters?.target_client_id;
+          if (!targetClientId) {
+            throw new Error('target_client_id is required for transfer');
+          }
+          const credit = await knex('credit_tracking')
+            .where({ credit_id: creditId, tenant: context.tenant })
+            .first();
+          if (!credit) {
+            throw new Error('Credit not found');
+          }
+          const transferred = await this.transferCredit({
+            user_id: context.userId,
+            source_credit_id: creditId,
+            target_client_id: targetClientId,
+            amount: Number(credit.remaining_amount),
+            reason: operation.parameters?.reason
+          }, context);
+          result = transferred.data;
+        } else {
+          result = await withTransaction(knex, async (trx) => {
+            const credit = await trx('credit_tracking')
+              .where({ credit_id: creditId, tenant: context.tenant })
+              .first();
+            if (!credit) {
+              throw new Error('Credit not found');
+            }
+            const now = new Date().toISOString();
+
+            if (operation.operation === 'expire') {
+              if (credit.is_expired) {
+                throw new Error('Credit is already expired');
+              }
+              const remaining = Number(credit.remaining_amount);
+              if (remaining > 0) {
+                const [client] = await trx('clients')
+                  .where({ client_id: credit.client_id, tenant: context.tenant })
+                  .select('credit_balance');
+                const newBalance = Number(client?.credit_balance || 0) - remaining;
+                await trx('transactions').insert({
+                  transaction_id: uuidv4(),
+                  client_id: credit.client_id,
+                  amount: -remaining,
+                  type: 'credit_expiration',
+                  status: 'completed',
+                  description: operation.parameters?.reason || `Credit ${creditId} expired`,
+                  created_at: now,
+                  balance_after: newBalance,
+                  tenant: context.tenant,
+                  related_transaction_id: credit.transaction_id,
+                  currency_code: credit.currency_code
+                });
+                await trx('clients')
+                  .where({ client_id: credit.client_id, tenant: context.tenant })
+                  .update({ credit_balance: newBalance, updated_at: now });
+              }
+              const [updated] = await trx('credit_tracking')
+                .where({ credit_id: creditId, tenant: context.tenant })
+                .update({ is_expired: true, remaining_amount: 0, updated_at: now })
+                .returning('*');
+              return updated;
+            }
+
+            if (operation.operation === 'extend_expiration') {
+              const newExpiration = operation.parameters?.expiration_date;
+              if (!newExpiration) {
+                throw new Error('parameters.expiration_date is required for extend_expiration');
+              }
+              const [updated] = await trx('credit_tracking')
+                .where({ credit_id: creditId, tenant: context.tenant })
+                .update({ expiration_date: newExpiration, is_expired: false, updated_at: now })
+                .returning('*');
+              return updated;
+            }
+
+            throw new Error(`Unsupported operation: ${operation.operation}`);
+          });
+        }
+
+        results.push({ id: creditId, success: true, result });
+      } catch (error) {
+        results.push({
+          id: creditId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    await withTransaction(knex, async (trx) => {
+      await auditLog(trx, {
+        userId: context.userId,
+        operation: 'bulk_credit_operation',
+        tableName: 'credit_tracking',
+        recordId: 'bulk',
+        changedData: operation,
+        details: {
+          action: `Bulk ${operation.operation} operation`,
+          total_requested: operation.credit_ids.length,
+          successful: results.filter(r => r.success).length,
+          failed: results.filter(r => !r.success).length
+        }
+      });
+    });
+
+    const bulkResult: BulkOperationResult = {
+      total_requested: operation.credit_ids.length,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results
+    };
+
+    return {
+      data: bulkResult,
+      links: [
+        { rel: 'credits', href: `/api/v1/financial/credits`, method: 'GET', description: 'List credits' }
+      ]
+    };
   }
 
   // ============================================================================

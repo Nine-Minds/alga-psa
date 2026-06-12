@@ -460,7 +460,7 @@ async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: fixture.tenantId,
+    tenant: fixture.tenantId,
     name: definition.name,
     description: definition.description,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -524,7 +524,7 @@ async function seedUnresolvedWorkflowStatusReference(fixture: LegacyFixture) {
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
-    tenant_id: fixture.tenantId,
+    tenant: fixture.tenantId,
     name: definition.name,
     description: definition.description,
     payload_schema_ref: definition.payloadSchemaRef,

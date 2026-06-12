@@ -9,7 +9,8 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { v4 as uuidv4 } from 'uuid';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildTagAppliedPayload,
   buildTagDefinitionCreatedPayload,
@@ -25,6 +26,144 @@ const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
 
 function getPermissionResource(taggedType: TaggedEntityType): string {
   return ENTITY_PERMISSION_MAP[taggedType] ?? taggedType;
+}
+
+type TagTextSnapshot = string[];
+
+type CreateTagOptions = {
+  suppressEntityUpdateEvent?: boolean;
+};
+
+async function getTagTextSnapshot(
+  trx: Knex.Transaction,
+  tenant: string,
+  taggedId: string,
+  taggedType: TaggedEntityType
+): Promise<TagTextSnapshot> {
+  const tags = await TagMapping.getByEntity(trx, tenant, taggedId, taggedType);
+  return Array.from(new Set(tags.map((tag) => tag.tag_text))).sort((a, b) => a.localeCompare(b));
+}
+
+function tagTextSnapshotsEqual(previous: TagTextSnapshot, next: TagTextSnapshot): boolean {
+  return previous.length === next.length && previous.every((tagText, index) => tagText === next[index]);
+}
+
+async function resolveProjectTaskTagContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string
+): Promise<{ projectId: string; phaseId: string } | null> {
+  const row = await trx('project_tasks as pt')
+    .join('project_phases as pp', function joinProjectPhases() {
+      this.on('pt.phase_id', '=', 'pp.phase_id')
+        .andOn('pt.tenant', '=', 'pp.tenant');
+    })
+    .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
+    .first<{ project_id: string; phase_id: string }>('pp.project_id', 'pt.phase_id');
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    projectId: row.project_id,
+    phaseId: row.phase_id,
+  };
+}
+
+/**
+ * Batched form of resolveProjectTaskTagContext: resolve project/phase context
+ * for many tasks in one query so bulk callers don't pay a lookup per task.
+ */
+async function resolveProjectTaskTagContexts(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskIds: string[]
+): Promise<Map<string, { projectId: string; phaseId: string }>> {
+  const contexts = new Map<string, { projectId: string; phaseId: string }>();
+  if (taskIds.length === 0) {
+    return contexts;
+  }
+
+  const rows = await trx('project_tasks as pt')
+    .join('project_phases as pp', function joinProjectPhases() {
+      this.on('pt.phase_id', '=', 'pp.phase_id')
+        .andOn('pt.tenant', '=', 'pp.tenant');
+    })
+    .where('pt.tenant', tenant)
+    .whereIn('pt.task_id', taskIds)
+    .select<Array<{ task_id: string; project_id: string; phase_id: string }>>(
+      'pt.task_id',
+      'pp.project_id',
+      'pt.phase_id',
+    );
+
+  for (const row of rows) {
+    contexts.set(row.task_id, { projectId: row.project_id, phaseId: row.phase_id });
+  }
+  return contexts;
+}
+
+async function publishEntityTagUpdateEvent(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  taggedId: string;
+  taggedType: TaggedEntityType;
+  userId: string;
+  occurredAt: string;
+  previousTags: TagTextSnapshot;
+  newTags: TagTextSnapshot;
+  // Pre-resolved project_task context lets bulk callers batch the project/phase
+  // lookup; when omitted the single-entity path resolves it on demand.
+  projectTaskContext?: { projectId: string; phaseId: string } | null;
+}): Promise<void> {
+  if (tagTextSnapshotsEqual(params.previousTags, params.newTags)) {
+    return;
+  }
+
+  const changes = {
+    tags: {
+      previous: params.previousTags,
+      new: params.newTags,
+    },
+  };
+
+  if (params.taggedType === 'project_task') {
+    const context = params.projectTaskContext !== undefined
+      ? params.projectTaskContext
+      : await resolveProjectTaskTagContext(params.trx, params.tenant, params.taggedId);
+    if (!context) {
+      return;
+    }
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_UPDATED',
+      payload: {
+        tenantId: params.tenant,
+        projectId: context.projectId,
+        // Canonical PROJECT_TASK_UPDATED shape (shared with search index):
+        // taskId/timestamp, not projectTaskId/occurredAt.
+        taskId: params.taggedId,
+        phaseId: context.phaseId,
+        userId: params.userId,
+        timestamp: params.occurredAt,
+        changes,
+      },
+    });
+    return;
+  }
+
+  if (params.taggedType === 'ticket') {
+    await publishEvent({
+      eventType: 'TICKET_UPDATED',
+      payload: {
+        tenantId: params.tenant,
+        ticketId: params.taggedId,
+        userId: params.userId,
+        changes,
+      },
+    });
+  }
 }
 
 export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
@@ -98,7 +237,12 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
   }
 });
 
-export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<ITag> => {
+export const createTag = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  tag: Omit<ITag, 'tag_id' | 'tenant'>,
+  options: CreateTagOptions = {}
+): Promise<ITag> => {
   // Validate tag text
   if (!tag.tag_text || !tag.tag_text.trim()) {
     throw new Error('Tag text is required');
@@ -166,12 +310,25 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         }
       );
 
+      const previousTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        tagWithTenant.tagged_id,
+        tagWithTenant.tagged_type
+      );
+
       // Create mapping with user ID
       const mapping = await TagMapping.insert(trx, tenant, {
         tag_id: definition.tag_id,
         tagged_id: tagWithTenant.tagged_id,
         tagged_type: tagWithTenant.tagged_type
       }, userId);
+      const newTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        tagWithTenant.tagged_id,
+        tagWithTenant.tagged_type
+      );
 
       const occurredAt = new Date().toISOString();
       if (createdDefinition) {
@@ -206,6 +363,19 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           actor: { actorType: 'USER', actorUserId: userId },
         },
       });
+
+      if (!options.suppressEntityUpdateEvent) {
+        await publishEntityTagUpdateEvent({
+          trx,
+          tenant,
+          taggedId: tagWithTenant.tagged_id,
+          taggedType: tagWithTenant.tagged_type,
+          userId,
+          occurredAt,
+          previousTags,
+          newTags,
+        });
+      }
 
       const createdTag: ITag = {
         ...tagWithTenant,
@@ -277,24 +447,22 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         board_id: tag.board_id
       });
 
-      if (nextTagText && nextTagText !== previousTagText) {
-        const occurredAt = new Date().toISOString();
-        await publishWorkflowEvent({
-          eventType: 'TAG_DEFINITION_UPDATED',
-          payload: buildTagDefinitionUpdatedPayload({
-            tagId: existingTag.definition_tag_id,
-            previousName: previousTagText,
-            newName: nextTagText,
-            updatedByUserId: currentUser.user_id,
-            updatedAt: occurredAt,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt,
-            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
-          },
-        });
-      }
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'TAG_DEFINITION_UPDATED',
+        payload: buildTagDefinitionUpdatedPayload({
+          tagId: existingTag.definition_tag_id,
+          previousName: previousTagText,
+          newName: nextTagText,
+          updatedByUserId: currentUser.user_id,
+          updatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+        },
+      });
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
       if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -381,12 +549,36 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         }
       }
 
+      const previousTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        existingTag.tagged_id,
+        existingTag.tagged_type
+      );
+
       // id is actually mapping_id - just delete the mapping
       await TagMapping.delete(trx, tenant, id);
+      const newTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        existingTag.tagged_id,
+        existingTag.tagged_type
+      );
 
       // If caller explicitly wants to delete the orphaned definition, do so
       if (deleteDefinition) {
-        await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        const deletedDefinitions = await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        if (deletedDefinitions > 0) {
+          await publishEvent({
+            eventType: 'TAG_DEFINITION_DELETED',
+            payload: {
+              tenantId: tenant,
+              tagId: existingTag.definition_tag_id,
+              userId: currentUser.user_id,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
       }
 
       const occurredAt = new Date().toISOString();
@@ -404,6 +596,17 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           occurredAt,
           actor: { actorType: 'USER', actorUserId: currentUser.user_id },
         },
+      });
+
+      await publishEntityTagUpdateEvent({
+        trx,
+        tenant,
+        taggedId: existingTag.tagged_id,
+        taggedType: existingTag.tagged_type,
+        userId: currentUser.user_id,
+        occurredAt,
+        previousTags,
+        newTags,
       });
     } catch (error) {
       console.error(`Error deleting tag with id ${id}:`, error);
@@ -546,7 +749,7 @@ export async function createTagsForEntity(
         tagged_type: entityType,
         background_color: tag.background_color,
         text_color: tag.text_color,
-      });
+      }, { suppressEntityUpdateEvent: true });
       createdTags.push(newTag);
     } catch (error) {
       console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
@@ -579,6 +782,10 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 ): Promise<ITag[]> => {
   const userId = currentUser.user_id;
 
+  // Mirror createTag's gate: minting a brand-new tag definition requires
+  // tag:create permission. Resolved once per call since pendingTags is small.
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+
   const createdTags: ITag[] = [];
 
   for (const tag of pendingTags) {
@@ -590,6 +797,18 @@ export const createTagsForEntityWithTransaction = withAuth(async (
       if (tagText.length > 50) {
         console.warn(`Tag text "${tagText}" too long, skipping`);
         continue;
+      }
+
+      if (!userHasTagCreate) {
+        const existingDefinition = await TagDefinition.findByTextAndType(
+          trx,
+          tenant,
+          tagText,
+          entityType,
+        );
+        if (!existingDefinition) {
+          throw new Error(`Permission denied: cannot create new tag "${tagText}"`);
+        }
       }
 
       // Determine colors
@@ -666,11 +885,240 @@ export const createTagsForEntityWithTransaction = withAuth(async (
       });
     } catch (error) {
       console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
-      // Continue with other tags - don't fail the entire operation
+      // Re-throw permission errors so the caller can attribute the failure
+      // to the right cause; other errors are swallowed so a single bad tag
+      // doesn't drop the rest.
+      if (error instanceof Error && error.message.includes('Permission denied')) {
+        throw error;
+      }
     }
   }
 
   return createdTags;
+});
+
+/**
+ * Apply a set of tag texts to many entities of one type in a single pass.
+ *
+ * Calling createTagsForEntityWithTransaction in a loop re-resolves the same tag
+ * definitions, re-checks tag:create, and re-reads tag-set snapshots once per
+ * entity — an N×(entities) query storm for what is otherwise identical work.
+ * This resolves the tag:create permission and the (shared) tag definitions once,
+ * then performs a single multi-row tag_mappings insert.
+ *
+ * The mapping insert uses ON CONFLICT DO NOTHING so a stale dedupe read or a
+ * concurrent add can't roll back the whole batch on the unique mapping
+ * constraint. Events match the per-entity path but fire only for rows actually
+ * inserted: TAG_DEFINITION_CREATED once per newly minted definition, TAG_APPLIED
+ * once per inserted (entity, tag) mapping, and one entity-update event
+ * (PROJECT_TASK_UPDATED / TICKET_UPDATED) per entity that actually gained a tag
+ * (project-task context is batch-resolved).
+ *
+ * @param applications  Per-entity tags to add. `existingTexts` is the entity's
+ *   current tag set (drives the before/after update-event snapshot and skips
+ *   duplicates); `newTexts` are the texts to apply.
+ * @returns appliedByEntity — entityId -> tag texts that are present after the
+ *   call (newly inserted or already there via a conflict). Requested texts
+ *   absent from the result were dropped because they'd require minting a new
+ *   definition and the user lacks tag:create.
+ */
+export const bulkApplyTagsToEntities = withAuth(async (
+  currentUser: IUserWithRoles,
+  _ctx: AuthContext,
+  trx: Knex.Transaction,
+  tenant: string,
+  taggedType: TaggedEntityType,
+  applications: Array<{ entityId: string; newTexts: string[]; existingTexts: string[] }>
+): Promise<{ appliedByEntity: Record<string, string[]> }> => {
+  const userId = currentUser.user_id;
+  const appliedByEntity: Record<string, string[]> = {};
+
+  // Dedupe each entity's requested texts against what it already has (and
+  // against itself), and drop entities left with nothing to do.
+  const normalized = applications
+    .map((app) => {
+      const existingLower = new Set(app.existingTexts.map((t) => t.toLowerCase()));
+      const seen = new Set<string>();
+      const newTexts: string[] = [];
+      for (const raw of app.newTexts) {
+        const text = raw.trim();
+        if (!text) continue;
+        const lower = text.toLowerCase();
+        if (existingLower.has(lower) || seen.has(lower)) continue;
+        seen.add(lower);
+        newTexts.push(text);
+      }
+      return { entityId: app.entityId, existingTexts: app.existingTexts, newTexts };
+    })
+    .filter((app) => app.newTexts.length > 0);
+
+  if (normalized.length === 0) {
+    return { appliedByEntity };
+  }
+
+  // tag:create gate (mints brand-new definitions) resolved once for the batch.
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+
+  // Definitions are shared across entities — resolve each unique text once,
+  // keyed by lowercased text while preserving the first-seen casing.
+  const uniqueTexts = new Map<string, string>();
+  for (const app of normalized) {
+    for (const text of app.newTexts) {
+      const lower = text.toLowerCase();
+      if (!uniqueTexts.has(lower)) uniqueTexts.set(lower, text);
+    }
+  }
+
+  const definitionByLowerText = new Map<string, ITagDefinition>();
+  const createdDefinitions: ITagDefinition[] = [];
+  for (const [lower, text] of uniqueTexts) {
+    if (text.length > 50) {
+      console.warn(`Tag text "${text}" too long, skipping`);
+      continue;
+    }
+    if (!userHasTagCreate) {
+      // Can only apply texts whose definition already exists.
+      const existingDefinition = await TagDefinition.findByTextAndType(trx, tenant, text, taggedType);
+      if (existingDefinition) {
+        definitionByLowerText.set(lower, existingDefinition);
+      }
+      continue;
+    }
+    const colors = await generateEntityColorAsync(text);
+    const { definition, created } = await TagDefinition.getOrCreateWithStatus(
+      trx,
+      tenant,
+      text,
+      taggedType,
+      { background_color: colors.backgroundColor, text_color: colors.textColor },
+    );
+    definitionByLowerText.set(lower, definition);
+    if (created) createdDefinitions.push(definition);
+  }
+
+  // Build every mapping row, then insert them in one statement.
+  const rows: Array<{
+    mapping_id: string;
+    tenant: string;
+    tag_id: string;
+    tagged_id: string;
+    tagged_type: TaggedEntityType;
+    created_by: string;
+  }> = [];
+  for (const app of normalized) {
+    // "applied" = texts that resolved to a definition, so the mapping will be
+    // present after this call (whether we insert it or it already existed via a
+    // conflict). The caller treats these as success; texts dropped here (no
+    // permission to mint / too long) are surfaced as failures.
+    const applied: string[] = [];
+    for (const text of app.newTexts) {
+      const definition = definitionByLowerText.get(text.toLowerCase());
+      if (!definition) continue; // dropped: forbidden new tag or too long
+      rows.push({
+        mapping_id: uuidv4(),
+        tenant,
+        tag_id: definition.tag_id,
+        tagged_id: app.entityId,
+        tagged_type: taggedType,
+        created_by: userId,
+      });
+      applied.push(text);
+    }
+    if (applied.length > 0) {
+      appliedByEntity[app.entityId] = applied;
+    }
+  }
+
+  if (rows.length === 0) {
+    return { appliedByEntity };
+  }
+
+  // ON CONFLICT DO NOTHING: existing tags are read before the transaction, so a
+  // stale read or a concurrent add could otherwise hit
+  // unique(tenant, tag_id, tagged_id) and roll back the entire batch. RETURNING
+  // yields only the rows we actually inserted, so events fire for real changes
+  // only; a skipped row just means the tag is already present.
+  const insertedRows = await trx('tag_mappings')
+    .insert(rows)
+    .onConflict(['tenant', 'tag_id', 'tagged_id'])
+    .ignore()
+    .returning(['tag_id', 'tagged_id']) as Array<{ tag_id: string; tagged_id: string }>;
+
+  const occurredAt = new Date().toISOString();
+
+  for (const definition of createdDefinitions) {
+    await publishWorkflowEvent({
+      eventType: 'TAG_DEFINITION_CREATED',
+      payload: buildTagDefinitionCreatedPayload({
+        tagId: definition.tag_id,
+        tagName: definition.tag_text,
+        createdByUserId: userId,
+        createdAt: definition.created_at ?? occurredAt,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: { actorType: 'USER', actorUserId: userId },
+      },
+    });
+  }
+
+  // TAG_APPLIED per actually-inserted mapping; track which entities changed.
+  const changedEntities = new Set<string>();
+  for (const row of insertedRows) {
+    await publishWorkflowEvent({
+      eventType: 'TAG_APPLIED',
+      payload: buildTagAppliedPayload({
+        tagId: row.tag_id,
+        entityType: taggedType,
+        entityId: row.tagged_id,
+        appliedByUserId: userId,
+        appliedAt: occurredAt,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: { actorType: 'USER', actorUserId: userId },
+      },
+    });
+    changedEntities.add(row.tagged_id);
+  }
+
+  // One entity-update event per entity that actually gained a tag. Re-read the
+  // authoritative post-insert tag set in a single batched query rather than
+  // computing existing ∪ inserted: a concurrent add could leave the entity with
+  // tags beyond what we saw or inserted, and webhook consumers treat
+  // changes.tags.new as the source of truth.
+  const changedEntityIds = Array.from(changedEntities);
+  const finalTagsByEntity = new Map<string, string[]>();
+  for (const row of await TagMapping.getByEntities(trx, tenant, changedEntityIds, taggedType)) {
+    const list = finalTagsByEntity.get(row.tagged_id) ?? [];
+    list.push(row.tag_text);
+    finalTagsByEntity.set(row.tagged_id, list);
+  }
+  const projectTaskContexts = taggedType === 'project_task'
+    ? await resolveProjectTaskTagContexts(trx, tenant, changedEntityIds)
+    : null;
+  for (const app of normalized) {
+    if (!changedEntities.has(app.entityId)) continue;
+    const previousTags = Array.from(new Set(app.existingTexts)).sort((a, b) => a.localeCompare(b));
+    const newTags = Array.from(new Set(finalTagsByEntity.get(app.entityId) ?? [])).sort((a, b) => a.localeCompare(b));
+    await publishEntityTagUpdateEvent({
+      trx,
+      tenant,
+      taggedId: app.entityId,
+      taggedType,
+      userId,
+      occurredAt,
+      previousTags,
+      newTags,
+      projectTaskContext: projectTaskContexts
+        ? (projectTaskContexts.get(app.entityId) ?? null)
+        : undefined,
+    });
+  }
+
+  return { appliedByEntity };
 });
 
 export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; }> => {
@@ -728,6 +1176,23 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
         await TagDefinition.update(trx, tenant, definition.tag_id, {
           background_color: backgroundColor,
           text_color: textColor
+        });
+
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_UPDATED',
+          payload: buildTagDefinitionUpdatedPayload({
+            tagId: definition.tag_id,
+            previousName: tag.tag_text,
+            newName: tag.tag_text,
+            updatedByUserId: currentUser.user_id,
+            updatedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+          },
         });
       }
       return {

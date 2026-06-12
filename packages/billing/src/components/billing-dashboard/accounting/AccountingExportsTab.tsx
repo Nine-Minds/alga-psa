@@ -12,10 +12,12 @@ import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  cancelAccountingExportBatch,
   createAccountingExportBatch,
   executeAccountingExportBatch,
   getAccountingExportBatch,
-  listAccountingExportBatches
+  listAccountingExportBatches,
+  getAccountingSyncHealth
 } from '@alga-psa/billing/actions';
 
 type AccountingExportStatus =
@@ -126,6 +128,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [clientSearch, setClientSearch] = useState<string>('');
   const [invoiceStatuses, setInvoiceStatuses] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [targetRealm, setTargetRealm] = useState<string>('');
+  const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
 
   const loadBatches = useCallback(async () => {
     setLoading(true);
@@ -168,6 +172,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   }, [t]);
 
+  // Load available realms once on mount for multi-realm picker in the create dialog
+  useEffect(() => {
+    getAccountingSyncHealth()
+      .then((health) => {
+        if (health.realms.length > 1) {
+          setAvailableRealms(health.realms);
+          const defaultRealm = health.realms.find((r) => r.isDefault);
+          if (defaultRealm) {
+            setTargetRealm(defaultRealm.realmId);
+          }
+        }
+      })
+      .catch(() => {
+        // Not EE or no permission — realm picker stays hidden
+      });
+  }, []);
+
   useEffect(() => {
     void loadBatches();
   }, [loadBatches]);
@@ -204,7 +225,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
         adapter_type: adapterType,
         export_type: 'invoice',
         filters,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        ...(targetRealm ? { target_realm: targetRealm } : {})
       });
       if (isActionPermissionError(batchResult)) {
         handleError(batchResult.permissionError);
@@ -244,6 +266,29 @@ export default function AccountingExportsTab(): React.JSX.Element {
       }));
     }
   };
+
+  const onCancel = async (batchId: string) => {
+    try {
+      const result = await cancelAccountingExportBatch(batchId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+      toast.success(t('accountingExports.toast.cancelled', {
+        defaultValue: 'Batch cancelled',
+      }));
+      await loadBatches();
+      await loadBatchDetail(batchId);
+    } catch (e) {
+      handleError(e, t('accountingExports.toast.cancelError', {
+        defaultValue: 'Failed to cancel batch',
+      }));
+    }
+  };
+
+  const isCancellable = (status: AccountingExportStatus): boolean =>
+    status === 'pending' || status === 'validating' || status === 'ready' ||
+    status === 'needs_attention' || status === 'failed';
 
   return (
     <div className="space-y-6" id="billing-accounting-exports">
@@ -376,6 +421,28 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 }))}
               />
             </div>
+
+            {availableRealms.length > 1 && (
+              <div className="space-y-2" id="accounting-export-realm-picker">
+                <Label htmlFor="accounting-export-realm">
+                  {t('accountingExports.createDialog.fields.realm', { defaultValue: 'Target Company (Realm)' })}
+                </Label>
+                <CustomSelect
+                  id="accounting-export-realm"
+                  value={targetRealm}
+                  onValueChange={(value) => setTargetRealm(value)}
+                  options={availableRealms.map((r) => ({
+                    value: r.realmId,
+                    label: r.isDefault
+                      ? t('accountingExports.createDialog.defaultRealmLabel', {
+                          realmId: r.realmId,
+                          defaultValue: `${r.realmId} (default)`,
+                        })
+                      : r.realmId,
+                  }))}
+                />
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -520,6 +587,34 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 </div>
               </div>
 
+              {selectedBatch.notes ? (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.fields.notes', { defaultValue: 'Notes' })}
+                  </div>
+                  <div className="text-sm whitespace-pre-wrap">{selectedBatch.notes}</div>
+                </div>
+              ) : null}
+
+              {(selectedDetail?.errors?.length ?? 0) > 0 ? (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('accountingExports.detailDialog.errorDetails', { defaultValue: 'Error Details' })}
+                  </div>
+                  <div className="mt-1 max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
+                    {(selectedDetail?.errors ?? []).map((error) => (
+                      <div key={error.error_id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-muted-foreground">{error.code}</span>
+                          <span className="text-xs text-muted-foreground">{formatIso(error.created_at)}</span>
+                        </div>
+                        <div className="whitespace-pre-wrap">{error.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="flex items-center justify-end gap-2">
                 <Button
                   id="accounting-exports-detail-refresh"
@@ -529,6 +624,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 >
                   {t('accountingExports.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
+                {isCancellable(selectedBatch.status) && (
+                  <Button
+                    id="accounting-exports-detail-cancel"
+                    variant="destructive"
+                    onClick={() => void onCancel(selectedBatch.batch_id)}
+                  >
+                    {t('accountingExports.actions.cancelBatch', { defaultValue: 'Cancel Batch' })}
+                  </Button>
+                )}
                 <Button
                   id="accounting-exports-detail-execute"
                   onClick={() => void onExecute(selectedBatch.batch_id)}
