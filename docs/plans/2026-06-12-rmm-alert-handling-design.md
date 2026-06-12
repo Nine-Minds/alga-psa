@@ -196,11 +196,16 @@ recurring schedule.
 
 ## Alert polling (reconciliation)
 
-A per-integration Temporal scheduled workflow (following the existing Entra
-per-tenant schedule pattern) runs every N minutes: default 15, configurable
-5–60 in integration settings, on by default for connected integrations. The
-schedule is created when an integration connects and removed when it
-disconnects. Each cycle works through the same normalized pipeline:
+A single recurring pg-boss dispatcher (the Huntress incident-poll pattern,
+registered from initializeApp in enterprise builds) iterates active RMM
+integrations with a registered alert fetcher and runs a cycle for the ones
+whose per-tenant interval has elapsed: default 15 minutes, configurable 5–60
+in integration settings, on by default. The original design called for
+per-integration Temporal schedules (Entra pattern); pg-boss won because
+TacticalRMM is a CE provider and CE deployments do not run Temporal workers,
+and the in-repo precedent for RMM polling (Huntress) already uses pg-boss.
+Connect/disconnect lifecycle is implicit — the dispatcher only polls active
+integrations. Each cycle works through the same normalized pipeline:
 
 1. Fetch active alerts from the RMM (`NinjaOneClient.getAlerts()`; Tactical's
    alerts API) and upsert any the webhooks missed as `triggered` events, so
@@ -211,6 +216,14 @@ disconnects. Each cycle works through the same normalized pipeline:
 
 Webhooks remain the primary low-latency path; polling is the backstop. Ingest
 idempotency makes the overlap harmless.
+
+One id-space caveat: NinjaOne webhooks carry activity ids while its alerts API
+returns condition uids, so stale-alert detection only trusts poller-ingested
+ids (marked in alert metadata) and never closes a webhook-created alert on the
+poller's say-so. Per-device+condition dedup absorbs cross-source duplicates.
+NinjaOne and TacticalRMM ship fetchers (Tactical's reuses the alerts endpoint
+its manual backfill verified); Level has no list-alerts surface and stays
+webhook-only.
 
 ## Rules CRUD and UI
 
