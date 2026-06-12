@@ -33,10 +33,15 @@ vi.mock('@ee/lib/actions/integrations/huduActions', () => ({
   testHuduConnection: testHuduConnectionMock,
 }));
 
-// The mapping manager has its own dedicated component tests; stub it here so
-// connected-state renders don't pull in the mapping actions module.
+// The mapping and layout-map managers have their own dedicated component
+// tests; stub them here so connected-state renders don't pull in their
+// actions modules.
 vi.mock('@ee/components/settings/integrations/hudu/HuduCompanyMappingManager', () => ({
   default: () => <div data-testid="hudu-company-mapping-manager-stub" />,
+}));
+
+vi.mock('@ee/components/settings/integrations/hudu/HuduAssetLayoutMapManager', () => ({
+  default: () => <div data-testid="hudu-asset-layout-map-manager-stub" />,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -369,6 +374,22 @@ describe('HuduIntegrationSettings', () => {
 
     await screen.findByLabelText('Base URL');
     expect(screen.queryByTestId('hudu-company-mapping-manager-stub')).toBeNull();
+  });
+
+  it('T208: renders the asset layout map manager below the card when connected', async () => {
+    getHuduConnectionStatusMock.mockResolvedValue({ success: true, data: connectedStatus });
+
+    render(<HuduIntegrationSettings />);
+
+    await screen.findByLabelText('Base URL');
+    expect(screen.getByTestId('hudu-asset-layout-map-manager-stub')).toBeTruthy();
+  });
+
+  it('T208: does not render the asset layout map manager when not connected', async () => {
+    render(<HuduIntegrationSettings />);
+
+    await screen.findByLabelText('Base URL');
+    expect(screen.queryByTestId('hudu-asset-layout-map-manager-stub')).toBeNull();
   });
 
   it('disconnect calls the action and reloads status', async () => {

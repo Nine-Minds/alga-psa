@@ -97,6 +97,31 @@ export type {
 } from './companyMapping';
 
 export {
+  HUDU_ASSET_LAYOUT_TYPE_MAP_KEY,
+  ALGA_ASSET_TYPES,
+  isAlgaAssetType,
+  normalizeAssetLayoutTypeMap,
+  parseAssetLayoutTypeMap,
+  getHuduAssetLayoutTypeMap,
+  setHuduAssetLayoutTypeMap,
+  suggestAssetTypeForLayout,
+  resolveAssetTypeForLayout,
+} from './assetLayoutMap';
+export type { AlgaAssetType, HuduAssetLayoutTypeMap } from './assetLayoutMap';
+
+export {
+  HUDU_SERIAL_CONFIDENCE,
+  suggestHuduAssetMappings,
+} from './assetMatching';
+export type {
+  HuduAssetSuggestionSource,
+  HuduAssetMappingSuggestion,
+  HuduMatcherAsset,
+  AlgaMatcherAsset,
+  HuduAssetExistingMappingRef,
+} from './assetMatching';
+
+export {
   HUDU_REFERENCE_CACHE_TTL_MS,
   HUDU_REFERENCE_CACHE_MAX_ENTRIES,
   getCachedHuduList,

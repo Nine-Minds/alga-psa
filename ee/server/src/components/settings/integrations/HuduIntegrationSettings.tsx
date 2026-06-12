@@ -17,6 +17,7 @@ import {
 import type { HuduActionResult, HuduConnectionStatusData } from '../../../lib/actions/integrations/huduActions';
 import type { HuduErrorKind } from '../../../lib/integrations/hudu/huduClient';
 import HuduCompanyMappingManager from './hudu/HuduCompanyMappingManager';
+import HuduAssetLayoutMapManager from './hudu/HuduAssetLayoutMapManager';
 
 type ConnectionBadgeState = 'not_connected' | 'connected' | 'error';
 
@@ -399,6 +400,13 @@ export default function HuduIntegrationSettings() {
     {isConnected && (
       <div className="mt-6">
         <HuduCompanyMappingManager />
+      </div>
+    )}
+
+    {/* Asset layout -> asset type map (Phase 2 FR11/FR12) - shown when connected */}
+    {isConnected && (
+      <div className="mt-6">
+        <HuduAssetLayoutMapManager />
       </div>
     )}
     </>
