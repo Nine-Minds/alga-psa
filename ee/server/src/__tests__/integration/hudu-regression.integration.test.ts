@@ -6,6 +6,11 @@
  * tenant-scoped). The unit half (tenant-prefixed reference-cache keys) lives
  * in huduRegression.test.ts.
  *
+ * T250/F239 (Phase 2, NFR4) — mapping rows stay direction-agnostic: the
+ * tenant_external_entity_mappings column list is exactly the Phase 1 set
+ * (create migration + tenant_id→tenant rename); Phase 2 asset mappings added
+ * NO pull-only columns (stale/sync state lives in `metadata`/`last_synced_at`).
+ *
  * Same harness as hudu-company-mappings.integration.test.ts: single-connection
  * pool holding pg_advisory_lock('hudu-db-integration-tests') for the whole
  * file (serializes against the migration test's DROP TABLE), random-uuid
@@ -115,6 +120,30 @@ describe('hudu regression — tenant isolation (DB)', () => {
       metadata: { hudu_company_name: 'Acme (Tenant A)' },
     });
     expect(created).toMatchObject({ ok: true });
+  });
+
+  it('T250: tenant_external_entity_mappings schema is unchanged (no pull-only columns)', async () => {
+    const { rows } = await db.raw(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = current_schema() AND table_name = ?
+       ORDER BY column_name`,
+      [HUDU_MAPPING_TABLE]
+    );
+
+    expect(rows.map((row: { column_name: string }) => row.column_name)).toEqual([
+      'alga_entity_id',
+      'alga_entity_type',
+      'created_at',
+      'external_entity_id',
+      'external_realm_id',
+      'id',
+      'integration_type',
+      'last_synced_at',
+      'metadata',
+      'sync_status',
+      'tenant',
+      'updated_at',
+    ]);
   });
 
   it("T112: tenant A's mapping rows are invisible to tenant B queries", async () => {

@@ -25,7 +25,7 @@ vi.mock('@alga-psa/integrations/components/settings/integrations/useHuduIntegrat
 }));
 
 vi.mock('@alga-psa/integrations/lib/calendarAvailability', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/integrations/lib/calendarAvailability')>();
+  const actual = (await importOriginal()) as typeof import('@alga-psa/integrations/lib/calendarAvailability');
   return {
     ...actual,
     isCalendarEnterpriseEdition: isEEMock,
