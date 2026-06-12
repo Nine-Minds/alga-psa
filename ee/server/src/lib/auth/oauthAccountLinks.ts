@@ -63,8 +63,8 @@ export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Prom
         provider_account_id: input.providerAccountId,
         provider_email: providerEmail,
         metadata: metadataPayload,
-        last_used_at: input.lastUsedAt ?? knex.fn.now(),
-        updated_at: knex.fn.now(),
+        last_used_at: input.lastUsedAt ?? new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
   } catch (error: any) {
     if (error?.code === '23505') {

@@ -631,7 +631,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
         .merge({
           external_organization_name: String(name),
           metadata: rc,
-          updated_at: knex.fn.now(),
+          updated_at: new Date().toISOString(),
         });
     }
 

@@ -143,7 +143,7 @@ export async function upsertForKey(
     .merge({
       max_tokens: input.maxTokens,
       refill_per_min: input.refillPerMin,
-      updated_at: knex.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning('*');
 

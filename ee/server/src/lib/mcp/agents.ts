@@ -181,7 +181,7 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
     await knex('agent_idp_providers')
       .insert({ tenant: input.tenant, issuer: resolved.issuer, ...fields })
       .onConflict(['tenant', 'issuer'])
-      .merge({ ...fields, active: true, updated_at: knex.fn.now() });
+      .merge({ ...fields, active: true, updated_at: new Date().toISOString() });
     return knex('agent_idp_providers').where({ tenant: input.tenant, issuer: resolved.issuer }).first();
   });
 }

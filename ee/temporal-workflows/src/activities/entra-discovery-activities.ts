@@ -44,7 +44,7 @@ export async function discoverManagedTenantsActivity(
     () =>
       runWithTenant(input.tenantId, async () => {
         const { knex } = await createTenantKnex();
-        const now = knex.fn.now();
+        const now = new Date().toISOString();
 
         await knex('entra_managed_tenants')
           .insert(

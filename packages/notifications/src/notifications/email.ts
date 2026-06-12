@@ -288,7 +288,7 @@ export class EmailNotificationService implements NotificationService {
       .merge({
         is_enabled: category.is_enabled,
         is_default_enabled: category.is_default_enabled,
-        updated_at: knex.fn.now()
+        updated_at: new Date().toISOString()
       });
 
     const result = await knex('notification_categories as nc')
@@ -342,7 +342,7 @@ export class EmailNotificationService implements NotificationService {
       .onConflict(['tenant', 'user_id', 'subtype_id'])
       .merge({
         is_enabled: preference.is_enabled,
-        updated_at: knex.fn.now()
+        updated_at: new Date().toISOString()
       })
       .returning('*');
 

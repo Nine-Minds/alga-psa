@@ -454,7 +454,7 @@ export const updateEntraFieldSyncConfig = withAuth(async (
 
   const normalizedConfig = normalizeEntraFieldSyncConfig(input);
   const { knex } = await createTenantKnex();
-  const now = knex.fn.now();
+  const now = new Date().toISOString();
 
   await knex('entra_sync_settings')
     .insert({

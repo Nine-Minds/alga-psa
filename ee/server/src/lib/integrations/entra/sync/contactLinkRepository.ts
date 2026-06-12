@@ -12,7 +12,7 @@ export async function upsertEntraContactLinkActive(
   trx: Knex.Transaction,
   input: UpsertEntraContactLinkInput
 ): Promise<void> {
-  const now = trx.fn.now();
+  const now = new Date().toISOString();
 
   await trx('entra_contact_links')
     .insert({

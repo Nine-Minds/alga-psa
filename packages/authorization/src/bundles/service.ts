@@ -593,7 +593,7 @@ export async function createBundleAssignment(
       .merge({
         status: 'active',
         updated_by: input.actorUserId ?? null,
-        updated_at: trx.fn.now(),
+        updated_at: new Date().toISOString(),
       });
   });
 }

@@ -207,7 +207,7 @@ export class StorageService {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date().toISOString();
       const revision = existing ? Number(existing.revision) + 1 : 1;
       const insertRow = {
         tenant: this.tenantId,
@@ -357,7 +357,7 @@ export class StorageService {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date().toISOString();
       const rows = request.items.map((item) => {
         const existing = existingMap.get(item.key);
         const ttlExpiresAt = computeTtl(item.ttlSeconds);
@@ -576,7 +576,7 @@ export class StorageService {
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
-        updated_at: trx.fn.now(),
+        updated_at: new Date().toISOString(),
       });
   }
 

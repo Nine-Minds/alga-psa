@@ -60,7 +60,7 @@ export class ExternalEntityMappingRepository {
         asset_id: payload.assetId,
         external_hash: payload.sourceHash,
         metadata,
-        last_synced_at: knex.fn.now()
+        last_synced_at: new Date().toISOString()
       });
   }
 }

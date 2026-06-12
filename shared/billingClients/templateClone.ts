@@ -86,7 +86,7 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
       .merge({
         quantity: service.quantity,
         custom_rate: normalizeNumeric(service.custom_rate),
-        updated_at: trx.fn.now()
+        updated_at: new Date().toISOString()
       });
 
     await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id);
