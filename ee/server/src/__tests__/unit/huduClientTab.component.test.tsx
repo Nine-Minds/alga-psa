@@ -26,6 +26,14 @@ vi.mock('@ee/lib/actions/integrations/huduDataActions', () => ({
   getHuduCompanyArticles: getHuduCompanyArticlesMock,
 }));
 
+// F223: the Assets section delegates to the mapping manager (tested in
+// huduAssetMappingManager.component.test); the tab test only checks placement.
+vi.mock('@ee/components/integrations/hudu/HuduAssetMappingManager', () => ({
+  default: ({ clientId }: { clientId: string }) => (
+    <div data-testid="hudu-asset-mapping-manager" data-client-id={clientId} />
+  ),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   // Stable identity: the component memoizes callbacks on `t`.
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
@@ -177,26 +185,13 @@ describe('HuduClientTab', () => {
   });
 
   describe('T071: assets and articles sections', () => {
-    it('renders asset rows with count, metadata and new-tab deep-links', async () => {
+    it('renders the asset mapping manager (F223) inside the assets section', async () => {
       await renderTab();
 
-      expect(document.getElementById('hudu-client-tab-assets-count')?.textContent).toBe('2');
-
-      const link = document.getElementById('hudu-client-tab-assets-link-1') as HTMLAnchorElement;
-      expect(link.tagName).toBe('A');
-      expect(link.getAttribute('href')).toBe('https://docs.example.com/a/1');
-      expect(link.getAttribute('target')).toBe('_blank');
-      expect(link.getAttribute('rel')).toContain('noopener');
-      expect(link.textContent).toContain('DC-01');
-
-      const assetsSection = document.getElementById('hudu-client-tab-assets');
-      expect(assetsSection?.textContent).toContain('Server · Serial: SN-123');
-      expect(assetsSection?.textContent).toContain('Firewall');
-
-      // A record without a deep-link renders as plain text, not an anchor.
-      const unlinked = document.getElementById('hudu-client-tab-assets-link-2');
-      expect(unlinked?.tagName).toBe('SPAN');
-      expect(unlinked?.textContent).toContain('FW-01');
+      const manager = screen.getByTestId('hudu-asset-mapping-manager');
+      expect(manager.getAttribute('data-client-id')).toBe(CLIENT_ID);
+      expect(document.getElementById('hudu-client-tab-assets')?.contains(manager)).toBe(true);
+      expect(document.getElementById('hudu-client-tab-assets-error')).toBeNull();
     });
 
     it('renders article rows with count, folder and deep-links', async () => {
@@ -212,15 +207,12 @@ describe('HuduClientTab', () => {
       expect(document.getElementById('hudu-client-tab-articles')?.textContent).toContain('Folder #3');
     });
 
-    it('shows per-section empty text for an ok-but-empty list', async () => {
+    it('still renders the manager for an ok-but-empty asset list (it owns the empty state)', async () => {
       getHuduCompanyAssetsMock.mockResolvedValue({ ...okAssets(), items: [], count: 0 });
 
       await renderTab();
 
-      expect(document.getElementById('hudu-client-tab-assets-empty')?.textContent).toBe(
-        'No Hudu assets for this company.'
-      );
-      expect(document.getElementById('hudu-client-tab-assets-count')?.textContent).toBe('0');
+      expect(screen.getByTestId('hudu-asset-mapping-manager')).toBeTruthy();
       // Articles still render normally.
       expect(document.getElementById('hudu-client-tab-articles-count')?.textContent).toBe('1');
     });
@@ -254,6 +246,8 @@ describe('HuduClientTab', () => {
       expect(document.getElementById('hudu-client-tab-articles-error')?.textContent).toContain(
         'Hudu could not be reached'
       );
+      // The mapping manager only renders for an ok asset fetch.
+      expect(screen.queryByTestId('hudu-asset-mapping-manager')).toBeNull();
       expect(document.getElementById('hudu-client-tab-not-connected')).toBeNull();
       expect(document.getElementById('hudu-client-tab-unmapped')).toBeNull();
     });

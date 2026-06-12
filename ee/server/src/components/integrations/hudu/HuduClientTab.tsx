@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Client detail "Hudu" tab (F070–F075): read-only Assets and Articles lists
- * for the client's mapped Hudu company, with counts, per-record deep-links,
- * a Refresh button, source attribution, and distinct empty/error states for
- * not-connected / unmapped / unreachable. Pull-only: nothing here writes to
- * Hudu or persists Hudu content in Alga.
+ * Client detail "Hudu" tab (F070–F075): Articles list for the client's mapped
+ * Hudu company, with counts, per-record deep-links, a Refresh button, source
+ * attribution, and distinct empty/error states for not-connected / unmapped /
+ * unreachable. Phase 2 (F223): the Assets section is the asset mapping
+ * manager; articles remain pull-only.
  */
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
@@ -13,8 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { BookOpen, ExternalLink, HardDrive, RefreshCw } from 'lucide-react';
+import { BookOpen, ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import HuduAssetMappingManager from './HuduAssetMappingManager';
 import {
   getHuduClientContext,
   getHuduCompanyArticles,
@@ -250,25 +251,22 @@ export function HuduClientTab({ clientId }: HuduClientTabProps) {
       )}
 
       {!isLoading && !contextError && !notConnected && !unmapped && context?.connected && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {renderSection<HuduAsset>(
-            'assets',
-            <HardDrive className="h-4 w-4 shrink-0" />,
-            t('integrations.hudu.clientTab.assetsTitle', { defaultValue: 'Assets' }),
-            t('integrations.hudu.clientTab.assetsEmpty', {
-              defaultValue: 'No Hudu assets for this company.',
-            }),
-            assets,
-            (item) =>
-              [
-                item.asset_type ?? null,
-                item.primary_serial
-                  ? `${t('integrations.hudu.clientTab.serial', { defaultValue: 'Serial' })}: ${item.primary_serial}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' · ') || null
-          )}
+        <div className="space-y-4">
+          {/* F223: the Assets section is the mapping manager (it fetches its
+              own mapping view); fetch-level errors keep the Phase 1 alert. */}
+          <div id="hudu-client-tab-assets">
+            {assets?.state === 'ok' ? (
+              <HuduAssetMappingManager clientId={clientId} />
+            ) : assets?.state === 'error' || assets?.state === 'no_password_access' ? (
+              <Alert id="hudu-client-tab-assets-error" variant="destructive">
+                <AlertDescription>
+                  {t('integrations.hudu.clientTab.unreachable', {
+                    defaultValue: 'Hudu could not be reached. Try again later.',
+                  })}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
           {renderSection<HuduArticle>(
             'articles',
             <BookOpen className="h-4 w-4 shrink-0" />,
