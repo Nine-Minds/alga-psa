@@ -29,7 +29,7 @@ export async function unregisterRmmAlertTicketClosedSubscriber(): Promise<void> 
   isRegistered = false;
 }
 
-async function handleTicketClosed(event: unknown): Promise<void> {
+export async function handleTicketClosed(event: unknown): Promise<void> {
   const payload =
     typeof event === 'object' && event !== null && 'payload' in event
       ? ((event as { payload?: Record<string, unknown> }).payload ?? {})

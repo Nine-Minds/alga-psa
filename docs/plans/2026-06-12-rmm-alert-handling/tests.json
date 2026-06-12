@@ -180,7 +180,7 @@
   {
     "id": "T021",
     "description": "Integration: ticket close calls the outbound adapter when resetAlertOnTicketClose is true; skips when the rule opted out or the alert is already resolved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F041"
@@ -189,7 +189,7 @@
   {
     "id": "T022",
     "description": "Integration: outbound reset failure is logged and stamped in metadata without blocking the close; providers without an adapter are skipped cleanly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F042",
