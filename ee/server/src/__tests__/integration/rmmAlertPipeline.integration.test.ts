@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import {
   processRmmAlertEvent,
+  registerRmmAlertFetcher,
+  runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
 } from '@alga-psa/shared/rmm/alerts';
 
@@ -449,6 +451,89 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     await db('rmm_maintenance_windows').where({ tenant: tenantId, window_id: windowId }).del();
   });
 
+  it('publishes workflow events for non-suppressed outcomes via injected deps', async () => {
+    const published: Array<{ eventType: string; payload: Record<string, unknown> }> = [];
+    const deps = {
+      publishWorkflowEvent: async (args: { eventType: string; tenantId: string; payload: Record<string, unknown> }) => {
+        published.push({ eventType: args.eventType, payload: args.payload });
+      },
+    };
+
+    const trigger = await processRmmAlertEvent(
+      { knex: db, deps },
+      event({ externalAlertId: 'ext-events', conditionIdentity: 'SVC_DOWN', alertClass: 'SVC_DOWN' })
+    );
+    expect(trigger.outcome).toBe('ticket_created');
+    await processRmmAlertEvent({ knex: db, deps }, event({ externalAlertId: 'ext-events', kind: 'reset' }));
+
+    expect(published.map((p) => p.eventType)).toEqual(['RMM_ALERT_TRIGGERED', 'RMM_ALERT_RESOLVED']);
+    expect(published[0].payload).toMatchObject({
+      tenantId,
+      integrationId,
+      provider: 'ninjaone',
+      alertId: trigger.alertId,
+      ticketId: trigger.ticketId,
+      severity: 'major',
+      assetId,
+    });
+    expect(published[1].payload).toMatchObject({ alertId: trigger.alertId });
+  });
+
+  it('ignores inactive rules and falls back through priority order', async () => {
+    // An inactive catch-all that would shadow everything if considered.
+    const inactiveRuleId = uuidv4();
+    await db('rmm_alert_rules').insert({
+      tenant: tenantId,
+      rule_id: inactiveRuleId,
+      integration_id: integrationId,
+      name: 'Disabled catch-all',
+      is_active: false,
+      priority_order: -10,
+      conditions: JSON.stringify({}),
+      actions: JSON.stringify({ createTicket: false }),
+    });
+
+    const result = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'ext-inactive', conditionIdentity: 'MEM_HIGH', alertClass: 'MEM_HIGH' })
+    );
+    expect(result.outcome).toBe('ticket_created');
+    expect(result.matchedRuleId).toBe(ruleId);
+    await db('rmm_alert_rules').where({ tenant: tenantId, rule_id: inactiveRuleId }).del();
+  });
+
+  it('maps severity to a tenant priority by name when the rule has no override', async () => {
+    const fallbackRuleId = uuidv4();
+    await db('rmm_alert_rules').insert({
+      tenant: tenantId,
+      rule_id: fallbackRuleId,
+      integration_id: integrationId,
+      name: 'Fallback priority rule',
+      is_active: true,
+      priority_order: -1,
+      conditions: JSON.stringify({ alertClasses: ['SMART_FAIL'] }),
+      actions: JSON.stringify({ createTicket: true, boardId }),
+    });
+
+    const result = await processRmmAlertEvent(
+      { knex: db },
+      event({
+        externalAlertId: 'ext-fallback',
+        conditionIdentity: 'SMART_FAIL',
+        alertClass: 'SMART_FAIL',
+        severity: 'major',
+        message: undefined,
+      })
+    );
+    expect(result.outcome).toBe('ticket_created');
+
+    const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: result.ticketId! }).first();
+    expect(ticket.priority_id).toBe(priorityHighId); // major → 'High'
+    // No template on this rule: the default title applies.
+    expect(ticket.title).toContain('[NinjaOne Alert] SMART_FAIL on SERVER-01');
+    await db('rmm_alert_rules').where({ tenant: tenantId, rule_id: fallbackRuleId }).del();
+  });
+
   it('acknowledged events stamp acknowledged status', async () => {
     // Distinct condition: the touched-ticket scenario left dev-1|DISK_SPACE
     // with an open ticket, which would absorb this alert via dedup.
@@ -469,5 +554,129 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
       .first();
     expect(alert.status).toBe('acknowledged');
     expect(alert.acknowledged_at).not.toBeNull();
+  });
+});
+
+describe('runRmmAlertReconciliation (DB integration)', { shuffle: false }, () => {
+  // The fetcher's "RMM truth" is this mutable list.
+  let remoteActive: NormalizedRmmAlertEvent[] = [];
+
+  beforeAll(() => {
+    registerRmmAlertFetcher('ninjaone', {
+      fetchActiveAlerts: async () => remoteActive,
+    });
+  });
+
+  it('turns a missed RMM-active alert into a ticket through the rules path', async () => {
+    remoteActive = [
+      event({ externalAlertId: 'recon-1', conditionIdentity: 'RECON_DISK', alertClass: 'RECON_DISK' }),
+    ];
+    const result = await runRmmAlertReconciliation(
+      { knex: db },
+      { tenantId, integrationId, provider: 'ninjaone' }
+    );
+    expect(result.skipped).toBe(false);
+    expect(result.ingested).toBe(1);
+
+    const alert = await db('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'recon-1' }).first();
+    expect(alert.status).toBe('active');
+    expect(alert.ticket_id).not.toBeNull();
+    expect(alert.metadata).toMatchObject({ __alga_ingest_source: 'reconciliation' });
+  });
+
+  it('a repeat cycle is a no-op while the alert stays active in the RMM', async () => {
+    const result = await runRmmAlertReconciliation(
+      { knex: db },
+      { tenantId, integrationId, provider: 'ninjaone' }
+    );
+    expect(result.ingested).toBe(0);
+    expect(result.resetsSynthesized).toBe(0);
+  });
+
+  it('synthesizes resets only for poller-ingested alerts that left the RMM', async () => {
+    // A webhook-created alert (no reconciliation marker) that the fetcher
+    // doesn't know about must never be closed by the poller.
+    const webhook = await processRmmAlertEvent(
+      { knex: db },
+      event({
+        externalAlertId: 'recon-webhook-origin',
+        conditionIdentity: 'RECON_WEBHOOK',
+        alertClass: 'RECON_WEBHOOK',
+      })
+    );
+    expect(webhook.outcome).toBe('ticket_created');
+
+    remoteActive = [];
+    const result = await runRmmAlertReconciliation(
+      { knex: db },
+      { tenantId, integrationId, provider: 'ninjaone' }
+    );
+    expect(result.resetsSynthesized).toBe(1);
+
+    const reconAlert = await db('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'recon-1' }).first();
+    expect(['resolved', 'auto_resolved']).toContain(reconAlert.status);
+    const reconTicket = await db('tickets').where({ tenant: tenantId, ticket_id: reconAlert.ticket_id }).first();
+    expect(reconTicket.status_id).toBe(statusClosedId); // untouched → auto-closed
+
+    const webhookAlert = await db('rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'recon-webhook-origin' })
+      .first();
+    expect(webhookAlert.status).toBe('active'); // conservatively untouched
+  });
+
+  it('reprocesses a still-active suppressed alert once its window ends', async () => {
+    const reconWindowId = uuidv4();
+    await db('rmm_maintenance_windows').insert({
+      tenant: tenantId,
+      window_id: reconWindowId,
+      integration_id: integrationId,
+      name: 'Recon window',
+      is_active: true,
+      starts_at: new Date(Date.now() - 60_000).toISOString(),
+      ends_at: new Date(Date.now() + 3_600_000).toISOString(),
+      recurrence: null,
+    });
+
+    remoteActive = [
+      event({ externalAlertId: 'recon-window', conditionIdentity: 'RECON_SVC', alertClass: 'RECON_SVC' }),
+    ];
+    let result = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'ninjaone' });
+    expect(result.ingested).toBe(1);
+    let alert = await db('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'recon-window' }).first();
+    expect(alert.status).toBe('suppressed');
+    expect(alert.ticket_id).toBeNull();
+
+    // Window ends; the condition is still firing in the RMM.
+    await db('rmm_maintenance_windows')
+      .where({ tenant: tenantId, window_id: reconWindowId })
+      .update({ is_active: false });
+
+    result = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'ninjaone' });
+    expect(result.ingested).toBe(1);
+    alert = await db('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'recon-window' }).first();
+    expect(alert.status).toBe('active');
+    expect(alert.ticket_id).not.toBeNull();
+
+    await db('rmm_maintenance_windows').where({ tenant: tenantId, window_id: reconWindowId }).del();
+  });
+
+  it('an alert known from a webhook is not duplicated by the poller (same id)', async () => {
+    const webhook = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'both-paths', conditionIdentity: 'RECON_CPU', alertClass: 'RECON_CPU' })
+    );
+    expect(webhook.outcome).toBe('ticket_created');
+
+    const before = await db('tickets').where({ tenant: tenantId }).count('ticket_id as n').first();
+    remoteActive = [
+      event({ externalAlertId: 'both-paths', conditionIdentity: 'RECON_CPU', alertClass: 'RECON_CPU' }),
+    ];
+    const result = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'ninjaone' });
+    expect(result.ingested).toBe(0); // redelivery no-op
+
+    const after = await db('tickets').where({ tenant: tenantId }).count('ticket_id as n').first();
+    expect(Number(after?.n)).toBe(Number(before?.n));
+    const rows = await db('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'both-paths' });
+    expect(rows).toHaveLength(1);
   });
 });

@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "Unit: rule selection — lower priority_order wins, inactive rules skipped, other integrations'/tenants' rules never evaluated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F049"
@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "Unit: ticket templates render all placeholders; defaults apply when no template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -136,7 +136,7 @@
   {
     "id": "T016",
     "description": "Integration: severity-to-priority fallback applies when the rule has no priorityOverride",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -208,7 +208,7 @@
   {
     "id": "T024",
     "description": "Integration: poll cycle upserts a missed RMM-active alert into a ticket, synthesizes a reset for a stale local active alert, and processes an expired-window suppressed alert into a ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F079",
@@ -218,7 +218,7 @@
   {
     "id": "T025",
     "description": "Integration: the same alert arriving via webhook and poller yields one alert row and one ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -248,7 +248,7 @@
   {
     "id": "T028",
     "description": "Integration: pipeline publishes RMM_ALERT_TRIGGERED and RMM_ALERT_RESOLVED workflow v2 events with alert, asset/client, and ticket IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059",
       "F060",
