@@ -1,6 +1,8 @@
 /**
  * T218–T223 — Hudu asset import actions (single + bulk).
  * T251/T252 — HuduAsset contract fields[] + the attributes namespace write.
+ * T264/T265 — tenant-wide serial-conflict pre-check (typed serial_conflict,
+ * per-row in bulk, batch never aborted).
  *
  * Unit-mocked like huduAssetMappingActions.test.ts: auth, flag, tiers, knex,
  * the Phase 1 fetch (huduDataActions), createAsset/deleteAsset and the
@@ -29,6 +31,15 @@ const assertAddOnAccessMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 let assetsRows: Array<{ asset_id: string; asset_name: string; serial_number: string | null }> = [];
 let takenAssetTags: string[] = [];
+// F261 serial-conflict pre-check: tenant assets matchable by trimmed,
+// lowercased serial (mirrors the lower(trim(serial_number)) SQL).
+let serialConflictRows: Array<{
+  asset_id: string;
+  name: string;
+  client_id: string | null;
+  serial_number: string;
+}> = [];
+let serialConflictQueries: Array<{ sql: string; bindings: unknown[] }> = [];
 let attributeUpdates: Array<{
   table: string;
   where: Record<string, unknown> | undefined;
@@ -37,18 +48,32 @@ let attributeUpdates: Array<{
 let attributesUpdateError: Error | null = null;
 const knexCallableMock = vi.fn((_table: string) => {
   let whereArg: Record<string, unknown> | undefined;
+  let whereRawArgs: { sql: string; bindings: unknown[] } | undefined;
   const qb: Record<string, any> = {};
   qb.where = vi.fn((arg: Record<string, unknown>) => {
     whereArg = arg;
     return qb;
   });
+  qb.whereRaw = vi.fn((sql: string, bindings?: unknown[]) => {
+    whereRawArgs = { sql, bindings: bindings ?? [] };
+    serialConflictQueries.push(whereRawArgs);
+    return qb;
+  });
   qb.select = vi.fn(async () => assetsRows);
+  // findSerialConflict: where({ tenant }).whereRaw(lower(trim(...))).first(...)
   // deriveHuduAssetTag's collision pre-check: where({ tenant, asset_tag }).first(...)
-  qb.first = vi.fn(async () =>
-    typeof whereArg?.asset_tag === 'string' && takenAssetTags.includes(whereArg.asset_tag as string)
+  qb.first = vi.fn(async () => {
+    if (whereRawArgs) {
+      const needle = String(whereRawArgs.bindings[0]);
+      const hit = serialConflictRows.find(
+        (row) => row.serial_number.trim().toLowerCase() === needle
+      );
+      return hit ? { asset_id: hit.asset_id, name: hit.name, client_id: hit.client_id } : undefined;
+    }
+    return typeof whereArg?.asset_tag === 'string' && takenAssetTags.includes(whereArg.asset_tag as string)
       ? { asset_id: 'asset-owning-tag' }
-      : undefined
-  );
+      : undefined;
+  });
   // writeHuduAssetAttributes: where({ tenant, asset_id }).update({ attributes: raw })
   qb.update = vi.fn(async (payload: Record<string, any>) => {
     if (attributesUpdateError) {
@@ -185,6 +210,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   assetsRows = [];
   takenAssetTags = [];
+  serialConflictRows = [];
+  serialConflictQueries = [];
   attributeUpdates = [];
   attributesUpdateError = null;
 
@@ -580,6 +607,120 @@ describe('T260: bulk import skips excluded layouts', () => {
       errorKind: 'rate_limited',
       partial: { created: 1, skipped: 1, failed: [] },
     });
+  });
+});
+
+// ============================================================================
+// T264 — serial-conflict pre-check (tenant-wide, trimmed, case-insensitive)
+// ============================================================================
+
+describe('T264: serial_conflict single import', () => {
+  it('a collision with another client\'s asset fails typed naming the existing asset; nothing created', async () => {
+    serialConflictRows = [
+      {
+        asset_id: 'existing-asset-9',
+        name: 'Other-Client-WS',
+        client_id: '22222222-2222-2222-2222-222222222222',
+        serial_number: ' sn-ec-1001 ', // different case + padding still collides
+      },
+    ];
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'An asset with serial number "SN-EC-1001" already exists: "Other-Client-WS".',
+      code: 'serial_conflict',
+      existing_asset_id: 'existing-asset-9',
+      existing_asset_name: 'Other-Client-WS',
+      existing_client_id: '22222222-2222-2222-2222-222222222222',
+    });
+    expect(createAssetMock).not.toHaveBeenCalled();
+    expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
+    expect(deleteAssetMock).not.toHaveBeenCalled();
+    expect(attributeUpdates).toHaveLength(0);
+    // Tenant-wide lookup normalizes in SQL and binds the trimmed lowercased serial.
+    expect(serialConflictQueries).toHaveLength(1);
+    expect(serialConflictQueries[0].sql).toContain('lower(trim(serial_number))');
+    expect(serialConflictQueries[0].bindings).toEqual(['sn-ec-1001']);
+  });
+
+  it('a conflict row without a client omits existing_client_id', async () => {
+    serialConflictRows = [
+      { asset_id: 'existing-asset-9', name: 'Orphan-WS', client_id: null, serial_number: 'SN-EC-1001' },
+    ];
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    expect(result).toMatchObject({
+      success: false,
+      code: 'serial_conflict',
+      existing_asset_id: 'existing-asset-9',
+      existing_asset_name: 'Orphan-WS',
+    });
+    expect(result).not.toHaveProperty('existing_client_id');
+    expect(createAssetMock).not.toHaveBeenCalled();
+  });
+
+  it('blank or missing serials never run the conflict check and import normally', async () => {
+    serialConflictRows = [
+      { asset_id: 'existing-asset-9', name: 'Blank-Serial-WS', client_id: null, serial_number: '' },
+    ];
+    const { importHuduAsset } = await importActions();
+
+    expect(await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 2 })).toMatchObject({ success: true }); // null serial
+    expect(await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 3 })).toMatchObject({ success: true }); // blank serial
+    expect(serialConflictQueries).toHaveLength(0);
+    expect(createAssetMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ============================================================================
+// T265 — bulk mixed excluded / serial-conflict / success
+// ============================================================================
+
+describe('T265: bulk mixed excluded / conflict / success', () => {
+  it('skips the excluded layout, records the conflict per-row with its code + existing name, creates the rest', async () => {
+    // Asset 3 (Printers, layout 12) excluded; asset 1's serial collides; asset 2 imports.
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'workstation', '12': 'excluded' });
+    serialConflictRows = [
+      {
+        asset_id: 'existing-asset-9',
+        name: 'Other-Client-WS',
+        client_id: '22222222-2222-2222-2222-222222222222',
+        serial_number: 'sn-ec-1001',
+      },
+    ];
+    const { importAllUnmatchedHuduAssets } = await importActions();
+
+    const result = await importAllUnmatchedHuduAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        created: 1,
+        skipped: 1,
+        failed: [
+          {
+            huduAssetId: 1,
+            error: 'An asset with serial number "SN-EC-1001" already exists: "Other-Client-WS".',
+            code: 'serial_conflict',
+            existing_asset_name: 'Other-Client-WS',
+          },
+        ],
+      },
+    });
+    // The conflict never aborted the batch: EC-SRV-01 was still created and mapped.
+    expect(createAssetMock).toHaveBeenCalledTimes(1);
+    expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'EC-SRV-01' }));
+    expect(setHuduAssetMappingRowMock).toHaveBeenCalledTimes(1);
+    expect(setHuduAssetMappingRowMock).toHaveBeenCalledWith(
+      knexCallableMock,
+      TENANT,
+      expect.objectContaining({ huduAssetId: 2 })
+    );
   });
 });
 

@@ -10,7 +10,9 @@
  * hudu_synced_at, jsonb-merged) on mapped Alga assets — never `asset_type`
  * or any other field, never deletes assets or mappings. Archived/missing
  * Hudu assets flag the mapping `stale` (attributes untouched); reappearance
- * clears the flag.
+ * clears the flag. F260: assets with `rmm_provider` set are RMM-owned —
+ * their name/serial diffs are suppressed (counted as `rmmSkipped`) while the
+ * Hudu attributes namespace and stale flags are handled normally.
  */
 
 import logger from '@alga-psa/core/logger';
@@ -42,7 +44,7 @@ export interface SyncHuduClientAssetsInput {
 }
 
 export type HuduAssetSyncResult =
-  | { state: 'ok'; updated: number; unchanged: number; stale: number; syncedAt: string }
+  | { state: 'ok'; updated: number; unchanged: number; stale: number; rmmSkipped: number; syncedAt: string }
   | { state: 'unmapped' }
   | { state: 'error'; error: string; errorKind?: HuduErrorKind };
 
@@ -85,14 +87,22 @@ async function listMappedAssets(
   knex: Knex,
   tenant: string,
   assetIds: string[]
-): Promise<Array<{ asset_id: string; name: string; serial_number: string | null; attributes: Record<string, unknown> | null }>> {
+): Promise<
+  Array<{
+    asset_id: string;
+    name: string;
+    serial_number: string | null;
+    attributes: Record<string, unknown> | null;
+    rmm_provider: string | null;
+  }>
+> {
   if (assetIds.length === 0) {
     return [];
   }
   return knex('assets')
     .where({ tenant })
     .whereIn('asset_id', assetIds)
-    .select('asset_id', 'name', 'serial_number', 'attributes');
+    .select('asset_id', 'name', 'serial_number', 'attributes', 'rmm_provider');
 }
 
 /** The only fields sync ever writes (FR7/F220: Hudu wins on these alone). */
@@ -152,6 +162,7 @@ export const syncHuduClientAssets = withHuduAssetAccess(
       let updated = 0;
       let unchanged = 0;
       let stale = 0;
+      let rmmSkipped = 0;
       const syncedAt = new Date().toISOString();
 
       for (const mapping of mappingRows) {
@@ -168,9 +179,16 @@ export const syncHuduClientAssets = withHuduAssetAccess(
 
         const algaAsset = algaAssetById.get(mapping.alga_entity_id);
         const changes = syncedFieldChanges(huduAsset, algaAsset);
-        let rowChanged = Object.keys(changes).length > 0;
-        if (rowChanged) {
-          await updateAsset(mapping.alga_entity_id, changes);
+        let rowChanged = false;
+        if (Object.keys(changes).length > 0) {
+          // F260: an RMM owns device facts on its assets — Hudu never writes
+          // name/serial there; the suppressed diff is surfaced as rmmSkipped.
+          if (algaAsset?.rmm_provider) {
+            rmmSkipped += 1;
+          } else {
+            await updateAsset(mapping.alga_entity_id, changes);
+            rowChanged = true;
+          }
         }
         // F253: the Hudu namespace is always Hudu-won — refreshed on every
         // mapped live asset via jsonb merge (sibling attributes keys survive).
@@ -200,9 +218,10 @@ export const syncHuduClientAssets = withHuduAssetAccess(
         updated,
         unchanged,
         stale,
+        rmmSkipped,
       });
 
-      return { state: 'ok', updated, unchanged, stale, syncedAt };
+      return { state: 'ok', updated, unchanged, stale, rmmSkipped, syncedAt };
     } catch (error) {
       logger.error('[HuduAssetSyncActions] syncHuduClientAssets failed', {
         tenant,

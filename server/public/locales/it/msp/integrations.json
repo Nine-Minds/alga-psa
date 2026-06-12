@@ -806,6 +806,7 @@
         "pendingSummary": "Modifiche non salvate: {{total}}",
         "sync": {
           "summary": "Sincronizzazione completata: {{updated}} aggiornati · {{unchanged}} invariati · {{stale}} obsoleti.",
+          "rmmSkipped": "{{rmmSkipped}} gestiti da RMM saltati.",
           "lastSynced": "Ultima sincronizzazione: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Impossibile aggiornare la mappatura dell'asset.",
           "import": "Impossibile importare l'asset Hudu.",
           "importAll": "Importazione in blocco non riuscita.",
+          "serialConflict": "Il numero di serie è già in uso da «{{name}}».",
           "sync": "Impossibile sincronizzare da Hudu.",
           "rateLimited": "Limite di richieste Hudu raggiunto. Riprova più tardi.",
           "unmapped": "Questo cliente non è mappato a un'azienda Hudu.",

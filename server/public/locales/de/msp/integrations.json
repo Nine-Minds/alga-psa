@@ -806,6 +806,7 @@
         "pendingSummary": "Nicht gespeicherte Änderungen: {{total}}",
         "sync": {
           "summary": "Synchronisierung abgeschlossen: {{updated}} aktualisiert · {{unchanged}} unverändert · {{stale}} veraltet.",
+          "rmmSkipped": "{{rmmSkipped}} vom RMM verwaltet übersprungen.",
           "lastSynced": "Zuletzt synchronisiert: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Asset-Zuordnung konnte nicht aktualisiert werden.",
           "import": "Hudu-Asset konnte nicht importiert werden.",
           "importAll": "Massenimport fehlgeschlagen.",
+          "serialConflict": "Die Seriennummer wird bereits von „{{name}}“ verwendet.",
           "sync": "Synchronisierung aus Hudu fehlgeschlagen.",
           "rateLimited": "Hudu-Ratenlimit erreicht. Versuchen Sie es später erneut.",
           "unmapped": "Dieser Kunde ist keinem Hudu-Unternehmen zugeordnet.",

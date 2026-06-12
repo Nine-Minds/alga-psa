@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 /**
  * T230–T236 — HuduAssetMappingManager component (asset-mapping-ui group).
+ * T266 — three-way bulk summary + serial-conflict row error naming the
+ * existing asset; rmmSkipped surfaced in the sync summary line.
  *
  * jsdom + @testing-library, mirroring huduCompanyMappingManager.component.test:
  * mapping/import/sync actions, asset list, permissions, CustomSelect (as a
@@ -520,6 +522,65 @@ describe('HuduAssetMappingManager', () => {
     });
   });
 
+  describe('T266: three-way bulk summary + serial-conflict naming', () => {
+    it('renders created/skipped/failed and the conflict row names the existing asset', async () => {
+      importAllUnmatchedHuduAssetsMock.mockResolvedValue({
+        success: true,
+        data: {
+          created: 1,
+          skipped: 1,
+          failed: [
+            {
+              huduAssetId: 3,
+              error: 'An asset with serial number "SN-3" already exists: "DC-01".',
+              code: 'serial_conflict',
+              existing_asset_name: 'DC-01',
+            },
+          ],
+        },
+      });
+
+      await renderManager();
+
+      fireEvent.click(document.getElementById('hudu-asset-import-all-btn')!);
+
+      await waitFor(() => {
+        expect(document.getElementById('hudu-asset-import-summary')?.textContent).toContain(
+          'Import finished: 1 created · 1 skipped · 1 failed.'
+        );
+      });
+      // The conflict row renders the translated message with the EXISTING asset's
+      // name (not the raw server error).
+      const failureRow = document.getElementById('hudu-asset-import-failure-3');
+      expect(failureRow?.textContent).toContain('PRN-01');
+      expect(failureRow?.textContent).toContain('Serial number already in use by "DC-01".');
+      expect(failureRow?.textContent).not.toContain('already exists');
+    });
+
+    it('a single-row import serial conflict surfaces the translated message with the existing asset name', async () => {
+      importHuduAssetMock.mockResolvedValue({
+        success: false,
+        error: 'An asset with serial number "SN-3" already exists: "DC-01".',
+        code: 'serial_conflict',
+        existing_asset_id: 'asset-1',
+        existing_asset_name: 'DC-01',
+      });
+
+      await renderManager();
+
+      fireEvent.click(document.getElementById('hudu-asset-import-3')!);
+
+      await waitFor(() => {
+        expect(document.getElementById('hudu-asset-mapping-error')?.textContent).toBe(
+          'Serial number already in use by "DC-01".'
+        );
+      });
+      // The row stays plain-unmapped and importable.
+      expect(document.getElementById('hudu-asset-status-3')?.textContent).toBe('Unmapped');
+      expect(document.getElementById('hudu-asset-import-3')).not.toBeNull();
+    });
+  });
+
   describe('T261: excluded-layout rows', () => {
     const withExcluded = (rows: HuduAssetMappingView[]): HuduAssetMappingView[] =>
       rows.map((row) => (row.hudu_asset_id === 3 ? { ...row, layout_excluded: true } : row));
@@ -585,6 +646,7 @@ describe('HuduAssetMappingManager', () => {
         updated: 2,
         unchanged: 5,
         stale: 1,
+        rmmSkipped: 0,
         syncedAt: '2026-06-11T10:00:00.000Z',
       });
 
@@ -603,8 +665,35 @@ describe('HuduAssetMappingManager', () => {
       const summary = document.getElementById('hudu-asset-sync-summary');
       expect(summary?.textContent).toContain('Last synced:');
       expect(summary?.textContent).toContain(new Date('2026-06-11T10:00:00.000Z').toLocaleString());
+      // rmmSkipped: 0 → the RMM note stays hidden.
+      expect(document.getElementById('hudu-asset-sync-rmm-skipped')).toBeNull();
+      expect(summary?.textContent).not.toContain('RMM-managed');
       // The rows reloaded so stale flags/names reflect the sync.
       expect(getHuduAssetMappingsMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('surfaces rmmSkipped in the summary line when RMM-owned rows were suppressed (F260)', async () => {
+      syncHuduClientAssetsMock.mockResolvedValue({
+        state: 'ok',
+        updated: 1,
+        unchanged: 4,
+        stale: 0,
+        rmmSkipped: 3,
+        syncedAt: '2026-06-12T10:00:00.000Z',
+      });
+
+      await renderManager();
+
+      fireEvent.click(document.getElementById('hudu-asset-sync-btn')!);
+
+      await waitFor(() => {
+        expect(document.getElementById('hudu-asset-sync-summary')?.textContent).toContain(
+          'Sync complete: 1 updated · 4 unchanged · 0 stale.'
+        );
+      });
+      expect(document.getElementById('hudu-asset-sync-rmm-skipped')?.textContent).toContain(
+        '3 RMM-managed skipped.'
+      );
     });
 
     it('a typed sync failure surfaces the rate-limited message', async () => {

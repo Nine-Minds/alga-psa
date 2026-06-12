@@ -20,6 +20,7 @@ import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import type { Knex } from 'knex';
 import { createAsset, deleteAsset } from '@alga-psa/assets/actions/assetActions';
 import { getHuduCompanyAssets } from './huduDataActions';
 import type { HuduLinkedItem } from './huduDataActions';
@@ -50,6 +51,7 @@ export type HuduAssetImportErrorCode =
   | 'hudu_asset_not_found'
   | 'hudu_asset_already_mapped'
   | 'layout_excluded'
+  | 'serial_conflict'
   | 'fetch_failed'
   | 'rate_limited'
   | 'create_failed'
@@ -63,6 +65,10 @@ export interface HuduAssetImportFailure {
   /** mapping_failed: the asset created right before the mapping write failed. */
   orphanAssetId?: string;
   orphanCleanedUp?: boolean;
+  /** serial_conflict: the tenant asset already carrying the serial (F261). */
+  existing_asset_id?: string;
+  existing_asset_name?: string;
+  existing_client_id?: string;
 }
 
 export type HuduAssetImportResult =
@@ -91,7 +97,13 @@ export interface HuduAssetBulkImportSummary {
   created: number;
   /** F258: unmatched assets whose layout is marked "Don't import" (FR8). */
   skipped: number;
-  failed: Array<{ huduAssetId: number; error: string; code?: HuduAssetImportErrorCode }>;
+  failed: Array<{
+    huduAssetId: number;
+    error: string;
+    code?: HuduAssetImportErrorCode;
+    /** serial_conflict rows carry the existing asset's name for the UI (F262). */
+    existing_asset_name?: string;
+  }>;
 }
 
 export type HuduAssetBulkImportResult =
@@ -162,6 +174,26 @@ async function cleanUpOrphanAsset(assetId: string): Promise<boolean> {
 }
 
 /**
+ * F261: tenant-wide lookup for an existing asset already carrying the Hudu
+ * asset's serial (trimmed, case-insensitive). Blank serials never conflict.
+ */
+async function findSerialConflict(
+  knex: Knex,
+  tenant: string,
+  primarySerial: string | null | undefined
+): Promise<{ asset_id: string; name: string; client_id: string | null } | null> {
+  const serial = (primarySerial ?? '').trim();
+  if (!serial) {
+    return null;
+  }
+  const existing = await knex('assets')
+    .where({ tenant })
+    .whereRaw('lower(trim(serial_number)) = ?', [serial.toLowerCase()])
+    .first('asset_id', 'name', 'client_id');
+  return existing ?? null;
+}
+
+/**
  * Single-asset import core, shared by both actions. Fetches via the Phase 1
  * cached path, so bulk callers mostly hit the server cache per item — and a
  * mid-batch 429 surfaces here as a typed rate_limited failure (F218).
@@ -205,6 +237,19 @@ async function importHuduAssetCore(
       success: false,
       error: `Hudu asset ${huduAsset.id} belongs to a layout marked "Don't import".`,
       code: 'layout_excluded',
+    };
+  }
+
+  // F261: a tenant-wide serial collision fails typed before anything is created.
+  const serialConflict = await findSerialConflict(knex, tenant, huduAsset.primary_serial);
+  if (serialConflict) {
+    return {
+      success: false,
+      error: `An asset with serial number "${(huduAsset.primary_serial ?? '').trim()}" already exists: "${serialConflict.name}".`,
+      code: 'serial_conflict',
+      existing_asset_id: serialConflict.asset_id,
+      existing_asset_name: serialConflict.name,
+      ...(serialConflict.client_id ? { existing_client_id: serialConflict.client_id } : {}),
     };
   }
 
@@ -388,6 +433,7 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
           huduAssetId: asset.id,
           error: failure.error,
           ...(failure.code ? { code: failure.code } : {}),
+          ...(failure.existing_asset_name ? { existing_asset_name: failure.existing_asset_name } : {}),
         });
       }
 

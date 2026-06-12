@@ -1,6 +1,8 @@
 /**
  * T224–T229 — Hudu manual pull-sync (syncHuduClientAssets) + sync helpers.
  * T253/T254 — hudu_fields refresh on mapped live assets; stale untouched.
+ * T262/T263 — rmm_provider guard: RMM-owned assets never get name/serial
+ * writes (counted rmmSkipped); hudu_fields/stale handling unaffected.
  *
  * Helper persistence (stale metadata merge, last_synced_at stamping, and the
  * assets.attributes jsonb merge) runs against the REAL local dev DB exactly
@@ -40,6 +42,7 @@ let assetsRows: Array<{
   name: string;
   serial_number: string | null;
   attributes?: Record<string, unknown> | null;
+  rmm_provider?: string | null;
 }> = [];
 const delMock = vi.fn();
 let attributeUpdates: Array<{
@@ -413,7 +416,7 @@ describe('T224/T225: syncHuduClientAssets synced fields', () => {
     });
     expect(Object.keys(updateAssetMock.mock.calls[0][1]).sort()).toEqual(['name', 'serial_number']);
 
-    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
   });
 
   it('T224: a name-only change sends a name-only payload', async () => {
@@ -451,7 +454,7 @@ describe('T224/T225: syncHuduClientAssets synced fields', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
     expectNoSyncWritesBeyond({ updateCalls: 0, staleCalls: 0 });
   });
 
@@ -497,7 +500,7 @@ describe('T226/T227: stale flagging and the no-delete guarantee', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 0, stale: 1, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 0, stale: 1, rmmSkipped: 0, syncedAt: expect.any(String) });
     expect(setHuduAssetMappingStaleMock).toHaveBeenCalledTimes(1);
     expect(setHuduAssetMappingStaleMock).toHaveBeenCalledWith(knexCallableMock, TENANT, { mappingId: 'am-1' }, true);
     expect(updateAssetMock).not.toHaveBeenCalled();
@@ -524,7 +527,7 @@ describe('T226/T227: stale flagging and the no-delete guarantee', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
     expect(setHuduAssetMappingStaleMock).toHaveBeenCalledTimes(1);
     expect(setHuduAssetMappingStaleMock).toHaveBeenCalledWith(knexCallableMock, TENANT, { mappingId: 'am-1' }, false);
   });
@@ -608,7 +611,7 @@ describe('T228: summary + last_synced_at stamping', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 1, stale: 1, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 1, stale: 1, rmmSkipped: 0, syncedAt: expect.any(String) });
 
     expect(updateAssetMock).toHaveBeenCalledTimes(1);
     expect(updateAssetMock).toHaveBeenCalledWith(ASSET_1, { name: 'EC-WS-001-RENAMED' });
@@ -661,7 +664,7 @@ describe('T253: hudu_fields refresh', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
     expect(updateAssetMock).not.toHaveBeenCalled();
 
     expect(attributeUpdates).toHaveLength(1);
@@ -707,7 +710,7 @@ describe('T253: hudu_fields refresh', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 0, unchanged: 1, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
     expect(attributeUpdates).toHaveLength(1);
     const merged = JSON.parse((attributeUpdates[0].payload.attributes as { bindings: string }).bindings);
     expect(merged.hudu_synced_at).toBe((result as { syncedAt: string }).syncedAt);
@@ -725,7 +728,7 @@ describe('T253: hudu_fields refresh', () => {
 
     const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, syncedAt: expect.any(String) });
+    expect(result).toEqual({ state: 'ok', updated: 1, unchanged: 0, stale: 0, rmmSkipped: 0, syncedAt: expect.any(String) });
     expect(updateAssetMock).toHaveBeenCalledWith(ASSET_1, { name: 'EC-WS-001-RENAMED' });
     expect(attributeUpdates).toHaveLength(1);
   });
@@ -755,6 +758,160 @@ describe('T254: stale/missing assets keep attributes untouched', () => {
     expect(result).toMatchObject({ state: 'ok', stale: 2 });
     expect(attributeUpdates).toHaveLength(0);
     expectNoSyncWritesBeyond({ updateCalls: 0, staleCalls: 2 });
+  });
+});
+
+// ============================================================================
+// T262/T263 — rmm_provider guard (F260)
+// ============================================================================
+
+describe('T262/T263: rmm_provider guard', () => {
+  const RMM_HUDU_FIELDS = [{ id: 11, label: 'Hostname', value: 'EC-WS-001', position: 1 }];
+
+  it('T262: suppresses name/serial writes on an RMM-owned asset; hudu_fields still refresh; rmmSkipped + updated', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([
+        // Both synced fields differ from the Alga row — and must NOT be written.
+        { id: 1, name: 'EC-WS-001-HUDU', primary_serial: 'SN-HUDU-9', archived: false, fields: RMM_HUDU_FIELDS },
+      ])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      {
+        asset_id: ASSET_1,
+        name: 'NINJA-WS-01',
+        serial_number: 'SN-RMM-1',
+        rmm_provider: 'ninjaone',
+        attributes: { hudu_fields: [{ label: 'Old', value: 'x' }] },
+      },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(updateAssetMock).not.toHaveBeenCalled();
+    // The Hudu namespace is still Hudu-won: refreshed, and its change counts the row updated.
+    expect(attributeUpdates).toHaveLength(1);
+    expect(attributeUpdates[0].where).toEqual({ tenant: TENANT, asset_id: ASSET_1 });
+    expect(
+      JSON.parse((attributeUpdates[0].payload.attributes as { bindings: string }).bindings).hudu_fields
+    ).toEqual([{ label: 'Hostname', value: 'EC-WS-001' }]);
+    expect(result).toEqual({
+      state: 'ok',
+      updated: 1,
+      unchanged: 0,
+      stale: 0,
+      rmmSkipped: 1,
+      syncedAt: expect.any(String),
+    });
+  });
+
+  it('T262: suppressed diffs with unchanged hudu_fields count the row unchanged + rmmSkipped; stale clears normally', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([
+        { id: 1, name: 'EC-WS-001-HUDU', primary_serial: 'SN-HUDU-9', archived: false, fields: RMM_HUDU_FIELDS },
+      ])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1, { stale: true })]);
+    assetsRows = [
+      {
+        asset_id: ASSET_1,
+        name: 'NINJA-WS-01',
+        serial_number: 'SN-RMM-1',
+        rmm_provider: 'ninjaone',
+        attributes: { hudu_fields: [{ label: 'Hostname', value: 'EC-WS-001' }] },
+      },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({
+      state: 'ok',
+      updated: 0,
+      unchanged: 1,
+      stale: 0,
+      rmmSkipped: 1,
+      syncedAt: expect.any(String),
+    });
+    expect(updateAssetMock).not.toHaveBeenCalled();
+    // hudu_synced_at still refreshes, and reappearance clears the stale flag as usual.
+    expect(attributeUpdates).toHaveLength(1);
+    expect(setHuduAssetMappingStaleMock).toHaveBeenCalledWith(knexCallableMock, TENANT, { mappingId: 'am-1' }, false);
+  });
+
+  it('T262: an RMM-owned asset with no name/serial diff is plain unchanged — rmmSkipped stays 0', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([{ id: 1, name: 'EC-WS-001', primary_serial: 'SN-EC-1001', archived: false }])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      { asset_id: ASSET_1, name: 'EC-WS-001', serial_number: 'SN-EC-1001', rmm_provider: 'ninjaone' },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({
+      state: 'ok',
+      updated: 0,
+      unchanged: 1,
+      stale: 0,
+      rmmSkipped: 0,
+      syncedAt: expect.any(String),
+    });
+    expect(updateAssetMock).not.toHaveBeenCalled();
+  });
+
+  it('T262: an archived Hudu asset mapped to an RMM-owned Alga asset goes stale normally', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([{ id: 1, name: 'EC-WS-001-HUDU', primary_serial: 'SN-HUDU-9', archived: true }])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      { asset_id: ASSET_1, name: 'NINJA-WS-01', serial_number: 'SN-RMM-1', rmm_provider: 'ninjaone' },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({
+      state: 'ok',
+      updated: 0,
+      unchanged: 0,
+      stale: 1,
+      rmmSkipped: 0,
+      syncedAt: expect.any(String),
+    });
+    expect(setHuduAssetMappingStaleMock).toHaveBeenCalledWith(knexCallableMock, TENANT, { mappingId: 'am-1' }, true);
+    expect(attributeUpdates).toHaveLength(0);
+  });
+
+  it('T263: rmm_provider null keeps the pull-update path exactly as before (regression)', async () => {
+    getHuduCompanyAssetsMock.mockResolvedValue(
+      okFetch([{ id: 1, name: 'EC-WS-001-RENAMED', primary_serial: 'SN-NEW-1', archived: false }])
+    );
+    getHuduAssetMappingRowsMock.mockResolvedValue([mappingRow('am-1', ASSET_1, 1)]);
+    assetsRows = [
+      { asset_id: ASSET_1, name: 'EC-WS-001', serial_number: 'SN-EC-1001', rmm_provider: null },
+    ];
+    const { syncHuduClientAssets } = await importActions();
+
+    const result = await syncHuduClientAssets({ clientId: CLIENT_1 });
+
+    expect(updateAssetMock).toHaveBeenCalledTimes(1);
+    expect(updateAssetMock).toHaveBeenCalledWith(ASSET_1, {
+      name: 'EC-WS-001-RENAMED',
+      serial_number: 'SN-NEW-1',
+    });
+    expect(result).toEqual({
+      state: 'ok',
+      updated: 1,
+      unchanged: 0,
+      stale: 0,
+      rmmSkipped: 0,
+      syncedAt: expect.any(String),
+    });
   });
 });
 

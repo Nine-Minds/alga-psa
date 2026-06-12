@@ -806,6 +806,7 @@
         "pendingSummary": "Niet-opgeslagen wijzigingen: {{total}}",
         "sync": {
           "summary": "Synchronisatie voltooid: {{updated}} bijgewerkt · {{unchanged}} ongewijzigd · {{stale}} verouderd.",
+          "rmmSkipped": "{{rmmSkipped}} door RMM beheerd overgeslagen.",
           "lastSynced": "Laatst gesynchroniseerd: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Kan de asset-toewijzing niet bijwerken.",
           "import": "Kan het Hudu-asset niet importeren.",
           "importAll": "Bulkimport mislukt.",
+          "serialConflict": "Het serienummer is al in gebruik door \"{{name}}\".",
           "sync": "Kan niet synchroniseren vanuit Hudu.",
           "rateLimited": "Hudu-aanvraaglimiet bereikt. Probeer het later opnieuw.",
           "unmapped": "Deze klant is niet toegewezen aan een Hudu-bedrijf.",

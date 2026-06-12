@@ -66,6 +66,7 @@ interface SyncSummary {
   updated: number;
   unchanged: number;
   stale: number;
+  rmmSkipped: number;
   syncedAt: string;
 }
 
@@ -196,6 +197,21 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
           t('integrations.hudu.assets.errors.save', { defaultValue: 'Failed to update the asset mapping.' })
         );
     }
+  };
+
+  // F262: serial conflicts name the existing asset; other codes fall back to
+  // the server message.
+  const importErrorMessage = (failure: { error: string; code?: string; existing_asset_name?: string }): string => {
+    if (failure.code === 'serial_conflict') {
+      return t('integrations.hudu.assets.errors.serialConflict', {
+        defaultValue: 'Serial number already in use by "{{name}}".',
+        name: failure.existing_asset_name ?? '',
+      });
+    }
+    return (
+      failure.error ||
+      t('integrations.hudu.assets.errors.import', { defaultValue: 'Failed to import the Hudu asset.' })
+    );
   };
 
   const reportMappingFailure = (result: { error: string; code?: string }) => {
@@ -342,10 +358,7 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
     try {
       const result = await importHuduAsset({ clientId, huduAssetId: row.hudu_asset_id });
       if (isImportFailure(result)) {
-        setError(
-          result.error ||
-            t('integrations.hudu.assets.errors.import', { defaultValue: 'Failed to import the Hudu asset.' })
-        );
+        setError(importErrorMessage(result));
         return;
       }
       setAssetOptions((prev) =>
@@ -562,6 +575,14 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
                 stale: syncSummary.stale,
               })}
             </span>{' '}
+            {syncSummary.rmmSkipped > 0 && (
+              <span id="hudu-asset-sync-rmm-skipped">
+                {t('integrations.hudu.assets.sync.rmmSkipped', {
+                  defaultValue: '{{rmmSkipped}} RMM-managed skipped.',
+                  rmmSkipped: syncSummary.rmmSkipped,
+                })}{' '}
+              </span>
+            )}
             <span>
               {t('integrations.hudu.assets.sync.lastSynced', {
                 defaultValue: 'Last synced: {{timestamp}}',
@@ -591,7 +612,7 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
                     {rows.find((row) => row.hudu_asset_id === failure.huduAssetId)?.hudu_asset_name ??
                       failure.huduAssetId}
                     {': '}
-                    {failure.error}
+                    {importErrorMessage(failure)}
                   </li>
                 ))}
               </ul>

@@ -806,6 +806,7 @@
         "pendingSummary": "Cambios sin guardar: {{total}}",
         "sync": {
           "summary": "Sincronización completada: {{updated}} actualizados · {{unchanged}} sin cambios · {{stale}} obsoletos.",
+          "rmmSkipped": "{{rmmSkipped}} gestionados por RMM omitidos.",
           "lastSynced": "Última sincronización: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "No se pudo actualizar la asignación del activo.",
           "import": "No se pudo importar el activo de Hudu.",
           "importAll": "La importación masiva falló.",
+          "serialConflict": "El número de serie ya está en uso por «{{name}}».",
           "sync": "No se pudo sincronizar desde Hudu.",
           "rateLimited": "Se alcanzó el límite de solicitudes de Hudu. Inténtelo de nuevo más tarde.",
           "unmapped": "Este cliente no está asignado a una empresa de Hudu.",

@@ -806,6 +806,7 @@
         "pendingSummary": "Alterações não salvas: {{total}}",
         "sync": {
           "summary": "Sincronização concluída: {{updated}} atualizados · {{unchanged}} inalterados · {{stale}} desatualizados.",
+          "rmmSkipped": "{{rmmSkipped}} geridos por RMM ignorados.",
           "lastSynced": "Última sincronização: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Falha ao atualizar o mapeamento do ativo.",
           "import": "Falha ao importar o ativo do Hudu.",
           "importAll": "Falha na importação em massa.",
+          "serialConflict": "O número de série já está em uso por \"{{name}}\".",
           "sync": "Falha ao sincronizar do Hudu.",
           "rateLimited": "Limite de requisições do Hudu atingido. Tente novamente mais tarde.",
           "unmapped": "Este cliente não está mapeado para uma empresa do Hudu.",

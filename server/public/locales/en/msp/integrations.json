@@ -806,6 +806,7 @@
         "pendingSummary": "Unsaved changes: {{total}}",
         "sync": {
           "summary": "Sync complete: {{updated}} updated · {{unchanged}} unchanged · {{stale}} stale.",
+          "rmmSkipped": "{{rmmSkipped}} RMM-managed skipped.",
           "lastSynced": "Last synced: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Failed to update the asset mapping.",
           "import": "Failed to import the Hudu asset.",
           "importAll": "Bulk import failed.",
+          "serialConflict": "Serial number already in use by \"{{name}}\".",
           "sync": "Failed to sync from Hudu.",
           "rateLimited": "Hudu rate limit reached. Try again later.",
           "unmapped": "This client is not mapped to a Hudu company.",

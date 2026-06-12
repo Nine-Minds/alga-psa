@@ -806,6 +806,7 @@
         "pendingSummary": "Niezapisane zmiany: {{total}}",
         "sync": {
           "summary": "Synchronizacja zakończona: {{updated}} zaktualizowane · {{unchanged}} bez zmian · {{stale}} nieaktualne.",
+          "rmmSkipped": "{{rmmSkipped}} zarządzane przez RMM pominięte.",
           "lastSynced": "Ostatnia synchronizacja: {{timestamp}}"
         },
         "import": {
@@ -820,6 +821,7 @@
           "save": "Nie udało się zaktualizować mapowania zasobu.",
           "import": "Nie udało się zaimportować zasobu Hudu.",
           "importAll": "Import zbiorczy nie powiódł się.",
+          "serialConflict": "Numer seryjny jest już używany przez „{{name}}”.",
           "sync": "Nie udało się zsynchronizować z Hudu.",
           "rateLimited": "Osiągnięto limit żądań Hudu. Spróbuj ponownie później.",
           "unmapped": "Ten klient nie jest zmapowany do firmy Hudu.",
