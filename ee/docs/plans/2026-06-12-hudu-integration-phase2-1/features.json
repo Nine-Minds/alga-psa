@@ -1,0 +1,119 @@
+[
+  {
+    "id": "F251",
+    "description": "HuduAsset contract gains asset_layout_id + fields[] ({label, value, position}); Phase 2 local typings replaced",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F252",
+    "description": "Import writes attributes.hudu_fields (position-ordered label/value array) + hudu_synced_at, preserving sibling attributes keys",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F253",
+    "description": "Sync refreshes hudu_fields on mapped live assets (Hudu-won namespace); changed fields count the row as updated",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F254",
+    "description": "Read-only 'Hudu Documentation' card on asset detail rendering attributes.hudu_fields; pure data-presence gate, CE-resident",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F255",
+    "description": "Card strings i18n'd in 8 locales in the asset components' namespace",
+    "implemented": true,
+    "commitGroup": "hudu-attributes",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F256",
+    "description": "Layout map accepts 'excluded'; normalization + resolver expose exclusion distinctly from 'unknown'",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F257",
+    "description": "Settings UI type select gains 'Don't import' option (8-locale strings)",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F258",
+    "description": "Single import returns typed layout_excluded; bulk skips excluded layouts with skipped count in summary",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F259",
+    "description": "Mapping manager hides Import affordances for excluded-layout rows (still mappable to existing assets)",
+    "implemented": true,
+    "commitGroup": "layout-exclude",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F260",
+    "description": "Sync skips name/serial for rmm_provider assets but still refreshes hudu_fields + stale; summary gains rmmSkipped surfaced in UI",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F261",
+    "description": "Import pre-checks tenant-wide non-blank serial collision -> typed serial_conflict naming existing asset; bulk records per-row",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F262",
+    "description": "Bulk summary UI distinguishes created / skipped / failed (incl. serial conflicts)",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F263",
+    "description": "Permissions sweep + i18n static scan remain green with new strings/scans wired",
+    "implemented": true,
+    "commitGroup": "multi-source-guard",
+    "prdRefs": [
+      "FR13"
+    ]
+  }
+]
