@@ -275,6 +275,117 @@ export const updateRmmMaintenanceWindow = withAuth(
   }
 );
 
+// ---------------------------------------------------------------------------
+// Form options + polling settings (settings UI support)
+// ---------------------------------------------------------------------------
+
+export interface RmmAlertRuleFormOptions {
+  boards: Array<{ board_id: string; board_name: string }>;
+  priorities: Array<{ priority_id: string; priority_name: string }>;
+  closedStatuses: Array<{ status_id: string; name: string }>;
+  users: Array<{ user_id: string; first_name: string | null; last_name: string | null; email: string }>;
+  organizations: Array<{ external_organization_id: string; external_organization_name: string | null }>;
+}
+
+export const getRmmAlertRuleFormOptions = withAuth(
+  async (user, { tenant }, input: { integrationId: string }): Promise<ActionResult<RmmAlertRuleFormOptions>> => {
+    if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
+      return { success: false, error: 'Permission denied' };
+    }
+    const { knex } = await createTenantKnex();
+    const [boards, priorities, closedStatuses, users, organizations] = await Promise.all([
+      knex('boards').where({ tenant }).select('board_id', 'board_name').orderBy('board_name'),
+      knex('priorities').where({ tenant }).select('priority_id', 'priority_name').orderBy('priority_name'),
+      knex('statuses')
+        .where({ tenant, item_type: 'ticket', is_closed: true })
+        .select('status_id', 'name')
+        .orderBy('order_number'),
+      knex('users')
+        .where({ tenant, user_type: 'internal' })
+        .andWhere((qb) => qb.where('is_inactive', false).orWhereNull('is_inactive'))
+        .select('user_id', 'first_name', 'last_name', 'email')
+        .orderBy('first_name'),
+      knex('rmm_organization_mappings')
+        .where({ tenant, integration_id: input.integrationId })
+        .select('external_organization_id', 'external_organization_name')
+        .orderBy('external_organization_name'),
+    ]);
+    return { success: true, data: { boards, priorities, closedStatuses, users, organizations } };
+  }
+);
+
+export interface RmmAlertPollingSettingsView {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastPolledAt: string | null;
+}
+
+export const getRmmAlertPollingSettings = withAuth(
+  async (user, { tenant }, input: { integrationId: string }): Promise<ActionResult<RmmAlertPollingSettingsView>> => {
+    if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
+      return { success: false, error: 'Permission denied' };
+    }
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, integration_id: input.integrationId })
+      .first('settings');
+    if (!integration) {
+      return { success: false, error: 'Integration not found' };
+    }
+    const settings = typeof integration.settings === 'string' ? safeJson(integration.settings) : integration.settings;
+    const polling = (settings?.alertPolling ?? {}) as Record<string, unknown>;
+    const rawInterval = Number(polling.intervalMinutes);
+    return {
+      success: true,
+      data: {
+        enabled: polling.enabled !== false,
+        intervalMinutes: Number.isFinite(rawInterval) ? rawInterval : 15,
+        lastPolledAt: typeof polling.lastPolledAt === 'string' ? polling.lastPolledAt : null,
+      },
+    };
+  }
+);
+
+export const updateRmmAlertPollingSettings = withAuth(
+  async (
+    user,
+    { tenant },
+    input: { integrationId: string; enabled: boolean; intervalMinutes: number }
+  ): Promise<ActionResult<null>> => {
+    if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
+      return { success: false, error: 'Permission denied' };
+    }
+    const intervalMinutes = Math.round(Number(input.intervalMinutes));
+    if (!Number.isFinite(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 60) {
+      return { success: false, error: 'Poll interval must be between 5 and 60 minutes' };
+    }
+    const { knex } = await createTenantKnex();
+    const updated = await knex('rmm_integrations')
+      .where({ tenant, integration_id: input.integrationId })
+      .update({
+        settings: knex.raw(
+          `jsonb_set(
+             jsonb_set(COALESCE(settings, '{}'::jsonb), '{alertPolling,enabled}', to_jsonb(?::boolean), true),
+             '{alertPolling,intervalMinutes}', to_jsonb(?::int), true
+           )`,
+          [input.enabled, intervalMinutes]
+        ),
+      });
+    if (!updated) {
+      return { success: false, error: 'Integration not found' };
+    }
+    return { success: true, data: null };
+  }
+);
+
+function safeJson(value: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 export const deleteRmmMaintenanceWindow = withAuth(
   async (user, { tenant }, input: { windowId: string }): Promise<ActionResult<null>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
@@ -286,5 +397,23 @@ export const deleteRmmMaintenanceWindow = withAuth(
       return { success: false, error: 'Window not found' };
     }
     return { success: true, data: null };
+  }
+);
+
+/**
+ * Resolve the rmm_integrations.integration_id for a given provider slug.
+ * Used by the alert-automation settings UI when the provider-pane component
+ * doesn't already have the integration_id in its loaded state.
+ */
+export const getRmmIntegrationIdByProvider = withAuth(
+  async (user, { tenant }, input: { provider: string }): Promise<ActionResult<{ integrationId: string | null }>> => {
+    if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
+      return { success: false, error: 'Permission denied' };
+    }
+    const { knex } = await createTenantKnex();
+    const row = await knex('rmm_integrations')
+      .where({ tenant, provider: input.provider })
+      .first('integration_id');
+    return { success: true, data: { integrationId: row?.integration_id ?? null } };
   }
 );

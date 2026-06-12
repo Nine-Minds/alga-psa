@@ -1,3 +1,4 @@
+export { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
 export { default as AccountingIntegrationsSetup } from './AccountingIntegrationsSetup';
 export { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 export { default as CSVIntegrationSettings } from './CSVIntegrationSettings';
