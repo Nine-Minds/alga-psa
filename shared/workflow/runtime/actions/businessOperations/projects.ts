@@ -575,7 +575,7 @@ async function getProjectStatusMappingDetails(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.tenant': tx.tenantId, 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
@@ -610,7 +610,7 @@ async function getScopedProjectStatusMappings(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.tenant': tx.tenantId, 'psm.project_id': projectId });
 
@@ -647,7 +647,7 @@ async function ensureProjectDefaultStatusMappings(
   if (existing.length > 0) return existing;
 
   const standardStatuses = await tx.trx('standard_statuses')
-    .where({ tenant: tx.tenantId, item_type: 'project_task' })
+    .where({ item_type: 'project_task' })
     .orderBy('display_order', 'asc');
 
   for (const status of standardStatuses) {

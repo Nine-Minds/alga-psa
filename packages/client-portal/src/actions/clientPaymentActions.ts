@@ -208,7 +208,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'succeeded',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -251,7 +251,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: paymentUrl ? 'pending' : 'failed',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -267,7 +267,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'succeeded',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -281,7 +281,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'processing',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -296,7 +296,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'pending',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -310,7 +310,7 @@ export const verifyClientPortalPayment = withAuth(async (
       data: {
         status: 'failed',
         invoiceNumber: invoice.invoice_number,
-        amount: invoice.total_amount,
+        amount: invoice.total_amount - (invoice.credit_applied ?? 0),
         currencyCode: invoice.currency_code || 'USD',
         servicePeriodStart: recurringSummary?.service_period_start ?? null,
         servicePeriodEnd: recurringSummary?.service_period_end ?? null,

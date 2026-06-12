@@ -7,7 +7,7 @@
 import type { Knex } from 'knex';
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE';
 
 export interface NumberingServiceDependencies {
   knex: Knex | Knex.Transaction;
@@ -42,6 +42,20 @@ export class SharedNumberingService {
             initial_value: 1,
             prefix: 'Q-',
             padding_length: 4,
+          })
+          .onConflict(['tenant', 'entity_type'])
+          .ignore();
+      }
+
+      if (entityType === 'CREDIT_NOTE') {
+        await knex('next_number')
+          .insert({
+            tenant,
+            entity_type: 'CREDIT_NOTE',
+            last_number: 0,
+            initial_value: 1,
+            prefix: 'CM-',
+            padding_length: 6,
           })
           .onConflict(['tenant', 'entity_type'])
           .ignore();

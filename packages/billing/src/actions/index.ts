@@ -45,6 +45,7 @@ export * from './serviceRateTierActions';
 export * from './taxSettingsActions';
 export * from './taxSourceActions';
 export * from './usageActions';
+export * from './voidInvoiceActions';
 
 // Export contract actions explicitly to avoid conflicts with contractLineMappingActions
 export {
@@ -85,3 +86,36 @@ export {
   updateTaxRate,
   deleteTaxRate,
 } from './taxRateActions';
+
+// QBO onboarding & reconciliation actions (EE only)
+export {
+  getCustomerMatchCandidates,
+  linkClientToQboCustomer,
+  bulkLinkExactCustomerMatches,
+  createQboCustomerForClient,
+  getHistoricalInvoiceMatches,
+  bulkLinkHistoricalInvoices,
+  backfillPaymentsForLinkedInvoices,
+  getOnboardingWizardState,
+  completeOnboardingWizard,
+  type HistMatch,
+} from './qboOnboardingActions';
+
+// Accounting sync actions (EE only)
+export {
+  getAccountingSyncSettingsAction,
+  updateAccountingSyncSettingsAction,
+  runAccountingSyncNow,
+  queueInvoiceSync,
+  resolveAccountingDriftReExport,
+  resolveAccountingDriftAccept,
+  getInvoiceSyncStatuses,
+  getAccountingSyncHealth,
+  setDefaultQboRealm,
+} from './accountingSyncActions';
+export type {
+  InvoiceSyncState,
+  InvoiceSyncStatus,
+  AccountingSyncHealth,
+  AccountingSyncRealmInfo,
+} from './accountingSyncActions';

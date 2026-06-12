@@ -80,6 +80,7 @@
     "playStoreQrAlt": "55555",
     "connectServer": "55555",
     "connectServerQrAlt": "55555",
+    "zoomAria": "55555 {{label}} 55555",
     "hide": "55555",
     "hiding": "55555",
     "dismissAria": "55555",

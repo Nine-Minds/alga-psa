@@ -388,8 +388,7 @@ async function fetchProjectTaskWebhookRow(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id')
-        .andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .leftJoin('users as au', function joinAssignedUsers() {
       this.on('pt.assigned_to', '=', 'au.user_id').andOn('pt.tenant', '=', 'au.tenant');
@@ -495,8 +494,7 @@ export async function fetchProjectTaskCountsForWebhook(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id')
-        .andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .select(
       knex.raw('COALESCE(psm.custom_name, s.name, ss.name, pt.project_status_mapping_id::text) as status_name'),
@@ -544,8 +542,7 @@ async function fetchProjectStatusName(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses() {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id')
-        .andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({
       'psm.tenant': tenantId,

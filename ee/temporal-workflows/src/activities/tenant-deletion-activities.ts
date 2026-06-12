@@ -223,6 +223,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_reconciliation_reports', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  // Accounting sync engine (leaf tables: nothing references them)
+  'accounting_sync_operations', 'accounting_sync_cycles',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -363,7 +365,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // === LEVEL 8: Lookup tables previously referenced by boards and tickets ===
   // Must be deleted AFTER boards (see FK notes above) and AFTER tickets.
-  'standard_statuses', 'statuses',
+  // standard_statuses is a global reference catalog (no tenant column) and
+  // must never be touched by tenant deletion.
+  'statuses',
   'priorities', 'severities', 'urgencies', 'impacts',
 
   // === LEVEL 8: Breaking circular dependencies ===

@@ -44,6 +44,11 @@ export default function LicenseBanner() {
         urgency = 'info';
       }
       break;
+    case 'trial_available':
+      // Fresh install, trial not yet used — invite, don't warn.
+      message = 'Running Essentials features. Start a free 30-day Enterprise trial to unlock all features.';
+      urgency = 'info';
+      break;
     case 'trial_expired':
       message = 'Enterprise trial has expired. The install is now running Essentials features.';
       urgency = 'warning';

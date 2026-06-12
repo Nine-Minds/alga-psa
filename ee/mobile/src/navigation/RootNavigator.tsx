@@ -1,8 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Platform, Pressable, Text } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Platform } from "react-native";
 import type { RootStackParamList } from "./types";
-import { TabsNavigator } from "./TabsNavigator";
+import { DrawerNavigator } from "./DrawerNavigator";
+import { goBackOrTabs, headerBackOptions } from "./HeaderBackButton";
 import { SignInScreen } from "../screens/SignInScreen";
 import { ServerEntryScreen } from "../screens/ServerEntryScreen";
 import { TicketDetailScreen } from "../screens/TicketDetailScreen";
@@ -11,6 +11,8 @@ import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
 import { CreateWorkspaceScreen } from "../screens/CreateWorkspaceScreen";
 import { AccountDeletionScreen } from "../screens/AccountDeletionScreen";
 import { MutedUsersScreen } from "../screens/MutedUsersScreen";
+import { ClientDetailScreen } from "../screens/ClientDetailScreen";
+import { ContactDetailScreen } from "../screens/ContactDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -20,8 +22,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const theme = useTheme();
   const { t: tAuth } = useTranslation("auth");
+  const { t: tCommon } = useTranslation("common");
   const { t: tTickets } = useTranslation("tickets");
   const { t: tSettings } = useTranslation("settings");
+  const { t: tClients } = useTranslation("clients");
+  const { t: tContacts } = useTranslation("contacts");
+  const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
   useNotifications();
@@ -43,7 +49,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
     >
       {isSignedIn ? (
         <>
-          <Stack.Screen name="Tabs" component={TabsNavigator} options={{ headerShown: false }} />
+          <Stack.Screen name="Tabs" component={DrawerNavigator} options={{ headerShown: false }} />
           <Stack.Screen
             name="AuthCallback"
             component={AuthCallbackScreen}
@@ -52,35 +58,26 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
           <Stack.Screen
             name="AccountDeletion"
             component={AccountDeletionScreen}
-            options={{ title: tAuth("accountDeletion.title", "Delete Account") }}
+            options={({ navigation }) => ({
+              title: tAuth("accountDeletion.title", "Delete Account"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
           />
           <Stack.Screen
             name="MutedUsers"
             component={MutedUsersScreen}
-            options={{ title: tSettings("mutedUsers.title", "Muted users") }}
+            options={({ navigation }) => ({
+              title: tSettings("mutedUsers.title", "Muted users"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
           />
           <Stack.Screen
             name="CreateTicket"
             component={CreateTicketScreen}
             options={({ navigation }) => ({
               title: tTickets("create.title", "New Ticket"),
-              headerBackTitle: tTickets("list.title", "Tickets"),
-              ...(Platform.OS === "android" ? {
-                headerTitleAlign: "left" as const,
-                headerLeft: () => (
-                  <Pressable
-                    onPress={() => navigation.goBack()}
-                    accessibilityRole="button"
-                    accessibilityLabel={tTickets("list.title", "Tickets")}
-                    style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}
-                  >
-                    <Feather name="chevron-left" size={24} color={theme.colors.text} />
-                    <Text style={{ color: theme.colors.text, fontSize: 16, marginLeft: 2 }}>
-                      {tTickets("list.title", "Tickets")}
-                    </Text>
-                  </Pressable>
-                ),
-              } : {}),
+              ...(Platform.OS === "android" ? { headerTitleAlign: "left" as const } : {}),
+              ...headerBackOptions(tTickets("list.title", "Tickets"), goBackOrTabs(navigation)),
             })}
           />
           <Stack.Screen
@@ -88,23 +85,24 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={TicketDetailScreen}
             options={({ navigation }) => ({
               title: tTickets("list.title", "Tickets"),
-              headerBackTitle: tTickets("list.title", "Tickets"),
-              ...(Platform.OS === "android" ? {
-                headerTitleAlign: "left" as const,
-                headerLeft: () => (
-                  <Pressable
-                    onPress={() => navigation.goBack()}
-                    accessibilityRole="button"
-                    accessibilityLabel={tTickets("list.title", "Tickets")}
-                    style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}
-                  >
-                    <Feather name="chevron-left" size={24} color={theme.colors.text} />
-                    <Text style={{ color: theme.colors.text, fontSize: 16, marginLeft: 2 }}>
-                      {tTickets("list.title", "Tickets")}
-                    </Text>
-                  </Pressable>
-                ),
-              } : {}),
+              ...(Platform.OS === "android" ? { headerTitleAlign: "left" as const } : {}),
+              ...headerBackOptions(tTickets("list.title", "Tickets"), goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="ClientDetail"
+            component={ClientDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.clientName ?? tClients("detail.title", "Client"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="ContactDetail"
+            component={ContactDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.contactName ?? tContacts("detail.title", "Contact"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />
         </>

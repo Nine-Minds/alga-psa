@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
+import { useSession } from 'next-auth/react';
 import { getLicenseStatus, submitLicense, startTrial, connectAppliance } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -20,6 +21,7 @@ export default function LicenseManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { update: updateSession } = useSession();
 
   useEffect(() => {
     getLicenseStatus().then((s) => { setStatus(s); setLoading(false); });
@@ -28,6 +30,10 @@ export default function LicenseManagementPage() {
   function refresh(newStatus: LicenseStatus) {
     setStatus(newStatus);
     setError(null);
+    // The session JWT caches effectiveTier and only re-resolves it every
+    // 5 minutes (PLAN_CHECK_INTERVAL) — force a refresh so tier-gated features
+    // react to the license change immediately instead of after re-login/poll.
+    void updateSession();
   }
 
   function handleSubmitLicense() {
@@ -91,6 +97,7 @@ export default function LicenseManagementPage() {
 
   const stateLabelMap: Record<string, string> = {
     ce: 'Community Edition (Essentials)',
+    trial_available: 'Essentials — Enterprise Trial Available',
     trial: 'Enterprise Trial',
     trial_expired: 'Trial Expired — Essentials',
     licensed: 'Licensed',

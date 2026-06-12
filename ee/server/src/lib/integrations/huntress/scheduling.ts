@@ -4,6 +4,7 @@
  * has elapsed. Registered from initializeApp in enterprise builds.
  */
 
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { runWithTenant } from '@/lib/db';
@@ -12,6 +13,7 @@ import { isPollDue, parseHuntressSettings } from './settings';
 import { runHuntressIncidentPoll } from './incidents/incidentPoller';
 
 export const HUNTRESS_POLL_JOB_NAME = 'huntress-incident-poll-dispatch';
+const HUNTRESS_FEATURE_FLAG = 'huntress-rmm-integration';
 const DISPATCH_INTERVAL = process.env.HUNTRESS_POLL_DISPATCH_INTERVAL || '5 minutes';
 
 export async function dispatchHuntressPolls(now: Date = new Date()): Promise<void> {
@@ -23,6 +25,11 @@ export async function dispatchHuntressPolls(now: Date = new Date()): Promise<voi
   for (const row of integrations) {
     const settings = parseHuntressSettings(row.settings);
     if (!isPollDue(row.last_incremental_sync_at, settings.pollIntervalMinutes, now)) continue;
+
+    const flagEnabled = await isFeatureFlagEnabled(HUNTRESS_FEATURE_FLAG, {
+      tenantId: String(row.tenant),
+    });
+    if (!flagEnabled) continue;
 
     try {
       await runWithTenant(String(row.tenant), async () => {

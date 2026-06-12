@@ -631,7 +631,8 @@
       "open": "Openen",
       "execute": "Uitvoeren",
       "createBatch": "Batch maken",
-      "creating": "Creëren..."
+      "creating": "Creëren...",
+      "cancelBatch": "Batch annuleren"
     },
     "states": {
       "loadingBatches": "Batch laden...",
@@ -678,7 +679,9 @@
       "loadBatchesError": "Kan boekhoudexportbatches niet laden",
       "loadDetailError": "Kan batchdetails niet laden",
       "createError": "Kan exportbatch niet maken",
-      "executeError": "Kan batch niet uitvoeren"
+      "executeError": "Kan batch niet uitvoeren",
+      "cancelled": "Batch geannuleerd",
+      "cancelError": "Kan batch niet annuleren"
     },
     "status": {
       "pending": "In afwachting",

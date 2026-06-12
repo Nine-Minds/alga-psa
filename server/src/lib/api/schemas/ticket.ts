@@ -98,7 +98,11 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   status_name: z.string().optional(),
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
-  board_name: z.string().optional()
+  board_name: z.string().optional(),
+  tags: z.union([
+    z.array(z.string()),
+    arrayTransform(z.string())
+  ]).transform(tags => tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0)).optional()
 });
 
 // Ticket list query schema

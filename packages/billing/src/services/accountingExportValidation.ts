@@ -125,7 +125,7 @@ export class AccountingExportValidation {
     const invoices =
       invoiceIds.size > 0
         ? await knex('invoices')
-            .select('invoice_id', 'client_id', 'tax_source')
+            .select('invoice_id', 'client_id', 'tax_source', 'invoice_type')
             .whereIn('invoice_id', Array.from(invoiceIds))
             .andWhere({ tenant: batch.tenant })
         : [];
@@ -135,6 +135,26 @@ export class AccountingExportValidation {
       for (const invoice of invoices) {
         if (invoice.client_id) {
           clientIds.add(invoice.client_id);
+        }
+      }
+    }
+
+    // Prepayments are excluded from QBO export. Emit an error per invoice so the
+    // batch UI surfaces a clear, actionable message before attempting delivery.
+    if (adapterType === 'quickbooks_online') {
+      for (const invoice of invoices) {
+        if (invoice.invoice_type === 'prepayment') {
+          const lineId = firstLineByInvoice.get(invoice.invoice_id);
+          const line = lineId ? lineById.get(lineId) : null;
+          if (lineId) {
+            await repo.addError({
+              batch_id: batchId,
+              line_id: lineId,
+              code: 'prepayment_not_exportable',
+              message: 'Prepayment invoices are not exported to accounting systems.',
+              metadata: mergeErrorMetadata(line, { invoice_id: invoice.invoice_id })
+            });
+          }
         }
       }
     }
@@ -332,7 +352,7 @@ export class AccountingExportValidation {
           batch_id: batchId,
           line_id: firstLine.line_id,
           code: 'missing_target_realm',
-          message: 'QuickBooks exports require a target realm.',
+          message: 'Connect QuickBooks Online before exporting.',
           metadata: mergeErrorMetadata(firstLine)
         });
       }

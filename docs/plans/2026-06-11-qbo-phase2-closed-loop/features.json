@@ -1,0 +1,351 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: accounting_sync_cycles table (cycle_id, tenant, adapter_type, target_realm, status, started_at, finished_at, cursor_before, cursor_after, stats jsonb, error), Citus-distributed on tenant like accounting_export_* tables.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: accounting_sync_operations table (op_id, tenant, adapter_type, target_realm, operation, alga_entity_type, alga_entity_id, status pending|in_progress|done|failed|skipped, attempts, last_error, payload jsonb, created_at, processed_at), Citus-distributed on tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: accounting_export_batches.origin column ('manual' default | 'scheduled') so scheduled auto-batches are distinguishable in the existing exports UI.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4",
+      "6"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Per-tenant auto-sync setting (storage + read/write accessors + server action), default OFF; toggled from the settings health panel. Gated EE + billing_settings update.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4",
+      "5.6"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "QuickBooksOnlineAdapter.deliver snapshots the exported total in mapping metadata alongside the existing sync token (drift baseline).",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "AccountingExportAdapterCapabilities extended with supportsChangePolling and supportsPaymentRecording; QBO adapter declares both true, CSV/Xero adapters false.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "QboClientService.fetchChanges(since): ChangeDataCapture call for Customer, Payment, Invoice, CreditMemo returning a normalized change set (entity type, id, sync token, deleted flag, payload), handling CDC pagination.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "AccountingSyncCycleService: orchestrates one cycle per tenant\u00d7realm in order token-health \u2192 inbound (customers, payments, invoice drift) \u2192 outbound drain \u2192 cursor advance; writes accounting_sync_cycles row with stats (payments applied/skipped, drift found, ops drained/failed, unmapped ignored).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Cursor management: poll from last successful cursor_after minus 5-minute overlap; cursor advances only when inbound application succeeds; outbound failures never block the cursor.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Ops queue repository: enqueue with dedupe (one pending op per entity+operation), claim/in_progress, complete, fail with attempts increment and capped retries (cap \u2192 status skipped + exception).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Job scheduling: accounting-sync-cycle registered through IJobRunner every 15 minutes, singleton-keyed per tenant\u00d7realm; registered on OAuth connect, deregistered on disconnect, re-registered for connected tenants at startup. Must not fall into JobScheduler's 24h interval coercion (use short-interval path or fix coercion).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "7"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Sync-now server action (EE + billing_settings update gated) triggering an immediate cycle for the tenant's realm; used by settings panel and invoice detail.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.6"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Cycle guard: cycle exits cleanly (no-op, no cursor burn) when tenant is CE, disconnected, or auto-sync prerequisites are missing; defensively deregisters orphaned schedules.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "recordExternalPayment shared service extracted from PaymentService.recordPaymentFromWebhook (EE), provider-parameterized (stripe|quickbooks); Stripe webhook path refactored onto it with byte-identical behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "computeBalanceDue helper (total_amount \u2212 credit_applied \u2212 payments) used for status flips; initially equivalent to current behavior (slice 2 swaps internals for the credit reshape).",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Payment applier: per-allocation application from QBO Payment.Line[].LinkedTxn \u2014 resolve invoice via mapping ledger, insert invoice_payments (method 'quickbooks', reference = QBO payment number), write payment transaction with {qbo_payment_id, realm} metadata, flip status paid/partially_applied via computeBalanceDue.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Payment mapping rows (alga_entity_type 'invoice_payment', external id = QBO Payment id, metadata: sync token + allocations snapshot) providing inbound idempotency and echo suppression.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Payment edit handling: CDC payment with moved sync token is transactionally reversed and reapplied from its current allocations.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Payment delete handling: CDC-deleted payment writes payment_reversal transactions, removes/voids the invoice_payments rows, recomputes invoice status.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Inbound payment exceptions: allocation against an unmapped QBO invoice \u2192 accounting_sync_unmapped_payment exception; payment/invoice currency mismatch \u2192 exception; neither applies anything.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2",
+      "5.5"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Unapplied/overpayment remainders and RefundReceipts are recorded in cycle stats only \u2014 never applied, never imported.",
+    "implemented": true,
+    "prdRefs": [
+      "5.2"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Customer change applier: QBO renames refresh the mapping's cached display name; mapped customer deleted/merged/inactive in QBO \u2192 exception (customer re-link UI arrives in slice 3; exception links to mappings tab).",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.5"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Drift comparator: for mapped invoices with moved sync token, compare exported-total snapshot, void/delete state, and doc number; balance-only movement is not drift; unmapped QBO invoices counted in stats only.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Material drift sets mapping sync_status 'drift' and files an accounting_sync_drift exception carrying both versions (Alga snapshot vs QBO current).",
+    "implemented": true,
+    "prdRefs": [
+      "5.3",
+      "5.5"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Drift resolution \u2014 re-export: sparse-update QBO back to Alga's truth, refresh snapshot/sync token, clear drift status and close the exception.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Drift resolution \u2014 accept: refresh the mapping snapshot to QBO's current values (acknowledgment, no Alga document change), clear drift status and close the exception.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "QBO-side void/delete of a mapped invoice: mapping enters an external-voided state surfaced as drift exception; badge renders the voided state.",
+    "implemented": true,
+    "prdRefs": [
+      "5.3",
+      "5.6"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "finalizeInvoice producer hook: enqueue export_invoice when a realm is connected and tenant auto-sync is on (EE-gated, no-op otherwise).",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Outbound drain: pending export_invoice ops grouped into one auto-created batch (origin 'scheduled') per cycle, run through the existing validate\u2192transform\u2192deliver pipeline; ops marked done/failed from batch results.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Scheduled-batch validation failures (missing mappings etc.) create accounting_sync_export_error exceptions instead of remaining silent batch errors.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4",
+      "5.5"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Manual batch creation marks matching pending export_invoice ops done so manual and scheduled paths never double-export.",
+    "implemented": true,
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Migration: system task definitions + forms for accounting_sync_drift, accounting_sync_unmapped_payment, accounting_sync_export_error, accounting_connection_expired; supersedes/folds the unwired qbo_mapping_error type.",
+    "implemented": true,
+    "prdRefs": [
+      "5.5"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Exception service: create-or-update with dedupe \u2014 one open workflow task per entity+type; subsequent cycles update context instead of filing duplicates; resolution closes the task.",
+    "implemented": true,
+    "prdRefs": [
+      "5.5"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Connection-failure handling: hard auth failure marks the connection expired, files accounting_connection_expired exception, notifies billing admins immediately (internal + email), aborts cycle without advancing cursor.",
+    "implemented": true,
+    "prdRefs": [
+      "5.1",
+      "5.5"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Token-expiry countdown: cycle checks refresh-token expiry and notifies billing admins once per 14/7/2-day threshold.",
+    "implemented": true,
+    "prdRefs": [
+      "5.5"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Per-cycle summary notification fired only when new exceptions appeared in that cycle ('N new QBO sync exceptions').",
+    "implemented": true,
+    "prdRefs": [
+      "5.5"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Per-invoice sync status read action: aggregates mapping ledger + pending ops into Not synced | Queued | Synced | Drift | Error | Voided; batched variant for list views.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "InvoiceSyncBadge component (InvoiceTaxSourceBadge pattern): state badge + tooltip with QBO doc number, last-synced time, and environment-aware deep link into QBO.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Badge wired into invoice list and invoice detail views.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Invoice detail actions: Sync now (enqueue single invoice + trigger immediate cycle) and View in QuickBooks.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Settings health panel in QboIntegrationSettings: last cycle result + timestamp, next run, pending-ops/exception/drift counts deep-linked to the inbox, token-expiry countdown, Sync Now button, auto-sync toggle.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "i18n: new keys for badge states, health panel, and notifications in en + the 7 translated locales; pseudo-locales regenerated.",
+    "implemented": true,
+    "prdRefs": [
+      "5.6"
+    ]
+  }
+]

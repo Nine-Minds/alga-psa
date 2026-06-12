@@ -631,7 +631,8 @@
       "open": "Apri",
       "execute": "Esegui",
       "createBatch": "Crea lotto",
-      "creating": "Creazione..."
+      "creating": "Creazione...",
+      "cancelBatch": "Annulla lotto"
     },
     "states": {
       "loadingBatches": "Caricamento batch...",
@@ -678,7 +679,9 @@
       "loadBatchesError": "Impossibile caricare i batch di esportazione contabile",
       "loadDetailError": "Impossibile caricare i dettagli del batch",
       "createError": "Impossibile creare il batch di esportazione",
-      "executeError": "Impossibile eseguire il batch"
+      "executeError": "Impossibile eseguire il batch",
+      "cancelled": "Batch annullato",
+      "cancelError": "Impossibile annullare il batch"
     },
     "status": {
       "pending": "In sospeso",

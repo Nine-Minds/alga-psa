@@ -80,6 +80,8 @@ const apiKeySkipPaths = [
   '/api/integrations/ninjaone/callback',
   '/api/integrations/xero/connect',
   '/api/integrations/xero/callback',
+  '/api/integrations/qbo/connect',
+  '/api/integrations/qbo/callback',
   // Entra integration API routes use session auth via requireEntraUiFlagEnabled
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)

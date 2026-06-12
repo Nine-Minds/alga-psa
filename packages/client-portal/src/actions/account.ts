@@ -430,6 +430,7 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]>
     invoice_number: string;
     created_at: string;
     total_amount: number | null;
+    credit_applied: number | null;
     status: string;
     due_date: string;
   }): Invoice => {
@@ -445,7 +446,7 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[]>
       id: invoice.invoice_id,
       number: invoice.invoice_number,
       date: formatDate(invoice.created_at),
-      amount: Number(invoice.total_amount || 0),
+      amount: Number(invoice.total_amount || 0) - Number(invoice.credit_applied || 0),
       status
     };
   });

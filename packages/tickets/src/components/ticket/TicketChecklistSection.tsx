@@ -151,11 +151,16 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
 
   const timeZone = useMemo(() => getUserTimeZone(), []);
   const formatCompletedAt = useCallback(
-    (completedAt: string): string => {
+    (completedAt: string | Date): string => {
+      // Server actions return completed_at as a Date (Next preserves Dates
+      // across the action boundary), while optimistic updates use an ISO
+      // string. Normalize to a string before formatting, and never return a
+      // non-string — rendering a Date as a React child crashes the page.
+      const iso = completedAt instanceof Date ? completedAt.toISOString() : completedAt;
       try {
-        return formatDateTime(utcToLocal(completedAt, timeZone), timeZone, COMPLETED_AT_FORMAT);
+        return formatDateTime(utcToLocal(iso, timeZone), timeZone, COMPLETED_AT_FORMAT);
       } catch {
-        return completedAt;
+        return typeof iso === 'string' ? iso : '';
       }
     },
     [timeZone]

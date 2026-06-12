@@ -1,0 +1,67 @@
+{
+  "title": "Schedule",
+  "week": {
+    "previous": "Previous week",
+    "next": "Next week",
+    "today": "Today"
+  },
+  "list": {
+    "loading": "Loading your schedule…",
+    "unableToLoad": "Unable to load schedule",
+    "unableToLoadDescription": "We couldn't load your schedule. Pull to refresh or try again.",
+    "noAccess": "No schedule access",
+    "noAccessDescription": "Your account does not have permission to view schedules.",
+    "emptyDay": "Nothing scheduled",
+    "emptyDayDescription": "No entries for this day.",
+    "addEntry": "Add schedule entry"
+  },
+  "kinds": {
+    "ticket": "Ticket",
+    "projectTask": "Project task",
+    "meeting": "Meeting",
+    "break": "Break",
+    "other": "Other",
+    "adHoc": "Ad-hoc"
+  },
+  "detail": {
+    "whenLabel": "When",
+    "notesLabel": "Notes",
+    "assignedLabel": "Assigned to",
+    "recurring": "Recurring",
+    "private": "Private",
+    "readOnly": "This entry is read-only on mobile.",
+    "readOnlyRecurring": "Recurring entries are read-only on mobile.",
+    "openTicket": "Open ticket",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteTitle": "Delete entry?",
+    "deleteMessage": "This schedule entry will be permanently removed.",
+    "deleteConfirm": "Delete"
+  },
+  "form": {
+    "createTitle": "New schedule entry",
+    "editTitle": "Edit schedule entry",
+    "kindLabel": "Type",
+    "ticketLabel": "Ticket",
+    "selectTicket": "Select ticket",
+    "searchTickets": "Search tickets",
+    "noTickets": "No tickets found.",
+    "unableToLoadTickets": "Unable to load tickets.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "What is this entry for?",
+    "dateLabel": "Date",
+    "datePlaceholder": "Select date",
+    "startTimeLabel": "Start",
+    "endTimeLabel": "End",
+    "invalidTimes": "End time must be after start time.",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "save": "Save"
+  },
+  "errors": {
+    "noPermission": "You don't have permission to do that.",
+    "saveFailed": "Unable to save. Please try again.",
+    "deleteFailed": "Unable to delete. Please try again."
+  }
+}
