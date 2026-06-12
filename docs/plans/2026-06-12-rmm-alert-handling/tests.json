@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit (table-driven): NinjaOne normalizer maps TRIGGERED/RESET/ACKNOWLEDGED payloads, normalizes all severity values, derives condition identity from statusCode with activityType fallback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
