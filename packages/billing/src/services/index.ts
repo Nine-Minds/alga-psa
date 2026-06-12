@@ -55,3 +55,36 @@ export {
   resolvePrintResolutionInputFromAst,
   resolveTemplatePrintSettingsFromAst,
 } from '../lib/invoice-template-ast/printSettings';
+
+// Accounting sync engine (closed-loop sync cycles)
+export {
+  runAccountingSyncCycle,
+  CURSOR_OVERLAP_MS,
+  type RunCycleParams,
+  type RunCycleResult
+} from './accountingSync/accountingSyncCycleService';
+export {
+  getAccountingSyncSettings,
+  updateAccountingSyncSettings,
+  type AccountingSyncSettings
+} from './accountingSync/accountingSyncSettings';
+export { SyncOperationsRepository, MAX_OP_ATTEMPTS } from './accountingSync/syncOperationsRepository';
+export { SyncCycleRepository } from './accountingSync/syncCycleRepository';
+export { SyncMappingLedger } from './accountingSync/syncMappingLedger';
+export {
+  recordExternalPayment,
+  reverseExternalPayment,
+  computeBalanceDue
+} from './accountingSync/recordExternalPayment';
+export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
+export {
+  enqueueInvoiceAutoExport,
+  satisfyExportOpsForManualBatch
+} from './accountingSync/syncProducers';
+export type { SyncExceptionService, SyncExceptionInput, SyncExceptionType } from './accountingSync/syncExceptions.types';
+export {
+  emptyCycleStats,
+  MAPPING_SYNC_STATUS,
+  type AccountingSyncCycleStats,
+  type AccountingSyncOperation
+} from './accountingSync/accountingSync.types';

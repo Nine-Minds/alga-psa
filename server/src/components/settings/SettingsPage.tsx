@@ -50,7 +50,7 @@ const ExperimentalFeaturesSettings = dynamic(() => import('./general/Experimenta
 });
 import InteractionSettings from './general/InteractionSettings';
 import { TimeEntrySettings } from '@alga-psa/scheduling/components';
-import { BillingSettings, TaxDelegationNudge } from '@alga-psa/billing/components'; // Import the new component
+import { BillingSettings, TaxDelegationNudge, QboSyncHealthPanel, QboOnboardingWizardEntry } from '@alga-psa/billing/components';
 import NotificationsTab from './general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
@@ -300,7 +300,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <>
           <TaxDelegationNudge />
-          <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />
+          <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} qboSyncHealthSlot={<QboSyncHealthPanel />} qboOnboardingSlot={<QboOnboardingWizardEntry />} />
         </>
       ),
     }

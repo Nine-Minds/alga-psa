@@ -4,6 +4,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps the default QBO realm so realm-scoped mappings resolve
+import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
 
 type Nullable<T> = T | null | undefined;
 
@@ -74,6 +77,7 @@ interface CreateBatchOptions {
   targetRealm?: Nullable<string>;
   notes?: Nullable<string>;
   createdBy?: Nullable<string>;
+  origin?: 'manual' | 'scheduled';
   filters: InvoiceSelectionFilters;
 }
 
@@ -167,8 +171,10 @@ export class AccountingExportInvoiceSelector {
     }
 
     const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
-    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be selected again.
-    const shouldExcludeSynced = Boolean(adapterType);
+    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be
+    // selected again — except for deliberate re-exports (drift resolution), which pass
+    // excludeSyncedInvoices: false.
+    const shouldExcludeSynced = Boolean(adapterType) && filters.excludeSyncedInvoices !== false;
 
     if (shouldExcludeSynced) {
       const knex = this.knex;
@@ -298,10 +304,17 @@ export class AccountingExportInvoiceSelector {
   }
 
   async createBatchFromFilters(options: CreateBatchOptions): Promise<{ batch: AccountingExportBatch; lines: InvoicePreviewLine[] }> {
+    let targetRealm = options.targetRealm ?? null;
+    if (!targetRealm && options.adapterType === 'quickbooks_online') {
+      // Live QBO mappings are realm-scoped, so a batch without a realm cannot
+      // resolve them; default to the tenant's connected company.
+      targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
+    }
+
     const preview = await this.previewInvoiceLines({
       ...options.filters,
       adapterType: options.adapterType,
-      targetRealm: options.targetRealm ?? null,
+      targetRealm,
       excludeSyncedInvoices: options.filters.excludeSyncedInvoices ?? true
     });
 
@@ -317,11 +330,22 @@ export class AccountingExportInvoiceSelector {
     const batch = await exportService.createBatch({
       adapter_type: options.adapterType,
       export_type: 'invoice',
-      target_realm: options.targetRealm ?? null,
+      target_realm: targetRealm,
       filters: normalizeFilters(options.filters),
       notes: options.notes ?? null,
-      created_by: options.createdBy ?? null
+      created_by: options.createdBy ?? null,
+      origin: options.origin ?? 'manual'
     });
+
+    if ((options.origin ?? 'manual') === 'manual') {
+      // Manual batches cover any queued auto-export ops for the same invoices.
+      await satisfyExportOpsForManualBatch(
+        this.knex,
+        this.tenantId,
+        options.adapterType,
+        Array.from(new Set(preview.map((line) => line.invoiceId)))
+      );
+    }
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,

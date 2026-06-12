@@ -18,19 +18,31 @@ type StubCookieSetOptions = {
   expires?: Date;
 };
 
+type StubCookieObjectForm = StubCookieSetOptions & { name: string; value: string };
+
 class StubResponseCookies {
   constructor(private headers: Headers) {}
 
-  set(name: string, value: string, options: StubCookieSetOptions = {}): this {
-    const parts = [`${name}=${encodeURIComponent(value)}`];
-    if (options.path) parts.push(`Path=${options.path}`);
-    if (typeof options.maxAge === 'number') parts.push(`Max-Age=${options.maxAge}`);
-    if (options.domain) parts.push(`Domain=${options.domain}`);
-    if (options.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
-    if (options.httpOnly) parts.push('HttpOnly');
-    if (options.secure) parts.push('Secure');
-    if (options.sameSite) {
-      const sameSite = typeof options.sameSite === 'string' ? options.sameSite : 'strict';
+  // Next.js supports both set(name, value, options) and set({ name, value, ...options }).
+  set(
+    nameOrCookie: string | StubCookieObjectForm,
+    value?: string,
+    options: StubCookieSetOptions = {}
+  ): this {
+    const cookie: StubCookieObjectForm =
+      typeof nameOrCookie === 'string'
+        ? { name: nameOrCookie, value: value ?? '', ...options }
+        : nameOrCookie;
+
+    const parts = [`${cookie.name}=${encodeURIComponent(cookie.value)}`];
+    if (cookie.path) parts.push(`Path=${cookie.path}`);
+    if (typeof cookie.maxAge === 'number') parts.push(`Max-Age=${cookie.maxAge}`);
+    if (cookie.domain) parts.push(`Domain=${cookie.domain}`);
+    if (cookie.expires) parts.push(`Expires=${cookie.expires.toUTCString()}`);
+    if (cookie.httpOnly) parts.push('HttpOnly');
+    if (cookie.secure) parts.push('Secure');
+    if (cookie.sameSite) {
+      const sameSite = typeof cookie.sameSite === 'string' ? cookie.sameSite : 'strict';
       parts.push(`SameSite=${sameSite.charAt(0).toUpperCase()}${sameSite.slice(1)}`);
     }
     this.headers.append('set-cookie', parts.join('; '));

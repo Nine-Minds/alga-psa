@@ -900,15 +900,108 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "Connection process completed.",
-        "errorDetail": "Error: {{error}}",
-        "errored": "Connection process resulted in an error.",
-        "failed": "Failed to connect to QuickBooks Online.",
-        "realmId": "Realm ID: {{realmId}}",
-        "returnButton": "Return to QuickBooks Settings",
-        "success": "Successfully connected to QuickBooks Online!",
-        "title": "QuickBooks Connection Status"
+      "live": {
+        "defaultCompany": "Connected QuickBooks Company"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Connect QuickBooks",
+          "disconnect": "Disconnect QuickBooks",
+          "disconnecting": "Disconnecting…",
+          "reconnect": "Reconnect QuickBooks",
+          "refresh": "Refresh",
+          "saveCredentials": "Save QuickBooks Credentials",
+          "saving": "Saving…"
+        },
+        "badges": {
+          "connectionExpired": "Connection Needs Attention",
+          "credentialsReady": "Credentials Ready",
+          "credentialsRequired": "Credentials Required",
+          "defaultConnected": "Company Connected",
+          "noCompany": "No Company Connected"
+        },
+        "callback": {
+          "accessDenied": "QuickBooks access was denied before the connection completed.",
+          "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "generic": "QuickBooks returned an OAuth error: {{code}}",
+          "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
+          "missingParams": "The QuickBooks callback was missing required parameters. Start the connect flow again.",
+          "oauthFailed": "The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
+          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again."
+        },
+        "clientIdLabel": "QuickBooks Client ID",
+        "clientIdPlaceholder": "Paste your Intuit app client ID",
+        "clientSecretLabel": "QuickBooks Client Secret",
+        "clientSecretPlaceholder": "Paste your Intuit app client secret",
+        "connectSuccess": "QuickBooks connected successfully. The connected company is now the default live QuickBooks context.",
+        "connection": {
+          "defaultCompany": "Connected company",
+          "description": "Start OAuth only after QuickBooks app credentials are configured. Disconnecting removes stored QuickBooks access tokens but keeps the tenant-owned app credentials in place.",
+          "notConnected": "No QuickBooks company is connected yet. Save credentials, then click Connect QuickBooks.",
+          "realmId": "Realm ID: {{id}}",
+          "title": "Live QuickBooks Connection",
+          "unknown": "unknown"
+        },
+        "credentialsSaved": "QuickBooks credentials saved. You can now start the QuickBooks OAuth flow.",
+        "csvAvailableMiddle": "in this same Accounting section and manage exports from",
+        "csvAvailablePrefix": "If you prefer a manual workflow, keep using",
+        "csvAvailableTitle": "QuickBooks CSV remains available",
+        "description": "Configure QuickBooks OAuth credentials, connect your QuickBooks company, and keep live QuickBooks available beside the manual QuickBooks CSV workflow.",
+        "disconnectSuccess": "The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.",
+        "environment": "Intuit Environment",
+        "environmentProduction": "Production",
+        "environmentSandbox": "Sandbox",
+        "errors": {
+          "disconnect": "Failed to disconnect QuickBooks.",
+          "load": "Failed to load QuickBooks settings.",
+          "saveCredentials": "Failed to save QuickBooks credentials."
+        },
+        "howItWorksDescription": "Save QuickBooks app credentials here, complete the Intuit OAuth flow, and Alga PSA will use the connected QuickBooks company as the default live context for exports and mappings.",
+        "howItWorksTitle": "How live QuickBooks works in this release",
+        "loading": "Loading QuickBooks settings…",
+        "mapping": {
+          "alert": "QuickBooks items, tax codes, and terms are loaded from the connected company so live exports can keep using the first stored QuickBooks connection in v1.",
+          "descriptionPrefix": "Configure live QuickBooks mappings for the connected company. These mappings are scoped to",
+          "placeholderAlert": "The mapping manager becomes available after the first QuickBooks company is connected and set as the default live QuickBooks context.",
+          "placeholderDescription": "Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.",
+          "title": "Live QuickBooks Mapping & Configuration"
+        },
+        "noClientId": "No client ID is stored for this tenant yet.",
+        "noClientSecret": "No client secret is stored for this tenant yet.",
+        "quickbooksCsv": "QuickBooks CSV",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Required Scopes",
+        "storedClientId": "Stored client ID: {{value}}",
+        "storedClientSecret": "Stored client secret: {{value}}",
+        "tenantOauthDescription": "Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.",
+        "tenantOauthTitle": "Tenant-Owned OAuth App",
+        "title": "QuickBooks Online"
+      },
+      "sync": {
+        "healthCardTitle": "Sync Health",
+        "healthCardDescription": "QuickBooks accounting sync status and controls. Runs every 15 minutes.",
+        "lastCycleTitle": "Last Sync Cycle",
+        "lastCycleStatus": "Status",
+        "lastCycleFinishedAt": "Finished",
+        "lastCycleStats": "Results",
+        "statOpsProcessed": "{{count}} ops processed",
+        "statDriftFound": "{{count}} drift",
+        "statPaymentsApplied": "{{count}} payments applied",
+        "noLastCycle": "No sync cycle has run yet.",
+        "nextRunHint": "Runs automatically every 15 minutes when auto-sync is enabled.",
+        "pendingOps": "Pending ops",
+        "erroredOps": "Errored ops",
+        "driftCount": "Drift",
+        "openExceptions": "Open exceptions",
+        "refreshTokenExpiry": "QuickBooks token expires {{date}}",
+        "refreshTokenExpired": "QuickBooks token expired — reconnect to resume syncing.",
+        "autoSyncLabel": "Auto-sync enabled",
+        "syncNowButton": "Sync Now",
+        "syncNowRunning": "Syncing…",
+        "syncNowSuccess": "Sync completed successfully.",
+        "syncNowSkipped": "Sync skipped: {{reason}}",
+        "syncNowError": "Sync failed: {{error}}",
+        "viewExceptionsLink": "View exceptions"
       }
     },
     "rmm": {

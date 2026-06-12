@@ -45,6 +45,13 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'credit', action: 'delete', msp: true, client: false, description: 'Delete credits' },
         { resource: 'credit', action: 'transfer', msp: true, client: false, description: 'Transfer credits' },
         { resource: 'credit', action: 'reconcile', msp: true, client: false, description: 'Reconcile credits' },
+
+        // Financial API permissions (v1 /api/v1/financial endpoints)
+        { resource: 'financial', action: 'create', msp: true, client: false, description: 'Create financial records (transactions, payment methods, prepayment invoices)' },
+        { resource: 'financial', action: 'read', msp: true, client: false, description: 'View financial data (transactions, credits, reports)' },
+        { resource: 'financial', action: 'update', msp: true, client: false, description: 'Update financial records (apply credits, reconciliation)' },
+        { resource: 'financial', action: 'delete', msp: true, client: false, description: 'Delete financial records' },
+        { resource: 'financial', action: 'transfer', msp: true, client: false, description: 'Transfer credits between clients' },
         
         // Document permissions
         { resource: 'document', action: 'create', msp: true, client: false, description: 'Create documents' },

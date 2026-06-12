@@ -65,6 +65,12 @@ vi.mock('../CreditExpirationInfo', () => ({
   default: () => <div data-automation-id="credit-expiration-mock" />,
 }));
 
+// CreditApplicationUI pulls in server actions (next-auth) that cannot load in
+// this environment; the panel only mounts it inside the Apply Credit dialog.
+vi.mock('../CreditApplicationUI', () => ({
+  default: () => <div data-automation-id="credit-application-mock" />,
+}));
+
 vi.mock('../../invoices/InvoiceTaxSourceBadge', () => ({
   InvoiceTaxSourceBadge: ({ taxSource }: { taxSource: string }) => (
     <div data-automation-id="invoice-tax-source-badge-mock">{taxSource}</div>

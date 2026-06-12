@@ -28,6 +28,7 @@ import {
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
+import { recordExternalPayment } from '@alga-psa/billing/services';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildPaymentAppliedPayload,
@@ -44,6 +45,7 @@ interface InvoiceData {
   invoice_number: string;
   client_id: string;
   total_amount: number;
+  credit_applied: number;
   currency_code: string;
   status: string;
 }
@@ -214,10 +216,26 @@ export class PaymentService {
     const successUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}`;
 
+    // Compute balance due: gross total minus credits already applied minus prior payments
+    const priorPaymentsRow = await this.knex('invoice_payments')
+      .where({ tenant: this.tenantId, invoice_id: invoiceId })
+      .sum('amount as total')
+      .first();
+    const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
+    const balanceDue = invoice.total_amount - (invoice.credit_applied ?? 0) - priorPayments;
+    if (balanceDue <= 0) {
+      logger.debug('[PaymentService] Invoice balance already satisfied', {
+        tenantId: this.tenantId,
+        invoiceId,
+        balanceDue,
+      });
+      return null;
+    }
+
     // Create payment link
     const request: CreatePaymentLinkRequest = {
       invoiceId,
-      amount: invoice.total_amount,
+      amount: balanceDue,
       currency: invoice.currency_code || 'USD',
       description: `Invoice ${invoice.invoice_number}`,
       clientId: client.client_id,
@@ -514,11 +532,11 @@ export class PaymentService {
       if (netPaid <= 0) {
         // Full refund or overpayment refunded - back to sent
         newStatus = 'sent';
-      } else if (netPaid < invoice.total_amount) {
+      } else if (netPaid < invoice.total_amount - (invoice.credit_applied ?? 0)) {
         // Partial refund - partially applied
         newStatus = 'partially_applied';
       }
-      // If netPaid >= total_amount, stay as 'paid'
+      // If netPaid >= total_amount - credit_applied, stay as 'paid'
 
       if (newStatus !== invoice.status) {
         await trx('invoices')
@@ -535,7 +553,7 @@ export class PaymentService {
       // Record refund transaction
       // Determine if it's a full or partial refund
       const refundAmount = Math.abs(event.amount!);
-      const isFullRefund = refundAmount >= invoice.total_amount;
+      const isFullRefund = refundAmount >= invoice.total_amount - (invoice.credit_applied ?? 0);
       const refundType: 'refund_full' | 'refund_partial' = isFullRefund ? 'refund_full' : 'refund_partial';
       
       await recordTransaction(
@@ -628,7 +646,7 @@ export class PaymentService {
 
     // Validate amount - warn if significantly different from expected
     // For now, we allow partial payments but log a warning for mismatches
-    if (event.amount > invoice.total_amount * 1.01) { // Allow 1% tolerance for rounding
+    if (event.amount > (invoice.total_amount - (invoice.credit_applied ?? 0)) * 1.01) { // Allow 1% tolerance for rounding
       logger.warn('[PaymentService] Payment amount exceeds invoice total', {
         tenantId: this.tenantId,
         invoiceId: event.invoiceId,
@@ -637,90 +655,40 @@ export class PaymentService {
       });
     }
 
-    // Use transaction for atomicity with row locking to prevent race conditions
-    const paymentId = await this.knex.transaction(async (trx) => {
-      // Lock the invoice row to prevent concurrent payment processing
-      // This ensures only one webhook at a time can update the invoice status
-      await trx('invoices')
-        .where({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-        })
-        .forUpdate()
-        .first();
+    // Shared provider-agnostic AR landing (same path the accounting sync uses):
+    // invoice lock, invoice_payments row, status flip, payment transaction.
+    const recordResult = await recordExternalPayment(this.knex, this.tenantId, {
+      invoiceId: event.invoiceId,
+      amount: event.amount,
+      provider: event.provider, // Provider is already 'stripe'
+      referenceNumber: event.paymentIntentId,
+      currency: event.currency,
+      notes: `Stripe payment via ${event.eventType}`,
+      transactionDescription: `Payment received via Stripe - ${event.paymentIntentId}`,
+      transactionMetadata: {
+        payment_provider: 'stripe',
+        stripe_payment_intent_id: event.paymentIntentId,
+        stripe_event_id: event.eventId,
+        currency: event.currency,
+      },
+    });
 
-      // Insert payment record
-      const [payment] = await trx('invoice_payments')
-        .insert({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-          amount: event.amount,
-          payment_method: event.provider, // Provider is already 'stripe'
-          payment_date: new Date(),
-          reference_number: event.paymentIntentId,
-          notes: `Stripe payment via ${event.eventType}`,
-        })
-        .returning('payment_id');
+    if (!recordResult.success || !recordResult.paymentId) {
+      return {
+        success: false,
+        paymentRecorded: false,
+        error: recordResult.error,
+      };
+    }
 
-      // Calculate total payments (now safe due to row lock)
-      const totalPayments = await trx('invoice_payments')
-        .where({
-          tenant: this.tenantId,
-          invoice_id: event.invoiceId,
-        })
-        .sum('amount as total')
-        .first();
+    const paymentId = recordResult.paymentId;
 
-      const totalPaid = parseInt(totalPayments?.total || '0', 10);
-
-      // Update invoice status
-      let newStatus = invoice.status;
-      if (totalPaid >= invoice.total_amount) {
-        newStatus = 'paid';
-      } else if (totalPaid > 0) {
-        newStatus = 'partially_applied';
-      }
-
-      if (newStatus !== invoice.status) {
-        await trx('invoices')
-          .where({
-            tenant: this.tenantId,
-            invoice_id: event.invoiceId,
-          })
-          .update({
-            status: newStatus,
-            updated_at: trx.fn.now(),
-          });
-      }
-
-      // Record transaction
-      await recordTransaction(
-        trx,
-        {
-          clientId: invoice.client_id,
-          invoiceId: event.invoiceId,
-          amount: event.amount!,
-          type: 'payment',
-          description: `Payment received via Stripe - ${event.paymentIntentId}`,
-          metadata: {
-            payment_provider: 'stripe',
-            stripe_payment_intent_id: event.paymentIntentId,
-            stripe_event_id: event.eventId,
-            currency: event.currency,
-          },
-        },
-        this.tenantId
-      );
-
-      logger.info('[PaymentService] Payment recorded', {
-        tenantId: this.tenantId,
-        invoiceId: event.invoiceId,
-        paymentId: payment.payment_id,
-        amount: event.amount,
-        newStatus,
-      });
-
-      return payment.payment_id;
+    logger.info('[PaymentService] Payment recorded', {
+      tenantId: this.tenantId,
+      invoiceId: event.invoiceId,
+      paymentId,
+      amount: event.amount,
+      newStatus: recordResult.newStatus,
     });
 
     const occurredAt = new Date().toISOString();

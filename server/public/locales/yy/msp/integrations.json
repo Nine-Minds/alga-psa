@@ -900,15 +900,108 @@
       }
     },
     "qbo": {
-      "callback": {
-        "completed": "55555",
-        "errorDetail": "55555 {{error}} 55555",
-        "errored": "55555",
-        "failed": "55555",
-        "realmId": "55555 {{realmId}} 55555",
-        "returnButton": "55555",
-        "success": "55555",
+      "live": {
+        "defaultCompany": "55555"
+      },
+      "settings": {
+        "actions": {
+          "connect": "55555",
+          "disconnect": "55555",
+          "disconnecting": "55555",
+          "reconnect": "55555",
+          "refresh": "55555",
+          "saveCredentials": "55555",
+          "saving": "55555"
+        },
+        "badges": {
+          "connectionExpired": "55555",
+          "credentialsReady": "55555",
+          "credentialsRequired": "55555",
+          "defaultConnected": "55555",
+          "noCompany": "55555"
+        },
+        "callback": {
+          "accessDenied": "55555",
+          "configMissing": "55555",
+          "generic": "55555 {{code}} 55555",
+          "invalidState": "55555",
+          "missingParams": "55555",
+          "oauthFailed": "55555",
+          "tokenExchangeFailed": "55555"
+        },
+        "clientIdLabel": "55555",
+        "clientIdPlaceholder": "55555",
+        "clientSecretLabel": "55555",
+        "clientSecretPlaceholder": "55555",
+        "connectSuccess": "55555",
+        "connection": {
+          "defaultCompany": "55555",
+          "description": "55555",
+          "notConnected": "55555",
+          "realmId": "55555 {{id}} 55555",
+          "title": "55555",
+          "unknown": "55555"
+        },
+        "credentialsSaved": "55555",
+        "csvAvailableMiddle": "55555",
+        "csvAvailablePrefix": "55555",
+        "csvAvailableTitle": "55555",
+        "description": "55555",
+        "disconnectSuccess": "55555",
+        "environment": "55555",
+        "environmentProduction": "55555",
+        "environmentSandbox": "55555",
+        "errors": {
+          "disconnect": "55555",
+          "load": "55555",
+          "saveCredentials": "55555"
+        },
+        "howItWorksDescription": "55555",
+        "howItWorksTitle": "55555",
+        "loading": "55555",
+        "mapping": {
+          "alert": "55555",
+          "descriptionPrefix": "55555",
+          "placeholderAlert": "55555",
+          "placeholderDescription": "55555",
+          "title": "55555"
+        },
+        "noClientId": "55555",
+        "noClientSecret": "55555",
+        "quickbooksCsv": "55555",
+        "redirectUri": "55555",
+        "requiredScopes": "55555",
+        "storedClientId": "55555 {{value}} 55555",
+        "storedClientSecret": "55555 {{value}} 55555",
+        "tenantOauthDescription": "55555",
+        "tenantOauthTitle": "55555",
         "title": "55555"
+      },
+      "sync": {
+        "healthCardTitle": "55555",
+        "healthCardDescription": "55555",
+        "lastCycleTitle": "55555",
+        "lastCycleStatus": "55555",
+        "lastCycleFinishedAt": "55555",
+        "lastCycleStats": "55555",
+        "statOpsProcessed": "55555 {{count}} 55555",
+        "statDriftFound": "55555 {{count}} 55555",
+        "statPaymentsApplied": "55555 {{count}} 55555",
+        "noLastCycle": "55555",
+        "nextRunHint": "55555",
+        "pendingOps": "55555",
+        "erroredOps": "55555",
+        "driftCount": "55555",
+        "openExceptions": "55555",
+        "refreshTokenExpiry": "55555 {{date}} 55555",
+        "refreshTokenExpired": "55555",
+        "autoSyncLabel": "55555",
+        "syncNowButton": "55555",
+        "syncNowRunning": "55555",
+        "syncNowSuccess": "55555",
+        "syncNowSkipped": "55555 {{reason}} 55555",
+        "syncNowError": "55555 {{error}} 55555",
+        "viewExceptionsLink": "55555"
       }
     },
     "rmm": {

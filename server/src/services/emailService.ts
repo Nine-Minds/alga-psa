@@ -273,7 +273,7 @@ export class EmailService {
     const templateData: InvoiceEmailTemplateData = {
       client_name: invoice.client.name,
       invoice_number: invoice.invoice_number,
-      total_amount: `${getCurrencySymbol(invoice.currencyCode || 'USD')}${(invoice.total_amount / 100).toFixed(2)}`,
+      total_amount: `${getCurrencySymbol(invoice.currencyCode || 'USD')}${((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100).toFixed(2)}`,
       sender_client: senderClient
     };
 
