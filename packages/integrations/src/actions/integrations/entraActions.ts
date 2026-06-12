@@ -211,6 +211,11 @@ export type EntraMappingPreviewResponse = {
   unmatched: unknown[];
 };
 
+export type EntraMappingGroupOption = {
+  id: string;
+  displayName: string | null;
+};
+
 export type EntraDirectValidationResponse = {
   valid: boolean;
   checkedAt: string;
@@ -853,6 +858,40 @@ export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
   return callEeRoute<EntraMappingPreviewResponse>({
     importFn: routes.mappingsPreviewRoute,
     method: 'GET',
+  });
+});
+
+export const listEntraMappingGroups = withAuth(async (
+  user,
+  { tenant },
+  input: { managedTenantId: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ groups: EntraMappingGroupOption[] }>();
+  }
+
+  const managedTenantId = String(input.managedTenantId || '').trim();
+  if (!managedTenantId) {
+    return { success: false, error: 'managedTenantId is required.' } as const;
+  }
+
+  return callEeRoute<{ groups: EntraMappingGroupOption[] }>({
+    importFn: routes.mappingsGroupsRoute,
+    method: 'GET',
+    query: { managedTenantId },
   });
 });
 

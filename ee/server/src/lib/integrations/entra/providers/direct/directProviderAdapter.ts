@@ -1,6 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { refreshEntraDirectToken } from '../../auth/refreshDirectToken';
+import {
+  refreshEntraDirectAccessTokenForTenant,
+  refreshEntraDirectToken,
+} from '../../auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../../secrets';
 import { normalizeEntraSyncUser } from '../../sync/types';
 import type {
@@ -194,6 +197,11 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
 
 export class DirectProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'direct' as const;
+  private readonly managedTenantTokenCache = new Map<
+    string,
+    { accessToken: string; expiresAt: number }
+  >();
+  private readonly managedTenantTokenRefreshes = new Map<string, Promise<string>>();
 
   private async getAccessToken(tenant: string): Promise<string> {
     const secretProvider = await getSecretProviderInstance();
@@ -214,6 +222,45 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     const refreshed = await refreshEntraDirectToken(tenant);
     return refreshed.accessToken;
+  }
+
+  private async getManagedTenantAccessToken(
+    tenant: string,
+    managedTenantId: string
+  ): Promise<string> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.getAccessToken(tenant);
+    }
+
+    const cacheKey = `${tenant}:${managedTenantId}`;
+    const cached = this.managedTenantTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now() + 30_000) {
+      return cached.accessToken;
+    }
+
+    const pendingRefresh = this.managedTenantTokenRefreshes.get(cacheKey);
+    if (pendingRefresh) {
+      return pendingRefresh;
+    }
+
+    const refreshPromise = refreshEntraDirectAccessTokenForTenant(tenant, managedTenantId)
+      .then((refreshed) => {
+        const expiresAt = Date.parse(refreshed.expiresAt);
+        if (Number.isFinite(expiresAt)) {
+          this.managedTenantTokenCache.set(cacheKey, {
+            accessToken: refreshed.accessToken,
+            expiresAt,
+          });
+        }
+        return refreshed.accessToken;
+      })
+      .finally(() => {
+        this.managedTenantTokenRefreshes.delete(cacheKey);
+      });
+
+    this.managedTenantTokenRefreshes.set(cacheKey, refreshPromise);
+    const accessToken = await refreshPromise;
+    return accessToken;
   }
 
   private async graphGet(
@@ -498,6 +545,63 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     }
 
     return users;
+  }
+
+  public async listSecurityGroupsForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<Array<{ id: string; displayName: string | null }>> {
+    const groups: Array<{ id: string; displayName: string | null }> = [];
+    const seen = new Set<string>();
+    let nextUrl = `${GRAPH_BASE_URL}/groups?$select=id,displayName,securityEnabled&$top=200`;
+    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
+
+    while (nextUrl) {
+      const response = await axios.get(nextUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 20_000,
+      });
+      const payload = toObject(response.data);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      for (const row of rows) {
+        const raw = toObject(row);
+        const id = getNullableString(raw.id);
+        if (!id || seen.has(id)) continue;
+        const securityEnabled = getBoolean(raw.securityEnabled, true);
+        if (!securityEnabled) continue;
+        seen.add(id);
+        groups.push({
+          id,
+          displayName: getNullableString(raw.displayName),
+        });
+      }
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return groups;
+  }
+
+  public async isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive';
+  }): Promise<boolean> {
+    const encodedUser = encodeURIComponent(input.userEntraObjectId);
+    const endpoint = `${GRAPH_BASE_URL}/users/${encodedUser}/checkMemberGroups`;
+    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
+    const response = await axios.post(
+      endpoint,
+      { groupIds: [input.groupId] },
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 20_000,
+      }
+    );
+    const payload = toObject(response.data);
+    const values = Array.isArray(payload.value) ? payload.value : [];
+    return values.some((value) => getNullableString(value) === input.groupId);
   }
 }
 

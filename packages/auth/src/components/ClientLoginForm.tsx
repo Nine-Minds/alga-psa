@@ -17,9 +17,10 @@ interface ClientLoginFormProps {
   onError: (error: string) => void;
   onTwoFactorRequired: () => void;
   tenantSlug?: string;
+  portalDomain?: string;
 }
 
-export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug }: ClientLoginFormProps) {
+export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug, portalDomain }: ClientLoginFormProps) {
   const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -221,12 +222,16 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
       </Button>
 
-      {/* SSO not supported for client portal
-      <SsoProviderButtons
-        callbackUrl={callbackUrl}
-        tenantHint={tenantSlug}
-      />
-      */}
+      {(tenantSlug || portalDomain) ? (
+        <SsoProviderButtons
+          callbackUrl={callbackUrl}
+          tenantHint={tenantSlug}
+          portalDomainHint={portalDomain}
+          email={email}
+          onError={onError}
+          authSurface="client_portal"
+        />
+      ) : null}
     </form>
   )
 }

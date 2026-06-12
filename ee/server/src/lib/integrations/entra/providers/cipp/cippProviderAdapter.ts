@@ -259,6 +259,71 @@ export class CippProviderAdapter implements EntraProviderAdapter {
 
     return users;
   }
+
+  public async listSecurityGroupsForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<Array<{ id: string; displayName: string | null }>> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
+    }
+
+    const tenantId = encodeURIComponent(input.managedTenantId);
+    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      `/api/listgroups?tenantId=${tenantId}`,
+      `/api/groups?tenantId=${tenantId}`,
+      `/api/tenant/${tenantId}/groups`,
+      `/api/tenants/${tenantId}/groups`,
+    ]);
+    const rows = extractCollection(payload);
+    const groups: Array<{ id: string; displayName: string | null }> = [];
+    const seen = new Set<string>();
+
+    for (const row of rows) {
+      const raw = toObject(row);
+      const id = toStringOrNull(raw.id) || toStringOrNull(raw.groupId) || toStringOrNull(raw.objectId);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      groups.push({
+        id,
+        displayName: toStringOrNull(raw.displayName) || toStringOrNull(raw.name),
+      });
+    }
+
+    return groups;
+  }
+
+  public async isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive';
+  }): Promise<boolean> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
+    }
+
+    const tenantId = encodeURIComponent(input.managedTenantId);
+    const userId = encodeURIComponent(input.userEntraObjectId);
+    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      `/api/usergroups?tenantId=${tenantId}&userId=${userId}`,
+      `/api/users/${userId}/groups?tenantId=${tenantId}`,
+      `/api/tenant/${tenantId}/users/${userId}/groups`,
+      `/api/tenants/${tenantId}/users/${userId}/groups`,
+    ]);
+    const rows = extractCollection(payload);
+    const groupIds = new Set(
+      rows
+        .map((row) => {
+          const raw = toObject(row);
+          return toStringOrNull(raw.id) || toStringOrNull(raw.groupId) || toStringOrNull(raw.objectId);
+        })
+        .filter((value): value is string => Boolean(value))
+    );
+    return groupIds.has(input.groupId);
+  }
 }
 
 export function createCippProviderAdapter(): EntraProviderAdapter {

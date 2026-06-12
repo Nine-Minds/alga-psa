@@ -78,6 +78,10 @@
       "import": "./src/lib/mspRememberedEmail.ts",
       "types": "./src/lib/mspRememberedEmail.ts"
     },
+    "./lib/sso/clientPortalSsoResolution": {
+      "import": "./src/lib/sso/clientPortalSsoResolution.ts",
+      "types": "./src/lib/sso/clientPortalSsoResolution.ts"
+    },
     "./lib/security/captcha": {
       "import": "./src/lib/security/captcha.ts",
       "types": "./src/lib/security/captcha.ts"

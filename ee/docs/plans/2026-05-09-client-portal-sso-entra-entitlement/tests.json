@@ -1,0 +1,326 @@
+[
+  {
+    "id": "T001",
+    "description": "API behavior: client portal SSO discovery returns ok with no providers when tenant context is missing or invalid.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "API behavior: client portal SSO discovery returns configured providers when tenant context resolves from tenant slug.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F007",
+      "F009"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "API behavior: client portal SSO discovery returns configured providers when tenant context resolves from portal domain.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F007",
+      "F009"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "API behavior: client portal SSO resolve rejects provider, callback, tenant, or discovery-state mismatches with generic failure.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Auth behavior: client portal OAuth mapping authenticates an active client user only when tenant and user type match.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Auth behavior: client portal OAuth sign-in redirects through vanity-domain handoff for a client user with active portal domain.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "UI behavior: ClientLoginForm keeps SSO unavailable before tenant context and enables discovery only after tenant context is present.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F061"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Regression behavior: existing client portal credentials login still signs in and redirects as before.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Regression behavior: existing MSP SSO discovery and resolve behavior remains unchanged after shared component/helper changes.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F023"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Settings behavior: SSO settings can persist autoLinkClient, MSP workspace default client portal Entra provisioning mode, and entitlement-removal deactivation independently.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration: Entra sync creates or links a contact but skips portal user provisioning when provisioning mode is disabled.",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F036"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed integration: Entra sync skips portal user provisioning when no entitlement group is configured or the user lacks group membership.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F033",
+      "F034",
+      "F037",
+      "F040"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB-backed integration: built-in mode provisions a client portal user and Microsoft OAuth account link for an enabled entitled Entra user after non-ambiguous contact reconciliation.",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F041",
+      "F043",
+      "F044",
+      "F045",
+      "F046",
+      "F047",
+      "F048",
+      "F067"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "DB-backed integration: Entra sync detects conflicting portal users and records a skipped/conflict outcome without creating a duplicate user.",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F049",
+      "F050",
+      "F056"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "DB-backed integration: entitlement removal deactivates an Entra-managed portal user when configured.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F051",
+      "F054"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed integration: disabled Entra account deactivates the corresponding Entra-managed portal user.",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F052",
+      "F054"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed integration: entitlement removal does not deactivate a manually managed portal user.",
+    "implemented": true,
+    "featureIds": [
+      "F053",
+      "F060"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB-backed integration: entitlement return reactivates only lifecycle-deactivated Entra-managed portal users, not manually disabled users.",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F055"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Invitation behavior: invitation with Entra pre-link completes through OAuth without requiring password setup.",
+    "implemented": true,
+    "featureIds": [
+      "F058",
+      "F059"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Configuration behavior: selected entitlement group must belong to the managed Entra tenant and group membership mode defaults to transitive.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "DB-backed integration: newly Entra-provisioned portal users in built-in mode receive the configured default role, and later manual role changes are preserved across sync runs.",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "UI behavior: selecting a broad Entra entitlement group presents warning copy that all enabled users in the group become eligible for portal access.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F031",
+      "F066"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "DB-backed integration: workflow-managed mode publishes an idempotent eligible-access workflow event for an entitled Entra user and does not create or link a portal user directly.",
+    "implemented": true,
+    "featureIds": [
+      "F067",
+      "F068",
+      "F069",
+      "F071"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "DB-backed integration: workflow-managed mode publishes an idempotent access-removal workflow event when entitlement is removed or the Entra account is disabled and does not directly deactivate the portal user.",
+    "implemented": true,
+    "featureIds": [
+      "F067",
+      "F070",
+      "F071"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Workflow behavior: portal user workflow actions create/link users, assign roles, upsert Microsoft OAuth links, and deactivate/reactivate access idempotently without affecting manually managed users.",
+    "implemented": true,
+    "featureIds": [
+      "F072",
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "UI behavior: workflow-managed mode explains that the selected workflow owns provisioning, role assignment, invitations, and lifecycle changes.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F068",
+      "F075"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "UI behavior: security SSO settings expose separate auto-link toggles for internal users and client portal users, persisting autoLinkClient independently.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Settings behavior: SSO preferences default client portal Entra provisioning mode to disabled, default entitlement-removal deactivation to true, and expose UI controls for both values.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "DB-backed integration: Entra sync resolves effective portal provisioning mode from per-client override first and MSP workspace default second, and skips provisioning/events when the effective mode is disabled.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F028",
+      "F036",
+      "F076",
+      "F079",
+      "F080"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "UI/API behavior: client mapping configuration supports inherit/disabled/built-in/workflow-managed override choices, keeps portal access group explicit per managed Microsoft tenant, and uses MSP workspace / managed Microsoft tenant terminology.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F077",
+      "F078"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "DB-backed integration: built-in provisioning uses per-client default role override when present, otherwise workspace default role, otherwise User, while still preserving later manual role changes.",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F064",
+      "F065",
+      "F079"
+    ]
+  }
+]

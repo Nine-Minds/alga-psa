@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const axiosGetMock = vi.fn();
+const axiosPostMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const refreshEntraDirectTokenMock = vi.fn();
+const refreshEntraDirectAccessTokenForTenantMock = vi.fn();
 
 vi.mock('axios', () => ({
   default: {
     get: axiosGetMock,
+    post: axiosPostMock,
     isAxiosError: (error: unknown) => Boolean((error as { isAxiosError?: boolean } | null)?.isAxiosError),
   },
   get: axiosGetMock,
+  post: axiosPostMock,
   isAxiosError: (error: unknown) => Boolean((error as { isAxiosError?: boolean } | null)?.isAxiosError),
 }));
 
@@ -18,6 +22,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/refreshDirectToken', () => ({
+  refreshEntraDirectAccessTokenForTenant: refreshEntraDirectAccessTokenForTenantMock,
   refreshEntraDirectToken: refreshEntraDirectTokenMock,
 }));
 
@@ -25,8 +30,16 @@ describe('DirectProviderAdapter normalization', () => {
   beforeEach(() => {
     vi.resetModules();
     axiosGetMock.mockReset();
+    axiosPostMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
+    refreshEntraDirectAccessTokenForTenantMock.mockReset();
     refreshEntraDirectTokenMock.mockReset();
+    refreshEntraDirectAccessTokenForTenantMock.mockResolvedValue({
+      accessToken: 'access-token-customer',
+      refreshToken: 'refresh-token-customer',
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      scope: null,
+    });
 
     const expiresFuture = new Date(Date.now() + 3600_000).toISOString();
     getSecretProviderInstanceMock.mockResolvedValue({
@@ -119,5 +132,72 @@ describe('DirectProviderAdapter normalization', () => {
       businessPhones: ['+1 555 0001'],
     });
     expect(refreshEntraDirectTokenMock).not.toHaveBeenCalled();
+  });
+
+  it('T113: checks transitive group membership for a managed-tenant user', async () => {
+    axiosPostMock.mockResolvedValue({
+      data: { value: ['group-113'] },
+    });
+
+    const { createDirectProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/direct/directProviderAdapter'
+    );
+    const adapter = createDirectProviderAdapter();
+    const isMember = await adapter.isUserInSecurityGroup({
+      tenant: 'tenant-113',
+      managedTenantId: 'managed-tenant-113',
+      userEntraObjectId: 'user-113',
+      groupId: 'group-113',
+      membershipMode: 'transitive',
+    });
+
+    expect(isMember).toBe(true);
+    expect(axiosPostMock).toHaveBeenCalledWith(
+      'https://graph.microsoft.com/v1.0/users/user-113/checkMemberGroups',
+      { groupIds: ['group-113'] },
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token-customer' },
+      })
+    );
+    expect(refreshEntraDirectAccessTokenForTenantMock).toHaveBeenCalledWith(
+      'tenant-113',
+      'managed-tenant-113'
+    );
+  });
+
+  it('reuses a managed-tenant access token across repeated group membership checks', async () => {
+    axiosPostMock.mockResolvedValue({
+      data: { value: ['group-cache'] },
+    });
+
+    const { createDirectProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/direct/directProviderAdapter'
+    );
+    const adapter = createDirectProviderAdapter();
+
+    await Promise.all([
+      adapter.isUserInSecurityGroup({
+        tenant: 'tenant-cache',
+        managedTenantId: 'managed-tenant-cache',
+        userEntraObjectId: 'user-one',
+        groupId: 'group-cache',
+        membershipMode: 'transitive',
+      }),
+      adapter.isUserInSecurityGroup({
+        tenant: 'tenant-cache',
+        managedTenantId: 'managed-tenant-cache',
+        userEntraObjectId: 'user-two',
+        groupId: 'group-cache',
+        membershipMode: 'transitive',
+      }),
+    ]);
+
+    expect(refreshEntraDirectAccessTokenForTenantMock).toHaveBeenCalledTimes(1);
+    expect(axiosPostMock).toHaveBeenCalledTimes(2);
+    expect(axiosPostMock.mock.calls[1]?.[2]).toEqual(
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token-customer' },
+      })
+    );
   });
 });

@@ -12,6 +12,8 @@ CE,/api/accounting/exports/{batchId}/download,POST,server/src/app/api/accounting
 CE,/api/accounting/exports/{batchId}/errors,POST,server/src/app/api/accounting/exports/[batchId]/errors/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
 CE,/api/accounting/exports/{batchId}/execute,POST,server/src/app/api/accounting/exports/[batchId]/execute/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
 CE,/api/accounting/exports/{batchId}/lines,POST,server/src/app/api/accounting/exports/[batchId]/lines/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/auth/client-portal/sso/discover,POST,server/src/app/api/auth/client-portal/sso/discover/route.ts,,,
+CE,/api/auth/client-portal/sso/resolve,POST,server/src/app/api/auth/client-portal/sso/resolve/route.ts,,,
 CE,/api/auth/e2e/google/authorize,GET,server/src/app/api/auth/e2e/google/authorize/route.ts,,,
 CE,/api/auth/e2e/google/complete,GET,server/src/app/api/auth/e2e/google/complete/route.ts,,,
 CE,/api/auth/e2e/google/token,POST,server/src/app/api/auth/e2e/google/token/route.ts,,,
@@ -669,6 +671,7 @@ EE,/api/integrations/entra/connect,POST,ee/server/src/app/api/integrations/entra
 EE,/api/integrations/entra/disconnect,POST,ee/server/src/app/api/integrations/entra/disconnect/route.ts,,,
 EE,/api/integrations/entra/discovery,POST,ee/server/src/app/api/integrations/entra/discovery/route.ts,,,
 EE,/api/integrations/entra/mappings/confirm,POST,ee/server/src/app/api/integrations/entra/mappings/confirm/route.ts,,,
+EE,/api/integrations/entra/mappings/groups,GET,ee/server/src/app/api/integrations/entra/mappings/groups/route.ts,,,
 EE,/api/integrations/entra/mappings/preview,GET,ee/server/src/app/api/integrations/entra/mappings/preview/route.ts,,,
 EE,/api/integrations/entra/mappings/remap,POST,ee/server/src/app/api/integrations/entra/mappings/remap/route.ts,,,
 EE,/api/integrations/entra/mappings/unmap,POST,ee/server/src/app/api/integrations/entra/mappings/unmap/route.ts,,,

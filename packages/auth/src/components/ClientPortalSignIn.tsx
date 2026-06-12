@@ -36,6 +36,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
     const slug = searchParams?.get('tenant') || '';
     return isValidTenantSlug(slug) ? slug.toLowerCase() : undefined;
   })();
+  const portalDomain = searchParams?.get('portalDomain') || undefined;
 
   // Handle error and success messages from URL parameters
   useEffect(() => {
@@ -285,6 +286,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
                 tenantSlug={tenantSlug}
+                portalDomain={portalDomain}
               />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">

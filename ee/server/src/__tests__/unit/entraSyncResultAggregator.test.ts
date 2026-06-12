@@ -17,6 +17,7 @@ describe('EntraSyncResultAggregator', () => {
       updated: 0,
       ambiguous: 0,
       inactivated: 0,
+      skipped: 0,
     });
   });
 
@@ -34,6 +35,7 @@ describe('EntraSyncResultAggregator', () => {
       updated: 0,
       ambiguous: 0,
       inactivated: 0,
+      skipped: 0,
     });
   });
 
@@ -50,6 +52,7 @@ describe('EntraSyncResultAggregator', () => {
       updated: 0,
       ambiguous: 6,
       inactivated: 0,
+      skipped: 0,
     });
   });
 });

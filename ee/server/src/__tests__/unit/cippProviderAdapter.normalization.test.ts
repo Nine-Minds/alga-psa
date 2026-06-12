@@ -117,4 +117,35 @@ describe('CippProviderAdapter normalization', () => {
       })
     );
   });
+
+  it('T114: checks group membership from CIPP user-group endpoint payload', async () => {
+    axiosGetMock.mockResolvedValue({
+      data: {
+        value: [{ id: 'group-114' }],
+      },
+    });
+
+    const { createCippProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter'
+    );
+    const adapter = createCippProviderAdapter();
+    const isMember = await adapter.isUserInSecurityGroup({
+      tenant: 'tenant-114',
+      managedTenantId: 'managed-tenant-114',
+      userEntraObjectId: 'user-114',
+      groupId: 'group-114',
+      membershipMode: 'transitive',
+    });
+
+    expect(isMember).toBe(true);
+    expect(axiosGetMock).toHaveBeenCalledWith(
+      'https://cipp.example.com/api/usergroups?tenantId=managed-tenant-114&userId=user-114',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer cipp-token',
+          'X-API-KEY': 'cipp-token',
+        },
+      })
+    );
+  });
 });

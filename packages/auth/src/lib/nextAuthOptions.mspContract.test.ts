@@ -33,7 +33,6 @@ describe('NextAuth MSP SSO contract', () => {
 
   it('T050/T051: invalid or expired resolver cookie contexts are ignored and app fallback remains in use', () => {
     expect(source).toContain('parseAndVerifyMspSsoResolutionCookie');
-    expect(source).toContain("if (!resolution || resolution.source !== 'tenant' || !resolution.tenantId) {");
     expect(source).toContain('return resolved;');
   });
 

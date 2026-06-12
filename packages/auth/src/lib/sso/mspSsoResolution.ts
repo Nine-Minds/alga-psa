@@ -206,11 +206,31 @@ export function isValidResolverCallbackUrl(value: string | undefined): boolean {
   if (!value) return true;
   const trimmed = value.trim();
   if (!trimmed) return true;
-  if (trimmed.startsWith('/')) return true;
+  if (trimmed.startsWith('/')) return !trimmed.startsWith('//');
 
   try {
     const parsed = new URL(trimmed);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function isValidClientPortalResolverCallbackUrl(value: string | undefined): boolean {
+  if (!value) return true;
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith('//')) return false;
+    return trimmed.startsWith('/client-portal') ||
+      trimmed.startsWith('/auth/client-portal/handoff');
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return parsed.pathname.startsWith('/client-portal') ||
+      parsed.pathname.startsWith('/auth/client-portal/handoff');
   } catch {
     return false;
   }

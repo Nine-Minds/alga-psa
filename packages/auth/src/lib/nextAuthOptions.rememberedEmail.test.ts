@@ -27,6 +27,7 @@ vi.mock('./session', () => ({
   getNextAuthSecretSync: () => 'unit-test-secret',
   getSessionCookieConfig: () => ({ name: 'authjs.session-token', options: {} }),
   getSessionMaxAge: () => 60 * 60,
+  isSecureCookieEnvironment: () => false,
   withDevPortSuffix: (value: string) => value,
 }));
 
@@ -72,9 +73,18 @@ vi.mock('next/headers.js', () => ({
 }));
 
 vi.mock('./sso/mspSsoResolution', () => ({
+  MSP_SSO_DISCOVERY_TTL_SECONDS: 300,
+  MSP_SSO_GENERIC_FAILURE_MESSAGE:
+    "We couldn't start SSO sign-in. Please verify provider setup and try again.",
   MSP_SSO_RESOLUTION_COOKIE: 'msp_sso_resolution',
+  MSP_SSO_RESOLUTION_TTL_SECONDS: 300,
   getMspSsoSigningSecret: async () => 'unit-test-secret',
+  hasAppFallbackProviderCredentials: vi.fn(async () => false),
+  hasTenantProviderCredentials: vi.fn(async () => false),
+  isValidClientPortalResolverCallbackUrl: vi.fn(() => true),
+  normalizeResolverEmail: (value: string) => value.trim().toLowerCase(),
   parseAndVerifyMspSsoResolutionCookie: vi.fn(() => null),
+  parseResolverProvider: vi.fn((value: string) => value),
 }));
 
 vi.mock('@alga-psa/db/models/UserSession', () => ({
