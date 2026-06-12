@@ -399,6 +399,7 @@ export const CollapsibleBlock: React.FC<{
   defaultExpanded?: boolean;
   children: React.ReactNode;
 }> = ({ title, variant, stepCount, defaultExpanded = true, children }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
