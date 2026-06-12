@@ -18,6 +18,7 @@ import type {
   HuduResource,
   HuduCompany,
   HuduAsset,
+  HuduAssetLayout,
   HuduArticle,
   HuduAssetPassword,
 } from './contracts';
@@ -174,6 +175,27 @@ export class HuduClient {
       `/asset_passwords/${id}`
     );
     return data.asset_password;
+  }
+
+  /** Asset layouts as minimal {id, name} reference entries (single request). */
+  async listAssetLayouts(): Promise<HuduAssetLayout[]> {
+    const data = await this.request<{ asset_layouts: HuduAssetLayout[] }>('get', '/asset_layouts');
+    const layouts = Array.isArray(data?.asset_layouts) ? data.asset_layouts : [];
+    return layouts.map((layout) => ({ id: layout.id, name: layout.name }));
+  }
+
+  /**
+   * One global page of articles (no company_id). `search` does case-insensitive
+   * partial name matching on the Hudu side (`name` is exact-only); omitted when empty.
+   * Never loops pages — callers paginate.
+   */
+  async listAllArticles({ page = 1, search }: { page?: number; search?: string } = {}): Promise<HuduArticle[]> {
+    const params: Record<string, string | number> = { page };
+    const term = search?.trim();
+    if (term) params.search = term;
+
+    const data = await this.request<{ articles: HuduArticle[] }>('get', '/articles', params);
+    return Array.isArray(data?.articles) ? data.articles : [];
   }
 
   /**

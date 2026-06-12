@@ -378,3 +378,85 @@ describe('T018: redaction', () => {
     expect(serialized).not.toContain('Hunter2Plaintext');
   });
 });
+
+describe('T201/T202: listAssetLayouts', () => {
+  it('returns typed {id, name} entries from a mocked 200', async () => {
+    const { HuduClient } = await importClient();
+    requestMock.mockResolvedValueOnce({
+      data: {
+        asset_layouts: [
+          { id: 1, name: 'API Secrets', icon: 'fas fa-key', active: true },
+          { id: 7, name: 'Computer Assets', active: true },
+        ],
+      },
+    });
+
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+    const layouts = await client.listAssetLayouts();
+
+    expect(layouts).toEqual([
+      { id: 1, name: 'API Secrets' },
+      { id: 7, name: 'Computer Assets' },
+    ]);
+    expect(requestMock.mock.calls[0][0]).toMatchObject({ url: '/asset_layouts' });
+  });
+
+  it('maps 401 to invalid_key (no retry)', async () => {
+    const { HuduClient, HuduRequestError } = await importClient();
+    requestMock.mockRejectedValue(axiosError(401));
+
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+
+    await expect(client.listAssetLayouts()).rejects.toBeInstanceOf(HuduRequestError);
+    requestMock.mockRejectedValue(axiosError(401));
+    await expect(client.listAssetLayouts()).rejects.toMatchObject({ hudu: { kind: 'invalid_key', status: 401 } });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('T203/T204: listAllArticles', () => {
+  it('passes page + search (no company_id) and returns exactly one typed page', async () => {
+    const { HuduClient } = await importClient();
+    requestMock.mockResolvedValueOnce({
+      data: {
+        articles: Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `Article ${i + 1}`, company_id: 1 })),
+      },
+    });
+
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+    const articles = await client.listAllArticles({ page: 3, search: 'vpn' });
+
+    expect(articles).toHaveLength(25);
+    expect(articles[0]).toMatchObject({ id: 1, name: 'Article 1', company_id: 1 });
+    // A full page must NOT trigger a follow-up fetch — one page per call.
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(requestMock.mock.calls[0][0]).toMatchObject({ url: '/articles' });
+    expect(requestMock.mock.calls[0][0].params).toEqual({ page: 3, search: 'vpn' });
+  });
+
+  it('omits the search param when the term is empty', async () => {
+    const { HuduClient } = await importClient();
+    requestMock.mockResolvedValueOnce({ data: { articles: [] } });
+
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+    await client.listAllArticles({ page: 1, search: '   ' });
+
+    expect(requestMock.mock.calls[0][0].params).toEqual({ page: 1 });
+  });
+
+  it('maps 429 to rate_limited after retries are exhausted', async () => {
+    const { HuduClient } = await importClient();
+    requestMock.mockRejectedValue(axiosError(429, { headers: { 'retry-after': '1' } }));
+
+    const client = new HuduClient({
+      credentials: VALID_CREDS,
+      sleep: noopSleep,
+      retryOptions: { maxAttempts: 2, maxJitterMs: 0 },
+    });
+
+    await expect(client.listAllArticles({ page: 1 })).rejects.toMatchObject({
+      hudu: { kind: 'rate_limited', status: 429 },
+    });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+});

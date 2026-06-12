@@ -56,6 +56,12 @@ export interface HuduAsset {
   updated_at?: string | null;
 }
 
+/** Hudu Asset Layout (reference projection: id + name only). */
+export interface HuduAssetLayout {
+  id: number;
+  name: string;
+}
+
 /** Hudu Article (knowledge-base document). */
 export interface HuduArticle {
   id: number;
@@ -102,6 +108,9 @@ export interface HuduCompaniesResponse {
 }
 export interface HuduAssetsResponse {
   assets: HuduAsset[];
+}
+export interface HuduAssetLayoutsResponse {
+  asset_layouts: HuduAssetLayout[];
 }
 export interface HuduArticlesResponse {
   articles: HuduArticle[];
