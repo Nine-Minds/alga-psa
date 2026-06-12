@@ -131,13 +131,14 @@ The following REST API groups are available in the Community Edition under the b
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - Additional endpoints: companies (clients), contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
+- **Workflow Registry (unversioned)** — Four endpoints outside the `/api/v1/` prefix expose the workflow engine's registered action types, node types, and JSON schema catalog. `GET /api/workflow/registry/actions` returns all registered action definitions; `GET /api/workflow/registry/nodes` lists registered node types; `GET /api/workflow/registry/designer-catalog` provides the designer's action tile catalog; and `GET /api/workflow/registry/schemas/{schemaRef}` resolves a named JSON Schema by reference. All four require the `workflow:read` RBAC permission.
 
 #### Ticket Bundling
 
 When multiple tickets describe the same underlying issue, they can be grouped under one *master* ticket using the bundle sub-resource at `/api/v1/tickets/{id}/bundle`. This feature is available to both PSA and AlgaDesk tenants.
 
 | Method | Path | Purpose |
-|--------|------|---------|
+|--------|------|--------|
 | `GET` | `/tickets/{id}/bundle` | Return the ticket's bundle role (`master`, `child`, or `standalone`), the master ticket, children, and settings |
 | `POST` | `/tickets/{id}/bundle` | Create a bundle with `{id}` as master. Requires `child_ticket_ids` (array of UUIDs); accepts optional `mode` (`link_only` or `sync_updates`, default `sync_updates`) |
 | `DELETE` | `/tickets/{id}/bundle` | Detach all children and remove bundle settings |
@@ -155,7 +156,7 @@ When multiple tickets describe the same underlying issue, they can be grouped un
 Assets and tickets can be linked to each other (the same association surfaced in the asset and ticket detail UIs). The link is a single record readable and writable from either side.
 
 | Method | Path | Purpose |
-|--------|------|---------|
+|--------|------|--------|
 | `GET` | `/assets/{id}/tickets` | List tickets linked to an asset |
 | `POST` | `/assets/{id}/tickets` | Link a ticket to an asset. Requires `ticket_id`; accepts optional `relationship_type` (default `affected`) and `notes` |
 | `DELETE` | `/assets/{id}/tickets/{ticketId}` | Remove the link between an asset and a ticket |
@@ -204,7 +205,6 @@ Assets and tickets can be linked to each other (the same association surfaced in
   - Error scenarios and handling
 
 ## 8. Future Considerations
-- **API Documentation:** OpenAPI/Swagger integration
 - **Webhook Support:** For asynchronous operations
 - **Rate Limiting:** Request throttling implementation
 - **Versioning Strategy:** API versioning guidelines
