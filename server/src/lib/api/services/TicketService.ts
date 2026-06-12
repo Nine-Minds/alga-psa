@@ -62,6 +62,7 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'updated_at',
   'entered_at',
   'closed_at',
+  'tags',
 ];
 
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
@@ -315,12 +316,20 @@ export class TicketService extends BaseService<ITicket> {
 
       if (selectedFields.includes('assigned_to_name')) {
         selectParts.push(
-          knex.raw(`CASE 
-            WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
-            THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
-            ELSE NULL 
+          knex.raw(`CASE
+            WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL
+            THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name)
+            ELSE NULL
           END as assigned_to_name`),
         );
+      }
+
+      // Authorization-aware pagination builds its record context from these
+      // columns, so they ride along with any field selection.
+      const authColumns = ['t.ticket_id', 't.status_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'];
+      const plainSelects = new Set(selectParts.filter((p): p is string => typeof p === 'string'));
+      for (const column of authColumns) {
+        if (!plainSelects.has(column)) selectParts.push(column);
       }
 
       dataQuery = dataQuery.select(selectParts);
@@ -332,10 +341,61 @@ export class TicketService extends BaseService<ITicket> {
       countQuery.count('* as count')
     ]);
 
+    if (wants('tags')) {
+      await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
+    }
+
     return {
       data: tickets as ITicket[],
       total: parseInt(count as string)
     };
+  }
+
+  private async attachTicketTags(
+    knex: Knex,
+    tenant: string,
+    tickets: Array<Record<string, unknown>>
+  ): Promise<void> {
+    const ticketIds = tickets
+      .map((t) => t.ticket_id)
+      .filter((id): id is string => typeof id === 'string');
+
+    for (const ticket of tickets) {
+      ticket.tags = [];
+    }
+    if (ticketIds.length === 0) return;
+
+    const rows = await knex('tag_mappings as tm')
+      .join('tag_definitions as td', function joinDefinitions() {
+        this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+      })
+      .where('tm.tenant', tenant)
+      .where('tm.tagged_type', 'ticket')
+      .whereIn('tm.tagged_id', ticketIds)
+      .select(
+        'tm.mapping_id as tag_id',
+        'tm.tagged_id',
+        'td.tag_text',
+        'td.background_color',
+        'td.text_color'
+      )
+      .orderBy('td.tag_text', 'asc');
+
+    const byTicket = new Map<string, Array<Record<string, unknown>>>();
+    for (const row of rows) {
+      const list = byTicket.get(row.tagged_id) ?? [];
+      list.push({
+        tag_id: row.tag_id,
+        tag_text: row.tag_text,
+        background_color: row.background_color,
+        text_color: row.text_color,
+      });
+      byTicket.set(row.tagged_id, list);
+    }
+
+    for (const ticket of tickets) {
+      ticket.tags = byTicket.get(ticket.ticket_id as string) ?? [];
+    }
   }
 
   private normalizeTicketListFields(fields?: string[]): string[] | null {

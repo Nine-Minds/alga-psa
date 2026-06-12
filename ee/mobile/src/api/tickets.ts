@@ -21,6 +21,13 @@ export type SuccessResponse<T> = {
   meta?: unknown;
 };
 
+export type TicketListTag = {
+  tag_id: string;
+  tag_text: string;
+  background_color?: string | null;
+  text_color?: string | null;
+};
+
 export type TicketListItem = {
   ticket_id: string;
   ticket_number: string;
@@ -35,6 +42,7 @@ export type TicketListItem = {
   updated_at?: string | null;
   entered_at?: string | null;
   closed_at?: string | null;
+  tags?: TicketListTag[] | null;
 };
 
 export type TicketRichAttributes = {
