@@ -9,6 +9,7 @@ import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhoo
 import { registerSearchIndexSubscriber, unregisterSearchIndexSubscriber } from './searchIndexSubscriber';
 import { registerProjectWebhookSubscriber, unregisterProjectWebhookSubscriber } from './projectWebhookSubscriber';
 import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedSubscriber } from './rmmAlertTicketClosedSubscriber';
+import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
 
 type SubscriberRegistration = {
   name: string;
@@ -27,6 +28,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'searchIndex', register: registerSearchIndexSubscriber },
   { name: 'projectWebhook', register: registerProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
+  { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -41,6 +43,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
   { name: 'projectWebhook', register: unregisterProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: unregisterRmmAlertTicketClosedSubscriber },
+  { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a
