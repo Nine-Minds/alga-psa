@@ -83,7 +83,7 @@ describe('asset_type_registry migration artifacts and seeding', () => {
     }
   });
 
-  it('T301: migration creates the table with expected columns, keys, unique (tenant, slug), and RLS policies', async () => {
+  it('T301: migration creates the table with expected columns, keys, unique (tenant, slug), and no RLS', async () => {
     expect(await db.schema.hasTable('asset_type_registry')).toBe(true);
 
     const columns = await db.raw(`
@@ -117,17 +117,17 @@ describe('asset_type_registry migration artifacts and seeding', () => {
     expect(defs).toContain('PRIMARY KEY (tenant, type_id)');
     expect(defs).toContain('UNIQUE (tenant, slug)');
 
+    // Post-20260509120000 architecture: no RLS on new tenant tables
+    // (isolation is app-layer scoped queries + Citus distribution).
     const rls = await db.raw(`
       SELECT relrowsecurity FROM pg_class WHERE relname = 'asset_type_registry'
     `);
-    expect(rls.rows[0].relrowsecurity).toBe(true);
+    expect(rls.rows[0].relrowsecurity).toBe(false);
 
     const policies = await db.raw(`
       SELECT policyname FROM pg_policies WHERE tablename = 'asset_type_registry'
     `);
-    const policyNames = policies.rows.map((row: any) => row.policyname);
-    expect(policyNames).toContain('tenant_isolation_policy');
-    expect(policyNames).toContain('tenant_isolation_insert_policy');
+    expect(policies.rows).toHaveLength(0);
   });
 
   it('T301: unique (tenant, slug) rejects duplicates while the same slug is fine on another tenant', async () => {
@@ -180,8 +180,6 @@ describe('asset_type_registry migration artifacts and seeding', () => {
     const policies = await db.raw(`
       SELECT policyname FROM pg_policies WHERE tablename = 'asset_type_registry'
     `);
-    expect(policies.rows.map((row: any) => row.policyname)).toEqual(
-      expect.arrayContaining(['tenant_isolation_policy', 'tenant_isolation_insert_policy'])
-    );
+    expect(policies.rows).toHaveLength(0);
   });
 });

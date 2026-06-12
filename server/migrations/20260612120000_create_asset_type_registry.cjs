@@ -14,13 +14,11 @@
  * (standard_statuses lesson: tenant-loop migrations skip tenants created
  * later).
  *
- * RLS: tenant_isolation_policy / tenant_isolation_insert_policy follow the
- * sibling asset-table pattern (20241112031330), but use
- * current_setting('app.current_tenant', true) with a NULL fallback so pooled
- * app connections that never set the GUC (see
- * 20260509120000_disable_remaining_rls_policies.cjs) neither error nor lose
- * rows; contexts that do set it (onboarding seeds, imports, jobs) get
- * enforced isolation.
+ * No RLS: tenant isolation is enforced at the app layer (scoped queries +
+ * Citus tenant distribution). 20260509120000_disable_remaining_rls_policies
+ * dropped every policy and disabled RLS schema-wide because pooled app
+ * connections never set app.current_tenant; new tenant tables follow that
+ * architecture (precedent: asset_facts and the EE integration tables).
  */
 
 const BUILTIN_ASSET_TYPES = [
@@ -53,22 +51,6 @@ exports.up = async function (knex) {
       table.primary(['tenant', 'type_id']);
       table.unique(['tenant', 'slug'], 'asset_type_registry_tenant_slug_uk');
     });
-
-    await knex.raw(`
-      ALTER TABLE asset_type_registry ENABLE ROW LEVEL SECURITY;
-
-      CREATE POLICY tenant_isolation_policy ON asset_type_registry
-          USING (
-            current_setting('app.current_tenant', true) IS NULL
-            OR tenant::TEXT = current_setting('app.current_tenant', true)
-          );
-
-      CREATE POLICY tenant_isolation_insert_policy ON asset_type_registry
-          FOR INSERT WITH CHECK (
-            current_setting('app.current_tenant', true) IS NULL
-            OR tenant::TEXT = current_setting('app.current_tenant', true)
-          );
-    `);
   }
 
   const citusEnabled = await knex.raw(`
