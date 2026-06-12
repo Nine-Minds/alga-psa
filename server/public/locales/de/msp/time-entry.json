@@ -121,7 +121,10 @@
       "minimumDuration": "Die Mindestdauer beträgt 1 Minute",
       "serviceRequired": "Für Zeiteinträge ist ein Service erforderlich",
       "timePeriodRange": "Das Datum muss innerhalb der aktuellen Periode liegen ({{periodRange}})",
-      "endAfterStartPicker": "Die Endzeit muss nach der Startzeit liegen"
+      "endAfterStartPicker": "Die Endzeit muss nach der Startzeit liegen",
+      "durationSameDay": "Die Dauer muss am selben Tag enden",
+      "endSameDay": "Die Endzeit muss am selben Tag wie die Startzeit liegen",
+      "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein"
     }
   },
   "workItemPicker": {
@@ -365,6 +368,10 @@
     "active": "Aktiv"
   },
   "intervals": {
+    "createdFromNote_one": "Aus {{count}} Intervall erstellt",
+    "createdFromNote_other": "Aus {{count}} Intervallen erstellt",
+    "selectedCount_one": "{{count}} Intervall ausgewählt",
+    "selectedCount_other": "{{count}} Intervalle ausgewählt",
     "title": "Ticketzeitintervalle",
     "hideShortIntervals": "Intervalle unter 1 Minute ausblenden",
     "totalTime": "Gesamtzeit: {{value}}",

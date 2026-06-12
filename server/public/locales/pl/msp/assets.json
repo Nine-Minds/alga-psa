@@ -63,7 +63,7 @@
         "description": "Usuń wszystkie aktywne filtry i wyszukiwane hasła"
       }
     },
-    "searchPlaceholder": "Szukaj zasobów, klientów, biletów…",
+    "searchPlaceholder": "Szukaj zasobów, klientów, zgłoszeń…",
     "empty": "Brak dopasowań. Spróbuj innego słowa kluczowego.",
     "groups": {
       "quickActions": "Szybkie działania",
@@ -71,7 +71,7 @@
       "hints": "Wskazówki"
     },
     "hint": {
-      "body": "Pisz dalej, aby przeszukać pełną listę zasobów. Bilety i wyszukiwanie klientów pojawią się później.",
+      "body": "Pisz dalej, aby przeszukać pełną listę zasobów. Zgłoszenia i wyszukiwanie klientów pojawią się później.",
       "badge": "Już wkrótce"
     },
     "values": {
@@ -101,7 +101,10 @@
     "selection": {
       "selectAllVisibleAssets": "Wybierz wszystkie widoczne zasoby",
       "selectAsset": "Wybierz zasób {{name}}",
-      "selectedAssets": "Wybrano {{count}} zasób{{suffix}}",
+      "selectedAssets_one": "Wybrano {{count}} zasób",
+      "selectedAssets_few": "Wybrano {{count}} zasoby",
+      "selectedAssets_many": "Wybrano {{count}} zasobów",
+      "selectedAssets_other": "Wybrano {{count}} zasobów",
       "clearSelection": "Wyczyść wybór",
       "bulkActionsComingSoon": "Działania zbiorcze już wkrótce"
     },
@@ -109,7 +112,7 @@
       "openActionsForAsset": "Otwórz działania dla zasobu {{name}}",
       "viewDetails": "Zobacz szczegóły",
       "editAsset": "Edytuj zasób",
-      "createTicket": "Utwórz bilet",
+      "createTicket": "Utwórz zgłoszenie",
       "refreshData": "Odśwież dane"
     },
     "table": {
@@ -216,6 +219,49 @@
         "title": "Opcje drukowania",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania zasobów."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Wyczyść",
+        "delete": "Usuń",
+        "selectedCount": "Zaznaczono {{count}}",
+        "setLocation": "Ustaw lokalizację",
+        "setStatus": "Ustaw status"
+      },
+      "actions": {
+        "apply": "Zastosuj",
+        "applying": "Stosowanie...",
+        "deleteAssets": "Usuń",
+        "deleting": "Usuwanie...",
+        "updateLocation": "Aktualizacja lokalizacji",
+        "updateStatus": "Aktualizacja statusu"
+      },
+      "deleteDialog": {
+        "description": "Usuń {{count}} zaznaczonych zasobów. Zasoby z zależnościami mogą zostać pominięte.",
+        "title": "Usuń zaznaczone zasoby"
+      },
+      "errors": {
+        "deleteFailed": "Nie można usunąć zaznaczonych zasobów.",
+        "updateLocationFailed": "Nie można zaktualizować lokalizacji zaznaczonych zasobów.",
+        "updateStatusFailed": "Nie można zaktualizować zaznaczonych zasobów."
+      },
+      "locationDialog": {
+        "clearLocation": "Wyczyść lokalizację",
+        "customLocation": "Lokalizacja niestandardowa",
+        "customPlaceholder": "Wprowadź niestandardową lokalizację lub obszar",
+        "description": "Zaktualizuj {{count}} zaznaczonych zasobów.",
+        "loadingLocations": "Ładowanie lokalizacji...",
+        "savedDisabled": "Zapisane lokalizacje klienta są dostępne tylko wtedy, gdy wszystkie zaznaczone zasoby są widoczne i należą do jednego klienta.",
+        "savedLocation": "Zapisana lokalizacja klienta",
+        "selectLocation": "Wybierz lokalizację",
+        "title": "Ustaw lokalizację zasobu"
+      },
+      "partialFailure": "{{action}} ukończono dla {{succeeded}} zasobów; nie powiodło się: {{failed}}.",
+      "statusDialog": {
+        "description": "Zaktualizuj {{count}} zaznaczonych zasobów.",
+        "title": "Ustaw status zasobu"
+      },
+      "success": "{{action}} ukończono dla {{count}} zasobów."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +279,7 @@
     "tabs": {
       "overview": "Przegląd",
       "maintenance": "Konserwacja",
-      "tickets": "Bilety",
+      "tickets": "Zgłoszenia",
       "configuration": "Konfiguracja",
       "documents": "Dokumenty"
     },
@@ -279,11 +325,11 @@
       "noLogs": "Dzienniki konserwacji pojawią się tutaj po pierwszym wpisie serwisowym."
     },
     "tickets": {
-      "empty": "Żadne bilety nie są jeszcze powiązane z tym zasobem. Użyj szybkiej akcji, aby ją utworzyć.",
+      "empty": "Żadne zgłoszenia nie są jeszcze powiązane z tym zasobem. Użyj szybkiej akcji, aby je utworzyć.",
       "linked": "Połączono {{date}}",
       "client": "Klient: {{name}}",
       "assignee": "Osoba przypisana: {{name}}",
-      "openTicket": "Otwórz bilet"
+      "openTicket": "Otwórz zgłoszenie"
     },
     "configuration": {
       "coreAttributes": "Podstawowe atrybuty",
@@ -341,9 +387,18 @@
     },
     "relative": {
       "momentsAgo": "chwilę temu",
-      "minutesAgo": "{{count}} min{{suffix}} temu",
-      "hoursAgo": "{{count}} godz{{suffix}} temu",
-      "daysAgo": "{{count}} dni{{suffix}} temu"
+      "minutesAgo_one": "{{count}} minutę temu",
+      "minutesAgo_few": "{{count}} minuty temu",
+      "minutesAgo_many": "{{count}} minut temu",
+      "minutesAgo_other": "{{count}} minuty temu",
+      "hoursAgo_one": "{{count}} godzinę temu",
+      "hoursAgo_few": "{{count}} godziny temu",
+      "hoursAgo_many": "{{count}} godzin temu",
+      "hoursAgo_other": "{{count}} godziny temu",
+      "daysAgo_one": "{{count}} dzień temu",
+      "daysAgo_few": "{{count}} dni temu",
+      "daysAgo_many": "{{count}} dni temu",
+      "daysAgo_other": "{{count}} dni temu"
     }
   },
   "assetDetailHeader": {
@@ -352,7 +407,7 @@
     "backToAssets": "Powrót do zasobów",
     "assetTag": "Etykieta zasobu: {{tag}}",
     "actions": {
-      "createTicket": "Utwórz bilet",
+      "createTicket": "Utwórz zgłoszenie",
       "menu": "Działania",
       "refreshing": "Odświeżanie...",
       "refreshData": "Odśwież dane",
@@ -501,7 +556,8 @@
       "loadFailed": "Nie udało się wczytać szczegółów zasobu",
       "clientsLoadFailed": "Nie można załadować klientów",
       "locationsLoadFailed": "Nie można załadować lokalizacji dla tego klienta",
-      "updateFailed": "Nie udało się zaktualizować zasobu"
+      "updateFailed": "Nie udało się zaktualizować zasobu",
+      "validation": "Popraw wyróżnione pola przed zapisaniem."
     },
     "actions": {
       "viewClient": "Zobacz klienta",
@@ -609,7 +665,7 @@
     "description": "Karty metryk i zestawienia wskaźników dotyczące zgłoszeń, konserwacji, czasu pracy i stanu zasobów",
     "labels": {
       "healthStatus": "Stan zdrowia",
-      "openTickets": "Bilety otwarte",
+      "openTickets": "Otwarte zgłoszenia",
       "securityStatus": "Stan zabezpieczeń",
       "warranty": "Gwarancja"
     },
@@ -707,7 +763,10 @@
     "actions": {
       "addAsset": "Dodaj zasób",
       "showLess": "Pokaż mniej",
-      "moreAssets": "{{count}} więcej zasobów{{suffix}}"
+      "moreAssets_one": "Jeszcze {{count}} zasób",
+      "moreAssets_few": "Jeszcze {{count}} zasoby",
+      "moreAssets_many": "Jeszcze {{count}} zasobów",
+      "moreAssets_other": "Jeszcze {{count}} zasobów"
     },
     "errors": {
       "loadAvailableAssets": "Nie udało się załadować dostępnych zasobów",
@@ -719,12 +778,18 @@
       "removeFailed": "Nie udało się usunąć powiązania z zasobami"
     },
     "success": {
-      "associated": "{{count}} zasób{{suffix}} powiązano pomyślnie",
-      "associatedPartial": "{{count}} zasób{{suffix}} powiązano pomyślnie, {{failed}} nie powiodło się (może już zostać powiązany)",
+      "associated_one": "Pomyślnie powiązano {{count}} zasób",
+      "associated_few": "Pomyślnie powiązano {{count}} zasoby",
+      "associated_many": "Pomyślnie powiązano {{count}} zasobów",
+      "associated_other": "Pomyślnie powiązano {{count}} zasobów",
+      "associatedPartial_one": "Pomyślnie powiązano {{count}} zasób, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_few": "Pomyślnie powiązano {{count}} zasoby, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_many": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
+      "associatedPartial_other": "Pomyślnie powiązano {{count}} zasobów, nie powiodło się: {{failed}} (możliwe wcześniejsze powiązanie)",
       "removed": "Usunięto powiązanie z zasobami"
     },
     "empty": {
-      "noneAssociated": "Żadne zasoby nie są powiązane z tym biletem.",
+      "noneAssociated": "Żadne zasoby nie są powiązane z tym zgłoszeniem.",
       "unknownAsset": "Nieznany zasób"
     },
     "dialog": {
@@ -743,7 +808,10 @@
         "placeholder": "Typ..."
       },
       "actions": {
-        "addAssets": "Dodaj zasób{{suffix}}"
+        "addAssets_one": "Dodaj zasób",
+        "addAssets_few": "Dodaj zasoby",
+        "addAssets_many": "Dodaj zasoby",
+        "addAssets_other": "Dodaj zasoby"
       }
     },
     "table": {
@@ -770,16 +838,16 @@
     }
   },
   "createTicketFromAssetButton": {
-    "title": "Utwórz bilet z zasobu",
-    "description": "Proces tworzenia biletów uruchamiany z zasobu z wyborem tablicy, statusu i kategorii",
+    "title": "Utwórz zgłoszenie z zasobu",
+    "description": "Proces tworzenia zgłoszeń uruchamiany z zasobu z wyborem tablicy, statusu i kategorii",
     "register": {
-      "label": "Utwórz bilet z zasobu",
-      "title": "Utwórz bilet z zasobu"
+      "label": "Utwórz zgłoszenie z zasobu",
+      "title": "Utwórz zgłoszenie z zasobu"
     },
     "defaultTitle": "Problem z {{name}}",
     "actions": {
-      "open": "Utwórz bilet",
-      "create": "Utwórz bilet",
+      "open": "Utwórz zgłoszenie",
+      "create": "Utwórz zgłoszenie",
       "creating": "Tworzenie..."
     },
     "fields": {
@@ -790,7 +858,7 @@
       "priority": "Priorytet"
     },
     "placeholders": {
-      "title": "Wpisz tytuł biletu",
+      "title": "Wpisz tytuł zgłoszenia",
       "description": "Opisz problem...",
       "loadingBoards": "Ładowanie tablic...",
       "selectBoard": "Wybierz tablicę...",
@@ -805,10 +873,10 @@
       "loadBoards": "Nie udało się załadować tablic",
       "loadStatuses": "Nie udało się załadować statusów",
       "requiredFields": "Podaj tytuł, tablicę, status i priorytet",
-      "createFailed": "Nie udało się utworzyć biletu"
+      "createFailed": "Nie udało się utworzyć zgłoszenia"
     },
     "success": {
-      "created": "Utworzono bilet"
+      "created": "Utworzono zgłoszenie"
     }
   },
   "deleteAssetButton": {
@@ -853,7 +921,9 @@
       "assetTagRequired": "Etykieta zasobu *",
       "typeRequired": "Typ *",
       "status": "Status",
-      "serialNumber": "Numer seryjny"
+      "serialNumber": "Numer seryjny",
+      "customLocationOption": "Lokalizacja niestandardowa",
+      "location": "Lokalizacja"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -869,7 +939,11 @@
       "assetTag": "Wprowadź tag zasobu",
       "selectType": "Wybierz typ",
       "selectStatus": "Wybierz stan",
-      "serialNumber": "Wprowadź numer seryjny"
+      "serialNumber": "Wprowadź numer seryjny",
+      "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
+      "loadingLocations": "Ładowanie lokalizacji...",
+      "selectClientFirst": "Najpierw wybierz klienta",
+      "selectLocation": "Wybierz lokalizację"
     },
     "sections": {
       "typeSpecificDetails": "Szczegóły specyficzne dla typu"
@@ -979,7 +1053,8 @@
       "uptime": "Czas pracy",
       "lastSync": "Ostatnia synchronizacja RMM",
       "network": "Sieć",
-      "networkValue": "Adres IP sieci LAN: {{lan}} | IP sieci WAN: {{wan}}"
+      "networkValue": "Adres IP sieci LAN: {{lan}} | IP sieci WAN: {{wan}}",
+      "taniumCriticality": "Krytyczność Tanium"
     },
     "values": {
       "never": "Nigdy"
@@ -1136,13 +1211,31 @@
       "actions": "Działania"
     },
     "frequency": {
-      "every": "Co {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Co {{frequency}}",
+      "every_few": "Co {{count}} {{frequency}}",
+      "every_many": "Co {{count}} {{frequency}}",
+      "every_other": "Co {{count}} {{frequency}}",
       "units": {
-        "daily": "dzień",
-        "weekly": "tydzień",
-        "monthly": "miesiąc",
-        "quarterly": "kwartał",
-        "yearly": "rok"
+        "daily_one": "dzień",
+        "daily_few": "dni",
+        "daily_many": "dni",
+        "daily_other": "dni",
+        "weekly_one": "tydzień",
+        "weekly_few": "tygodnie",
+        "weekly_many": "tygodni",
+        "weekly_other": "tygodni",
+        "monthly_one": "miesiąc",
+        "monthly_few": "miesiące",
+        "monthly_many": "miesięcy",
+        "monthly_other": "miesięcy",
+        "quarterly_one": "kwartał",
+        "quarterly_few": "kwartały",
+        "quarterly_many": "kwartałów",
+        "quarterly_other": "kwartałów",
+        "yearly_one": "rok",
+        "yearly_few": "lata",
+        "yearly_many": "lat",
+        "yearly_other": "lat"
       }
     },
     "status": {
@@ -1230,16 +1323,16 @@
     "title": "Historia serwisowa",
     "description": "Karta historii usług podsumowująca czynności konserwacyjne i zgłoszenia dotyczące zasobu",
     "actions": {
-      "createTicket": "Utwórz bilet"
+      "createTicket": "Utwórz zgłoszenie"
     },
     "table": {
-      "ticketId": "Identyfikator biletu",
+      "ticketId": "Identyfikator zgłoszenia",
       "subject": "Temat",
       "status": "Status",
       "priority": "Priorytet",
       "dateLinked": "Data połączona"
     },
-    "empty": "Brak biletów powiązanych z tym zasobem.",
+    "empty": "Brak zgłoszeń powiązanych z tym zasobem.",
     "clientFallback": "Nieznany klient"
   },
   "softwareInventoryTab": {
@@ -1278,5 +1371,14 @@
     "activeAlerts": "Aktywne alerty",
     "acknowledge": "Potwierdź",
     "createTicket": "Utwórz zgłoszenie"
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania",
+    "printSelected": "Drukuj zaznaczone ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+    "openTicketFailed": "Nie udało się otworzyć zgłoszenia"
   }
 }

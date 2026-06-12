@@ -123,7 +123,27 @@
       "goToPage": "Go to page",
       "dismissError": "Failed to dismiss task: {{message}}"
     },
-    "retryLater": "Please try again later."
+    "retryLater": "Please try again later.",
+    "adHoc": {
+      "endBeforeStart": "End time must be after the start time.",
+      "fields": {
+        "end": "End (optional)",
+        "noTime": "No time",
+        "notes": "Notes",
+        "notesPlaceholder": "Add notes…",
+        "start": "Start (optional)",
+        "title": "Title",
+        "titlePlaceholder": "Title"
+      },
+      "loadError": "Failed to load this item. Please try again later.",
+      "saveError": "Failed to save item.",
+      "saveSuccess": "Item saved",
+      "statusDone": "Done",
+      "statusOpen": "Open",
+      "title": "Ad hoc item",
+      "toggleDoneError": "Failed to update item."
+    },
+    "enterpriseOnly": "Workflow tasks are an Enterprise feature."
   },
   "groupedView": {
     "addGroup": "Add Group",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Failed to load schedule activities. Please try again later.",
-        "refreshFailed": "Failed to refresh schedule activities. Please try again later."
+        "refreshFailed": "Failed to refresh schedule activities. Please try again later.",
+        "addAdHocFailed": "Failed to add activity. Please try again."
       },
       "filterDialog": {
         "title": "Filter Schedule Entries",
@@ -417,7 +438,13 @@
       "priority": "Priority",
       "search": "Search",
       "dueDate": "Due Date",
-      "showClosed": "Show closed"
+      "showClosed": "Show closed",
+      "client": "Client",
+      "dueDateShort": "Due",
+      "tags": "Tags",
+      "tagsSelected": "{{count}} tags",
+      "tasksCompact": "Tasks",
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Schedule",
@@ -434,10 +461,16 @@
       "search": "Search activities...",
       "searchBoards": "Search boards...",
       "searchStatuses": "Search statuses...",
-      "searchProjects": "Search projects..."
+      "searchProjects": "Search projects...",
+      "allClients": "All Clients",
+      "fromDateShort": "From",
+      "projectTaskTags": "Filter task tags...",
+      "ticketTags": "Filter ticket tags...",
+      "toDateShort": "To"
     },
     "actions": {
-      "reset": "Reset"
+      "reset": "Reset",
+      "clearClient": "Clear client filter"
     },
     "statusClosedSuffix": " (closed)",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "{{count}} phases",
       "excludingName": "excl {{name}}",
       "excludingCount_one": "excl {{count}}",
-      "excludingCount_other": "excl {{count}}"
+      "excludingCount_other": "excl {{count}}",
+      "boards": "{{count}} boards",
+      "excludingCount": "excl {{count}}",
+      "phases": "{{count}} phases",
+      "projects": "{{count}} projects",
+      "statuses": "{{count}} statuses"
     }
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options"
   }
 }

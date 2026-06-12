@@ -34,6 +34,10 @@ const SKIP_DIRS = new Set([
   'node_modules', '.next', 'dist', 'build', '.turbo', 'coverage',
 ]);
 
+// Test files assert on key strings (contract tests grep source for t('…')
+// literals) without being runtime translation calls — skip them.
+const RE_TEST_FILE = /(\.test\.|\.spec\.|\/__tests__\/|\/src\/test\/)/;
+
 function walk(target, out = []) {
   if (!fs.existsSync(target)) return out;
   const stat = fs.statSync(target);
@@ -76,6 +80,14 @@ function hasKey(obj, dotted) {
   return typeof cur === 'string' || Array.isArray(cur);
 }
 
+// i18next v4 stores count-based keys with CLDR plural suffixes; a t('key',
+// { count }) call resolves via key_one/key_other/…, so accept those too.
+const PLURAL_SUFFIXES = ['zero', 'one', 'two', 'few', 'many', 'other'];
+function resolvesKey(obj, dotted) {
+  if (hasKey(obj, dotted)) return true;
+  return PLURAL_SUFFIXES.some((s) => hasKey(obj, `${dotted}_${s}`));
+}
+
 const RE_USE_TRANSLATION = /useTranslation\(\s*['"`]([^'"`]+)['"`]/g;
 // t('key'…) or t("key"…) — skip template strings (dynamic keys).
 const RE_T_CALL = /(?<![A-Za-z0-9_$])t\(\s*['"]([^'"]+)['"]/g;
@@ -84,6 +96,7 @@ const findings = [];
 
 for (const root of SCAN_ROOTS) {
   for (const file of walk(root)) {
+    if (RE_TEST_FILE.test(file)) continue;
     const src = fs.readFileSync(file, 'utf8');
     if (!src.includes('useTranslation') && !/(?<![A-Za-z0-9_$])t\(/.test(src)) continue;
 
@@ -100,11 +113,13 @@ for (const root of SCAN_ROOTS) {
       const key = m[1];
       // Skip obvious non-i18n calls: keys with whitespace or no dots and short.
       if (!/^[A-Za-z0-9_.:-]+$/.test(key)) continue;
+      // Skip trailing-dot prefixes (dynamic keys / contract-test assertions).
+      if (key.endsWith('.')) continue;
       const before = src.slice(0, m.index);
       const line = before.split('\n').length;
 
       // Try every namespace declared in the file; pass if any resolves.
-      const resolved = nsList.some((ns) => hasKey(loadLocale(ns), key));
+      const resolved = nsList.some((ns) => resolvesKey(loadLocale(ns), key));
       if (!resolved) {
         findings.push({ file: path.relative(REPO, file), line, key, namespaces: nsList });
       }

@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "11111",
       "selectAsset": "11111 {{name}} 11111",
-      "selectedAssets": "11111 {{count}} 11111 {{suffix}} 11111",
+      "selectedAssets_one": "11111 {{count}} 11111",
+      "selectedAssets_other": "11111 {{count}} 11111",
       "clearSelection": "11111",
       "bulkActionsComingSoon": "11111"
     },
@@ -216,6 +217,49 @@
         "title": "11111",
         "description": "11111"
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "11111",
+        "delete": "11111",
+        "selectedCount": "11111 {{count}} 11111",
+        "setLocation": "11111",
+        "setStatus": "11111"
+      },
+      "actions": {
+        "apply": "11111",
+        "applying": "11111",
+        "deleteAssets": "11111",
+        "deleting": "11111",
+        "updateLocation": "11111",
+        "updateStatus": "11111"
+      },
+      "deleteDialog": {
+        "description": "11111 {{count}} 11111",
+        "title": "11111"
+      },
+      "errors": {
+        "deleteFailed": "11111",
+        "updateLocationFailed": "11111",
+        "updateStatusFailed": "11111"
+      },
+      "locationDialog": {
+        "clearLocation": "11111",
+        "customLocation": "11111",
+        "customPlaceholder": "11111",
+        "description": "11111 {{count}} 11111",
+        "loadingLocations": "11111",
+        "savedDisabled": "11111",
+        "savedLocation": "11111",
+        "selectLocation": "11111",
+        "title": "11111"
+      },
+      "partialFailure": "11111 {{action}} 11111 {{succeeded}} 11111 {{failed}} 11111",
+      "statusDialog": {
+        "description": "11111 {{count}} 11111",
+        "title": "11111"
+      },
+      "success": "11111 {{action}} 11111 {{count}} 11111"
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "11111",
-      "minutesAgo": "11111 {{count}} 11111 {{suffix}} 11111",
-      "hoursAgo": "11111 {{count}} 11111 {{suffix}} 11111",
-      "daysAgo": "11111 {{count}} 11111 {{suffix}} 11111"
+      "minutesAgo_one": "11111 {{count}} 11111",
+      "minutesAgo_other": "11111 {{count}} 11111",
+      "hoursAgo_one": "11111 {{count}} 11111",
+      "hoursAgo_other": "11111 {{count}} 11111",
+      "daysAgo_one": "11111 {{count}} 11111",
+      "daysAgo_other": "11111 {{count}} 11111"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "11111",
       "clientsLoadFailed": "11111",
       "locationsLoadFailed": "11111",
-      "updateFailed": "11111"
+      "updateFailed": "11111",
+      "validation": "11111"
     },
     "actions": {
       "viewClient": "11111",
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "11111",
       "showLess": "11111",
-      "moreAssets": "11111 {{count}} 11111 {{suffix}} 11111"
+      "moreAssets_one": "11111 {{count}} 11111",
+      "moreAssets_other": "11111 {{count}} 11111"
     },
     "errors": {
       "loadAvailableAssets": "11111",
@@ -719,8 +768,10 @@
       "removeFailed": "11111"
     },
     "success": {
-      "associated": "11111 {{count}} 11111 {{suffix}} 11111",
-      "associatedPartial": "11111 {{count}} 11111 {{suffix}} 11111 {{failed}} 11111",
+      "associated_one": "11111 {{count}} 11111",
+      "associated_other": "11111 {{count}} 11111",
+      "associatedPartial_one": "11111 {{count}} 11111 {{failed}} 11111",
+      "associatedPartial_other": "11111 {{count}} 11111 {{failed}} 11111",
       "removed": "11111"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "11111"
       },
       "actions": {
-        "addAssets": "11111 {{suffix}} 11111"
+        "addAssets_one": "11111",
+        "addAssets_other": "11111"
       }
     },
     "table": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "11111",
       "typeRequired": "11111",
       "status": "11111",
-      "serialNumber": "11111"
+      "serialNumber": "11111",
+      "customLocationOption": "11111",
+      "location": "11111"
     },
     "placeholders": {
       "workstationOsType": "11111",
@@ -869,7 +923,11 @@
       "assetTag": "11111",
       "selectType": "11111",
       "selectStatus": "11111",
-      "serialNumber": "11111"
+      "serialNumber": "11111",
+      "customLocation": "11111",
+      "loadingLocations": "11111",
+      "selectClientFirst": "11111",
+      "selectLocation": "11111"
     },
     "sections": {
       "typeSpecificDetails": "11111"
@@ -979,7 +1037,8 @@
       "uptime": "11111",
       "lastSync": "11111",
       "network": "11111",
-      "networkValue": "11111 {{lan}} 11111 {{wan}} 11111"
+      "networkValue": "11111 {{lan}} 11111 {{wan}} 11111",
+      "taniumCriticality": "11111"
     },
     "values": {
       "never": "11111"
@@ -1136,13 +1195,19 @@
       "actions": "11111"
     },
     "frequency": {
-      "every": "11111 {{count}} 11111 {{frequency}} 11111 {{suffix}} 11111",
+      "every_one": "11111 {{frequency}} 11111",
+      "every_other": "11111 {{count}} 11111 {{frequency}} 11111",
       "units": {
-        "daily": "11111",
-        "weekly": "11111",
-        "monthly": "11111",
-        "quarterly": "11111",
-        "yearly": "11111"
+        "daily_one": "11111",
+        "daily_other": "11111",
+        "weekly_one": "11111",
+        "weekly_other": "11111",
+        "monthly_one": "11111",
+        "monthly_other": "11111",
+        "quarterly_one": "11111",
+        "quarterly_other": "11111",
+        "yearly_one": "11111",
+        "yearly_other": "11111"
       }
     },
     "status": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "11111",
     "acknowledge": "11111",
     "createTicket": "11111"
+  },
+  "actions": {
+    "print": "11111",
+    "printOptions": "11111",
+    "printSelected": "11111 {{count}} 11111"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "11111",
+    "openTicketFailed": "11111"
   }
 }

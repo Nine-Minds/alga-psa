@@ -648,13 +648,15 @@
         "endDate": "Date de fin",
         "clientSearch": "Recherche de clients",
         "invoiceStatuses": "Statuts des factures",
-        "notes": "Remarques"
+        "notes": "Remarques",
+        "realm": "Société cible (realm)"
       },
       "placeholders": {
         "clientSearch": "Filtre de nom de client facultatif",
         "invoiceStatuses": "Séparés par des virgules (facultatif), par ex. finalisé, publié",
         "notes": "Notes facultatives"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (par défaut)"
     },
     "detailDialog": {
       "title": "Lot d'export comptable",

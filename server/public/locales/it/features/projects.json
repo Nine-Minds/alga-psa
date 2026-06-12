@@ -64,11 +64,11 @@
     "deletePhase": "Elimina fase",
     "cancel": "Annulla",
     "save": "Salva",
-    "taskCount": "{{count}} attività",
     "taskCount_other": "{{count}} attività",
     "startLabel": "Inizio",
     "dueLabel": "Scadenza",
-    "notSet": "Non impostato"
+    "notSet": "Non impostato",
+    "taskCount_one": "{{count}} attività"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -227,6 +227,16 @@
     "hideStickyStatusNames": "Nascondi nomi stato fissi",
     "pinHeader": "Fissa intestazione in alto",
     "unpinHeader": "Rimuovi fissaggio intestazione",
+    "showHideColumns": "Mostra/nascondi colonne",
+    "columns": "Colonne",
+    "showAll": "Mostra tutto",
+    "noColumns": "Nessuna colonna disponibile",
+    "allColumnsHidden": "Tutte le colonne sono nascoste",
+    "allColumnsHiddenHint": "Mostra una o più colonne per vedere le tue attività.",
+    "showAllColumns": "Mostra tutte le colonne",
+    "hideColumn": "Nascondi colonna",
+    "showColumn": "Mostra colonna",
+    "addTask": "Aggiungi attività",
     "taskUpdatedSuccess": "Attività aggiornata con successo!",
     "hiddenColumnsAlert": "{{count}} colonne nascoste per spazio limitato. Ridimensiona il browser per vederne altre.",
     "listViewEmptyMessage": "Crea fasi e aggiungi attività per vederle qui",
@@ -326,18 +336,22 @@
     "primaryAgentRequired": "È richiesto un agente principale quando sono assegnati agenti aggiuntivi",
     "keepCreatedTicketsTitle": "Mantenere i ticket creati?",
     "keepCreatedTicketsMessage": "Vuoi mantenere questi ticket o eliminarli?",
-    "createdTicketsIntro": "Hai creato {{count}} ticket{{plural}} durante questa sessione:",
+    "createdTicketsIntro_one": "Hai creato {{count}} ticket durante questa sessione:",
+    "createdTicketsIntro_other": "Hai creato {{count}} ticket durante questa sessione:",
     "keepUploadedDocumentsTitle": "Mantenere i documenti caricati?",
     "keepUploadedDocumentsMessage": "Vuoi mantenere questi documenti nella sezione Documenti o eliminarli?",
-    "documentsCleanupIntro": "Hai {{count}} documento{{plural}} che {{wasWere}} {{cleanupType}}:",
-    "uploadedOrCreated": "caricato o creato",
-    "createdOnly": "creato",
-    "uploadedOnly": "caricato",
+    "documentsCleanupIntro_one": "Hai {{count}} documento che è stato {{cleanupType}}:",
+    "documentsCleanupIntro_other": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "uploadedOrCreated": "caricato/i o creato/i",
+    "createdOnly": "creato/i",
+    "uploadedOnly": "caricato/i",
     "createdDocumentTag": "creato",
     "uploadedDocumentTag": "caricato",
     "andMore": "…e altri {{count}}",
-    "documentCleanupFailure": "{{count}} document{{plural}} non hanno potuto essere eliminati e rimarranno in Documenti",
-    "ticketCleanupFailure": "{{count}} ticket{{plural}} non hanno potuto essere eliminati",
+    "documentCleanupFailure_one": "Impossibile eliminare {{count}} documento: rimarrà in Documenti",
+    "documentCleanupFailure_other": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "ticketCleanupFailure_one": "Impossibile eliminare {{count}} ticket",
+    "ticketCleanupFailure_other": "Impossibile eliminare {{count}} ticket",
     "checklistItemPlaceholder": "Elemento checklist",
     "reorderChecklistItem": "Trascina per riordinare",
     "insertChecklistItem": "Inserisci elemento qui",
@@ -516,12 +530,14 @@
     "fieldsToExport": "Campi da esportare",
     "selectAll": "Seleziona tutto",
     "deselectAll": "Deseleziona tutto",
-    "phasesSelected": "{{selected}} di {{total}} fase{{plural}} selezionate",
+    "phasesSelected_one": "{{selected}} di {{total}} fase selezionata",
+    "phasesSelected_other": "{{selected}} di {{total}} fasi selezionate",
     "fieldsSelected": "{{selected}} di {{total}} campi selezionati",
     "exportTasks": "Esporta attività",
     "exporting": "Esportazione attività...",
     "completeTitle": "Esportazione completata",
-    "success": "{{count}} attività esportat{{plural}} con successo in CSV.",
+    "success_one": "{{count}} attività esportata con successo in CSV.",
+    "success_other": "{{count}} attività esportate con successo in CSV.",
     "failed": "Impossibile esportare le attività",
     "done": "Fatto",
     "fields": {
@@ -543,7 +559,8 @@
       "updatedAt": "Aggiornato il"
     },
     "exportSelected": "Esporta {{count}} selezionata/e",
-    "selectedTasksNotice": "Esportazione di {{count}} attività selezionat{{plural}}."
+    "selectedTasksNotice_one": "Esportazione di {{count}} attività selezionata.",
+    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -594,7 +611,8 @@
     "importTasksButton": "Importa {{tasks}} attività",
     "mapUnmatchedAgentsTitle": "Mappa agenti non trovati",
     "agentResolutionIntro": "I seguenti nomi di agenti dal tuo CSV non corrispondono ad alcun utente esistente. Scegli come gestire ciascuno. Il primo agente in un elenco separato da virgole diventa l'assegnatario principale e gli agenti aggiuntivi diventano risorse dell'attività.",
-    "taskCountLabel": "({{count}} attività{{plural}})",
+    "taskCountLabel_one": "({{count}} attività)",
+    "taskCountLabel_other": "({{count}} attività)",
     "tasksList": "Attività: {{tasks}}",
     "andMore": " e altri {{count}}…",
     "mapToExistingUser": "Mappa a utente esistente:",
@@ -732,8 +750,8 @@
       "openFailed": "Impossibile aprire l'attività",
       "task": "Attività",
       "tasks": "Attività",
-      "badgeCount": "{{count}} Attività",
-      "badgeCount_other": "{{count}} Attività"
+      "badgeCount_other": "{{count}} Attività",
+      "badgeCount_one": "{{count}} Attività"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",
@@ -1474,5 +1492,13 @@
       "confirm_other": "Aggiungi tag a {{count}} attività",
       "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
     }
+  },
+  "common:actions": {
+    "back": "Indietro",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "done": "Fatto",
+    "edit": "Modifica",
+    "save": "Salva"
   }
 }

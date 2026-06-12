@@ -9,10 +9,10 @@
       "openMenu": "abrir menú",
       "remove": "Eliminar",
       "reset": "Reiniciar",
-      "save": "Ahorrar",
+      "save": "Guardar",
       "saveChanges": "Guardar cambios",
       "saveChangesDirty": "Guardar cambios *",
-      "saving": "Ahorro..."
+      "saving": "Guardando..."
     },
     "errors": {
       "errorWithMessage": "Error: {{message}}"
@@ -212,7 +212,7 @@
     "actions": {
       "cancel": "Cancelar",
       "createPreset": "Crear línea de contrato preestablecida",
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "updatePreset": "Actualizar valor preestablecido de línea de contrato"
     },
     "basics": {

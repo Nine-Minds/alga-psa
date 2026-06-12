@@ -21,12 +21,12 @@ export interface RmmProviderMetadata {
   badge?: RmmProviderBadge;
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
-  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration';
+  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration' | 'huntress-rmm-integration';
 }
 
 export interface RmmProviderAvailabilityContext {
   isEnterprise: boolean;
-  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration', boolean>>;
+  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration' | 'huntress-rmm-integration', boolean>>;
 }
 
 const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
@@ -105,7 +105,8 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       events: false,
       remoteActions: false
     },
-    requiresEnterprise: true
+    requiresEnterprise: true,
+    featureFlagKey: 'huntress-rmm-integration'
   }
 ];
 

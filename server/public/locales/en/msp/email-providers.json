@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Providers",
-      "defaults": "Defaults"
+      "defaults": "Defaults",
+      "inboundRules": "Inbound Rules"
     },
     "setup": {
       "title": "Setup Instructions",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Failed to initiate OAuth",
         "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
         "closedEarly": "Authorization window closed before completing. Please try again.",
-        "authorizationFailed": "Authorization failed"
+        "authorizationFailed": "Authorization failed",
+        "senderDisplayNameInvalid": "Display name cannot contain quotes, angle brackets, or line breaks"
       },
       "requiredFields": {
         "providerName": "Configuration Name",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)",
         "hostRequired": "IMAP host is required",
         "usernameRequired": "IMAP username is required",
-        "oauthInitiateFailed": "Failed to initiate IMAP OAuth"
+        "oauthInitiateFailed": "Failed to initiate IMAP OAuth",
+        "senderDisplayNameInvalid": "Display name cannot contain quotes, angle brackets, or line breaks"
       },
       "basic": {
         "title": "Basic Settings",
@@ -835,6 +838,146 @@
       "mismatchHelp": "The DNS record exists, but the value does not match what Resend expects.",
       "matchedHelp": "Detected value matches what we expected.",
       "unknownHelp": "We have not checked DNS yet. Re-check DNS to run verification."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Add Rule",
+      "aiClassify": "Classify with AI",
+      "aiClassifyUpsell": "Requires the AI Assistant add-on",
+      "extractAssign": "Assign client from extracted text",
+      "setDestination": "Route to destination",
+      "skip": "Skip email (no ticket)"
+    },
+    "badges": {
+      "allMailboxes": "All mailboxes"
+    },
+    "empty": {
+      "description": "Create a rule to skip status-update emails or assign tickets to clients named in the subject line.",
+      "title": "No inbound rules configured"
+    },
+    "errors": {
+      "aliasAdd": "Failed to add alias",
+      "delete": "Failed to delete rule",
+      "load": "Failed to load inbound rules",
+      "reorder": "Failed to reorder rules",
+      "save": "Failed to save rule",
+      "test": "Failed to test rule",
+      "update": "Failed to update rule"
+    },
+    "extraction": {
+      "after": "Text after marker",
+      "before": "Text before marker",
+      "between": "Text between delimiters",
+      "regex": "Regular expression (advanced)"
+    },
+    "fields": {
+      "bodyText": "Body text",
+      "fromAddress": "From address",
+      "fromDomain": "From domain",
+      "subject": "Subject",
+      "toAddress": "To/CC address"
+    },
+    "form": {
+      "action": "Action",
+      "active": "Active",
+      "addCondition": "Add condition",
+      "aiAllowAssign": "May assign clients",
+      "aiAllowSkip": "May skip emails",
+      "aiInstruction": "Instruction",
+      "aiInstructionPlaceholder": "e.g. Determine which customer this monitoring alert is about.",
+      "aiUpsell": "Classify with AI is available with the Enterprise AI Assistant add-on — emails are classified by intent with no patterns to maintain.",
+      "cancel": "Cancel",
+      "conditions": "Conditions (all must match)",
+      "create": "Create rule",
+      "createTitle": "Create Inbound Rule",
+      "description": "Define when the rule matches and what happens to the email. Use the tester below to verify against a sample before saving.",
+      "destination": "Destination (ticket defaults)",
+      "destinationPlaceholder": "Select a defaults set",
+      "editTitle": "Edit Inbound Rule",
+      "endDelimiter": "End delimiter",
+      "extractFrom": "Extract from",
+      "extractionTemplate": "Extraction",
+      "fallbackDestination": "Fallback destination",
+      "first": "First",
+      "last": "Last",
+      "mailboxes": "Apply to mailboxes",
+      "mailboxesHint": "Leave all unchecked to apply this rule to every mailbox.",
+      "marker": "Marker text",
+      "markerPlaceholder": "e.g. Customer:",
+      "matchHint": "The extracted text is matched against client names and client aliases (case-insensitive).",
+      "name": "Rule name",
+      "namePlaceholder": "e.g. Huntress customer routing",
+      "noMailboxes": "No mailboxes configured yet.",
+      "noMatchFallback": "Route to a fallback destination",
+      "noMatchProceed": "Continue with later rules / normal processing",
+      "noMatchSkip": "Skip the email",
+      "occurrence": "Occurrence",
+      "onNoMatch": "If no client matches",
+      "pattern": "Pattern (capture group 1 is the client name)",
+      "regexPlaceholder": "Regular expression",
+      "saving": "Saving…",
+      "startDelimiter": "Start delimiter",
+      "update": "Update rule",
+      "valuePlaceholder": "Value"
+    },
+    "header": {
+      "description": "Match inbound email by sender or subject to skip noise, assign the right client, or route to a destination. Rules run in order; the first match wins.",
+      "title": "Inbound Email Rules"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Extracted names match client names and aliases. Manage aliases on the client record, or add them from the rule tester.",
+        "audit": "• Skipped emails stay auditable in email processing diagnostics, tagged with the rule that skipped them.",
+        "order": "• Rules run top to bottom on new inbound email; the first matching rule applies.",
+        "replies": "• Replies to existing tickets always become comments — rules never touch them."
+      },
+      "title": "How It Works"
+    },
+    "loading": "Loading inbound rules...",
+    "menu": {
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "edit": "Edit"
+    },
+    "operators": {
+      "contains": "contains",
+      "endsWith": "ends with",
+      "equals": "equals",
+      "matchesRegex": "matches regex",
+      "startsWith": "starts with"
+    },
+    "summary": {
+      "aiClassify": "Classify with AI",
+      "extractAssign": "Assign client from {{source}}",
+      "setDestination": "Route to destination",
+      "skip": "Skip email (no ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Add alias",
+      "aliasAdded": "Alias added. Run the test again to see it match.",
+      "aliasAdding": "Adding…",
+      "aliasClientPlaceholder": "Select a client",
+      "aliasLabel": "Add \"{{value}}\" as an alias of",
+      "body": "Body text",
+      "clientMatched": "Matched client via {{source}}",
+      "clientName": "client name",
+      "extracted": "Extracted value:",
+      "from": "From",
+      "noClient": "No client matched",
+      "outcome": {
+        "assignClient": "Ticket assigned to client \"{{client}}\"",
+        "fallback": "No client matched — ticket routed to the fallback destination",
+        "none": "Rule did not resolve — normal processing continues",
+        "setDestination": "Ticket routed to the selected destination",
+        "skip": "Email skipped — no ticket created"
+      },
+      "run": "Run test",
+      "running": "Testing…",
+      "subject": "Subject",
+      "title": "Test this rule",
+      "to": "To"
     }
   }
 }

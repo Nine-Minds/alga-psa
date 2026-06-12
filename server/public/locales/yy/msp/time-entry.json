@@ -121,7 +121,10 @@
       "minimumDuration": "55555",
       "serviceRequired": "55555",
       "timePeriodRange": "55555 {{periodRange}} 55555",
-      "endAfterStartPicker": "55555"
+      "endAfterStartPicker": "55555",
+      "durationSameDay": "55555",
+      "endSameDay": "55555",
+      "invalidTimeRange": "55555"
     }
   },
   "workItemPicker": {
@@ -365,6 +368,10 @@
     "active": "55555"
   },
   "intervals": {
+    "createdFromNote_one": "55555 {{count}} 55555",
+    "createdFromNote_other": "55555 {{count}} 55555",
+    "selectedCount_one": "55555 {{count}} 55555",
+    "selectedCount_other": "55555 {{count}} 55555",
     "title": "55555",
     "hideShortIntervals": "55555",
     "totalTime": "55555 {{value}} 55555",

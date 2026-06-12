@@ -201,9 +201,8 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             {isSelectionMode && (
               <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50 dark:border-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-900))] p-3">
                 <p className="text-sm text-primary-700 dark:text-[rgb(var(--color-primary-200))]">
-                  {exportT('selectedTasksNotice', 'Exporting {{count}} selected task{{plural}}.', {
+                  {exportT('selectedTasksNotice', 'Exporting {{count}} selected tasks.', {
                     count: selectedTaskIds!.size,
-                    plural: selectedTaskIds!.size === 1 ? '' : 's',
                   })}
                 </p>
               </div>
@@ -243,10 +242,10 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                 </div>
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {exportT('phasesSelected', '{{selected}} of {{total}} phase{{plural}} selected', {
+                {exportT('phasesSelected', '{{selected}} of {{total}} phases selected', {
+                  count: phases.length,
                   selected: selectedPhaseIds.size,
                   total: phases.length,
-                  plural: phases.length === 1 ? '' : 's',
                 })}
               </p>
             </div>
@@ -322,9 +321,8 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
             </div>
             <h3 className="text-lg font-medium mb-2">{exportT('completeTitle', 'Export Complete')}</h3>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-              {exportT('success', 'Successfully exported {{count}} task{{plural}} to CSV.', {
+              {exportT('success', 'Successfully exported {{count}} tasks to CSV.', {
                 count: exportedCount,
-                plural: exportedCount === 1 ? '' : 's',
               })}
             </p>
           </div>

@@ -33,7 +33,8 @@
       "resources": "Ressources",
       "more": "Plus",
       "apps": "Apps"
-    }
+    },
+    "licenses": "Licences"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -131,7 +132,8 @@
           "declined": "Rendez-vous refusé : {{name}}",
           "cancelled": "Rendez-vous annulé : {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Lorsque des tickets sont mis à jour, vous les verrez ici."
     },
     "devices": {
       "title": "Vos appareils",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà.",
         "registrationFailed": "Nous n'avons pas pu finaliser l'inscription. Veuillez réessayer."
       }
-    }
+    },
+    "captchaRequired": "Veuillez compléter la vérification ci-dessous, puis connectez-vous à nouveau.",
+    "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer."
   },
   "account": {
     "title": "Compte",
@@ -434,6 +438,8 @@
       "disabled": "Désactivée"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} notification non lue",
+      "unreadCount_other": "{{count}} notifications non lues",
       "title": "Paramètres de notification",
       "email": "Notifications par e-mail",
       "ticketUpdates": "Mises à jour des tickets",

@@ -136,7 +136,9 @@
     "description": "Description",
     "created": "Requested",
     "approved": "Approved",
-    "cancelButton": "Cancel Appointment"
+    "cancelButton": "Cancel Appointment",
+    "downloadRecording": "Download recording",
+    "viewTranscript": "View transcript"
   },
   "cancel": {
     "title": "Cancel Appointment",

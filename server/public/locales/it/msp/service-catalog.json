@@ -235,7 +235,7 @@
     },
     "actions": {
       "cancel": "Annulla",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "save": "Salva configurazione"
     },
     "title": "Configurazione del servizio",
@@ -347,7 +347,7 @@
       "unlimited": "Illimitato"
     },
     "actions": {
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "addTier": "Aggiungi livello",
       "save": "Salva livelli tariffari"
     },
@@ -382,7 +382,7 @@
       "save": "Impossibile salvare le impostazioni fiscali"
     },
     "actions": {
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "save": "Salva impostazioni fiscali"
     },
     "title": "Impostazioni fiscali",

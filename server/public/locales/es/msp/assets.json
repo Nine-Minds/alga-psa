@@ -71,7 +71,7 @@
       "hints": "Consejos"
     },
     "hint": {
-      "body": "Siga escribiendo para buscar en la lista completa de activos. Los boletos y la búsqueda de clientes llegarán en un lanzamiento posterior.",
+      "body": "Siga escribiendo para buscar en la lista completa de activos. Los tickets y la búsqueda de clientes llegarán en un lanzamiento posterior.",
       "badge": "Muy pronto"
     },
     "values": {
@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Seleccionar todos los activos visibles",
       "selectAsset": "Seleccionar activo {{name}}",
-      "selectedAssets": "{{count}} activo{{suffix}} seleccionado",
+      "selectedAssets_one": "{{count}} activo seleccionado",
+      "selectedAssets_other": "{{count}} activos seleccionados",
       "clearSelection": "Borrar selección",
       "bulkActionsComingSoon": "Próximamente acciones masivas"
     },
@@ -216,6 +217,49 @@
         "title": "Opciones de impresión",
         "description": "Elige qué columnas incluir al imprimir los activos."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Borrar",
+        "delete": "Eliminar",
+        "selectedCount": "{{count}} seleccionados",
+        "setLocation": "Establecer ubicación",
+        "setStatus": "Establecer estado"
+      },
+      "actions": {
+        "apply": "Aplicar",
+        "applying": "Aplicando...",
+        "deleteAssets": "Eliminar",
+        "deleting": "Eliminando...",
+        "updateLocation": "Actualización de ubicación",
+        "updateStatus": "Actualización de estado"
+      },
+      "deleteDialog": {
+        "description": "Eliminar {{count}} activo(s) seleccionado(s). Los activos con dependencias pueden omitirse.",
+        "title": "Eliminar activos seleccionados"
+      },
+      "errors": {
+        "deleteFailed": "No se pudieron eliminar los activos seleccionados.",
+        "updateLocationFailed": "No se pudieron actualizar las ubicaciones de los activos seleccionados.",
+        "updateStatusFailed": "No se pudieron actualizar los activos seleccionados."
+      },
+      "locationDialog": {
+        "clearLocation": "Borrar ubicación",
+        "customLocation": "Ubicación personalizada",
+        "customPlaceholder": "Introduzca una ubicación o área personalizada",
+        "description": "Actualizar {{count}} activo(s) seleccionado(s).",
+        "loadingLocations": "Cargando ubicaciones...",
+        "savedDisabled": "Las ubicaciones guardadas del cliente solo están disponibles cuando todos los activos seleccionados están visibles y pertenecen a un mismo cliente.",
+        "savedLocation": "Ubicación guardada del cliente",
+        "selectLocation": "Seleccionar ubicación",
+        "title": "Establecer ubicación del activo"
+      },
+      "partialFailure": "{{action}} se completó para {{succeeded}} activo(s); {{failed}} fallaron.",
+      "statusDialog": {
+        "description": "Actualizar {{count}} activo(s) seleccionado(s).",
+        "title": "Establecer estado del activo"
+      },
+      "success": "{{action}} se completó para {{count}} activo(s)."
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "hace momentos",
-      "minutesAgo": "Hace {{count}} minuto{{suffix}}",
-      "hoursAgo": "Hace {{count}} hora{{suffix}}",
-      "daysAgo": "Hace {{count}} día{{suffix}}"
+      "minutesAgo_one": "Hace {{count}} minuto",
+      "minutesAgo_other": "Hace {{count}} minutos",
+      "hoursAgo_one": "Hace {{count}} hora",
+      "hoursAgo_other": "Hace {{count}} horas",
+      "daysAgo_one": "Hace {{count}} día",
+      "daysAgo_other": "Hace {{count}} días"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "No se pudieron cargar los detalles del activo",
       "clientsLoadFailed": "No se pueden cargar clientes",
       "locationsLoadFailed": "No se pueden cargar ubicaciones para este cliente",
-      "updateFailed": "No se pudo actualizar el activo"
+      "updateFailed": "No se pudo actualizar el activo",
+      "validation": "Corrija los campos resaltados antes de guardar."
     },
     "actions": {
       "viewClient": "Ver cliente",
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "Agregar activo",
       "showLess": "Mostrar menos",
-      "moreAssets": "{{count}} más activo{{suffix}}"
+      "moreAssets_one": "{{count}} activo más",
+      "moreAssets_other": "{{count}} activos más"
     },
     "errors": {
       "loadAvailableAssets": "No se pudieron cargar los recursos disponibles",
@@ -719,8 +768,10 @@
       "removeFailed": "No se pudo eliminar la asociación de activos"
     },
     "success": {
-      "associated": "{{count}} activo{{suffix}} asociado exitosamente",
-      "associatedPartial": "{{count}} activo{{suffix}} asociado correctamente, {{failed}} falló (puede que ya esté asociado)",
+      "associated_one": "{{count}} activo asociado correctamente",
+      "associated_other": "{{count}} activos asociados correctamente",
+      "associatedPartial_one": "{{count}} activo asociado correctamente, {{failed}} con error (puede que ya esté asociado)",
+      "associatedPartial_other": "{{count}} activos asociados correctamente, {{failed}} con error (puede que ya estén asociados)",
       "removed": "Se eliminó la asociación de recursos"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "Tipo..."
       },
       "actions": {
-        "addAssets": "Agregar activo{{suffix}}"
+        "addAssets_one": "Agregar activo",
+        "addAssets_other": "Agregar activos"
       }
     },
     "table": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "Etiqueta de activo *",
       "typeRequired": "Tipo *",
       "status": "Estado",
-      "serialNumber": "Número de serie"
+      "serialNumber": "Número de serie",
+      "customLocationOption": "Ubicación personalizada",
+      "location": "Ubicación"
     },
     "placeholders": {
       "workstationOsType": "por ejemplo, Windows, macOS, Linux",
@@ -869,7 +923,11 @@
       "assetTag": "Introduzca la etiqueta de activo",
       "selectType": "Seleccionar tipo",
       "selectStatus": "Seleccionar estado",
-      "serialNumber": "Introduzca el número de serie"
+      "serialNumber": "Introduzca el número de serie",
+      "customLocation": "Introduzca una ubicación o área personalizada",
+      "loadingLocations": "Cargando ubicaciones...",
+      "selectClientFirst": "Seleccione primero un cliente",
+      "selectLocation": "Seleccionar ubicación"
     },
     "sections": {
       "typeSpecificDetails": "Detalles específicos del tipo"
@@ -979,7 +1037,8 @@
       "uptime": "tiempo de actividad",
       "lastSync": "Última sincronización RMM",
       "network": "Red",
-      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}",
+      "taniumCriticality": "Criticidad de Tanium"
     },
     "values": {
       "never": "Nunca"
@@ -1136,13 +1195,19 @@
       "actions": "Acciones"
     },
     "frequency": {
-      "every": "Cada {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Cada {{frequency}}",
+      "every_other": "Cada {{count}} {{frequency}}",
       "units": {
-        "daily": "día",
-        "weekly": "semana",
-        "monthly": "mes",
-        "quarterly": "trimestre",
-        "yearly": "año"
+        "daily_one": "día",
+        "daily_other": "días",
+        "weekly_one": "semana",
+        "weekly_other": "semanas",
+        "monthly_one": "mes",
+        "monthly_other": "meses",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestres",
+        "yearly_one": "año",
+        "yearly_other": "años"
       }
     },
     "status": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "Alertas activas",
     "acknowledge": "Confirmar",
     "createTicket": "Crear ticket"
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión",
+    "printSelected": "Imprimir seleccionados ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "No se pudo cargar el ticket",
+    "openTicketFailed": "No se pudo abrir el ticket"
   }
 }

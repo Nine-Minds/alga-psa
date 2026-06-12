@@ -285,7 +285,8 @@
       "invoiceDate": "Data da fatura",
       "dueDate": "Data de vencimento",
       "status": "Status",
-      "actions": "Ações"
+      "actions": "Ações",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalizar",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "Não foi possível finalizar {{count}} faturas e elas foram ignoradas."
     },
     "reverseDialog": {
-      "title": "Rascunho de fatura reversa",
       "title_other": "Faturas de rascunho reverso",
       "message_one": "A reversão deste rascunho de fatura irá excluí-lo e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "message_other": "A reversão de faturas preliminares {{count}} irá excluí-las e liberar quaisquer entradas de tempo ou registros de uso vinculados. Esta ação não pode ser desfeita.",
       "confirm": "Rascunho reverso",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "title_one": "Rascunho de fatura reversa"
     },
     "pendingTaxDialog": {
       "title": "Fatura aguardando imposto externo",
@@ -340,7 +341,8 @@
       "amount": "Quantia",
       "finalizedDate": "Data Finalizada",
       "status": "Status",
-      "actions": "Ações"
+      "actions": "Ações",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Baixar PDFs",
@@ -578,7 +580,13 @@
       "reverseDraft": "Rascunho reverso",
       "sendEmail": "Enviar e-mail",
       "unfinalize": "Desfinalizar",
-      "viewSourceQuote": "Ver cotação da fonte"
+      "viewSourceQuote": "Ver cotação da fonte",
+      "applyCredit": "Apply Credit",
+      "driftAccept": "Accept QuickBooks Version",
+      "driftReexport": "Re-export to QuickBooks",
+      "syncNow": "Sync to QuickBooks",
+      "viewInQbo": "View in QuickBooks",
+      "voidInvoice": "Void Invoice"
     },
     "loading": "Carregando visualização...",
     "empty": "Selecione uma fatura para visualizar",
@@ -594,6 +602,17 @@
         "sendEmail": "enviar e-mail",
         "unfinalize": "cancelar fatura"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Apply Credit"
+    },
+    "voidDialog": {
+      "title": "Void Invoice",
+      "description": "Voiding this invoice is permanent. Please provide a reason.",
+      "reasonPlaceholder": "Reason for voiding...",
+      "cancel": "Cancel",
+      "confirm": "Void Invoice",
+      "voiding": "Voiding..."
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "Tenant Address",
         "description": "Your company address."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Limite do modelo"
+    },
+    "dragOverlay": {
+      "component": "Componente"
     }
   }
 }

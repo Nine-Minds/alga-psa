@@ -14,7 +14,7 @@
       "save": "Salva",
       "saveChanges": "Salva modifiche",
       "saveChangesDirty": "Salva modifiche *",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "view": "Visualizzazione",
       "openMenu": "Apri menu"
     },
@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} giorni",
         "ongoing": "In corso",
         "renewalTermMonths_one": "{{count}} mese",
-        "renewalTermMonths_other": "{{count}} mesi"
+        "renewalTermMonths_other": "{{count}} mesi",
+        "noticePeriodDays": "{{count}} giorno",
+        "renewalTermMonths": "{{count}} mese"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Prodotto {{index}}",
       "products": "Prodotti",
       "quantity": "Quantità",
-      "selectProductPlaceholder": "Seleziona un prodotto"
+      "selectProductPlaceholder": "Seleziona un prodotto",
+      "catalogPriceInCurrency": "Prezzo di catalogo in {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Nessun prezzo predefinito impostato. Inserisci un prezzo unitario.",
-      "productMissingPrice": "Questo prodotto non ha un prezzo predefinito né un override. Non può essere fatturato finché non inserisci un prezzo unitario."
+      "productMissingPrice": "Questo prodotto non ha un prezzo predefinito né un override. Non può essere fatturato finché non inserisci un prezzo unitario.",
+      "noCurrencyPriceEnterUnitPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci un prezzo unitario.",
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci un prezzo unitario in {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Servizi orari",
       "selectServicePlaceholder": "Seleziona un servizio",
       "serviceItem": "Servizio {{index}}",
-      "setBucketOfHours": "Imposta pacchetto di ore"
+      "setBucketOfHours": "Imposta pacchetto di ore",
+      "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa oraria.",
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa oraria in {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "es., 15 minuti - qualsiasi registrazione di tempo inferiore verrà arrotondata per eccesso",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Imposta allocazione pacchetto",
       "unitOfMeasure": "Unità di misura",
       "unitOfMeasureHint": "Scegli l'unità su cui questo servizio viene fatturato.",
-      "unitOfMeasurePlaceholder": "es., GB, chiamata API, utente"
+      "unitOfMeasurePlaceholder": "es., GB, chiamata API, utente",
+      "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria.",
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa unitaria in {{currency}}."
     },
     "summary": {
       "labels": {

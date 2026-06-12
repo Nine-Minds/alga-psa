@@ -3,6 +3,7 @@ import { getTenantIdBySlug } from '@alga-psa/db';
 import { getAvailableDates } from '@alga-psa/client-portal/services/availabilityService';
 import { runWithTenant } from '@/lib/db';
 import logger from '@alga-psa/core/logger';
+import { formatInTimeZone } from 'date-fns-tz';
 import { z } from 'zod';
 
 // Tenant slug pattern: 12-char lowercase hex
@@ -148,19 +149,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Calculate default date range using UTC (today to 30 days from now)
+    // "Today" is evaluated in the requester's timezone (when provided) so users
+    // west of UTC aren't told their current date is in the past every evening.
     const now = new Date();
-    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const requesterTz = validatedParams.timezone || 'UTC';
+    const todayLocal = formatInTimeZone(now, requesterTz, 'yyyy-MM-dd');
 
-    const defaultStartDate = todayUTC.toISOString().split('T')[0];
-    const defaultEndDate = new Date(todayUTC.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultStartDate = todayLocal;
+    const defaultEndDate = formatInTimeZone(
+      new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      requesterTz,
+      'yyyy-MM-dd'
+    );
 
     const startDate = validatedParams.start_date || defaultStartDate;
     const endDate = validatedParams.end_date || defaultEndDate;
 
-    // Validate start_date is not in the past (using UTC)
+    // Validate start_date is not in the past (in the requester's timezone)
     const requestedStartDate = new Date(startDate + 'T00:00:00Z');
-    if (requestedStartDate < todayUTC) {
+    if (startDate < todayLocal) {
       return NextResponse.json(
         {
           success: false,

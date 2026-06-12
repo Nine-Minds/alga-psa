@@ -648,13 +648,15 @@
         "endDate": "End Date",
         "clientSearch": "Client Search",
         "invoiceStatuses": "Invoice Statuses",
-        "notes": "Notes"
+        "notes": "Notes",
+        "realm": "Target Company (Realm)"
       },
       "placeholders": {
         "clientSearch": "Optional client name filter",
         "invoiceStatuses": "Comma-separated (optional), e.g. finalized,posted",
         "notes": "Optional notes"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (default)"
     },
     "detailDialog": {
       "title": "Accounting Export Batch",

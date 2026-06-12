@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reactie",
+    "ariaSummary_other": "{{emoji}} {{count}} reacties",
+    "ariaYouReacted": ", jij hebt gereageerd"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Verloopt over {{count}} dag, op {{date}}",
+    "expiresInDaysOn_other": "Verloopt over {{count}} dagen, op {{date}}",
+    "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
+    "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "De Enterprise-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Enterprise-functies te behouden.",
+    "trialExpiresIn_other": "De Enterprise-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Enterprise-functies te behouden.",
+    "trialDaysRemaining_one": "Enterprise-proefperiode actief — nog {{count}} dag.",
+    "trialDaysRemaining_other": "Enterprise-proefperiode actief — nog {{count}} dagen.",
+    "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Afdrukopties resetten",
     "share": "Delen",
     "done": "Klaar",
-    "continue": "Doorgaan"
+    "continue": "Doorgaan",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -462,7 +482,10 @@
         "visible": "Zichtbaar voor klant",
         "hidden": "Alleen intern"
       },
-      "clientVisibilityLabel": "Zichtbaarheid voor klant"
+      "clientVisibilityLabel": "Zichtbaarheid voor klant",
+      "entityOptions": {
+        "all": "Alle entiteiten"
+      }
     },
     "selector": {
       "title": "Documenten selecteren",
@@ -490,7 +513,10 @@
       "uploadingProgress": "{{current}} van {{total}} uploaden",
       "pending": "In behandeling",
       "error": "Document kon niet worden geüpload",
-      "fileError": "Bestand kon niet worden geüpload"
+      "fileError": "Bestand kon niet worden geüpload",
+      "associatedEntityTypeLabel": "Koppelen aan",
+      "noAssociation": "Geen koppeling",
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat je uploadt."
     },
     "folders": {
       "root": "Hoofdmap",
@@ -549,7 +575,20 @@
     "downloadVideo": "Video downloaden",
     "downloadAsPdf": "Downloaden als PDF",
     "downloadAsMarkdown": "Downloaden als Markdown",
-    "move": "Verplaatsen"
+    "move": "Verplaatsen",
+    "associatedEntityPicker": {
+      "allEntities": "Alle entiteiten",
+      "loadingClients": "Klanten laden...",
+      "loadingContacts": "Contactpersonen laden...",
+      "noEntityTypes": "Geen entiteitstypen gevonden",
+      "typeLabel": "Type gekoppelde entiteit",
+      "typePlaceholder": "Selecteer entiteitstype",
+      "typeSearchPlaceholder": "Entiteitstypen zoeken...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Selecteer {{entityType}}",
+      "entitySearchPlaceholder": "{{entityType}} zoeken...",
+      "noEntities": "Geen {{entityType}} gevonden"
+    }
   },
   "fields": {
     "notes": "Notities"
@@ -919,7 +958,8 @@
       "revoke": "Intrekken",
       "revoking": "Intrekken...",
       "loggingOut": "Uitloggen...",
-      "logoutFromOther": "Uitloggen van {{count}} ander apparaat{{count, plural, one {} other {en}}}"
+      "logoutFromOther_one": "Uitloggen van {{count}} ander apparaat",
+      "logoutFromOther_other": "Uitloggen van {{count}} andere apparaten"
     },
     "confirmations": {
       "logoutCurrent": "Dit zal u uitloggen van uw huidige sessie. Weet u het zeker?",
@@ -1009,7 +1049,10 @@
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "deleteComment": "Commentaar verwijderen",
     "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-    "update": "Bijwerken"
+    "update": "Bijwerken",
+    "create": "Aanmaken",
+    "replyComment": "Reageren op opmerking",
+    "saving": "Opslaan..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte.",
     "showAll": "Alles tonen",
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
   }
 }

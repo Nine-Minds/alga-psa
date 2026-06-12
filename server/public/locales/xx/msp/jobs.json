@@ -98,5 +98,9 @@
       "processed": "11111",
       "retries": "11111"
     }
+  },
+  "actions": {
+    "print": "11111",
+    "printOptions": "11111"
   }
 }

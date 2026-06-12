@@ -253,15 +253,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
             if (succeeded > 0 && failed === 0) {
                 toast.success(t('associatedAssets.success.associated', {
-                    defaultValue: '{{count}} asset{{suffix}} associated successfully',
-                    count: succeeded,
-                    suffix: succeeded === 1 ? '' : 's'
+                    defaultValue: '{{count}} assets associated successfully',
+                    count: succeeded
                 }));
             } else if (succeeded > 0 && failed > 0) {
                 toast.success(t('associatedAssets.success.associatedPartial', {
-                    defaultValue: '{{count}} asset{{suffix}} associated successfully, {{failed}} failed (may already be associated)',
+                    defaultValue: '{{count}} assets associated successfully, {{failed}} failed (may already be associated)',
                     count: succeeded,
-                    suffix: succeeded === 1 ? '' : 's',
                     failed
                 }));
             } else {
@@ -526,9 +524,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                     {isExpanded
                                         ? t('associatedAssets.actions.showLess', { defaultValue: 'Show less' })
                                         : t('associatedAssets.actions.moreAssets', {
-                                            defaultValue: '{{count}} more asset{{suffix}}',
-                                            count: hiddenCount,
-                                            suffix: hiddenCount !== 1 ? 's' : ''
+                                            defaultValue: '{{count}} more assets',
+                                            count: hiddenCount
                                         })}
                                 </span>
                                 <svg
@@ -564,8 +561,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 disabled={selectedAssets.size === 0}
                             >
                                 {t('associatedAssets.dialog.actions.addAssets', {
-                                    defaultValue: 'Add Asset{{suffix}}',
-                                    suffix: selectedAssets.size > 1 ? 's' : ''
+                                    defaultValue: 'Add Assets',
+                                    count: selectedAssets.size
                                 })}
                             </Button>
                         </div>

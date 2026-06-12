@@ -71,7 +71,7 @@
       "hints": "Conseils"
     },
     "hint": {
-      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les billets et la recherche de clients arriveront ultérieurement.",
+      "body": "Continuez à taper pour effectuer une recherche dans la liste complète des actifs. Les tickets et la recherche de clients arriveront ultérieurement.",
       "badge": "À venir"
     },
     "values": {
@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Sélectionnez tous les éléments visibles",
       "selectAsset": "Sélectionnez l'élément {{name}}",
-      "selectedAssets": "{{count}} élément{{suffix}} sélectionné",
+      "selectedAssets_one": "{{count}} élément sélectionné",
+      "selectedAssets_other": "{{count}} éléments sélectionnés",
       "clearSelection": "Effacer la sélection",
       "bulkActionsComingSoon": "Actions groupées à venir"
     },
@@ -216,6 +217,49 @@
         "title": "Options d'impression",
         "description": "Choisissez les colonnes à inclure lors de l'impression des actifs."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Effacer",
+        "delete": "Supprimer",
+        "selectedCount": "{{count}} sélectionné(s)",
+        "setLocation": "Définir l'emplacement",
+        "setStatus": "Définir le statut"
+      },
+      "actions": {
+        "apply": "Appliquer",
+        "applying": "Application...",
+        "deleteAssets": "Supprimer",
+        "deleting": "Suppression...",
+        "updateLocation": "Mise à jour de l'emplacement",
+        "updateStatus": "Mise à jour du statut"
+      },
+      "deleteDialog": {
+        "description": "Supprimer {{count}} actif(s) sélectionné(s). Les actifs ayant des dépendances peuvent être ignorés.",
+        "title": "Supprimer les actifs sélectionnés"
+      },
+      "errors": {
+        "deleteFailed": "Impossible de supprimer les actifs sélectionnés.",
+        "updateLocationFailed": "Impossible de mettre à jour les emplacements des actifs sélectionnés.",
+        "updateStatusFailed": "Impossible de mettre à jour les actifs sélectionnés."
+      },
+      "locationDialog": {
+        "clearLocation": "Effacer l'emplacement",
+        "customLocation": "Emplacement personnalisé",
+        "customPlaceholder": "Saisissez un emplacement ou une zone personnalisée",
+        "description": "Mettre à jour {{count}} actif(s) sélectionné(s).",
+        "loadingLocations": "Chargement des emplacements...",
+        "savedDisabled": "Les emplacements clients enregistrés ne sont disponibles que lorsque tous les actifs sélectionnés sont visibles et appartiennent à un seul client.",
+        "savedLocation": "Emplacement client enregistré",
+        "selectLocation": "Sélectionner un emplacement",
+        "title": "Définir l'emplacement des actifs"
+      },
+      "partialFailure": "{{action}} terminée pour {{succeeded}} actif(s) ; {{failed}} en échec.",
+      "statusDialog": {
+        "description": "Mettre à jour {{count}} actif(s) sélectionné(s).",
+        "title": "Définir le statut des actifs"
+      },
+      "success": "{{action}} terminée pour {{count}} actif(s)."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +277,7 @@
     "tabs": {
       "overview": "Aperçu",
       "maintenance": "Entretien",
-      "tickets": "Billets",
+      "tickets": "Tickets",
       "configuration": "Configuration",
       "documents": "Documents"
     },
@@ -283,7 +327,7 @@
       "linked": "Lié {{date}}",
       "client": "Client : {{name}}",
       "assignee": "Destinataire : {{name}}",
-      "openTicket": "Billet ouvert"
+      "openTicket": "Ticket ouvert"
     },
     "configuration": {
       "coreAttributes": "Attributs de base",
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "il y a quelques instants",
-      "minutesAgo": "Il y a {{count}} minute{{suffix}}",
-      "hoursAgo": "Il y a {{count}} heure{{suffix}}",
-      "daysAgo": "Il y a {{count}} jour{{suffix}}"
+      "minutesAgo_one": "Il y a {{count}} minute",
+      "minutesAgo_other": "Il y a {{count}} minutes",
+      "hoursAgo_one": "Il y a {{count}} heure",
+      "hoursAgo_other": "Il y a {{count}} heures",
+      "daysAgo_one": "Il y a {{count}} jour",
+      "daysAgo_other": "Il y a {{count}} jours"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "Échec du chargement des détails de l'actif",
       "clientsLoadFailed": "Impossible de charger les clients",
       "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
-      "updateFailed": "Échec de la mise à jour de l'élément"
+      "updateFailed": "Échec de la mise à jour de l'élément",
+      "validation": "Veuillez corriger les champs en surbrillance avant d'enregistrer."
     },
     "actions": {
       "viewClient": "Afficher le client",
@@ -609,7 +657,7 @@
     "description": "Cartes métriques et cumuls pour les tickets, la maintenance, la disponibilité et les indicateurs de santé des actifs",
     "labels": {
       "healthStatus": "État de santé",
-      "openTickets": "Billets ouverts",
+      "openTickets": "Tickets ouverts",
       "securityStatus": "Statut de sécurité",
       "warranty": "Garantie"
     },
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "Ajouter un actif",
       "showLess": "Afficher moins",
-      "moreAssets": "{{count}} plus d'actif{{suffix}}"
+      "moreAssets_one": "{{count}} actif de plus",
+      "moreAssets_other": "{{count}} actifs de plus"
     },
     "errors": {
       "loadAvailableAssets": "Échec du chargement des ressources disponibles",
@@ -719,8 +768,10 @@
       "removeFailed": "Échec de la suppression de l'association d'éléments"
     },
     "success": {
-      "associated": "{{count}} actif{{suffix}} associé avec succès",
-      "associatedPartial": "{{count}} actif{{suffix}} associé avec succès, {{failed}} a échoué (peut-être déjà associé)",
+      "associated_one": "{{count}} actif associé avec succès",
+      "associated_other": "{{count}} actifs associés avec succès",
+      "associatedPartial_one": "{{count}} actif associé avec succès, {{failed}} en échec (peut-être déjà associé)",
+      "associatedPartial_other": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
       "removed": "Association d'éléments supprimée"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "Taper..."
       },
       "actions": {
-        "addAssets": "Ajouter un actif{{suffix}}"
+        "addAssets_one": "Ajouter un actif",
+        "addAssets_other": "Ajouter des actifs"
       }
     },
     "table": {
@@ -785,12 +837,12 @@
     "fields": {
       "title": "Titre",
       "description": "Description",
-      "board": "Conseil",
+      "board": "Tableau",
       "status": "Statut",
       "priority": "Priorité"
     },
     "placeholders": {
-      "title": "Entrez le titre du billet",
+      "title": "Entrez le titre du ticket",
       "description": "Décrivez le problème...",
       "loadingBoards": "Chargement des planches...",
       "selectBoard": "Sélectionnez le tableau...",
@@ -853,7 +905,9 @@
       "assetTagRequired": "Étiquette d'actif *",
       "typeRequired": "Taper *",
       "status": "Statut",
-      "serialNumber": "Numéro de série"
+      "serialNumber": "Numéro de série",
+      "customLocationOption": "Emplacement personnalisé",
+      "location": "Emplacement"
     },
     "placeholders": {
       "workstationOsType": "par exemple, Windows, macOS, Linux",
@@ -869,7 +923,11 @@
       "assetTag": "Saisir le numéro d'actif",
       "selectType": "Sélectionnez le type",
       "selectStatus": "Sélectionnez le statut",
-      "serialNumber": "Entrez le numéro de série"
+      "serialNumber": "Entrez le numéro de série",
+      "customLocation": "Saisissez un emplacement ou une zone personnalisée",
+      "loadingLocations": "Chargement des emplacements...",
+      "selectClientFirst": "Sélectionnez d'abord un client",
+      "selectLocation": "Sélectionner un emplacement"
     },
     "sections": {
       "typeSpecificDetails": "Détails spécifiques au type"
@@ -912,9 +970,9 @@
     },
     "relative": {
       "justNow": "Tout à l' heure",
-      "minutesAgo": "il y a {{count}} mois",
+      "minutesAgo": "il y a {{count}} min",
       "hoursAgo": "Il y a {{count}}h",
-      "daysAgo": "Il y a {{count}}d"
+      "daysAgo": "Il y a {{count}} j"
     }
   },
   "assetInfoPanel": {
@@ -979,7 +1037,8 @@
       "uptime": "Temps de disponibilité",
       "lastSync": "Dernière synchronisation RMM",
       "network": "Réseau",
-      "networkValue": "LAN IP : {{lan}} | WAN IP : {{wan}}"
+      "networkValue": "LAN IP : {{lan}} | WAN IP : {{wan}}",
+      "taniumCriticality": "Criticité Tanium"
     },
     "values": {
       "never": "Jamais"
@@ -1136,13 +1195,19 @@
       "actions": "Actes"
     },
     "frequency": {
-      "every": "Tous les {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Chaque {{frequency}}",
+      "every_other": "Tous les {{count}} {{frequency}}",
       "units": {
-        "daily": "jour",
-        "weekly": "semaine",
-        "monthly": "mois",
-        "quarterly": "quart",
-        "yearly": "année"
+        "daily_one": "jour",
+        "daily_other": "jours",
+        "weekly_one": "semaine",
+        "weekly_other": "semaines",
+        "monthly_one": "mois",
+        "monthly_other": "mois",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestres",
+        "yearly_one": "année",
+        "yearly_other": "années"
       }
     },
     "status": {
@@ -1233,7 +1298,7 @@
       "createTicket": "Créer un ticket"
     },
     "table": {
-      "ticketId": "Identifiant du billet",
+      "ticketId": "Identifiant du ticket",
       "subject": "Sujet",
       "status": "Statut",
       "priority": "Priorité",
@@ -1278,5 +1343,14 @@
     "activeAlerts": "Alertes actives",
     "acknowledge": "Accuser réception",
     "createTicket": "Créer un ticket"
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression",
+    "printSelected": "Imprimer la sélection ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Échec du chargement du ticket",
+    "openTicketFailed": "Échec de l'ouverture du ticket"
   }
 }

@@ -264,7 +264,8 @@
       "formBehaviorNotObject": "Formularverhalten-Konfiguration muss ein JSON-Objekt sein",
       "formBehaviorInvalid": "Ungültiges Formularverhalten-JSON",
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
-      "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON"
+      "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
+      "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}"
     }
   }
 }

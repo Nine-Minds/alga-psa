@@ -28,6 +28,8 @@ export type Column<Row> = {
 export type DataTableProps<Row extends Record<string, any>> = {
   columns: Column<Row>[];
   data: Row[];
+  /** Localized message shown when columns are hidden for lack of space. Receives the hidden-column count. */
+  hiddenColumnsMessage?: (count: number) => string;
   initialSortKey?: keyof Row & string;
   /** Initial sort direction. Defaults to 'asc' */
   initialSortDir?: 'asc' | 'desc';
@@ -63,6 +65,7 @@ const ChevronRight = () => (
 export function DataTable<Row extends Record<string, any>>({
   columns,
   data,
+  hiddenColumnsMessage,
   initialSortKey,
   initialSortDir = 'asc',
   paginate = false,
@@ -429,7 +432,9 @@ export function DataTable<Row extends Record<string, any>>({
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', flexShrink: 0 }}>
               <path d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            {hiddenColumnCount} column{hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize to see more.
+            {hiddenColumnsMessage
+              ? hiddenColumnsMessage(hiddenColumnCount)
+              : `${hiddenColumnCount} column${hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize to see more.`}
           </div>
         </Alert>
       )}

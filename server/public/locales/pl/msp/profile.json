@@ -149,8 +149,6 @@
     },
     "sessions": {
       "title": "Wszystkie sesje użytkowników",
-      "subtitle": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
-      "subtitle_plural": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
       "filters": {
         "search": "Szukaj",
         "searchPlaceholder": "Szukaj po nazwie, e-mailu, urządzeniu lub adresie IP...",
@@ -195,7 +193,11 @@
         "loading": "Ładowanie sesji...",
         "noMatch": "Żadne sesje nie pasują do wyszukiwania",
         "noSessions": "Nie znaleziono aktywnych sesji"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
+      "subtitle_few": "{{sessionCount}} aktywne sesje u {{userCount}} użytkowników",
+      "subtitle_many": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
+      "subtitle_other": "{{sessionCount}} aktywnej sesji u {{userCount}} użytkowników"
     },
     "webhooks": {
       "title": "Webhooki wychodzące",

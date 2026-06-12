@@ -16,14 +16,19 @@
       "resetAll": "Restablecer todo",
       "replace": "Reemplazar",
       "copyCheatsheet": "Copiar atajos",
-      "printCheatsheet": "Imprimir"
+      "printCheatsheet": "Imprimir",
+      "reassign": "Reasignar",
+      "rebind": "Reasignar tecla",
+      "reset": "Restablecer",
+      "resetAllTo": "Restablecer todo a {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Atajo de teclado actualizado",
       "enabledUpdated": "Atajo de teclado actualizado",
       "resetOne": "Atajo de teclado restablecido",
       "resetAll": "Atajos de teclado restablecidos",
-      "cheatsheetCopied": "Atajos copiados al portapapeles"
+      "cheatsheetCopied": "Atajos copiados al portapapeles",
+      "profileChanged": "Perfil cambiado"
     },
     "errors": {
       "saveFailed": "No se pudieron guardar las preferencias de atajos de teclado",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "¿Reemplazar el atajo existente?",
-      "message": "{{binding}} ya está asignado a {{action}}."
+      "message": "{{binding}} ya está asignado a {{action}}.",
+      "indicator": "Entra en conflicto con otra acción"
     },
     "advisory": {
       "hostileCombo": "{{binding}} puede entrar en conflicto con atajos del navegador o del sistema para {{action}}."
-    }
+    },
+    "boundTo": "Asignado a",
+    "chords": {
+      "empty": "Ninguna secuencia coincide.",
+      "search": "Buscar…",
+      "title": "Atajos de secuencia"
+    },
+    "hint": "Pase el cursor sobre una tecla para previsualizar y haga clic para reasignar. Active las capas de modificadores arriba para ver los atajos con prefijo.",
+    "modified": "Modificado",
+    "notSet": "Sin asignar",
+    "modHint": "mod se resuelve como {{modKey}} en este dispositivo"
   },
   "help": {
     "title": "Atajos de teclado",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinaciones",
+    "thenPress": "luego…"
   }
 }

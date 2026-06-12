@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Dernière utilisation du type de téléphone",
-      "message": "Le type de téléphone personnalisé suivant{{suffix}} n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type{{definitionSuffix}} ou le conserver pour une utilisation future ?",
+      "message_one": "Le type de téléphone personnalisé suivant n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type ou la conserver pour une utilisation future ?",
+      "message_other": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
       "keepType": "Conserver le type"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "Si défini, cela remplace la destination du client pour ce contact expéditeur exact. Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
       "tags": "Étiquettes",
       "notes": "Notes",
-      "status": "Statut"
+      "status": "Statut",
+      "phone": "Téléphone"
     },
     "status": {
       "label": "Statut",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tableau",
+    "boardCount_other": "{{count}} tableaux",
     "title": "Accès au portail",
     "description": "Gestion de l’accès au portail client pour un contact, y compris les invitations et les mises à jour de rôles",
     "loadingDescription": "Chargement des informations du portail...",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "Notes enregistrées",
       "saveFailed": "Échec de l'enregistrement des notes"
+    }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ajouter un ticket",
+      "empty": "Aucun ticket trouvé pour ce contact",
+      "filters": {
+        "allAssignees": "Tous les assignés",
+        "allPriorities": "Toutes les priorités",
+        "categoryPlaceholder": "Filtrer par catégorie",
+        "reset": "Réinitialiser",
+        "searchPlaceholder": "Rechercher des tickets...",
+        "statusPlaceholder": "Sélectionner un statut"
+      },
+      "loadMore": {
+        "label": "Charger plus de tickets",
+        "loading": "Chargement..."
+      },
+      "loading": "Chargement...",
+      "title": "Tickets du contact",
+      "toasts": {
+        "clientNotFound": "Client introuvable",
+        "loadClientFailed": "Échec du chargement des détails du client",
+        "loadTicketFailed": "Échec du chargement du ticket",
+        "openTicketFailed": "Échec de l'ouverture du ticket",
+        "userNotAuthenticated": "Utilisateur non authentifié"
+      }
     }
   }
 }

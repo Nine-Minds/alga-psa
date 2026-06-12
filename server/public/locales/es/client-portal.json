@@ -33,7 +33,8 @@
       "resources": "Recursos",
       "more": "Más",
       "apps": "Apps"
-    }
+    },
+    "licenses": "Licencias"
   },
   "dashboard": {
     "title": "Panel",
@@ -131,7 +132,8 @@
           "declined": "Cita rechazada: {{name}}",
           "cancelled": "Cita cancelada: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Cuando los tickets se actualicen, los verá aquí."
     },
     "devices": {
       "title": "Tus dispositivos",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico.",
         "registrationFailed": "No pudimos completar el registro. Inténtalo de nuevo."
       }
-    }
+    },
+    "captchaRequired": "Complete la verificación a continuación y vuelva a iniciar sesión.",
+    "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo."
   },
   "account": {
     "title": "Cuenta",
@@ -434,6 +438,8 @@
       "disabled": "Desactivado"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} notificación no leída",
+      "unreadCount_other": "{{count}} notificaciones no leídas",
       "title": "Configuración de notificaciones",
       "email": "Notificaciones por correo",
       "ticketUpdates": "Actualizaciones de tickets",

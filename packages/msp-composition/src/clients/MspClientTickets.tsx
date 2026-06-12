@@ -29,6 +29,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientTicketsProps {
   clientId: string;
@@ -64,6 +65,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialTags = [],
   initialUsers = []
 }) => {
+  const { t } = useTranslation('msp/clients');
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -168,7 +170,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
     if (!currentUser) {
-      toast.error('User not authenticated');
+      toast.error(t('clientTabs.tickets.toasts.userNotAuthenticated', { defaultValue: 'User not authenticated' }));
       return;
     }
 
@@ -176,7 +178,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       const ticketData = await getConsolidatedTicketData(ticketId);
 
       if (!ticketData) {
-        toast.error('Failed to load ticket');
+        toast.error(t('clientTabs.tickets.toasts.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
         return;
       }
 
@@ -204,7 +206,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
         />
       );
     } catch (error) {
-      handleError(error, 'Failed to open ticket');
+      handleError(error, t('clientTabs.tickets.toasts.openTicketFailed', { defaultValue: 'Failed to open ticket' }));
     }
   }, [currentUser, openDrawer]);
 
@@ -323,7 +325,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   if (isLoading && tickets.length === 0) {
     return (
       <div className="flex justify-center items-center h-32">
-        <span>Loading tickets...</span>
+        <span>{t('clientTabs.tickets.loading', { defaultValue: 'Loading tickets...' })}</span>
       </div>
     );
   }
@@ -333,13 +335,13 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       {/* Sticky Header and Filters */}
       <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Client Tickets</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('clientTabs.tickets.title', { defaultValue: 'Client Tickets' })}</h3>
           <Button
             id="add-client-ticket-btn"
             onClick={() => setIsQuickAddTicketOpen(true)}
             className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
           >
-            Add Ticket
+            {t('clientTabs.tickets.addTicket', { defaultValue: 'Add Ticket' })}
           </Button>
         </div>
 
@@ -362,7 +364,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialStatuses}
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value)}
-              placeholder="Select Status"
+              placeholder={t('clientTabs.tickets.filters.statusPlaceholder', { defaultValue: 'Select Status' })}
             />
           )}
 
@@ -372,7 +374,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               options={initialPriorities}
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
-              placeholder="All Priorities"
+              placeholder={t('clientTabs.tickets.filters.allPriorities', { defaultValue: 'All Priorities' })}
             />
           )}
 
@@ -385,7 +387,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               filterMode={true}
               includeUnassigned={includeUnassigned}
               onUnassignedChange={setIncludeUnassigned}
-              placeholder="All Assignees"
+              placeholder={t('clientTabs.tickets.filters.allAssignees', { defaultValue: 'All Assignees' })}
               showSearch={true}
               compactDisplay={true}
             />
@@ -400,7 +402,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               selectedCategories={selectedCategories}
               excludedCategories={excludedCategories}
               onSelect={handleCategorySelect}
-              placeholder="Filter by category"
+              placeholder={t('clientTabs.tickets.filters.categoryPlaceholder', { defaultValue: 'Filter by category' })}
               multiSelect={true}
               showExclude={true}
               showReset={true}
@@ -413,7 +415,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
 
           <Input
             id="client-tickets-search-input"
-            placeholder="Search tickets..."
+            placeholder={t('clientTabs.tickets.filters.searchPlaceholder', { defaultValue: 'Search tickets...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-[38px] min-w-[350px] text-sm"
@@ -444,7 +446,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               id="client-tickets-reset-filters-btn"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('clientTabs.tickets.filters.reset', { defaultValue: 'Reset' })}
             </Button>
         </div>
       </div>
@@ -471,7 +473,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
               disabled={isLoading}
               variant="outline"
             >
-              {isLoading ? 'Loading...' : 'Load More Tickets'}
+              {isLoading ? t('clientTabs.tickets.loadMore.loading', { defaultValue: 'Loading...' }) : t('clientTabs.tickets.loadMore.label', { defaultValue: 'Load More Tickets' })}
             </Button>
           </div>
         )}

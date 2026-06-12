@@ -16,14 +16,19 @@
       "resetAll": "55555",
       "replace": "55555",
       "copyCheatsheet": "55555",
-      "printCheatsheet": "55555"
+      "printCheatsheet": "55555",
+      "reassign": "55555",
+      "rebind": "55555",
+      "reset": "55555",
+      "resetAllTo": "55555 {{profile}} 55555"
     },
     "messages": {
       "bindingUpdated": "55555",
       "enabledUpdated": "55555",
       "resetOne": "55555",
       "resetAll": "55555",
-      "cheatsheetCopied": "55555"
+      "cheatsheetCopied": "55555",
+      "profileChanged": "55555"
     },
     "errors": {
       "saveFailed": "55555",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "55555",
-      "message": "55555 {{binding}} 55555 {{action}} 55555"
+      "message": "55555 {{binding}} 55555 {{action}} 55555",
+      "indicator": "55555"
     },
     "advisory": {
       "hostileCombo": "55555 {{binding}} 55555 {{action}} 55555"
-    }
+    },
+    "boundTo": "55555",
+    "chords": {
+      "empty": "55555",
+      "search": "55555",
+      "title": "55555"
+    },
+    "hint": "55555",
+    "modified": "55555",
+    "notSet": "55555",
+    "modHint": "55555 {{modKey}} 55555"
   },
   "help": {
     "title": "55555",
@@ -362,5 +378,9 @@
       "alt": "55555",
       "shift": "55555"
     }
+  },
+  "hud": {
+    "combinations": "55555",
+    "thenPress": "55555"
   }
 }

@@ -185,6 +185,15 @@ export function useI18n() {
 }
 
 /**
+ * Like useI18n, but returns null outside an I18nProvider instead of throwing.
+ * For shared components (DatePicker, CurrencyInput, …) that also render on
+ * pages without the provider (e.g. auth pages) and need a locale fallback.
+ */
+export function useOptionalI18n() {
+  return useContext(I18nContext);
+}
+
+/**
  * Hook for translations (wrapper around react-i18next)
  */
 export function useTranslation(namespace?: string | string[]) {

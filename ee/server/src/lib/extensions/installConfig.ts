@@ -447,7 +447,7 @@ export async function upsertInstallConfigRecord(input: UpsertInstallConfigInput)
       config: insertPayload.config,
       providers: insertPayload.providers,
       version,
-      updated_at: connection.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning(['version', 'providers', 'updated_at']);
 
@@ -591,7 +591,7 @@ export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInpu
       transit_mount: envelope.transitMount ?? null,
       version,
       expires_at: expiresAt ? expiresAt.toISOString() : null,
-      updated_at: connection.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning(['version', 'algorithm']);
 

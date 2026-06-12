@@ -8,7 +8,19 @@ import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndR
 import { DateTimePickerComponent } from '../ui-reflection/types';
 import { Calendar } from './Calendar';
 import { cn } from '../lib/utils';
+import { useOptionalI18n } from '../lib/i18n/client';
+import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { getDateFnsLocale } from '../lib/dateFnsLocale';
 import '../styles/calendar.css';
+
+function localeUses12HourClock(locale: string): boolean {
+  const normalized = locale === 'xx' || locale === 'yy' ? 'en' : locale;
+  try {
+    return new Intl.DateTimeFormat(normalized, { hour: 'numeric' }).resolvedOptions().hour12 ?? true;
+  } catch {
+    return true;
+  }
+}
 
 interface DateTimePickerBaseProps {
   value?: Date;
@@ -25,7 +37,7 @@ interface DateTimePickerBaseProps {
   minDate?: Date;
   /** Maximum allowed date */
   maxDate?: Date;
-  /** Time format preference */
+  /** Time format preference; when unset, derived from the active locale */
   timeFormat?: '12h' | '24h';
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
@@ -57,10 +69,14 @@ export function DateTimePicker({
   clearable = false,
   minDate,
   maxDate,
-  timeFormat = '12h',
+  timeFormat,
   ref
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const i18n = useOptionalI18n();
+  const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  const dateFnsLocale = getDateFnsLocale(locale);
+  const effectiveTimeFormat = timeFormat ?? (localeUses12HourClock(locale) ? '12h' : '24h');
   const hourListRef = React.useRef<HTMLDivElement>(null);
   const minuteListRef = React.useRef<HTMLDivElement>(null);
 
@@ -83,7 +99,7 @@ export function DateTimePicker({
 
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
   const [selectedHour, setSelectedHour] = React.useState(
-    value ? format(value, timeFormat === '12h' ? 'hh' : 'HH') : '12'
+    value ? format(value, effectiveTimeFormat === '12h' ? 'hh' : 'HH') : '12'
   );
   const [selectedMinute, setSelectedMinute] = React.useState(
     value ? format(value, 'mm') : '00'
@@ -138,11 +154,11 @@ export function DateTimePicker({
   }, [value, disabled, required, updateMetadata]);
 
   const hours = React.useMemo(() => {
-    if (timeFormat === '24h') {
+    if (effectiveTimeFormat === '24h') {
       return Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     }
     return Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-  }, [timeFormat]);
+  }, [effectiveTimeFormat]);
 
   const minutes = React.useMemo(() =>
     Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
@@ -152,7 +168,7 @@ export function DateTimePicker({
     if (!selectedDate) return;
 
     let h = parseInt(hour);
-    if (timeFormat === '12h') {
+    if (effectiveTimeFormat === '12h') {
       if (newPeriod === 'PM' && h !== 12) h += 12;
       if (newPeriod === 'AM' && h === 12) h = 0;
     }
@@ -179,7 +195,11 @@ export function DateTimePicker({
   };
 
   const displayValue = value
-    ? format(value, timeFormat === '12h' ? 'MM/dd/yyyy hh:mm a' : 'MM/dd/yyyy HH:mm')
+    ? format(
+        value,
+        timeFormat ? (timeFormat === '12h' ? 'P hh:mm a' : 'P HH:mm') : 'P p',
+        { locale: dateFnsLocale }
+      )
     : placeholder;
 
   return (
@@ -311,7 +331,7 @@ export function DateTimePicker({
                   </div>
                 </div>
 
-                {timeFormat === '12h' && (
+                {effectiveTimeFormat === '12h' && (
                   <div className="datetime-picker-time-section w-16">
                     <label className="datetime-picker-time-label">Period</label>
                     <div className="datetime-picker-period-buttons">

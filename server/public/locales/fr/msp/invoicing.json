@@ -285,7 +285,8 @@
       "invoiceDate": "Date de la facture",
       "dueDate": "Date d'échéance",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finaliser",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "{{count}} factures n'ont pas pu être finalisées et ont été ignorées."
     },
     "reverseDialog": {
-      "title": "Contre-version de facture",
       "title_other": "Contrepasser les factures provisoires",
       "message_one": "L'annulation de ce brouillon de facture le supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "message_other": "L'annulation des factures provisoires {{count}} les supprimera et libérera toutes les entrées de temps ou enregistrements d'utilisation liés. Cette action ne peut pas être annulée.",
       "confirm": "Brouillon inversé",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "title_one": "Contre-version de facture"
     },
     "pendingTaxDialog": {
       "title": "Facture en attente de la taxe externe",
@@ -340,7 +341,8 @@
       "amount": "Montant",
       "finalizedDate": "Date de finalisation",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Télécharger des PDF",
@@ -578,7 +580,13 @@
       "reverseDraft": "Brouillon inversé",
       "sendEmail": "Envoyer un e-mail",
       "unfinalize": "Définaliser",
-      "viewSourceQuote": "Afficher le devis source"
+      "viewSourceQuote": "Afficher le devis source",
+      "applyCredit": "Appliquer un crédit",
+      "driftAccept": "Accepter la version QuickBooks",
+      "driftReexport": "Réexporter vers QuickBooks",
+      "syncNow": "Synchroniser avec QuickBooks",
+      "viewInQbo": "Afficher dans QuickBooks",
+      "voidInvoice": "Annuler la facture"
     },
     "loading": "Chargement de l'aperçu...",
     "empty": "Sélectionnez une facture à prévisualiser",
@@ -594,6 +602,17 @@
         "sendEmail": "envoyer un email",
         "unfinalize": "définaliser la facture"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Appliquer un crédit"
+    },
+    "voidDialog": {
+      "title": "Annuler la facture",
+      "description": "L'annulation de cette facture est définitive. Veuillez indiquer un motif.",
+      "reasonPlaceholder": "Motif de l'annulation...",
+      "cancel": "Annuler",
+      "confirm": "Annuler la facture",
+      "voiding": "Annulation…"
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "Adresse du locataire",
         "description": "L'adresse de votre entreprise."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Limite du modèle"
+    },
+    "dragOverlay": {
+      "component": "Composant"
     }
   }
 }

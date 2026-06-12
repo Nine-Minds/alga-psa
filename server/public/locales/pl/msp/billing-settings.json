@@ -88,23 +88,23 @@
       "fields": {
         "dueDateAction": {
           "label": "Termin wykonania czynności",
-          "help": "Wybierz, czy daty odnowienia mają domyślnie tworzyć bilety, czy pozostać tylko w kolejce."
+          "help": "Wybierz, czy daty odnowienia mają domyślnie tworzyć zgłoszenia, czy pozostać tylko w kolejce."
         },
         "ticketBoard": {
-          "label": "Tablica biletów odnowieniowych",
+          "label": "Tablica zgłoszeń odnowieniowych",
           "placeholderLoading": "Ładowanie tablic...",
           "placeholderSelect": "Wybierz tablicę"
         },
         "ticketStatus": {
-          "label": "Stan biletu odnowienia",
+          "label": "Stan zgłoszenia odnowienia",
           "placeholderLoading": "Ładowanie statusów...",
           "placeholderSelect": "Wybierz stan",
           "placeholderSelectBoardFirst": "Najpierw wybierz deskę",
-          "help": "Statusy biletów odnowienia są ograniczone do wybranej tablicy."
+          "help": "Statusy zgłoszeń odnowienia są ograniczone do wybranej tablicy."
         }
       },
       "options": {
-        "createTicket": "Utwórz bilet",
+        "createTicket": "Utwórz zgłoszenie",
         "queueOnly": "Tylko kolejka"
       },
       "states": {
@@ -112,14 +112,14 @@
       },
       "actions": {
         "save": "Ratować",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "updated": "Ustawienia automatyzacji odnawiania zostały zaktualizowane."
       },
       "errors": {
         "load": "Nie udało się wczytać ustawień automatyzacji odnawiania",
-        "loadStatuses": "Nie udało się załadować statusów biletów odnowienia",
+        "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
     }
@@ -168,7 +168,7 @@
       "actions": {
         "cancel": "Anulować",
         "save": "Zapisz ustawienia",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "saved": "Ustawienia źródła podatku zostały zapisane pomyślnie."
@@ -205,7 +205,7 @@
         "deactivate": "Dezaktywować",
         "cancel": "Anulować",
         "save": "Zapisz zmiany",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       },
       "toast": {
         "created": "Region podatkowy został pomyślnie utworzony.",
@@ -270,7 +270,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -340,7 +340,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -392,7 +392,7 @@
         "delete": "Usuwać",
         "cancel": "Anulować",
         "save": "Ratować",
-        "saving": "Oszczędność...",
+        "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
       "delete": {
@@ -535,9 +535,11 @@
       "reorder": "Importuj w innej kolejności:"
     },
     "toast": {
-      "importedCount": "Zaimportowany typ usługi {{count}}",
       "importedCount_other": "Zaimportowane typy usług {{count}}",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Zaimportowany typ usługi {{count}}",
+      "importedCount_few": "Zaimportowano {{count}} typy usług",
+      "importedCount_many": "Zaimportowano {{count}} typów usług"
     },
     "errors": {
       "fetch": "Nie udało się pobrać typów usług",
@@ -932,7 +934,7 @@
       "actions": {
         "cancel": "Anulować",
         "save": "Zapisz status zwolnienia z podatku",
-        "saving": "Oszczędność..."
+        "saving": "Zapisywanie..."
       }
     },
     "advanced": {

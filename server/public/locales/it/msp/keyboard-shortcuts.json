@@ -16,14 +16,19 @@
       "resetAll": "Ripristina tutto",
       "replace": "Sostituisci",
       "copyCheatsheet": "Copia promemoria",
-      "printCheatsheet": "Stampa"
+      "printCheatsheet": "Stampa",
+      "reassign": "Riassegna",
+      "rebind": "Riassocia",
+      "reset": "Ripristina",
+      "resetAllTo": "Ripristina tutto su {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Scorciatoia da tastiera aggiornata",
       "enabledUpdated": "Scorciatoia da tastiera aggiornata",
       "resetOne": "Scorciatoia da tastiera ripristinata",
       "resetAll": "Scorciatoie da tastiera ripristinate",
-      "cheatsheetCopied": "Promemoria copiato negli appunti"
+      "cheatsheetCopied": "Promemoria copiato negli appunti",
+      "profileChanged": "Profilo modificato"
     },
     "errors": {
       "saveFailed": "Impossibile salvare le preferenze delle scorciatoie da tastiera",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Sostituire la scorciatoia esistente?",
-      "message": "{{binding}} è già assegnata a {{action}}."
+      "message": "{{binding}} è già assegnata a {{action}}.",
+      "indicator": "In conflitto con un'altra azione"
     },
     "advisory": {
       "hostileCombo": "{{binding}} potrebbe entrare in conflitto con scorciatoie del browser o del sistema per {{action}}."
-    }
+    },
+    "boundTo": "Associato a",
+    "chords": {
+      "empty": "Nessuna sequenza corrispondente.",
+      "search": "Cerca…",
+      "title": "Scorciatoie a sequenza"
+    },
+    "hint": "Passa il mouse su un tasto per l'anteprima, fai clic per riassociare. Attiva i livelli dei modificatori qui sopra per vedere le scorciatoie con prefisso.",
+    "modified": "Modificata",
+    "notSet": "Non impostata",
+    "modHint": "mod corrisponde a {{modKey}} su questo dispositivo"
   },
   "help": {
     "title": "Scorciatoie da tastiera",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinazioni",
+    "thenPress": "poi…"
   }
 }

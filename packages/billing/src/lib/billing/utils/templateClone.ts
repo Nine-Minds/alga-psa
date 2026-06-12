@@ -120,7 +120,7 @@ async function cloneServices(
       .merge({
         quantity: service.quantity,
         custom_rate: normalizeNumeric(service.custom_rate),
-        updated_at: trx.fn.now()
+        updated_at: new Date().toISOString()
       });
 
     await cloneServiceConfiguration(
@@ -298,7 +298,7 @@ async function cloneHourlyConfig(
       overtime_threshold: hourlyConfig?.overtime_threshold ?? null,
       enable_after_hours_rate: Boolean(hourlyConfig?.enable_after_hours_rate),
       after_hours_multiplier: normalizeNumeric(hourlyConfig?.after_hours_multiplier),
-      updated_at: trx.fn.now(),
+      updated_at: new Date().toISOString(),
     });
 
   await trx('contract_line_service_hourly_configs')
@@ -314,7 +314,7 @@ async function cloneHourlyConfig(
     .onConflict(['tenant', 'config_id'])
     .merge({
       hourly_rate: normalizeNumeric(configuration.custom_rate) ?? 0,
-      updated_at: trx.fn.now(),
+      updated_at: new Date().toISOString(),
     });
 }
 
@@ -354,7 +354,7 @@ async function cloneUsageConfig(
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),
-      updated_at: trx.fn.now(),
+      updated_at: new Date().toISOString(),
     });
 }
 

@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "55555 {{count}} 55555",
+    "folderCount_other": "55555 {{count}} 55555"
+  },
   "title": "55555",
   "noDocuments": "55555",
   "upload": "55555",
@@ -273,5 +277,10 @@
   "uploadHint": "55555",
   "file": "55555",
   "files": "55555",
-  "view": "55555"
+  "view": "55555",
+  "common:pagination": {
+    "next": "55555",
+    "pageOf": "55555 {{current}} 55555 {{total}} 55555",
+    "previous": "55555"
+  }
 }

@@ -1001,7 +1001,18 @@
         "syncNowSuccess": "11111",
         "syncNowSkipped": "11111 {{reason}} 11111",
         "syncNowError": "11111 {{error}} 11111",
-        "viewExceptionsLink": "11111"
+        "viewExceptionsLink": "11111",
+        "autoApplyCreditsWarning": "11111",
+        "configTitle": "11111",
+        "connectedCompanies": "11111",
+        "defaultClass": "11111",
+        "defaultDepartment": "11111",
+        "defaultRealm": "11111",
+        "depositAccount": "11111",
+        "makeDefault": "11111",
+        "noDefault": "11111",
+        "saving": "11111",
+        "undepositedFunds": "11111"
       }
     },
     "rmm": {
@@ -1121,7 +1132,16 @@
         "comingSoon": "11111",
         "configure": "11111",
         "selected": "11111 {{title}} 11111",
-        "title": "11111"
+        "title": "11111",
+        "backToList": "11111",
+        "loadingProvider": "11111 {{title}} 11111",
+        "status": {
+          "connected": "11111",
+          "connectedOneDevice": "11111",
+          "connectedWithDevices": "11111 {{count}} 11111",
+          "notConnected": "11111",
+          "syncError": "11111"
+        }
       },
       "tactical": {
         "actions": {
@@ -1328,6 +1348,86 @@
         "sync": {
           "description": "11111",
           "title": "11111"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "11111",
+          "disconnect": "11111",
+          "discoverGroups": "11111",
+          "runDeviceSync": "11111",
+          "saveConfiguration": "11111",
+          "testConnection": "11111"
+        },
+        "connection": {
+          "connectedAt": "11111 {{time}} 11111",
+          "description": "11111",
+          "never": "11111",
+          "syncLabel": "11111 {{status}} 11111",
+          "syncLabelWithError": "11111 {{status}} 11111 {{error}} 11111",
+          "title": "11111"
+        },
+        "errors": {
+          "alertBackfillFailed": "11111",
+          "deviceSyncFailed": "11111",
+          "disconnectFailed": "11111",
+          "groupSyncFailed": "11111",
+          "loadMappings": "11111",
+          "loadSettings": "11111",
+          "loadState": "11111",
+          "loadSummary": "11111",
+          "loadWebhook": "11111",
+          "saveConfiguration": "11111",
+          "testConnectionFailed": "11111",
+          "updateMappingFailed": "11111"
+        },
+        "fields": {
+          "apiKey": "11111 {{state}} 11111",
+          "apiKeyPlaceholderExisting": "11111",
+          "apiKeyPlaceholderNew": "11111",
+          "apiKeyStateRequired": "11111",
+          "apiKeyStateSaved": "11111"
+        },
+        "mappings": {
+          "autoSync": "11111",
+          "autoSyncDisabled": "11111",
+          "autoSyncEnabled": "11111",
+          "group": "11111",
+          "groupIdLabel": "11111 {{id}} 11111",
+          "loading": "11111",
+          "mappedClient": "11111",
+          "noGroups": "11111",
+          "unmapped": "11111"
+        },
+        "status": {
+          "connected": "11111",
+          "disconnected": "11111",
+          "label": "11111"
+        },
+        "success": {
+          "alertBackfillCompleted": "11111 {{processed}} 11111",
+          "configurationSaved": "11111",
+          "connectionTestSucceeded": "11111",
+          "deviceSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111",
+          "disconnected": "11111",
+          "groupSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111"
+        },
+        "sync": {
+          "description": "11111",
+          "summary": "11111 {{mappedGroups}} 11111 {{devices}} 11111 {{activeAlerts}} 11111",
+          "title": "11111"
+        },
+        "webhook": {
+          "copied": "11111",
+          "copy": "11111",
+          "description": "11111",
+          "header": "11111 {{name}} 11111",
+          "hideSecret": "11111",
+          "loading": "11111",
+          "payload": "11111",
+          "showSecret": "11111",
+          "title": "11111",
+          "url": "11111"
         }
       }
     },

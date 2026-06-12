@@ -1,0 +1,15 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Atribuído a",
+        "description": "Descrição",
+        "dueDate": "Data de vencimento",
+        "estimatedHours": "Horas estimadas",
+        "phase": "Fase",
+        "status": "Status",
+        "wbsCode": "Código EAP"
+      }
+    }
+  }
+}

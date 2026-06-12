@@ -24,7 +24,10 @@
   "actions": {
     "create": "55555",
     "open": "55555",
-    "close": "55555"
+    "close": "55555",
+    "print": "55555",
+    "printOptions": "55555",
+    "printSelected": "55555 {{count}} 55555"
   },
   "runList": {
     "shareTooltip": "55555",
@@ -60,7 +63,8 @@
       "cancelSelected": "55555 {{count}} 55555",
       "clearSelection": "55555",
       "details": "55555",
-      "loadMore": "55555"
+      "loadMore": "55555",
+      "preview": "55555"
     },
     "table": {
       "runId": "55555",
@@ -124,6 +128,15 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "preview": {
+      "close": "55555",
+      "next": "55555",
+      "openFullPage": "55555",
+      "position": "55555 {{current}} 55555 {{total}} 55555",
+      "previous": "55555",
+      "selectedRun": "55555",
+      "title": "55555"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "55555",
       "identity": "55555",
       "runErrorFallback": "55555",
-      "errorCategoryFallback": "55555"
+      "errorCategoryFallback": "55555",
+      "technicalDetailLabel": "55555"
     },
     "stepTimeline": {
       "title": "55555",
@@ -179,7 +193,8 @@
         "duration": "55555",
         "nextRetry": "55555",
         "started": "55555",
-        "error": "55555"
+        "error": "55555",
+        "action": "55555"
       },
       "empty": "55555"
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "55555",
       "errorTitle": "55555",
       "stepErrorFallback": "55555",
-      "errorCategoryFallback": "55555"
+      "errorCategoryFallback": "55555",
+      "technicalDetailLabel": "55555"
     },
     "waitHistory": {
       "title": "55555",
@@ -241,7 +257,8 @@
         "step": "55555",
         "event": "55555",
         "correlation": "55555"
-      }
+      },
+      "loading": "55555"
     },
     "audit": {
       "title": "55555",
@@ -253,7 +270,9 @@
         "operation": "55555",
         "user": "55555",
         "details": "55555"
-      }
+      },
+      "loading": "55555",
+      "unknownUser": "55555"
     },
     "dialogs": {
       "reasonLabel": "55555",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "55555",
-      "loadMore": "55555"
+      "loadMore": "55555",
+      "refresh": "55555"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "55555",
-      "empty": "55555"
+      "empty": "55555",
+      "loading": "55555"
     },
     "values": {
       "system": "55555"
@@ -577,6 +598,19 @@
         "events": "55555",
         "eventCatalog": "55555",
         "deadLetter": "55555"
+      },
+      "quota": {
+        "consumedLabel": "55555",
+        "consumedUnit": "55555",
+        "loading": "55555",
+        "planLimit": "55555 {{limit}} 55555",
+        "remainingLabel": "55555",
+        "remainingUnit": "55555",
+        "resetsOn": "55555 {{date}} 55555",
+        "title": "55555",
+        "unavailable": "55555",
+        "unlimitedPlan": "55555",
+        "unlimitedRemaining": "55555"
       }
     },
     "toolbar": {
@@ -1323,6 +1357,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "55555 {{count}} 55555",
+    "stepCount_other": "55555 {{count}} 55555",
     "start": "55555",
     "insertStepHere": "55555",
     "emptyDisabled": "55555",
@@ -1437,7 +1473,10 @@
     "softEnumPlaceholder": "55555",
     "softEnumSearchPlaceholder": "55555",
     "softEnumNoResults": "55555",
-    "softEnumUseCustom": "55555 {{value}} 55555"
+    "softEnumUseCustom": "55555 {{value}} 55555",
+    "expression": {
+      "placeholder": "55555"
+    }
   },
   "schemaReference": {
     "selectAction": "55555",
@@ -1542,7 +1581,8 @@
     },
     "actions": {
       "replay": "55555",
-      "cancel": "55555"
+      "cancel": "55555",
+      "refresh": "55555"
     },
     "status": {
       "running": "55555",
@@ -1550,7 +1590,8 @@
       "retrying": "55555",
       "failed": "55555",
       "pending": "55555",
-      "canceled": "55555"
+      "canceled": "55555",
+      "loading": "55555"
     },
     "failure": {
       "title": "55555",
@@ -1567,7 +1608,9 @@
         "loadingDefinition": "55555",
         "loadingDefinitionPlain": "55555",
         "noSteps": "55555"
-      }
+      },
+      "selectPrompt": "55555",
+      "selectedStep": "55555 {{label}} 55555"
     },
     "details": {
       "title": "55555",
@@ -1697,8 +1740,14 @@
       "reasonRequired": "55555",
       "canceled": "55555",
       "replayStarted": "55555",
-      "actionFailed": "55555"
-    }
+      "actionFailed": "55555",
+      "loadFailed": "55555"
+    },
+    "lastRefreshed": "55555 {{time}} 55555",
+    "navigation": {
+      "backToRuns": "55555"
+    },
+    "title": "55555"
   },
   "schedules": {
     "common": {

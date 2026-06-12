@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Anbieter",
-      "defaults": "Standardeinstellungen"
+      "defaults": "Standardeinstellungen",
+      "inboundRules": "Eingangsregeln"
     },
     "setup": {
       "title": "Einrichtungsanweisungen",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "OAuth konnte nicht gestartet werden",
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen. Bitte versuchen Sie es erneut.",
-        "authorizationFailed": "Die Autorisierung ist fehlgeschlagen"
+        "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
+        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten"
       },
       "requiredFields": {
         "providerName": "Konfigurationsname",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "Gültiges Postfach ist erforderlich (z. B. user@domain.com, user@localhost, user@test-server oder user)",
         "hostRequired": "IMAP-Host ist erforderlich",
         "usernameRequired": "IMAP-Benutzername ist erforderlich",
-        "oauthInitiateFailed": "IMAP-OAuth konnte nicht gestartet werden"
+        "oauthInitiateFailed": "IMAP-OAuth konnte nicht gestartet werden",
+        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten"
       },
       "basic": {
         "title": "Grundeinstellungen",
@@ -835,6 +838,146 @@
       "mismatchHelp": "Der DNS-Eintrag existiert, aber der Wert stimmt nicht mit dem überein, was Resend erwartet.",
       "matchedHelp": "Der erkannte Wert stimmt mit dem erwarteten überein.",
       "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Regel hinzufügen",
+      "aiClassify": "Mit KI klassifizieren",
+      "aiClassifyUpsell": "Erfordert das KI-Assistent-Add-on",
+      "extractAssign": "Kunden aus extrahiertem Text zuweisen",
+      "setDestination": "An Ziel weiterleiten",
+      "skip": "E-Mail überspringen (kein Ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Alle Postfächer"
+    },
+    "empty": {
+      "description": "Erstellen Sie eine Regel, um Statusupdate-E-Mails zu überspringen oder Tickets Kunden zuzuweisen, die in der Betreffzeile genannt werden.",
+      "title": "Keine Eingangsregeln konfiguriert"
+    },
+    "errors": {
+      "aliasAdd": "Alias konnte nicht hinzugefügt werden",
+      "delete": "Regel konnte nicht gelöscht werden",
+      "load": "Eingangsregeln konnten nicht geladen werden",
+      "reorder": "Regeln konnten nicht neu sortiert werden",
+      "save": "Regel konnte nicht gespeichert werden",
+      "test": "Regel konnte nicht getestet werden",
+      "update": "Regel konnte nicht aktualisiert werden"
+    },
+    "extraction": {
+      "after": "Text nach Markierung",
+      "before": "Text vor Markierung",
+      "between": "Text zwischen Trennzeichen",
+      "regex": "Regulärer Ausdruck (erweitert)"
+    },
+    "fields": {
+      "bodyText": "Nachrichtentext",
+      "fromAddress": "Absenderadresse",
+      "fromDomain": "Absenderdomäne",
+      "subject": "Betreff",
+      "toAddress": "An/CC-Adresse"
+    },
+    "form": {
+      "action": "Aktion",
+      "active": "Aktiv",
+      "addCondition": "Bedingung hinzufügen",
+      "aiAllowAssign": "Darf Kunden zuweisen",
+      "aiAllowSkip": "Darf E-Mails überspringen",
+      "aiInstruction": "Anweisung",
+      "aiInstructionPlaceholder": "z. B. Bestimme, welchen Kunden diese Monitoring-Warnung betrifft.",
+      "aiUpsell": "\"Mit KI klassifizieren\" ist mit dem Enterprise-KI-Assistent-Add-on verfügbar — E-Mails werden nach Absicht klassifiziert, ohne dass Muster gepflegt werden müssen.",
+      "cancel": "Abbrechen",
+      "conditions": "Bedingungen (alle müssen zutreffen)",
+      "create": "Regel erstellen",
+      "createTitle": "Eingangsregel erstellen",
+      "description": "Legen Sie fest, wann die Regel zutrifft und was mit der E-Mail geschieht. Verwenden Sie den Tester unten, um sie vor dem Speichern an einem Beispiel zu überprüfen.",
+      "destination": "Ziel (Ticket-Standardeinstellungen)",
+      "destinationPlaceholder": "Set mit Standardeinstellungen auswählen",
+      "editTitle": "Eingangsregel bearbeiten",
+      "endDelimiter": "End-Trennzeichen",
+      "extractFrom": "Extrahieren aus",
+      "extractionTemplate": "Extraktion",
+      "fallbackDestination": "Fallback-Ziel",
+      "first": "Erstes",
+      "last": "Letztes",
+      "mailboxes": "Auf Postfächer anwenden",
+      "mailboxesHint": "Lassen Sie alle Kontrollkästchen deaktiviert, um diese Regel auf alle Postfächer anzuwenden.",
+      "marker": "Markierungstext",
+      "markerPlaceholder": "z. B. Kunde:",
+      "matchHint": "Der extrahierte Text wird mit Kundennamen und Kunden-Aliassen abgeglichen (Groß-/Kleinschreibung wird ignoriert).",
+      "name": "Regelname",
+      "namePlaceholder": "z. B. Huntress-Kundenrouting",
+      "noMailboxes": "Noch keine Postfächer konfiguriert.",
+      "noMatchFallback": "An ein Fallback-Ziel weiterleiten",
+      "noMatchProceed": "Mit späteren Regeln / normaler Verarbeitung fortfahren",
+      "noMatchSkip": "E-Mail überspringen",
+      "occurrence": "Vorkommen",
+      "onNoMatch": "Wenn kein Kunde zugeordnet wird",
+      "pattern": "Muster (Erfassungsgruppe 1 ist der Kundenname)",
+      "regexPlaceholder": "Regulärer Ausdruck",
+      "saving": "Wird gespeichert…",
+      "startDelimiter": "Start-Trennzeichen",
+      "update": "Regel aktualisieren",
+      "valuePlaceholder": "Wert"
+    },
+    "header": {
+      "description": "Gleichen Sie eingehende E-Mails anhand von Absender oder Betreff ab, um Störmeldungen zu überspringen, den richtigen Kunden zuzuweisen oder an ein Ziel weiterzuleiten. Regeln werden der Reihe nach ausgeführt; der erste Treffer gewinnt.",
+      "title": "Regeln für eingehende E-Mails"
+    },
+    "help": {
+      "items": {
+        "aliases": "• Extrahierte Namen werden mit Kundennamen und Aliassen abgeglichen. Verwalten Sie Aliasse im Kundendatensatz oder fügen Sie sie über den Regeltester hinzu.",
+        "audit": "• Übersprungene E-Mails bleiben in der E-Mail-Verarbeitungsdiagnose nachvollziehbar und sind mit der Regel gekennzeichnet, die sie übersprungen hat.",
+        "order": "• Regeln werden bei neuen eingehenden E-Mails von oben nach unten ausgeführt; die erste zutreffende Regel wird angewendet.",
+        "replies": "• Antworten auf bestehende Tickets werden immer zu Kommentaren — Regeln greifen hier nie ein."
+      },
+      "title": "So funktioniert es"
+    },
+    "loading": "Eingangsregeln werden geladen...",
+    "menu": {
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht…",
+      "edit": "Bearbeiten"
+    },
+    "operators": {
+      "contains": "enthält",
+      "endsWith": "endet mit",
+      "equals": "ist gleich",
+      "matchesRegex": "entspricht Regex",
+      "startsWith": "beginnt mit"
+    },
+    "summary": {
+      "aiClassify": "Mit KI klassifizieren",
+      "extractAssign": "Kunden aus {{source}} zuweisen",
+      "setDestination": "An Ziel weiterleiten",
+      "skip": "E-Mail überspringen (kein Ticket)"
+    },
+    "tester": {
+      "alias": "Alias",
+      "aliasAdd": "Alias hinzufügen",
+      "aliasAdded": "Alias hinzugefügt. Führen Sie den Test erneut aus, um die Übereinstimmung zu sehen.",
+      "aliasAdding": "Wird hinzugefügt…",
+      "aliasClientPlaceholder": "Kunden auswählen",
+      "aliasLabel": "\"{{value}}\" als Alias hinzufügen für",
+      "body": "Nachrichtentext",
+      "clientMatched": "Kunde über {{source}} zugeordnet",
+      "clientName": "Kundenname",
+      "extracted": "Extrahierter Wert:",
+      "from": "Von",
+      "noClient": "Kein Kunde zugeordnet",
+      "outcome": {
+        "assignClient": "Ticket dem Kunden \"{{client}}\" zugewiesen",
+        "fallback": "Kein Kunde zugeordnet — Ticket wurde an das Fallback-Ziel weitergeleitet",
+        "none": "Regel hat keine Zuordnung ergeben — die normale Verarbeitung wird fortgesetzt",
+        "setDestination": "Ticket an das ausgewählte Ziel weitergeleitet",
+        "skip": "E-Mail übersprungen — kein Ticket erstellt"
+      },
+      "run": "Test ausführen",
+      "running": "Wird getestet…",
+      "subject": "Betreff",
+      "title": "Diese Regel testen",
+      "to": "An"
     }
   }
 }

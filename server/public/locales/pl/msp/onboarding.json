@@ -169,7 +169,10 @@
         "success": {
           "titleOne": "Typ usługi został zaimportowany!",
           "titleOther": "Typy usług zostały zaimportowane!",
-          "description": "Dodano {{count}} typ{{suffix}} do katalogu.",
+          "description_one": "Dodano {{count}} typ do katalogu.",
+          "description_few": "Dodano {{count}} typy do katalogu.",
+          "description_many": "Dodano {{count}} typów do katalogu.",
+          "description_other": "Dodano {{count}} typów do katalogu.",
           "skipped": "Pominięto {{count}}."
         },
         "actions": {

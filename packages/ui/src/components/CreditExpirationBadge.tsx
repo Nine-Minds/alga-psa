@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react';
+import { useTranslation } from '../lib/i18n/client';
 import { Badge } from './Badge';
 import { Tooltip } from './Tooltip';
 import { format } from 'date-fns';
@@ -22,6 +23,7 @@ export const CreditExpirationBadge = ({
   showTooltip = true,
   daysUntilWarning = 30
 }: CreditExpirationBadgeProps) => {
+  const { t } = useTranslation('common');
   const getStatus = (): CreditStatus => {
     if (isExpired) return 'expired';
     if (!expirationDate) return 'no-expiration';
@@ -76,7 +78,7 @@ export const CreditExpirationBadge = ({
       const diffTime = expDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      return `Expires in ${diffDays} day${diffDays !== 1 ? 's' : ''} on ${format(expDate, 'yyyy-MM-dd')}`;
+      return t('credits.expiresInDaysOn', { defaultValue: 'Expires in {{count}} days on {{date}}', count: diffDays, date: format(expDate, 'yyyy-MM-dd') });
     }
     return `Expires on ${expirationDate ? format(new Date(expirationDate), 'yyyy-MM-dd') : 'unknown date'}`;
   };

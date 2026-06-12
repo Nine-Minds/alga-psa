@@ -64,11 +64,11 @@
     "deletePhase": "Delete phase",
     "cancel": "Cancel",
     "save": "Save",
-    "taskCount": "{{count}} task",
     "taskCount_other": "{{count}} tasks",
     "startLabel": "Start",
     "dueLabel": "Due",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "taskCount_one": "{{count}} task"
   },
   "projectList": {
     "addProject": "Add Project",
@@ -227,6 +227,16 @@
     "hideStickyStatusNames": "Hide sticky status names",
     "pinHeader": "Pin header to top",
     "unpinHeader": "Unpin header",
+    "showHideColumns": "Mostrar/ocultar colunas",
+    "columns": "Colunas",
+    "showAll": "Mostrar tudo",
+    "noColumns": "Nenhuma coluna disponível",
+    "allColumnsHidden": "Todas as colunas estão ocultas",
+    "allColumnsHiddenHint": "Mostre uma ou mais colunas para ver suas tarefas.",
+    "showAllColumns": "Mostrar todas as colunas",
+    "hideColumn": "Ocultar coluna",
+    "showColumn": "Mostrar coluna",
+    "addTask": "Adicionar tarefa",
     "taskUpdatedSuccess": "Task updated successfully!",
     "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",
     "listViewEmptyMessage": "Create phases and add tasks to see them here",
@@ -326,18 +336,22 @@
     "primaryAgentRequired": "Primary agent is required when additional agents are assigned",
     "keepCreatedTicketsTitle": "Keep Created Tickets?",
     "keepCreatedTicketsMessage": "Would you like to keep these tickets or delete them?",
-    "createdTicketsIntro": "You created {{count}} ticket{{plural}} during this session:",
+    "createdTicketsIntro_one": "Você criou {{count}} ticket durante esta sessão:",
+    "createdTicketsIntro_other": "Você criou {{count}} tickets durante esta sessão:",
     "keepUploadedDocumentsTitle": "Keep Uploaded Documents?",
     "keepUploadedDocumentsMessage": "Would you like to keep these documents in the Documents section or delete them?",
-    "documentsCleanupIntro": "You have {{count}} document{{plural}} that {{wasWere}} {{cleanupType}}:",
-    "uploadedOrCreated": "uploaded or created",
-    "createdOnly": "created",
-    "uploadedOnly": "uploaded",
+    "documentsCleanupIntro_one": "Você tem {{count}} documento que foi {{cleanupType}}:",
+    "documentsCleanupIntro_other": "Você tem {{count}} documentos que foram {{cleanupType}}:",
+    "uploadedOrCreated": "enviado(s) ou criado(s)",
+    "createdOnly": "criado(s)",
+    "uploadedOnly": "enviado(s)",
     "createdDocumentTag": "created",
     "uploadedDocumentTag": "uploaded",
     "andMore": "...and {{count}} more",
-    "documentCleanupFailure": "{{count}} document{{plural}} could not be deleted and will remain in Documents",
-    "ticketCleanupFailure": "{{count}} ticket{{plural}} could not be deleted",
+    "documentCleanupFailure_one": "Não foi possível excluir {{count}} documento e ele permanecerá em Documentos",
+    "documentCleanupFailure_other": "Não foi possível excluir {{count}} documentos e eles permanecerão em Documentos",
+    "ticketCleanupFailure_one": "Não foi possível excluir {{count}} ticket",
+    "ticketCleanupFailure_other": "Não foi possível excluir {{count}} tickets",
     "checklistItemPlaceholder": "Checklist item",
     "reorderChecklistItem": "Arrastar para reordenar",
     "insertChecklistItem": "Inserir item aqui",
@@ -516,12 +530,14 @@
     "fieldsToExport": "Fields to export",
     "selectAll": "Select all",
     "deselectAll": "Deselect all",
-    "phasesSelected": "{{selected}} of {{total}} phase{{plural}} selected",
+    "phasesSelected_one": "{{selected}} de {{total}} fase selecionada",
+    "phasesSelected_other": "{{selected}} de {{total}} fases selecionadas",
     "fieldsSelected": "{{selected}} of {{total}} fields selected",
     "exportTasks": "Export Tasks",
     "exporting": "Exporting tasks...",
     "completeTitle": "Export Complete",
-    "success": "Successfully exported {{count}} task{{plural}} to CSV.",
+    "success_one": "{{count}} tarefa exportada para CSV com sucesso.",
+    "success_other": "{{count}} tarefas exportadas para CSV com sucesso.",
     "failed": "Failed to export tasks",
     "done": "Done",
     "fields": {
@@ -543,7 +559,8 @@
       "updatedAt": "Updated At"
     },
     "exportSelected": "Export {{count}} Selected",
-    "selectedTasksNotice": "Exporting {{count}} selected task{{plural}}."
+    "selectedTasksNotice_one": "Exportando {{count}} tarefa selecionada.",
+    "selectedTasksNotice_other": "Exportando {{count}} tarefas selecionadas."
   },
   "import": {
     "title": "Import Phases & Tasks",
@@ -594,7 +611,8 @@
     "importTasksButton": "Import {{tasks}} Tasks",
     "mapUnmatchedAgentsTitle": "Map Unmatched Agents",
     "agentResolutionIntro": "The following agent names from your CSV don't match any existing users. Choose how to handle each one. The first agent in a comma-separated list becomes the primary assignee, and additional agents become task resources.",
-    "taskCountLabel": "({{count}} task{{plural}})",
+    "taskCountLabel_one": "({{count}} tarefa)",
+    "taskCountLabel_other": "({{count}} tarefas)",
     "tasksList": "Tasks: {{tasks}}",
     "andMore": " and {{count}} more...",
     "mapToExistingUser": "Map to existing user:",
@@ -732,8 +750,8 @@
       "openFailed": "Failed to open task",
       "task": "Task",
       "tasks": "Tasks",
-      "badgeCount": "{{count}} Task",
-      "badgeCount_other": "{{count}} Tasks"
+      "badgeCount_other": "{{count}} Tasks",
+      "badgeCount_one": "{{count}} Task"
     },
     "bulkMoveTask": {
       "title": "Move Tasks",
@@ -1474,5 +1492,13 @@
       "confirm_other": "Adicionar tags a {{count}} tarefas",
       "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:"
     }
+  },
+  "common:actions": {
+    "back": "Voltar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "done": "Concluído",
+    "edit": "Editar",
+    "save": "Salvar"
   }
 }

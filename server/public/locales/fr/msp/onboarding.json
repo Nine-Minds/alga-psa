@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "Type de service importé avec succès !",
           "titleOther": "Types de service importés avec succès !",
-          "description": "{{count}} type{{suffix}} ajouté(s) à votre catalogue.",
+          "description_one": "{{count}} type ajouté à votre catalogue.",
+          "description_other": "{{count}} types ajoutés à votre catalogue.",
           "skipped": "{{count}} ignoré(s)."
         },
         "actions": {

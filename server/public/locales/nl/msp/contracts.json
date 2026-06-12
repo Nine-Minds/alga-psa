@@ -14,7 +14,7 @@
       "save": "Redden",
       "saveChanges": "Wijzigingen opslaan",
       "saveChangesDirty": "Wijzigingen opslaan *",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "view": "Weergave",
       "openMenu": "Menu openen"
     },
@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} dagen",
         "ongoing": "Lopend",
         "renewalTermMonths_one": "{{count}} maand",
-        "renewalTermMonths_other": "{{count}} maanden"
+        "renewalTermMonths_other": "{{count}} maanden",
+        "noticePeriodDays": "{{count}} dag",
+        "renewalTermMonths": "{{count}} maand"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Product {{index}}",
       "products": "Producten",
       "quantity": "Hoeveelheid",
-      "selectProductPlaceholder": "Selecteer een product"
+      "selectProductPlaceholder": "Selecteer een product",
+      "catalogPriceInCurrency": "Catalogusprijs in {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Geen standaardprijs ingesteld. Voer een prijs per eenheid in.",
-      "productMissingPrice": "Dit product heeft geen standaardprijs en geen override. Het kan niet worden gefactureerd totdat u een prijs per eenheid invoert."
+      "productMissingPrice": "Dit product heeft geen standaardprijs en geen override. Het kan niet worden gefactureerd totdat u een prijs per eenheid invoert.",
+      "noCurrencyPriceEnterUnitPrice": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidsprijs in.",
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidsprijs in {{currency}} in."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Uurservices",
       "selectServicePlaceholder": "Selecteer een service",
       "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Urenbundel instellen"
+      "setBucketOfHours": "Urenbundel instellen",
+      "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een uurtarief in.",
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in."
     },
     "minimumBillableTime": {
       "hint": "bijv. 15 minuten - elke tijdregistratie korter dan dit wordt naar boven afgerond",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Bundeltoewijzing instellen",
       "unitOfMeasure": "Meeteenheid",
       "unitOfMeasureHint": "Kies de eenheid waarop deze service wordt gefactureerd.",
-      "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker"
+      "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker",
+      "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidstarief in.",
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in."
     },
     "summary": {
       "labels": {

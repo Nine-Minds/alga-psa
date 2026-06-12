@@ -156,11 +156,11 @@ export const getCurrentTenantPortalDomain = withAuth(async (_user: IUserWithRole
 });
 
 export async function upsertPortalDomain(knex: Knex, tenant: string, input: UpsertPortalDomainInput): Promise<PortalDomain> {
-  const now = knex.fn.now();
+  const now = new Date();
   const canonicalHost = computeCanonicalHost(tenant);
   const normalizedDomain = normalizeHostname(input.domain);
   const lastCheckedAt =
-    input.lastCheckedAt === undefined ? knex.fn.now() : coerceLastCheckedAt(knex, input.lastCheckedAt);
+    input.lastCheckedAt === undefined ? now : coerceLastCheckedAt(knex, input.lastCheckedAt);
   const payload = {
     tenant,
     domain: normalizedDomain,

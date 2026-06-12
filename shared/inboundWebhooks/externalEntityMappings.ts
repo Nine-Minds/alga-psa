@@ -117,9 +117,9 @@ export async function writeEntityMapping(
       external_entity_id: externalId,
       external_realm_id: externalRealmId,
       sync_status: 'synced',
-      last_synced_at: db.fn.now(),
+      last_synced_at: new Date().toISOString(),
       metadata: options.metadata ?? null,
-      updated_at: db.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning('*');
 

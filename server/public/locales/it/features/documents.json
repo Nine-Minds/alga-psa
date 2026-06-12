@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} cartella",
+    "folderCount_other": "{{count}} cartelle"
+  },
   "title": "Documenti",
   "noDocuments": "Nessun documento allegato",
   "upload": "Carica documento",
@@ -273,5 +277,10 @@
   "uploadHint": "Carica file da condividere con questa attività",
   "file": "file",
   "files": "file",
-  "view": "Vedi"
+  "view": "Vedi",
+  "common:pagination": {
+    "next": "Successivo",
+    "pageOf": "Pagina {{current}} di {{total}}",
+    "previous": "Precedente"
+  }
 }

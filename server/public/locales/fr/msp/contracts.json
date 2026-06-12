@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} jours",
         "ongoing": "En cours",
         "renewalTermMonths_one": "{{count}} mois",
-        "renewalTermMonths_other": "{{count}} mois"
+        "renewalTermMonths_other": "{{count}} mois",
+        "noticePeriodDays": "{{count}} jour",
+        "renewalTermMonths": "{{count}} mois"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Produit {{index}}",
       "products": "Produits",
       "quantity": "Quantité",
-      "selectProductPlaceholder": "Sélectionnez un produit"
+      "selectProductPlaceholder": "Sélectionnez un produit",
+      "catalogPriceInCurrency": "Prix catalogue en {{currency}} :"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Aucun prix par défaut défini. Saisissez un prix unitaire.",
-      "productMissingPrice": "Ce produit n'a ni prix par défaut ni prix de remplacement. Il ne peut pas être facturé tant que vous n'avez pas saisi de prix unitaire."
+      "productMissingPrice": "Ce produit n'a ni prix par défaut ni prix de remplacement. Il ne peut pas être facturé tant que vous n'avez pas saisi de prix unitaire.",
+      "noCurrencyPriceEnterUnitPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un prix unitaire.",
+      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un prix unitaire en {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Services horaires",
       "selectServicePlaceholder": "Sélectionnez un service",
       "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Définir une banque d'heures"
+      "setBucketOfHours": "Définir une banque d'heures",
+      "noCurrencyPriceEnterRate": "Aucun prix en {{currency}} dans le catalogue. Saisissez un taux horaire.",
+      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un taux horaire en {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "par ex., 15 minutes - toute entrée de temps inférieure à ce seuil sera arrondie à la hausse",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Définir l'allocation de la banque",
       "unitOfMeasure": "Unité de mesure",
       "unitOfMeasureHint": "Choisissez l'unité sur laquelle ce service est facturé.",
-      "unitOfMeasurePlaceholder": "par ex., Go, appel API, utilisateur"
+      "unitOfMeasurePlaceholder": "par ex., Go, appel API, utilisateur",
+      "noCurrencyPriceEnterRate": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire.",
+      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un tarif unitaire en {{currency}}."
     },
     "summary": {
       "labels": {

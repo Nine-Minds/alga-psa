@@ -149,8 +149,6 @@
     },
     "sessions": {
       "title": "Toutes les sessions utilisateur",
-      "subtitle": "{{sessionCount}} session active pour {{userCount}} utilisateur",
-      "subtitle_plural": "{{sessionCount}} sessions actives pour {{userCount}} utilisateurs",
       "filters": {
         "search": "Rechercher",
         "searchPlaceholder": "Rechercher par nom, courriel, appareil ou IP...",
@@ -195,7 +193,9 @@
         "loading": "Chargement des sessions...",
         "noMatch": "Aucune session ne correspond à votre recherche",
         "noSessions": "Aucune session active trouvée"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} session active pour {{userCount}} utilisateur",
+      "subtitle_other": "{{sessionCount}} sessions actives pour {{userCount}} utilisateurs"
     },
     "webhooks": {
       "title": "Webhooks sortants",

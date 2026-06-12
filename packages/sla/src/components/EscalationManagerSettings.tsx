@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -30,6 +31,7 @@ interface PendingChange {
 }
 
 export const EscalationManagerSettings: React.FC = () => {
+  const { t } = useTranslation('msp/settings');
   const [configs, setConfigs] = useState<IBoardEscalationConfig[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ export const EscalationManagerSettings: React.FC = () => {
         <div className="flex items-center gap-4">
           {pendingChanges.size > 0 && (
             <span className="text-sm text-amber-600">
-              {pendingChanges.size} unsaved change{pendingChanges.size > 1 ? 's' : ''}
+              {t('escalationManager.unsavedChanges', { defaultValue: '{{count}} unsaved changes', count: pendingChanges.size })}
             </span>
           )}
           <Button

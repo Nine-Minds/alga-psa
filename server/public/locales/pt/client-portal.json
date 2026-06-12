@@ -33,7 +33,8 @@
       "resources": "Recursos",
       "more": "Mais",
       "apps": "Apps"
-    }
+    },
+    "licenses": "Licenças"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -131,7 +132,8 @@
           "declined": "Agendamento recusado: {{name}}",
           "cancelled": "Agendamento cancelado: {{name}}"
         }
-      }
+      },
+      "algadeskEmptyHint": "Quando os tickets forem atualizados, eles aparecerão aqui."
     },
     "devices": {
       "title": "Seus dispositivos",
@@ -278,7 +280,9 @@
         "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail.",
         "registrationFailed": "Não foi possível concluir o registo. Tente novamente."
       }
-    }
+    },
+    "captchaRequired": "Conclua a verificação abaixo e depois faça login novamente.",
+    "tooManyAttempts": "Muitas tentativas de login com falha. Aguarde alguns minutos antes de tentar novamente."
   },
   "account": {
     "title": "Account",
@@ -434,6 +438,8 @@
       "disabled": "Disabled"
     },
     "notifications": {
+      "unreadCount_one": "{{count}} unread notification",
+      "unreadCount_other": "{{count}} unread notifications",
       "title": "Definições de notificações",
       "email": "Notificações por email",
       "ticketUpdates": "Ticket Updates",

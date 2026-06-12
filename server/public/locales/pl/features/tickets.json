@@ -1,4 +1,70 @@
 {
+  "importDialog": {
+    "errorCount_one": "{{count}} błąd:",
+    "errorCount_few": "{{count}} błędy:",
+    "errorCount_many": "{{count}} błędów:",
+    "errorCount_other": "{{count}} błędów:",
+    "warningCount_one": "{{count}} ostrzeżenie:",
+    "warningCount_few": "{{count}} ostrzeżenia:",
+    "warningCount_many": "{{count}} ostrzeżeń:",
+    "warningCount_other": "{{count}} ostrzeżeń:",
+    "unmatchedPriorities_one": "{{count}} priorytet",
+    "unmatchedPriorities_few": "{{count}} priorytety",
+    "unmatchedPriorities_many": "{{count}} priorytetów",
+    "unmatchedPriorities_other": "{{count}} priorytetów",
+    "unmatchedStatuses_one": "{{count}} status",
+    "unmatchedStatuses_few": "{{count}} statusy",
+    "unmatchedStatuses_many": "{{count}} statusów",
+    "unmatchedStatuses_other": "{{count}} statusów",
+    "unmatchedCategories_one": "{{count}} kategoria",
+    "unmatchedCategories_few": "{{count}} kategorie",
+    "unmatchedCategories_many": "{{count}} kategorii",
+    "unmatchedCategories_other": "{{count}} kategorii",
+    "skippedCount_one": "Pominięto {{count}} zgłoszenie.",
+    "skippedCount_few": "Pominięto {{count}} zgłoszenia.",
+    "skippedCount_many": "Pominięto {{count}} zgłoszeń.",
+    "skippedCount_other": "Pominięto {{count}} zgłoszenia.",
+    "importTickets_one": "Importuj {{count}} zgłoszenie",
+    "importTickets_few": "Importuj {{count}} zgłoszenia",
+    "importTickets_many": "Importuj {{count}} zgłoszeń",
+    "importTickets_other": "Importuj {{count}} zgłoszenia",
+    "unmatchedClients_one": "{{count}} klient",
+    "unmatchedClients_few": "{{count}} klientów",
+    "unmatchedClients_many": "{{count}} klientów",
+    "unmatchedClients_other": "{{count}} klientów",
+    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_few": "{{count}} agentów",
+    "unmatchedAgents_many": "{{count}} agentów",
+    "unmatchedAgents_other": "{{count}} agentów",
+    "unmatchedTeams_one": "{{count}} zespół",
+    "unmatchedTeams_few": "{{count}} zespoły",
+    "unmatchedTeams_many": "{{count}} zespołów",
+    "unmatchedTeams_other": "{{count}} zespołów",
+    "unmatchedContacts_one": "{{count}} kontakt",
+    "unmatchedContacts_few": "{{count}} kontakty",
+    "unmatchedContacts_many": "{{count}} kontaktów",
+    "unmatchedContacts_other": "{{count}} kontaktów",
+    "unmatchedDateFormats_one": "{{count}} format daty",
+    "unmatchedDateFormats_few": "{{count}} formaty dat",
+    "unmatchedDateFormats_many": "{{count}} formatów dat",
+    "unmatchedDateFormats_other": "{{count}} formatów dat",
+    "unmatchedValuesIntro_one": "Nie udało się automatycznie dopasować {{count}} wartości z pliku CSV.",
+    "unmatchedValuesIntro_few": "Nie udało się automatycznie dopasować {{count}} wartości z pliku CSV.",
+    "unmatchedValuesIntro_many": "Nie udało się automatycznie dopasować {{count}} wartości z pliku CSV.",
+    "unmatchedValuesIntro_other": "Nie udało się automatycznie dopasować {{count}} wartości z pliku CSV.",
+    "ticketCount_one": "({{count}} zgłoszenie)",
+    "ticketCount_few": "({{count}} zgłoszenia)",
+    "ticketCount_many": "({{count}} zgłoszeń)",
+    "ticketCount_other": "({{count}} zgłoszenia)",
+    "skipDropped_one": "Pomiń ({{count}} zgłoszenie zostanie pominięte)",
+    "skipDropped_few": "Pomiń ({{count}} zgłoszenia zostaną pominięte)",
+    "skipDropped_many": "Pomiń ({{count}} zgłoszeń zostanie pominiętych)",
+    "skipDropped_other": "Pomiń ({{count}} zgłoszenia zostaną pominięte)",
+    "createdSuccess_one": "Pomyślnie utworzono {{count}} zgłoszenie.",
+    "createdSuccess_few": "Pomyślnie utworzono {{count}} zgłoszenia.",
+    "createdSuccess_many": "Pomyślnie utworzono {{count}} zgłoszeń.",
+    "createdSuccess_other": "Pomyślnie utworzono {{count}} zgłoszenia."
+  },
   "title": "Zgłoszenia wsparcia",
   "subtitle": "Przeglądaj i zarządzaj zgłoszeniami wsparcia",
   "backToTickets": "Wróć do zgłoszeń",
@@ -164,7 +230,8 @@
     "proceed": "Kontynuuj",
     "export": "Eksportuj",
     "reset": "Resetuj",
-    "importSelected": "Importuj zaznaczone"
+    "importSelected": "Importuj zaznaczone",
+    "printOptions": "Opcje drukowania"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -240,13 +307,33 @@
     "updateClientFailed": "Nie udało się zaktualizować klienta",
     "updateLocationFailed": "Nie udało się zaktualizować lokalizacji",
     "deleteCommentFailed": "Nie udało się usunąć komentarza",
+    "pastedImagesDeleted_one": "Usunięto {{count}} wklejony obraz.",
+    "pastedImagesDeleted_few": "Usunięto {{count}} wklejone obrazy.",
+    "pastedImagesDeleted_many": "Usunięto {{count}} wklejonych obrazów.",
+    "pastedImagesDeleted_other": "Usunięto {{count}} wklejone obrazy.",
+    "pastedImagesDeleteFailed_one": "Nie udało się usunąć {{count}} wklejonego obrazu.",
+    "pastedImagesDeleteFailed_few": "Nie udało się usunąć {{count}} wklejonych obrazów.",
+    "pastedImagesDeleteFailed_many": "Nie udało się usunąć {{count}} wklejonych obrazów.",
+    "pastedImagesDeleteFailed_other": "Nie udało się usunąć {{count}} wklejonych obrazów.",
+    "deleteCommentConfirm": "Czy na pewno chcesz usunąć ten komentarz? Tej akcji nie można cofnąć.",
+    "deleteCommentWithImages_one": "Ten komentarz zawiera {{count}} wklejony obraz przesłany jako dokument zgłoszenia. Usunąć tylko komentarz, czy także trwale usunąć wklejony obraz?",
+    "deleteCommentWithImages_few": "Ten komentarz zawiera {{count}} wklejone obrazy przesłane jako dokumenty zgłoszenia. Usunąć tylko komentarz, czy także trwale usunąć wklejone obrazy?",
+    "deleteCommentWithImages_many": "Ten komentarz zawiera {{count}} wklejonych obrazów przesłanych jako dokumenty zgłoszenia. Usunąć tylko komentarz, czy także trwale usunąć wklejone obrazy?",
+    "deleteCommentWithImages_other": "Ten komentarz zawiera {{count}} wklejone obrazy przesłane jako dokumenty zgłoszenia. Usunąć tylko komentarz, czy także trwale usunąć wklejone obrazy?",
     "removeFromBundleFailed": "Nie udało się usunąć zgłoszenia z pakietu",
     "unbundleFailed": "Nie udało się rozpakować zgłoszenia",
     "addToBundleFailed": "Nie udało się dodać zgłoszenia do pakietu",
     "promoteMasterFailed": "Nie udało się promować zgłoszenia głównego",
     "updateBundleSettingsFailed": "Nie udało się zaktualizować ustawień pakietu",
     "assetLoadFailed": "Nie udało się załadować szczegółów zasobu",
-    "assetNotFound": "Nie znaleziono zasobu"
+    "assetNotFound": "Nie znaleziono zasobu",
+    "addCommentFailed": "Nie udało się dodać komentarza",
+    "deleteTimeEntryFailed": "Nie udało się usunąć wpisu czasu",
+    "timeEntryDeleted": "Wpis czasu usunięty",
+    "commentWithImagesDeleted_few": "Komentarz i {{count}} wklejone obrazy zostały pomyślnie usunięte.",
+    "commentWithImagesDeleted_many": "Komentarz i {{count}} wklejonych obrazów zostało pomyślnie usuniętych.",
+    "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
+    "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów."
   },
   "conversation": {
     "comments": "Komentarze",
@@ -288,7 +375,8 @@
     "inboundChildReplies": "Odpowiedzi przychodzące na zgłoszenia podrzędne (tylko do odczytu)",
     "childTicket": "Zgłoszenie podrzędne",
     "ticketPrefix": "Zgłoszenie {{number}}",
-    "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?"
+    "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?",
+    "replyCommentAriaLabel": "Odpowiedz na komentarz"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -390,7 +478,13 @@
       "allMatchingSelected_other": "Zaznaczono wszystkie {{count}} zgłoszenia spełniające filtry.",
       "clear": "Wyczyść zaznaczenie",
       "selectAllMatching_one": "Zaznacz wszystkie {{count}} zgłoszenie spełniające filtry",
-      "selectAllMatching_other": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry"
+      "selectAllMatching_other": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry",
+      "allMatchingSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia spełniające filtry.",
+      "allMatchingSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń spełniających filtry.",
+      "pageSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia na tej stronie.",
+      "pageSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń na tej stronie.",
+      "selectAllMatching_few": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry",
+      "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry"
     },
     "spacing": {
       "compact": "Kompaktowo",
@@ -427,11 +521,28 @@
         "title": "Opcje drukowania",
         "selectedTitle": "Opcje drukowania ({{count}} zaznaczonych)",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania zgłoszeń."
-      }
+      },
+      "selectedAction": "Drukuj zaznaczone ({{count}})",
+      "selectedTitle": "Zaznaczone zgłoszenia ({{count}})",
+      "subtitle": "{{count}} zgłoszeń",
+      "selectedAction_few": "Drukuj zaznaczone ({{count}})",
+      "selectedAction_many": "Drukuj zaznaczone ({{count}})",
+      "selectedTitle_few": "Zaznaczone zgłoszenia ({{count}})",
+      "selectedTitle_many": "Zaznaczone zgłoszenia ({{count}})",
+      "subtitle_few": "{{count}} zgłoszenia",
+      "subtitle_many": "{{count}} zgłoszeń"
     },
     "exportSelectedAction": "Eksportuj zaznaczone ({{count}})",
     "exportAction": "Eksportuj CSV",
-    "importAction": "Importuj CSV"
+    "importAction": "Importuj CSV",
+    "allMatchingSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia spełniające filtry.",
+    "allMatchingSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń spełniających filtry.",
+    "allPageSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia na tej stronie.",
+    "allPageSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń na tej stronie.",
+    "exportSelectedTooltip_few": "Eksportuj {{count}} wybrane zgłoszenia do CSV",
+    "exportSelectedTooltip_many": "Eksportuj {{count}} wybranych zgłoszeń do CSV",
+    "selectAllMatching_few": "Zaznacz wszystkie {{count}} zgłoszenia spełniające filtry",
+    "selectAllMatching_many": "Zaznacz wszystkie {{count}} zgłoszeń spełniających filtry"
   },
   "bulk": {
     "bundleTickets": "Połącz zgłoszenia",
@@ -495,7 +606,13 @@
       "success_one": "Przeniesiono {{count}} zgłoszenie",
       "success_other": "Przeniesiono {{count}} zgłoszeń",
       "partialFailure": "Niektórych zgłoszeń nie udało się przenieść",
-      "failure": "Nie udało się przenieść zaznaczonych zgłoszeń"
+      "failure": "Nie udało się przenieść zaznaczonych zgłoszeń",
+      "confirm": "Przenieś {{count}} zgłoszeń",
+      "success": "Przeniesiono {{count}} zgłoszeń",
+      "confirm_few": "Przenieś {{count}} zgłoszenia",
+      "confirm_many": "Przenieś {{count}} zgłoszeń",
+      "success_few": "Przeniesiono {{count}} zgłoszenia",
+      "success_many": "Przeniesiono {{count}} zgłoszeń"
     },
     "delete": {
       "dialogTitle": "Usuń zaznaczone zgłoszenia",
@@ -510,7 +627,15 @@
       "success_one": "Usunięto {{count}} zgłoszenie",
       "success_other": "Usunięto {{count}} zgłoszeń",
       "partialFailure": "Niektórych zgłoszeń nie udało się usunąć",
-      "failure": "Nie udało się usunąć zaznaczonych zgłoszeń"
+      "failure": "Nie udało się usunąć zaznaczonych zgłoszeń",
+      "confirm": "Czy na pewno chcesz usunąć te {{count}} zgłoszenia? Tej operacji nie można cofnąć.",
+      "success": "Usunięto {{count}} zgłoszeń",
+      "button_few": "Usuń {{count}} zgłoszenia",
+      "button_many": "Usuń {{count}} zgłoszeń",
+      "confirm_few": "Czy na pewno chcesz usunąć te {{count}} zgłoszenia? Tej operacji nie można cofnąć.",
+      "confirm_many": "Czy na pewno chcesz usunąć te {{count}} zgłoszeń? Tej operacji nie można cofnąć.",
+      "success_few": "Usunięto {{count}} zgłoszenia",
+      "success_many": "Usunięto {{count}} zgłoszeń"
     },
     "bundle": {
       "dialogTitle": "Połącz zgłoszenia",
@@ -556,7 +681,9 @@
       "dueDate": "Termin",
       "statusDisabledMultiBoard": "Wybrane zgłoszenia są na różnych tablicach",
       "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
-      "more": "Więcej"
+      "more": "Więcej",
+      "selectedCount_few": "Zaznaczono {{count}}",
+      "selectedCount_many": "Zaznaczono {{count}}"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",
@@ -570,7 +697,11 @@
       "success_other": "{{count}} zgłoszeń ponownie przypisanych",
       "partialFailure": "Niektórych zgłoszeń nie udało się ponownie przypisać",
       "failure": "Nie udało się ponownie przypisać wybranych zgłoszeń",
-      "failedHeading": "Następujących zgłoszeń nie udało się ponownie przypisać:"
+      "failedHeading": "Następujących zgłoszeń nie udało się ponownie przypisać:",
+      "confirm_few": "Ponownie przypisz {{count}} zgłoszenia",
+      "confirm_many": "Ponownie przypisz {{count}} zgłoszeń",
+      "success_few": "{{count}} zgłoszenia ponownie przypisane",
+      "success_many": "{{count}} zgłoszeń ponownie przypisanych"
     },
     "tags": {
       "dialogTitle": "Dodaj tagi do wybranych zgłoszeń",
@@ -583,7 +714,11 @@
       "success_other": "Tagi dodane do {{count}} zgłoszeń",
       "partialFailure": "Tagi nie zostały dodane do wszystkich zgłoszeń",
       "failure": "Nie udało się dodać tagów",
-      "failedHeading": "Tagi nie zostały dodane do następujących zgłoszeń:"
+      "failedHeading": "Tagi nie zostały dodane do następujących zgłoszeń:",
+      "confirm_few": "Dodaj tagi do {{count}} zgłoszeń",
+      "confirm_many": "Dodaj tagi do {{count}} zgłoszeń",
+      "success_few": "Tagi dodane do {{count}} zgłoszeń",
+      "success_many": "Tagi dodane do {{count}} zgłoszeń"
     },
     "dueDate": {
       "dialogTitle": "Ustaw termin dla wybranych zgłoszeń",
@@ -598,7 +733,11 @@
       "success_other": "Termin zaktualizowany w {{count}} zgłoszeniach",
       "partialFailure": "Termin nie został zaktualizowany w niektórych zgłoszeniach",
       "failure": "Nie udało się zaktualizować terminu",
-      "failedHeading": "Termin nie został zaktualizowany w następujących zgłoszeniach:"
+      "failedHeading": "Termin nie został zaktualizowany w następujących zgłoszeniach:",
+      "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
+      "confirm_many": "Zaktualizuj {{count}} zgłoszeń",
+      "success_few": "Termin zaktualizowany w {{count}} zgłoszeniach",
+      "success_many": "Termin zaktualizowany w {{count}} zgłoszeniach"
     },
     "status": {
       "dialogTitle": "Zmień status wybranych zgłoszeń",
@@ -612,7 +751,11 @@
       "success_other": "Status zaktualizowany w {{count}} zgłoszeniach",
       "partialFailure": "Status nie został zaktualizowany w niektórych zgłoszeniach",
       "failure": "Nie udało się zaktualizować statusu",
-      "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:"
+      "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
+      "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
+      "confirm_many": "Zaktualizuj {{count}} zgłoszeń",
+      "success_few": "Status zaktualizowany w {{count}} zgłoszeniach",
+      "success_many": "Status zaktualizowany w {{count}} zgłoszeniach"
     },
     "priority": {
       "dialogTitle": "Zmień priorytet wybranych zgłoszeń",
@@ -625,8 +768,24 @@
       "success_other": "Priorytet zaktualizowany w {{count}} zgłoszeniach",
       "partialFailure": "Priorytet nie został zaktualizowany w niektórych zgłoszeniach",
       "failure": "Nie udało się zaktualizować priorytetu",
-      "failedHeading": "Priorytet nie został zaktualizowany w następujących zgłoszeniach:"
-    }
+      "failedHeading": "Priorytet nie został zaktualizowany w następujących zgłoszeniach:",
+      "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
+      "confirm_many": "Zaktualizuj {{count}} zgłoszeń",
+      "success_few": "Priorytet zaktualizowany w {{count}} zgłoszeniach",
+      "success_many": "Priorytet zaktualizowany w {{count}} zgłoszeniach"
+    },
+    "deleteConfirm_few": "Usuń {{count}} zgłoszenia",
+    "deleteConfirm_many": "Usuń {{count}} zgłoszeń",
+    "deleteDialogDescription_few": "Czy na pewno chcesz usunąć te {{count}} zgłoszenia? Tej operacji nie można cofnąć.",
+    "deleteDialogDescription_many": "Czy na pewno chcesz usunąć te {{count}} zgłoszeń? Tej operacji nie można cofnąć.",
+    "deleteSuccess_few": "Usunięto {{count}} zgłoszenia",
+    "deleteSuccess_many": "Usunięto {{count}} zgłoszeń",
+    "exportSelectedTooltip_few": "Eksportuj {{count}} wybrane zgłoszenia do CSV",
+    "exportSelectedTooltip_many": "Eksportuj {{count}} wybranych zgłoszeń do CSV",
+    "moveConfirm_few": "Przenieś {{count}} zgłoszenia",
+    "moveConfirm_many": "Przenieś {{count}} zgłoszeń",
+    "moveSuccess_few": "Przeniesiono {{count}} zgłoszenia",
+    "moveSuccess_many": "Przeniesiono {{count}} zgłoszeń"
   },
   "quickAdd": {
     "dialogTitle": "Szybkie dodanie zgłoszenia",
@@ -681,7 +840,11 @@
     "clipboardUploadPartialFailure": "Zgłoszenie zostało utworzone, ale wklejone obrazy nie mogły zostać dołączone do opisu.",
     "teamAssignmentPartialFailure": "Zgłoszenie zostało utworzone, ale przypisanie zespołu nie powiodło się",
     "tagCreatePartialFailure_one": "Nie udało się utworzyć {{count}} tagu",
-    "tagCreatePartialFailure_other": "Nie udało się utworzyć {{count}} tagów"
+    "tagCreatePartialFailure_other": "Nie udało się utworzyć {{count}} tagów",
+    "tagCreatePartialFailure_few": "Nie udało się utworzyć {{count}} tagów",
+    "tagCreatePartialFailure_many": "Nie udało się utworzyć {{count}} tagów",
+    "tagCreationFailed_few": "Nie udało się utworzyć {{count}} tagów",
+    "tagCreationFailed_many": "Nie udało się utworzyć {{count}} tagów"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -794,7 +957,9 @@
     "openEmailNotificationLogs": "Wyświetl dzienniki powiadomień e-mail",
     "clipboardDraftMessage": "Ten opis zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Chcesz je zachować czy usunąć na stałe?",
     "clearDueDate": "Wyczyść termin",
-    "paused": "Wstrzymane"
+    "paused": "Wstrzymane",
+    "openActivityLog": "Zobacz dziennik aktywności",
+    "resolveLiveConflict": "Rozwiąż konflikty aktualizacji na żywo przed zapisaniem zmian."
   },
   "properties": {
     "timeEntry": "Wpis czasu",
@@ -997,7 +1162,27 @@
       "responseState": "Stan odpowiedzi",
       "ticketOrigin": "Źródło zgłoszenia",
       "tags": "Tagi"
-    }
+    },
+    "appliedFiltersSummary": "(z {{count}} zgłoszeń pasujących do zastosowanych filtrów)",
+    "completeMessage": "Pomyślnie wyeksportowano {{count}} zgłoszeń do CSV.",
+    "confirm": "Eksportuj {{count}} zgłoszeń",
+    "selectedTicketsSummary": "Eksportowanie {{count}} zaznaczonych zgłoszeń",
+    "appliedFiltersSummary_few": "(z {{count}} zgłoszeniami spełniającymi zastosowane filtry)",
+    "appliedFiltersSummary_many": "(z {{count}} zgłoszeniami spełniającymi zastosowane filtry)",
+    "completeDescription_few": "Pomyślnie wyeksportowano {{count}} zgłoszenia do CSV.",
+    "completeDescription_many": "Pomyślnie wyeksportowano {{count}} zgłoszeń do CSV.",
+    "completeMessage_few": "Pomyślnie wyeksportowano {{count}} zgłoszenia do CSV.",
+    "completeMessage_many": "Pomyślnie wyeksportowano {{count}} zgłoszeń do CSV.",
+    "confirm_few": "Eksportuj {{count}} zgłoszenia",
+    "confirm_many": "Eksportuj {{count}} zgłoszeń",
+    "selectedFields_few": "Zaznaczono {{count}} z {{total}} pól",
+    "selectedFields_many": "Zaznaczono {{count}} z {{total}} pól",
+    "selectedTicketsSummary_few": "Eksportowanie {{count}} zaznaczonych zgłoszeń",
+    "selectedTicketsSummary_many": "Eksportowanie {{count}} zaznaczonych zgłoszeń",
+    "summary_few": "Eksportowanie {{selected}} zaznaczonych zgłoszeń",
+    "summary_many": "Eksportowanie {{selected}} zaznaczonych zgłoszeń",
+    "summaryMatching_few": "(z {{total}} zgłoszeniami spełniającymi zastosowane filtry)",
+    "summaryMatching_many": "(z {{total}} zgłoszeniami spełniającymi zastosowane filtry)"
   },
   "materials": {
     "title": "Materiały",
@@ -1112,7 +1297,17 @@
     "selectedCount_other": "{{count}} kategorii",
     "excludingCount_one": "z wyłączeniem {{count}} kategorii",
     "excludingCount_other": "z wyłączeniem {{count}} kategorii",
-    "excludingPrefix": "z wyłączeniem {{name}}"
+    "excludingPrefix": "z wyłączeniem {{name}}",
+    "excludingCount": "z wyłączeniem {{count}} kategorii",
+    "selectedCount": "{{count}} kategorii",
+    "categoriesCount_few": "{{count}} kategorie",
+    "categoriesCount_many": "{{count}} kategorii",
+    "excludingCategoriesCount_few": "z wyłączeniem {{count}} kategorii",
+    "excludingCategoriesCount_many": "z wyłączeniem {{count}} kategorii",
+    "excludingCount_few": "z wyłączeniem {{count}} kategorii",
+    "excludingCount_many": "z wyłączeniem {{count}} kategorii",
+    "selectedCount_few": "{{count}} kategorie",
+    "selectedCount_many": "{{count}} kategorii"
   },
   "navigation": {
     "previousTicket": "Poprzednie zgłoszenie",
@@ -1220,7 +1415,8 @@
     }
   },
   "common": {
-    "continueEditing": "Kontynuuj edycję"
+    "continueEditing": "Kontynuuj edycję",
+    "cancel": "Anuluj"
   },
   "details": {
     "bundle": {
@@ -1258,7 +1454,9 @@
     "editing": {
       "single": "{{name}} edytuje",
       "multiple_one": "{{name}} i {{count}} inna osoba edytują",
-      "multiple_other": "{{name}} i {{count}} innych osób edytują"
+      "multiple_other": "{{name}} i {{count}} innych osób edytują",
+      "multiple_few": "{{name}} i {{count}} inne osoby edytują",
+      "multiple_many": "{{name}} i {{count}} innych osób edytują"
     },
     "remoteFieldUpdated": "{{name}} zaktualizował(a) {{field}}",
     "connection": {
@@ -1281,6 +1479,48 @@
     "excludingCount_other": "bez {{count}} tablic",
     "placeholder": "Filtruj według tablicy",
     "title": "Wybór tablicy",
-    "searchPlaceholder": "Szukaj tablic..."
+    "searchPlaceholder": "Szukaj tablic...",
+    "excludingCount": "bez {{count}} tablic",
+    "selectedCount": "{{count}} tablic",
+    "statusActive": "Aktywne",
+    "statusAll": "Wszystkie",
+    "statusInactive": "Nieaktywne",
+    "excludingCount_few": "bez {{count}} tablic",
+    "excludingCount_many": "bez {{count}} tablic",
+    "selectedCount_few": "{{count}} tablice",
+    "selectedCount_many": "{{count}} tablic"
+  },
+  "checklist": {
+    "addFailed": "Nie udało się dodać elementu listy kontrolnej",
+    "addItem": "Dodaj",
+    "addItemPlaceholder": "Dodaj element listy kontrolnej",
+    "applyTemplate": "Zastosuj szablon",
+    "applyTemplateFailed": "Nie udało się zastosować szablonu listy kontrolnej",
+    "clickToRename": "Kliknij, aby zmienić nazwę",
+    "deleteFailed": "Nie udało się usunąć elementu listy kontrolnej",
+    "deleteItem": "Usuń element",
+    "empty": "Brak elementów listy kontrolnej.",
+    "itemMenu": "Menu elementu listy kontrolnej",
+    "loadTemplatesFailed": "Nie udało się załadować szablonów list kontrolnych",
+    "loading": "Ładowanie listy kontrolnej...",
+    "markOptional": "Oznacz jako opcjonalny",
+    "markRequired": "Oznacz jako wymagany",
+    "moveDown": "Przenieś w dół",
+    "moveUp": "Przenieś w górę",
+    "noTemplates": "Brak dostępnych szablonów.",
+    "progress": "{{done}} z {{total}} ukończono",
+    "renameFailed": "Nie udało się zmienić nazwy elementu listy kontrolnej",
+    "reorderFailed": "Nie udało się zmienić kolejności elementów listy kontrolnej",
+    "requiredBadge": "Wymagany",
+    "templateAlreadyApplied": "Ten szablon został już zastosowany do tego zgłoszenia.",
+    "templateApplied": "Zastosowano szablon listy kontrolnej.",
+    "templatesLoading": "Ładowanie szablonów...",
+    "title": "Lista kontrolna",
+    "toggleFailed": "Nie udało się zaktualizować elementu listy kontrolnej",
+    "updateFailed": "Nie udało się zaktualizować elementu listy kontrolnej"
+  },
+  "integration": {
+    "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+    "noUserSession": "Nie znaleziono sesji użytkownika"
   }
 }

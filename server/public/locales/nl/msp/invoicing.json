@@ -285,7 +285,8 @@
       "invoiceDate": "Factuurdatum",
       "dueDate": "Vervaldatum",
       "status": "Status",
-      "actions": "Acties"
+      "actions": "Acties",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Voltooien",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "{{count}} facturen konden niet worden gefinaliseerd en zijn overgeslagen."
     },
     "reverseDialog": {
-      "title": "Omgekeerde conceptfactuur",
       "title_other": "Conceptfacturen omkeren",
       "message_one": "Als u deze conceptfactuur terugboekt, wordt deze verwijderd en worden eventuele gekoppelde tijdsvermeldingen of gebruiksregistraties vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "message_other": "Als u {{count}}-conceptfacturen terugdraait, worden deze verwijderd en worden eventuele gekoppelde tijdsinvoer- of gebruiksgegevens vrijgegeven. Deze actie kan niet ongedaan worden gemaakt.",
       "confirm": "Omgekeerde diepgang",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "title_one": "Omgekeerde conceptfactuur"
     },
     "pendingTaxDialog": {
       "title": "Factuur wacht op externe belasting",
@@ -340,7 +341,8 @@
       "amount": "Hoeveelheid",
       "finalizedDate": "Definitieve datum",
       "status": "Status",
-      "actions": "Acties"
+      "actions": "Acties",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "PDF's downloaden",
@@ -578,7 +580,13 @@
       "reverseDraft": "Omgekeerde diepgang",
       "sendEmail": "E-mail verzenden",
       "unfinalize": "Finaliseren ongedaan maken",
-      "viewSourceQuote": "Broncitaat bekijken"
+      "viewSourceQuote": "Broncitaat bekijken",
+      "applyCredit": "Tegoed toepassen",
+      "driftAccept": "QuickBooks-versie accepteren",
+      "driftReexport": "Opnieuw exporteren naar QuickBooks",
+      "syncNow": "Synchroniseren met QuickBooks",
+      "viewInQbo": "Bekijken in QuickBooks",
+      "voidInvoice": "Factuur ongeldig maken"
     },
     "loading": "Voorbeeld laden...",
     "empty": "Selecteer een factuur waarvan u een voorbeeld wilt bekijken",
@@ -594,6 +602,17 @@
         "sendEmail": "stuur een e-mail",
         "unfinalize": "factuur ongedaan maken"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Tegoed toepassen"
+    },
+    "voidDialog": {
+      "title": "Factuur ongeldig maken",
+      "description": "Het ongeldig maken van deze factuur is definitief. Geef een reden op.",
+      "reasonPlaceholder": "Reden voor ongeldig maken...",
+      "cancel": "Annuleren",
+      "confirm": "Factuur ongeldig maken",
+      "voiding": "Ongeldig maken…"
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "Tenant-adres",
         "description": "Het adres van uw bedrijf."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Sjabloongrens"
+    },
+    "dragOverlay": {
+      "component": "Component"
     }
   }
 }

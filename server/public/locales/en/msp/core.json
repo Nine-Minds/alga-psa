@@ -160,7 +160,11 @@
       "failedLast24h": "Failed last 24h",
       "openJobCenter": "Open Job Center"
     },
-    "breadcrumb": "Breadcrumb",
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "dashboard": "Dashboard",
+      "home": "Home"
+    },
     "tenantBadge": {
       "ariaLabel": "Active tenant {{tenant}}"
     },

@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "55555",
       "selectAsset": "55555 {{name}} 55555",
-      "selectedAssets": "55555 {{count}} 55555 {{suffix}} 55555",
+      "selectedAssets_one": "55555 {{count}} 55555",
+      "selectedAssets_other": "55555 {{count}} 55555",
       "clearSelection": "55555",
       "bulkActionsComingSoon": "55555"
     },
@@ -216,6 +217,49 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "55555",
+        "delete": "55555",
+        "selectedCount": "55555 {{count}} 55555",
+        "setLocation": "55555",
+        "setStatus": "55555"
+      },
+      "actions": {
+        "apply": "55555",
+        "applying": "55555",
+        "deleteAssets": "55555",
+        "deleting": "55555",
+        "updateLocation": "55555",
+        "updateStatus": "55555"
+      },
+      "deleteDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "errors": {
+        "deleteFailed": "55555",
+        "updateLocationFailed": "55555",
+        "updateStatusFailed": "55555"
+      },
+      "locationDialog": {
+        "clearLocation": "55555",
+        "customLocation": "55555",
+        "customPlaceholder": "55555",
+        "description": "55555 {{count}} 55555",
+        "loadingLocations": "55555",
+        "savedDisabled": "55555",
+        "savedLocation": "55555",
+        "selectLocation": "55555",
+        "title": "55555"
+      },
+      "partialFailure": "55555 {{action}} 55555 {{succeeded}} 55555 {{failed}} 55555",
+      "statusDialog": {
+        "description": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "success": "55555 {{action}} 55555 {{count}} 55555"
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "55555",
-      "minutesAgo": "55555 {{count}} 55555 {{suffix}} 55555",
-      "hoursAgo": "55555 {{count}} 55555 {{suffix}} 55555",
-      "daysAgo": "55555 {{count}} 55555 {{suffix}} 55555"
+      "minutesAgo_one": "55555 {{count}} 55555",
+      "minutesAgo_other": "55555 {{count}} 55555",
+      "hoursAgo_one": "55555 {{count}} 55555",
+      "hoursAgo_other": "55555 {{count}} 55555",
+      "daysAgo_one": "55555 {{count}} 55555",
+      "daysAgo_other": "55555 {{count}} 55555"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "55555",
       "clientsLoadFailed": "55555",
       "locationsLoadFailed": "55555",
-      "updateFailed": "55555"
+      "updateFailed": "55555",
+      "validation": "55555"
     },
     "actions": {
       "viewClient": "55555",
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "55555",
       "showLess": "55555",
-      "moreAssets": "55555 {{count}} 55555 {{suffix}} 55555"
+      "moreAssets_one": "55555 {{count}} 55555",
+      "moreAssets_other": "55555 {{count}} 55555"
     },
     "errors": {
       "loadAvailableAssets": "55555",
@@ -719,8 +768,10 @@
       "removeFailed": "55555"
     },
     "success": {
-      "associated": "55555 {{count}} 55555 {{suffix}} 55555",
-      "associatedPartial": "55555 {{count}} 55555 {{suffix}} 55555 {{failed}} 55555",
+      "associated_one": "55555 {{count}} 55555",
+      "associated_other": "55555 {{count}} 55555",
+      "associatedPartial_one": "55555 {{count}} 55555 {{failed}} 55555",
+      "associatedPartial_other": "55555 {{count}} 55555 {{failed}} 55555",
       "removed": "55555"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "55555"
       },
       "actions": {
-        "addAssets": "55555 {{suffix}} 55555"
+        "addAssets_one": "55555",
+        "addAssets_other": "55555"
       }
     },
     "table": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "55555",
       "typeRequired": "55555",
       "status": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocationOption": "55555",
+      "location": "55555"
     },
     "placeholders": {
       "workstationOsType": "55555",
@@ -869,7 +923,11 @@
       "assetTag": "55555",
       "selectType": "55555",
       "selectStatus": "55555",
-      "serialNumber": "55555"
+      "serialNumber": "55555",
+      "customLocation": "55555",
+      "loadingLocations": "55555",
+      "selectClientFirst": "55555",
+      "selectLocation": "55555"
     },
     "sections": {
       "typeSpecificDetails": "55555"
@@ -979,7 +1037,8 @@
       "uptime": "55555",
       "lastSync": "55555",
       "network": "55555",
-      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555"
+      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555",
+      "taniumCriticality": "55555"
     },
     "values": {
       "never": "55555"
@@ -1136,13 +1195,19 @@
       "actions": "55555"
     },
     "frequency": {
-      "every": "55555 {{count}} 55555 {{frequency}} 55555 {{suffix}} 55555",
+      "every_one": "55555 {{frequency}} 55555",
+      "every_other": "55555 {{count}} 55555 {{frequency}} 55555",
       "units": {
-        "daily": "55555",
-        "weekly": "55555",
-        "monthly": "55555",
-        "quarterly": "55555",
-        "yearly": "55555"
+        "daily_one": "55555",
+        "daily_other": "55555",
+        "weekly_one": "55555",
+        "weekly_other": "55555",
+        "monthly_one": "55555",
+        "monthly_other": "55555",
+        "quarterly_one": "55555",
+        "quarterly_other": "55555",
+        "yearly_one": "55555",
+        "yearly_other": "55555"
       }
     },
     "status": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "55555",
     "acknowledge": "55555",
     "createTicket": "55555"
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555",
+    "printSelected": "55555 {{count}} 55555"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "55555",
+    "openTicketFailed": "55555"
   }
 }

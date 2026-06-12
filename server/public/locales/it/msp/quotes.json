@@ -69,7 +69,7 @@
     "states": {
       "generating": "Generazione...",
       "loading": "Caricamento...",
-      "saving": "Risparmio...",
+      "saving": "Salvataggio...",
       "sending": "Invio..."
     }
   },
@@ -149,7 +149,9 @@
       "back": "Indietro",
       "moreActions": "Altre azioni",
       "cancel": "Annulla",
-      "previewPdf": "Anteprima PDF"
+      "previewPdf": "Anteprima PDF",
+      "backToQuotes": "Torna ai preventivi",
+      "backToTemplates": "Torna ai modelli di preventivo"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Apri contratto convertito",
       "openConvertedInvoice": "Apri fattura convertita",
       "preview": "Anteprima",
-      "saveAsTemplate": "Salva come modello"
+      "saveAsTemplate": "Salva come modello",
+      "back": "Indietro"
     },
     "sections": {
       "activityLog": "Registro delle attività",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "Preventivo modello"
+      "templateQuote": "Preventivo modello",
+      "customItem": "Elemento personalizzato",
+      "optional": "Facoltativo",
+      "recurring": "Ricorrente"
     },
     "loading": "Caricamento dettagli preventivo...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Caricamento anteprima..."
     },
     "table": {
-      "description": "Descrizione"
+      "description": "Descrizione",
+      "billing": "Fatturazione",
+      "quantity": "Qtà",
+      "total": "Totale",
+      "unitPrice": "Prezzo unitario"
     },
     "locations": {
       "groupHeading": "Sede",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Rendering",
-      "shape": "Forma"
+      "shape": "Forma",
+      "renderFailed": "Rendering non riuscito.",
+      "shapeFailed": "Shaping non riuscito.",
+      "shapingFailed": "Shaping non riuscito."
     },
     "tabs": {
       "code": "Codice",

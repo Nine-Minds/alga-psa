@@ -108,11 +108,11 @@
         "queueOnly": "Alleen wachtrij"
       },
       "states": {
-        "unnamedBoard": "Naamloze bord"
+        "unnamedBoard": "Naamloos bord"
       },
       "actions": {
         "save": "Redden",
-        "saving": "Besparing..."
+        "saving": "Opslaan..."
       },
       "toast": {
         "updated": "De automatiseringsinstellingen voor verlenging zijn bijgewerkt."
@@ -168,7 +168,7 @@
       "actions": {
         "cancel": "Annuleren",
         "save": "Instellingen opslaan",
-        "saving": "Besparing..."
+        "saving": "Opslaan..."
       },
       "toast": {
         "saved": "Belastingbroninstellingen zijn succesvol opgeslagen."
@@ -205,7 +205,7 @@
         "deactivate": "Deactiveren",
         "cancel": "Annuleren",
         "save": "Wijzigingen opslaan",
-        "saving": "Besparing..."
+        "saving": "Opslaan..."
       },
       "toast": {
         "created": "Belastingregio is succesvol aangemaakt.",
@@ -270,7 +270,7 @@
         "delete": "Verwijderen",
         "cancel": "Annuleren",
         "save": "Redden",
-        "saving": "Besparing...",
+        "saving": "Opslaan...",
         "deleting": "Verwijderen..."
       },
       "delete": {
@@ -340,7 +340,7 @@
         "delete": "Verwijderen",
         "cancel": "Annuleren",
         "save": "Redden",
-        "saving": "Besparing...",
+        "saving": "Opslaan...",
         "deleting": "Verwijderen..."
       },
       "delete": {
@@ -392,7 +392,7 @@
         "delete": "Verwijderen",
         "cancel": "Annuleren",
         "save": "Redden",
-        "saving": "Besparing...",
+        "saving": "Opslaan...",
         "deleting": "Verwijderen..."
       },
       "delete": {
@@ -535,9 +535,9 @@
       "reorder": "Importeren met andere volgorde:"
     },
     "toast": {
-      "importedCount": "Geïmporteerd servicetype {{count}}",
       "importedCount_other": "Geïmporteerde {{count}} servicetypen",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Geïmporteerd servicetype {{count}}"
     },
     "errors": {
       "fetch": "Kan servicetypen niet ophalen",
@@ -932,7 +932,7 @@
       "actions": {
         "cancel": "Annuleren",
         "save": "Belastingvrijstellingsstatus opslaan",
-        "saving": "Besparing..."
+        "saving": "Opslaan..."
       }
     },
     "advanced": {

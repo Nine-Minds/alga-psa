@@ -1,9 +1,20 @@
 import { z } from 'zod';
 import { tenantSchema } from '@alga-psa/validation';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Shared Validation Patterns
  */
+
+// "Today" as YYYY-MM-DD in the requester's timezone (fallback UTC). A server-local
+// or UTC check rejects valid same-day requests west of UTC every evening.
+function todayInTimeZone(timeZone?: string | null): string {
+  try {
+    return formatInTimeZone(new Date(), timeZone || 'UTC', 'yyyy-MM-dd');
+  } catch {
+    return formatInTimeZone(new Date(), 'UTC', 'yyyy-MM-dd');
+  }
+}
 
 // Date validation: YYYY-MM-DD format
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,11 +48,8 @@ export const createAppointmentRequestSchema = z.object({
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
-  // Validate that requested_date is not in the past
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Reset to start of day
-  const requestedDate = new Date(data.requested_date);
-  return requestedDate >= today;
+  // Validate that requested_date is not in the past (in the requester's timezone)
+  return data.requested_date >= todayInTimeZone(data.requester_timezone);
 }, {
   message: 'Requested date cannot be in the past',
   path: ['requested_date'],
@@ -64,11 +72,8 @@ export const updateAppointmentRequestSchema = z.object({
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
-  // Validate that requested_date is not in the past
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Reset to start of day
-  const requestedDate = new Date(data.requested_date);
-  return requestedDate >= today;
+  // Validate that requested_date is not in the past (in the requester's timezone)
+  return data.requested_date >= todayInTimeZone(data.requester_timezone);
 }, {
   message: 'Requested date cannot be in the past',
   path: ['requested_date'],

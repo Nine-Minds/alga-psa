@@ -3,7 +3,7 @@
 'use server';
 
 import { createTenantKnex, User } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -964,37 +964,41 @@ export const approveAppointmentRequest = withAuth(async (
 
       let onlineMeetingInteractionId: string | null = null;
       if (onlineMeetingUrl && onlineMeetingId) {
-        const onlineMeetingType = await trx('system_interaction_types')
-          .where({ type_name: 'Online Meeting' })
-          .first('type_id');
+        // Anonymous public bookings have no client/contact; interactions require one,
+        // so the meeting is recorded without an interaction in that case.
+        if (request.client_id || request.contact_id) {
+          const onlineMeetingType = await trx('system_interaction_types')
+            .where({ type_name: 'Online Meeting' })
+            .first('type_id');
 
-        if (!onlineMeetingType?.type_id) {
-          throw new Error('Online Meeting interaction type is not configured');
+          if (!onlineMeetingType?.type_id) {
+            throw new Error('Online Meeting interaction type is not configured');
+          }
+
+          // Dynamic import: cross-vertical (scheduling -> clients) idiom; see
+          // custom-rules/no-feature-to-feature-imports.
+          const { createInteractionWithSideEffects } = await import('@alga-psa/clients/actions/interactionCreateHelper');
+          const interactionResult = await createInteractionWithSideEffects({
+            tenant,
+            trx,
+            user,
+            interactionData: {
+              type_id: onlineMeetingType.type_id,
+              client_id: request.client_id ?? null,
+              contact_name_id: request.contact_id ?? null,
+              user_id: user.user_id,
+              ticket_id: validatedData.ticket_id || request.ticket_id || null,
+              title: `Online Meeting: ${service.service_name}`,
+              notes: `Join Teams Meeting: ${onlineMeetingUrl}`,
+              start_time: scheduledStart,
+              end_time: scheduledEnd,
+              duration: request.requested_duration,
+            },
+          });
+
+          onlineMeetingInteractionId = interactionResult.interaction.interaction_id;
+          interactionSideEffects.push(interactionResult.publishSideEffects);
         }
-
-        // Dynamic import: cross-vertical (scheduling -> clients) idiom; see
-        // custom-rules/no-feature-to-feature-imports.
-        const { createInteractionWithSideEffects } = await import('@alga-psa/clients/actions/interactionCreateHelper');
-        const interactionResult = await createInteractionWithSideEffects({
-          tenant,
-          trx,
-          user,
-          interactionData: {
-            type_id: onlineMeetingType.type_id,
-            client_id: request.client_id ?? null,
-            contact_name_id: request.contact_id ?? null,
-            user_id: user.user_id,
-            ticket_id: validatedData.ticket_id || request.ticket_id || null,
-            title: `Online Meeting: ${service.service_name}`,
-            notes: `Join Teams Meeting: ${onlineMeetingUrl}`,
-            start_time: scheduledStart,
-            end_time: scheduledEnd,
-            duration: request.requested_duration,
-          },
-        });
-
-        onlineMeetingInteractionId = interactionResult.interaction.interaction_id;
-        interactionSideEffects.push(interactionResult.publishSideEffects);
 
         await trx('online_meetings').insert({
           meeting_id: uuidv4(),
@@ -1094,13 +1098,12 @@ export const approveAppointmentRequest = withAuth(async (
           .first();
         const calendarLink = await generateICSLink(scheduleEntryWithDetails);
 
-        // finalDate/finalTime are UTC values. Render the appointment in the
-        // requester's timezone so the email shows the user their own local time.
+        // scheduledStart is a UTC instant. Render it per recipient: the requester
+        // sees their own local time, the technician theirs, both labeled.
         const requesterTz = (request as any).requester_timezone || 'UTC';
-        const localDateStr = formatInTimeZone(scheduledStart, requesterTz, 'yyyy-MM-dd');
-        const localTimeStr = formatInTimeZone(scheduledStart, requesterTz, 'HH:mm');
-        const formattedDate = await formatDate(localDateStr);
-        const formattedTime = await formatTime(localTimeStr);
+        const requesterFormatted = await formatEmailDateTime(scheduledStart, requesterTz);
+        const technicianTz = await resolveEffectiveTimeZone(trx, tenant, validatedData.assigned_user_id);
+        const technicianFormatted = await formatEmailDateTime(scheduledStart, technicianTz);
 
         // Generate ICS file for email attachment
         const icsDescriptionLines = [
@@ -1146,8 +1149,8 @@ export const approveAppointmentRequest = withAuth(async (
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
-            appointmentDate: formattedDate,
-            appointmentTime: formattedTime,
+            appointmentDate: requesterFormatted.date,
+            appointmentTime: requesterFormatted.time,
             duration: request.requested_duration,
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
@@ -1183,8 +1186,8 @@ export const approveAppointmentRequest = withAuth(async (
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email,
             serviceName: service.service_name,
-            appointmentDate: formattedDate,
-            appointmentTime: formattedTime,
+            appointmentDate: technicianFormatted.date,
+            appointmentTime: technicianFormatted.time,
             duration: request.requested_duration,
             clientName,
             description: request.description || '',
@@ -1417,12 +1420,20 @@ export const declineAppointmentRequest = withAuth(async (
           const tenantSettings = await getTenantSettings(tenant);
           const requestNewAppointmentLink = await getRequestNewAppointmentLink();
 
+          // requested_date/requested_time are the requester's wall-clock; label their timezone.
+          const declineTz = (request as any).requester_timezone || 'UTC';
+          const declineDateStr = normalizeDateValue(request.requested_date) || '';
+          const declineTimeStr = normalizeTimeValue(request.requested_time) || '';
+          const declineTzLabel = declineDateStr && declineTimeStr
+            ? ` (${formatInTimeZone(fromZonedTime(`${declineDateStr}T${declineTimeStr}:00`, declineTz), declineTz, 'zzz')})`
+            : '';
+
           await emailService.sendAppointmentRequestDeclined({
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
-            requestedDate: await formatDate(normalizeDateValue(request.requested_date) || ''),
-            requestedTime: await formatTime(normalizeTimeValue(request.requested_time) || ''),
+            requestedDate: await formatDate(declineDateStr),
+            requestedTime: `${await formatTime(declineTimeStr)}${declineTzLabel}`,
             referenceNumber: request.appointment_request_id.slice(0, 8).toUpperCase(),
             declineReason: validatedData.decline_reason,
             requestNewAppointmentLink,
@@ -1769,6 +1780,12 @@ export const associateRequestToTicket = withAuth(async (
     return { success: false, error: message };
   }
 });
+
+async function formatEmailDateTime(instant: Date, timeZone: string): Promise<{ date: string; time: string }> {
+  const date = await formatDate(formatInTimeZone(instant, timeZone, 'yyyy-MM-dd'));
+  const time = await formatTime(formatInTimeZone(instant, timeZone, 'HH:mm'));
+  return { date, time: `${time} (${formatInTimeZone(instant, timeZone, 'zzz')})` };
+}
 
 function normalizeDateValue(value: string | Date | null | undefined): string | null {
   if (!value) {

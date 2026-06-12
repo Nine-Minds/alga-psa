@@ -98,5 +98,9 @@
       "processed": "Processed:",
       "retries": "Retries:"
     }
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options"
   }
 }

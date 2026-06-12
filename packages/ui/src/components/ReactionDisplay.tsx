@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from '../lib/i18n/client';
 import { SmilePlus } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { EmojiPickerPopover, ALGA_EMOJI_ID } from './EmojiPickerPopover';
@@ -49,6 +50,7 @@ export function ReactionDisplay({
   onAdd,
   userNames,
 }: ReactionDisplayProps) {
+  const { t } = useTranslation('common');
   if (reactions.length === 0) {
     return (
       <div id={`${id}-reactions`} className="flex items-center gap-1 mt-1">
@@ -86,7 +88,7 @@ export function ReactionDisplay({
                 ? 'bg-[rgb(var(--color-primary-50))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.15)] dark:border-[rgb(var(--color-primary-400)/0.3)] dark:text-[rgb(var(--color-primary-300))]'
                 : 'bg-[rgb(var(--color-border-50))] border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:border-[rgb(var(--color-border-300))] dark:bg-[rgb(var(--color-border-200)/0.1)] dark:border-[rgb(var(--color-border-200)/0.2)] dark:text-[rgb(var(--color-text-400))] dark:hover:border-[rgb(var(--color-border-200)/0.3)]'
             )}
-            aria-label={`${reaction.emoji} ${reaction.count} reaction${reaction.count !== 1 ? 's' : ''}${reaction.currentUserReacted ? ', you reacted' : ''}`}
+            aria-label={`${t('reactions.ariaSummary', { defaultValue: '{{emoji}} {{count}} reactions', emoji: reaction.emoji, count: reaction.count })}${reaction.currentUserReacted ? t('reactions.ariaYouReacted', ', you reacted') : ''}`}
           >
             <span className="text-base leading-none">{reaction.emoji === ALGA_EMOJI_ID ? <AlgaLogoSmall /> : reaction.emoji}</span>
             <span className="text-xs font-medium">{reaction.count}</span>

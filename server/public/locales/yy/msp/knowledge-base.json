@@ -113,7 +113,8 @@
       "archive": "55555",
       "delete": "55555",
       "saveMetadata": "55555",
-      "saving": "55555"
+      "saving": "55555",
+      "saveContent": "55555"
     },
     "feedback": {
       "permissionDenied": "55555",
@@ -134,6 +135,10 @@
       "delete": {
         "title": "55555",
         "message": "55555 {{title}} 55555"
+      },
+      "archive": {
+        "message": "55555 {{title}} 55555",
+        "title": "55555"
       }
     },
     "badges": {
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "55555"
+    "done": "55555",
+    "cancel": "55555"
   }
 }

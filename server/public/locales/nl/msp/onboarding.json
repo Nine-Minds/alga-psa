@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "Servicetype succesvol geïmporteerd!",
           "titleOther": "Servicetypen succesvol geïmporteerd!",
-          "description": "{{count}} type{{suffix}} toegevoegd aan je catalogus.",
+          "description_one": "{{count}} type toegevoegd aan je catalogus.",
+          "description_other": "{{count}} typen toegevoegd aan je catalogus.",
           "skipped": "{{count}} overgeslagen."
         },
         "actions": {

@@ -1001,7 +1001,18 @@
         "syncNowSuccess": "Sincronizzazione completata correttamente.",
         "syncNowSkipped": "Sincronizzazione saltata: {{reason}}",
         "syncNowError": "Sincronizzazione non riuscita: {{error}}",
-        "viewExceptionsLink": "Visualizza eccezioni"
+        "viewExceptionsLink": "Visualizza eccezioni",
+        "autoApplyCreditsWarning": "QuickBooks è impostato per applicare automaticamente i crediti, in conflitto con le applicazioni dei crediti gestite da Alga: QuickBooks potrebbe applicare le note di credito esportate a un'altra fattura prima della sincronizzazione. In QuickBooks, vai su \"Account and Settings → Advanced → Automation\" e disattiva \"Automatically apply credits\".",
+        "configTitle": "Configurazione della sincronizzazione",
+        "connectedCompanies": "Aziende collegate",
+        "defaultClass": "Classe predefinita",
+        "defaultDepartment": "Reparto predefinito",
+        "defaultRealm": "Predefinito",
+        "depositAccount": "Conto di deposito",
+        "makeDefault": "Imposta come predefinito",
+        "noDefault": "Nessun valore predefinito",
+        "saving": "Salvataggio…",
+        "undepositedFunds": "Fondi non depositati (predefinito)"
       }
     },
     "rmm": {
@@ -1121,7 +1132,16 @@
         "comingSoon": "Integrazione RMM in arrivo",
         "configure": "Configura integrazione",
         "selected": "{{title}} selezionato",
-        "title": "Integrazioni RMM"
+        "title": "Integrazioni RMM",
+        "backToList": "Tutte le integrazioni RMM",
+        "loadingProvider": "Caricamento impostazioni dell'integrazione {{title}}...",
+        "status": {
+          "connected": "Connesso",
+          "connectedOneDevice": "Connesso · 1 dispositivo",
+          "connectedWithDevices": "Connesso · {{count}} dispositivi",
+          "notConnected": "Non connesso",
+          "syncError": "Errore di sincronizzazione"
+        }
       },
       "tactical": {
         "actions": {
@@ -1328,6 +1348,86 @@
         "sync": {
           "description": "Scopri gli ambiti dai gruppi di computer Tanium, mappali ai clienti, quindi esegui la sincronizzazione dell'inventario.",
           "title": "Sincronizzazione Tanium"
+        }
+      },
+      "levelio": {
+        "actions": {
+          "backfillAlerts": "Recupera avvisi",
+          "disconnect": "Disconnetti",
+          "discoverGroups": "Rileva gruppi",
+          "runDeviceSync": "Esegui sincronizzazione dispositivi",
+          "saveConfiguration": "Salva configurazione",
+          "testConnection": "Verifica connessione"
+        },
+        "connection": {
+          "connectedAt": "Connesso: {{time}}",
+          "description": "Connettiti a Level (level.io) con una chiave API. Le chiavi si creano in Level in Settings > API.",
+          "never": "mai",
+          "syncLabel": "Sincronizzazione: {{status}}",
+          "syncLabelWithError": "Sincronizzazione: {{status}} ({{error}})",
+          "title": "Connessione Level"
+        },
+        "errors": {
+          "alertBackfillFailed": "Recupero avvisi non riuscito",
+          "deviceSyncFailed": "Sincronizzazione dispositivi non riuscita",
+          "disconnectFailed": "Impossibile disconnettere l'integrazione Level",
+          "groupSyncFailed": "Rilevamento gruppi non riuscito",
+          "loadMappings": "Impossibile caricare le mappature dei gruppi Level",
+          "loadSettings": "Impossibile caricare le impostazioni di Level",
+          "loadState": "Impossibile caricare lo stato dell'integrazione Level",
+          "loadSummary": "Impossibile caricare il riepilogo della connessione Level",
+          "loadWebhook": "Impossibile caricare i dettagli del webhook Level",
+          "saveConfiguration": "Impossibile salvare la configurazione Level",
+          "testConnectionFailed": "Verifica connessione non riuscita",
+          "updateMappingFailed": "Impossibile aggiornare la mappatura"
+        },
+        "fields": {
+          "apiKey": "Chiave API ({{state}})",
+          "apiKeyPlaceholderExisting": "Inserisci una nuova chiave per sostituire quella salvata",
+          "apiKeyPlaceholderNew": "Incolla la tua chiave API di Level",
+          "apiKeyStateRequired": "obbligatoria",
+          "apiKeyStateSaved": "salvata"
+        },
+        "mappings": {
+          "autoSync": "Sincronizzazione automatica",
+          "autoSyncDisabled": "Disabilitata",
+          "autoSyncEnabled": "Abilitata",
+          "group": "Gruppo Level",
+          "groupIdLabel": "ID: {{id}}",
+          "loading": "Caricamento…",
+          "mappedClient": "Cliente mappato",
+          "noGroups": "Nessun gruppo ancora rilevato. Esegui prima Rileva gruppi.",
+          "unmapped": "Non mappato"
+        },
+        "status": {
+          "connected": "Connesso",
+          "disconnected": "Non connesso",
+          "label": "Stato: "
+        },
+        "success": {
+          "alertBackfillCompleted": "Recupero avvisi completato: {{processed}} avvisi elaborati",
+          "configurationSaved": "Configurazione Level salvata",
+          "connectionTestSucceeded": "Connessione a Level riuscita",
+          "deviceSyncCompleted": "Sincronizzazione dispositivi completata: {{processed}} elaborati, {{created}} creati, {{updated}} aggiornati",
+          "disconnected": "Integrazione Level disconnessa",
+          "groupSyncCompleted": "Rilevamento gruppi completato: {{processed}} elaborati, {{created}} creati, {{updated}} aggiornati"
+        },
+        "sync": {
+          "description": "Rileva i gruppi Level, mappali sui clienti e sincronizza i dispositivi. I dispositivi nei gruppi non mappati vengono ignorati; i sottogruppi ereditano dal gruppo superiore mappato più vicino.",
+          "summary": "{{mappedGroups}} gruppi mappati · {{devices}} dispositivi · {{activeAlerts}} avvisi attivi",
+          "title": "Sincronizzazione e mappature gruppi"
+        },
+        "webhook": {
+          "copied": "Copiato",
+          "copy": "Copia",
+          "description": "Level non può registrare webhook tramite la sua API. In Level, crea un'automazione con un'azione HTTP POST usando l'URL, l'header e il payload qui sotto per inviare gli avvisi ad Alga in tempo reale.",
+          "header": "Header: {{name}}",
+          "hideSecret": "Nascondi segreto",
+          "loading": "I dettagli del webhook vengono caricati dopo la configurazione dell'integrazione.",
+          "payload": "Modello di payload",
+          "showSecret": "Mostra segreto",
+          "title": "Webhook avvisi",
+          "url": "URL webhook"
         }
       }
     },

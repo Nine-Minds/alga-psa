@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
@@ -31,6 +32,7 @@ export function IntervalManagementDrawer({
   userId,
   onCreateTimeEntry
 }: IntervalManagementDrawerProps) {
+  const { t } = useTranslation('msp/time-entry');
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -397,7 +399,7 @@ export function IntervalManagementDrawer({
           <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium">{selectedIntervalIds.length} interval{selectedIntervalIds.length !== 1 ? 's' : ''} selected</span>
+                <span className="font-medium">{t('intervals.selectedCount', { defaultValue: '{{count}} intervals selected', count: selectedIntervalIds.length })}</span>
                 <span className="ml-2 text-sm">
                   ({formatDuration(selectedDuration)})
                 </span>

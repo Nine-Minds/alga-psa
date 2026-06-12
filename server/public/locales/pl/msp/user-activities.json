@@ -123,7 +123,27 @@
       "goToPage": "Przejdź do strony",
       "dismissError": "Nie udało się odrzucić zadania: {{message}}"
     },
-    "retryLater": "Spróbuj ponownie później."
+    "retryLater": "Spróbuj ponownie później.",
+    "adHoc": {
+      "endBeforeStart": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia.",
+      "fields": {
+        "end": "Koniec (opcjonalnie)",
+        "noTime": "Bez godziny",
+        "notes": "Notatki",
+        "notesPlaceholder": "Dodaj notatki…",
+        "start": "Początek (opcjonalnie)",
+        "title": "Tytuł",
+        "titlePlaceholder": "Tytuł"
+      },
+      "loadError": "Nie udało się załadować tego elementu. Spróbuj ponownie później.",
+      "saveError": "Nie udało się zapisać elementu.",
+      "saveSuccess": "Element zapisany",
+      "statusDone": "Ukończone",
+      "statusOpen": "Otwarte",
+      "title": "Element ad hoc",
+      "toggleDoneError": "Nie udało się zaktualizować elementu."
+    },
+    "enterpriseOnly": "Zadania przepływu pracy są funkcją wersji Enterprise."
   },
   "groupedView": {
     "addGroup": "Dodaj grupę",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Nie udało się załadować aktywności harmonogramu. Proszę spróbować ponownie później.",
-        "refreshFailed": "Nie udało się odświeżyć aktywności harmonogramu. Proszę spróbować ponownie później."
+        "refreshFailed": "Nie udało się odświeżyć aktywności harmonogramu. Proszę spróbować ponownie później.",
+        "addAdHocFailed": "Nie udało się dodać aktywności. Spróbuj ponownie."
       },
       "filterDialog": {
         "title": "Filtruj wpisy harmonogramu",
@@ -417,7 +438,13 @@
       "priority": "Priorytet",
       "dueDate": "Termin",
       "showClosed": "Pokaż zamknięte",
-      "search": "Szukaj"
+      "search": "Szukaj",
+      "client": "Klient",
+      "dueDateShort": "Termin",
+      "tags": "Tagi",
+      "tagsSelected": "{{count}} tagów",
+      "tasksCompact": "Zadania",
+      "ticketsCompact": "Zgłoszenia"
     },
     "activityTypeOptions": {
       "schedule": "Harmonogram",
@@ -434,10 +461,16 @@
       "search": "Szukaj aktywności...",
       "searchBoards": "Szukaj tablic...",
       "searchStatuses": "Szukaj statusów...",
-      "searchProjects": "Szukaj projektów..."
+      "searchProjects": "Szukaj projektów...",
+      "allClients": "Wszyscy klienci",
+      "fromDateShort": "Od",
+      "projectTaskTags": "Filtruj tagi zadań...",
+      "ticketTags": "Filtruj tagi zgłoszeń...",
+      "toDateShort": "Do"
     },
     "actions": {
-      "reset": "Resetuj"
+      "reset": "Resetuj",
+      "clearClient": "Wyczyść filtr klienta"
     },
     "statusClosedSuffix": " (zamknięte)",
     "summary": {
@@ -451,7 +484,26 @@
       "phases_other": "{{count}} fazy",
       "excludingName": "bez {{name}}",
       "excludingCount_one": "bez {{count}}",
-      "excludingCount_other": "bez {{count}}"
+      "excludingCount_other": "bez {{count}}",
+      "boards": "{{count}} tablic",
+      "excludingCount": "bez {{count}}",
+      "phases": "{{count}} faz",
+      "projects": "{{count}} projektów",
+      "statuses": "{{count}} statusów",
+      "boards_few": "{{count}} tablice",
+      "boards_many": "{{count}} tablic",
+      "excludingCount_few": "bez {{count}}",
+      "excludingCount_many": "bez {{count}}",
+      "phases_few": "{{count}} fazy",
+      "phases_many": "{{count}} faz",
+      "projects_few": "{{count}} projekty",
+      "projects_many": "{{count}} projektów",
+      "statuses_few": "{{count}} statusy",
+      "statuses_many": "{{count}} statusów"
     }
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania"
   }
 }

@@ -69,7 +69,7 @@
     "states": {
       "generating": "Generowanie...",
       "loading": "Załadunek...",
-      "saving": "Oszczędność...",
+      "saving": "Zapisywanie...",
       "sending": "Przesyłka..."
     }
   },
@@ -149,7 +149,9 @@
       "back": "Wstecz",
       "moreActions": "Więcej akcji",
       "cancel": "Anuluj",
-      "previewPdf": "Podgląd PDF"
+      "previewPdf": "Podgląd PDF",
+      "backToQuotes": "Powrót do wycen",
+      "backToTemplates": "Powrót do szablonów wycen"
     },
     "headings": {
       "editQuote": "Edytuj wycenę",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Otwórz przekonwertowany kontrakt",
       "openConvertedInvoice": "Otwórz przekonwertowaną fakturę",
       "preview": "Zapowiedź",
-      "saveAsTemplate": "Zapisz jako szablon"
+      "saveAsTemplate": "Zapisz jako szablon",
+      "back": "Wstecz"
     },
     "sections": {
       "activityLog": "Dziennik aktywności",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Faza: {{phase}}",
-      "templateQuote": "Wycena szablonowa"
+      "templateQuote": "Wycena szablonowa",
+      "customItem": "Pozycja niestandardowa",
+      "optional": "Opcjonalna",
+      "recurring": "Cykliczna"
     },
     "loading": "Ładowanie szczegółów oferty...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Ładowanie podglądu..."
     },
     "table": {
-      "description": "Opis"
+      "description": "Opis",
+      "billing": "Rozliczanie",
+      "quantity": "Ilość",
+      "total": "Razem",
+      "unitPrice": "Cena jednostkowa"
     },
     "locations": {
       "groupHeading": "Lokalizacja",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Oddać",
-      "shape": "Kształt"
+      "shape": "Kształt",
+      "renderFailed": "Renderowanie nie powiodło się.",
+      "shapeFailed": "Kształtowanie nie powiodło się.",
+      "shapingFailed": "Kształtowanie nie powiodło się."
     },
     "tabs": {
       "code": "Kod",

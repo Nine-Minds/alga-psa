@@ -113,7 +113,8 @@
       "archive": "Archive",
       "saveMetadata": "Save Metadata",
       "saving": "Saving...",
-      "delete": "Excluir permanentemente"
+      "delete": "Excluir permanentemente",
+      "saveContent": "Salvar"
     },
     "feedback": {
       "permissionDenied": "Permission denied",
@@ -160,6 +161,10 @@
       "delete": {
         "title": "Excluir artigo",
         "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
+      },
+      "archive": {
+        "message": "Tem certeza de que deseja arquivar \"{{title}}\"? Os artigos arquivados ficam ocultos no portal do cliente e podem ser excluídos permanentemente mais tarde.",
+        "title": "Arquivar artigo"
       }
     }
   },
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Done"
+    "done": "Done",
+    "cancel": "Cancelar"
   }
 }

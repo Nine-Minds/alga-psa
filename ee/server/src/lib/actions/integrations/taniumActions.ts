@@ -189,7 +189,7 @@ async function upsertTaniumIntegrationRow(args: {
       sync_status: args.syncStatus ?? knex.raw('rmm_integrations.sync_status'),
       sync_error: args.syncError ?? null,
       settings,
-      updated_at: knex.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning(['integration_id', 'is_active', 'instance_url', 'settings', 'connected_at', 'sync_status', 'sync_error']);
 

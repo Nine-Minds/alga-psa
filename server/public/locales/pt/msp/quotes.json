@@ -149,7 +149,9 @@
       "back": "Back",
       "moreActions": "More actions",
       "cancel": "Cancel",
-      "previewPdf": "Preview PDF"
+      "previewPdf": "Preview PDF",
+      "backToQuotes": "Voltar para orçamentos",
+      "backToTemplates": "Voltar para modelos de orçamento"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Open Converted Contract",
       "openConvertedInvoice": "Open Converted Invoice",
       "preview": "Preview",
-      "saveAsTemplate": "Save as Template"
+      "saveAsTemplate": "Save as Template",
+      "back": "Voltar"
     },
     "sections": {
       "activityLog": "Activity Log",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Phase: {{phase}}",
-      "templateQuote": "Template quote"
+      "templateQuote": "Template quote",
+      "customItem": "Item personalizado",
+      "optional": "Opcional",
+      "recurring": "Recorrente"
     },
     "loading": "Loading quote details...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Loading preview..."
     },
     "table": {
-      "description": "Description"
+      "description": "Description",
+      "billing": "Faturamento",
+      "quantity": "Qtd.",
+      "total": "Total",
+      "unitPrice": "Preço unitário"
     },
     "locations": {
       "groupHeading": "Location",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Render",
-      "shape": "Shape"
+      "shape": "Shape",
+      "renderFailed": "Falha na renderização.",
+      "shapeFailed": "Falha na modelagem dos dados.",
+      "shapingFailed": "Falha ao modelar os dados."
     },
     "tabs": {
       "code": "Code",

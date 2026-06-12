@@ -121,7 +121,9 @@
     "approved": "Genehmigt",
     "cancelButton": "Termin stornieren",
     "teamsMeeting": "Teams-Besprechung",
-    "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
+    "joinTeamsMeeting": "An Teams-Besprechung teilnehmen",
+    "downloadRecording": "Aufzeichnung herunterladen",
+    "viewTranscript": "Transkript anzeigen"
   },
   "cancel": {
     "title": "Termin stornieren",

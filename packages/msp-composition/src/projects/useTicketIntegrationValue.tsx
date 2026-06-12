@@ -13,20 +13,22 @@ import { PrioritySelect } from '@alga-psa/ui/components';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function useTicketIntegrationValue(): TicketIntegrationContextType {
+  const { t } = useTranslation('features/tickets');
   const { openDrawer } = useDrawer();
 
   const openTicketInDrawer = useCallback(async (ticketId: string) => {
     try {
       const user = await getCurrentUser();
       if (!user) {
-        toast.error('No user session found');
+        toast.error(t('integration.noUserSession', { defaultValue: 'No user session found' }));
         return;
       }
       const ticketData = await getConsolidatedTicketData(ticketId);
       if (!ticketData) {
-        toast.error('Failed to load ticket');
+        toast.error(t('integration.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
         return;
       }
       openDrawer(
@@ -55,7 +57,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
       );
     } catch (error) {
       console.error('Error loading ticket:', error);
-      toast.error('Failed to load ticket');
+      toast.error(t('integration.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
     }
   }, [openDrawer]);
 

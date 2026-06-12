@@ -123,7 +123,27 @@
       "goToPage": "Ir para a página",
       "dismissError": "Falha ao dispensar a tarefa: {{message}}"
     },
-    "retryLater": "Tente novamente mais tarde."
+    "retryLater": "Tente novamente mais tarde.",
+    "adHoc": {
+      "endBeforeStart": "A hora de término deve ser posterior à hora de início.",
+      "fields": {
+        "end": "Término (opcional)",
+        "noTime": "Sem horário",
+        "notes": "Notas",
+        "notesPlaceholder": "Adicionar notas…",
+        "start": "Início (opcional)",
+        "title": "Título",
+        "titlePlaceholder": "Título"
+      },
+      "loadError": "Falha ao carregar este item. Tente novamente mais tarde.",
+      "saveError": "Falha ao salvar o item.",
+      "saveSuccess": "Item salvo",
+      "statusDone": "Concluído",
+      "statusOpen": "Aberto",
+      "title": "Item ad hoc",
+      "toggleDoneError": "Falha ao atualizar o item."
+    },
+    "enterpriseOnly": "As tarefas de fluxo de trabalho são um recurso Enterprise."
   },
   "groupedView": {
     "addGroup": "Adicionar grupo",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Falha ao carregar as atividades da agenda. Tente novamente mais tarde.",
-        "refreshFailed": "Falha ao atualizar as atividades da agenda. Tente novamente mais tarde."
+        "refreshFailed": "Falha ao atualizar as atividades da agenda. Tente novamente mais tarde.",
+        "addAdHocFailed": "Falha ao adicionar a atividade. Tente novamente."
       },
       "filterDialog": {
         "title": "Filtrar entradas da agenda",
@@ -417,7 +438,13 @@
       "priority": "Prioridade",
       "dueDate": "Data de vencimento",
       "showClosed": "Exibir fechadas",
-      "search": "Pesquisar"
+      "search": "Pesquisar",
+      "client": "Cliente",
+      "dueDateShort": "Vencimento",
+      "tags": "Tags",
+      "tagsSelected": "{{count}} tags",
+      "tasksCompact": "Tarefas",
+      "ticketsCompact": "Tickets"
     },
     "activityTypeOptions": {
       "schedule": "Agenda",
@@ -434,10 +461,16 @@
       "search": "Pesquisar atividades...",
       "searchBoards": "Pesquisar quadros...",
       "searchStatuses": "Pesquisar status...",
-      "searchProjects": "Pesquisar projetos..."
+      "searchProjects": "Pesquisar projetos...",
+      "allClients": "Todos os clientes",
+      "fromDateShort": "De",
+      "projectTaskTags": "Filtrar tags de tarefas...",
+      "ticketTags": "Filtrar tags de tickets...",
+      "toDateShort": "Até"
     },
     "actions": {
-      "reset": "Redefinir"
+      "reset": "Redefinir",
+      "clearClient": "Limpar filtro de cliente"
     },
     "statusClosedSuffix": " (fechado)",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "{{count}} fases",
       "excludingName": "exceto {{name}}",
       "excludingCount_one": "exceto {{count}}",
-      "excludingCount_other": "exceto {{count}}"
+      "excludingCount_other": "exceto {{count}}",
+      "boards": "{{count}} quadros",
+      "excludingCount": "exceto {{count}}",
+      "phases": "{{count}} fases",
+      "projects": "{{count}} projetos",
+      "statuses": "{{count}} status"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão"
   }
 }

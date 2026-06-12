@@ -121,7 +121,9 @@
     "approved": "Goedgekeurd",
     "cancelButton": "Afspraak annuleren",
     "teamsMeeting": "Teams-vergadering",
-    "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
+    "joinTeamsMeeting": "Deelnemen aan Teams-vergadering",
+    "downloadRecording": "Opname downloaden",
+    "viewTranscript": "Transcriptie bekijken"
   },
   "cancel": {
     "title": "Afspraak annuleren",

@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} days",
         "ongoing": "Ongoing",
         "renewalTermMonths_one": "{{count}} month",
-        "renewalTermMonths_other": "{{count}} months"
+        "renewalTermMonths_other": "{{count}} months",
+        "noticePeriodDays": "{{count}} dia",
+        "renewalTermMonths": "{{count}} mês"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Product {{index}}",
       "products": "Products",
       "quantity": "Quantity",
-      "selectProductPlaceholder": "Select a product"
+      "selectProductPlaceholder": "Select a product",
+      "catalogPriceInCurrency": "Preço de catálogo em {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "No default price set. Enter a unit price.",
-      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price."
+      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price.",
+      "noCurrencyPriceEnterUnitPrice": "Não há preço em {{currency}} no catálogo. Insira um preço unitário.",
+      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira um preço unitário em {{currency}}."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Hourly Services",
       "selectServicePlaceholder": "Select a service",
       "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours"
+      "setBucketOfHours": "Set bucket of hours",
+      "noCurrencyPriceEnterRate": "Não há preço em {{currency}} no catálogo. Insira uma taxa horária.",
+      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira uma taxa horária em {{currency}}."
     },
     "minimumBillableTime": {
       "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Set bucket allocation",
       "unitOfMeasure": "Unit of Measure",
       "unitOfMeasureHint": "Choose the unit this service bills on.",
-      "unitOfMeasurePlaceholder": "e.g., GB, API call, user"
+      "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
+      "noCurrencyPriceEnterRate": "Não há preço em {{currency}} no catálogo. Insira uma taxa unitária.",
+      "noCurrencyPriceWithLegacyHint": "Não há preço em {{currency}} no catálogo. Taxa padrão legada: {{rate}}. Insira uma taxa unitária em {{currency}}."
     },
     "summary": {
       "labels": {

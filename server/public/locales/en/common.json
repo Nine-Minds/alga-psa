@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reaction",
+    "ariaSummary_other": "{{emoji}} {{count}} reactions",
+    "ariaYouReacted": ", you reacted"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
+    "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
+    "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
+    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
+    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
+    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
+    "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
+    "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Reset print options",
     "share": "Share",
     "done": "Done",
-    "continue": "Continue"
+    "continue": "Continue",
+    "printSelected": "Print selected ({{count}})"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -524,7 +544,10 @@
         "visible": "Client Visible",
         "hidden": "Internal Only"
       },
-      "clientVisibilityLabel": "Client Visibility"
+      "clientVisibilityLabel": "Client Visibility",
+      "entityOptions": {
+        "all": "All Entities"
+      }
     },
     "selector": {
       "title": "Select Documents",
@@ -552,7 +575,10 @@
       "uploadingProgress": "Uploading {{current}} of {{total}}",
       "pending": "Pending",
       "error": "Failed to upload document",
-      "fileError": "Failed to upload file"
+      "fileError": "Failed to upload file",
+      "associatedEntityTypeLabel": "Associate With",
+      "noAssociation": "No association",
+      "selectAssociatedEntityError": "Select an associated entity before uploading."
     },
     "folders": {
       "root": "Root",
@@ -611,7 +637,20 @@
     "downloadVideo": "Download Video",
     "downloadAsPdf": "Download as PDF",
     "downloadAsMarkdown": "Download as Markdown",
-    "move": "Move"
+    "move": "Move",
+    "associatedEntityPicker": {
+      "allEntities": "All Entities",
+      "loadingClients": "Loading clients...",
+      "loadingContacts": "Loading contacts...",
+      "noEntityTypes": "No entity types found",
+      "typeLabel": "Associated Entity Type",
+      "typePlaceholder": "Select entity type",
+      "typeSearchPlaceholder": "Search entity types...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Select {{entityType}}",
+      "entitySearchPlaceholder": "Search {{entityType}}...",
+      "noEntities": "No {{entityType}} found"
+    }
   },
   "surveys": {
     "common": {
@@ -952,7 +991,10 @@
     "deleteCommentAriaLabel": "Delete comment",
     "deleteComment": "Delete Comment",
     "deleteCommentConfirmation": "Are you sure you want to delete this comment? This action cannot be undone.",
-    "update": "Update"
+    "update": "Update",
+    "create": "Create",
+    "replyComment": "Reply to comment",
+    "saving": "Saving..."
   },
   "sessionManagement": {
     "title": "Active Sessions",
@@ -982,7 +1024,8 @@
       "revoke": "Revoke",
       "revoking": "Revoking...",
       "loggingOut": "Logging out...",
-      "logoutFromOther": "Logout from {{count}} other device{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Logout from {{count}} other device",
+      "logoutFromOther_other": "Logout from {{count}} other devices"
     },
     "confirmations": {
       "logoutCurrent": "This will log you out of your current session. Are you sure?",
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} columns hidden due to limited space.",
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "columnsHidden": "{{count}} columns hidden due to limited space."
   }
 }

@@ -155,7 +155,11 @@
       "failedLast24h": "Échecs sur 24 h",
       "openJobCenter": "Ouvrir le centre des tâches"
     },
-    "breadcrumb": "Fil d'Ariane",
+    "breadcrumb": {
+      "label": "Fil d'Ariane",
+      "dashboard": "Tableau de bord",
+      "home": "Accueil"
+    },
     "tenantBadge": {
       "ariaLabel": "Locataire actif {{tenant}}"
     },
@@ -279,7 +283,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Tableaux",
       "category": "Categories",
       "tag": "Tags",
       "status": "Statuts"
@@ -309,7 +313,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Tableaux",
       "category": "Categories",
       "tag": "Tags",
       "status": "Statuts"

@@ -285,7 +285,8 @@
       "invoiceDate": "11111",
       "dueDate": "11111",
       "status": "11111",
-      "actions": "11111"
+      "actions": "11111",
+      "quickbooks": "11111"
     },
     "actions": {
       "finalize": "11111",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "11111 {{count}} 11111"
     },
     "reverseDialog": {
-      "title": "11111",
       "title_other": "11111",
       "message_one": "11111",
       "message_other": "11111 {{count}} 11111",
       "confirm": "11111",
-      "cancel": "11111"
+      "cancel": "11111",
+      "title_one": "11111"
     },
     "pendingTaxDialog": {
       "title": "11111",
@@ -340,7 +341,8 @@
       "amount": "11111",
       "finalizedDate": "11111",
       "status": "11111",
-      "actions": "11111"
+      "actions": "11111",
+      "quickbooks": "11111"
     },
     "actions": {
       "downloadPdfs": "11111",
@@ -578,7 +580,13 @@
       "reverseDraft": "11111",
       "sendEmail": "11111",
       "unfinalize": "11111",
-      "viewSourceQuote": "11111"
+      "viewSourceQuote": "11111",
+      "applyCredit": "11111",
+      "driftAccept": "11111",
+      "driftReexport": "11111",
+      "syncNow": "11111",
+      "viewInQbo": "11111",
+      "voidInvoice": "11111"
     },
     "loading": "11111",
     "empty": "11111",
@@ -594,6 +602,17 @@
         "sendEmail": "11111",
         "unfinalize": "11111"
       }
+    },
+    "applyCreditDialog": {
+      "title": "11111"
+    },
+    "voidDialog": {
+      "title": "11111",
+      "description": "11111",
+      "reasonPlaceholder": "11111",
+      "cancel": "11111",
+      "confirm": "11111",
+      "voiding": "11111"
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "11111",
         "description": "11111"
       }
+    },
+    "canvas": {
+      "templateBoundary": "11111"
+    },
+    "dragOverlay": {
+      "component": "11111"
     }
   }
 }

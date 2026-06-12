@@ -155,7 +155,11 @@
       "failedLast24h": "Falliti nelle ultime 24 ore",
       "openJobCenter": "Apri centro job"
     },
-    "breadcrumb": "Breadcrumb",
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "dashboard": "Dashboard",
+      "home": "Home"
+    },
     "tenantBadge": {
       "ariaLabel": "Tenant attivo {{tenant}}"
     },
@@ -279,7 +283,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Bacheche",
       "category": "Categories",
       "tag": "Tags",
       "status": "Stati"
@@ -309,7 +313,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Bacheche",
       "category": "Categories",
       "tag": "Tags",
       "status": "Stati"

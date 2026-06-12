@@ -11,8 +11,10 @@ import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('msp/assets');
   const { openDrawer } = useDrawer();
   // Use ref to avoid re-creating callbacks when drawer state changes
   const openDrawerRef = useRef(openDrawer);
@@ -38,7 +40,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
         const ticketData = await getConsolidatedTicketData(props.ticketId);
 
         if (!ticketData) {
-          toast.error('Failed to load ticket');
+          toast.error(t('crossFeature.loadTicketFailed', { defaultValue: 'Failed to load ticket' }));
           return;
         }
 
@@ -67,7 +69,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
           '50vw'
         );
       } catch (error) {
-        handleError(error, 'Failed to open ticket');
+        handleError(error, t('crossFeature.openTicketFailed', { defaultValue: 'Failed to open ticket' }));
       }
     },
     []

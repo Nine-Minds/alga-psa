@@ -150,7 +150,7 @@ export function NotificationDropdown({
             </div>
           ) : (
             <div className="text-sm text-[rgb(var(--color-text-600))]">
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+              {tClient('notifications.unreadCount', { defaultValue: '{{count}} unread notifications', count: unreadCount })}
             </div>
           )}
         </div>

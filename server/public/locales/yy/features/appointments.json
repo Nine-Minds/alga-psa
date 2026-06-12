@@ -136,7 +136,9 @@
     "description": "55555",
     "created": "55555",
     "approved": "55555",
-    "cancelButton": "55555"
+    "cancelButton": "55555",
+    "downloadRecording": "55555",
+    "viewTranscript": "55555"
   },
   "cancel": {
     "title": "55555",

@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Selecteer alle zichtbare assets",
       "selectAsset": "Selecteer item {{name}}",
-      "selectedAssets": "{{count}} item{{suffix}} geselecteerd",
+      "selectedAssets_one": "{{count}} item geselecteerd",
+      "selectedAssets_other": "{{count}} items geselecteerd",
       "clearSelection": "Duidelijke selectie",
       "bulkActionsComingSoon": "Bulkacties binnenkort beschikbaar"
     },
@@ -216,6 +217,49 @@
         "title": "Afdrukopties",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van assets."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Wissen",
+        "delete": "Verwijderen",
+        "selectedCount": "{{count}} geselecteerd",
+        "setLocation": "Locatie instellen",
+        "setStatus": "Status instellen"
+      },
+      "actions": {
+        "apply": "Toepassen",
+        "applying": "Toepassen...",
+        "deleteAssets": "Verwijderen",
+        "deleting": "Verwijderen...",
+        "updateLocation": "Locatie-update",
+        "updateStatus": "Statusupdate"
+      },
+      "deleteDialog": {
+        "description": "Verwijder {{count}} geselecteerde asset(s). Assets met afhankelijkheden worden mogelijk overgeslagen.",
+        "title": "Geselecteerde assets verwijderen"
+      },
+      "errors": {
+        "deleteFailed": "Kan geselecteerde assets niet verwijderen.",
+        "updateLocationFailed": "Kan locaties van geselecteerde assets niet bijwerken.",
+        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken."
+      },
+      "locationDialog": {
+        "clearLocation": "Locatie wissen",
+        "customLocation": "Aangepaste locatie",
+        "customPlaceholder": "Voer een aangepaste locatie of ruimte in",
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "loadingLocations": "Locaties laden...",
+        "savedDisabled": "Opgeslagen klantlocaties zijn alleen beschikbaar wanneer alle geselecteerde assets zichtbaar zijn en bij één klant horen.",
+        "savedLocation": "Opgeslagen klantlocatie",
+        "selectLocation": "Selecteer locatie",
+        "title": "Assetlocatie instellen"
+      },
+      "partialFailure": "{{action}} voltooid voor {{succeeded}} asset(s); {{failed}} mislukt.",
+      "statusDialog": {
+        "description": "Werk {{count}} geselecteerde asset(s) bij.",
+        "title": "Assetstatus instellen"
+      },
+      "success": "{{action}} voltooid voor {{count}} asset(s)."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +277,7 @@
     "tabs": {
       "overview": "Overzicht",
       "maintenance": "Onderhoud",
-      "tickets": "Kaartjes",
+      "tickets": "Tickets",
       "configuration": "Configuratie",
       "documents": "Documenten"
     },
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "momenten geleden",
-      "minutesAgo": "{{count}} minuut{{suffix}} geleden",
-      "hoursAgo": "{{count}} uur{{suffix}} geleden",
-      "daysAgo": "{{count}} dag{{suffix}} geleden"
+      "minutesAgo_one": "{{count}} minuut geleden",
+      "minutesAgo_other": "{{count}} minuten geleden",
+      "hoursAgo_one": "{{count}} uur geleden",
+      "hoursAgo_other": "{{count}} uur geleden",
+      "daysAgo_one": "{{count}} dag geleden",
+      "daysAgo_other": "{{count}} dagen geleden"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "Kan itemdetails niet laden",
       "clientsLoadFailed": "Kan klanten niet laden",
       "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
-      "updateFailed": "Kan item niet updaten"
+      "updateFailed": "Kan item niet updaten",
+      "validation": "Corrigeer de gemarkeerde velden voordat je opslaat."
     },
     "actions": {
       "viewClient": "Klant bekijken",
@@ -609,7 +657,7 @@
     "description": "Metrische kaarten en rollups voor tickets, onderhoud, uptime en indicatoren voor de status van bedrijfsmiddelen",
     "labels": {
       "healthStatus": "Gezondheidsstatus",
-      "openTickets": "Kaartjes openen",
+      "openTickets": "Openstaande tickets",
       "securityStatus": "Beveiligingsstatus",
       "warranty": "Garantie"
     },
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "Voeg item toe",
       "showLess": "Laat minder zien",
-      "moreAssets": "{{count}} meer activa{{suffix}}"
+      "moreAssets_one": "Nog {{count}} item",
+      "moreAssets_other": "Nog {{count}} items"
     },
     "errors": {
       "loadAvailableAssets": "Kan beschikbare middelen niet laden",
@@ -719,8 +768,10 @@
       "removeFailed": "Kan itemkoppeling niet verwijderen"
     },
     "success": {
-      "associated": "{{count}} item{{suffix}} is succesvol gekoppeld",
-      "associatedPartial": "{{count}} asset{{suffix}} succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associated_one": "{{count}} item is succesvol gekoppeld",
+      "associated_other": "{{count}} items zijn succesvol gekoppeld",
+      "associatedPartial_one": "{{count}} item succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associatedPartial_other": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
       "removed": "Itemkoppeling verwijderd"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "Type…"
       },
       "actions": {
-        "addAssets": "Item toevoegen{{suffix}}"
+        "addAssets_one": "Item toevoegen",
+        "addAssets_other": "Items toevoegen"
       }
     },
     "table": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "Itemtag *",
       "typeRequired": "Type *",
       "status": "Status",
-      "serialNumber": "Serienummer"
+      "serialNumber": "Serienummer",
+      "customLocationOption": "Aangepaste locatie",
+      "location": "Locatie"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -869,7 +923,11 @@
       "assetTag": "Voer de itemtag in",
       "selectType": "Selecteer type",
       "selectStatus": "Selecteer status",
-      "serialNumber": "Voer het serienummer in"
+      "serialNumber": "Voer het serienummer in",
+      "customLocation": "Voer een aangepaste locatie of ruimte in",
+      "loadingLocations": "Locaties laden...",
+      "selectClientFirst": "Selecteer eerst een klant",
+      "selectLocation": "Selecteer locatie"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -979,7 +1037,8 @@
       "uptime": "Uptime",
       "lastSync": "Laatste RMM-synchronisatie",
       "network": "Netwerk",
-      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN IP: {{wan}}",
+      "taniumCriticality": "Tanium-kritikaliteit"
     },
     "values": {
       "never": "Nooit"
@@ -1136,13 +1195,19 @@
       "actions": "Acties"
     },
     "frequency": {
-      "every": "Elke {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Elke {{frequency}}",
+      "every_other": "Elke {{count}} {{frequency}}",
       "units": {
-        "daily": "dag",
-        "weekly": "week",
-        "monthly": "maand",
-        "quarterly": "kwartaal",
-        "yearly": "jaar"
+        "daily_one": "dag",
+        "daily_other": "dagen",
+        "weekly_one": "week",
+        "weekly_other": "weken",
+        "monthly_one": "maand",
+        "monthly_other": "maanden",
+        "quarterly_one": "kwartaal",
+        "quarterly_other": "kwartalen",
+        "yearly_one": "jaar",
+        "yearly_other": "jaren"
       }
     },
     "status": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "Actieve waarschuwingen",
     "acknowledge": "Bevestigen",
     "createTicket": "Ticket aanmaken"
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties",
+    "printSelected": "Geselecteerde afdrukken ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Kan ticket niet laden",
+    "openTicketFailed": "Kan ticket niet openen"
   }
 }

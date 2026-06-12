@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} Reaktion",
+    "ariaSummary_other": "{{emoji}} {{count}} Reaktionen",
+    "ariaYouReacted": ", Sie haben reagiert"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Läuft in {{count}} Tag ab, am {{date}}",
+    "expiresInDaysOn_other": "Läuft in {{count}} Tagen ab, am {{date}}",
+    "expiringForClient_one": "{{count}} Guthaben für {{clientName}} läuft bald ab",
+    "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Die Enterprise-Testphase läuft in {{count}} Tag ab. Geben Sie einen Lizenzschlüssel ein, um die Enterprise-Funktionen zu behalten.",
+    "trialExpiresIn_other": "Die Enterprise-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Enterprise-Funktionen zu behalten.",
+    "trialDaysRemaining_one": "Enterprise-Testphase aktiv — noch {{count}} Tag.",
+    "trialDaysRemaining_other": "Enterprise-Testphase aktiv — noch {{count}} Tage.",
+    "licenseExpiresIn_one": "Die Lizenz läuft in {{count}} Tag ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "licenseExpiresIn_other": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Druckoptionen zurücksetzen",
     "share": "Teilen",
     "done": "Fertig",
-    "continue": "Weiter"
+    "continue": "Weiter",
+    "printSelected": "Ausgewählte drucken ({{count}})"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -462,7 +482,10 @@
         "visible": "Für Kunden sichtbar",
         "hidden": "Nur intern"
       },
-      "clientVisibilityLabel": "Kundensichtbarkeit"
+      "clientVisibilityLabel": "Kundensichtbarkeit",
+      "entityOptions": {
+        "all": "Alle Entitäten"
+      }
     },
     "selector": {
       "title": "Dokumente auswählen",
@@ -490,7 +513,10 @@
       "uploadingProgress": "{{current}} von {{total}} werden hochgeladen",
       "pending": "Ausstehend",
       "error": "Dokument konnte nicht hochgeladen werden",
-      "fileError": "Datei konnte nicht hochgeladen werden"
+      "fileError": "Datei konnte nicht hochgeladen werden",
+      "associatedEntityTypeLabel": "Verknüpfen mit",
+      "noAssociation": "Keine Verknüpfung",
+      "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus."
     },
     "folders": {
       "root": "Stammordner",
@@ -549,7 +575,20 @@
     "downloadVideo": "Video herunterladen",
     "downloadAsPdf": "Als PDF herunterladen",
     "downloadAsMarkdown": "Als Markdown herunterladen",
-    "move": "Verschieben"
+    "move": "Verschieben",
+    "associatedEntityPicker": {
+      "allEntities": "Alle Entitäten",
+      "loadingClients": "Kunden werden geladen...",
+      "loadingContacts": "Kontakte werden geladen...",
+      "noEntityTypes": "Keine Entitätstypen gefunden",
+      "typeLabel": "Verknüpfter Entitätstyp",
+      "typePlaceholder": "Entitätstyp auswählen",
+      "typeSearchPlaceholder": "Entitätstypen suchen...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "{{entityType}} auswählen",
+      "entitySearchPlaceholder": "{{entityType}} suchen...",
+      "noEntities": "Keine {{entityType}} gefunden"
+    }
   },
   "fields": {
     "notes": "Notizen"
@@ -919,7 +958,8 @@
       "revoke": "Widerrufen",
       "revoking": "Wird widerrufen...",
       "loggingOut": "Wird abgemeldet...",
-      "logoutFromOther": "Von {{count}} anderem Gerät{{count, plural, one {} other {en}} abmelden"
+      "logoutFromOther_one": "Von {{count}} anderem Gerät abmelden",
+      "logoutFromOther_other": "Von {{count}} anderen Geräten abmelden"
     },
     "confirmations": {
       "logoutCurrent": "Dies meldet Sie von Ihrer aktuellen Sitzung ab. Sind Sie sicher?",
@@ -1009,7 +1049,10 @@
     "deleteCommentAriaLabel": "Kommentar löschen",
     "deleteComment": "Kommentar löschen",
     "deleteCommentConfirmation": "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "update": "Aktualisieren"
+    "update": "Aktualisieren",
+    "create": "Erstellen",
+    "replyComment": "Auf Kommentar antworten",
+    "saving": "Wird gespeichert..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} Spalten aus Platzgründen ausgeblendet.",
     "showAll": "Alle anzeigen",
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
   }
 }

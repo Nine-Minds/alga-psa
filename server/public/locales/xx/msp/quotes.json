@@ -149,7 +149,9 @@
       "back": "11111",
       "moreActions": "11111",
       "cancel": "11111",
-      "previewPdf": "11111"
+      "previewPdf": "11111",
+      "backToQuotes": "11111",
+      "backToTemplates": "11111"
     },
     "headings": {
       "editQuote": "11111",
@@ -348,7 +350,8 @@
       "openConvertedContract": "11111",
       "openConvertedInvoice": "11111",
       "preview": "11111",
-      "saveAsTemplate": "11111"
+      "saveAsTemplate": "11111",
+      "back": "11111"
     },
     "sections": {
       "activityLog": "11111",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "11111 {{phase}} 11111",
-      "templateQuote": "11111"
+      "templateQuote": "11111",
+      "customItem": "11111",
+      "optional": "11111",
+      "recurring": "11111"
     },
     "loading": "11111",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "11111"
     },
     "table": {
-      "description": "11111"
+      "description": "11111",
+      "billing": "11111",
+      "quantity": "11111",
+      "total": "11111",
+      "unitPrice": "11111"
     },
     "locations": {
       "groupHeading": "11111",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "11111",
-      "shape": "11111"
+      "shape": "11111",
+      "renderFailed": "11111",
+      "shapeFailed": "11111",
+      "shapingFailed": "11111"
     },
     "tabs": {
       "code": "11111",

@@ -535,9 +535,9 @@
       "reorder": "Importer avec un ordre différent :"
     },
     "toast": {
-      "importedCount": "Type de service {{count}} importé",
       "importedCount_other": "Types de services {{count}} importés",
-      "skippedItem": "{{name}} : {{reason}}"
+      "skippedItem": "{{name}} : {{reason}}",
+      "importedCount_one": "Type de service {{count}} importé"
     },
     "errors": {
       "fetch": "Échec de la récupération des types de services",

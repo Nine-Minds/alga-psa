@@ -169,7 +169,8 @@
         "success": {
           "titleOne": "55555",
           "titleOther": "55555",
-          "description": "55555 {{count}} 55555 {{suffix}} 55555",
+          "description_one": "55555 {{count}} 55555",
+          "description_other": "55555 {{count}} 55555",
           "skipped": "55555 {{count}} 55555"
         },
         "actions": {

@@ -228,7 +228,7 @@
       "inactive": "Inactief"
     },
     "fields": {
-      "board": "Board:",
+      "board": "Bord:",
       "status": "Status:",
       "priority": "Prioriteit:",
       "enteredBy": "Ingevoerd door:"
@@ -362,7 +362,8 @@
         "assignments": "Toewijzingen",
         "simulator": "Simulator",
         "clone": "Klonen",
-        "archive": "Archiveren"
+        "archive": "Archiveren",
+        "openMenu": "Menu openen"
       }
     },
     "workspace": {

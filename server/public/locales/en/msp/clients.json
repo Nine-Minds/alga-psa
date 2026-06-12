@@ -28,7 +28,12 @@
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
-      "none": "None"
+      "none": "None",
+      "archived": "Archived",
+      "draft": "Draft",
+      "expired": "Expired",
+      "published": "Published",
+      "terminated": "Terminated"
     },
     "no": "No",
     "yes": "Yes"
@@ -83,34 +88,43 @@
     "selectedSingle": "{{count}} Selected",
     "selectedPlural": "{{count}} Selected",
     "createSuccess": "{{name}} has been created successfully.",
-    "exportSuccess": "Exported {{count}} {{clientsLabel}} to CSV",
-    "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} been deleted successfully.",
-    "bulkInactiveFailed": "{{count}} {{clientsLabel}} could not be marked as inactive.",
+    "exportSuccess_one": "Exported {{count}} client to CSV",
+    "exportSuccess_other": "Exported {{count}} clients to CSV",
+    "bulkDeleteSuccess_one": "{{count}} client has been deleted successfully.",
+    "bulkDeleteSuccess_other": "{{count}} clients have been deleted successfully.",
+    "bulkInactiveFailed_one": "{{count}} client could not be marked as inactive.",
+    "bulkInactiveFailed_other": "{{count}} clients could not be marked as inactive.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been marked as inactive successfully.",
     "singleInactiveSuccess": "{{name}} has been marked as inactive successfully.",
     "singleInactiveWithContactsSuccess_one": "{{name}} and {{count}} contact have been deactivated successfully.",
     "singleInactiveWithContactsSuccess_other": "{{name}} and {{count}} contacts have been deactivated successfully.",
-    "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} been marked as inactive successfully.",
-    "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} been marked as inactive.",
+    "bulkInactiveSuccess_one": "{{count}} client has been marked as inactive successfully.",
+    "bulkInactiveSuccess_other": "{{count}} clients have been marked as inactive successfully.",
+    "bulkInactiveShortSuccess_one": "{{count}} client has been marked as inactive.",
+    "bulkInactiveShortSuccess_other": "{{count}} clients have been marked as inactive.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been marked as inactive.",
     "bulkInactiveShortError": "An error occurred while marking clients as inactive.",
-    "bulkReactivateFailed": "{{count}} {{clientsLabel}} could not be reactivated.",
+    "bulkReactivateFailed_one": "{{count}} client could not be reactivated.",
+    "bulkReactivateFailed_other": "{{count}} clients could not be reactivated.",
     "bulkReactivateWithContactsSuccess": "{{clientCount}} {{clientsLabel}} and {{contactCount}} {{contactsLabel}} have been reactivated successfully.",
-    "bulkReactivateSuccess": "{{count}} {{clientsLabel}} {{verb}} been reactivated successfully.",
+    "bulkReactivateSuccess_one": "{{count}} client has been reactivated successfully.",
+    "bulkReactivateSuccess_other": "{{count}} clients have been reactivated successfully.",
     "deleteClientUnable": "Unable to delete this client.",
     "deleteSinglePrompt": "Are you sure you want to delete {{name}}? This action cannot be undone.",
     "markFailedAsInactive": "Mark {{count}} as Inactive",
-    "multiDeleteSuccessSummary": "{{count}} {{clientsLabel}} {{verb}} successfully deleted.",
-    "multiDeleteFailedSummary": "{{count}} {{clientsLabel}} could not be deleted",
+    "multiDeleteSuccessSummary_one": "{{count}} client was successfully deleted.",
+    "multiDeleteSuccessSummary_other": "{{count}} clients were successfully deleted.",
+    "multiDeleteFailedSummary_one": "{{count}} client could not be deleted",
+    "multiDeleteFailedSummary_other": "{{count}} clients could not be deleted",
     "inactiveAlternative": "You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.",
     "table": {
       "client": "Client"
     },
     "entities": {
-      "client": "client",
-      "clients": "clients",
-      "contact": "contact",
-      "contacts": "contacts"
+      "client_one": "client",
+      "client_other": "clients",
+      "contact_one": "contact",
+      "contact_other": "contacts"
     },
     "dependency": {
       "contact": "contact",
@@ -132,7 +146,8 @@
       "bucketUsageRecord": "bucket usage record",
       "bucketUsageRecords": "bucket usage records"
     },
-    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
+    "deleteSelectedPrompt_one": "Are you sure you want to delete {{count}} selected client? This action cannot be undone.",
+    "deleteSelectedPrompt_other": "Are you sure you want to delete {{count}} selected clients? This action cannot be undone.",
     "clientTypes": {
       "company": "Company",
       "individual": "Individual"
@@ -155,8 +170,7 @@
         "description": "Choose which columns to include when printing clients."
       }
     },
-    "shareTooltip": "Print, import and export"
-    ,
+    "shareTooltip": "Print, import and export",
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
     "deletePermissionDenied": "Permission denied: Cannot delete clients."
@@ -216,8 +230,10 @@
     "inboundDomainRemoved": "Inbound email domain removed",
     "inboundDomainRemoveFailed": "Failed to remove domain",
     "deleteError": "Failed to delete client. Please try again.",
-    "deactivateWithContactsSuccess": "Client and {{count}} contact(s) have been deactivated successfully.",
-    "reactivateWithContactsSuccess": "Client and {{count}} contact(s) have been reactivated successfully.",
+    "deactivateWithContactsSuccess_one": "Client and {{count}} contact have been deactivated successfully.",
+    "deactivateWithContactsSuccess_other": "Client and {{count}} contacts have been deactivated successfully.",
+    "reactivateWithContactsSuccess_one": "Client and {{count}} contact have been reactivated successfully.",
+    "reactivateWithContactsSuccess_other": "Client and {{count}} contacts have been reactivated successfully.",
     "singleInactiveSuccess": "{{name}} has been marked as inactive successfully.",
     "slaPolicy": "SLA Policy",
     "defaultPolicy": "{{name}} (Default)",
@@ -248,10 +264,15 @@
       "accountManager": "Account Manager",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deactivates the record without deleting its data.",
-    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active."
+    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active.",
+    "nameAliasAddFailed": "Failed to add alias",
+    "nameAliasAdded": "Alias added",
+    "nameAliasRemoveFailed": "Failed to remove alias",
+    "nameAliasRemoved": "Alias removed",
+    "nameAliases": "Matching aliases",
+    "noNameAliases": "No aliases configured. The client name itself always matches."
   },
   "quickAddClient": {
     "title": "Add New Client",
@@ -418,7 +439,8 @@
     "invalidDate": "Invalid Date",
     "formattingError": "Formatting Error",
     "removeAssignmentTitle": "Remove Contract Line Assignment",
-    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted."
+    "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted.",
+    "contracts": "Contracts"
   },
   "clientBillingSchedule": {
     "title": "Billing Schedule",
@@ -522,7 +544,9 @@
     "manualDue": "Manual (due {{date}})",
     "addError": "Failed to add contract to client",
     "deactivateError": "Failed to deactivate contract",
-    "updateError": "Failed to update contract"
+    "updateError": "Failed to update contract",
+    "createContract": "Create Contract",
+    "quickAdd": "Quick Add"
   },
   "clientContractDialog": {
     "assignTitle": "Assign Contract to Client",
@@ -1017,7 +1041,10 @@
   },
   "actions": {
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "print": "Print",
+    "printOptions": "Print options",
+    "printSelected": "Print selected ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1156,168 @@
     "messages": {
       "saveSuccess": "Notes saved",
       "saveFailed": "Failed to save notes"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Download recording",
+      "join": "Join",
+      "noArtifacts": "No recordings or transcripts are available yet.",
+      "recordingArtifact": "Recording",
+      "refreshFailed": "Failed to refresh recordings. Please try again.",
+      "refreshRecordings": "Refresh recordings",
+      "sectionTitle": "Online Meeting",
+      "transcriptArtifact": "Transcript",
+      "viewTranscript": "View transcript"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Add",
+          "addContact": "Select contacts...",
+          "addUser": "Select internal users...",
+          "badge": {
+            "clientLocation": "Client location",
+            "contact": "Contact",
+            "email": "Email",
+            "internal": "Internal"
+          },
+          "duplicateEmail": "That email is already on the attendee list.",
+          "emailPlaceholder": "name@example.com",
+          "empty": "No attendees added yet.",
+          "helper": "Attendees receive a Teams calendar invite from the meeting organizer.",
+          "invalidEmail": "Enter a valid email address.",
+          "label": "Attendees",
+          "remove": "Remove {{name}}",
+          "tabs": {
+            "contacts": "Contacts",
+            "email": "Email",
+            "users": "Users"
+          }
+        },
+        "checkingCapability": "Checking Teams meeting availability...",
+        "createFailed": "Failed to create Teams meeting",
+        "createToggle": "Create Teams meeting",
+        "endRequired": "End time is required to create a Teams meeting",
+        "startRequired": "Start time is required to create a Teams meeting",
+        "unavailable": "Teams meeting creation is not available for this tenant."
+      }
+    },
+    "feed": {
+      "addInteraction": "Add Interaction",
+      "allTypes": "All Types",
+      "applyFilters": "Apply Filters",
+      "endDate": "End Date",
+      "filter": "Filter",
+      "filterDialogTitle": "Filter Interactions",
+      "reset": "Reset",
+      "searchPlaceholder": "Search interactions",
+      "startDate": "Start Date",
+      "title": "Interactions",
+      "typePlaceholder": "Interaction Type"
+    },
+    "overall": {
+      "allContacts": "All Contacts",
+      "allStatuses": "All Statuses",
+      "allUsers": "All Users",
+      "byUser": "By {{name}}",
+      "collapse": "Collapse Recent Interactions",
+      "contactsFromClient": "Contacts from selected client",
+      "endTime": "End Time",
+      "endTimeLabel": "Interaction End Time",
+      "endTimePlaceholder": "Filter until this end time",
+      "expand": "Expand Recent Interactions",
+      "startTime": "Start Time",
+      "startTimeLabel": "Interaction Start Time",
+      "startTimePlaceholder": "Filter from this start time",
+      "statusPlaceholder": "Status",
+      "title": "Recent Interactions"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Failed to load client details.",
+    "loading": "Loading...",
+    "notFound": "Client not found."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Asset Tag",
+        "details": "Details",
+        "location": "Location",
+        "name": "Name",
+        "purchaseDate": "Purchase Date",
+        "serialNumber": "Serial Number",
+        "status": "Status",
+        "type": "Type",
+        "warrantyEnd": "Warranty End"
+      },
+      "details": {
+        "local": "Local",
+        "network": "Network",
+        "noIp": "No IP",
+        "none": "No details available"
+      },
+      "drawerLoadError": "Unable to load asset details right now. Please try again.",
+      "expiredSuffix": "(Expired)",
+      "filterByType": "Filter by Type",
+      "inventory": {
+        "subtitle": "Manage and track all client assets",
+        "title": "Asset Inventory"
+      },
+      "loading": "Loading assets...",
+      "loadingHint": "Please wait while we fetch your data",
+      "maintenanceTypes": {
+        "subtitle": "Breakdown by category",
+        "title": "Maintenance Types"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Assets with Maintenance",
+        "coverageRate": "Coverage Rate",
+        "subtitle": "Maintenance statistics",
+        "title": "Asset Overview",
+        "totalSchedules": "Total Schedules"
+      },
+      "summary": {
+        "activeBadge": "Active",
+        "maintenanceRate": "Maintenance Rate",
+        "needsAttention": "Needs attention",
+        "overdueMaintenance": "Overdue Maintenance",
+        "scheduledBadge": "Scheduled",
+        "totalAssets": "Total Assets",
+        "upcomingMaintenance": "Upcoming Maintenance"
+      },
+      "typePlaceholder": "All asset types...",
+      "types": {
+        "all": "All Asset Types",
+        "mobileDevice": "Mobile Device",
+        "networkDevice": "Network Device",
+        "printer": "Printer",
+        "server": "Server",
+        "workstation": "Workstation"
+      }
+    },
+    "tickets": {
+      "addTicket": "Add Ticket",
+      "filters": {
+        "allAssignees": "All Assignees",
+        "allPriorities": "All Priorities",
+        "categoryPlaceholder": "Filter by category",
+        "reset": "Reset",
+        "searchPlaceholder": "Search tickets...",
+        "statusPlaceholder": "Select Status"
+      },
+      "loadMore": {
+        "label": "Load More Tickets",
+        "loading": "Loading..."
+      },
+      "loading": "Loading tickets...",
+      "title": "Client Tickets",
+      "toasts": {
+        "loadTicketFailed": "Failed to load ticket",
+        "openTicketFailed": "Failed to open ticket",
+        "userNotAuthenticated": "User not authenticated"
+      }
     }
   }
 }

@@ -19,6 +19,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -38,6 +39,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   interactions, 
   setInteractions 
 }) => {
+  const { t } = useTranslation('msp/clients');
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
@@ -156,14 +158,14 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   const typeFilterOptions = useMemo(
     () => [
-      { value: 'all', label: 'All Types' },
+      { value: 'all', label: t('interactions.feed.allTypes', { defaultValue: 'All Types' }) },
       ...interactionTypes.map((type) => ({
         value: type.type_id,
         label: getTypeLabel(type),
         textValue: type.type_name
       }))
     ],
-    [interactionTypes]
+    [interactionTypes, t]
   );
 
   const filteredInteractions = useMemo(() => {
@@ -241,7 +243,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 {...titleProps} className="text-2xl font-bold">
-              Interactions
+              {t('interactions.feed.title', { defaultValue: 'Interactions' })}
             </h2>
             <Button 
               {...addButtonProps}
@@ -250,7 +252,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               variant="default"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Interaction
+              {t('interactions.feed.addInteraction', { defaultValue: 'Add Interaction' })}
             </Button>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -259,7 +261,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search interactions"
+              placeholder={t('interactions.feed.searchPlaceholder', { defaultValue: 'Search interactions' })}
               className="flex-grow"
             />
             <Button 
@@ -270,7 +272,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              Filter
+              {t('interactions.feed.filter', { defaultValue: 'Filter' })}
             </Button>
           </div>
         </div>
@@ -304,7 +306,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
       <Dialog
         isOpen={isFilterDialogOpen}
         onClose={() => setIsFilterDialogOpen(false)}
-        title="Filter Interactions"
+        title={t('interactions.feed.filterDialogTitle', { defaultValue: 'Filter Interactions' })}
         footer={
           <div className="flex justify-between w-full">
             <Button
@@ -315,13 +317,13 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('interactions.feed.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button
               {...applyButtonProps}
               onClick={handleApplyFilters}
             >
-              Apply Filters
+              {t('interactions.feed.applyFilters', { defaultValue: 'Apply Filters' })}
             </Button>
           </div>
         }
@@ -333,21 +335,21 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               options={typeFilterOptions}
               value={selectedType}
               onValueChange={setSelectedType}
-              placeholder="Interaction Type"
+              placeholder={t('interactions.feed.typePlaceholder', { defaultValue: 'Interaction Type' })}
             />
             <Input
               {...startDateProps}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Start Date"
+              placeholder={t('interactions.feed.startDate', { defaultValue: 'Start Date' })}
             />
             <Input
               {...endDateProps}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              placeholder="End Date"
+              placeholder={t('interactions.feed.endDate', { defaultValue: 'End Date' })}
             />
           </div>
         </DialogContent>

@@ -91,7 +91,7 @@ async function upsertLevelIoIntegrationRow(args: {
       connected_at: args.connectedAt ?? knex.raw('rmm_integrations.connected_at'),
       sync_status: args.syncStatus ?? knex.raw('rmm_integrations.sync_status'),
       sync_error: args.syncError ?? null,
-      updated_at: knex.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning(['integration_id', 'is_active', 'instance_url', 'connected_at', 'sync_status', 'sync_error']);
 

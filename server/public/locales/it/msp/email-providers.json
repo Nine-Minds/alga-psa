@@ -33,7 +33,8 @@
     },
     "nav": {
       "providers": "Fornitori",
-      "defaults": "Predefiniti"
+      "defaults": "Predefiniti",
+      "inboundRules": "Regole in entrata"
     },
     "setup": {
       "title": "Istruzioni per l'installazione",
@@ -241,7 +242,8 @@
         "oauthInitiateFailed": "Impossibile avviare OAuth",
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "Finestra di autorizzazione chiusa prima del completamento. Per favore riprova.",
-        "authorizationFailed": "Autorizzazione fallita"
+        "authorizationFailed": "Autorizzazione fallita",
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
       },
       "requiredFields": {
         "providerName": "Nome configurazione",
@@ -347,7 +349,8 @@
         "mailboxInvalid": "È richiesta una casella di posta valida (ad esempio utente@dominio.com, utente@localhost, utente@test-server o utente)",
         "hostRequired": "L'host IMAP è obbligatorio",
         "usernameRequired": "Il nome utente IMAP è obbligatorio",
-        "oauthInitiateFailed": "Impossibile avviare IMAP OAuth"
+        "oauthInitiateFailed": "Impossibile avviare IMAP OAuth",
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
       },
       "basic": {
         "title": "Impostazioni di base",
@@ -835,6 +838,146 @@
       "mismatchHelp": "Il record DNS esiste, ma il valore non corrisponde a quello atteso da Resend.",
       "matchedHelp": "Il valore rilevato corrisponde a quello atteso.",
       "unknownHelp": "Non abbiamo ancora verificato il DNS. Riverifica il DNS per eseguire la verifica."
+    }
+  },
+  "inboundRules": {
+    "actions": {
+      "addRule": "Aggiungi regola",
+      "aiClassify": "Classifica con IA",
+      "aiClassifyUpsell": "Richiede il componente aggiuntivo AI Assistant",
+      "extractAssign": "Assegna cliente dal testo estratto",
+      "setDestination": "Instrada verso una destinazione",
+      "skip": "Ignora email (nessun ticket)"
+    },
+    "badges": {
+      "allMailboxes": "Tutte le caselle di posta"
+    },
+    "empty": {
+      "description": "Crea una regola per ignorare le email di aggiornamento di stato o assegnare i ticket ai clienti citati nell'oggetto.",
+      "title": "Nessuna regola in entrata configurata"
+    },
+    "errors": {
+      "aliasAdd": "Impossibile aggiungere l'alias",
+      "delete": "Impossibile eliminare la regola",
+      "load": "Impossibile caricare le regole in entrata",
+      "reorder": "Impossibile riordinare le regole",
+      "save": "Impossibile salvare la regola",
+      "test": "Impossibile testare la regola",
+      "update": "Impossibile aggiornare la regola"
+    },
+    "extraction": {
+      "after": "Testo dopo il marcatore",
+      "before": "Testo prima del marcatore",
+      "between": "Testo tra i delimitatori",
+      "regex": "Espressione regolare (avanzato)"
+    },
+    "fields": {
+      "bodyText": "Testo del corpo",
+      "fromAddress": "Indirizzo mittente",
+      "fromDomain": "Dominio mittente",
+      "subject": "Oggetto",
+      "toAddress": "Indirizzo A/CC"
+    },
+    "form": {
+      "action": "Azione",
+      "active": "Attiva",
+      "addCondition": "Aggiungi condizione",
+      "aiAllowAssign": "Può assegnare clienti",
+      "aiAllowSkip": "Può ignorare email",
+      "aiInstruction": "Istruzione",
+      "aiInstructionPlaceholder": "es. Determina a quale cliente si riferisce questo avviso di monitoraggio.",
+      "aiUpsell": "Classifica con IA è disponibile con il componente aggiuntivo Enterprise AI Assistant — le email vengono classificate in base all'intento, senza pattern da gestire.",
+      "cancel": "Annulla",
+      "conditions": "Condizioni (devono corrispondere tutte)",
+      "create": "Crea regola",
+      "createTitle": "Crea regola in entrata",
+      "description": "Definisci quando la regola corrisponde e cosa succede all'email. Usa il tester qui sotto per verificarla su un esempio prima di salvare.",
+      "destination": "Destinazione (valori predefiniti del ticket)",
+      "destinationPlaceholder": "Seleziona un set di valori predefiniti",
+      "editTitle": "Modifica regola in entrata",
+      "endDelimiter": "Delimitatore finale",
+      "extractFrom": "Estrai da",
+      "extractionTemplate": "Estrazione",
+      "fallbackDestination": "Destinazione di fallback",
+      "first": "Prima",
+      "last": "Ultima",
+      "mailboxes": "Applica alle caselle di posta",
+      "mailboxesHint": "Non selezionarne nessuna per applicare questa regola a tutte le caselle di posta.",
+      "marker": "Testo del marcatore",
+      "markerPlaceholder": "es. Cliente:",
+      "matchHint": "Il testo estratto viene confrontato con i nomi e gli alias dei clienti (senza distinzione tra maiuscole e minuscole).",
+      "name": "Nome della regola",
+      "namePlaceholder": "es. Instradamento clienti Huntress",
+      "noMailboxes": "Nessuna casella di posta ancora configurata.",
+      "noMatchFallback": "Instrada verso una destinazione di fallback",
+      "noMatchProceed": "Continua con le regole successive / elaborazione normale",
+      "noMatchSkip": "Ignora l'email",
+      "occurrence": "Occorrenza",
+      "onNoMatch": "Se nessun cliente corrisponde",
+      "pattern": "Pattern (il gruppo di cattura 1 è il nome del cliente)",
+      "regexPlaceholder": "Espressione regolare",
+      "saving": "Salvataggio…",
+      "startDelimiter": "Delimitatore iniziale",
+      "update": "Aggiorna regola",
+      "valuePlaceholder": "Valore"
+    },
+    "header": {
+      "description": "Abbina le email in entrata per mittente o oggetto per ignorare il rumore, assegnare il cliente giusto o instradarle verso una destinazione. Le regole vengono eseguite in ordine; vince la prima corrispondenza.",
+      "title": "Regole email in entrata"
+    },
+    "help": {
+      "items": {
+        "aliases": "• I nomi estratti corrispondono ai nomi e agli alias dei clienti. Gestisci gli alias nella scheda del cliente o aggiungili dal tester delle regole.",
+        "audit": "• Le email ignorate restano verificabili nella diagnostica di elaborazione email, contrassegnate con la regola che le ha ignorate.",
+        "order": "• Le regole vengono eseguite dall'alto verso il basso sulle nuove email in entrata; si applica la prima regola corrispondente.",
+        "replies": "• Le risposte ai ticket esistenti diventano sempre commenti — le regole non le toccano mai."
+      },
+      "title": "Come funziona"
+    },
+    "loading": "Caricamento regole in entrata...",
+    "menu": {
+      "delete": "Elimina",
+      "deleting": "Eliminazione…",
+      "edit": "Modifica"
+    },
+    "operators": {
+      "contains": "contiene",
+      "endsWith": "termina con",
+      "equals": "è uguale a",
+      "matchesRegex": "corrisponde alla regex",
+      "startsWith": "inizia con"
+    },
+    "summary": {
+      "aiClassify": "Classifica con IA",
+      "extractAssign": "Assegna cliente da {{source}}",
+      "setDestination": "Instrada verso una destinazione",
+      "skip": "Ignora email (nessun ticket)"
+    },
+    "tester": {
+      "alias": "alias",
+      "aliasAdd": "Aggiungi alias",
+      "aliasAdded": "Alias aggiunto. Esegui di nuovo il test per vederlo corrispondere.",
+      "aliasAdding": "Aggiunta…",
+      "aliasClientPlaceholder": "Seleziona un cliente",
+      "aliasLabel": "Aggiungi \"{{value}}\" come alias di",
+      "body": "Testo del corpo",
+      "clientMatched": "Cliente abbinato tramite {{source}}",
+      "clientName": "nome del cliente",
+      "extracted": "Valore estratto:",
+      "from": "Da",
+      "noClient": "Nessun cliente corrispondente",
+      "outcome": {
+        "assignClient": "Ticket assegnato al cliente \"{{client}}\"",
+        "fallback": "Nessun cliente corrispondente — ticket instradato verso la destinazione di fallback",
+        "none": "La regola non ha prodotto un esito — l'elaborazione normale continua",
+        "setDestination": "Ticket instradato verso la destinazione selezionata",
+        "skip": "Email ignorata — nessun ticket creato"
+      },
+      "run": "Esegui test",
+      "running": "Test in corso…",
+      "subject": "Oggetto",
+      "title": "Testa questa regola",
+      "to": "A"
     }
   }
 }

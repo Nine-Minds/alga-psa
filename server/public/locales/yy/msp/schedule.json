@@ -91,7 +91,8 @@
         "single": "55555",
         "future": "55555",
         "all": "55555"
-      }
+      },
+      "messageWithTeamsWarning": "55555"
     },
     "print": {
       "title": "55555",
@@ -546,7 +547,9 @@
         "title": "55555",
         "descriptionWithDate": "55555 {{date}} 55555",
         "description": "55555",
-        "joinTeamsMeeting": "55555"
+        "joinTeamsMeeting": "55555",
+        "downloadRecording": "55555",
+        "viewTranscript": "55555"
       },
       "pending": {
         "title": "55555",
@@ -630,5 +633,28 @@
       "future": "55555",
       "all": "55555"
     }
+  },
+  "actions": {
+    "print": "55555",
+    "printOptions": "55555"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "55555",
+      "contact": "55555",
+      "duration": "55555",
+      "endTime": "55555",
+      "notes": "55555",
+      "startTime": "55555",
+      "status": "55555",
+      "title": "55555",
+      "user": "55555"
+    },
+    "noClient": "55555",
+    "noContact": "55555",
+    "noTitle": "55555",
+    "notAvailable": "55555",
+    "title": "55555",
+    "unknownUser": "55555"
   }
 }

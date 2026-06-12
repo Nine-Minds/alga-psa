@@ -28,7 +28,12 @@
       "inactive": "Inactif",
       "loading": "Chargement...",
       "na": "S/O",
-      "none": "Aucun"
+      "none": "Aucun",
+      "archived": "Archivé",
+      "draft": "Brouillon",
+      "expired": "Expiré",
+      "published": "Publié",
+      "terminated": "Résilié"
     },
     "no": "Non",
     "yes": "Oui"
@@ -83,38 +88,47 @@
     "selectedSingle": "{{count}} Sélectionné",
     "selectedPlural": "{{count}} Sélectionné",
     "createSuccess": "{{name}} a été créé avec succès.",
-    "exportSuccess": "Exporté {{count}} {{clientsLabel}} au format CSV",
-    "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} a été supprimé avec succès.",
-    "bulkInactiveFailed": "{{count}} {{clientsLabel}} n'a pas pu être marqué comme inactif.",
+    "exportSuccess_one": "{{count}} client exporté au format CSV",
+    "exportSuccess_other": "{{count}} clients exportés au format CSV",
+    "bulkDeleteSuccess_one": "{{count}} client a été supprimé avec succès.",
+    "bulkDeleteSuccess_other": "{{count}} clients ont été supprimés avec succès.",
+    "bulkInactiveFailed_one": "{{count}} client n'a pas pu être marqué comme inactif.",
+    "bulkInactiveFailed_other": "{{count}} clients n'ont pas pu être marqués comme inactifs.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} et {{contactCount}} {{contactsLabel}} ont été marqués comme inactifs avec succès.",
     "singleInactiveSuccess": "{{name}} a été marqué comme inactif avec succès.",
-    "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} a été marqué comme inactif avec succès.",
-    "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} a été marqué comme inactif.",
+    "bulkInactiveSuccess_one": "{{count}} client a été marqué comme inactif avec succès.",
+    "bulkInactiveSuccess_other": "{{count}} clients ont été marqués comme inactifs avec succès.",
+    "bulkInactiveShortSuccess_one": "{{count}} client a été marqué comme inactif.",
+    "bulkInactiveShortSuccess_other": "{{count}} clients ont été marqués comme inactifs.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} et {{contactCount}} {{contactsLabel}} ont été marqués comme inactifs.",
     "bulkInactiveShortError": "Une erreur s'est produite lors du marquage des clients comme inactifs.",
-    "bulkReactivateFailed": "{{count}} {{clientsLabel}} n'a pas pu être réactivé.",
+    "bulkReactivateFailed_one": "{{count}} client n'a pas pu être réactivé.",
+    "bulkReactivateFailed_other": "{{count}} clients n'ont pas pu être réactivés.",
     "bulkReactivateWithContactsSuccess": "{{clientCount}} {{clientsLabel}} et {{contactCount}} {{contactsLabel}} ont été réactivés avec succès.",
-    "bulkReactivateSuccess": "{{count}} {{clientsLabel}} {{verb}} a été réactivé avec succès.",
+    "bulkReactivateSuccess_one": "{{count}} client a été réactivé avec succès.",
+    "bulkReactivateSuccess_other": "{{count}} clients ont été réactivés avec succès.",
     "deleteClientUnable": "Impossible de supprimer ce client.",
     "deleteSinglePrompt": "Êtes-vous sûr de vouloir supprimer {{name}} ? Cette action ne peut pas être annulée.",
     "markFailedAsInactive": "Marquer {{count}} comme inactif",
-    "multiDeleteSuccessSummary": "{{count}} {{clientsLabel}} {{verb}} supprimé avec succès.",
-    "multiDeleteFailedSummary": "{{count}} {{clientsLabel}} n'a pas pu être supprimé",
+    "multiDeleteSuccessSummary_one": "{{count}} client supprimé avec succès.",
+    "multiDeleteSuccessSummary_other": "{{count}} clients supprimés avec succès.",
+    "multiDeleteFailedSummary_one": "{{count}} client n'a pas pu être supprimé",
+    "multiDeleteFailedSummary_other": "{{count}} clients n'ont pas pu être supprimés",
     "inactiveAlternative": "Vous pouvez plutôt marquer ce client comme inactif. Les clients inactifs sont masqués dans la plupart des vues mais conservent toutes leurs données et peuvent être marqués comme actifs ultérieurement.",
     "table": {
       "client": "Client"
     },
     "entities": {
-      "client": "client",
-      "clients": "clients",
-      "contact": "contact",
-      "contacts": "contacts"
+      "client_one": "client",
+      "client_other": "clients",
+      "contact_one": "contact",
+      "contact_other": "contacts"
     },
     "dependency": {
       "contact": "contact",
       "contacts": "contacts",
-      "ticket": "billet",
-      "tickets": "billets",
+      "ticket": "ticket",
+      "tickets": "tickets",
       "project": "projet",
       "projects": "projets",
       "invoice": "facture",
@@ -130,7 +144,8 @@
       "bucketUsageRecord": "enregistrement d'utilisation du compartiment",
       "bucketUsageRecords": "enregistrements d'utilisation du compartiment"
     },
-    "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
+    "deleteSelectedPrompt_one": "Êtes-vous sûr de vouloir supprimer {{count}} client sélectionné ? Cette action ne peut pas être annulée.",
+    "deleteSelectedPrompt_other": "Êtes-vous sûr de vouloir supprimer {{count}} clients sélectionnés ? Cette action ne peut pas être annulée.",
     "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
     "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès.",
     "clientTypes": {
@@ -155,8 +170,7 @@
         "description": "Choisissez les colonnes à inclure lors de l'impression des clients."
       }
     },
-    "shareTooltip": "Imprimer, importer et exporter"
-    ,
+    "shareTooltip": "Imprimer, importer et exporter",
     "defaultClientDeleteError": "Impossible de supprimer le client par défaut. Définissez d’abord un autre client comme client par défaut dans les paramètres généraux.",
     "clientNotFound": "Client introuvable.",
     "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
@@ -165,7 +179,7 @@
     "title": "Détails du client",
     "backToClients": "Retour aux Clients",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
-    "addTicket": "Ajouter un billet",
+    "addTicket": "Ajouter un ticket",
     "details": "Détails",
     "contacts": "Contacts",
     "assets": "Actifs",
@@ -191,7 +205,7 @@
     "inboundEmailDomains": "Domaines de messagerie entrants",
     "inboundEmailDomainsHelp": "Seuls ces domaines seront utilisés pour la mise en correspondance des domaines de courrier électronique entrant (par exemple, acme.com). Les domaines doivent être uniques pour tous les clients.",
     "noInboundDomains": "Aucun domaine de messagerie entrant configuré. La correspondance de domaine ne sera pas utilisée.",
-    "inboundTicketDestination": "Destination du billet entrant",
+    "inboundTicketDestination": "Destination du ticket entrant",
     "inboundDestinationPrecedence": "Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
     "manageLocations": "Gérer les emplacements",
     "loadingUsers": "Chargement des utilisateurs...",
@@ -211,8 +225,10 @@
     "reactivateError": "Une erreur s'est produite lors de la réactivation du client. Veuillez réessayer.",
     "entraSyncError": "Échec du démarrage de la synchronisation Entra.",
     "deleteError": "Échec de la suppression du client. Veuillez réessayer.",
-    "deactivateWithContactsSuccess": "Le client et le(s) contact(s) {{count}} ont été désactivés avec succès.",
-    "reactivateWithContactsSuccess": "Le client et le(s) contact(s) {{count}} ont été réactivés avec succès.",
+    "deactivateWithContactsSuccess_one": "Le client et {{count}} contact ont été désactivés avec succès.",
+    "deactivateWithContactsSuccess_other": "Le client et {{count}} contacts ont été désactivés avec succès.",
+    "reactivateWithContactsSuccess_one": "Le client et {{count}} contact ont été réactivés avec succès.",
+    "reactivateWithContactsSuccess_other": "Le client et {{count}} contacts ont été réactivés avec succès.",
     "singleInactiveSuccess": "{{name}} a été marqué comme inactif avec succès.",
     "slaPolicy": "Politique SLA",
     "defaultPolicy": "{{name}} (par défaut)",
@@ -223,7 +239,7 @@
     "timezoneHelper": "Sélectionnez le fuseau horaire pour ce client",
     "taxSettings": "Paramètres fiscaux",
     "additionalInfo": "Informations supplémentaires",
-    "tickets": "Billets",
+    "tickets": "Tickets",
     "saveChanges": "Enregistrer les modifications",
     "requiredFields": "Veuillez remplir tous les champs obligatoires",
     "syncEntraNow": "Synchroniser Entra maintenant",
@@ -248,10 +264,15 @@
       "accountManager": "Responsable de compte",
       "url": "URL",
       "status": "Statut"
-    }
-    ,
+    },
     "deactivateClientDescription": "Désactive l’enregistrement sans supprimer ses données.",
-    "deactivateClientOnlyDescription": "Désactive le client, mais laisse ses contacts actifs."
+    "deactivateClientOnlyDescription": "Désactive le client, mais laisse ses contacts actifs.",
+    "nameAliasAddFailed": "Échec de l'ajout de l'alias",
+    "nameAliasAdded": "Alias ajouté",
+    "nameAliasRemoveFailed": "Échec de la suppression de l'alias",
+    "nameAliasRemoved": "Alias supprimé",
+    "nameAliases": "Alias de correspondance",
+    "noNameAliases": "Aucun alias configuré. Le nom du client lui-même correspond toujours."
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",
@@ -418,7 +439,8 @@
     "invalidDate": "Date invalide",
     "formattingError": "Erreur de formatage",
     "removeAssignmentTitle": "Supprimer l'affectation de ligne de contrat",
-    "removeAssignmentMessage": "Êtes-vous sûr de vouloir supprimer cette attribution de ligne de contrat du client ? La ligne de contrat elle-même ne sera pas supprimée."
+    "removeAssignmentMessage": "Êtes-vous sûr de vouloir supprimer cette attribution de ligne de contrat du client ? La ligne de contrat elle-même ne sera pas supprimée.",
+    "contracts": "Contrats"
   },
   "clientBillingSchedule": {
     "title": "Calendrier de facturation",
@@ -522,7 +544,9 @@
     "manualDue": "Manuel (à échéance {{date}})",
     "addError": "Échec de l'ajout du contrat au client",
     "deactivateError": "Échec de la désactivation du contrat",
-    "updateError": "Échec de la mise à jour du contrat"
+    "updateError": "Échec de la mise à jour du contrat",
+    "createContract": "Créer un contrat",
+    "quickAdd": "Ajout rapide"
   },
   "clientContractDialog": {
     "assignTitle": "Attribuer un contrat au client",
@@ -1017,7 +1041,10 @@
   },
   "actions": {
     "cancel": "Annuler",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "print": "Imprimer",
+    "printOptions": "Options d'impression",
+    "printSelected": "Imprimer la sélection ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1156,168 @@
     "messages": {
       "saveSuccess": "Notes enregistrées",
       "saveFailed": "Échec de l'enregistrement des notes"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Télécharger l'enregistrement",
+      "join": "Rejoindre",
+      "noArtifacts": "Aucun enregistrement ni transcription n'est encore disponible.",
+      "recordingArtifact": "Enregistrement",
+      "refreshFailed": "Échec de l'actualisation des enregistrements. Veuillez réessayer.",
+      "refreshRecordings": "Actualiser les enregistrements",
+      "sectionTitle": "Réunion en ligne",
+      "transcriptArtifact": "Transcription",
+      "viewTranscript": "Voir la transcription"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Ajouter",
+          "addContact": "Sélectionner des contacts...",
+          "addUser": "Sélectionner des utilisateurs internes...",
+          "badge": {
+            "clientLocation": "Emplacement du client",
+            "contact": "Contact",
+            "email": "E-mail",
+            "internal": "Interne"
+          },
+          "duplicateEmail": "Cette adresse e-mail figure déjà dans la liste des participants.",
+          "emailPlaceholder": "nom@exemple.com",
+          "empty": "Aucun participant ajouté pour le moment.",
+          "helper": "Les participants reçoivent une invitation de calendrier Teams de la part de l'organisateur de la réunion.",
+          "invalidEmail": "Saisissez une adresse e-mail valide.",
+          "label": "Participants",
+          "remove": "Retirer {{name}}",
+          "tabs": {
+            "contacts": "Contacts",
+            "email": "E-mail",
+            "users": "Utilisateurs"
+          }
+        },
+        "checkingCapability": "Vérification de la disponibilité des réunions Teams...",
+        "createFailed": "Échec de la création de la réunion Teams",
+        "createToggle": "Créer une réunion Teams",
+        "endRequired": "L'heure de fin est requise pour créer une réunion Teams",
+        "startRequired": "L'heure de début est requise pour créer une réunion Teams",
+        "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
+      }
+    },
+    "feed": {
+      "addInteraction": "Ajouter une interaction",
+      "allTypes": "Tous les types",
+      "applyFilters": "Appliquer les filtres",
+      "endDate": "Date de fin",
+      "filter": "Filtrer",
+      "filterDialogTitle": "Filtrer les interactions",
+      "reset": "Réinitialiser",
+      "searchPlaceholder": "Rechercher des interactions",
+      "startDate": "Date de début",
+      "title": "Interactions",
+      "typePlaceholder": "Type d'interaction"
+    },
+    "overall": {
+      "allContacts": "Tous les contacts",
+      "allStatuses": "Tous les statuts",
+      "allUsers": "Tous les utilisateurs",
+      "byUser": "Par {{name}}",
+      "collapse": "Réduire les interactions récentes",
+      "contactsFromClient": "Contacts du client sélectionné",
+      "endTime": "Heure de fin",
+      "endTimeLabel": "Heure de fin de l'interaction",
+      "endTimePlaceholder": "Filtrer jusqu'à cette heure de fin",
+      "expand": "Développer les interactions récentes",
+      "startTime": "Heure de début",
+      "startTimeLabel": "Heure de début de l'interaction",
+      "startTimePlaceholder": "Filtrer à partir de cette heure de début",
+      "statusPlaceholder": "Statut",
+      "title": "Interactions récentes"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Échec du chargement des détails du client.",
+    "loading": "Chargement...",
+    "notFound": "Client introuvable."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Étiquette d'actif",
+        "details": "Détails",
+        "location": "Emplacement",
+        "name": "Nom",
+        "purchaseDate": "Date d'achat",
+        "serialNumber": "Numéro de série",
+        "status": "Statut",
+        "type": "Type",
+        "warrantyEnd": "Fin de garantie"
+      },
+      "details": {
+        "local": "Local",
+        "network": "Réseau",
+        "noIp": "Aucune IP",
+        "none": "Aucun détail disponible"
+      },
+      "drawerLoadError": "Impossible de charger les détails de l'actif pour le moment. Veuillez réessayer.",
+      "expiredSuffix": "(Expirée)",
+      "filterByType": "Filtrer par type",
+      "inventory": {
+        "subtitle": "Gérez et suivez tous les actifs du client",
+        "title": "Inventaire des actifs"
+      },
+      "loading": "Chargement des actifs...",
+      "loadingHint": "Veuillez patienter pendant la récupération de vos données",
+      "maintenanceTypes": {
+        "subtitle": "Répartition par catégorie",
+        "title": "Types de maintenance"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Actifs avec maintenance",
+        "coverageRate": "Taux de couverture",
+        "subtitle": "Statistiques de maintenance",
+        "title": "Aperçu des actifs",
+        "totalSchedules": "Total des calendriers"
+      },
+      "summary": {
+        "activeBadge": "Actif",
+        "maintenanceRate": "Taux de maintenance",
+        "needsAttention": "Nécessite une attention",
+        "overdueMaintenance": "Maintenance en retard",
+        "scheduledBadge": "Planifiée",
+        "totalAssets": "Total des actifs",
+        "upcomingMaintenance": "Maintenance à venir"
+      },
+      "typePlaceholder": "Tous les types d'actifs...",
+      "types": {
+        "all": "Tous les types d'actifs",
+        "mobileDevice": "Appareil mobile",
+        "networkDevice": "Périphérique réseau",
+        "printer": "Imprimante",
+        "server": "Serveur",
+        "workstation": "Poste de travail"
+      }
+    },
+    "tickets": {
+      "addTicket": "Ajouter un ticket",
+      "filters": {
+        "allAssignees": "Tous les assignés",
+        "allPriorities": "Toutes les priorités",
+        "categoryPlaceholder": "Filtrer par catégorie",
+        "reset": "Réinitialiser",
+        "searchPlaceholder": "Rechercher des tickets...",
+        "statusPlaceholder": "Sélectionner un statut"
+      },
+      "loadMore": {
+        "label": "Charger plus de tickets",
+        "loading": "Chargement..."
+      },
+      "loading": "Chargement des tickets...",
+      "title": "Tickets du client",
+      "toasts": {
+        "loadTicketFailed": "Échec du chargement du ticket",
+        "openTicketFailed": "Échec de l'ouverture du ticket",
+        "userNotAuthenticated": "Utilisateur non authentifié"
+      }
     }
   }
 }

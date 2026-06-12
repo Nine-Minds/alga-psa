@@ -91,7 +91,8 @@
         "single": "Alleen dit evenement",
         "future": "Deze en toekomstige gebeurtenissen",
         "all": "Alle evenementen"
-      }
+      },
+      "messageWithTeamsWarning": "Weet u zeker dat u deze planningsinvoer wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt. Hiermee wordt ook de Microsoft Teams-vergadering verwijderd."
     },
     "print": {
       "title": "Planningsagenda",
@@ -175,7 +176,7 @@
         "requestedTime": "Gevraagde tijd",
         "duration": "Duur",
         "status": "Status",
-        "linkedTicket": "Gekoppeld kaartje",
+        "linkedTicket": "Gekoppeld ticket",
         "description": "Beschrijving",
         "teamsMeeting": "Teams-vergadering"
       },
@@ -546,7 +547,9 @@
         "title": "Goedgekeurde afspraak",
         "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
         "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt.",
-        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering",
+        "downloadRecording": "Opname downloaden",
+        "viewTranscript": "Transcriptie bekijken"
       },
       "pending": {
         "title": "Afspraakverzoek in behandeling",
@@ -630,5 +633,28 @@
       "future": "Deze en toekomstige gebeurtenissen",
       "all": "Alle evenementen"
     }
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Klant",
+      "contact": "Contact",
+      "duration": "Duur",
+      "endTime": "Eindtijd",
+      "notes": "Notities",
+      "startTime": "Starttijd",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Gebruiker"
+    },
+    "noClient": "Geen klant gekoppeld",
+    "noContact": "Geen contact gekoppeld",
+    "noTitle": "Geen titel",
+    "notAvailable": "N.v.t.",
+    "title": "Interactiedetails",
+    "unknownUser": "Onbekend"
   }
 }

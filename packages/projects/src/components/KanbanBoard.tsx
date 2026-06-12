@@ -38,6 +38,7 @@ interface KanbanBoardProps {
   searchWholeWord?: boolean;
   zoomLevel?: number;
   hideHeader?: boolean;
+  revealedHiddenStatusIds?: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -53,6 +54,7 @@ interface KanbanBoardProps {
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
+  onHideColumn?: (status: ProjectStatus) => void;
 }
 
 // Helper function to get the configured icon or fallback to auto-detected icon
@@ -119,6 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   searchWholeWord = false,
   zoomLevel = 50,
   hideHeader = false,
+  revealedHiddenStatusIds,
   onDrop,
   onDragOver,
   onAddCard,
@@ -134,6 +137,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onEditTaskClick,
   onDeleteTaskClick,
   onTaskTagsChange,
+  onHideColumn,
   taskTypes,
 }) => {
   // Calculate column width and card gap based on zoom level
@@ -216,6 +220,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             cardGap={cardGap}
             zoomLevel={zoomLevel}
             hideHeader={hideHeader}
+            isRevealedHidden={revealedHiddenStatusIds?.has(status.project_status_mapping_id) ?? false}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}
@@ -236,6 +241,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onEditTaskClick={onEditTaskClick}
             onDeleteTaskClick={onDeleteTaskClick}
             onTaskTagsChange={onTaskTagsChange}
+            onHideColumn={onHideColumn}
           />
         );
       })}

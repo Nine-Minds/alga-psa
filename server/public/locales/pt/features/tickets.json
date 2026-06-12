@@ -1,4 +1,38 @@
 {
+  "importDialog": {
+    "errorCount_one": "{{count}} error:",
+    "errorCount_other": "{{count}} errors:",
+    "warningCount_one": "{{count}} warning:",
+    "warningCount_other": "{{count}} warnings:",
+    "unmatchedPriorities_one": "{{count}} priority",
+    "unmatchedPriorities_other": "{{count}} priorities",
+    "unmatchedStatuses_one": "{{count}} status",
+    "unmatchedStatuses_other": "{{count}} statuses",
+    "unmatchedCategories_one": "{{count}} category",
+    "unmatchedCategories_other": "{{count}} categories",
+    "skippedCount_one": "{{count}} ticket was skipped.",
+    "skippedCount_other": "{{count}} tickets were skipped.",
+    "importTickets_one": "Import {{count}} Ticket",
+    "importTickets_other": "Import {{count}} Tickets",
+    "unmatchedClients_one": "{{count}} client",
+    "unmatchedClients_other": "{{count}} clients",
+    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_other": "{{count}} agents",
+    "unmatchedTeams_one": "{{count}} team",
+    "unmatchedTeams_other": "{{count}} teams",
+    "unmatchedContacts_one": "{{count}} contact",
+    "unmatchedContacts_other": "{{count}} contacts",
+    "unmatchedDateFormats_one": "{{count}} date format",
+    "unmatchedDateFormats_other": "{{count}} date formats",
+    "unmatchedValuesIntro_one": "{{count}} value from your CSV couldn't be automatically matched.",
+    "unmatchedValuesIntro_other": "{{count}} values from your CSV couldn't be automatically matched.",
+    "ticketCount_one": "({{count}} ticket)",
+    "ticketCount_other": "({{count}} tickets)",
+    "skipDropped_one": "Skip ({{count}} ticket dropped)",
+    "skipDropped_other": "Skip ({{count}} tickets dropped)",
+    "createdSuccess_one": "Successfully created {{count}} ticket.",
+    "createdSuccess_other": "Successfully created {{count}} tickets."
+  },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
   "backToTickets": "Back to Tickets",
@@ -164,7 +198,8 @@
     "proceed": "Proceed",
     "export": "Export",
     "reset": "Reset",
-    "importSelected": "Import Selected"
+    "importSelected": "Import Selected",
+    "printOptions": "Opções de impressão"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -240,13 +275,23 @@
     "updateClientFailed": "Falha ao atualizar o cliente",
     "updateLocationFailed": "Falha ao atualizar a localização",
     "deleteCommentFailed": "Falha ao excluir o comentário",
+    "pastedImagesDeleted_one": "Deleted {{count}} pasted image.",
+    "pastedImagesDeleted_other": "Deleted {{count}} pasted images.",
+    "pastedImagesDeleteFailed_one": "Could not delete {{count}} pasted image.",
+    "pastedImagesDeleteFailed_other": "Could not delete {{count}} pasted images.",
+    "deleteCommentConfirm": "Are you sure you want to delete this comment? This action cannot be undone.",
+    "deleteCommentWithImages_one": "This comment includes {{count}} pasted image that was uploaded as a ticket document. Delete the comment only, or also delete the pasted image permanently?",
+    "deleteCommentWithImages_other": "This comment includes {{count}} pasted images that were uploaded as ticket documents. Delete the comment only, or also delete the pasted images permanently?",
     "removeFromBundleFailed": "Falha ao remover o ticket do pacote",
     "unbundleFailed": "Falha ao desagrupar o ticket",
     "addToBundleFailed": "Falha ao adicionar o ticket ao pacote",
     "promoteMasterFailed": "Falha ao promover o principal",
     "updateBundleSettingsFailed": "Falha ao atualizar as configurações do pacote",
     "assetLoadFailed": "Falha ao carregar os detalhes do ativo",
-    "assetNotFound": "Ativo não encontrado"
+    "assetNotFound": "Ativo não encontrado",
+    "addCommentFailed": "Falha ao adicionar o comentário",
+    "deleteTimeEntryFailed": "Falha ao excluir a entrada de tempo",
+    "timeEntryDeleted": "Entrada de tempo excluída"
   },
   "conversation": {
     "comments": "Comments",
@@ -288,7 +333,8 @@
     "inboundChildReplies": "Inbound replies on child tickets (view-only)",
     "childTicket": "Child ticket",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
+    "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
+    "replyCommentAriaLabel": "Responder ao comentário"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -427,7 +473,10 @@
         "title": "Opções de impressão",
         "selectedTitle": "Opções de impressão ({{count}} selecionados)",
         "description": "Escolha quais colunas incluir ao imprimir os tickets."
-      }
+      },
+      "selectedAction": "Imprimir selecionados ({{count}})",
+      "selectedTitle": "Tickets selecionados ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Exportar selecionados ({{count}})",
     "exportAction": "Exportar CSV",
@@ -495,7 +544,9 @@
       "success_one": "{{count}} ticket moved",
       "success_other": "{{count}} tickets moved",
       "partialFailure": "Some tickets could not be moved",
-      "failure": "Failed to move selected tickets"
+      "failure": "Failed to move selected tickets",
+      "confirm": "Mover {{count}} tickets",
+      "success": "{{count}} tickets movidos"
     },
     "delete": {
       "dialogTitle": "Delete Selected Tickets",
@@ -510,7 +561,9 @@
       "success_one": "{{count}} ticket deleted",
       "success_other": "{{count}} tickets deleted",
       "partialFailure": "Some tickets could not be deleted",
-      "failure": "Failed to delete selected tickets"
+      "failure": "Failed to delete selected tickets",
+      "confirm": "Tem certeza de que deseja excluir estes {{count}} tickets? Esta ação não pode ser desfeita.",
+      "success": "{{count}} tickets excluídos"
     },
     "bundle": {
       "dialogTitle": "Bundle Tickets",
@@ -794,7 +847,9 @@
     "openEmailNotificationLogs": "View email notification logs",
     "clipboardDraftMessage": "This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
     "clearDueDate": "Clear due date",
-    "paused": "Paused"
+    "paused": "Paused",
+    "openActivityLog": "Ver registro de atividades",
+    "resolveLiveConflict": "Resolva os conflitos de atualização em tempo real antes de salvar as alterações."
   },
   "properties": {
     "timeEntry": "Time Entry",
@@ -997,7 +1052,11 @@
       "responseState": "Response State",
       "ticketOrigin": "Ticket Origin",
       "tags": "Tags"
-    }
+    },
+    "appliedFiltersSummary": "(de {{count}} ticket correspondente aos filtros aplicados)",
+    "completeMessage": "{{count}} ticket exportado para CSV com sucesso.",
+    "confirm": "Exportar {{count}} ticket",
+    "selectedTicketsSummary": "Exportando {{count}} ticket selecionado"
   },
   "materials": {
     "title": "Materials",
@@ -1112,7 +1171,9 @@
     "selectedCount_other": "{{count}} categories",
     "excludingCount_one": "excluding {{count}} category",
     "excludingCount_other": "excluding {{count}} categories",
-    "excludingPrefix": "excluding {{name}}"
+    "excludingPrefix": "excluding {{name}}",
+    "excludingCount": "exceto {{count}} categoria",
+    "selectedCount": "{{count}} categorias"
   },
   "navigation": {
     "previousTicket": "Previous ticket",
@@ -1220,7 +1281,8 @@
     }
   },
   "common": {
-    "continueEditing": "Continue Editing"
+    "continueEditing": "Continue Editing",
+    "cancel": "Cancelar"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1343,44 @@
     "excludingCount_other": "exceto {{count}} quadros",
     "placeholder": "Filtrar por quadro",
     "title": "Seletor de quadro",
-    "searchPlaceholder": "Pesquisar quadros..."
+    "searchPlaceholder": "Pesquisar quadros...",
+    "excludingCount": "exceto {{count}} quadros",
+    "selectedCount": "{{count}} quadros",
+    "statusActive": "Ativos",
+    "statusAll": "Todos",
+    "statusInactive": "Inativos"
+  },
+  "checklist": {
+    "addFailed": "Falha ao adicionar o item da checklist",
+    "addItem": "Adicionar",
+    "addItemPlaceholder": "Adicionar um item à checklist",
+    "applyTemplate": "Aplicar modelo",
+    "applyTemplateFailed": "Falha ao aplicar o modelo de checklist",
+    "clickToRename": "Clique para renomear",
+    "deleteFailed": "Falha ao excluir o item da checklist",
+    "deleteItem": "Excluir item",
+    "empty": "Ainda não há itens na checklist.",
+    "itemMenu": "Menu do item da checklist",
+    "loadTemplatesFailed": "Falha ao carregar os modelos de checklist",
+    "loading": "Carregando checklist...",
+    "markOptional": "Marcar como opcional",
+    "markRequired": "Marcar como obrigatório",
+    "moveDown": "Mover para baixo",
+    "moveUp": "Mover para cima",
+    "noTemplates": "Nenhum modelo disponível.",
+    "progress": "{{done}} de {{total}} concluídos",
+    "renameFailed": "Falha ao renomear o item da checklist",
+    "reorderFailed": "Falha ao reordenar os itens da checklist",
+    "requiredBadge": "Obrigatório",
+    "templateAlreadyApplied": "Este modelo já foi aplicado a este ticket.",
+    "templateApplied": "Modelo de checklist aplicado.",
+    "templatesLoading": "Carregando modelos...",
+    "title": "Checklist",
+    "toggleFailed": "Falha ao atualizar o item da checklist",
+    "updateFailed": "Falha ao atualizar o item da checklist"
+  },
+  "integration": {
+    "loadTicketFailed": "Falha ao carregar o ticket",
+    "noUserSession": "Nenhuma sessão de utilizador encontrada"
   }
 }

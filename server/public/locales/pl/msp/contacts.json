@@ -65,7 +65,10 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Ostatnie użycie typu telefonu",
-      "message": "Niestandardowy typ telefonu{{suffix}} nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu{{definitionSuffix}} czy zachować ją na przyszłość?",
+      "message_one": "Niestandardowy typ telefonu nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu czy zachować ją na przyszłość?",
+      "message_few": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
+      "message_many": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
+      "message_other": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
       "deleteType": "Usuń typ",
       "keepType": "Zachowaj typ"
     },
@@ -115,7 +118,8 @@
       "inboundTicketDestinationHelp": "Jeśli ustawione, nadpisuje docelowe miejsce klienta dla dokładnie tego kontaktu nadawcy. Kolejność: nadpisanie kontaktu -> docelowe miejsce klienta -> domyślne ustawienie dostawcy.",
       "tags": "Tagi",
       "notes": "Notatki",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefon"
     },
     "status": {
       "label": "Status",
@@ -312,6 +316,10 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} tablica",
+    "boardCount_few": "{{count}} tablice",
+    "boardCount_many": "{{count}} tablic",
+    "boardCount_other": "{{count}} tablic",
     "title": "Dostęp do portalu",
     "description": "Zarządzanie dostępem kontaktu do portalu klienta, w tym zaproszeniami i aktualizacją ról",
     "loadingDescription": "Ładowanie informacji o portalu...",
@@ -614,6 +622,37 @@
     "messages": {
       "saveSuccess": "Notatki zapisane",
       "saveFailed": "Nie udało się zapisać notatek"
+    }
+  },
+  "actions": {
+    "print": "Drukuj",
+    "printOptions": "Opcje drukowania"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Dodaj zgłoszenie",
+      "empty": "Nie znaleziono zgłoszeń dla tego kontaktu",
+      "filters": {
+        "allAssignees": "Wszyscy przypisani",
+        "allPriorities": "Wszystkie priorytety",
+        "categoryPlaceholder": "Filtruj według kategorii",
+        "reset": "Resetuj",
+        "searchPlaceholder": "Szukaj zgłoszeń...",
+        "statusPlaceholder": "Wybierz status"
+      },
+      "loadMore": {
+        "label": "Załaduj więcej zgłoszeń",
+        "loading": "Ładowanie..."
+      },
+      "loading": "Ładowanie...",
+      "title": "Zgłoszenia kontaktu",
+      "toasts": {
+        "clientNotFound": "Nie znaleziono klienta",
+        "loadClientFailed": "Nie udało się załadować szczegółów klienta",
+        "loadTicketFailed": "Nie udało się załadować zgłoszenia",
+        "openTicketFailed": "Nie udało się otworzyć zgłoszenia",
+        "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
+      }
     }
   }
 }

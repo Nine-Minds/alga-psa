@@ -64,11 +64,11 @@
     "deletePhase": "11111",
     "cancel": "11111",
     "save": "11111",
-    "taskCount": "11111 {{count}} 11111",
     "taskCount_other": "11111 {{count}} 11111",
     "startLabel": "11111",
     "dueLabel": "11111",
-    "notSet": "11111"
+    "notSet": "11111",
+    "taskCount_one": "11111 {{count}} 11111"
   },
   "projectList": {
     "addProject": "11111",
@@ -227,6 +227,16 @@
     "hideStickyStatusNames": "11111",
     "pinHeader": "11111",
     "unpinHeader": "11111",
+    "showHideColumns": "11111",
+    "columns": "11111",
+    "showAll": "11111",
+    "noColumns": "11111",
+    "allColumnsHidden": "11111",
+    "allColumnsHiddenHint": "11111",
+    "showAllColumns": "11111",
+    "hideColumn": "11111",
+    "showColumn": "11111",
+    "addTask": "11111",
     "taskUpdatedSuccess": "11111",
     "hiddenColumnsAlert": "11111 {{count}} 11111",
     "listViewEmptyMessage": "11111",
@@ -326,18 +336,22 @@
     "primaryAgentRequired": "11111",
     "keepCreatedTicketsTitle": "11111",
     "keepCreatedTicketsMessage": "11111",
-    "createdTicketsIntro": "11111 {{count}} 11111 {{plural}} 11111",
+    "createdTicketsIntro_one": "11111 {{count}} 11111",
+    "createdTicketsIntro_other": "11111 {{count}} 11111",
     "keepUploadedDocumentsTitle": "11111",
     "keepUploadedDocumentsMessage": "11111",
-    "documentsCleanupIntro": "11111 {{count}} 11111 {{plural}} 11111 {{wasWere}} 11111 {{cleanupType}} 11111",
+    "documentsCleanupIntro_one": "11111 {{count}} 11111 {{cleanupType}} 11111",
+    "documentsCleanupIntro_other": "11111 {{count}} 11111 {{cleanupType}} 11111",
     "uploadedOrCreated": "11111",
     "createdOnly": "11111",
     "uploadedOnly": "11111",
     "createdDocumentTag": "11111",
     "uploadedDocumentTag": "11111",
     "andMore": "11111 {{count}} 11111",
-    "documentCleanupFailure": "11111 {{count}} 11111 {{plural}} 11111",
-    "ticketCleanupFailure": "11111 {{count}} 11111 {{plural}} 11111",
+    "documentCleanupFailure_one": "11111 {{count}} 11111",
+    "documentCleanupFailure_other": "11111 {{count}} 11111",
+    "ticketCleanupFailure_one": "11111 {{count}} 11111",
+    "ticketCleanupFailure_other": "11111 {{count}} 11111",
     "checklistItemPlaceholder": "11111",
     "reorderChecklistItem": "11111",
     "insertChecklistItem": "11111",
@@ -516,12 +530,14 @@
     "fieldsToExport": "11111",
     "selectAll": "11111",
     "deselectAll": "11111",
-    "phasesSelected": "11111 {{selected}} 11111 {{total}} 11111 {{plural}} 11111",
+    "phasesSelected_one": "11111 {{selected}} 11111 {{total}} 11111",
+    "phasesSelected_other": "11111 {{selected}} 11111 {{total}} 11111",
     "fieldsSelected": "11111 {{selected}} 11111 {{total}} 11111",
     "exportTasks": "11111",
     "exporting": "11111",
     "completeTitle": "11111",
-    "success": "11111 {{count}} 11111 {{plural}} 11111",
+    "success_one": "11111 {{count}} 11111",
+    "success_other": "11111 {{count}} 11111",
     "failed": "11111",
     "done": "11111",
     "fields": {
@@ -543,7 +559,8 @@
       "updatedAt": "11111"
     },
     "exportSelected": "11111 {{count}} 11111",
-    "selectedTasksNotice": "11111 {{count}} 11111 {{plural}} 11111"
+    "selectedTasksNotice_one": "11111 {{count}} 11111",
+    "selectedTasksNotice_other": "11111 {{count}} 11111"
   },
   "import": {
     "title": "11111",
@@ -594,7 +611,8 @@
     "importTasksButton": "11111 {{tasks}} 11111",
     "mapUnmatchedAgentsTitle": "11111",
     "agentResolutionIntro": "11111",
-    "taskCountLabel": "11111 {{count}} 11111 {{plural}} 11111",
+    "taskCountLabel_one": "11111 {{count}} 11111",
+    "taskCountLabel_other": "11111 {{count}} 11111",
     "tasksList": "11111 {{tasks}} 11111",
     "andMore": "11111 {{count}} 11111",
     "mapToExistingUser": "11111",
@@ -731,9 +749,9 @@
       "openFailed": "11111",
       "task": "11111",
       "tasks": "11111",
-      "badgeCount": "11111 {{count}} 11111",
       "badgeCount_other": "11111 {{count}} 11111",
-      "restrictedTooltip": "11111"
+      "restrictedTooltip": "11111",
+      "badgeCount_one": "11111 {{count}} 11111"
     },
     "bulkMoveTask": {
       "title": "11111",
@@ -1474,5 +1492,13 @@
       "confirm_other": "11111 {{count}} 11111",
       "failedHeading": "11111"
     }
+  },
+  "common:actions": {
+    "back": "11111",
+    "cancel": "11111",
+    "delete": "11111",
+    "done": "11111",
+    "edit": "11111",
+    "save": "11111"
   }
 }

@@ -98,5 +98,9 @@
       "processed": "Verwerkt:",
       "retries": "Nieuwe pogingen:"
     }
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties"
   }
 }

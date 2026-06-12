@@ -1,4 +1,35 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reakcja",
+    "ariaSummary_few": "{{emoji}} {{count}} reakcje",
+    "ariaSummary_many": "{{emoji}} {{count}} reakcji",
+    "ariaSummary_other": "{{emoji}} {{count}} reakcji",
+    "ariaYouReacted": ", w tym Twoja reakcja"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Wygasa za {{count}} dzień, dnia {{date}}",
+    "expiresInDaysOn_few": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiresInDaysOn_many": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiresInDaysOn_other": "Wygasa za {{count}} dni, dnia {{date}}",
+    "expiringForClient_one": "{{count}} kredyt klienta {{clientName}} wkrótce wygaśnie",
+    "expiringForClient_few": "{{count}} kredyty klienta {{clientName}} wkrótce wygasną",
+    "expiringForClient_many": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie",
+    "expiringForClient_other": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Okres próbny Enterprise wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_few": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_many": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialExpiresIn_other": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
+    "trialDaysRemaining_one": "Okres próbny Enterprise aktywny — pozostał {{count}} dzień.",
+    "trialDaysRemaining_few": "Okres próbny Enterprise aktywny — pozostały {{count}} dni.",
+    "trialDaysRemaining_many": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "trialDaysRemaining_other": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "licenseExpiresIn_one": "Licencja wygasa za {{count}} dzień. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_few": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_many": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
+    "licenseExpiresIn_other": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi."
+  },
   "nav": {
     "dashboard": "Panel",
     "tickets": "Zgłoszenia",
@@ -48,7 +79,10 @@
     "resetPrintOptions": "Resetuj opcje drukowania",
     "share": "Udostępnij",
     "done": "Gotowe",
-    "continue": "Kontynuuj"
+    "continue": "Kontynuuj",
+    "printSelected": "Drukuj zaznaczone ({{count}})",
+    "printSelected_few": "Drukuj zaznaczone ({{count}})",
+    "printSelected_many": "Drukuj zaznaczone ({{count}})"
   },
   "status": {
     "loading": "Ładowanie...",
@@ -325,7 +359,9 @@
     "replies_other": "{{count}} odpowiedzi",
     "collapse": "Zwiń",
     "expand": "Rozwiń",
-    "showInDrawer": "Pokaż w panelu"
+    "showInDrawer": "Pokaż w panelu",
+    "replies_few": "{{count}} odpowiedzi",
+    "replies_many": "{{count}} odpowiedzi"
   },
   "pagination": {
     "previous": "Poprzednia",
@@ -398,7 +434,11 @@
       "downloadFailed": "Nie udało się pobrać dokumentu",
       "bulkDeleteFailed": "Nie udało się usunąć części dokumentów",
       "bulkDeleteSuccess_one": "{{count}} dokument usunięty pomyślnie",
-      "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie"
+      "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie",
+      "bulkDeleteSuccess_few": "{{count}} dokumenty usunięte pomyślnie",
+      "bulkDeleteSuccess_many": "{{count}} dokumentów usuniętych pomyślnie",
+      "moveDocumentsSuccess_few": "{{count}} dokumenty przeniesiono do {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} dokumentów przeniesiono do {{destination}}"
     },
     "empty": {
       "default": "Nie znaleziono dokumentów",
@@ -412,11 +452,15 @@
       "selected_other": "Wybrano {{count}} dokumentów",
       "moveToFolder": "Przenieś do folderu",
       "deleteSelected": "Usuń zaznaczone",
-      "clearSelection": "Wyczyść zaznaczenie"
+      "clearSelection": "Wyczyść zaznaczenie",
+      "selected_few": "Wybrano {{count}} dokumenty",
+      "selected_many": "Wybrano {{count}} dokumentów"
     },
     "prompts": {
       "confirmBulkDelete_one": "Czy na pewno chcesz usunąć {{count}} dokument?",
-      "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
+      "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?",
+      "confirmBulkDelete_few": "Czy na pewno chcesz usunąć {{count}} dokumenty?",
+      "confirmBulkDelete_many": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
     },
     "pagination": {
       "perPage": "{{count}} na stronę"
@@ -449,7 +493,9 @@
       "rootOption": "Katalog główny (bez folderu)",
       "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym.",
       "showAllFolders": "Pokaż wszystkie foldery",
-      "showEntityFolders": "Pokaż foldery jednostki"
+      "showEntityFolders": "Pokaż foldery jednostki",
+      "bulkMoveDescription_few": "Wybierz folder docelowy dla {{count}} dokumentów",
+      "bulkMoveDescription_many": "Wybierz folder docelowy dla {{count}} dokumentów"
     },
     "filters": {
       "searchLabel": "Szukaj dokumentów",
@@ -506,7 +552,10 @@
         "visible": "Widoczne dla klienta",
         "hidden": "Tylko wewnętrzne"
       },
-      "clientVisibilityLabel": "Widoczność dla klienta"
+      "clientVisibilityLabel": "Widoczność dla klienta",
+      "entityOptions": {
+        "all": "Wszystkie obiekty"
+      }
     },
     "selector": {
       "title": "Wybierz dokumenty",
@@ -534,7 +583,10 @@
       "uploadingProgress": "Przesyłanie {{current}} z {{total}}",
       "pending": "Oczekujące",
       "error": "Nie udało się przesłać dokumentu",
-      "fileError": "Nie udało się przesłać pliku"
+      "fileError": "Nie udało się przesłać pliku",
+      "associatedEntityTypeLabel": "Powiąż z",
+      "noAssociation": "Brak powiązania",
+      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt."
     },
     "folders": {
       "root": "Główny",
@@ -593,7 +645,20 @@
     "downloadVideo": "Pobierz wideo",
     "downloadAsPdf": "Pobierz jako PDF",
     "downloadAsMarkdown": "Pobierz jako Markdown",
-    "move": "Przenieś"
+    "move": "Przenieś",
+    "associatedEntityPicker": {
+      "allEntities": "Wszystkie obiekty",
+      "loadingClients": "Ładowanie klientów...",
+      "loadingContacts": "Ładowanie kontaktów...",
+      "noEntityTypes": "Nie znaleziono typów obiektów",
+      "typeLabel": "Typ powiązanego obiektu",
+      "typePlaceholder": "Wybierz typ obiektu",
+      "typeSearchPlaceholder": "Szukaj typów obiektów...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Wybierz: {{entityType}}",
+      "entitySearchPlaceholder": "Szukaj: {{entityType}}...",
+      "noEntities": "Nie znaleziono: {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -934,7 +999,10 @@
     "deleteCommentAriaLabel": "Usuń komentarz",
     "deleteComment": "Usuń komentarz",
     "deleteCommentConfirmation": "Czy na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.",
-    "update": "Zaktualizuj"
+    "update": "Zaktualizuj",
+    "create": "Utwórz",
+    "replyComment": "Odpowiedz na komentarz",
+    "saving": "Zapisywanie..."
   },
   "sessionManagement": {
     "title": "Aktywne sesje",
@@ -964,7 +1032,10 @@
       "revoke": "Unieważnij",
       "revoking": "Unieważnianie...",
       "loggingOut": "Wylogowywanie...",
-      "logoutFromOther": "Wyloguj z {{count}} innych urządzeń{{count, plural, one {} other {}}}"
+      "logoutFromOther_one": "Wyloguj z {{count}} innego urządzenia",
+      "logoutFromOther_few": "Wyloguj z {{count}} innych urządzeń",
+      "logoutFromOther_many": "Wyloguj z {{count}} innych urządzeń",
+      "logoutFromOther_other": "Wyloguj z {{count}} innych urządzeń"
     },
     "confirmations": {
       "logoutCurrent": "Spowoduje to wylogowanie z bieżącej sesji. Czy na pewno?",
@@ -1180,6 +1251,9 @@
     "columnsHidden_other": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca.",
     "showAll": "Pokaż wszystko",
     "showingAllColumns": "Wyświetlane są wszystkie kolumny; przewiń w poziomie, aby je zobaczyć.",
-    "showLess": "Pokaż mniej"
+    "showLess": "Pokaż mniej",
+    "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni.",
+    "columnsHidden_few": "Ukryto {{count}} kolumny z powodu ograniczonego miejsca.",
+    "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca."
   }
 }

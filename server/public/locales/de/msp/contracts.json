@@ -14,7 +14,7 @@
       "save": "Speichern",
       "saveChanges": "Änderungen speichern",
       "saveChangesDirty": "Änderungen speichern *",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "view": "Sicht",
       "openMenu": "Menü öffnen"
     },
@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "{{count}} Tage",
         "ongoing": "Laufend",
         "renewalTermMonths_one": "{{count}} Monat",
-        "renewalTermMonths_other": "{{count}} Monate"
+        "renewalTermMonths_other": "{{count}} Monate",
+        "noticePeriodDays": "{{count}} Tag",
+        "renewalTermMonths": "{{count}} Monat"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "Produkt {{index}}",
       "products": "Produkte",
       "quantity": "Menge",
-      "selectProductPlaceholder": "Produkt auswählen"
+      "selectProductPlaceholder": "Produkt auswählen",
+      "catalogPriceInCurrency": "Katalogpreis in {{currency}}:"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "Kein Standardpreis festgelegt. Geben Sie einen Einheitspreis ein.",
-      "productMissingPrice": "Dieses Produkt hat keinen Standardpreis und keine Überschreibung. Es kann nicht abgerechnet werden, bis Sie einen Einheitspreis eingeben."
+      "productMissingPrice": "Dieses Produkt hat keinen Standardpreis und keine Überschreibung. Es kann nicht abgerechnet werden, bis Sie einen Einheitspreis eingeben.",
+      "noCurrencyPriceEnterUnitPrice": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Einzelpreis ein.",
+      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einzelpreis in {{currency}} ein."
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "Stunden-Services",
       "selectServicePlaceholder": "Service auswählen",
       "serviceItem": "Dienst {{index}}",
-      "setBucketOfHours": "Stundenkontingent festlegen"
+      "setBucketOfHours": "Stundenkontingent festlegen",
+      "noCurrencyPriceEnterRate": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Stundensatz ein.",
+      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Stundensatz in {{currency}} ein."
     },
     "minimumBillableTime": {
       "hint": "z. B. 15 Minuten – jeder Zeiteintrag darunter wird aufgerundet",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "Kontingentzuweisung festlegen",
       "unitOfMeasure": "Maßeinheit",
       "unitOfMeasureHint": "Wählen Sie die Einheit aus, nach der dieser Service abgerechnet wird.",
-      "unitOfMeasurePlaceholder": "z. B. GB, API-Aufruf, Benutzer"
+      "unitOfMeasurePlaceholder": "z. B. GB, API-Aufruf, Benutzer",
+      "noCurrencyPriceEnterRate": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Einheitensatz ein.",
+      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einheitensatz in {{currency}} ein."
     },
     "summary": {
       "labels": {
