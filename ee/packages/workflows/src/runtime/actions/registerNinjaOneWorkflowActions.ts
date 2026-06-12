@@ -102,6 +102,22 @@ const normalizeNinjaDevice = (device: any, source: 'local' | 'ninjaone') => {
   };
 };
 
+const normalizeNinjaScriptingOptions = (options: Record<string, unknown>) => {
+  const collect = (value: unknown, type: string) =>
+    (Array.isArray(value) ? value : [])
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+      .map((item) => ({
+        id: typeof item.id === 'number' ? item.id : null,
+        uid: typeof item.uid === 'string' ? item.uid : null,
+        name: typeof item.name === 'string' ? item.name : null,
+        type
+      }));
+  return [
+    ...collect(options.scripts, 'SCRIPT'),
+    ...collect(options.actions ?? (options as Record<string, unknown>).builtInActions, 'ACTION')
+  ];
+};
+
 const normalizeNinjaAlert = (alert: any) => ({
   alert_id: String(alert.alert_id ?? alert.uid ?? ''),
   external_alert_id: String(alert.external_alert_id ?? alert.uid ?? ''),
@@ -245,6 +261,89 @@ export function registerNinjaOneWorkflowActionsV2(): void {
   });
 
   registry.register({
+    id: 'ninjaone.devices.scripting_options',
+    version: 1,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    inputSchema: z.object({
+      device_id: ninjaOneDeviceIdSchema
+    }),
+    outputSchema: z.object({
+      scripts: z.array(z.object({
+        id: z.number().int().nullable(),
+        uid: z.string().nullable(),
+        name: z.string().nullable(),
+        type: z.string().nullable()
+      })),
+      count: z.number().int()
+    }),
+    ui: {
+      label: 'List runnable scripts',
+      description: 'List the scripts and built-in actions that can run on a NinjaOne device.',
+      category: 'NinjaOne',
+      icon: 'ninjaone'
+    },
+    handler: async (input, ctx) => {
+      const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
+      const options = await client.getScriptingOptions(input.device_id);
+      const scripts = normalizeNinjaScriptingOptions(options);
+      return { scripts, count: scripts.length };
+    }
+  });
+
+  registry.register({
+    id: 'ninjaone.devices.run_script',
+    version: 1,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    inputSchema: z.object({
+      device_id: ninjaOneDeviceIdSchema,
+      type: z.enum(['SCRIPT', 'ACTION']).default('SCRIPT'),
+      script_id: z.coerce.number().int().positive().optional(),
+      action_uid: z.string().uuid().optional(),
+      parameters: z.string().optional(),
+      run_as: z.string().optional()
+    }).superRefine((value, ctx2) => {
+      if (value.type === 'SCRIPT' && value.script_id === undefined) {
+        ctx2.addIssue({ code: z.ZodIssueCode.custom, message: 'script_id is required when type is SCRIPT' });
+      }
+      if (value.type === 'ACTION' && !value.action_uid) {
+        ctx2.addIssue({ code: z.ZodIssueCode.custom, message: 'action_uid is required when type is ACTION' });
+      }
+    }),
+    outputSchema: z.object({
+      run_requested: z.boolean(),
+      external_device_id: z.string(),
+      vendor_response: z.unknown().nullable()
+    }),
+    ui: {
+      label: 'Run script',
+      description: 'Run a stored script or built-in action on a NinjaOne device.',
+      category: 'NinjaOne',
+      icon: 'ninjaone'
+    },
+    handler: async (input, ctx) => {
+      const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
+      const vendorResponse = await client.runScript(input.device_id, {
+        type: input.type ?? 'SCRIPT',
+        ...(input.script_id !== undefined ? { id: input.script_id } : {}),
+        ...(input.action_uid ? { uid: input.action_uid } : {}),
+        ...(input.parameters !== undefined ? { parameters: input.parameters } : {}),
+        ...(input.run_as !== undefined ? { runAs: input.run_as } : {})
+      });
+      return {
+        run_requested: true,
+        external_device_id: String(input.device_id),
+        vendor_response: vendorResponse ?? null
+      };
+    }
+  });
+
+  registry.register({
     id: 'ninjaone.alerts.list_active',
     version: 1,
     sideEffectful: false,
@@ -367,6 +466,8 @@ export function registerNinjaOneWorkflowModule(): void {
         'ninjaone.devices.find',
         'ninjaone.devices.sync',
         'ninjaone.devices.reboot',
+        'ninjaone.devices.scripting_options',
+        'ninjaone.devices.run_script',
         'ninjaone.alerts.list_active',
         'ninjaone.alerts.get',
         'ninjaone.alerts.reset'
