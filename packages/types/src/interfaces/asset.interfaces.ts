@@ -495,3 +495,41 @@ export interface ClientMaintenanceSummary {
   compliance_rate: number;
   maintenance_by_type: Record<string, number>;
 }
+
+// Asset type registry (custom asset types)
+export type AssetTypeFieldKind = 'text' | 'number' | 'date' | 'select' | 'url' | 'boolean';
+
+export interface AssetTypeField {
+  key: string;
+  label: string;
+  kind: AssetTypeFieldKind;
+  required?: boolean;
+  options?: string[];
+}
+
+export interface AssetTypeRegistryEntry {
+  tenant: string;
+  type_id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  fields_schema: AssetTypeField[];
+  is_builtin: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAssetTypeInput {
+  name: string;
+  icon?: string | null;
+  fields_schema?: AssetTypeField[];
+  display_order?: number;
+}
+
+export interface UpdateAssetTypeInput {
+  name?: string;
+  icon?: string | null;
+  fields_schema?: AssetTypeField[];
+  display_order?: number;
+}
