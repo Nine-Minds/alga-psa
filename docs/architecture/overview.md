@@ -91,6 +91,8 @@ This document provides a high-level architectural overview of the open-source MS
     - Automatic Redis reconnection with exponential backoff
     - Event validation using Zod schemas
     - Detailed event logging and monitoring
+    - Poison-resistant delivery: handler success is tracked per `(event, handler)` pair so redeliveries never re-invoke handlers that already succeeded. Handlers that exhaust the delivery cap (default 10, env `REDIS_STREAM_MAX_DELIVERIES`) are moved to a `<stream>:dead-letter` stream instead of retried indefinitely; dead-letter entries preserve the original payload plus `sourceStream`, `sourceMessageId`, `deliveries`, and `deadLetteredAt` for manual inspection and replay.
+    - After-commit event publishing: event publishes and backend side effects are dispatched only after the owning database transaction commits via `registerAfterCommit()` in `@alga-psa/db`, preventing consumers from racing against uncommitted writes. See `docs/architecture/db-transaction-guardrails.md` for the full transaction-safety rules and patterns.
 
 * **Email Notifications:** Comprehensive notification system with template management and tenant customization, integrated with the event bus system. Core components:
   * Database-driven templates:
@@ -126,6 +128,15 @@ This document provides a high-level architectural overview of the open-source MS
     - `server/src/components/settings/notifications/NotificationSettings.tsx`: Global settings UI
 
 * **Interactions:** Tracks client interactions. See `server/src/lib/models/interactions.ts` and components under `server/src/components/interactions`.
+
+* **Mobile Access (EE):** Native apps for iOS and Android for MSP technicians, available on the App Store and Google Play as an Enterprise Edition feature (`TIER_FEATURES.MOBILE_ACCESS`). Self-hosted Enterprise Edition appliance users can connect the app to their own server by entering the server URL or scanning the **Connect this server** QR code on the MSP dashboard. Open-source Community Edition (CE) self-hosted servers do not support mobile app access; CE builds explicitly reject the mobile token exchange. Sign-in uses the browser-based mobile handoff flow (`/auth/mobile/handoff`) against the selected EE host.
+  * Operator configuration for self-hosted EE appliances: set `NEXTAUTH_URL` to the server's public URL, configure at least one SSO provider (Google or Microsoft OAuth), and optionally set `ALGA_MOBILE_HOST_ALLOWLIST` to a comma-separated list of allowed hostnames. If unset or empty, any host is allowed.
+  * See `ee/appliance/docs/mobile-app-access.md` for full operator setup.
+  * Key files:
+    - `ee/mobile/src/screens/ServerEntryScreen.tsx`: UI for manual URL entry and QR code scanning
+    - `ee/mobile/src/config/hostStore.ts`: Persistent secure storage for the active server host
+    - `ee/mobile/src/config/serverQr.ts`: `alga://server?url=…` deep-link parser
+    - `server/src/app/api/v1/mobile/`: Mobile auth API routes
 
 * **Projects:** Manages projects and tasks. Key files include `server/src/lib/models/project.ts` and components under `server/src/components/projects`.
 
@@ -220,7 +231,7 @@ This document provides a high-level architectural overview of the open-source MS
     - Display order management and conflict resolution
 
 * **Support Ticketing:** Manages support tickets. See `server/src/lib/models/ticket.tsx` and components under `server/src/components/tickets`.
-  * **Ticket Bundling (Master/Child Tickets):** Groups duplicate/related tickets into a single “master” ticket with linked “child” tickets. Master updates can sync to children and customer notifications can fan out to child requesters.
+  * **Ticket Bundling (Master/Child Tickets):** Groups duplicate/related tickets into a single "master" ticket with linked "child" tickets. Master updates can sync to children and customer notifications can fan out to child requesters.
     - Data model: `tickets.master_ticket_id`, `ticket_bundle_settings`, `ticket_bundle_mirrors` (migrations: `server/migrations/20260104120000_create_ticket_bundles.cjs`, `server/migrations/20260104121000_add_system_generated_comments.cjs`)
     - Server actions/queries: `server/src/lib/actions/ticket-actions/ticketBundleActions.ts`, `server/src/lib/actions/ticket-actions/optimizedTicketActions.ts`, `server/src/lib/actions/ticket-actions/ticketBundleUtils.ts`
     - UI: `server/src/components/tickets/TicketingDashboard.tsx`, `server/src/components/tickets/ticket/TicketDetails.tsx`
@@ -312,7 +323,7 @@ Proposed high-level design
    • Spins up an `express()` instance and mounts:
      – Health-check & readiness probes at `/healthz` and `/readyz` (needed by k8s).  
      – Logging, Sentry, tracing and rate-limit middleware.  
-     – The Next.js request handler *last*, via `app.get('*', nextHandler)` – this keeps parity with Next’s routing precedence.
+     – The Next.js request handler *last*, via `app.get('*', nextHandler)` – this keeps parity with Next's routing precedence.
 2. Swap the `npm run start` script in `package.json` to `NODE_ENV=production node server/index.js` after the build step.
 3. Update the Docker image to expose `server/index.js` instead of `next start`.
 4. Keep the current `next dev` workflow untouched for local development – the express server only runs in `production` mode.
@@ -455,8 +466,6 @@ No code has been merged yet – this section serves as an architectural note so 
 * **Expanded Integrations:**
   * Develop APIs for third-party integrations and enhance client portal features.
   * Leverage the workflows module to streamline integrations with external systems.
-
-* **Mobile Access:** Develop mobile applications for both technicians and clients.
 
 * **Advanced Reporting and Analytics:** Implement more sophisticated reporting and analytics features for data-driven decision-making.
 
