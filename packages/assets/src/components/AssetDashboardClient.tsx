@@ -39,6 +39,11 @@ import { toast } from 'react-hot-toast';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
+import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
+import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
+import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
+import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { ShortcutActiveRegion, useCatalogShortcut, usePageCreateShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
@@ -98,6 +103,17 @@ const ASSETS_PRINT_PAGE_SIZE = 5000;
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
   const { t } = useTranslation('msp/assets');
   const clientDrawer = useClientDrawer();
+  const assetTypeEntries = useAssetTypeRegistry();
+  const customAssetTypes = useMemo(
+    () => (assetTypeEntries ?? []).filter((entry) => !entry.is_builtin),
+    [assetTypeEntries]
+  );
+  // F311: built-in slugs first (existing labels), then tenant custom types
+  // from the registry in registry order.
+  const typeFilterOptions = useMemo(
+    () => [...TYPE_OPTIONS, ...customAssetTypes.map((entry) => entry.slug)],
+    [customAssetTypes]
+  );
   const rmmManagedOptions = useMemo(() => [
     {
       value: 'managed',
@@ -448,7 +464,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return {
       search: debouncedSearchTerm || undefined,
       status: statusFilters.length > 0 ? statusFilters[0] : undefined,
-      asset_type: typeFilters.length > 0 ? (typeFilters[0] as AssetQueryParams['asset_type']) : undefined,
+      asset_type: typeFilters.length > 0 ? typeFilters[0] : undefined,
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
@@ -727,10 +743,16 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         return <Printer {...iconProps} />;
       case 'network_device':
         return <Network {...iconProps} />;
-      default:
+      default: {
+        const customIcon = customAssetTypes.find((entry) => entry.slug === type)?.icon;
+        if (customIcon) {
+          const CustomIcon = getIconComponent(customIcon);
+          return <CustomIcon {...iconProps} />;
+        }
         return <Boxes {...iconProps} />;
+      }
     }
-  }, []);
+  }, [customAssetTypes]);
 
   const renderAssetDetails = useCallback((asset: Asset): string => {
     if (asset.workstation) {
@@ -758,10 +780,15 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   }, [t]);
 
   const getAssetTypeLabel = useCallback((type: string) => {
-    return t(`assetDashboardClient.types.${type}`, {
-      defaultValue: type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-    });
-  }, [t]);
+    // Built-ins keep their existing i18n labels; custom slugs resolve to the
+    // registry name; unknown slugs keep the historical title-cased fallback.
+    if (isBuiltinAssetTypeSlug(type)) {
+      return t(`assetDashboardClient.types.${type}`, {
+        defaultValue: fallbackAssetTypeLabel(type)
+      });
+    }
+    return resolveAssetTypeLabel(assetTypeEntries, type);
+  }, [assetTypeEntries, t]);
 
   const getAgentStatusLabel = useFormatRmmAgentStatus();
   const agentStatusOptions = useRmmAgentStatusOptions();
@@ -1242,7 +1269,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-52">
-                    {TYPE_OPTIONS.map((type) => (
+                    {typeFilterOptions.map((type) => (
                       <DropdownMenuItem key={type} id={`filter-type-${type}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`type-checkbox-${type}`}
@@ -1494,6 +1521,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 isLoading={loading}
               />
             </div>
+
+            <AssetTypeBreakdownCard
+              getTypeLabel={getAssetTypeLabel}
+              refreshToken={refreshCounter}
+              activeTypes={typeFilters}
+              onSelectType={(slug) => toggleFilterValue(typeFilters, slug, setTypeFilters)}
+            />
 
             <ShortcutActiveRegion id="assets-shortcut-region" className="outline-none">
               <DataTable

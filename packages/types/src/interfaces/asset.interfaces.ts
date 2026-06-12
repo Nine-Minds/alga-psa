@@ -450,7 +450,8 @@ export interface AssetQueryParams {
   client_id?: string;
   client_name?: string;
   location_id?: string;
-  asset_type?: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
+  /** Built-in slug or tenant asset_type_registry slug (custom type). */
+  asset_type?: string;
   status?: string;
   search?: string;
   agent_status?: RmmAgentStatus;

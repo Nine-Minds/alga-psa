@@ -4,6 +4,7 @@ import { HardwareSpecsPanel } from './panels/HardwareSpecsPanel';
 import { SecurityPatchingPanel } from './panels/SecurityPatchingPanel';
 import { AssetInfoPanel } from './panels/AssetInfoPanel';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
+import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import { HuduDocumentationCard } from './panels/HuduDocumentationCard';
 import type { Asset, AssetFact, RmmCachedData, AssetSummaryMetrics } from '@alga-psa/types';
 
@@ -52,10 +53,11 @@ export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
 
       {/* Right Column (1/3 width on large screens) */}
       <div className="flex flex-col gap-6">
-        <AssetInfoPanel 
-          asset={asset} 
-          isLoading={isLoading} 
+        <AssetInfoPanel
+          asset={asset}
+          isLoading={isLoading}
         />
+        <CustomTypeDetailsPanel asset={asset} />
         <AssetNotesPanel
           assetId={asset.asset_id}
         />
