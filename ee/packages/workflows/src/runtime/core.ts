@@ -5,6 +5,7 @@ import {
 import { registerNinjaOneWorkflowModule } from './actions/registerNinjaOneWorkflowActions';
 import { registerTacticalRmmWorkflowModule } from './actions/registerTacticalRmmWorkflowActions';
 import { registerLevelIoWorkflowModule } from './actions/registerLevelIoWorkflowActions';
+import { registerHuntressWorkflowModule } from './actions/registerHuntressWorkflowActions';
 
 export * from '../../../../../shared/workflow/runtime';
 export * from './integrationModules';
@@ -48,6 +49,7 @@ export function initializeWorkflowRuntimeV2(): void {
   registerNinjaOneWorkflowModule();
   registerTacticalRmmWorkflowModule();
   registerLevelIoWorkflowModule();
+  registerHuntressWorkflowModule();
 }
 
 export { isWorkflowRuntimeV2Initialized };
