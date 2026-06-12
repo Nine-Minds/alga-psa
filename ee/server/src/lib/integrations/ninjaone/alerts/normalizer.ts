@@ -1,4 +1,8 @@
-import type { NormalizedRmmAlertEvent, NormalizedRmmAlertEventKind } from '@alga-psa/shared/rmm/alerts';
+import type {
+  NormalizedRmmAlertEvent,
+  NormalizedRmmAlertEventKind,
+  NormalizedRmmAlertSeverity,
+} from '@alga-psa/shared/rmm/alerts';
 import {
   NinjaOneWebhookPayload,
   NinjaOneAlertSeverity,
@@ -36,7 +40,7 @@ export function mapNinjaOneWebhookToAlertEvent(args: {
     activityType: payload.activityType ?? null,
     alertClass: payload.statusCode ?? null,
     sourceType: payload.type ? String(payload.type).toLowerCase() : 'condition',
-    severity: mapAlertSeverity((payload.severity || 'NONE') as NinjaOneAlertSeverity),
+    severity: mapAlertSeverity((payload.severity || 'NONE') as NinjaOneAlertSeverity) as NormalizedRmmAlertSeverity,
     message: payload.message || payload.statusCode || null,
     deviceName: payload.device?.displayName || payload.device?.systemName || null,
     externalOrganizationId:

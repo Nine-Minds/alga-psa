@@ -327,6 +327,21 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
         'disconnect'
       );
 
+      // Remove the per-integration alert reconciliation schedule without
+      // waiting for the next temporal-worker boot (leftovers no-op anyway).
+      try {
+        const { removeRmmAlertPollingSchedule } = await import('../../integrations/rmm/alertPollingSchedule');
+        await removeRmmAlertPollingSchedule({
+          tenantId: tenant,
+          integrationId: String(existingIntegration.integration_id),
+        });
+      } catch (scheduleError) {
+        logger.warn('[NinjaOneActions] Failed to remove alert polling schedule', {
+          tenant,
+          error: extractErrorInfo(scheduleError),
+        });
+      }
+
       existingIntegration = await knex('rmm_integrations')
         .where({ tenant, provider: 'ninjaone' })
         .first();

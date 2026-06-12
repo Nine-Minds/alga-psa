@@ -21,3 +21,4 @@ export * from './sla-ticket-workflow.js';
 export * from './premium-trial-expiry-workflow.js';
 export * from './appliance-check-in-workflow.js';
 export * from './workflow-runtime-v2-run-workflow.js';
+export * from './rmm-alert-polling-workflows.js';

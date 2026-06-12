@@ -1,4 +1,8 @@
-import type { NormalizedRmmAlertEvent, RmmActiveAlertFetcher } from '@alga-psa/shared/rmm/alerts';
+import type {
+  NormalizedRmmAlertEvent,
+  NormalizedRmmAlertSeverity,
+  RmmActiveAlertFetcher,
+} from '@alga-psa/shared/rmm/alerts';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import {
   NinjaOneAlert,
@@ -34,7 +38,7 @@ function mapAlertToEvent(alert: NinjaOneAlert, tenantId: string, integrationId: 
     activityType: 'CONDITION',
     alertClass: statusCode || alert.sourceName || null,
     sourceType: alert.sourceType ? String(alert.sourceType).toLowerCase() : 'condition',
-    severity: mapAlertSeverity((alert.severity || 'NONE') as NinjaOneAlertSeverity),
+    severity: mapAlertSeverity((alert.severity || 'NONE') as NinjaOneAlertSeverity) as NormalizedRmmAlertSeverity,
     message: alert.message ?? alert.sourceName ?? null,
     deviceName: alert.device?.displayName || alert.device?.systemName || null,
     externalOrganizationId:

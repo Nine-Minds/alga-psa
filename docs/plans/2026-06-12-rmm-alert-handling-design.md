@@ -41,7 +41,7 @@ preserving, so corrective schema work can be additive without backfill.
 | Processing model | Synchronous in the webhook request (local DB work only) |
 | Migration strategy | One additive corrective migration; never rewrite the deployed one |
 | Maintenance windows | Suppress before rule matching; alert stored as `suppressed`; the poller processes still-active alerts after the window ends |
-| Alert polling | Per-integration Temporal schedule (default on, every 15 min) reconciles missed triggers and missed resets through the same pipeline |
+| Alert polling | Per-integration Temporal schedule (default on, every 15 min) reconciles missed triggers and missed resets through the same pipeline; Huntress incident polling migrated to the same model |
 
 ## Architecture
 
@@ -196,16 +196,23 @@ recurring schedule.
 
 ## Alert polling (reconciliation)
 
-A single recurring pg-boss dispatcher (the Huntress incident-poll pattern,
-registered from initializeApp in enterprise builds) iterates active RMM
-integrations with a registered alert fetcher and runs a cycle for the ones
-whose per-tenant interval has elapsed: default 15 minutes, configurable 5–60
-in integration settings, on by default. The original design called for
-per-integration Temporal schedules (Entra pattern); pg-boss won because
-TacticalRMM is a CE provider and CE deployments do not run Temporal workers,
-and the in-repo precedent for RMM polling (Huntress) already uses pg-boss.
-Connect/disconnect lifecycle is implicit — the dispatcher only polls active
-integrations. Each cycle works through the same normalized pipeline:
+Per-integration Temporal schedules (the Entra per-tenant pattern):
+`rmm-alert-reconciliation:{tenant}:{integration}` runs
+`rmmAlertReconciliationWorkflow` on the `tenant-workflows` queue every N
+minutes — default 15, configurable 5–60 in integration settings, on by
+default. Schedules are reconciled at temporal-worker boot
+(`setupSchedules.ts` scans `rmm_integrations`: active + polling-enabled →
+upsert with the configured interval; otherwise delete), and the NinjaOne
+connect/disconnect flows ensure/remove their schedule immediately. Every
+activity run re-checks the integration's `is_active` and polling-enabled
+state, so a schedule that outlives its integration between boots is a
+harmless no-op. Interval changes saved in settings take effect at the next
+worker boot (or NinjaOne reconnect). Huntress incident polling was migrated
+onto the same model (`huntress-incident-poll:{tenant}:{integration}` →
+`huntressIncidentPollWorkflow`), replacing its pg-boss dispatcher; the
+activities are thin wrappers over the existing ee/server poll logic, reached
+from the temporal worker via its `@ee` alias — no duplication. Each cycle
+works through the same normalized pipeline:
 
 1. Fetch active alerts from the RMM (`NinjaOneClient.getAlerts()`; Tactical's
    alerts API) and upsert any the webhooks missed as `triggered` events, so

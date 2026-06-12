@@ -386,6 +386,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Ensure the per-integration alert reconciliation schedule exists without
+    // waiting for the next temporal-worker boot.
+    try {
+      const integrationRow = await runWithTenant(tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        return knex('rmm_integrations')
+          .where({ tenant: tenantId, provider: 'ninjaone' })
+          .first('integration_id');
+      });
+      if (integrationRow?.integration_id) {
+        const { ensureRmmAlertPollingSchedule } = await import(
+          '../../../../../lib/integrations/rmm/alertPollingSchedule'
+        );
+        await ensureRmmAlertPollingSchedule({
+          tenantId,
+          integrationId: String(integrationRow.integration_id),
+          provider: 'ninjaone',
+        });
+      }
+    } catch (scheduleError) {
+      console.warn('[NinjaOne Callback] Failed to ensure alert polling schedule (worker boot will heal)', scheduleError);
+    }
+
     // 8. Register webhook with NinjaOne
     // This is done after storing credentials so the client can authenticate
     try {

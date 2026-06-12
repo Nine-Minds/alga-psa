@@ -604,27 +604,10 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
   }
 
-  // Huntress incident polling (Enterprise only). The @enterprise alias
-  // resolves to the CE no-op stub in community builds.
-  if (isEnterprise) {
-    try {
-      const { registerHuntressPolling } = await import(
-        '@enterprise/lib/integrations/huntress/scheduling'
-      );
-      await registerHuntressPolling(jobScheduler);
-    } catch (error) {
-      logger.error('Failed to register Huntress incident polling:', error);
-    }
-
-    try {
-      const { registerRmmAlertReconciliation } = await import(
-        '@enterprise/lib/integrations/rmm/alertReconciliationScheduling'
-      );
-      await registerRmmAlertReconciliation(jobScheduler);
-    } catch (error) {
-      logger.error('Failed to register RMM alert reconciliation:', error);
-    }
-  }
+  // Huntress incident polling and RMM alert reconciliation run as
+  // per-integration Temporal schedules, reconciled at temporal-worker boot
+  // (ee/temporal-workflows/src/schedules/setupSchedules.ts) — no pg-boss
+  // registration here.
 }
 
 // Helper function to setup development environment
