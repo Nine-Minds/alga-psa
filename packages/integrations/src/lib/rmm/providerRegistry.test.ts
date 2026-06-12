@@ -30,12 +30,12 @@ describe('RMM provider registry', () => {
     });
   });
 
-  it('exposes Huntress metadata gated by enterprise without a feature flag', () => {
+  it('exposes Huntress metadata gated by enterprise and feature flag', () => {
     const huntress = getRmmProviderMetadata('huntress');
     expect(huntress).toBeDefined();
     expect(huntress?.title).toBe('Huntress');
     expect(huntress?.requiresEnterprise).toBe(true);
-    expect(huntress?.featureFlagKey).toBeUndefined();
+    expect(huntress?.featureFlagKey).toBe('huntress-rmm-integration');
     expect(huntress?.capabilities).toEqual({
       connection: true,
       scopeSync: true,
