@@ -4,7 +4,7 @@ import { getCapabilitiesResponse } from '@/lib/mobileAuth/mobileAuthService';
 
 export async function GET(): Promise<NextResponse> {
   try {
-    return NextResponse.json(getCapabilitiesResponse());
+    return NextResponse.json(await getCapabilitiesResponse());
   } catch (error) {
     return handleApiError(error);
   }

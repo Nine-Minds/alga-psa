@@ -45,7 +45,7 @@ export async function ensureSystemEmailWorkflow(db: Knex, tenantId?: string): Pr
 
   const workflowId = tenantWorkflowId(resolvedTenantId);
   const existing = await db('workflow_definitions')
-    .where({ workflow_id: workflowId, tenant_id: resolvedTenantId })
+    .where({ workflow_id: workflowId, tenant: resolvedTenantId })
     .first();
   if (existing) {
     return;
@@ -55,7 +55,7 @@ export async function ensureSystemEmailWorkflow(db: Knex, tenantId?: string): Pr
   const now = new Date().toISOString();
   const record: Record<string, any> = {
     workflow_id: workflowId,
-    tenant_id: resolvedTenantId,
+    tenant: resolvedTenantId,
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,

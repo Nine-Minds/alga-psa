@@ -9,6 +9,8 @@ import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-re
 import type { FormComponent, FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
 import { useTranslation } from '@alga-psa/ui/lib';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
+import CaptchaChallenge from './CaptchaChallenge';
+import { useLoginCaptcha } from './useLoginCaptcha';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -24,6 +26,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const captcha = useLoginCaptcha();
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -92,12 +95,24 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         signInPayload.tenant = tenantSlug;
       }
 
-      const result = (await signIn('credentials', signInPayload)) as unknown as { error?: string; url?: string } | null
+      if (captcha.token) {
+        signInPayload.captchaToken = captcha.token;
+      }
+
+      const result = (await signIn('credentials', signInPayload)) as unknown as { error?: string; code?: string; url?: string } | null
 
       if (result?.error) {
         if (result.error === '2FA_REQUIRED') {
           onTwoFactorRequired();
+        } else if (result.code === 'CAPTCHA_REQUIRED') {
+          await captcha.requireCaptcha();
+          onError(t('auth.captchaRequired', 'Please complete the verification below, then sign in again.'))
+        } else if (result.code === 'RATE_LIMITED') {
+          onError(t('auth.tooManyAttempts', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.'))
         } else {
+          if (captcha.required) {
+            captcha.refreshChallenge();
+          }
           onError(t('auth.invalidCredentials', 'Invalid email or password'))
         }
       } else if (result?.url) {
@@ -188,11 +203,20 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         </Alert>
       )}
 
+      {captcha.required && captcha.config?.siteKey && (
+        <CaptchaChallenge
+          siteKey={captcha.config.siteKey}
+          onToken={captcha.setToken}
+          resetSignal={captcha.resetSignal}
+          id="client-login-captcha"
+        />
+      )}
+
       <Button
         id="client-sign-in-button"
         type="submit"
         className="w-full"
-        disabled={isLoading}
+        disabled={isLoading || (captcha.required && !!captcha.config?.siteKey && !captcha.token)}
       >
         {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
       </Button>

@@ -10,6 +10,32 @@ export interface AccountingExportAdapterCapabilities {
   supportsInvoiceFetch?: boolean;
   /** Whether this adapter supports importing individual tax components */
   supportsTaxComponentImport?: boolean;
+  /** Whether this adapter can report entities changed in the external system since a timestamp */
+  supportsChangePolling?: boolean;
+  /** Whether this adapter can record payments in the external system */
+  supportsPaymentRecording?: boolean;
+}
+
+/** Entity kinds reported by change polling */
+export type AccountingExternalChangeEntity = 'Customer' | 'Payment' | 'Invoice' | 'CreditMemo' | 'RefundReceipt';
+
+/** One changed entity in the external accounting system */
+export interface AccountingExternalChange {
+  entityType: AccountingExternalChangeEntity;
+  externalId: string;
+  syncToken?: string;
+  deleted: boolean;
+  updatedAt?: string;
+  /** Raw entity payload as returned by the external system (absent for deletions) */
+  payload?: Record<string, unknown>;
+}
+
+export interface AccountingChangeSet {
+  changes: AccountingExternalChange[];
+  /** True when the source truncated results; the next poll should run soon with the same cursor */
+  truncated: boolean;
+  /** Timestamp the changes were fetched (next cycle's cursor basis) */
+  fetchedAt: string;
 }
 
 /** Tax delegation mode for the export */
@@ -50,8 +76,22 @@ export interface AccountingExportDeliveryLineResult {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * A document that could not be delivered while the rest of the batch continued.
+ * API adapters report these instead of throwing so one rejected invoice does not
+ * abort delivery of the remaining documents.
+ */
+export interface AccountingExportDeliveryDocumentFailure {
+  documentId: string;
+  lineIds: string[];
+  code: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface AccountingExportDeliveryResult {
   deliveredLines: AccountingExportDeliveryLineResult[];
+  failedDocuments?: AccountingExportDeliveryDocumentFailure[];
   artifacts?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }
@@ -116,6 +156,16 @@ export interface AccountingExportAdapter {
     externalInvoiceRef: string,
     targetRealm?: string
   ): Promise<ExternalInvoiceFetchResult>;
+
+  /**
+   * Report entities changed in the external system since the given ISO timestamp.
+   * Only available when capabilities().supportsChangePolling is true.
+   */
+  fetchChanges?(
+    tenantId: string,
+    since: string,
+    targetRealm?: string | null
+  ): Promise<AccountingChangeSet>;
 
   /**
    * Called after export when tax delegation is enabled.

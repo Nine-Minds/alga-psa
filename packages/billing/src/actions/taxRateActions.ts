@@ -19,7 +19,7 @@ export type DeleteTaxRateResult = DeletionValidationResult & { success: boolean;
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
-    if (!hasPermission(user, 'billing', 'read')) {
+    if (!await hasPermission(user, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read tax rates');
     }
 
@@ -38,7 +38,7 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
 export const addTaxRate = withAuth(async (user, { tenant }, taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
-    if (!hasPermission(user, 'billing', 'create')) {
+    if (!await hasPermission(user, 'billing', 'create')) {
       throw new Error('Permission denied: Cannot create tax rates');
     }
 
@@ -74,7 +74,7 @@ export const addTaxRate = withAuth(async (user, { tenant }, taxRateData: Omit<IT
 export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITaxRate): Promise<ITaxRate> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
-    if (!hasPermission(user, 'billing', 'update')) {
+    if (!await hasPermission(user, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update tax rates');
     }
 
@@ -135,9 +135,12 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
   }
 });
 
-export const deleteTaxRate = withAuth(async (_user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
+export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    if (!await hasPermission(user, 'billing', 'delete')) {
+      throw new Error('Permission denied: billing delete required');
+    }
     const { knex } = await createTenantKnex();
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
@@ -202,6 +205,9 @@ export const deleteTaxRate = withAuth(async (_user, { tenant }, taxRateId: strin
   }
 });
 
-export const confirmDeleteTaxRate = withAuth(async (_user, _ctx, taxRateId: string): Promise<DeleteTaxRateResult> => {
+export const confirmDeleteTaxRate = withAuth(async (user, _ctx, taxRateId: string): Promise<DeleteTaxRateResult> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   return deleteTaxRate(taxRateId);
 });

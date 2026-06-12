@@ -9,10 +9,12 @@ interface TeamsMeetingIntegrationRow {
   selected_profile_id: string | null;
   install_status: TeamsInstallStatus;
   default_meeting_organizer_upn: string | null;
+  default_meeting_organizer_object_id?: string | null;
 }
 
 export interface TeamsMeetingExecutionConfig {
   organizerUpn: string;
+  organizerUserId: string;
   clientId: string;
   clientSecret: string;
   microsoftTenantId: string;
@@ -20,6 +22,7 @@ export interface TeamsMeetingExecutionConfig {
 
 export interface TeamsMeetingGraphConfig {
   organizerUpn: string | null;
+  organizerUserId: string | null;
   clientId: string;
   clientSecret: string;
   microsoftTenantId: string;
@@ -68,6 +71,7 @@ export async function resolveTeamsMeetingGraphConfig(
 
   return {
     organizerUpn: normalizeString(integration.default_meeting_organizer_upn) || null,
+    organizerUserId: normalizeString(integration.default_meeting_organizer_object_id) || null,
     clientId: providerConfig.clientId,
     clientSecret: providerConfig.clientSecret,
     microsoftTenantId: providerConfig.microsoftTenantId,
@@ -84,6 +88,7 @@ export async function resolveTeamsMeetingExecutionConfig(
 
   return {
     organizerUpn: config.organizerUpn,
+    organizerUserId: config.organizerUserId || config.organizerUpn,
     clientId: config.clientId,
     clientSecret: config.clientSecret,
     microsoftTenantId: config.microsoftTenantId,

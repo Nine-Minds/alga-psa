@@ -47,6 +47,10 @@ function createAdvancedMockTrx() {
   };
 
   const trx = ((table: string) => createChain(table)) as any;
+  trx.raw = vi.fn().mockImplementation((sql: string, bindings?: any[]) => {
+    calls.push({ table: '__raw', method: 'raw', args: [sql, bindings] });
+    return Promise.resolve({ rows: [] });
+  });
   trx.setData = (table: string, data: any) => {
     mockData[table] = data;
   };
@@ -121,18 +125,19 @@ describe('slaService', () => {
       expect(result.recorded_at).toEqual(respondedAt);
     });
 
-    it('should account for pause time when determining if SLA met', async () => {
+    it('compares directly against the stored due date (already shifted on resume)', async () => {
+      // Pause time is applied by shifting sla_response_due_at forward at
+      // resume time; recording must NOT add sla_total_pause_minutes again.
       const trx = createAdvancedMockTrx();
 
       trx.setData('tickets', {
         sla_policy_id: POLICY_ID,
         sla_response_at: null,
         sla_response_due_at: new Date('2024-01-15T11:00:00Z').toISOString(),
-        sla_total_pause_minutes: 120, // 2 hours paused
+        sla_total_pause_minutes: 120, // already reflected in the due date
       });
 
-      // Response at 12:30 would be late without pause, but with 2hr pause it's on time
-      const respondedAt = new Date('2024-01-15T12:30:00Z');
+      const respondedAt = new Date('2024-01-15T12:30:00Z'); // after stored due
 
       const result = await recordFirstResponse(
         trx,
@@ -143,7 +148,32 @@ describe('slaService', () => {
       );
 
       expect(result.success).toBe(true);
-      // Due at 11:00 + 2hr pause = effective due at 13:00, response at 12:30 = met
+      // 12:30 > 11:00 stored due — pause minutes are not double-counted.
+      expect(result.met).toBe(false);
+    });
+
+    it('honors a due date that was shifted forward by a pause', async () => {
+      const trx = createAdvancedMockTrx();
+
+      trx.setData('tickets', {
+        sla_policy_id: POLICY_ID,
+        sla_response_at: null,
+        // Original due 11:00, shifted +2h at resume.
+        sla_response_due_at: new Date('2024-01-15T13:00:00Z').toISOString(),
+        sla_total_pause_minutes: 120,
+      });
+
+      const respondedAt = new Date('2024-01-15T12:30:00Z'); // before shifted due
+
+      const result = await recordFirstResponse(
+        trx,
+        TENANT_ID,
+        TICKET_ID,
+        respondedAt,
+        USER_ID
+      );
+
+      expect(result.success).toBe(true);
       expect(result.met).toBe(true);
     });
 
@@ -303,18 +333,19 @@ describe('slaService', () => {
       expect(result.recorded_at).toEqual(resolvedAt);
     });
 
-    it('should account for pause time when determining if SLA met', async () => {
+    it('compares directly against the stored due date (already shifted on resume)', async () => {
+      // Pause time is applied by shifting sla_resolution_due_at forward at
+      // resume time; recording must NOT add sla_total_pause_minutes again.
       const trx = createAdvancedMockTrx();
 
       trx.setData('tickets', {
         sla_policy_id: POLICY_ID,
         sla_resolution_at: null,
         sla_resolution_due_at: new Date('2024-01-15T18:00:00Z').toISOString(),
-        sla_total_pause_minutes: 180, // 3 hours paused
+        sla_total_pause_minutes: 180, // already reflected in the due date
       });
 
-      // Resolved at 20:00 would be late without pause, but with 3hr pause it's on time
-      const resolvedAt = new Date('2024-01-15T20:00:00Z');
+      const resolvedAt = new Date('2024-01-15T20:00:00Z'); // after stored due
 
       const result = await recordResolution(
         trx,
@@ -325,7 +356,32 @@ describe('slaService', () => {
       );
 
       expect(result.success).toBe(true);
-      // Due at 18:00 + 3hr pause = effective due at 21:00, resolved at 20:00 = met
+      // 20:00 > 18:00 stored due — pause minutes are not double-counted.
+      expect(result.met).toBe(false);
+    });
+
+    it('honors a due date that was shifted forward by a pause', async () => {
+      const trx = createAdvancedMockTrx();
+
+      trx.setData('tickets', {
+        sla_policy_id: POLICY_ID,
+        sla_resolution_at: null,
+        // Original due 18:00, shifted +3h at resume.
+        sla_resolution_due_at: new Date('2024-01-15T21:00:00Z').toISOString(),
+        sla_total_pause_minutes: 180,
+      });
+
+      const resolvedAt = new Date('2024-01-15T20:00:00Z'); // before shifted due
+
+      const result = await recordResolution(
+        trx,
+        TENANT_ID,
+        TICKET_ID,
+        resolvedAt,
+        USER_ID
+      );
+
+      expect(result.success).toBe(true);
       expect(result.met).toBe(true);
     });
 
@@ -618,7 +674,9 @@ describe('slaService', () => {
       expect(status!.resolution_remaining_minutes).toBeUndefined();
     });
 
-    it('should include total pause minutes in status', async () => {
+    it('reports only the ongoing pause in total_pause_minutes', async () => {
+      // Completed pauses are already reflected in the shifted due dates, so
+      // the status only surfaces the current (ongoing) pause duration.
       const trx = createAdvancedMockTrx();
 
       const now = new Date();
@@ -632,14 +690,15 @@ describe('slaService', () => {
         sla_resolution_due_at: new Date(now.getTime() + 28800000).toISOString(),
         sla_resolution_at: null,
         sla_resolution_met: null,
-        sla_paused_at: null,
-        sla_total_pause_minutes: 45, // 45 minutes of total pause time
+        sla_paused_at: new Date(now.getTime() - 45 * 60000).toISOString(), // paused 45 min ago
+        sla_total_pause_minutes: 120, // completed pauses, already in due dates
         priority_id: PRIORITY_ID,
       });
 
       const status = await getSlaStatus(trx, TENANT_ID, TICKET_ID);
 
       expect(status).not.toBeNull();
+      expect(status!.is_paused).toBe(true);
       expect(status!.total_pause_minutes).toBe(45);
     });
   });

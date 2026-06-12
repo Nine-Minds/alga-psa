@@ -10,6 +10,10 @@ import {
   WORKFLOW_EVENT_STATUS_VALUES,
   WORKFLOW_INPUT_SOURCE_MODE_LABEL_DEFAULTS,
   WORKFLOW_INPUT_SOURCE_MODE_VALUES,
+  WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS,
+  WORKFLOW_ENTITY_TYPE_VALUES,
+  WORKFLOW_LINK_RELATION_LABEL_DEFAULTS,
+  WORKFLOW_LINK_RELATION_VALUES,
   WORKFLOW_LOG_LEVEL_LABEL_DEFAULTS,
   WORKFLOW_LOG_LEVEL_VALUES,
   WORKFLOW_ON_ERROR_LABEL_DEFAULTS,
@@ -31,7 +35,9 @@ import {
   type WorkflowAiSchemaType,
   type WorkflowCanvasView,
   type WorkflowEventStatus,
+  type WorkflowEntityType,
   type WorkflowInputSourceMode,
+  type WorkflowLinkRelation,
   type WorkflowLogLevel,
   type WorkflowOnError,
   type WorkflowReferenceSection,
@@ -238,4 +244,28 @@ export function useWorkflowWaitTimingOptions(): LocalizedOption<WorkflowWaitTimi
 
 export function useFormatWorkflowWaitTiming(): (value: string) => string {
   return useEnumFormatter('enums.workflowWaitTiming', WORKFLOW_WAIT_TIMING_LABEL_DEFAULTS);
+}
+
+export function useWorkflowEntityTypeOptions(): LocalizedOption<WorkflowEntityType>[] {
+  return useEnumOptions(
+    'enums.workflowEntityType',
+    WORKFLOW_ENTITY_TYPE_VALUES,
+    WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS,
+  );
+}
+
+export function useFormatWorkflowEntityType(): (value: string) => string {
+  return useEnumFormatter('enums.workflowEntityType', WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS);
+}
+
+export function useWorkflowLinkRelationOptions(): LocalizedOption<WorkflowLinkRelation>[] {
+  return useEnumOptions(
+    'enums.workflowLinkRelation',
+    WORKFLOW_LINK_RELATION_VALUES,
+    WORKFLOW_LINK_RELATION_LABEL_DEFAULTS,
+  );
+}
+
+export function useFormatWorkflowLinkRelation(): (value: string) => string {
+  return useEnumFormatter('enums.workflowLinkRelation', WORKFLOW_LINK_RELATION_LABEL_DEFAULTS);
 }

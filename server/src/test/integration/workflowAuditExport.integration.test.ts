@@ -129,7 +129,7 @@ describe('workflow audit export integration', () => {
 
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
-      tenant_id: tenantId,
+      tenant: tenantId,
       name: 'Quarterly Review',
       key: 'quarterly.review',
       description: null,
@@ -198,7 +198,7 @@ describe('workflow audit export integration', () => {
     const workflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
-      tenant_id: tenantId,
+      tenant: tenantId,
       name: 'Permissions Fixture',
       key: 'permissions.fixture',
       description: null,
@@ -222,7 +222,7 @@ describe('workflow audit export integration', () => {
     const otherTenantWorkflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: otherTenantWorkflowId,
-      tenant_id: uuidv4(),
+      tenant: uuidv4(),
       name: 'Other Tenant Workflow',
       key: 'other.tenant.workflow',
       description: null,
@@ -253,7 +253,7 @@ describe('workflow audit export integration', () => {
 
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
-      tenant_id: tenantId,
+      tenant: tenantId,
       name: 'Compatibility Workflow',
       key: 'compatibility.workflow',
       description: null,
@@ -270,7 +270,7 @@ describe('workflow audit export integration', () => {
       run_id: runId,
       workflow_id: workflowId,
       workflow_version: 1,
-      tenant_id: tenantId,
+      tenant: tenantId,
       status: 'RUNNING',
       ...(hasColumn(runColumns, 'node_path') ? { node_path: null } : {}),
       ...(hasColumn(runColumns, 'input_json') ? { input_json: null } : {}),

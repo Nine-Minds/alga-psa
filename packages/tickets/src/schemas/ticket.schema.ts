@@ -134,9 +134,13 @@ export const ticketListItemSchema = baseTicketSchema.extend({
 
 export const ticketListFiltersSchema = z.object({
   boardId: z.string().uuid().nullish(),
+  boardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
+  excludeBoardIds: z.array(z.union([z.string().uuid(), z.literal('no-board')])).optional(),
   statusId: z.string().optional(),
   priorityId: z.string().optional(),
   categoryId: z.union([z.string().uuid(), z.literal('no-category'), z.literal('all')]).nullish(),
+  categoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
+  excludeCategoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
   clientId: z.string().uuid().nullish(),
   contactId: z.string().uuid().nullish(),
   searchQuery: z.string().optional(),
@@ -146,6 +150,7 @@ export const ticketListFiltersSchema = z.object({
   assignedToIds: z.array(z.string().uuid()).optional(),
   assignedTeamIds: z.array(z.string().uuid()).optional(),
   includeUnassigned: z.boolean().optional(),
+  assignedToMe: z.boolean().optional(),
   // Due date filters
   dueDateFilter: z
     .enum(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom'])

@@ -145,4 +145,3 @@ export default function DocumentFilters({ filters, onFiltersChange, onClearFilte
       </div>
     </Card>);
 }
-//# sourceMappingURL=DocumentFilters.jsx.map

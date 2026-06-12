@@ -1,1 +1,1 @@
-export { WorkflowRuntimeV2Worker } from './WorkflowRuntimeV2Worker';
+export { WorkflowDataStoreSweepWorker } from './WorkflowDataStoreSweepWorker';

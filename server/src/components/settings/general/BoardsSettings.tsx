@@ -11,7 +11,15 @@ import {
   updateBoard,
   deleteBoard,
   getBoardTicketStatuses,
+  getBoardCloseRules,
+  upsertBoardCloseRules,
+  getBoardAutoCloseRules,
+  createBoardAutoCloseRule,
+  updateBoardAutoCloseRule,
+  deleteBoardAutoCloseRule,
 } from '@alga-psa/tickets/actions';
+import type { IBoardAutoCloseRule } from '@alga-psa/tickets/actions';
+import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -63,6 +71,47 @@ function createManagedTicketStatus(index: number): ManagedTicketStatus {
     order_number: (index + 1) * 10,
     color: null,
     icon: null,
+  };
+}
+
+interface CloseRulesFormState {
+  require_resolution_comment: boolean;
+  require_time_entry: boolean;
+  require_checklist_complete: boolean;
+  require_no_open_children: boolean;
+  required_fields: string[];
+  is_enabled: boolean;
+}
+
+function createEmptyCloseRulesForm(): CloseRulesFormState {
+  return {
+    require_resolution_comment: false,
+    require_time_entry: false,
+    require_checklist_complete: false,
+    require_no_open_children: false,
+    required_fields: [],
+    is_enabled: true,
+  };
+}
+
+interface EditableAutoCloseRule {
+  temp_id: string;
+  rule_id?: string;
+  trigger_status_id: string;
+  inactivity_days: number;
+  warning_days_before: number | null;
+  close_to_status_id: string;
+  is_enabled: boolean;
+}
+
+function createEmptyAutoCloseRule(index: number): EditableAutoCloseRule {
+  return {
+    temp_id: `auto-close-rule-${Date.now()}-${index}`,
+    trigger_status_id: '',
+    inactivity_days: 7,
+    warning_days_before: null,
+    close_to_status_id: '',
+    is_enabled: true,
   };
 }
 
@@ -233,6 +282,9 @@ const BoardsSettings: React.FC = () => {
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
   const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
+  const [closeRulesForm, setCloseRulesForm] = useState<CloseRulesFormState>(createEmptyCloseRulesForm);
+  const [autoCloseRulesForm, setAutoCloseRulesForm] = useState<EditableAutoCloseRule[]>([]);
+  const [removedAutoCloseRuleIds, setRemovedAutoCloseRuleIds] = useState<string[]>([]);
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -362,8 +414,40 @@ const BoardsSettings: React.FC = () => {
     setError(null);
     setDialogError(null);
     setIsLoadingBoardStatuses(true);
+    setCloseRulesForm(createEmptyCloseRulesForm());
+    setAutoCloseRulesForm([]);
+    setRemovedAutoCloseRuleIds([]);
 
     await loadManagedTicketStatusesFromBoard(board.board_id!);
+
+    try {
+      const [closeRules, autoRules] = await Promise.all([
+        getBoardCloseRules(board.board_id!),
+        getBoardAutoCloseRules(board.board_id!),
+      ]);
+      setCloseRulesForm({
+        require_resolution_comment: closeRules.require_resolution_comment,
+        require_time_entry: closeRules.require_time_entry,
+        require_checklist_complete: closeRules.require_checklist_complete,
+        require_no_open_children: closeRules.require_no_open_children,
+        required_fields: closeRules.required_fields,
+        is_enabled: closeRules.is_enabled,
+      });
+      setAutoCloseRulesForm(
+        autoRules.map((rule: IBoardAutoCloseRule) => ({
+          temp_id: rule.rule_id,
+          rule_id: rule.rule_id,
+          trigger_status_id: rule.trigger_status_id,
+          inactivity_days: rule.inactivity_days,
+          warning_days_before: rule.warning_days_before,
+          close_to_status_id: rule.close_to_status_id,
+          is_enabled: rule.is_enabled,
+        }))
+      );
+    } catch (loadError) {
+      console.error('Error loading board close rules:', loadError);
+      setDialogError(loadError instanceof Error ? loadError.message : t('ticketing.boards.closeRules.messages.fetchFailed'));
+    }
   };
 
   const updateManagedTicketStatus = (tempId: string, updates: Partial<ManagedTicketStatus>) => {
@@ -552,6 +636,28 @@ const BoardsSettings: React.FC = () => {
       }
 
       if (editingBoard) {
+        for (const rule of autoCloseRulesForm) {
+          if (!rule.trigger_status_id || !rule.close_to_status_id) {
+            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseStatusRequired'));
+            return;
+          }
+          if (!Number.isInteger(rule.inactivity_days) || rule.inactivity_days < 1) {
+            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseDaysInvalid'));
+            return;
+          }
+          if (
+            rule.warning_days_before !== null &&
+            (!Number.isInteger(rule.warning_days_before) ||
+              rule.warning_days_before < 1 ||
+              rule.warning_days_before >= rule.inactivity_days)
+          ) {
+            setDialogError(t('ticketing.boards.closeRules.messages.autoCloseWarningInvalid'));
+            return;
+          }
+        }
+      }
+
+      if (editingBoard) {
         await updateBoard(editingBoard.board_id!, {
           board_name: formData.board_name,
           description: formData.description,
@@ -571,6 +677,27 @@ const BoardsSettings: React.FC = () => {
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           ticket_statuses: normalizedTicketStatuses,
         });
+
+        await upsertBoardCloseRules(editingBoard.board_id!, closeRulesForm);
+
+        for (const ruleId of removedAutoCloseRuleIds) {
+          await deleteBoardAutoCloseRule(ruleId);
+        }
+        for (const rule of autoCloseRulesForm) {
+          const payload = {
+            trigger_status_id: rule.trigger_status_id,
+            inactivity_days: rule.inactivity_days,
+            warning_days_before: rule.warning_days_before,
+            close_to_status_id: rule.close_to_status_id,
+            is_enabled: rule.is_enabled,
+          };
+          if (rule.rule_id) {
+            await updateBoardAutoCloseRule(rule.rule_id, payload);
+          } else {
+            await createBoardAutoCloseRule(editingBoard.board_id!, payload);
+          }
+        }
+
         toast.success(t('ticketing.boards.messages.success.updated'));
       } else {
         await createBoard({
@@ -1216,6 +1343,200 @@ const BoardsSettings: React.FC = () => {
                 />
               </div>
             </div>
+
+            {editingBoard && (
+              <div className="space-y-3 rounded-md border border-gray-200 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="close-rules-enabled">{t('ticketing.boards.closeRules.enabledLabel')}</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('ticketing.boards.closeRules.enabledHelp')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="close-rules-enabled"
+                    checked={closeRulesForm.is_enabled}
+                    onCheckedChange={(checked) =>
+                      setCloseRulesForm({ ...closeRulesForm, is_enabled: checked })
+                    }
+                  />
+                </div>
+
+                {([
+                  ['require_resolution_comment', 'requireResolutionComment'],
+                  ['require_time_entry', 'requireTimeEntry'],
+                  ['require_checklist_complete', 'requireChecklistComplete'],
+                  ['require_no_open_children', 'requireNoOpenChildren'],
+                ] as const).map(([field, key]) => (
+                  <div key={field} className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor={`close-rule-${field}`}>{t(`ticketing.boards.closeRules.${key}Label`)}</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t(`ticketing.boards.closeRules.${key}Help`)}
+                      </p>
+                    </div>
+                    <Switch
+                      id={`close-rule-${field}`}
+                      checked={closeRulesForm[field]}
+                      onCheckedChange={(checked) =>
+                        setCloseRulesForm({ ...closeRulesForm, [field]: checked })
+                      }
+                      disabled={!closeRulesForm.is_enabled}
+                    />
+                  </div>
+                ))}
+
+                <div>
+                  <Label>{t('ticketing.boards.closeRules.requiredFieldsLabel')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1 mb-2">
+                    {t('ticketing.boards.closeRules.requiredFieldsHelp')}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CLOSE_RULE_REQUIRED_FIELDS.map((field) => (
+                      <div key={field} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`close-rule-required-${field}`}
+                          checked={closeRulesForm.required_fields.includes(field)}
+                          disabled={!closeRulesForm.is_enabled}
+                          onChange={(event) => {
+                            const checked = (event.target as HTMLInputElement).checked;
+                            setCloseRulesForm((prev) => ({
+                              ...prev,
+                              required_fields: checked
+                                ? [...prev.required_fields, field]
+                                : prev.required_fields.filter((f) => f !== field),
+                            }));
+                          }}
+                        />
+                        <Label htmlFor={`close-rule-required-${field}`}>
+                          {CLOSE_RULE_REQUIRED_FIELD_LABELS[field]}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editingBoard && (
+              <div className="space-y-3 rounded-md border border-gray-200 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>{t('ticketing.boards.closeRules.autoCloseLabel')}</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('ticketing.boards.closeRules.autoCloseHelp')}
+                    </p>
+                  </div>
+                  <Button
+                    id="add-auto-close-rule-button"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setAutoCloseRulesForm((prev) => [...prev, createEmptyAutoCloseRule(prev.length)])
+                    }
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t('ticketing.boards.closeRules.addAutoCloseRule')}
+                  </Button>
+                </div>
+
+                {autoCloseRulesForm.map((rule, index) => {
+                  const managedStatuses = normalizeManagedTicketStatuses(formData.ticket_statuses);
+                  const openStatusOptions = managedStatuses
+                    .filter((status) => !status.is_closed && status.status_id)
+                    .map((status): SelectOption => ({ value: status.status_id || '', label: status.name }));
+                  const closedStatusOptions = managedStatuses
+                    .filter((status) => status.is_closed && status.status_id)
+                    .map((status): SelectOption => ({ value: status.status_id || '', label: status.name }));
+                  const updateRule = (updates: Partial<EditableAutoCloseRule>) =>
+                    setAutoCloseRulesForm((prev) =>
+                      prev.map((r) => (r.temp_id === rule.temp_id ? { ...r, ...updates } : r))
+                    );
+
+                  return (
+                    <div key={rule.temp_id} className="space-y-2 rounded-md border border-gray-100 bg-gray-50 p-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor={`auto-close-trigger-${index}`}>{t('ticketing.boards.closeRules.triggerStatusLabel')}</Label>
+                          <CustomSelect
+                            id={`auto-close-trigger-${index}`}
+                            value={rule.trigger_status_id}
+                            onValueChange={(value) => updateRule({ trigger_status_id: value })}
+                            options={openStatusOptions}
+                            placeholder={t('ticketing.boards.closeRules.triggerStatusPlaceholder')}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`auto-close-target-${index}`}>{t('ticketing.boards.closeRules.targetStatusLabel')}</Label>
+                          <CustomSelect
+                            id={`auto-close-target-${index}`}
+                            value={rule.close_to_status_id}
+                            onValueChange={(value) => updateRule({ close_to_status_id: value })}
+                            options={closedStatusOptions}
+                            placeholder={t('ticketing.boards.closeRules.targetStatusPlaceholder')}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`auto-close-days-${index}`}>{t('ticketing.boards.closeRules.inactivityDaysLabel')}</Label>
+                          <Input
+                            id={`auto-close-days-${index}`}
+                            type="number"
+                            min={1}
+                            value={rule.inactivity_days}
+                            onChange={(e) =>
+                              updateRule({ inactivity_days: Math.max(1, parseInt(e.target.value || '1', 10) || 1) })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`auto-close-warning-${index}`}>{t('ticketing.boards.closeRules.warningDaysLabel')}</Label>
+                          <Input
+                            id={`auto-close-warning-${index}`}
+                            type="number"
+                            min={1}
+                            value={rule.warning_days_before ?? ''}
+                            placeholder={t('ticketing.boards.closeRules.warningDaysPlaceholder')}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              updateRule({
+                                warning_days_before: raw === '' ? null : Math.max(1, parseInt(raw, 10) || 1),
+                              });
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id={`auto-close-enabled-${index}`}
+                            checked={rule.is_enabled}
+                            onCheckedChange={(checked) => updateRule({ is_enabled: checked })}
+                          />
+                          <Label htmlFor={`auto-close-enabled-${index}`}>
+                            {t('ticketing.boards.closeRules.ruleEnabledLabel')}
+                          </Label>
+                        </div>
+                        <Button
+                          id={`remove-auto-close-rule-${index}`}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (rule.rule_id) {
+                              setRemovedAutoCloseRuleIds((prev) => [...prev, rule.rule_id!]);
+                            }
+                            setAutoCloseRulesForm((prev) => prev.filter((r) => r.temp_id !== rule.temp_id));
+                          }}
+                        >
+                          {t('ticketing.boards.closeRules.removeRule')}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="default-priority-select">{t('ticketing.boards.fields.defaultPriority.label')}</Label>

@@ -214,4 +214,3 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
       </DialogContent>
     </Dialog>);
 }
-//# sourceMappingURL=FolderSelectorModal.jsx.map

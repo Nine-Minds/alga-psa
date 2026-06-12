@@ -29,8 +29,7 @@ import {
   cancelWorkflowRunAction,
   exportWorkflowRunsAction,
   listWorkflowRunSummaryAction,
-  listWorkflowRunsAction,
-  resumeWorkflowRunAction
+  listWorkflowRunsAction
 } from '@alga-psa/workflows/actions';
 import {
   useFormatWorkflowRunStatus,
@@ -204,7 +203,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<'resume' | 'cancel' | null>(null);
+  const [bulkAction, setBulkAction] = useState<'cancel' | null>(null);
   const [bulkReason, setBulkReason] = useState('');
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
@@ -606,7 +605,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     onSelectedIdsChange: setSelectedRunIds,
   });
 
-  const performBulkAction = async (action: 'resume' | 'cancel') => {
+  const performBulkAction = async (action: 'cancel') => {
     if (selectedRuns.length === 0) {
       toast.error(
         t('runList.toasts.selectRunsForBulkAction', {
@@ -625,9 +624,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
       return;
     }
 
-    const eligible = selectedRuns.filter((run) =>
-      action === 'resume' ? run.status === 'WAITING' : !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status)
-    );
+    const eligible = selectedRuns.filter((run) => !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status));
     const skipped = selectedRuns.length - eligible.length;
 
     if (eligible.length === 0) {
@@ -643,41 +640,23 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     try {
       const responses = await Promise.all(
         eligible.map((run) =>
-          action === 'resume'
-            ? resumeWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
-            : cancelWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
+          cancelWorkflowRunAction({ runId: run.run_id, reason: bulkReason.trim(), source: 'ui' })
         )
       );
       const failed = responses.filter((response: any) => !response?.ok).length;
       if (failed > 0) {
         toast.error(
-          t(
-            action === 'resume'
-              ? 'runList.toasts.bulkResumeFailedCount'
-              : 'runList.toasts.bulkCancelFailedCount',
-            {
-              defaultValue:
-                action === 'resume'
-                  ? 'Failed to resume {{count}} run(s).'
-                  : 'Failed to cancel {{count}} run(s).',
-              count: failed,
-            }
-          )
+          t('runList.toasts.bulkCancelFailedCount', {
+            defaultValue: 'Failed to cancel {{count}} run(s).',
+            count: failed,
+          })
         );
       } else {
         toast.success(
-          t(
-            action === 'resume'
-              ? 'runList.toasts.bulkResumeSuccessCount'
-              : 'runList.toasts.bulkCancelSuccessCount',
-            {
-              defaultValue:
-                action === 'resume'
-                  ? 'Resumed {{count}} run(s).'
-                  : 'Canceled {{count}} run(s).',
-              count: eligible.length,
-            }
-          )
+          t('runList.toasts.bulkCancelSuccessCount', {
+            defaultValue: 'Canceled {{count}} run(s).',
+            count: eligible.length,
+          })
         );
       }
       if (skipped > 0) {
@@ -900,17 +879,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             </Button>
             {showSelection && selectedRunIds.size > 0 && (
               <>
-                <Button
-                  id="workflow-runs-bulk-resume"
-                  variant="outline"
-                  onClick={() => setBulkAction('resume')}
-                  disabled={isLoading}
-                >
-                  {t('runList.actions.resumeSelected', {
-                    defaultValue: 'Resume selected ({{count}})',
-                    count: selectedRunIds.size,
-                  })}
-                </Button>
                 <Button
                   id="workflow-runs-bulk-cancel"
                   variant="outline"
@@ -1216,33 +1184,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
 
       {showSelection && (
         <>
-          <ConfirmationDialog
-            id="workflow-runs-bulk-resume-confirm"
-            isOpen={bulkAction === 'resume'}
-            title={t('runList.bulk.resumeTitle', { defaultValue: 'Resume Selected Runs' })}
-            message={(
-              <div className="space-y-3">
-                <p>
-                  {t('runList.bulk.resumeMessage', {
-                    defaultValue: 'Resume {{count}} selected run(s)?',
-                    count: selectedRunIds.size,
-                  })}
-                </p>
-                <TextArea
-                  id="workflow-runs-bulk-resume-reason"
-                  label={t('runList.bulk.reasonLabel', { defaultValue: 'Reason' })}
-                  value={bulkReason}
-                  onChange={(event) => setBulkReason(event.target.value)}
-                  placeholder={t('runList.bulk.resumeReasonPlaceholder', {
-                    defaultValue: 'Provide a reason for resuming',
-                  })}
-                />
-              </div>
-            )}
-            confirmLabel={t('runList.bulk.resumeConfirm', { defaultValue: 'Resume runs' })}
-            onConfirm={() => performBulkAction('resume')}
-            onClose={() => setBulkAction(null)}
-          />
           <ConfirmationDialog
             id="workflow-runs-bulk-cancel-confirm"
             isOpen={bulkAction === 'cancel'}

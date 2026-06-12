@@ -95,7 +95,7 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
       return { success: false, error: 'Invoice is cancelled' };
     }
 
-    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(tenantId, invoiceId);
+    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(invoiceId);
     if (!paymentUrl) {
       return { success: false, error: 'payment_not_configured' };
     }
@@ -208,7 +208,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'succeeded',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -240,10 +240,10 @@ export const verifyClientPortalPayment = withAuth(async (
     }
 
     // Check payment status from the payment provider
-    const paymentStatus = await getInvoicePaymentStatus(tenantId, invoiceId);
+    const paymentStatus = await getInvoicePaymentStatus(invoiceId);
 
     // Get the most current payment URL (if needed for retry)
-    const paymentUrl = await getActiveInvoicePaymentLinkUrl(tenantId, invoiceId);
+    const paymentUrl = await getActiveInvoicePaymentLinkUrl(invoiceId);
 
     if (!paymentStatus) {
       return {
@@ -251,7 +251,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: paymentUrl ? 'pending' : 'failed',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -267,7 +267,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'succeeded',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -281,7 +281,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'processing',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -296,7 +296,7 @@ export const verifyClientPortalPayment = withAuth(async (
         data: {
           status: 'pending',
           invoiceNumber: invoice.invoice_number,
-          amount: invoice.total_amount,
+          amount: invoice.total_amount - (invoice.credit_applied ?? 0),
           currencyCode: invoice.currency_code || 'USD',
           servicePeriodStart: recurringSummary?.service_period_start ?? null,
           servicePeriodEnd: recurringSummary?.service_period_end ?? null,
@@ -310,7 +310,7 @@ export const verifyClientPortalPayment = withAuth(async (
       data: {
         status: 'failed',
         invoiceNumber: invoice.invoice_number,
-        amount: invoice.total_amount,
+        amount: invoice.total_amount - (invoice.credit_applied ?? 0),
         currencyCode: invoice.currency_code || 'USD',
         servicePeriodStart: recurringSummary?.service_period_start ?? null,
         servicePeriodEnd: recurringSummary?.service_period_end ?? null,

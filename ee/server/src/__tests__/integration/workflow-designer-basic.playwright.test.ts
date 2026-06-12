@@ -93,7 +93,7 @@ async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: 
     names.push(name);
     return {
       workflow_id: workflowId,
-      tenant_id: tenantId,
+      tenant: tenantId,
       name,
       description: null,
       payload_schema_ref: definition.payloadSchemaRef,

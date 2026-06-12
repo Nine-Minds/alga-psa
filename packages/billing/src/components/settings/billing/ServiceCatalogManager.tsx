@@ -14,6 +14,7 @@ import { getServiceCategories } from '@alga-psa/billing/actions';
 // Import action to get tax rates
 import { getTaxRates } from '@alga-psa/billing/actions';
 import { IService, IServiceCategory, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types'; // Added IServiceType, IServicePrice
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 // Import ITaxRate interface
 import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
@@ -365,6 +366,11 @@ const ServiceCatalogManager: React.FC = () => {
       setIsDeleteProcessing(true);
 
       const result = await deleteService(serviceToDelete);
+
+      if (isActionPermissionError(result)) {
+        // Permission error — surface it to the user if desired
+        return;
+      }
 
       if (!result.success) {
         setDeleteValidation(result);

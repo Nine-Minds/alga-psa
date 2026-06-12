@@ -18,6 +18,13 @@ import {
   SortingState,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from '@alga-psa/types';
+import {
+  ColumnLayoutContext,
+  computeColumnFit,
+  getColumnId,
+  getColumnLayout,
+  getColumnSizeConfig,
+} from './dataTableColumnFit';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
@@ -93,60 +100,6 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   }
   
   return String(cellValue);
-};
-
-const COLUMN_SIZE_BASE_WIDTH = 1800;
-const DEFAULT_COLUMN_SIZE = 160;
-const COMPACT_COLUMN_IDS = new Set(['selection', 'actions', 'tags']);
-
-const getColumnId = (dataIndex: string | string[]): string => (
-  Array.isArray(dataIndex) ? dataIndex.join('_') : dataIndex
-);
-
-const parseColumnWidth = (width: string | undefined): number | undefined => {
-  if (!width) return undefined;
-
-  const trimmed = width.trim();
-  if (trimmed.endsWith('px')) {
-    const px = Number.parseFloat(trimmed);
-    return Number.isFinite(px) ? Math.round(px) : undefined;
-  }
-
-  if (trimmed.endsWith('%')) {
-    const percent = Number.parseFloat(trimmed);
-    return Number.isFinite(percent) ? Math.round((percent / 100) * COLUMN_SIZE_BASE_WIDTH) : undefined;
-  }
-
-  const numeric = Number.parseFloat(trimmed);
-  return Number.isFinite(numeric) ? Math.round(numeric) : undefined;
-};
-
-const getColumnSizeConfig = (column: ColumnDefinition<any>): { size: number; minSize: number; maxSize: number } => {
-  const columnId = getColumnId(column.dataIndex);
-  const parsedWidth = parseColumnWidth(column.width);
-  const titleLength = typeof column.title === 'string' ? column.title.length : 12;
-
-  if (COMPACT_COLUMN_IDS.has(columnId)) {
-    return {
-      size: parsedWidth ?? 64,
-      minSize: columnId === 'selection' ? 44 : 56,
-      maxSize: 180,
-    };
-  }
-
-  if (columnId === 'title') {
-    return {
-      size: parsedWidth ?? 320,
-      minSize: 180,
-      maxSize: 720,
-    };
-  }
-
-  return {
-    size: parsedWidth ?? Math.max(DEFAULT_COLUMN_SIZE, Math.min(280, titleLength * 12 + 72)),
-    minSize: 96,
-    maxSize: 520,
-  };
 };
 
 // Custom case-insensitive sorting function for all columns
@@ -371,6 +324,35 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // When true, every column renders and the table scrolls horizontally; otherwise only the
   // columns that fully fit the container are shown (no horizontal overflow).
   const [showAllColumns, setShowAllColumns] = useState(false);
+  // Per-column size overrides from the fit calculation: the last admitted column may be
+  // shrunk into the remaining space instead of being hidden.
+  const [fittedSizeOverrides, setFittedSizeOverrides] = useState<Record<string, number>>({});
+
+  // Measured container width. Observed with ResizeObserver so layout changes that don't fire a
+  // window resize (sidebar collapse, tab becoming visible, drawers) still recalculate the fit.
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const element = tableContainerRef.current;
+    if (!element) return;
+
+    const updateWidth = () => setContainerWidth(element.clientWidth);
+    updateWidth();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const columnLayout = useMemo<ColumnLayoutContext>(
+    () => getColumnLayout(columns, containerWidth),
+    [columns, containerWidth]
+  );
 
   const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
@@ -405,77 +387,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
   }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
 
-  // Recalculate which columns fit the container. Columns are accumulated in priority order using
-  // their real sizes (not a uniform estimate) so the visible set never exceeds the container width
-  // and the table doesn't scroll horizontally. `showAllColumns` bypasses this and renders everything.
+  // Recalculate which columns fit the container (see computeColumnFit for the algorithm).
+  // `showAllColumns` bypasses this and renders everything with horizontal scroll.
   useEffect(() => {
-    const allColumnIds = columns.map(col => getColumnId(col.dataIndex));
+    if (showAllColumns) {
+      setVisibleColumnIds(columns.map(col => getColumnId(col.dataIndex)));
+      setFittedSizeOverrides({});
+      return;
+    }
+    // Not measured yet (e.g. rendered inside a hidden tab) — keep the current set until the
+    // ResizeObserver reports a real width.
+    if (!containerWidth) return;
 
-    const updateVisibleColumnsEffect = () => {
-      if (showAllColumns) {
-        setVisibleColumnIds(allColumnIds);
-        return;
-      }
-      if (!tableContainerRef.current) return;
-
-      const containerWidth = tableContainerRef.current.clientWidth;
-
-      // Check if the last column is 'Actions' or 'Action' with interactive elements
-      const lastColumn = columns[columns.length - 1];
-      const isActionsColumn = !!lastColumn &&
-        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
-        lastColumn.render !== undefined;
-
-      const prioritizedColumns = [...columns].sort((a, b) => {
-        // Always prioritize Actions column if it's the last column
-        if (isActionsColumn) {
-          if (a === lastColumn) return -1;
-          if (b === lastColumn) return 1;
-        }
-
-        // Keep ID column and any columns with explicit width as highest priority
-        const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
-        const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-
-        if (aIsId && !bIsId) return -1;
-        if (!aIsId && bIsId) return 1;
-
-        // Then prioritize columns with explicit width
-        if (a.width && !b.width) return -1;
-        if (!a.width && b.width) return 1;
-
-        return 0;
-      });
-
-      // Greedily include columns (highest priority first) until the next one would overflow.
-      // Using each column's real rendered size keeps the visible set within the container.
-      const visible = new Set<string>();
-      let usedWidth = 0;
-      for (const col of prioritizedColumns) {
-        const colId = getColumnId(col.dataIndex);
-        const { size } = getColumnSizeConfig(col);
-        if (visible.size > 0 && usedWidth + size > containerWidth) {
-          break;
-        }
-        usedWidth += size;
-        visible.add(colId);
-      }
-
-      // Preserve original column order in the visible list.
-      setVisibleColumnIds(allColumnIds.filter(colId => visible.has(colId)));
-    };
-
-    updateVisibleColumnsEffect();
-
-    const handleResize = () => {
-      updateVisibleColumnsEffect();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [columns, showAllColumns]); // Re-run when columns or show-all change
+    const { visibleColumnIds: fittedColumnIds, sizeOverrides } = computeColumnFit(columns, containerWidth, columnLayout);
+    setFittedSizeOverrides(sizeOverrides);
+    setVisibleColumnIds(fittedColumnIds);
+  }, [columns, showAllColumns, containerWidth, columnLayout]);
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
@@ -520,21 +447,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           return visibleColumnIds.includes(colId);
         })
         .map((col): ColumnDef<T> => {
-          const sizing = getColumnSizeConfig(col);
+          const colId = getColumnId(col.dataIndex);
+          const sizing = getColumnSizeConfig(col, columnLayout);
           return {
-            id: getColumnId(col.dataIndex),
+            id: colId,
             accessorFn: (row) => getNestedValue(row, col.dataIndex),
             header: () => col.title,
             cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
             sortingFn: caseInsensitiveSort,
             enableSorting: col.sortable !== false,
             enableResizing: true,
-            size: sizing.size,
+            size: fittedSizeOverrides[colId] ?? sizing.size,
             minSize: sizing.minSize,
             maxSize: sizing.maxSize,
           };
         }),
-    [columns, visibleColumnIds]
+    [columns, visibleColumnIds, columnLayout, fittedSizeOverrides]
   );
 
   const [{ pageIndex, pageSize: currentPageSize }, setPagination] = React.useState({
@@ -778,7 +706,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </AlertDescription>
           </Alert>
         )}
-        <div className="overflow-x-auto [scrollbar-color:rgb(var(--color-border-300))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
+        <div className="overflow-x-auto supports-[not_selector(::-webkit-scrollbar)]:[scrollbar-color:rgb(var(--color-border-300))_transparent] supports-[not_selector(::-webkit-scrollbar)]:[scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
           <table
             className="border-collapse text-[13px]"
             style={{ minWidth: '100%', width: table.getTotalSize() }}

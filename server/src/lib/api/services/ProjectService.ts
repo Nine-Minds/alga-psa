@@ -79,7 +79,7 @@ async function resolveProjectStatusInfo(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -430,14 +430,22 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
+  // TODO: This bare DELETE has the same gap that was fixed for tickets — it
+  // skips dependency validation and child-row cleanup. A project with blocking
+  // records (phases, ticket links, interactions, materials, asset associations)
+  // will FK-crash (500) instead of returning a clean 409, and there's no
+  // safeguard against the API force-deleting a project that shouldn't be deleted.
+  // Mirror TicketService.delete: route through deleteEntityWithValidation('project', ...)
+  // (config already exists in @alga-psa/core), clean up child rows, and throw
+  // ConflictError when blocking dependencies exist.
   async delete(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
-      
+
       await withTransaction(knex, async (trx) => {
         const result = await trx(this.tableName)
           .where({ [this.primaryKey]: id, tenant: context.tenant })
           .del();
-  
+
         if (result === 0) {
           throw new NotFoundError('Project not found');
         }
@@ -1149,8 +1157,7 @@ export class ProjectService extends BaseService<IProject> {
               .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
           })
           .leftJoin('standard_statuses', function joinStandardStatuses(this: Knex.JoinClause) {
-            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id')
-              .andOn('project_status_mappings.tenant', '=', 'standard_statuses.tenant');
+            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id');
           })
           .first()
       ]);
@@ -1287,7 +1294,7 @@ export class ProjectService extends BaseService<IProject> {
         this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
       })
       .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+        this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
       })
       .select(
         'psm.*',

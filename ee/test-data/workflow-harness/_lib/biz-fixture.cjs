@@ -269,7 +269,7 @@ async function getLatestFixtureRun({ ctx, workflowId, tenantId, startedAfter, fi
         run_id,
         workflow_id,
         workflow_version,
-        tenant_id,
+        tenant,
         status,
         event_type,
         source_payload_schema_ref,
@@ -280,7 +280,7 @@ async function getLatestFixtureRun({ ctx, workflowId, tenantId, startedAfter, fi
         error_json
       from workflow_runs
       where workflow_id = $1
-        and tenant_id = $2
+        and tenant = $2
         and started_at >= $3
         and input_json->>'fixtureNotifyUserId' = $4
         and ($5::text is null or input_json->>'fixtureDedupeKey' = $5)
@@ -323,18 +323,18 @@ async function waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId, fixtu
 
 async function withWorkflowPaused(ctx, workflowId, fn) {
   const tenantId = ctx.config.tenantId;
-  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
+  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
   const wasPaused = rows[0]?.is_paused ?? false;
 
   if (!wasPaused) {
-    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
+    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
   }
 
   try {
     return await fn();
   } finally {
     if (!wasPaused) {
-      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
+      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1 and tenant = $2`, [workflowId, tenantId]);
     }
   }
 }

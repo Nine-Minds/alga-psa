@@ -5,8 +5,12 @@ import { ITicketCategory } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
-export const getServiceCategories = withAuth(async (_user, { tenant }): Promise<IServiceCategory[]> => {
+export const getServiceCategories = withAuth(async (user, { tenant }): Promise<IServiceCategory[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -24,11 +28,14 @@ export const getServiceCategories = withAuth(async (_user, { tenant }): Promise<
   }
 });
 
-export const createServiceCategory = withAuth(async (_user, { tenant }, data: {
+export const createServiceCategory = withAuth(async (user, { tenant }, data: {
   category_name: string;
   description?: string;
   display_order?: number;
 }): Promise<IServiceCategory> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -63,7 +70,7 @@ export const createServiceCategory = withAuth(async (_user, { tenant }, data: {
 });
 
 export const updateServiceCategory = withAuth(async (
-  _user,
+  user,
   { tenant },
   categoryId: string,
   data: {
@@ -72,6 +79,9 @@ export const updateServiceCategory = withAuth(async (
     display_order?: number;
   }
 ): Promise<IServiceCategory> => {
+  if (!await hasPermission(user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -98,7 +108,10 @@ export const updateServiceCategory = withAuth(async (
   }
 });
 
-export const deleteServiceCategory = withAuth(async (_user, { tenant }, categoryId: string): Promise<void> => {
+export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryId: string): Promise<void> => {
+  if (!await hasPermission(user, 'billing', 'delete')) {
+    throw new Error('Permission denied: billing delete required');
+  }
   try {
     const {knex: db} = await createTenantKnex();
 

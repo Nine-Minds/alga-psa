@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 /**
  * Client-specific tax source resolution result.
@@ -26,6 +27,9 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<ClientTaxSourceInfo> => {
+  if (!await hasPermission(_user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -112,6 +116,9 @@ export const validateInvoiceFinalization = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceFinalizationValidation> => {
+  if (!await hasPermission(_user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
@@ -155,6 +162,9 @@ export const updateInvoiceTaxSource = withAuth(async (
   invoiceId: string,
   newTaxSource: TaxSource
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!await hasPermission(_user, 'billing', 'update')) {
+    throw new Error('Permission denied: billing update required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {

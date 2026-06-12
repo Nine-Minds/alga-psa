@@ -87,7 +87,9 @@ describe('resolveSelfHostTier', () => {
     // with no trial and no license.
     const result = resolveSelfHostTier(makeRow({ edition_choice: 'ee' }));
     expect(result?.tier).toBe('essentials');
-    expect(result?.state).toBe('trial_expired');
+    // Fresh ee install with no trial used: trial_available, NOT trial_expired —
+    // the expired state (and its banner) is reserved for an actually-elapsed trial.
+    expect(result?.state).toBe('trial_available');
   });
 
   it('license takes precedence over an active trial', () => {

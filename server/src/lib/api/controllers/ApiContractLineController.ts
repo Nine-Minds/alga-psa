@@ -79,7 +79,7 @@ import {
   BulkUnassignPlansFromClientData
 } from '../schemas/contractLineSchemas';
 import { z } from 'zod';
-import { createApiResponse, createErrorResponse } from '../utils/response';
+import { createApiResponse, createErrorResponse, createPaginatedResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
 
@@ -133,21 +133,11 @@ export class ApiContractLineController {
         _links: getHateoasLinks('contract-line', plan.contract_line_id!)
       }));
 
-      const response = createApiResponse({
-        data: plansWithLinks,
-        pagination: {
-          page: listOptions.page,
-          limit: listOptions.limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / listOptions.limit)
-        },
-        _links: {
-          self: { href: `/api/v2/contract-lines` },
-          create: { href: `/api/v2/contract-lines`, method: 'POST' }
-        }
+      return createPaginatedResponse(plansWithLinks, {
+        page: listOptions.page,
+        limit: listOptions.limit,
+        total: result.total
       });
-
-      return NextResponse.json(response);
     };
   }
 
@@ -173,14 +163,10 @@ export class ApiContractLineController {
         return createErrorResponse('Contract Line not found', 404);
       }
 
-      const response = createApiResponse({
-        data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
-        }
+      return createApiResponse({
+        ...plan,
+        _links: getHateoasLinks('contract-line', plan.contract_line_id!)
       });
-
-      return NextResponse.json(response);
     };
   }
 
@@ -200,14 +186,10 @@ export class ApiContractLineController {
 
       const plan = await this.contractLineService.create(validation.data, context);
       
-      const response = createApiResponse({
-        data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
-        }
+      return createApiResponse({
+        ...plan,
+        _links: getHateoasLinks('contract-line', plan.contract_line_id!)
       }, 201);
-
-      return NextResponse.json(response);
     };
   }
 
@@ -228,14 +210,10 @@ export class ApiContractLineController {
 
       const plan = await this.contractLineService.update(params.id, validation.data, requestContext);
       
-      const response = createApiResponse({
-        data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
-        }
+      return createApiResponse({
+        ...plan,
+        _links: getHateoasLinks('contract-line', plan.contract_line_id!)
       });
-
-      return NextResponse.json(response);
     };
   }
 
@@ -249,7 +227,7 @@ export class ApiContractLineController {
       
       await this.contractLineService.delete(params.id, requestContext);
       
-      return NextResponse.json(createApiResponse(null, 204));
+      return new NextResponse(null, { status: 204 });
     };
   }
 
@@ -263,16 +241,7 @@ export class ApiContractLineController {
       
       const services = await this.contractLineService.getPlanServices(params.id, requestContext);
       
-      const response = createApiResponse({
-        data: services,
-        _links: {
-          self: { href: `/api/v2/contract-lines/${params.id}/services` },
-          create: { href: `/api/v2/contract-lines/${params.id}/services`, method: 'POST' },
-          parent: { href: `/api/v2/contract-lines/${params.id}` }
-        }
-      });
-
-      return NextResponse.json(response);
+      return createApiResponse(services);
     };
   }
 
@@ -293,8 +262,7 @@ export class ApiContractLineController {
 
       const serviceConfig = await this.contractLineService.addServiceToPlan(params.id, validation.data, requestContext);
       
-      const response = createApiResponse({ data: serviceConfig }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(serviceConfig, 201);
     };
   }
 
@@ -315,8 +283,7 @@ export class ApiContractLineController {
 
       const serviceConfig = await this.contractLineService.updatePlanService(params.contractLineId, params.serviceId, validation.data, requestContext);
       
-      const response = createApiResponse({ data: serviceConfig });
-      return NextResponse.json(response);
+      return createApiResponse(serviceConfig);
     };
   }
 
@@ -330,7 +297,7 @@ export class ApiContractLineController {
       
       await this.contractLineService.removeServiceFromPlan(params.contractLineId, params.serviceId, requestContext);
       
-      return NextResponse.json(createApiResponse(null, 204));
+      return new NextResponse(null, { status: 204 });
     };
   }
 
@@ -348,8 +315,7 @@ export class ApiContractLineController {
         return createErrorResponse('Fixed plan configuration not found', 404);
       }
 
-      const response = createApiResponse({ data: config });
-      return NextResponse.json(response);
+      return createApiResponse(config);
     };
   }
 
@@ -370,8 +336,7 @@ export class ApiContractLineController {
 
       const config = await this.contractLineService.upsertFixedPlanConfig(params.id, validation.data, requestContext);
       
-      const response = createApiResponse({ data: config });
-      return NextResponse.json(response);
+      return createApiResponse(config);
     };
   }
 
@@ -385,8 +350,7 @@ export class ApiContractLineController {
       
       const config = await this.contractLineService.getCombinedFixedPlanConfig(params.contractLineId, params.serviceId, requestContext);
       
-      const response = createApiResponse({ data: config });
-      return NextResponse.json(response);
+      return createApiResponse(config);
     };
   }
 
@@ -407,8 +371,7 @@ export class ApiContractLineController {
 
       const plan = await this.contractLineService.setPlanActivation(params.id, validation.data, requestContext);
       
-      const response = createApiResponse({ data: plan });
-      return NextResponse.json(response);
+      return createApiResponse(plan);
     };
   }
 
@@ -429,14 +392,10 @@ export class ApiContractLineController {
 
       const newPlan = await this.contractLineService.copyPlan(validation.data, requestContext);
       
-      const response = createApiResponse({
-        data: {
-          ...newPlan,
-          _links: getHateoasLinks('contract-line', newPlan.contract_line_id!)
-        }
+      return createApiResponse({
+        ...newPlan,
+        _links: getHateoasLinks('contract-line', newPlan.contract_line_id!)
       }, 201);
-
-      return NextResponse.json(response);
     };
   }
 
@@ -450,8 +409,7 @@ export class ApiContractLineController {
       
       const analytics = await this.contractLineService.getPlanAnalytics(params.id, requestContext);
       
-      const response = createApiResponse({ data: analytics });
-      return NextResponse.json(response);
+      return createApiResponse(analytics);
     };
   }
 
@@ -469,8 +427,7 @@ export class ApiContractLineController {
 
       const metrics = await this.contractLineService.getUsageMetrics(params.id, periodStart, periodEnd, requestContext);
       
-      const response = createApiResponse({ data: metrics });
-      return NextResponse.json(response);
+      return createApiResponse(metrics);
     };
   }
 
@@ -498,21 +455,11 @@ export class ApiContractLineController {
       };
       const result = await this.contractLineService.listContracts(listOptions, context);
       
-      const response = createApiResponse({
-        data: result.data,
-        pagination: {
-          page: listOptions.page,
-          limit: listOptions.limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / listOptions.limit)
-        },
-        _links: {
-          self: { href: `/api/v2/contracts` },
-          create: { href: `/api/v2/contracts`, method: 'POST' }
-        }
+      return createPaginatedResponse(result.data, {
+        page: listOptions.page,
+        limit: listOptions.limit,
+        total: result.total
       });
-
-      return NextResponse.json(response);
     };
   }
 
@@ -532,8 +479,7 @@ export class ApiContractLineController {
 
       const contract = await this.contractLineService.createContract(validation.data, context);
       
-      const response = createApiResponse({ data: contract }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(contract, 201);
     };
   }
 
@@ -559,8 +505,7 @@ export class ApiContractLineController {
         requestContext
       );
       
-      const response = createApiResponse({ data: contractLineMapping }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(contractLineMapping, 201);
     };
   }
 
@@ -574,7 +519,7 @@ export class ApiContractLineController {
       
       await this.contractLineService.removeContractLine(params.contractId, params.contractLineId, requestContext);
       
-      return NextResponse.json(createApiResponse(null, 204));
+      return new NextResponse(null, { status: 204 });
     };
   }
 
@@ -601,24 +546,13 @@ export class ApiContractLineController {
         filters
       };
       
-      // TODO: Implement listClientContractLines in ContractLineService
-      const result = { data: [], total: 0 };
-      
-      const response = createApiResponse({
-        data: result.data,
-        pagination: {
-          page: listOptions.page,
-          limit: listOptions.limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / listOptions.limit)
-        },
-        _links: {
-          self: { href: `/api/v2/client-contract-lines` },
-          create: { href: `/api/v2/client-contract-lines`, method: 'POST' }
-        }
-      });
+      const result = await this.contractLineService.listClientContractLines(listOptions, context);
 
-      return NextResponse.json(response);
+      return createPaginatedResponse(result.data, {
+        page: listOptions.page,
+        limit: listOptions.limit,
+        total: result.total
+      });
     };
   }
 
@@ -638,8 +572,7 @@ export class ApiContractLineController {
 
       const assignment = await this.contractLineService.assignPlanToClient(validation.data, context);
       
-      const response = createApiResponse({ data: assignment }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(assignment, 201);
     };
   }
 
@@ -653,7 +586,7 @@ export class ApiContractLineController {
       
       await this.contractLineService.unassignPlanFromClient(params.id, requestContext);
       
-      return NextResponse.json(createApiResponse(null, 204));
+      return new NextResponse(null, { status: 204 });
     };
   }
 
@@ -673,8 +606,7 @@ export class ApiContractLineController {
 
       const template = await this.contractLineService.createTemplate(validation.data, context);
       
-      const response = createApiResponse({ data: template }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(template, 201);
     };
   }
 
@@ -682,27 +614,30 @@ export class ApiContractLineController {
    * POST /api/v2/plan-templates/{id}/create-plan - Create plan from template
    */
   createFromTemplate() {
-    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
-      const params = await context.params;
-      const data = await req.json();
+    return async (req: NextRequest): Promise<NextResponse> => {
       const requestContext = requireRequestContext(req);
-      
-      // Validate request body
-      const validation = createPlanFromTemplateSchema.safeParse(data);
+      // The template id comes from the {id} path param (set by the route auth
+      // wrapper) and takes precedence over any template_id in the body.
+      const templateId = (req as any).params?.id as string | undefined;
+      const data = await req.json();
+
+      const validation = createPlanFromTemplateSchema.safeParse({
+        ...data,
+        template_id: templateId ?? data?.template_id
+      });
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
+      if (!validation.data.template_id) {
+        return createErrorResponse('Template id is required in the path', 400, 'VALIDATION_ERROR');
+      }
 
       const plan = await this.contractLineService.createFromTemplate(validation.data, requestContext);
-      
-      const response = createApiResponse({
-        data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
-        }
-      }, 201);
 
-      return NextResponse.json(response);
+      return createApiResponse({
+        ...plan,
+        _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+      }, 201);
     };
   }
 
@@ -715,8 +650,7 @@ export class ApiContractLineController {
       
       const analytics = await this.contractLineService.getBillingOverviewAnalytics(context);
       
-      const response = createApiResponse({ data: analytics });
-      return NextResponse.json(response);
+      return createApiResponse(analytics);
     };
   }
 
@@ -736,11 +670,7 @@ export class ApiContractLineController {
 
       const plans = await this.contractLineService.bulkCreateContractLines(validation.data, context);
       
-      const response = createApiResponse({ 
-        data: plans, 
-        count: plans.length 
-      }, 201);
-      return NextResponse.json(response);
+      return createApiResponse(plans, 201, { count: plans.length });
     };
   }
 
@@ -760,11 +690,7 @@ export class ApiContractLineController {
 
       const plans = await this.contractLineService.bulkUpdateContractLines(validation.data, context);
       
-      const response = createApiResponse({ 
-        data: plans, 
-        count: plans.length 
-      });
-      return NextResponse.json(response);
+      return createApiResponse(plans, 200, { count: plans.length });
     };
   }
 
@@ -784,11 +710,10 @@ export class ApiContractLineController {
 
       await this.contractLineService.bulkDeleteContractLines(validation.data, context);
       
-      const response = createApiResponse({ 
-        message: 'Plans deleted successfully', 
-        count: validation.data.contract_line_ids.length 
+      return createApiResponse(null, 200, {
+        message: 'Plans deleted successfully',
+        count: validation.data.contract_line_ids.length
       });
-      return NextResponse.json(response);
     };
   }
 
@@ -816,8 +741,7 @@ export class ApiContractLineController {
         }
       }
       
-      const response = createApiResponse({ results, total: results.length });
-      return NextResponse.json(response);
+      return createApiResponse(results, 200, { total: results.length });
     };
   }
 
@@ -845,8 +769,7 @@ export class ApiContractLineController {
         }
       }
       
-      const response = createApiResponse({ results, total: results.length });
-      return NextResponse.json(response);
+      return createApiResponse(results, 200, { total: results.length });
     };
   }
 

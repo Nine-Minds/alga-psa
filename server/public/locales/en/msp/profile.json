@@ -134,7 +134,18 @@
         "noUsers": "No {{type}} users found",
         "inactiveHidden": "(inactive users hidden)"
       },
-      "inactiveTag": "(Inactive)"
+      "inactiveTag": "(Inactive)",
+      "messages": {
+        "success": {
+          "roleAssigned": "Role assigned successfully",
+          "roleRemoved": "Role removed successfully"
+        },
+        "error": {
+          "assignFailed": "Failed to assign role. Please try again.",
+          "removeFailed": "Failed to remove role. Please try again.",
+          "permissionDenied": "You do not have permission to change user roles."
+        }
+      }
     },
     "sessions": {
       "title": "All User Sessions",

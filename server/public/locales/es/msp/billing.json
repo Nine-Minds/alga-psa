@@ -631,7 +631,8 @@
       "open": "Abrir",
       "execute": "Ejecutar",
       "createBatch": "Crear lote",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "cancelBatch": "Cancelar lote"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
@@ -665,8 +666,10 @@
         "created": "Creado",
         "lines": "Líneas",
         "errors": "Errores",
-        "delivered": "Entregado"
-      }
+        "delivered": "Entregado",
+        "notes": "Notas"
+      },
+      "errorDetails": "Detalles de errores"
     },
     "toast": {
       "created": "Lote de exportación contable creado",
@@ -674,7 +677,9 @@
       "loadBatchesError": "No se pudieron cargar los lotes de exportación contable",
       "loadDetailError": "No se pudieron cargar los detalles del lote",
       "createError": "No se pudo crear el lote de exportación",
-      "executeError": "No se pudo ejecutar el lote"
+      "executeError": "No se pudo ejecutar el lote",
+      "cancelled": "Lote cancelado",
+      "cancelError": "No se pudo cancelar el lote"
     },
     "status": {
       "pending": "Pendiente",

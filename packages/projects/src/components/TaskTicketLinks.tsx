@@ -13,7 +13,7 @@ import { ITicketListItem, ITicket, ITicketCategory, IStatus } from '@alga-psa/ty
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
+import { Link, Lock, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -185,7 +185,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       if (!user) return;
 
       const filters: ITicketListFilters = {
-        boardFilterState: 'all'
+        boardFilterState: 'all',
+        assignedToMe: true
       };
       const tickets = await getTicketsForList(filters);
       setAvailableTickets(tickets || []);
@@ -579,23 +580,36 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         {(taskTicketLinks || []).map((link): React.JSX.Element => (
           <div key={link.link_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
             <div className="flex flex-col">
-              <span>{link.ticket_number} - {link.title}</span>
-              {link.status_name && (
+              <span className="flex items-center gap-1">
+                {link.restricted && (
+                  <span
+                    title={linkT('restrictedTooltip', 'Limited details — you are not assigned to this ticket')}
+                    aria-label={linkT('restrictedTooltip', 'Limited details — you are not assigned to this ticket')}
+                    className="inline-flex"
+                  >
+                    <Lock className="h-3.5 w-3.5 text-gray-500" />
+                  </span>
+                )}
+                <span>{link.ticket_number} - {link.title}</span>
+              </span>
+              {!link.restricted && link.status_name && (
                 <span className="text-xs text-gray-500 mt-0.5">
                   {link.status_name}
                 </span>
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                id={`view-ticket-${link.ticket_id}-button`}
-                type="button"
-                variant="ghost"
-                onClick={() => onViewTicket(link.ticket_id)}
-                className="flex items-center text-sm"
-              >
-                <ExternalLink className="h-4 w-4 mr-1" />
-              </Button>
+              {!link.restricted && (
+                <Button
+                  id={`view-ticket-${link.ticket_id}-button`}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onViewTicket(link.ticket_id)}
+                  className="flex items-center text-sm"
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                </Button>
+              )}
               <Button
                 id={`delete-link-${link.link_id}-button`}
                 type="button"

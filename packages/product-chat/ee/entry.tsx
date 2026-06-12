@@ -9,6 +9,9 @@ export { ChatStreamService } from '@ee/services/chatStreamService';
 export { TemporaryApiKeyService } from '@ee/services/temporaryApiKeyService';
 export { ChatCompletionsService } from '@ee/services/chatCompletionsService';
 
+// EE endpoint registry, served by GET /api/v1/meta/mcp-registry on EE builds.
+export { chatApiRegistry as eeMcpRegistry } from '@ee/chat/registry/apiRegistry.generated';
+
 export const ChatPage = () => {
   return <Chat />;
 };

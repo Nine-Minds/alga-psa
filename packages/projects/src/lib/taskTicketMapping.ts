@@ -1,3 +1,25 @@
+import type { IProjectTicketLinkWithDetails } from '@alga-psa/types';
+
+/**
+ * Returns a copy of a ticket-link row with non-essential fields nulled when
+ * the caller isn't allowed to see the ticket in full. Caller is expected to
+ * compute `allowedTicketIds` via filterAuthorizedTicketIds.
+ */
+export function applyTicketLinkRestriction(
+  link: IProjectTicketLinkWithDetails,
+  allowedTicketIds: Set<string>
+): IProjectTicketLinkWithDetails {
+  if (allowedTicketIds.has(link.ticket_id)) {
+    return { ...link, restricted: false };
+  }
+  return {
+    ...link,
+    status_name: null,
+    is_closed: null,
+    restricted: true,
+  };
+}
+
 /**
  * Extract plain text from a BlockNote JSON string.
  * Falls back to returning the raw value if it's not valid BlockNote JSON.

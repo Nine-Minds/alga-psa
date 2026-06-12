@@ -8,6 +8,17 @@ const {
 const CONTRACT_OWNER_FK = 'contracts_owner_client_fkey';
 const CONTRACT_OWNER_INDEX = 'idx_contracts_tenant_owner_client_id';
 
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  const citus = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  if (citus.rows.length === 0) return;
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  if (rows.length > 0) return;
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+};
+
 const ensureSequentialMode = async (knex) => {
   await knex.raw(`
     DO $$
@@ -172,6 +183,12 @@ exports.up = async function up(knex) {
   }
 
   await ensureOwnerClientColumn(knex);
+
+  // The queries below join client_contracts/invoice_charges with distributed
+  // contracts; Citus cannot join distributed and local tables. No-op on plain
+  // Postgres and on clusters that already have them.
+  await ensureDistributed(knex, 'client_contracts', 'tenant');
+  await ensureDistributed(knex, 'invoice_charges', 'tenant');
 
   await knex.transaction(async (trx) => {
     const assignmentRows = await fetchSharedAssignmentRows(trx);

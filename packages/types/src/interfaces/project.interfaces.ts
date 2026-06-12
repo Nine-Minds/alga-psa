@@ -162,8 +162,9 @@ export interface IProjectTicketLink extends TenantEntity {
 export interface IProjectTicketLinkWithDetails extends IProjectTicketLink {
   ticket_number: string;
   title: string;
-  status_name: string;
-  is_closed: boolean;
+  status_name: string | null;
+  is_closed: boolean | null;
+  restricted?: boolean;
 }
 
 export interface ITicketLinkedTask {
@@ -171,11 +172,12 @@ export interface ITicketLinkedTask {
   task_id: string;
   task_name: string;
   project_id: string;
-  project_name: string;
+  project_name: string | null;
   phase_id: string;
-  phase_name: string;
+  phase_name: string | null;
   status_name: string | null;
-  is_closed: boolean;
+  is_closed: boolean | null;
+  restricted?: boolean;
 }
 
 export interface ITaskChecklistItem extends TenantEntity {

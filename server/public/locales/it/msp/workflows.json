@@ -57,7 +57,6 @@
       "runNow": "Esegui ora",
       "exportCsv": "Esporta CSV",
       "refresh": "Aggiorna",
-      "resumeSelected": "Riprendi selezionati ({{count}})",
       "cancelSelected": "Annulla selezionati ({{count}})",
       "clearSelection": "Cancella selezione",
       "details": "Dettagli",
@@ -85,14 +84,10 @@
       "empty": "Nessuna esecuzione di workflow corrisponde ai filtri attuali."
     },
     "bulk": {
-      "resumeTitle": "Riprendi esecuzioni selezionate",
-      "resumeMessage": "Riprendere {{count}} esecuzione/i selezionata/e?",
       "cancelTitle": "Annulla esecuzioni selezionate",
       "cancelMessage": "Annullare {{count}} esecuzione/i selezionata/e? L’operazione non è reversibile.",
       "reasonLabel": "Motivo",
-      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
       "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
-      "resumeConfirm": "Riprendi esecuzioni",
       "cancelConfirm": "Annulla esecuzioni"
     },
     "toasts": {
@@ -106,9 +101,7 @@
       "selectRunsForBulkAction": "Selezioni le esecuzioni per eseguire questa azione.",
       "bulkReasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
       "noEligibleRuns": "Nessuna delle esecuzioni selezionate è idonea per quell’azione.",
-      "bulkResumeFailedCount": "Impossibile riprendere {{count}} esecuzione/i.",
       "bulkCancelFailedCount": "Impossibile annullare {{count}} esecuzione/i.",
-      "bulkResumeSuccessCount": "Ripresa/e {{count}} esecuzione/i.",
       "bulkCancelSuccessCount": "Annullata/e {{count}} esecuzione/i.",
       "bulkSkippedIneligibleCount": "Saltata/e {{count}} esecuzione/i non idonea/e.",
       "bulkActionFailed": "Azione multipla non riuscita"
@@ -143,12 +136,9 @@
       "triggerLabel": "Trigger:"
     },
     "actions": {
-      "resume": "Riprendi",
       "cancel": "Annulla",
       "export": "Esporta",
-      "retry": "Riprova",
       "replay": "Ripeti",
-      "requeueEvent": "Rimetti in coda evento",
       "close": "Chiudi",
       "view": "Visualizza",
       "apply": "Applica",
@@ -267,26 +257,15 @@
     },
     "dialogs": {
       "reasonLabel": "Motivo",
-      "resumeTitle": "Riprendi esecuzione del workflow",
-      "resumeMessage": "Riprendere ora questa esecuzione del workflow?",
-      "resumeReasonPlaceholder": "Fornisca un motivo per la ripresa",
       "cancelTitle": "Annulla esecuzione del workflow",
       "cancelMessage": "Annullare questa esecuzione del workflow? L’operazione non è reversibile.",
       "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
       "cancelConfirm": "Annulla esecuzione",
-      "retryTitle": "Riprova esecuzione del workflow",
-      "retryMessage": "Riprovare questa esecuzione dall’ultimo passaggio fallito?",
-      "retryReasonPlaceholder": "Fornisca un motivo per il nuovo tentativo",
-      "retryConfirm": "Riprova esecuzione",
       "replayTitle": "Ripeti esecuzione del workflow",
       "replayMessage": "Ripeta questa esecuzione con un nuovo payload.",
       "replayReasonPlaceholder": "Fornisca un motivo per la ripetizione",
       "payloadLabel": "Payload (JSON)",
-      "replayConfirm": "Ripeti esecuzione",
-      "requeueTitle": "Rimetti in coda attesa evento",
-      "requeueMessage": "Rimettere in coda l’attesa evento più recente per questa esecuzione?",
-      "requeueReasonPlaceholder": "Fornisca un motivo per il reinserimento in coda",
-      "requeueConfirm": "Rimetti in coda attesa"
+      "replayConfirm": "Ripeti esecuzione"
     },
     "toasts": {
       "loadRunDetailsFailed": "Impossibile caricare i dettagli dell’esecuzione",
@@ -295,21 +274,19 @@
       "logExportReady": "Esportazione log pronta",
       "exportLogsFailed": "Impossibile esportare i log",
       "reasonTooShort": "Il motivo deve contenere almeno 3 caratteri.",
-      "runResumed": "Esecuzione ripresa",
-      "resumeRunFailed": "Impossibile riprendere l’esecuzione",
       "runCanceled": "Esecuzione annullata",
       "cancelRunFailed": "Impossibile annullare l’esecuzione",
       "runExportReady": "Esportazione esecuzione pronta",
       "exportRunFailed": "Impossibile esportare l’esecuzione",
-      "runRetryStarted": "Nuovo tentativo di esecuzione avviato",
-      "retryRunFailed": "Impossibile riprovare l’esecuzione",
       "replayPayloadInvalid": "Il payload di ripetizione deve essere JSON valido.",
       "runReplayStarted": "Ripetizione dell’esecuzione avviata",
       "replayRunFailed": "Impossibile ripetere l’esecuzione",
-      "eventWaitRequeued": "Attesa evento rimessa in coda",
-      "requeueEventWaitFailed": "Impossibile reinserire in coda l’attesa evento",
       "auditExportReady": "Esportazione audit pronta",
       "exportAuditLogsFailed": "Impossibile esportare i log di audit"
+    },
+    "queuedWarning": {
+      "title": "In coda — in attesa di un worker del flusso di lavoro",
+      "description": "Questa esecuzione è iniziata più di un minuto fa, ma non è ancora stato eseguito alcun passaggio. Verifica che il servizio worker del flusso di lavoro sia in esecuzione e connesso a Temporal."
     }
   },
   "runDialog": {
@@ -787,6 +764,50 @@
       "ai.infer": {
         "label": "Deduci output strutturato",
         "description": "Genera dati strutturati del workflow da un prompt utilizzando il provider IA configurato."
+      },
+      "store.get": {
+        "label": "Ottieni valore memorizzato",
+        "description": "Leggi una voce chiave/valore del workflow persistente."
+      },
+      "store.set": {
+        "label": "Imposta valore memorizzato",
+        "description": "Rendi persistente una voce chiave/valore del workflow."
+      },
+      "store.delete": {
+        "label": "Elimina valore memorizzato",
+        "description": "Elimina una voce chiave/valore del workflow persistente."
+      },
+      "store.increment": {
+        "label": "Incrementa numero memorizzato",
+        "description": "Incrementa in modo atomico un numero del workflow persistente."
+      },
+      "store.list": {
+        "label": "Elenca valori memorizzati",
+        "description": "Elenca le voci chiave/valore del workflow persistenti in uno spazio dei nomi."
+      },
+      "store.list_namespaces": {
+        "label": "Elenca spazi dei nomi dell'archivio",
+        "description": "Elenca gli spazi dei nomi dell'archivio dati del workflow usati da questo tenant."
+      },
+      "links.upsert": {
+        "label": "Crea o aggiorna collegamento entità",
+        "description": "Crea o aggiorna un collegamento persistente tra due entità del workflow."
+      },
+      "links.lookup": {
+        "label": "Cerca collegamenti tra entità",
+        "description": "Trova collegamenti tra entità persistenti per entità di origine e direzione."
+      },
+      "links.delete": {
+        "label": "Elimina collegamenti tra entità",
+        "description": "Elimina collegamenti tra entità persistenti per lato e relazione facoltativa."
+      },
+      "links.list": {
+        "label": "Elenca collegamenti tra entità",
+        "description": "Elenca i collegamenti tra entità persistenti in uno spazio dei nomi."
+      },
+      "links.list_namespaces": {
+        "label": "Elenca spazi dei nomi dei collegamenti",
+        "description": "Elenca gli spazi dei nomi dei collegamenti tra entità del workflow usati da questo tenant."
       }
     },
     "validation": {
@@ -931,6 +952,10 @@
         "ai": {
           "label": "AI",
           "description": "Azioni IA"
+        },
+        "data-store": {
+          "label": "Archivio dati",
+          "description": "Leggi e scrivi lo stato persistente del workflow tra le esecuzioni."
         }
       }
     },
@@ -1408,7 +1433,11 @@
       "ariaLabel": "Chiedi aiuto all’IA per le trasformazioni",
       "title": "Chiedi all’IA",
       "shortcutHint": "Apri Quick Ask per la guida sulle trasformazioni"
-    }
+    },
+    "softEnumPlaceholder": "Seleziona o inserisci un valore",
+    "softEnumSearchPlaceholder": "Cerca o inserisci un valore personalizzato",
+    "softEnumNoResults": "Nessun suggerimento",
+    "softEnumUseCustom": "Usa \"{{value}}\""
   },
   "schemaReference": {
     "selectAction": "Selezioni un’azione per vederne lo schema di input/output",
@@ -1984,6 +2013,23 @@
     "workflowWaitTiming": {
       "fixed": "Data e ora specifiche",
       "expression": "Espressione avanzata"
+    },
+    "workflowEntityType": {
+      "project_task": "Attività di progetto",
+      "ticket": "Ticket",
+      "contact": "Contatto",
+      "client": "Cliente",
+      "project": "Progetto",
+      "appointment": "Appuntamento",
+      "quote": "Preventivo"
+    },
+    "workflowLinkRelation": {
+      "related": "Correlato",
+      "mirrors": "Rispecchia",
+      "maps_to": "Mappato a",
+      "blocks": "Blocca",
+      "duplicate_of": "Duplicato di",
+      "synced_with": "Sincronizzato con"
     }
   },
   "automation": {

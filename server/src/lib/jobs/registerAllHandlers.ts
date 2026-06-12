@@ -40,6 +40,12 @@ import {
   GooglePubSubVerificationJobData,
 } from './handlers/calendarWebhookMaintenanceHandler';
 import {
+  renewTeamsMeetingArtifactSubscriptions,
+  processTeamsMeetingArtifactNotification,
+  TeamsMeetingArtifactSubscriptionRenewalJobData,
+  TeamsMeetingArtifactNotificationJobData,
+} from './handlers/teamsMeetingArtifactWebhookHandler';
+import {
   renewGoogleGmailWatchSubscriptions,
   GoogleGmailWatchRenewalJobData,
 } from './handlers/googleGmailWatchRenewalHandler';
@@ -53,10 +59,15 @@ import {
   WorkflowScheduledRunJobData,
 } from './handlers/workflowScheduledRunHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
 } from './handlers/workflowQuotaResumeScanHandler';
+import {
+  accountingSyncCycleHandler,
+  AccountingSyncCycleJobData,
+} from './handlers/accountingSyncCycleHandler';
 import {
   SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
   searchVisibleUserReindexHandler,
@@ -279,6 +290,19 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // Auto-close stale tickets per board auto-close rules
+  JobHandlerRegistry.register<AutoCloseTicketsJobData & BaseJobData>(
+    {
+      name: 'auto-close-tickets',
+      handler: async (_jobId, data) => {
+        await autoCloseTicketsHandler(data);
+      },
+      retry: { maxAttempts: 2 },
+      timeoutMs: 600000,
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // CLEANUP HANDLERS
   // ============================================================================
@@ -300,6 +324,19 @@ export async function registerAllJobHandlers(
   // ============================================================================
 
   if (includeEnterprise) {
+    // Accounting sync cycle (QBO closed-loop sync; cheap no-op for unconnected tenants)
+    JobHandlerRegistry.register<AccountingSyncCycleJobData & BaseJobData>(
+      {
+        name: 'accounting-sync-cycle',
+        handler: async (_jobId, data) => {
+          await accountingSyncCycleHandler(data);
+        },
+        retry: { maxAttempts: 1 }, // cycles are self-healing on the next tick
+        timeoutMs: 600000, // 10 minutes
+      },
+      registerOpts
+    );
+
     JobHandlerRegistry.register<ExtensionScheduledInvocationJobData & BaseJobData>(
       {
         name: 'extension-scheduled-invocation',
@@ -364,6 +401,30 @@ export async function registerAllJobHandlers(
     },
     registerOpts
   );
+
+  if (includeEnterprise) {
+    JobHandlerRegistry.register<TeamsMeetingArtifactSubscriptionRenewalJobData & BaseJobData>(
+      {
+        name: 'renew-teams-meeting-artifact-subscriptions',
+        handler: async (_jobId, data) => {
+          await renewTeamsMeetingArtifactSubscriptions(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TeamsMeetingArtifactNotificationJobData & BaseJobData>(
+      {
+        name: 'process-teams-meeting-artifact-notification',
+        handler: async (_jobId, data) => {
+          await processTeamsMeetingArtifactNotification(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+  }
 
   // Google Gmail watch renewal handler
   JobHandlerRegistry.register<GoogleGmailWatchRenewalJobData & BaseJobData>(
@@ -460,6 +521,13 @@ export function getAvailableJobHandlers(): string[] {
     'renew-microsoft-calendar-webhooks',
     'verify-google-calendar-pubsub',
     'renew-google-gmail-watch',
+    ...(
+      process.env.EDITION === 'enterprise'
+      || process.env.EDITION === 'ee'
+      || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification']
+        : []
+    ),
     // SLA
     'sla-timer',
     // Enterprise-only
@@ -467,7 +535,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['cleanup-ai-session-keys', 'workflow-quota-resume-scan']
+        ? ['cleanup-ai-session-keys', 'workflow-quota-resume-scan', 'accounting-sync-cycle']
         : []
     ),
   ];

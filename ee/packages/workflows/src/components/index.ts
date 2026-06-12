@@ -7,7 +7,5 @@ export type { WorkflowComponentType, WorkflowProps } from './WorkflowComponentLo
 
 export { TaskForm } from './workflow/TaskForm';
 
-export { ActivityDrawerProvider, useActivityDrawer } from './user-activities/ActivityDrawerProvider';
-export { UserActivitiesDashboard } from './user-activities/UserActivitiesDashboard';
-export { NotificationCard } from './user-activities/NotificationCard';
-export { NotificationSectionFiltersDialog } from './user-activities/filters/NotificationSectionFiltersDialog';
+// user-activities moved to @alga-psa/user-activities (wired into the MSP app via
+// @alga-psa/msp-composition/user-activities). Workflow engine/runtime concerns stay here.

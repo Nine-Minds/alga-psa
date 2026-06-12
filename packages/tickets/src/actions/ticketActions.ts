@@ -16,11 +16,11 @@ import Ticket from '../models/ticket';
 import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from '@alga-psa/auth/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
-import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
@@ -53,6 +53,8 @@ import {
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -294,14 +296,15 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
     try {
         const {knex: db} = await createTenantKnex();
 
-        const result = await db.transaction(async (trx) => {
+        const result = await withTransaction(db, async (trx) => {
             // Server-specific: Check permissions
             if (!await hasPermission(user, 'ticket', 'create', trx)) {
                 throw new Error('Permission denied: Cannot create ticket');
             }
 
-            // Server-specific: Create adapters for dependency injection
-            const eventPublisher = new TicketModelEventPublisher();
+            // Server-specific: Create adapters for dependency injection.
+            // Passing trx defers event publishing until the commit.
+            const eventPublisher = new TicketModelEventPublisher(trx);
             const analyticsTracker = new TicketModelAnalyticsTracker();
 
             // Use shared TicketModel for asset ticket creation
@@ -341,18 +344,21 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               enteredAt: fullTicket.entered_at,
             });
             if (enteredSlaEvent) {
-              await publishWorkflowEvent({
-                eventType: enteredSlaEvent.eventType,
-                payload: enteredSlaEvent.payload,
-                ctx: {
-                  tenantId: tenant,
-                  actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-                  occurredAt: (fullTicket.entered_at instanceof Date
-                    ? fullTicket.entered_at.toISOString()
-                    : fullTicket.entered_at) || new Date().toISOString(),
-                },
-                idempotencyKey: enteredSlaEvent.idempotencyKey,
-              });
+              registerAfterCommit(trx, () =>
+                publishWorkflowEvent({
+                  eventType: enteredSlaEvent.eventType,
+                  payload: enteredSlaEvent.payload,
+                  ctx: {
+                    tenantId: tenant,
+                    actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+                    occurredAt: (fullTicket.entered_at instanceof Date
+                      ? fullTicket.entered_at.toISOString()
+                      : fullTicket.entered_at) || new Date().toISOString(),
+                  },
+                  idempotencyKey: enteredSlaEvent.idempotencyKey,
+                }),
+                `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
+              );
             }
 
             return convertDates(fullTicket);
@@ -374,7 +380,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
   try {
     const {knex: db} = await createTenantKnex();
 
-    return await db.transaction(async (trx) => {
+    return await withTransaction(db, async (trx) => {
       // Server-specific: Check permissions
       if (!await hasPermission(user, 'ticket', 'create', trx)) {
         throw new Error('Permission denied: Cannot create ticket');
@@ -438,8 +444,9 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         ticket_origin: TICKET_ORIGINS.INTERNAL,
       };
 
-      // Server-specific: Create adapters for dependency injection
-      const eventPublisher = new TicketModelEventPublisher();
+      // Server-specific: Create adapters for dependency injection.
+      // Passing trx defers event publishing until the commit.
+      const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
@@ -469,15 +476,18 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {
-        await publishEvent({
-          eventType: 'TICKET_ASSIGNED',
-          payload: {
-            tenantId: tenant,
-            ticketId: ticketResult.ticket_id,
-            userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
-            assignedByUserId: user.user_id  // The user who created and assigned the ticket
-          }
-        });
+        registerAfterCommit(trx, () =>
+          publishEvent({
+            eventType: 'TICKET_ASSIGNED',
+            payload: {
+              tenantId: tenant,
+              ticketId: ticketResult.ticket_id,
+              userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+              assignedByUserId: user.user_id  // The user who created and assigned the ticket
+            }
+          }),
+          `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
+        );
       }
 
       // Server-specific: Get full ticket data for return
@@ -528,18 +538,21 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         enteredAt: fullTicket.entered_at,
       });
       if (enteredSlaEvent) {
-        await publishWorkflowEvent({
-          eventType: enteredSlaEvent.eventType,
-          payload: enteredSlaEvent.payload,
-          ctx: {
-            tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-            occurredAt: (fullTicket.entered_at instanceof Date
-              ? fullTicket.entered_at.toISOString()
-              : fullTicket.entered_at) || new Date().toISOString(),
-          },
-          idempotencyKey: enteredSlaEvent.idempotencyKey,
-        });
+        registerAfterCommit(trx, () =>
+          publishWorkflowEvent({
+            eventType: enteredSlaEvent.eventType,
+            payload: enteredSlaEvent.payload,
+            ctx: {
+              tenantId: tenant,
+              actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+              occurredAt: (fullTicket.entered_at instanceof Date
+                ? fullTicket.entered_at.toISOString()
+                : fullTicket.entered_at) || new Date().toISOString(),
+            },
+            idempotencyKey: enteredSlaEvent.idempotencyKey,
+          }),
+          `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
+        );
       }
 
       // Server-specific: Revalidate cache paths
@@ -591,7 +604,13 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
   }
 });
 
-export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+export interface UpdateTicketOptions {
+  /** Close despite unmet close rules; honored only with ticket:close_override. */
+  overrideCloseRules?: boolean;
+  overrideCloseRulesReason?: string | null;
+}
+
+export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions) => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
@@ -727,6 +746,37 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           tenant: tenant
         })
         .first();
+
+      // Pre-close validation gates: when this update flips the ticket from an
+      // open to a closed status, enforce the board's close rules before any
+      // writes. Throws TicketCloseValidationError (aborting the transaction)
+      // unless gates pass or a permissioned override applies.
+      if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+        const nextStatus = await trx('statuses')
+          .where({ status_id: updateData.status_id, tenant: tenant })
+          .first();
+        if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+          const merged = { ...currentTicket, ...updateData };
+          await enforceTicketCloseRules(trx, tenant, {
+            ticket: {
+              ticket_id: id,
+              board_id: merged.board_id ?? null,
+              category_id: merged.category_id ?? null,
+              subcategory_id: merged.subcategory_id ?? null,
+              priority_id: merged.priority_id ?? null,
+              assigned_to: merged.assigned_to ?? null,
+            },
+            override: options?.overrideCloseRules
+              ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
+              : undefined,
+            actor: {
+              actorType: TICKET_ACTIVITY_ACTOR.USER,
+              userId: user.user_id,
+            },
+            source: TICKET_ACTIVITY_SOURCE.UI,
+          });
+        }
+      }
 
       let updatedTicket;
 
@@ -947,6 +997,30 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updatedTicket.closed_by = null;
       }
 
+      // Auto-apply checklist templates when the ticket's targeting attributes
+      // (board/category/subcategory/priority) changed. Idempotent per template.
+      const checklistTargetingChanged =
+        (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) ||
+        (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) ||
+        (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) ||
+        (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id);
+      if (checklistTargetingChanged) {
+        try {
+          await applyMatchingChecklistTemplates(trx, tenant, {
+            ticket_id: id,
+            board_id: updatedTicket.board_id,
+            category_id: updatedTicket.category_id,
+            subcategory_id: updatedTicket.subcategory_id,
+            priority_id: updatedTicket.priority_id,
+          }, {
+            actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+            source: TICKET_ACTIVITY_SOURCE.UI,
+          });
+        } catch (error) {
+          console.error('Failed to auto-apply checklist templates:', error);
+        }
+      }
+
       // Handle response_state changes
       const previousResponseState = currentTicket.response_state as TicketResponseState;
       let responseStateChanged = false;
@@ -1079,6 +1153,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
     return 'success';
   } catch (error) {
     console.error(error);
+    // Close-rule failures carry the user-facing explanation of what's unmet —
+    // don't flatten them into the generic message.
+    if (error instanceof TicketCloseValidationError) {
+      throw error;
+    }
     throw new Error('Failed to update ticket');
   }
 });
@@ -1272,6 +1351,28 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           .andWhere('tm.tenant', tenant)
           .whereIn('td.tag_text', validatedFilters.tags as string[]);
       });
+    }
+
+    if (validatedFilters.assignedToMe) {
+      const hasProjectRead = await hasPermission(user, 'project', 'read', trx);
+      if (!hasProjectRead) {
+        const callerUserId = (user as IUserWithRoles).user_id;
+        query = query.where(function(this: any) {
+          this.where('t.assigned_to', callerUserId)
+            .orWhereIn('t.ticket_id', function(this: any) {
+              this.select('ticket_id')
+                .from('ticket_resources')
+                .where('tenant', tenant)
+                .andWhere('additional_user_id', callerUserId);
+            })
+            .orWhereIn('t.assigned_team_id', function(this: any) {
+              this.select('team_id')
+                .from('team_members')
+                .where('tenant', tenant)
+                .andWhere('user_id', callerUserId);
+            });
+        });
+      }
     }
 
       const sortBy = validatedFilters.sortBy ?? 'entered_at';
@@ -1513,67 +1614,9 @@ async function performTicketDelete(
     throw new Error('Ticket not found');
   }
 
-  await deleteEntityTags(trx, ticketId, 'ticket');
-
-  // Clean up child records that are owned by the ticket
-  // Delete comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-  const commentIds = await trx('comments')
-    .where({ ticket_id: ticketId, tenant })
-    .pluck('comment_id');
-  if (commentIds.length > 0) {
-    await trx('comment_reactions')
-      .where({ tenant })
-      .whereIn('comment_id', commentIds)
-      .delete();
-  }
-
-  await trx('comments')
-    .where({ ticket_id: ticketId, tenant })
-    .delete();
-
-  await trx('ticket_resources')
-    .where({ ticket_id: ticketId, tenant })
-    .delete();
-
-  await trx('project_ticket_links')
-    .where({ ticket_id: ticketId, tenant })
-    .delete();
-
-  await trx('email_reply_tokens')
-    .where({ ticket_id: ticketId, tenant })
-    .delete();
-
-  // Delete SLA notification tracking records (CitusDB doesn't support ON DELETE CASCADE)
-  await trx('sla_notifications_sent')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant
-    })
-    .delete();
-
-  // Detach SLA audit log rows from the ticket rather than deleting them.
-  // The audit log is the system of record for SLA compliance reporting
-  // and forensics; we preserve the rows by NULL-ing ticket_id (FK is
-  // MATCH SIMPLE so a NULL satisfies the constraint) and stashing the
-  // original ticket id + number into event_data so the audit trail still
-  // answers "what ticket was this about?".
-  const detachMetadata = JSON.stringify({
-    _detached_from_ticket_id: ticketId,
-    _detached_from_ticket_number: ticket.ticket_number ?? null,
-    _detached_at: new Date().toISOString(),
-  });
-  await trx('sla_audit_log')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant,
-    })
-    .update({
-      ticket_id: null,
-      event_data: trx.raw(
-        `COALESCE(event_data, '{}'::jsonb) || ?::jsonb`,
-        [detachMetadata]
-      ),
-    });
+  // Clean up every child row that references the ticket (shared with the REST
+  // API delete path in TicketService) before deleting the ticket itself.
+  await deleteTicketChildRecords(trx, ticketId, tenant, ticket);
 
   await trx('tickets')
     .where({ ticket_id: ticketId, tenant })
@@ -1968,7 +2011,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   statusId: string,
 ): Promise<{
   updatedIds: string[];
-  failed: Array<{ ticketId: string; message: string }>;
+  failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
 }> => {
   const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
 
@@ -1983,7 +2026,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   }
 
   const updatedIds: string[] = [];
-  const failed: Array<{ ticketId: string; message: string }> = [];
+  const failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }> = [];
 
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
@@ -1996,6 +2039,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
       failed.push({
         ticketId,
         message: error instanceof Error ? error.message : 'Failed to update status',
+        closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
   }

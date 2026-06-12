@@ -65,7 +65,7 @@ async function seedBoardTicketStatusesFromStandards(
   }
 
   const standardStatuses = await trx('standard_statuses')
-    .where({ tenant, item_type: 'ticket' })
+    .where({ item_type: 'ticket' })
     .orderBy('display_order', 'asc')
     .orderBy('name', 'asc');
 

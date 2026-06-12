@@ -146,12 +146,22 @@ exports.up = async function up(knex) {
   }
 
   if (await knex.schema.hasColumn('contract_lines', 'tenant')) {
+    // contract_lines carries an FK into contracts, and Citus requires the
+    // referenced table to be distributed first (tenants first of all — it is
+    // the colocation anchor, matching ee/server/migrations/citus). Production
+    // already had these distributed before this migration shipped; fresh
+    // chains (new EE installs, the Citus smoke job) must do it here.
+    await ensureDistributed(knex, 'tenants', 'tenant');
+    await ensureDistributed(knex, 'contracts', 'tenant');
     await ensureDistributed(knex, 'contract_lines', 'tenant');
   }
 
-  if (await knex.schema.hasColumn('contract_template_lines', 'tenant')) {
-    await ensureDistributed(knex, 'contract_template_lines', 'tenant');
-  }
+  // contract_templates carries a deliberate UNIQUE(template_id) (it backs
+  // single-column template references), which Citus forbids on distributed
+  // tables — and contract_template_lines FKs into it, so it cannot be
+  // distributed either. The template tables stay local coordinator tables:
+  // template data is small and local-distributed joins are fine for it.
+  // (Production matches: nothing ever distributed these tables there.)
 };
 
 exports.down = async function down(knex) {

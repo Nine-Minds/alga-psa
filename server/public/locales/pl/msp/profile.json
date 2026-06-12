@@ -134,7 +134,18 @@
         "inactiveHidden": "(nieaktywni użytkownicy ukryci)"
       },
       "inactiveTag": "(Nieaktywny)",
-      "unnamedUser": "Użytkownik bez nazwy"
+      "unnamedUser": "Użytkownik bez nazwy",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rola przypisana pomyślnie",
+          "roleRemoved": "Rola usunięta pomyślnie"
+        },
+        "error": {
+          "assignFailed": "Nie udało się przypisać roli. Spróbuj ponownie.",
+          "removeFailed": "Nie udało się usunąć roli. Spróbuj ponownie.",
+          "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
+        }
+      }
     },
     "sessions": {
       "title": "Wszystkie sesje użytkowników",

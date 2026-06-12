@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from '@alga-psa/db';
-import { IWorkItem } from '@alga-psa/types';
+import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { validateData } from '@alga-psa/validation';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
@@ -23,7 +23,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
   { tenant },
   timeSheetId: string
-): Promise<IWorkItem[]> => {
+): Promise<IExtendedWorkItem[]> => {
   const {knex: db} = await createTenantKnex();
 
   // Check permission for time entry reading (reading work items for time entries)
@@ -47,7 +47,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
 
   // Get tickets
   const tickets = await db('tickets')
-    .whereIn('ticket_id', function () {
+    .whereIn('tickets.ticket_id', function () {
       this.select('work_item_id')
         .from('time_entries')
         .where({
@@ -57,11 +57,17 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         });
     })
     .where('tickets.tenant', tenant)
+    .leftJoin('tickets as mt', function () {
+      this.on('tickets.master_ticket_id', '=', 'mt.ticket_id')
+        .andOn('tickets.tenant', '=', 'mt.tenant');
+    })
     .select(
-      'ticket_id as work_item_id',
-      'title as name',
-      'url as description',
-      'ticket_number',
+      'tickets.ticket_id as work_item_id',
+      'tickets.title as name',
+      'tickets.url as description',
+      'tickets.ticket_number',
+      'tickets.master_ticket_id',
+      'mt.ticket_number as master_ticket_number',
       db.raw("'ticket' as type")
     );
 
@@ -178,7 +184,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     }, new Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>()).values()
   );
 
-  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IWorkItem => ({
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IExtendedWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
     ticket_number: item.type === 'ticket' ? item.ticket_number : undefined

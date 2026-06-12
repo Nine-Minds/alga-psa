@@ -631,7 +631,8 @@
       "open": "Otwórz",
       "execute": "Wykonaj",
       "createBatch": "Utwórz partię",
-      "creating": "Tworzenie..."
+      "creating": "Tworzenie...",
+      "cancelBatch": "Anuluj partię"
     },
     "states": {
       "loadingBatches": "Ładowanie partii...",
@@ -665,8 +666,10 @@
         "created": "Stworzony",
         "lines": "Wiersze",
         "errors": "Błędy",
-        "delivered": "Dostarczony"
-      }
+        "delivered": "Dostarczony",
+        "notes": "Notatki"
+      },
+      "errorDetails": "Szczegóły błędów"
     },
     "toast": {
       "created": "Utworzono partię eksportu księgowego",
@@ -674,7 +677,9 @@
       "loadBatchesError": "Nie udało się załadować partii eksportu księgowego",
       "loadDetailError": "Nie udało się załadować szczegółów partii",
       "createError": "Nie udało się utworzyć partii eksportu",
-      "executeError": "Nie udało się wykonać partii"
+      "executeError": "Nie udało się wykonać partii",
+      "cancelled": "Partia anulowana",
+      "cancelError": "Nie udało się anulować partii"
     },
     "status": {
       "pending": "Oczekujące",

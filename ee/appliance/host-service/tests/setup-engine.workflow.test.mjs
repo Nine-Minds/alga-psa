@@ -164,6 +164,72 @@ test('applyRuntimeValuesAndReleaseSelection renders runtime values from the mani
   }
 });
 
+test('applyRuntimeValuesAndReleaseSelection redeems an install code and threads INITIAL_TENANT_ID', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-install-code-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const runtimeValuesDir = path.join(tmp, 'runtime');
+  const binDir = path.join(tmp, 'bin');
+  const oldPath = process.env.PATH;
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  process.env.PATH = `${binDir}:${oldPath}`;
+
+  let redeemArgs = null;
+  try {
+    const result = await applyRuntimeValuesAndReleaseSelection({
+      channel: 'stable',
+      appHostname: 'psa.example.test',
+      initialTenant,
+      installCode: 'K7QPM2RX'
+    }, { ok: true, releaseVersion: '1.2.3' }, {
+      stateFile,
+      runtimeValuesDir,
+      releaseManifestOverride: makeReleaseManifest(),
+      kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+      tokenFile: path.join(tmp, 'setup-token'),
+      redeemInstallCode: async (args) => {
+        redeemArgs = args;
+        return { tenantId: '11111111-2222-3333-4444-555555555555', edition: 'premium', licenseToken: 'jwt.tok', applianceCredential: 'cred', checkInUrl: 'https://lic/check-in', applianceId: args.applianceId };
+      }
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(redeemArgs.installCode, 'K7QPM2RX');
+    const initialTenantSecret = fs.readFileSync(path.join(runtimeValuesDir, 'initial-tenant-secret.yaml'), 'utf8');
+    assert.match(initialTenantSecret, /INITIAL_TENANT_ID: "11111111-2222-3333-4444-555555555555"/);
+  } finally {
+    process.env.PATH = oldPath;
+  }
+});
+
+test('applyRuntimeValuesAndReleaseSelection blocks the install when redeem fails', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-install-code-fail-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const runtimeValuesDir = path.join(tmp, 'runtime');
+  const binDir = path.join(tmp, 'bin');
+  const oldPath = process.env.PATH;
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  process.env.PATH = `${binDir}:${oldPath}`;
+
+  try {
+    const result = await applyRuntimeValuesAndReleaseSelection({
+      channel: 'stable', appHostname: 'psa.example.test', initialTenant, installCode: 'BADCODE1'
+    }, { ok: true, releaseVersion: '1.2.3' }, {
+      stateFile, runtimeValuesDir,
+      releaseManifestOverride: makeReleaseManifest(),
+      kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+      tokenFile: path.join(tmp, 'setup-token'),
+      redeemInstallCode: async () => { throw new Error('Install code has already been used.'); }
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.step, 'redeem-install-code');
+    assert.match(result.details, /already been used/);
+  } finally {
+    process.env.PATH = oldPath;
+  }
+});
+
 test('applyReleaseSelectionConfiguration persists selected release and runtime values', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-config-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');

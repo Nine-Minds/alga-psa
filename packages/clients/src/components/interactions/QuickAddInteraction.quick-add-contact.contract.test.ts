@@ -16,4 +16,16 @@ describe('quick add interaction contact creation wiring contract', () => {
     expect(source).toContain('isOpen={isQuickAddContactOpen}');
     expect(source).toContain('selectedClientId={selectedClientId}');
   });
+
+  it('T049: Online Meeting quick add is capability-gated and schedules Teams through cross-feature wiring', () => {
+    const source = read('./QuickAddInteraction.tsx');
+
+    expect(source).toContain("selectedInteractionType?.type_name === 'Online Meeting'");
+    expect(source).toContain('clientCrossFeature?.getTeamsMeetingCapability');
+    expect(source).toContain('clientCrossFeature?.scheduleTeamsMeeting');
+    expect(source).toContain('teamsMeetingCapability?.available === true');
+    expect(source).toContain('id={`${id}-create-teams-meeting-toggle`}');
+    expect(source).toContain('clientCrossFeature.scheduleTeamsMeeting!');
+    expect(source).toContain('getInteractionById(resultInteraction.interaction_id!)');
+  });
 });

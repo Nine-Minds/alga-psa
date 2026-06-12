@@ -43,6 +43,7 @@ import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagClea
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
+import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -470,7 +471,7 @@ export const getProjectsWithPhases = withAuth(async (
             this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
           })
           .leftJoin('standard_statuses as ss', function () {
-            this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+            this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
           })
           .where('psm.tenant', tenant)
           .select(
@@ -1644,7 +1645,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
                 ticketLinks.map((link) => link.ticket_id)
             )
         );
-        const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));
+        const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
         const contact = project.contact_name ? {
             full_name: project.contact_name

@@ -17,8 +17,8 @@ let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration'
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let createContract: typeof import('@alga-psa/billing/actions/contractActions').createContract;
 let assignContractToClient: typeof import('@alga-psa/clients/actions/clientContractActions').assignContractToClient;
-let getPurchaseOrderConsumedCents: typeof import('server/src/lib/services/purchaseOrderService').getPurchaseOrderConsumedCents;
-let computePurchaseOrderOverage: typeof import('server/src/lib/services/purchaseOrderService').computePurchaseOrderOverage;
+let getPurchaseOrderConsumedCents: typeof import('@alga-psa/billing/services/purchaseOrderService').getPurchaseOrderConsumedCents;
+let computePurchaseOrderOverage: typeof import('@alga-psa/billing/services/purchaseOrderService').computePurchaseOrderOverage;
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -33,6 +33,66 @@ vi.mock('server/src/lib/db', async () => {
 vi.mock('server/src/lib/tenant', () => ({
   getTenantForCurrentRequest: vi.fn(async () => tenantId ?? null),
   getTenantFromHeaders: vi.fn(() => tenantId ?? null),
+}));
+
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    getCurrentTenantId: vi.fn(() => tenantId ?? null),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+    withTransaction: vi.fn(async (_knex: unknown, fn: (trx: Knex) => Promise<any>) => fn(db)),
+    requireTenantId: vi.fn(async () => tenantId),
+    auditLog: vi.fn(async () => undefined),
+  };
+});
+
+// The billing/client actions authenticate through @alga-psa/auth; supply the
+// test user directly instead of going through the session machinery.
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { tenant: tenantId },
+        ...args
+      ),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { tenant: tenantId },
+        ...args
+      ),
+  withOptionalAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        { tenant: tenantId },
+        ...args
+      ),
+  withAuthCheck:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        { user_id: 'po-test-user', tenant: tenantId, roles: [] },
+        ...args
+      ),
+  // test-utils/testMocks.ts re-points these via vi.mocked(...) in setupCommonMocks,
+  // so the factory has to export them.
+  hasPermission: vi.fn(async () => true),
+  getCurrentUser: vi.fn(async () => null),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => true),
 }));
 
 describe('Contract Purchase Order Support', () => {
@@ -57,7 +117,7 @@ describe('Contract Purchase Order Support', () => {
     ({ createContract } = await import('@alga-psa/billing/actions/contractActions'));
     ({ assignContractToClient } = await import('@alga-psa/clients/actions/clientContractActions'));
     ({ getPurchaseOrderConsumedCents, computePurchaseOrderOverage } = await import(
-      'server/src/lib/services/purchaseOrderService'
+      '@alga-psa/billing/services/purchaseOrderService'
     ));
   }, HOOK_TIMEOUT);
 
@@ -263,7 +323,13 @@ describe('Contract Purchase Order Support', () => {
         'iifd.allocated_amount'
       ]);
 
-    expect(fixedDetailRows).toEqual([
+    // pg returns the period columns as Date objects; normalize before comparing.
+    const normalizedDetailRows = fixedDetailRows.map((row: any) => ({
+      ...row,
+      service_period_start: new Date(row.service_period_start).toISOString(),
+      service_period_end: new Date(row.service_period_end).toISOString(),
+    }));
+    expect(normalizedDetailRows).toEqual([
       expect.objectContaining({
         service_id: serviceId,
         service_period_start: expect.stringContaining('2024-12-01'),
@@ -455,7 +521,6 @@ describe('Contract Purchase Order Support', () => {
       id: serviceTypeId,
       tenant: tenantId,
       name: `Fixed Type ${serviceName}`,
-      billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
       updated_at: db.fn.now(),

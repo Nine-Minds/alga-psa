@@ -24,9 +24,13 @@ const HOOK_TIMEOUT = 240_000;
 let testDb: any;
 let testTenant: string;
 
-// Mock createTenantKnex to use test database
+// Mock createTenantKnex to use test database. The implementation is passed
+// directly to vi.fn() (not via mockImplementation) so the afterEach
+// vi.restoreAllMocks() — needed for the fetchExternalInvoice spies — cannot
+// strip it: restore resets a mock to the implementation vi.fn() was created
+// with, which for .mockImplementation() is undefined.
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn().mockImplementation(async () => ({
+  createTenantKnex: vi.fn(async () => ({
     knex: testDb,
     tenant: testTenant
   }))
@@ -557,7 +561,7 @@ describe('External Tax Import', () => {
       mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500], 1500);
 
       // Import the AccountingExportService after mocking
-      const { AccountingExportService } = await import('../../../lib/services/accountingExportService');
+      const { AccountingExportService } = await import('@alga-psa/billing/services');
 
       // Create a mock export batch and context that simulates a completed export
       // with tax delegation mode
@@ -580,8 +584,11 @@ describe('External Tax Import', () => {
         excludeTaxFromExport: true
       };
 
-      // Act: Call the method that should trigger automatic tax import after export
-      const exportService = new AccountingExportService(null as any, null as any);
+      // Act: Call the method that should trigger automatic tax import after
+      // export. Pass the prepared tax import service: the constructor does not
+      // default taxImporter (only the static factories do), and without it the
+      // post-delivery import is skipped entirely.
+      const exportService = new AccountingExportService(null as any, null as any, service);
 
       // Get the adapter from the tax import service to pass to the export service
       const adapter = (service as any).adapters.get('quickbooks_online');

@@ -97,12 +97,27 @@ afterEach(async () => {
   }
 
   async function insertServiceMapping(serviceId: string) {
-    await insertServiceMapping(serviceId);
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'QB-ITEM-1',
+      external_realm_id: null,
+      sync_status: 'synced',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
   }
 
   async function stubValidationDependencies(): Promise<AccountingExportRepository> {
-    const repoModule = await import('server/src/lib/repositories/accountingExportRepository');
-    vi.spyOn(repoModule.AccountingExportRepository, 'create').mockResolvedValue({
+    // Validation resolves tenant via @alga-psa/db and loads its repository
+    // through AccountingExportRepository.create(); pin both to the test context.
+    const algaDbModule = await import('@alga-psa/db');
+    vi.spyOn(algaDbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
+
+    const stubRepo = {
       getBatch: async (id: string) =>
         ctx.db('accounting_export_batches')
           .where({ batch_id: id, tenant: ctx.tenantId })
@@ -129,19 +144,16 @@ afterEach(async () => {
         };
         await ctx.db('accounting_export_errors').insert(record);
         return record;
-      }
-    } as unknown as AccountingExportRepository);
-
-    const serviceModule = await import('server/src/lib/services/accountingExportService');
-    vi.spyOn(serviceModule.AccountingExportService, 'create').mockResolvedValue({
+      },
       updateBatchStatus: async (id: string, updates: any) => {
         await ctx.db('accounting_export_batches')
           .where({ batch_id: id, tenant: ctx.tenantId })
           .update({ ...updates, updated_at: new Date().toISOString() });
       }
-    } as unknown as AccountingExportService);
+    } as unknown as AccountingExportRepository;
 
-    return AccountingExportRepository.create();
+    vi.spyOn(AccountingExportRepository, 'create').mockResolvedValue(stubRepo);
+    return stubRepo;
   }
 
   it('marks batch as needs_attention when services lack mappings and clears once mapped', async () => {
@@ -174,6 +186,7 @@ afterEach(async () => {
       adapter_type: 'quickbooks_online',
       export_type: 'invoice',
       status: 'pending',
+      target_realm: 'realm-1',
       queued_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -189,6 +202,7 @@ afterEach(async () => {
       amount_cents: 5000,
       currency_code: 'USD',
       status: 'pending',
+      payload: { service_period_source: 'financial_document_fallback' },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -215,6 +229,8 @@ afterEach(async () => {
 
     const finalBatch = await repo.getBatch(batchId);
     expect(finalBatch?.status).toBe('ready');
+  });
+
   it('flags missing tax mappings for QuickBooks exports', async () => {
     const financeUser = createMockUser('internal', {
       user_id: ctx.user.user_id,
@@ -262,6 +278,7 @@ afterEach(async () => {
       amount_cents: 5000,
       currency_code: 'USD',
       status: 'pending',
+      payload: { service_period_source: 'financial_document_fallback' },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -328,6 +345,7 @@ afterEach(async () => {
       amount_cents: 5000,
       currency_code: 'USD',
       status: 'pending',
+      payload: { service_period_source: 'financial_document_fallback' },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -390,6 +408,7 @@ afterEach(async () => {
       amount_cents: 5000,
       currency_code: 'USD',
       status: 'pending',
+      payload: { service_period_source: 'financial_document_fallback' },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -403,7 +422,5 @@ afterEach(async () => {
 
     const batchAfterValidation = await repo.getBatch(batchId);
     expect(batchAfterValidation?.status).toBe('needs_attention');
-  });
-
   });
 });

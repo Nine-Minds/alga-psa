@@ -15,7 +15,13 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog-root">{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: any) =>
+    isOpen ? (
+      <div data-testid="dialog-root">
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
@@ -60,6 +66,23 @@ vi.mock('react-hot-toast', () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
   },
+}));
+
+// The component now goes through useTranslation('features/tickets'); without a
+// stub the real react-i18next hook has no instance and returns a new `t` on
+// every render, retriggering the boards-fetch effect. Stable stub mirrors the
+// pattern used by the other component tests in this package.
+const stableT = (_key: string, fallback?: string | Record<string, unknown>) => {
+  if (fallback && typeof fallback === 'object') {
+    fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+  }
+  return typeof fallback === 'string' ? fallback : _key;
+};
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: stableT,
+    i18n: { language: 'en' },
+  }),
 }));
 
 const boards: IBoard[] = [

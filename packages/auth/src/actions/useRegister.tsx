@@ -123,8 +123,7 @@ export async function setNewPassword(password: string, token: string): Promise<b
       return false;
     }
     
-    // Update the password using the updatePassword function which doesn't require tenant context
-    await User.updatePassword(userInfo.email, hashedPassword);
+    await User.updatePassword(dbUser.user_id, dbUser.tenant, hashedPassword);
     logger.info(`Password updated successfully for User [ ${userInfo.email} ] type [ ${dbUser.user_type} ] id [ ${dbUser.user_id} ]`);
     return true;
   }

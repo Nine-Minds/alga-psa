@@ -1,0 +1,229 @@
+[
+  {
+    "id": "T001",
+    "mode": "automated",
+    "description": "Reshape invariant: applyCreditToInvoice leaves total_amount untouched while credit_applied, transactions, allocations, pools, and client balance update as before.",
+    "implemented": false,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "mode": "automated",
+    "description": "computeBalanceDue: matrix over payments \u00d7 credits \u00d7 partials (full credit, partial credit + partial payment, overcredit clamp) returns correct balance and drives paid/partially_applied flips.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "mode": "automated",
+    "description": "Backfill migration round-trip: invoices with credit_applied > 0 get original totals restored on up; down re-applies the decrement; untouched rows unchanged.",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "mode": "automated",
+    "description": "Stripe payment link requests a checkout amount equal to balance due after a partial credit (existing payment-link tests extended).",
+    "implemented": false,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "mode": "automated",
+    "description": "Portal invoice views and pay-page render balance due, not mutated total (contract test with a credited invoice fixture).",
+    "implemented": false,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "mode": "automated",
+    "description": "invoice_type backfill: prepayment rows \u2192 'prepayment', negative-total rows \u2192 'credit_note', the rest \u2192 'standard'; finalizing a new negative invoice sets 'credit_note'.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T007",
+    "mode": "automated",
+    "description": "Credit-note numbering: sequence independent from invoices, CM- prefix applied, configurable prefix respected.",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T008",
+    "mode": "automated",
+    "description": "CreditMemo transform: sign-flipped line amounts, item/tax mapping reuse, internal-tax vs delegated-tax parity with the invoice transform.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T009",
+    "mode": "automated",
+    "description": "CreditMemo delivery writes a CreditMemo mapping row with sync token + total snapshot; re-delivery is an idempotent sparse update.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T010",
+    "mode": "automated",
+    "description": "Validation: prepayment invoice in an export selection produces the exclusion message and no document; credit note with missing item mapping fails validation like an invoice.",
+    "implemented": false,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T011",
+    "mode": "automated",
+    "description": "Producer: finalizing a credit note enqueues export_credit_memo only with connected realm + auto-sync on.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T012",
+    "mode": "automated",
+    "description": "CreditMemo drift: QBO-side total change or void on a mapped memo files a drift exception via the slice-1 comparator.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T013",
+    "mode": "automated",
+    "description": "apply_credit dependency gate: op stays pending (with reason) until both memo and invoice are mapped, then executes on a later cycle.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T014",
+    "mode": "automated",
+    "description": "apply_credit execution: zero-dollar Payment payload links CreditMemo and Invoice with the allocation amount; allocation-keyed mapping makes re-delivery a no-op.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T015",
+    "mode": "automated",
+    "description": "voidInvoice happy path: status 'cancelled', invoice_cancelled transaction written, credit applications reversed (pools + client balance restored, reversal transactions present).",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T016",
+    "mode": "automated",
+    "description": "voidInvoice guards: blocked with payments present; applied credit note blocked; draft excluded; permission enforced.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T017",
+    "mode": "automated",
+    "description": "hardDeleteInvoice on an exported invoice is rejected with the void-directing error; unexported invoices delete as before.",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T018",
+    "mode": "automated",
+    "description": "void_invoice op: adapter issues the QBO void call (mocked), mapping \u2192 'voided', badge aggregation reports Voided; voiding enqueues regardless of auto-sync setting.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T019",
+    "mode": "automated",
+    "description": "Unapply on a synced allocation files an exception and does not call QBO.",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T020",
+    "mode": "automated",
+    "description": "DB-backed integration: credit note finalized \u2192 memo exported; applied \u2192 apply_credit delivered; invoice voided \u2192 QBO void issued; balances and mapping states consistent end-to-end (mocked QBO client).",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F016",
+      "F018",
+      "F019",
+      "F023"
+    ]
+  },
+  {
+    "id": "T021",
+    "mode": "live-smoke",
+    "description": "Sandbox: finalize a credit note \u2192 CreditMemo appears in QBO with correct lines/tax; apply it in Alga \u2192 QBO invoice balance and customer balance match Alga.",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F018"
+    ]
+  },
+  {
+    "id": "T022",
+    "mode": "live-smoke",
+    "description": "Sandbox: void an exported invoice with a reason \u2192 QBO shows the invoice voided; badge shows Voided; books agree.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F023"
+    ]
+  },
+  {
+    "id": "T023",
+    "mode": "live-smoke",
+    "description": "Sandbox + portal: after a partial credit, the portal shows balance due and the Stripe checkout charges exactly that.",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T024",
+    "mode": "live-smoke",
+    "description": "Regression: pre-slice-2 invoices (backfilled totals) display correct amounts in MSP UI, portal, and PDFs.",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F006"
+    ]
+  }
+]

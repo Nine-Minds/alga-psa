@@ -75,7 +75,11 @@ export const setDefaultQuoteDocumentTemplate = withAuth(async (
   user,
   { tenant },
   payload: SetDefaultQuoteTemplatePayload
-): Promise<void> => {
+): Promise<void | ActionPermissionError> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    return permissionError('Permission denied: Cannot set default quote document template');
+  }
+
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {

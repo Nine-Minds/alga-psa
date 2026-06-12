@@ -16,7 +16,10 @@ describe('QuickAddTicket asset link pill contract', () => {
   it('renders an asset-link pill (not a full-width Alert) whenever an assetId is provided', () => {
     expect(source).toContain('quick-add-ticket-asset-pill');
     expect(source).toMatch(/<Badge\b/);
-    expect(source).toMatch(/\{assetId &&/);
+    // The guard is now effectiveAssetId (assetId in PSA mode; AlgaDesk mode
+    // intentionally suppresses the asset pill — see ticket-inline-add-prefill T010).
+    expect(source).toMatch(/\{effectiveAssetId &&/);
+    expect(source).toMatch(/const effectiveAssetId = isAlgaDeskMode \? undefined : assetId;/);
     expect(source).toContain("'create.linkedToAsset'");
     expect(source).toContain("'create.linkedToAssetGeneric'");
   });

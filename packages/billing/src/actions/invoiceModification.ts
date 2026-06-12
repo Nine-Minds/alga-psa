@@ -23,8 +23,10 @@ import {
 } from '@alga-psa/workflow-streams';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
+import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -138,6 +140,9 @@ export const updateDraftInvoiceProperties = withAuth(async (
   invoiceId: string,
   input: DraftInvoicePropertiesUpdateInput
 ): Promise<DraftInvoicePropertiesUpdateResult> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const trimmedInvoiceNumber = input.invoiceNumber?.trim();
 
   if (!trimmedInvoiceNumber) {
@@ -237,6 +242,9 @@ export const finalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
@@ -289,13 +297,34 @@ export async function finalizeInvoiceWithKnex(
       throw new Error('Invoice is already finalized');
     }
 
+    // Financial-document identity is fixed at finalization: negative-total
+    // invoices become credit notes (CM-numbered), prepayments are tagged so
+    // downstream consumers (export validation, void guards) can rely on it.
+    const handlingKind = classifyInvoiceCreditHandling(invoice);
+    const identityUpdates: Record<string, unknown> = {};
+    if (handlingKind === 'negative_total') {
+      identityUpdates.invoice_type = 'credit_note';
+      const { SharedNumberingService } = await import('@alga-psa/shared/services/numberingService');
+      identityUpdates.invoice_number = await SharedNumberingService.getNextNumber('CREDIT_NOTE', {
+        knex: trx,
+        tenant
+      });
+    } else if (handlingKind === 'prepayment') {
+      identityUpdates.invoice_type = 'prepayment';
+    }
+
     await trx('invoices')
       .where({ invoice_id: invoiceId, tenant: tenant })
       .update({
         status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
-        updated_at: toISODate(Temporal.Now.plainDateISO())
+        updated_at: toISODate(Temporal.Now.plainDateISO()),
+        ...identityUpdates
       });
+
+    if (Object.keys(identityUpdates).length > 0) {
+      invoice = { ...invoice, ...identityUpdates };
+    }
 
     // Record audit log
     // await auditLog(
@@ -534,6 +563,9 @@ export async function finalizeInvoiceWithKnex(
       idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
     });
   }
+
+  // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
+  await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
 }
 
 export const unfinalizeInvoice = withAuth(async (
@@ -541,6 +573,9 @@ export const unfinalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<void> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -602,6 +637,9 @@ export const updateInvoiceManualItems = withAuth(async (
   invoiceId: string,
   changes: ManualItemsUpdate
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
   const billingEngine = new BillingEngine();
 
@@ -870,6 +908,9 @@ export const addManualItemsToInvoice = withAuth(async (
   invoiceId: string,
   items: IInvoiceCharge[]
 ): Promise<InvoiceViewModel> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    throw new Error('Permission denied: invoice update required');
+  }
   const session = await getSession();
 
   if (!session?.user?.id) {
@@ -986,7 +1027,24 @@ export const hardDeleteInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ) => {
+  if (!await hasPermission(user, 'invoice', 'delete')) {
+    throw new Error('Permission denied: invoice delete required');
+  }
   const { knex } = await createTenantKnex();
+
+  // Guard: block deletion if invoice is already exported to an accounting system
+  const existingMapping = await knex('tenant_external_entity_mappings')
+    .where({
+      tenant: tenant,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId
+    })
+    .first('id');
+  if (existingMapping) {
+    throw new Error('This invoice is synced to an accounting system — void it instead of deleting.');
+  }
+
   let voidedCreditNotes: Array<{
     creditNoteId: string;
     voidedAt: string;

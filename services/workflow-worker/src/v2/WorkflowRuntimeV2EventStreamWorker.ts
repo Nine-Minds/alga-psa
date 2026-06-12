@@ -220,7 +220,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       };
       for (const wait of candidateWaits) {
         const matchedRun = await getRun(wait.run_id);
-        if (matchedRun?.engine !== 'temporal') {
+        if (!matchedRun) {
           continue;
         }
         try {

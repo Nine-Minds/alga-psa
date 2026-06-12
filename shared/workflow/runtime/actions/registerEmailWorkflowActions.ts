@@ -585,6 +585,8 @@ export function registerEmailWorkflowActionsV2(): void {
         author_type: 'contact',
         author_id: input.targetAuthorUserId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
+        // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
+        suppressTechEmailNotification: true,
         metadata: commentPayload.metadata
       }, tenant);
 

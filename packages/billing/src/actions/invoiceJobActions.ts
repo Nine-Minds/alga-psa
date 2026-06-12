@@ -14,6 +14,7 @@ import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
 
 interface InitialJobData extends JobData {
@@ -32,6 +33,9 @@ export const scheduleInvoiceZipAction = withAuth(async (
   { tenant },
   invoiceIds: string[]
 ) => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   const jobService = await JobService.create();
@@ -85,6 +89,9 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   { tenant },
   invoiceIds: string[]
 ) => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
 
   const jobService = await JobService.create();
@@ -182,6 +189,9 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   { tenant },
   invoiceIds: string[]
 ): Promise<GetInvoiceEmailRecipientsResult> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
@@ -236,7 +246,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       }
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const totalAmount = formatCurrency(invoice.total_amount / 100, 'en-US', currencyCode);
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, 'en-US', currencyCode);
 
       const invoiceDate = invoice.invoice_date
         ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
@@ -377,6 +387,9 @@ export const sendInvoiceEmailAction = withAuth(async (
   invoiceIds: string[],
   customMessage?: string
 ): Promise<SendInvoiceEmailsResult> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    throw new Error('Permission denied: billing create required');
+  }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
@@ -464,7 +477,7 @@ export const sendInvoiceEmailAction = withAuth(async (
       const pdfBuffer = await fs.readFile(tempPdfPath);
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const totalAmount = formatCurrency(invoice.total_amount / 100, 'en-US', currencyCode);
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, 'en-US', currencyCode);
 
       const invoiceDate = invoice.invoice_date
         ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {

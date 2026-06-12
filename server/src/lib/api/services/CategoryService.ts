@@ -60,18 +60,20 @@ export interface BulkCategoryResult {
 export class CategoryService extends BaseService {
   
   constructor() {
+    // NOTE: ticket categories live in the `categories` table; `service_categories`
+    // holds service categories. The two have different column sets — `categories`
+    // has no description/is_active/updated_* columns but does have a NOT NULL
+    // display_order. Ticket-category methods below query `categories` explicitly.
     super({
-      tableName: 'ticket_categories',
+      tableName: 'categories',
       primaryKey: 'category_id',
       tenantColumn: 'tenant',
       softDelete: false,
       auditFields: {
         createdBy: 'created_by',
-        updatedBy: 'updated_by',
-        createdAt: 'created_at',
-        updatedAt: 'updated_at'
+        createdAt: 'created_at'
       },
-      searchableFields: ['category_name', 'description'],
+      searchableFields: ['category_name'],
       defaultSort: 'category_name',
       defaultOrder: 'asc'
     });
@@ -269,7 +271,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let query = trx('ticket_categories')
+      let query = trx('categories')
         .where('tenant', context.tenant);
 
       // Apply board filter if provided
@@ -280,10 +282,7 @@ export class CategoryService extends BaseService {
       // Apply search filter
       if (filters.search) {
         const searchTerm = `%${filters.search.toLowerCase()}%`;
-        query = query.where(function() {
-          this.whereRaw('LOWER(category_name) LIKE ?', [searchTerm])
-              .orWhereRaw('LOWER(description) LIKE ?', [searchTerm]);
-        });
+        query = query.whereRaw('LOWER(category_name) LIKE ?', [searchTerm]);
       }
 
       // Apply parent filter
@@ -332,7 +331,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const category = await trx('ticket_categories')
+      const category = await trx('categories')
         .where('category_id', id)
         .where('tenant', context.tenant)
         .first();
@@ -359,7 +358,7 @@ export class CategoryService extends BaseService {
     return withTransaction(knex, async (trx) => {
       // Validate parent category if provided
       if (data.parent_category) {
-        const parent = await trx('ticket_categories')
+        const parent = await trx('categories')
           .where('category_id', data.parent_category)
           .where('tenant', context.tenant)
           .first();
@@ -380,24 +379,33 @@ export class CategoryService extends BaseService {
         }
       }
 
-      const categoryData = {
-        category_id: uuidv4(),
-        category_name: data.category_name.trim(),
-        description: data.description?.trim(),
-        parent_category: data.parent_category,
-        board_id: data.board_id,
-        created_by: context.userId,
-        updated_by: context.userId,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
+      // display_order is NOT NULL with no default; append after the current max
+      // within the same board scope.
+      const maxOrder = await trx('categories')
+        .where('tenant', context.tenant)
+        .modify((q) => {
+          if (data.board_id) {
+            q.where('board_id', data.board_id);
+          } else {
+            q.whereNull('board_id');
+          }
+        })
+        .max('display_order as max')
+        .first();
+      const nextOrder = maxOrder?.max != null ? Number(maxOrder.max) + 1 : 0;
 
       const fullCategoryData = {
-        ...categoryData,
+        category_id: uuidv4(),
+        category_name: data.category_name.trim(),
+        parent_category: data.parent_category,
+        board_id: data.board_id,
+        display_order: nextOrder,
+        created_by: context.userId,
+        created_at: new Date(),
         tenant: context.tenant
       };
 
-      const [created] = await trx('ticket_categories')
+      const [created] = await trx('categories')
         .insert(fullCategoryData)
         .returning('*');
 
@@ -421,7 +429,7 @@ export class CategoryService extends BaseService {
       // Validate parent category change if provided
       if (data.parent_category !== undefined) {
         if (data.parent_category) {
-          const parent = await trx('ticket_categories')
+          const parent = await trx('categories')
             .where('category_id', data.parent_category)
             .where('tenant', context.tenant)
             .first();
@@ -443,16 +451,10 @@ export class CategoryService extends BaseService {
         }
       }
 
-      const updateData: any = {
-        updated_by: context.userId,
-        updated_at: new Date()
-      };
+      const updateData: any = {};
 
       if (data.category_name !== undefined) {
         updateData.category_name = data.category_name.trim();
-      }
-      if (data.description !== undefined) {
-        updateData.description = data.description?.trim();
       }
       if (data.parent_category !== undefined) {
         updateData.parent_category = data.parent_category;
@@ -461,7 +463,19 @@ export class CategoryService extends BaseService {
         updateData.board_id = data.board_id;
       }
 
-      const [updated] = await trx('ticket_categories')
+      if (Object.keys(updateData).length === 0) {
+        const existing = await trx('categories')
+          .where('category_id', id)
+          .where('tenant', context.tenant)
+          .first();
+        if (!existing) {
+          throw new Error('Ticket category not found');
+        }
+        const [enrichedExisting] = await this.enrichCategoriesWithHierarchy([existing], trx);
+        return enrichedExisting as TicketCategoryResponse;
+      }
+
+      const [updated] = await trx('categories')
         .where('category_id', id)
         .where('tenant', context.tenant)
         .update(updateData)
@@ -485,7 +499,7 @@ export class CategoryService extends BaseService {
 
     return withTransaction(knex, async (trx) => {
       // Check if category has children
-      const childrenCount = await trx('ticket_categories')
+      const childrenCount = await trx('categories')
         .where('parent_category', id)
         .where('tenant', context.tenant)
         .count('* as count')
@@ -506,7 +520,7 @@ export class CategoryService extends BaseService {
         throw new Error('Cannot delete category that is in use by tickets');
       }
 
-      const deleted = await trx('ticket_categories')
+      const deleted = await trx('categories')
         .where('category_id', id)
         .where('tenant', context.tenant)
         .del();
@@ -527,7 +541,7 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      let query = trx('ticket_categories')
+      let query = trx('categories')
         .where('tenant', context.tenant);
 
       if (boardId) {
@@ -557,7 +571,7 @@ export class CategoryService extends BaseService {
     return withTransaction(knex, async (trx) => {
       // Validate new parent if provided
       if (newParentId) {
-        const parent = await trx('ticket_categories')
+        const parent = await trx('categories')
           .where('category_id', newParentId)
           .where('tenant', context.tenant)
           .first();
@@ -578,13 +592,11 @@ export class CategoryService extends BaseService {
         }
       }
 
-      const [updated] = await trx('ticket_categories')
+      const [updated] = await trx('categories')
         .where('category_id', categoryId)
         .where('tenant', context.tenant)
         .update({
-          parent_category: newParentId,
-          updated_by: context.userId,
-          updated_at: new Date()
+          parent_category: newParentId
         })
         .returning('*');
 
@@ -614,17 +626,19 @@ export class CategoryService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       const categoryType = filters.category_type || 'ticket';
-      const tableName = categoryType === 'service' ? 'service_categories' : 'ticket_categories';
+      const tableName = categoryType === 'service' ? 'service_categories' : 'categories';
       
       let query = trx(tableName)
         .where('tenant', context.tenant);
 
-      // Apply search
+      // Apply search (only service_categories has a description column)
       if (searchTerm) {
         const searchPattern = `%${searchTerm.toLowerCase()}%`;
         query = query.where(function() {
-          this.whereRaw('LOWER(category_name) LIKE ?', [searchPattern])
-              .orWhereRaw('LOWER(description) LIKE ?', [searchPattern]);
+          this.whereRaw('LOWER(category_name) LIKE ?', [searchPattern]);
+          if (categoryType === 'service') {
+            this.orWhereRaw('LOWER(description) LIKE ?', [searchPattern]);
+          }
         });
       }
 
@@ -674,26 +688,31 @@ export class CategoryService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       const categoryType = filters.category_type || 'ticket';
-      const tableName = categoryType === 'service' ? 'service_categories' : 'ticket_categories';
+      const tableName = categoryType === 'service' ? 'service_categories' : 'categories';
       const usageTable = categoryType === 'service' ? 'service_items' : 'tickets';
       
-      // Get basic category stats
+      // Get basic category stats. Only service_categories has an is_active column;
+      // ticket categories (table `categories`) have no active flag, so all count
+      // as active.
+      const activeCountExpr = categoryType === 'service'
+        ? 'COUNT(CASE WHEN is_active = true THEN 1 END) as active_categories'
+        : 'COUNT(*) as active_categories';
       const categoryStats = await trx(tableName)
         .where('tenant', context.tenant)
         .select(
           trx.raw('COUNT(*) as total_categories'),
-          trx.raw('COUNT(CASE WHEN is_active = true THEN 1 END) as active_categories')
+          trx.raw(activeCountExpr)
         )
         .first();
 
       // Get hierarchy stats for ticket categories
       let hierarchyStats = { categories_with_children: 0, average_depth: 0, max_depth: 0 };
       if (categoryType === 'ticket') {
-        const categories = await trx('ticket_categories')
+        const categories = await trx('categories')
           .where('tenant', context.tenant)
           .select('category_id', 'parent_category');
 
-        const categoriesWithChildren = await trx('ticket_categories')
+        const categoriesWithChildren = await trx('categories')
           .where('tenant', context.tenant)
           .whereNotNull('parent_category')
           .countDistinct('parent_category as count')
@@ -781,7 +800,7 @@ export class CategoryService extends BaseService {
       enrichedCategory.path = depthAndPath.path;
 
       // Add children count
-      const childrenCount = await trx('ticket_categories')
+      const childrenCount = await trx('categories')
         .where('parent_category', category.category_id)
         .where('tenant', category.tenant)
         .count('* as count')
@@ -856,7 +875,7 @@ export class CategoryService extends BaseService {
 
       visited.add(currentParentId);
 
-      const parent = await trx('ticket_categories')
+      const parent = await trx('categories')
         .where('category_id', currentParentId)
         .select('parent_category')
         .first();
@@ -879,7 +898,7 @@ export class CategoryService extends BaseService {
     let depth = 0;
 
     while (currentId) {
-      const category = await trx('ticket_categories')
+      const category = await trx('categories')
         .where('category_id', currentId)
         .select('category_name', 'parent_category')
         .first();

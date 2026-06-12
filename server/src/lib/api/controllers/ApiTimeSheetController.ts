@@ -40,7 +40,6 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -58,7 +57,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   private async assertManualProductAccess(
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
-    user: NonNullable<ApiRequest['context']>['user'],
+    user: AuthenticatedApiRequest['context']['user'],
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
@@ -1139,6 +1138,86 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
+   * Get current time period
+   */
+  getCurrentTimePeriod() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(
+          user,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time periods');
+        }
+
+        // Optional reference date (defaults to today in UTC)
+        const url = new URL(req.url);
+        const date = url.searchParams.get('date') || undefined;
+
+        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          throw new ValidationError('Invalid date format, expected YYYY-MM-DD');
+        }
+
+        // Get current time period within tenant context
+        const period = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getCurrentTimePeriod({
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          }, date);
+        });
+
+        if (!period) {
+          throw new NotFoundError('No current time period');
+        }
+
+        return createSuccessResponse(period);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Create time period
    */
   createTimePeriod() {
@@ -1734,7 +1813,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
           user,
-          'schedule',
+          'user_schedule',
           'read',
           db
         );
@@ -1743,12 +1822,21 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read schedules');
         }
 
+        const canViewAllSchedules = await hasPermission(
+          user,
+          'user_schedule',
+          'update',
+          db
+        );
+
         // Get filter parameters from query string
         const url = new URL(req.url);
         const filters = {
           start_date: url.searchParams.get('start_date') || undefined,
           end_date: url.searchParams.get('end_date') || undefined,
-          user_id: url.searchParams.get('user_id') || undefined
+          user_id: canViewAllSchedules
+            ? url.searchParams.get('user_id') || undefined
+            : user.user_id
         };
 
         // Get schedule entries within tenant context
@@ -1761,6 +1849,107 @@ export class ApiTimeSheetController extends ApiBaseController {
         });
 
         return createSuccessResponse(entries);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get schedule entry by ID
+   * Overrides the base getById, which is only routed for /api/v1/schedules/[id]
+   */
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(
+          user,
+          'user_schedule',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read schedules');
+        }
+
+        // Extract ID from path
+        const pathParts = new URL(req.url).pathname.split('/');
+        const id = pathParts[pathParts.length - 1];
+
+        const entry = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntry(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        if (!entry) {
+          throw new NotFoundError('Schedule entry not found');
+        }
+
+        const assignedIds = (entry.assigned_users || []).map((u: any) => u.user_id);
+        const isOwnEntry = entry.created_by === user.user_id ||
+          assignedIds.includes(user.user_id);
+
+        if (!isOwnEntry) {
+          const canViewAllSchedules = await hasPermission(
+            user,
+            'user_schedule',
+            'update',
+            db
+          );
+          if (!canViewAllSchedules) {
+            throw new ForbiddenError('Permission denied: Cannot read schedules of other users');
+          }
+          if (entry.is_private) {
+            return createSuccessResponse({
+              ...entry,
+              title: 'Busy',
+              notes: '',
+              work_item_id: null,
+              work_item: null
+            });
+          }
+        }
+
+        return createSuccessResponse(entry);
       } catch (error) {
         return handleApiError(error);
       }
@@ -1808,14 +1997,14 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
+        const hasReadPermission = await hasPermission(
           user,
-          'schedule',
-          'create',
+          'user_schedule',
+          'read',
           db
         );
 
-        if (!hasCreatePermission) {
+        if (!hasReadPermission) {
           throw new ForbiddenError('Permission denied: Cannot create schedules');
         }
 
@@ -1829,6 +2018,22 @@ export class ApiTimeSheetController extends ApiBaseController {
             throw new ValidationError('Invalid schedule data', error.errors);
           }
           throw error;
+        }
+
+        // Assigning entries to other users requires the broader update permission
+        const assignsOthers = (scheduleData.assigned_user_ids || []).some(
+          (assignedId) => assignedId !== user.user_id
+        );
+        if (assignsOthers) {
+          const canAssignOthers = await hasPermission(
+            user,
+            'user_schedule',
+            'update',
+            db
+          );
+          if (!canAssignOthers) {
+            throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
+          }
         }
 
         // Create schedule entry within tenant context
@@ -1888,16 +2093,12 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
+        const canUpdateAll = await hasPermission(
           user,
-          'schedule',
+          'user_schedule',
           'update',
           db
         );
-
-        if (!hasUpdatePermission) {
-          throw new ForbiddenError('Permission denied: Cannot update schedules');
-        }
 
         // Extract ID from path
         const pathParts = req.url.split('/');
@@ -1913,6 +2114,36 @@ export class ApiTimeSheetController extends ApiBaseController {
             throw new ValidationError('Invalid schedule data', error.errors);
           }
           throw error;
+        }
+
+        const existing = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntry(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        if (!existing) {
+          throw new NotFoundError('Schedule entry not found');
+        }
+
+        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
+        const isOwnEntry = existing.created_by === user.user_id ||
+          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
+
+        if (existing.is_private && !isOwnEntry) {
+          throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
+        }
+
+        if (!canUpdateAll) {
+          const assignmentRemainsOwn = scheduleData.assigned_user_ids
+            ? scheduleData.assigned_user_ids.length === 1 &&
+              scheduleData.assigned_user_ids[0] === user.user_id
+            : true;
+          if (!isOwnEntry || !assignmentRemainsOwn) {
+            throw new ForbiddenError('Permission denied: Cannot update schedules');
+          }
         }
 
         // Update schedule entry within tenant context
@@ -1972,20 +2203,40 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
+        const canDeleteAll = await hasPermission(
           user,
-          'schedule',
+          'user_schedule',
           'delete',
           db
         );
 
-        if (!hasDeletePermission) {
-          throw new ForbiddenError('Permission denied: Cannot delete schedules');
-        }
-
         // Extract ID from path
         const pathParts = req.url.split('/');
         const id = pathParts[pathParts.length - 1];
+
+        const existing = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntry(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        if (!existing) {
+          throw new NotFoundError('Schedule entry not found');
+        }
+
+        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
+        const isOwnEntry = existing.created_by === user.user_id ||
+          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
+
+        if (existing.is_private && !isOwnEntry) {
+          throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
+        }
+
+        if (!canDeleteAll && !isOwnEntry) {
+          throw new ForbiddenError('Permission denied: Cannot delete schedules');
+        }
 
         // Delete schedule entry within tenant context
         await runWithTenant(tenantId!, async () => {

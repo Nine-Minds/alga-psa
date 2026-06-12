@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import type { Knex } from 'knex';
@@ -191,6 +192,9 @@ const mapAssignmentStatusToRevenueStatus = (
  * Shows monthly recurring revenue and year-to-date billing by contract
  */
 export const getContractRevenueReport = withAuth(async (user, { tenant }): Promise<ContractRevenue[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex();
 
@@ -282,6 +286,9 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
  * Track upcoming contract expirations and renewal opportunities
  */
 export const getContractExpirationReport = withAuth(async (user, { tenant }): Promise<ContractExpiration[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex();
 
@@ -388,6 +395,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
  * Monitor bucket hours usage and identify overage situations
  */
 export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<BucketUsage[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex();
 
@@ -454,6 +464,9 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
  * Basic profit margins and revenue vs. cost analysis by contract
  */
 export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise<Profitability[]> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex();
 
@@ -520,6 +533,9 @@ export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise
  * Get contract report summary statistics
  */
 export const getContractReportSummary = withAuth(async (user, { tenant }): Promise<ContractReportSummary> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    throw new Error('Permission denied: billing read required');
+  }
   try {
     const { knex } = await createTenantKnex();
 

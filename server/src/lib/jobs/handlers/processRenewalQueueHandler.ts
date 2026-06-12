@@ -128,7 +128,9 @@ const tryCreateRenewalTicketViaWorkflowAction = async (params: {
     board_id: params.boardId,
     status_id: params.statusId,
     priority_id: params.priorityId,
-    assigned_to: params.assignedTo,
+    assignment: params.assignedTo
+      ? { primary: { type: 'user', id: params.assignedTo }, additional_user_ids: [] }
+      : undefined,
     attributes: params.attributes,
     idempotency_key: params.idempotencyKey,
   });
@@ -326,14 +328,22 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     .select(['cc.*', 'c.status as contract_status', 'c.contract_name', 'cl.client_name', ...defaultSelections]);
 
   const candidateRows = await contractQuery;
-  const workflowRunIdForTenant = hasWorkflowRunsTable
-    ? (
-      await knex('workflow_runs')
-        .where({ tenant_id: tenantId })
-        .orderBy('updated_at', 'desc')
-        .first('run_id')
-    )?.run_id ?? null
-    : null;
+  let workflowRunIdForTenant: string | null = null;
+  if (hasWorkflowRunsTable) {
+    try {
+      workflowRunIdForTenant = (
+        await knex('workflow_runs')
+          .where({ tenant: tenantId })
+          .orderBy('updated_at', 'desc')
+          .first('run_id')
+      )?.run_id ?? null;
+    } catch (error) {
+      logger.warn('Failed to resolve workflow run for renewal ticket provenance; tickets will be created directly', {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
   let eligibleRows = 0;
   let upsertedCount = 0;
   let normalizedStatusCount = 0;

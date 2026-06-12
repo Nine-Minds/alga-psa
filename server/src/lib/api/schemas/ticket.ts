@@ -43,13 +43,19 @@ export const createTicketSchema = z.object({
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
 export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Close despite unmet close rules; honored only when the caller's user holds
+  // ticket:close_override. Stripped before the row update.
+  override_close_rules: z.boolean().optional(),
+  override_close_rules_reason: z.string().nullable().optional(),
 });
 
 // Ticket status update schema
 export const updateTicketStatusSchema = z.object({
   status_id: uuidSchema,
   closed_at: z.string().datetime().optional(),
-  closed_by: uuidSchema.optional()
+  closed_by: uuidSchema.optional(),
+  override_close_rules: z.boolean().optional(),
+  override_close_rules_reason: z.string().nullable().optional()
 });
 
 // Ticket assignment schema
@@ -92,7 +98,11 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   status_name: z.string().optional(),
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
-  board_name: z.string().optional()
+  board_name: z.string().optional(),
+  tags: z.union([
+    z.array(z.string()),
+    arrayTransform(z.string())
+  ]).transform(tags => tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag.length > 0)).optional()
 });
 
 // Ticket list query schema
@@ -328,6 +338,13 @@ export const createTicketFromAssetSchema = z.object({
   category_id: uuidSchema.optional()
 });
 
+// Link an asset to a ticket (POST /api/v1/tickets/{id}/assets).
+export const linkTicketAssetSchema = z.object({
+  asset_id: uuidSchema,
+  relationship_type: z.string().min(1).optional(),
+  notes: z.string().optional()
+});
+
 // Export types for TypeScript
 export type CreateTicketData = z.infer<typeof createTicketSchema>;
 export type UpdateTicketData = z.infer<typeof updateTicketSchema>;
@@ -340,3 +357,4 @@ export type TicketSearchData = z.infer<typeof ticketSearchSchema>;
 export type TicketExportQuery = z.infer<typeof ticketExportQuerySchema>;
 export type TicketMetricsQuery = z.infer<typeof ticketMetricsQuerySchema>;
 export type CreateTicketFromAssetData = z.infer<typeof createTicketFromAssetSchema>;
+export type LinkTicketAssetData = z.infer<typeof linkTicketAssetSchema>;

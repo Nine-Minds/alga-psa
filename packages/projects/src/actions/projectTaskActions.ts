@@ -42,6 +42,7 @@ import {
 } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
 import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
+import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 import {
   buildProjectTaskAssignedPayload,
@@ -72,7 +73,7 @@ async function resolveProjectStatusInfo(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -119,7 +120,7 @@ async function getProjectStatusMappingDetails(
       this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
     })
     .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
     })
     .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
     .select(
@@ -294,37 +295,138 @@ async function createProjectReadAuthorizer(
     };
 }
 
-type KernelAuthorizationContext = {
-    subject: AuthorizationSubject;
-    authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
-    requestCache: RequestLocalAuthorizationCache;
-};
+async function isProjectReadAdmin(
+    user: IUserWithRoles,
+    trx: Knex.Transaction
+): Promise<boolean> {
+    return hasPermission(user, 'project', 'read', trx);
+}
 
-async function createKernelAuthorizationContext(
+/**
+ * Builds the per-ticket assignee set: primary assignee + ticket_resources
+ * additional agents + members of the ticket's assigned_team_id. Used to gate
+ * non-admin (no project:read) access to linked tickets.
+ */
+export async function buildTicketAssigneeSetByTicketId(
     trx: Knex.Transaction,
     tenant: string,
-    user: IUserWithRoles
-): Promise<KernelAuthorizationContext> {
-    const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-    const authorizationKernel = createAuthorizationKernel({
-        builtinProvider: new BuiltinAuthorizationKernelProvider(),
-        bundleProvider: new BundleAuthorizationKernelProvider({
-            resolveRules: async (input) => {
-                try {
-                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                } catch {
-                    return [];
-                }
-            },
-        }),
-        rbacEvaluator: async () => true,
-    });
+    ticketIds: string[]
+): Promise<Map<string, Set<string>>> {
+    const result = new Map<string, Set<string>>();
+    const uniqueIds = Array.from(new Set(ticketIds.filter(Boolean)));
+    if (uniqueIds.length === 0) {
+        return result;
+    }
 
-    return {
-        subject,
-        authorizationKernel,
-        requestCache: new RequestLocalAuthorizationCache(),
-    };
+    const tickets = await trx('tickets')
+        .where({ tenant })
+        .whereIn('ticket_id', uniqueIds)
+        .select<{ ticket_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
+            'ticket_id',
+            'assigned_to',
+            'assigned_team_id'
+        );
+
+    for (const ticket of tickets) {
+        const set = new Set<string>();
+        if (ticket.assigned_to) set.add(ticket.assigned_to);
+        result.set(ticket.ticket_id, set);
+    }
+
+    const additional = await trx('ticket_resources')
+        .where({ tenant })
+        .whereIn('ticket_id', uniqueIds)
+        .whereNotNull('additional_user_id')
+        .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');
+    for (const row of additional) {
+        result.get(row.ticket_id)?.add(row.additional_user_id);
+    }
+
+    const teamIds = Array.from(new Set(tickets.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
+    if (teamIds.length > 0) {
+        const members = await trx('team_members')
+            .where({ tenant })
+            .whereIn('team_id', teamIds)
+            .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
+        const membersByTeam = new Map<string, string[]>();
+        for (const row of members) {
+            const ids = membersByTeam.get(row.team_id) ?? [];
+            ids.push(row.user_id);
+            membersByTeam.set(row.team_id, ids);
+        }
+        for (const ticket of tickets) {
+            if (!ticket.assigned_team_id) continue;
+            const teamMembers = membersByTeam.get(ticket.assigned_team_id) ?? [];
+            const set = result.get(ticket.ticket_id);
+            if (!set) continue;
+            for (const id of teamMembers) set.add(id);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Builds the per-task assignee set: primary assignee + task_resources
+ * additional agents + members of the task's assigned_team_id.
+ */
+export async function buildTaskAssigneeSetByTaskId(
+    trx: Knex.Transaction,
+    tenant: string,
+    taskIds: string[]
+): Promise<Map<string, Set<string>>> {
+    const result = new Map<string, Set<string>>();
+    const uniqueIds = Array.from(new Set(taskIds.filter(Boolean)));
+    if (uniqueIds.length === 0) {
+        return result;
+    }
+
+    const tasks = await trx('project_tasks')
+        .where({ tenant })
+        .whereIn('task_id', uniqueIds)
+        .select<{ task_id: string; assigned_to: string | null; assigned_team_id: string | null }[]>(
+            'task_id',
+            'assigned_to',
+            'assigned_team_id'
+        );
+
+    for (const task of tasks) {
+        const set = new Set<string>();
+        if (task.assigned_to) set.add(task.assigned_to);
+        result.set(task.task_id, set);
+    }
+
+    const additional = await trx('task_resources')
+        .where({ tenant })
+        .whereIn('task_id', uniqueIds)
+        .whereNotNull('additional_user_id')
+        .select<{ task_id: string; additional_user_id: string }[]>('task_id', 'additional_user_id');
+    for (const row of additional) {
+        result.get(row.task_id)?.add(row.additional_user_id);
+    }
+
+    const teamIds = Array.from(new Set(tasks.map((t) => t.assigned_team_id).filter((id): id is string => Boolean(id))));
+    if (teamIds.length > 0) {
+        const members = await trx('team_members')
+            .where({ tenant })
+            .whereIn('team_id', teamIds)
+            .select<{ team_id: string; user_id: string }[]>('team_id', 'user_id');
+        const membersByTeam = new Map<string, string[]>();
+        for (const row of members) {
+            const ids = membersByTeam.get(row.team_id) ?? [];
+            ids.push(row.user_id);
+            membersByTeam.set(row.team_id, ids);
+        }
+        for (const task of tasks) {
+            if (!task.assigned_team_id) continue;
+            const teamMembers = membersByTeam.get(task.assigned_team_id) ?? [];
+            const set = result.get(task.task_id);
+            if (!set) continue;
+            for (const id of teamMembers) set.add(id);
+        }
+    }
+
+    return result;
 }
 
 export async function filterAuthorizedTicketIds(
@@ -338,52 +440,18 @@ export async function filterAuthorizedTicketIds(
         return new Set();
     }
 
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-        return new Set();
+    if (await isProjectReadAdmin(user, trx)) {
+        return new Set(uniqueTicketIds);
     }
 
-    const context = await createKernelAuthorizationContext(trx, tenant, user);
-    const tickets = await trx('tickets')
-        .where({ tenant })
-        .whereIn('ticket_id', uniqueTicketIds)
-        .select(
-            'ticket_id',
-            'entered_by',
-            'assigned_to',
-            'assigned_team_id',
-            'client_id',
-            'board_id',
-            'status_id'
-        );
-
-    const decisions = await Promise.all(
-        tickets.map((ticket) =>
-            context.authorizationKernel.authorizeResource({
-                subject: context.subject,
-                resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
-                record: {
-                    id: ticket.ticket_id,
-                    ownerUserId: ticket.entered_by ?? null,
-                    assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
-                    clientId: ticket.client_id ?? null,
-                    boardId: ticket.board_id ?? undefined,
-                    teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
-                    statusId: ticket.status_id,
-                },
-                requestCache: context.requestCache,
-                knex: trx,
-            })
-        )
-    );
-
-    const allowedIds = new Set<string>();
-    tickets.forEach((ticket, index) => {
-        if (decisions[index]?.allowed) {
-            allowedIds.add(ticket.ticket_id);
+    const assigneesByTicket = await buildTicketAssigneeSetByTicketId(trx, tenant, uniqueTicketIds);
+    const allowed = new Set<string>();
+    for (const ticketId of uniqueTicketIds) {
+        if (assigneesByTicket.get(ticketId)?.has(user.user_id)) {
+            allowed.add(ticketId);
         }
-    });
-
-    return allowedIds;
+    }
+    return allowed;
 }
 
 async function assertTicketReadAllowedById(
@@ -1060,7 +1128,7 @@ export const getTaskTicketLinksAction = withAuth(async (
                 user as IUserWithRoles,
                 links.map((link) => link.ticket_id)
             );
-            return links.filter((link) => allowedTicketIds.has(link.ticket_id));
+            return links.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
@@ -1083,20 +1151,30 @@ export const getLinkedTasksForTicketAction = withAuth(async (
                 return linkedTasks;
             }
 
-            const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
-            const projects = await trx('projects')
-                .where({ tenant })
-                .whereIn('project_id', Array.from(new Set(linkedTasks.map((task) => task.project_id).filter(Boolean))))
-                .select('project_id', 'client_id', 'assigned_to');
+            const isAdmin = await isProjectReadAdmin(user as IUserWithRoles, trx);
+            if (isAdmin) {
+                return linkedTasks.map((task) => ({ ...task, restricted: false }));
+            }
 
-            const allowedProjectIds = new Set<string>();
-            await Promise.all(projects.map(async (project) => {
-                if (await authorizeProjectRead(project)) {
-                    allowedProjectIds.add(project.project_id);
+            const assigneesByTask = await buildTaskAssigneeSetByTaskId(
+                trx,
+                tenant,
+                linkedTasks.map((task) => task.task_id)
+            );
+            return linkedTasks.map((task) => {
+                const isAssigned = assigneesByTask.get(task.task_id)?.has(user.user_id) ?? false;
+                if (isAssigned) {
+                    return { ...task, restricted: false };
                 }
-            }));
-
-            return linkedTasks.filter((task) => allowedProjectIds.has(task.project_id));
+                return {
+                    ...task,
+                    project_name: null,
+                    phase_name: null,
+                    status_name: null,
+                    is_closed: null,
+                    restricted: true,
+                };
+            });
         });
     } catch (error) {
         console.error('Error getting linked tasks for ticket:', error);
@@ -1182,7 +1260,9 @@ export const getTasksForPhase = withAuth(async (
                 user as IUserWithRoles,
                 ticketLinksArray.map((link) => link.ticket_id)
             );
-            const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+            const authorizedTicketLinksArray = ticketLinksArray.map((link) =>
+                applyTicketLinkRestriction(link, allowedTicketIds)
+            );
 
             // Convert arrays to maps
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
@@ -2247,7 +2327,7 @@ export const getTaskWithDetails = withAuth(async (
                 user as IUserWithRoles,
                 ticketLinks.map((link) => link.ticket_id)
             );
-            const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));
+            const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
             return {
                 ...task,
@@ -2787,7 +2867,9 @@ export const getAllProjectTasksForListView = withAuth(async (
             user as IUserWithRoles,
             ticketLinksArray.map((link) => link.ticket_id)
         );
-        const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+        const authorizedTicketLinksArray = ticketLinksArray.map((link) =>
+            applyTicketLinkRestriction(link, allowedTicketIds)
+        );
 
         // 5. Convert arrays to maps keyed by task_id
         const ticketLinks: Record<string, IProjectTicketLinkWithDetails[]> = {};

@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
-import path from 'path';
 
+// Resolve relative to this test file so the suite passes regardless of the
+// runner's working directory (server/ vs packages/billing).
 const companySyncSource = readFileSync(
-  path.resolve(process.cwd(), '../packages/billing/src/services/companySync/companySyncService.ts'),
+  new URL('../src/services/companySync/companySyncService.ts', import.meta.url),
   'utf8'
 );
 const mappingResolverSource = readFileSync(
-  path.resolve(process.cwd(), '../packages/billing/src/services/accountingMappingResolver.ts'),
+  new URL('../src/services/accountingMappingResolver.ts', import.meta.url),
   'utf8'
 );
 const exportValidationSource = readFileSync(
-  path.resolve(process.cwd(), '../packages/billing/src/services/accountingExportValidation.ts'),
+  new URL('../src/services/accountingExportValidation.ts', import.meta.url),
   'utf8'
 );
 

@@ -17,6 +17,11 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [

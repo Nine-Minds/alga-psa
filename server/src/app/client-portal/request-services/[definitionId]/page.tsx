@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -7,6 +8,10 @@ import {
   getRequestServiceDefinitionDetailAction,
   submitRequestServiceDefinitionAction,
 } from './actions';
+
+export const metadata: Metadata = {
+  title: 'Service Request',
+};
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 

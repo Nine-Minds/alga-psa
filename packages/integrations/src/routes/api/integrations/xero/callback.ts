@@ -1,10 +1,11 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 import {
   getXeroRedirectUri,
@@ -13,6 +14,8 @@ import {
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
 } from '../../../../lib/xero/xeroClientService';
+import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
+import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
@@ -44,10 +47,17 @@ function createRedirect(path: string, params?: Record<string, string | undefined
       }
     }
   }
-  return NextResponse.redirect(url);
+  const response = NextResponse.redirect(url);
+  // The CSRF cookie is single-use: clear it on every outcome.
+  response.cookies.set(
+    XERO_OAUTH_CSRF_COOKIE.name,
+    '',
+    buildOauthCsrfCookieOptions(XERO_OAUTH_CSRF_COOKIE, { clear: true })
+  );
+  return response;
 }
 
-export async function GET(request: Request): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
       { error: 'Xero integration is only available in Enterprise Edition.' },
@@ -71,7 +81,13 @@ export async function GET(request: Request): Promise<NextResponse> {
   let statePayload: XeroStatePayload;
   try {
     statePayload = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8')) as XeroStatePayload;
-    if (!statePayload?.tenantId || !statePayload?.codeVerifier) {
+    if (
+      !statePayload?.tenantId ||
+      typeof statePayload.tenantId !== 'string' ||
+      typeof statePayload.csrf !== 'string' ||
+      !statePayload.csrf ||
+      !statePayload?.codeVerifier
+    ) {
       throw new Error('state missing required fields');
     }
   } catch (error) {
@@ -80,6 +96,33 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const tenantId = statePayload.tenantId;
+
+  // Verify the CSRF token in the state against the HttpOnly cookie set by the
+  // connect route. Only the initiating browser holds the cookie, so a forged
+  // or replayed callback URL fails here.
+  const csrfCookie = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
+  if (!csrfCookie || !oauthCsrfTokensMatch(csrfCookie, statePayload.csrf)) {
+    logger.warn('[xeroOAuth] CSRF token mismatch on callback', { tenantId });
+    return createRedirect(FAILURE_PATH, { xero_error: 'csrf_mismatch' });
+  }
+
+  // The state payload is not integrity-protected, so never trust its tenantId
+  // alone: require it to match the authenticated session's tenant. This blocks
+  // a logged-in user from binding a Xero connection to another tenant by
+  // tampering with the state.
+  const sessionUser = await getCurrentUser();
+  if (!sessionUser?.tenant) {
+    logger.warn('[xeroOAuth] Callback received without an authenticated session', { tenantId });
+    return createRedirect(FAILURE_PATH, { xero_error: 'session_expired' });
+  }
+  if (sessionUser.tenant !== tenantId) {
+    logger.warn('[xeroOAuth] State tenant does not match session tenant', {
+      stateTenant: tenantId,
+      sessionTenant: sessionUser.tenant,
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'tenant_mismatch' });
+  }
+
   const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
 

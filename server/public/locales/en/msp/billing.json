@@ -631,7 +631,8 @@
       "open": "Open",
       "execute": "Execute",
       "createBatch": "Create Batch",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "cancelBatch": "Cancel Batch"
     },
     "states": {
       "loadingBatches": "Loading batches...",
@@ -665,8 +666,10 @@
         "created": "Created",
         "lines": "Lines",
         "errors": "Errors",
-        "delivered": "Delivered"
-      }
+        "delivered": "Delivered",
+        "notes": "Notes"
+      },
+      "errorDetails": "Error Details"
     },
     "toast": {
       "created": "Accounting export batch created",
@@ -674,7 +677,9 @@
       "loadBatchesError": "Failed to load accounting export batches",
       "loadDetailError": "Failed to load batch details",
       "createError": "Failed to create export batch",
-      "executeError": "Failed to execute batch"
+      "executeError": "Failed to execute batch",
+      "cancelled": "Batch cancelled",
+      "cancelError": "Failed to cancel batch"
     },
     "status": {
       "pending": "Pending",

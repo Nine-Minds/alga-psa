@@ -6,7 +6,7 @@
 
 export * from './workflow-actions/formRegistryActions';
 export * from './workflow-actions/taskInboxActions';
-export * from './activity-actions';
+// activity-actions moved to @alga-psa/user-activities/actions.
 export * from './event-catalog-actions';
 export * from './workflow-runtime-v2-actions';
 export * from './workflow-schedule-v2-actions';

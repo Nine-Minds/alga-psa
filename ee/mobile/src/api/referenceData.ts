@@ -29,6 +29,7 @@ export function listClients(
       limit: params.limit ?? 50,
       sort: "client_name",
       order: "asc",
+      is_inactive: "false",
       ...(params.search ? { search: params.search } : {}),
     },
     headers: { "x-api-key": params.apiKey },
@@ -44,6 +45,7 @@ export type ContactListItem = {
   email?: string | null;
   phone?: string | null;
   client_id?: string | null;
+  is_inactive?: boolean;
   avatarUrl?: string | null;
 };
 
@@ -64,6 +66,7 @@ export function listContacts(
       limit: params.limit ?? 50,
       sort: "full_name",
       order: "asc",
+      is_inactive: "false",
       ...(params.clientId ? { client_id: params.clientId } : {}),
       ...(params.search ? { search: params.search } : {}),
     },

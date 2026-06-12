@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type Row = Record<string, unknown>;
 
 type KnexMock = ((tableName: string) => {
+  leftJoin: (_table: string, _join: (...args: unknown[]) => void) => any;
   where: (clause: Row) => any;
   orderBy: (_column: string, _direction?: string) => any;
   limit: (_count: number) => any;
@@ -72,6 +73,42 @@ const dbMocks = vi.hoisted(() => ({
 const assertTierAccessMock = vi.hoisted(() => vi.fn(async () => undefined));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 
+// The kernel's default rbacEvaluator resolves roles via User.getUserRolesWithPermissions;
+// grant every simulator resource/action so the bundle/builtin narrowing stages stay decisive.
+const kernelRbacRoles = vi.hoisted(() => {
+  const resources = ['ticket', 'document', 'time_entry', 'project', 'asset', 'billing'];
+  const actions = ['read', 'approve'];
+  return [
+    {
+      role_id: 'role-admin',
+      role_name: 'Admin',
+      description: '',
+      msp: true,
+      client: true,
+      permissions: resources.flatMap((resource) =>
+        actions.map((action) => ({
+          permission_id: `${resource}-${action}`,
+          resource,
+          action,
+          msp: true,
+          client: true,
+        }))
+      ),
+    },
+  ];
+});
+
+// Strip a table alias: 'users as u' -> 'users'.
+function parseTable(tableName: string): string {
+  return tableName.split(/\s+as\s+/i)[0];
+}
+
+// Strip a column's table prefix: 'u.tenant' -> 'tenant'.
+function stripPrefix(column: string): string {
+  return column.split('.').pop() as string;
+}
+
+// 'u.user_id as user_id' reads row.user_id into picked.user_id.
 function pickColumns(row: Row | undefined, columns: string[]): Row | undefined {
   if (!row) {
     return undefined;
@@ -81,7 +118,8 @@ function pickColumns(row: Row | undefined, columns: string[]): Row | undefined {
   }
   const picked: Row = {};
   for (const column of columns) {
-    picked[column] = row[column];
+    const [source, alias] = column.split(/\s+as\s+/i);
+    picked[alias ?? stripPrefix(source)] = row[stripPrefix(source)];
   }
   return picked;
 }
@@ -98,14 +136,21 @@ function buildKnexMock(input: {
 
   const knex = ((tableName: string) => {
     const state = {
-      table: tableName,
+      table: parseTable(tableName),
       whereClauses: [] as Row[],
     };
-    calls.push({ table: tableName, where: state.whereClauses });
+    calls.push({ table: state.table, where: state.whereClauses });
 
     const builder = {
+      leftJoin(_table: string, _join: (...args: unknown[]) => void) {
+        return builder;
+      },
       where(clause: Row) {
-        state.whereClauses.push(clause);
+        const normalized: Row = {};
+        for (const [key, value] of Object.entries(clause)) {
+          normalized[stripPrefix(key)] = value;
+        }
+        state.whereClauses.push(normalized);
         return builder;
       },
       orderBy(_column: string, _direction?: string) {
@@ -196,6 +241,12 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+}));
+
+vi.mock('@alga-psa/db/models/user', () => ({
+  default: {
+    getUserRolesWithPermissions: vi.fn(async () => kernelRbacRoles),
+  },
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({

@@ -160,7 +160,8 @@
       "additionalUsers": "{{name}}, +{{count}} gebruiker",
       "additionalUsersOther": "{{name}}, +{{count}} gebruikers"
     },
-    "bundledTicket": "Gebundeld ticket: registreer de tijd op het hoofdticket{{suffix}}.",
+    "bundledUnder": "Gebundeld → {{number}}",
+    "bundled": "Gebundeld",
     "pagination": {
       "previous": "Vorige",
       "next": "Volgende",
@@ -421,5 +422,9 @@
     "saveChangesFailed": "Kan wijzigingen niet opslaan",
     "changesSaved": "Wijzigingen succesvol opgeslagen",
     "workItemDeleted": "Werkitem succesvol verwijderd"
+  },
+  "bundleNotice": {
+    "withNumber": "Dit ticket is gebundeld onder {{number}}. Bundeltijd wordt meestal op het hoofdticket geregistreerd.",
+    "withoutNumber": "Dit ticket maakt deel uit van een bundel. Bundeltijd wordt meestal op het hoofdticket geregistreerd."
   }
 }

@@ -3,9 +3,11 @@ import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
+  AccountingChangeSet,
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
+  AccountingExportDeliveryDocumentFailure,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
   AccountingExportDocument,
@@ -22,8 +24,9 @@ import { KnexCompanyMappingRepository } from '../../services/companySync/company
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
 
 type DbInvoice = {
   invoice_id: string;
@@ -35,6 +38,7 @@ type DbInvoice = {
   client_id?: string | null;
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
+  invoice_type?: string | null;
 };
 
 type DbCharge = {
@@ -91,6 +95,8 @@ interface InvoiceDocumentPayload {
   totals: {
     amountCents: number;
   };
+  /** QBO entity type: 'Invoice' for standard invoices, 'CreditMemo' for credit notes. */
+  documentType?: 'Invoice' | 'CreditMemo';
 }
 
 export function buildQboPrivateNoteForPurchaseOrder(poNumber: string): string {
@@ -125,8 +131,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
       supportsInvoiceFetch: true,
-      supportsTaxComponentImport: true // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
+      supportsTaxComponentImport: true, // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
+      supportsChangePolling: true,
+      supportsPaymentRecording: true
     };
+  }
+
+  async fetchChanges(tenantId: string, since: string, targetRealm?: string | null): Promise<AccountingChangeSet> {
+    const qboClient = await QboClientService.create(tenantId, targetRealm ?? null);
+    return qboClient.fetchChanges(since);
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
@@ -141,6 +154,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       adapterFactory: (adapterType) =>
         adapterType === QuickBooksOnlineAdapter.TYPE ? this.companyAdapter : null
     });
+
+    // Read tenant sync settings once per transform for class/department defaults
+    const syncSettings = await getAccountingSyncSettings(knex, tenantId).catch(() => null);
+    const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
+    const tenantDefaultDepartmentRef = syncSettings?.defaultDepartmentRef ?? null;
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -213,6 +231,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
       let invoiceNetCents = 0;
       let invoiceTaxCents = 0;
+      // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
+      const isCreditNote = invoice.invoice_type === 'credit_note';
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
@@ -242,11 +262,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         };
 
         if (charge.quantity != null) {
-          salesDetail.Qty = charge.quantity;
+          salesDetail.Qty = isCreditNote ? Math.abs(charge.quantity) : charge.quantity;
         }
 
         if (charge.unit_price != null) {
-          salesDetail.UnitPrice = centsToAmount(charge.unit_price);
+          salesDetail.UnitPrice = isCreditNote
+            ? centsToAmount(Math.abs(charge.unit_price))
+            : centsToAmount(charge.unit_price);
         }
 
         const serviceDate = resolveQboServiceDate(line);
@@ -255,6 +277,18 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           if (formatted) {
             salesDetail.ServiceDate = formatted;
           }
+        }
+
+        // ClassRef: per-item mapping metadata.classId takes precedence over tenant default
+        const serviceMeta = serviceMapping.metadata as Record<string, any> | null | undefined;
+        const itemClassId: string | null =
+          typeof serviceMeta?.classId === 'string' && serviceMeta.classId
+            ? serviceMeta.classId
+            : null;
+        if (itemClassId) {
+          salesDetail.ClassRef = { value: itemClassId };
+        } else if (tenantDefaultClassRef) {
+          salesDetail.ClassRef = { value: tenantDefaultClassRef.value };
         }
 
         // Handle tax based on delegation mode
@@ -282,18 +316,19 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
         // QBO will apply default tax behavior or NON depending on settings
 
-        const netAmountCents = coerceChargeCents(charge.net_amount);
-        if (netAmountCents === null) {
+        const rawNetAmountCents = coerceChargeCents(charge.net_amount);
+        if (rawNetAmountCents === null) {
           throw new AppError(
             'QBO_CHARGE_MISSING_NET_AMOUNT',
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
+        const netAmountCents = isCreditNote ? Math.abs(rawNetAmountCents) : rawNetAmountCents;
         invoiceNetCents += netAmountCents;
         if (shouldIncludeAuthoritativeTax) {
-          const taxCents = coerceChargeCents(charge.tax_amount);
-          if (taxCents !== null) {
-            invoiceTaxCents += taxCents;
+          const rawTaxCents = coerceChargeCents(charge.tax_amount);
+          if (rawTaxCents !== null) {
+            invoiceTaxCents += isCreditNote ? Math.abs(rawTaxCents) : rawTaxCents;
           }
         }
 
@@ -328,6 +363,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       if (invoice.po_number) {
         qboInvoice.PrivateNote = buildQboPrivateNoteForPurchaseOrder(invoice.po_number);
+      }
+
+      // DepartmentRef: tenant default at the invoice header level
+      if (tenantDefaultDepartmentRef) {
+        qboInvoice.DepartmentRef = { value: tenantDefaultDepartmentRef.value };
       }
 
       if (clientRow?.payment_terms) {
@@ -378,7 +418,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         },
         totals: {
           amountCents: invoiceNetCents
-        }
+        },
+        documentType: isCreditNote ? 'CreditMemo' : 'Invoice'
       };
 
       documents.push({
@@ -404,109 +445,162 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     transformResult: AccountingExportTransformResult,
     context: AccountingExportAdapterContext
   ): Promise<AccountingExportDeliveryResult> {
-    const realmId = context.batch.target_realm;
-    if (!realmId) {
-      throw new Error('QuickBooks adapter requires batch.target_realm to deliver invoices');
-    }
-
     const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
     }
+
+    const realmId = context.batch.target_realm ?? await getDefaultQboRealmId(tenantId);
+    if (!realmId) {
+      throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
+    }
     const qboClient = await QboClientService.create(tenantId, realmId);
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+    const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
 
     for (const document of transformResult.documents) {
-      const payload = document.payload as unknown as InvoiceDocumentPayload;
-      const mapping = await invoiceMappingRepository.findInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        targetRealm: realmId
-      });
-      const mappingMetadata = mapping?.metadata ?? null;
-      const existingMetadata = mappingMetadata ?? undefined;
-      let response: QboInvoice;
+      try {
+        const externalRef = await this.deliverInvoiceDocument(document, qboClient, invoiceMappingRepository, {
+          tenantId,
+          realmId
+        });
 
-      if (mapping?.externalInvoiceId) {
-        let syncToken =
-          existingMetadata?.sync_token ??
-          existingMetadata?.syncToken;
-        if (!syncToken) {
-          const remoteInvoice = await qboClient.read<QboInvoice>('Invoice', mapping.externalInvoiceId);
-          syncToken = remoteInvoice?.SyncToken ? String(remoteInvoice.SyncToken) : undefined;
+        deliveredLines.push(
+          ...document.lineIds.map((lineId) => ({
+            lineId,
+            externalDocumentRef: externalRef
+          }))
+        );
+      } catch (error) {
+        // Auth/connection failures affect every remaining call, so isolating them
+        // per invoice would only repeat the same failure across the batch.
+        if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
+          throw error;
         }
 
-        if (!syncToken) {
-          throw new Error(`QuickBooks adapter: missing SyncToken for invoice ${document.documentId}`);
-        }
-
-        const updatePayload = {
-          ...payload.invoice,
-          Id: mapping.externalInvoiceId,
-          SyncToken: syncToken as string,
-          sparse: true
-        } as { [key: string]: any; Id: string; SyncToken: string };
-
-        response = await qboClient.update<QboInvoice>('Invoice', updatePayload);
-      } else {
-        response = await qboClient.create<QboInvoice>('Invoice', payload.invoice);
+        const code = error instanceof AppError ? error.code : 'QBO_DELIVERY_ERROR';
+        const message = error instanceof Error ? error.message : 'Unknown QuickBooks delivery error';
+        logger.warn('QuickBooks adapter: invoice delivery failed, continuing with remaining invoices', {
+          invoiceId: document.documentId,
+          tenant: tenantId,
+          code,
+          error: message
+        });
+        failedDocuments.push({
+          documentId: document.documentId,
+          lineIds: document.lineIds,
+          code,
+          message
+        });
       }
-
-      // Build charge-to-QBO-line mapping from response
-      // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
-      const qboSalesLines = (response.Line ?? [])
-        .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
-      const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
-      for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
-        const qboLineId = qboSalesLines[i].Id;
-        if (qboLineId) {
-          chargeLineMappings.push({
-            chargeId: payload.chargeIds[i],
-            qboLineId
-          });
-        }
-      }
-
-      const metadata = {
-        ...(existingMetadata ?? {}),
-        sync_token: response.SyncToken ?? existingMetadata?.sync_token ?? null,
-        last_exported_at: new Date().toISOString(),
-        chargeLineMappings // Store mapping for tax import
-      };
-
-      const externalRef = response.Id;
-      if (!externalRef) {
-        throw new Error('QuickBooks adapter: QBO response missing Invoice Id');
-      }
-
-      await invoiceMappingRepository.upsertInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        externalInvoiceId: externalRef,
-        targetRealm: realmId,
-        metadata
-      });
-
-      deliveredLines.push(
-        ...document.lineIds.map((lineId) => ({
-          lineId,
-          externalDocumentRef: externalRef
-        }))
-      );
     }
 
     return {
       deliveredLines,
+      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       metadata: {
         adapter: this.type,
-        deliveredInvoices: transformResult.documents.length
+        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
+        failedInvoices: failedDocuments.length
       }
     };
+  }
+
+  private async deliverInvoiceDocument(
+    document: AccountingExportDocument,
+    qboClient: QboClientService,
+    invoiceMappingRepository: KnexInvoiceMappingRepository,
+    target: { tenantId: string; realmId: string }
+  ): Promise<string> {
+    const { tenantId, realmId } = target;
+    const payload = document.payload as unknown as InvoiceDocumentPayload;
+    const mapping = await invoiceMappingRepository.findInvoiceMapping({
+      tenantId,
+      adapterType: this.type,
+      invoiceId: document.documentId,
+      targetRealm: realmId
+    });
+    const mappingMetadata = mapping?.metadata ?? null;
+    const existingMetadata = mappingMetadata ?? undefined;
+    const qboEntityType = payload.documentType ?? 'Invoice';
+    let response: QboInvoice;
+
+    if (mapping?.externalInvoiceId) {
+      // Always read the live SyncToken: the stored one is stale whenever QBO
+      // changed out-of-band (which is precisely the drift re-export case) and
+      // QBO rejects updates with stale tokens (error 5010).
+      let syncToken: string | undefined;
+      try {
+        const remoteInvoice = await qboClient.read<QboInvoice>(qboEntityType, mapping.externalInvoiceId);
+        syncToken = remoteInvoice?.SyncToken !== undefined ? String(remoteInvoice.SyncToken) : undefined;
+      } catch {
+        // fall back to the stored token below
+      }
+      if (!syncToken) {
+        const stored = existingMetadata?.sync_token ?? existingMetadata?.syncToken;
+        syncToken = stored != null ? String(stored) : undefined;
+      }
+
+      if (!syncToken) {
+        throw new Error(`QuickBooks adapter: missing SyncToken for invoice ${document.documentId}`);
+      }
+
+      const updatePayload = {
+        ...payload.invoice,
+        Id: mapping.externalInvoiceId,
+        SyncToken: syncToken as string,
+        sparse: true
+      } as { [key: string]: any; Id: string; SyncToken: string };
+
+      response = await qboClient.update<QboInvoice>(qboEntityType, updatePayload);
+    } else {
+      response = await qboClient.create<QboInvoice>(qboEntityType, payload.invoice);
+    }
+
+    // Build charge-to-QBO-line mapping from response
+    // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
+    const qboSalesLines = (response.Line ?? [])
+      .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
+    const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
+    for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
+      const qboLineId = qboSalesLines[i].Id;
+      if (qboLineId) {
+        chargeLineMappings.push({
+          chargeId: payload.chargeIds[i],
+          qboLineId
+        });
+      }
+    }
+
+    const metadata = {
+      ...(existingMetadata ?? {}),
+      sync_token: response.SyncToken ?? existingMetadata?.sync_token ?? null,
+      last_exported_at: new Date().toISOString(),
+      // Drift baseline: what we believe the document looks like in QBO.
+      exported_total: typeof response.TotalAmt === 'number' ? response.TotalAmt : (existingMetadata?.exported_total ?? null),
+      doc_number: response.DocNumber ?? existingMetadata?.doc_number ?? null,
+      chargeLineMappings, // Store mapping for tax import
+      external_entity_type: qboEntityType
+    };
+
+    const externalRef = response.Id;
+    if (!externalRef) {
+      throw new Error('QuickBooks adapter: QBO response missing Invoice Id');
+    }
+
+    await invoiceMappingRepository.upsertInvoiceMapping({
+      tenantId,
+      adapterType: this.type,
+      invoiceId: document.documentId,
+      externalInvoiceId: externalRef,
+      targetRealm: realmId,
+      metadata
+    });
+
+    return externalRef;
   }
 
   private async loadInvoices(
@@ -529,7 +623,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'total_amount',
         'client_id',
         'currency_code',
-        'exchange_rate_basis_points'
+        'exchange_rate_basis_points',
+        'invoice_type'
       )
       .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);

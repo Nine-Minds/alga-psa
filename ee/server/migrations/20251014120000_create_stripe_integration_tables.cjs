@@ -124,11 +124,14 @@ const createStripeSubscriptions = (knex) =>
       .references(['tenant', 'stripe_customer_id'])
       .inTable('stripe_customers')
       .onDelete('CASCADE');
+    // Single-column FK on the globally-unique stripe_price_id (matches prod).
+    // A composite (tenant, stripe_price_id) FK would reject subscriptions that
+    // reference the master-tenant price catalog — which is exactly how both
+    // new-tenant signup and reactivation link subscriptions.
     table
-      .foreign(['tenant', 'stripe_price_id'])
-      .references(['tenant', 'stripe_price_id'])
-      .inTable('stripe_prices')
-      .onDelete('CASCADE');
+      .foreign('stripe_price_id')
+      .references('stripe_price_id')
+      .inTable('stripe_prices');
     table.integer('quantity').notNullable().defaultTo(1);
     table.text('status').defaultTo('active');
     table.timestamp('current_period_start', { useTz: true });

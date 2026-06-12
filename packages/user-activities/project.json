@@ -1,0 +1,22 @@
+{
+  "name": "@alga-psa/user-activities",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/user-activities/src",
+  "projectType": "library",
+  "tags": ["scope:user-activities", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/user-activities/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

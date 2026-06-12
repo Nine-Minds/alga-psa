@@ -19,7 +19,13 @@ vi.mock('@alga-psa/ui/editor', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string | Record<string, unknown>) => {
+      // Mirror i18next's t(key, options) form where options carries defaultValue.
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    },
   }),
 }));
 
@@ -417,10 +423,14 @@ function StatefulTicketConversationForTopLevelAdd({ onReplyAttempt }: { onReplyA
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
-      value: vi.fn(() => ({
-        observe: vi.fn(),
-        disconnect: vi.fn(),
-      })),
+      // Must be constructible: the component calls `new IntersectionObserver(...)`.
+      value: vi.fn(function IntersectionObserverStub() {
+        return {
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+      }),
       configurable: true,
     });
     vi.clearAllMocks();

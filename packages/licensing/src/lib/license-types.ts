@@ -22,6 +22,13 @@ export interface LicenseClaims {
   iat: number;
   /** Expiry (seconds since epoch) */
   exp: number;
+  /**
+   * Optional audience binding: the tenant UUID this license was issued for. When
+   * present, the license is only valid on the appliance whose tenant matches;
+   * absent means unbound (legacy) and is accepted on any appliance. Enforced at
+   * activation by submitLicense and at runtime by resolveSelfHostTier.
+   */
+  aud?: string;
 }
 
 /** Reason a license failed verification. */

@@ -74,8 +74,10 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     const textEditorPath = path.resolve(__dirname, '../../../../ui/src/editor/TextEditor.tsx');
     const source = fs.readFileSync(textEditorPath, 'utf-8');
 
-    expect(source).toContain("const mediaBlockTypes = new Set(['image', 'video', 'audio', 'file']);");
-    expect(source).toContain('if (typeof block.type === \'string\' && mediaBlockTypes.has(block.type)) {');
+    // The media-type set was hoisted to a module constant (MEDIA_BLOCK_TYPES)
+    // and the check moved into blockHasContent; same trimming behavior.
+    expect(source).toContain("const MEDIA_BLOCK_TYPES = new Set(['image', 'video', 'audio', 'file']);");
+    expect(source).toContain("if (typeof block.type === 'string' && MEDIA_BLOCK_TYPES.has(block.type)) {");
     expect(source).toContain('return Boolean(props?.url || props?.name);');
   });
 });

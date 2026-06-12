@@ -5,13 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BoardsSettings from './BoardsSettings';
+import ChecklistTemplatesSettings from './ChecklistTemplatesSettings';
 import StatusSettings from './StatusSettings';
 import { CategoriesSettings } from '@alga-psa/tickets/components';
 import { DisplaySettings } from '@alga-psa/tickets/components';
 import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'statuses', 'priorities', 'categories'] as const;
+const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'statuses', 'priorities', 'categories', 'checklist-templates'] as const;
 const DEFAULT_TICKETING_TAB = 'display';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
@@ -69,6 +70,11 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
       id: 'categories',
       label: t('ticketing.tabs.categories'),
       content: <CategoriesSettings />
+    },
+    {
+      id: 'checklist-templates',
+      label: t('ticketing.tabs.checklistTemplates'),
+      content: <ChecklistTemplatesSettings />
     }
   ];
 

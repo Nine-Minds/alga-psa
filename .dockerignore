@@ -54,6 +54,12 @@ temp
 # Volume directories
 volumes
 
+# Appliance ISO build artifacts (multi-GB; never part of an app image context)
+ee/appliance/ubuntu-iso/output
+ee/appliance/ubuntu-iso/work
+**/*.iso
+**/*.iso.sha256
+
 # Other common directories to ignore
 docs
 tests

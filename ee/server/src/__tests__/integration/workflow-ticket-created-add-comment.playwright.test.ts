@@ -425,7 +425,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     const eventRecord = await waitForCondition(
       async () => {
         const row = await db('workflow_runtime_events')
-          .where({ tenant_id: tenantId, event_name: 'TICKET_CREATED' })
+          .where({ tenant: tenantId, event_name: 'TICKET_CREATED' })
           .andWhereRaw(`payload->>'ticketId' = ?`, [ticketId])
           .orderBy('created_at', 'desc')
           .first(['event_id', 'matched_run_id']);
@@ -443,7 +443,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
         if (direct?.matched_run_id) return direct.matched_run_id as string;
 
         const run = await db('workflow_runs')
-          .where({ tenant_id: tenantId, workflow_id: workflowId, event_type: 'TICKET_CREATED' })
+          .where({ tenant: tenantId, workflow_id: workflowId, event_type: 'TICKET_CREATED' })
           .orderBy('started_at', 'desc')
           .first(['run_id']);
         return run?.run_id ? (run.run_id as string) : null;

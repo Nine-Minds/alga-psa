@@ -4,10 +4,17 @@ kind: Job
 metadata:
   name: {{ include "sebastian.fullname" . }}-bootstrap
   namespace: {{ include "sebastian.namespace" . }}
+  {{- if not .Values.setup.applianceBootstrap.enabled }}
+  # SaaS: run as a post-install/upgrade hook. NOT for the appliance — the alga
+  # core Deployment's wait-for-bootstrap init blocks readiness until this job
+  # creates the `users` table, but a post-install hook only fires AFTER the
+  # install succeeds, which can't happen while readiness is blocked. That
+  # deadlocks the appliance install, so there it runs as a regular concurrent Job.
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  {{- end }}
 spec:
   ttlSecondsAfterFinished: 300
   template:
@@ -435,5 +442,11 @@ spec:
             name: {{ include "sebastian.fullname" . }}-appliance-bootstrap
             defaultMode: 0755
       {{- end }}
+  {{- if .Values.setup.applianceBootstrap.enabled }}
+  # Appliance: this runs concurrently with db-0 coming up (not a post-install
+  # hook), so allow retries while Postgres becomes reachable.
+  backoffLimit: 6
+  {{- else }}
   backoffLimit: 0
+  {{- end }}
 {{- end }}

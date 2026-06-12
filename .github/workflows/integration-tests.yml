@@ -1,0 +1,141 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which suite to run'
+        required: false
+        default: 'tier1'
+        type: choice
+        options:
+          - tier1
+          - full
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    # Nightly full run at 04:30 UTC.
+    - cron: '30 4 * * *'
+
+jobs:
+  check-changes:
+    name: Check for relevant changes
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    outputs:
+      should_run: ${{ steps.filter.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes that affect DB-backed tests
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || echo "")
+
+          if echo "$CHANGED_FILES" | grep -qE '^(server/|packages/|shared/|ee/server/|\.github/workflows/integration-tests\.yml)'; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Relevant changes detected - will run integration tests"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes - skipping integration tests"
+          fi
+
+  integration-tests:
+    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full integration suite' || 'Tier-1 integration subset' }}
+    needs: check-changes
+    # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      # Fail loudly instead of describe.skip when the DB is unreachable (see server/test-utils/requireDb.ts).
+      REQUIRE_DB: '1'
+      VITEST_SEED: '20260610'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      # No npm install fallback: a failing npm ci means the lockfile is out of
+      # sync with a package.json, and regenerating dependencies on the fly once
+      # swapped vitest 3→4 and silently broke test-file serialization. Fail
+      # loudly instead.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      # Some tests read credentials from secrets/ files directly (getSecret falls back to env).
+      - name: Create secrets files
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Run Tier-1 integration subset
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        working-directory: ./server
+        run: npm run test:integration:tier1
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Run full integration suite
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        working-directory: ./server
+        run: npm run test:integration:ci
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'

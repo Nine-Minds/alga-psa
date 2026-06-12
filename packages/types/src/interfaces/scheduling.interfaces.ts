@@ -122,6 +122,8 @@ export interface TimeEntryWorkItemContext {
   workItemType: WorkItemType;
   workItemName: string;
   ticketNumber?: string;
+  masterTicketId?: string | null;
+  masterTicketNumber?: string | null;
   interactionType?: string;
   clientName?: string | null;
   startTime?: Date;
