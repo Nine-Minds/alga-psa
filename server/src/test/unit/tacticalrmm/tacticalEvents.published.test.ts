@@ -30,6 +30,18 @@ vi.mock('@alga-psa/assets/actions/assetActions', () => ({
   createAsset: vi.fn(),
 }));
 
+vi.mock('@alga-psa/shared/rmm/alerts', async () => {
+  const actual: any = await vi.importActual('@alga-psa/shared/rmm/alerts');
+  return {
+    ...actual,
+    processRmmAlertEvent: vi.fn(async () => ({ outcome: 'recorded_only', alertId: 'alert-1', warnings: [] })),
+  };
+});
+
+vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({
+  buildRmmAlertPipelineDeps: vi.fn(() => ({})),
+}));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),

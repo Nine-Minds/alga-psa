@@ -118,9 +118,10 @@ let fetchersRegistered = false;
 function ensureFetchersRegistered(): void {
   if (fetchersRegistered) return;
   registerRmmAlertFetcher('ninjaone', ninjaOneAlertFetcher);
-  // TacticalRMM/Level fetchers land once their list-alerts API shapes are
-  // verified against live instances; until then those providers stay
-  // webhook-only and the dispatcher skips them.
+  // Tactical's fetcher self-registers on import (same alerts endpoint the
+  // manual backfill uses). Level has no list-alerts API surface yet and stays
+  // webhook-only, so the dispatcher skips it.
+  void import('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher');
   fetchersRegistered = true;
 }
 

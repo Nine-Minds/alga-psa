@@ -1280,103 +1280,20 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       syncType: 'alerts',
     });
 
-    const authMode = (integration.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
-    const client = await buildConfiguredTacticalClient({
-      tenant,
-      instanceUrl: integration.instance_url,
-      authMode,
-    });
+    // A manual backfill is one reconciliation cycle: active alerts in
+    // Tactical flow through the shared pipeline (rules, dedup, windows,
+    // ticketing) and stale poller-ingested alerts get synthesized resets.
+    const [{ runRmmAlertReconciliation }, { buildRmmAlertPipelineDeps }] = await Promise.all([
+      import('@alga-psa/shared/rmm/alerts'),
+      import('../../lib/rmm/alerts/pipelineDeps'),
+    ]);
+    await import('../../lib/rmm/tacticalrmm/alertFetcher'); // registers the fetcher
 
-    // Tactical supports a filterable alerts endpoint; prefer PATCH per docs, but be permissive in response shape.
-    const res = await client.request<any>({
-      method: 'PATCH',
-      path: '/api/alerts/',
-      data: {
-        // Conservative default: request active alerts. Tactical may ignore unknown filters.
-        status: 'active',
-      },
-    });
-
-    const alerts: any[] = Array.isArray(res)
-      ? res
-      : Array.isArray((res as any)?.results)
-        ? (res as any).results
-        : Array.isArray((res as any)?.alerts)
-          ? (res as any).alerts
-          : [];
-
-    const existingRows = await knex('rmm_alerts')
-      .where({ tenant, integration_id: integration.integration_id })
-      .select('external_alert_id');
-    const existing = new Set(existingRows.map((r: any) => String(r.external_alert_id)));
-
-    let created = 0;
-    let updated = 0;
-
-    for (const alert of alerts) {
-      try {
-        const externalAlertId = String(alert?.id ?? alert?.alert_id ?? alert?.uid ?? '');
-        if (!externalAlertId) {
-          errors.push('Alert record missing id');
-          continue;
-        }
-
-        const agentId = String(alert?.agent_id ?? alert?.device_id ?? alert?.agent ?? alert?.device ?? '');
-        let assetId: string | undefined;
-        if (agentId) {
-          const mapping = await knex('tenant_external_entity_mappings')
-            .where({
-              tenant,
-              integration_type: PROVIDER,
-              alga_entity_type: 'asset',
-              external_entity_id: agentId,
-            })
-            .first(['alga_entity_id']);
-          assetId = mapping?.alga_entity_id;
-        }
-
-        const status: string =
-          alert?.status ? String(alert.status) :
-          alert?.resolved ? 'resolved' :
-          'active';
-
-        const severity = mapTacticalSeverity(alert?.severity ?? alert?.alert_severity);
-        const message = String(alert?.message ?? alert?.alert_message ?? alert?.description ?? '');
-        const triggeredAt = alert?.alert_time || alert?.triggered_at || alert?.created || new Date().toISOString();
-        const resolvedAt = alert?.resolved_at || alert?.resolved || null;
-
-        const baseRow = {
-          tenant,
-          integration_id: integration.integration_id,
-          external_alert_id: externalAlertId,
-          external_device_id: agentId || null,
-          asset_id: assetId || null,
-          severity,
-          priority: null,
-          activity_type: 'tacticalrmm_alert',
-          status,
-          message: message || null,
-          source_data: JSON.stringify(alert),
-          triggered_at: triggeredAt,
-          resolved_at: resolvedAt,
-          updated_at: knex.fn.now(),
-        };
-
-        if (existing.has(externalAlertId)) {
-          await knex('rmm_alerts')
-            .where({ tenant, integration_id: integration.integration_id, external_alert_id: externalAlertId })
-            .update(baseRow);
-          updated += 1;
-        } else {
-          await knex('rmm_alerts')
-            .insert({ ...baseRow, created_at: knex.fn.now() });
-          created += 1;
-          existing.add(externalAlertId);
-        }
-      } catch (e) {
-        errors.push(e instanceof Error ? e.message : 'Unknown error upserting alert');
-      }
-    }
+    const result = await runRmmAlertReconciliation(
+      { knex, deps: buildRmmAlertPipelineDeps() },
+      { tenantId: tenant, integrationId: integrationIdForEvents, provider: PROVIDER }
+    );
+    errors.push(...result.warnings);
 
     await knex('rmm_integrations')
       .where({ tenant, provider: PROVIDER })
@@ -1388,17 +1305,17 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       actorUserId,
       integrationId: integrationIdForEvents,
       syncType: 'alerts',
-      itemsProcessed: alerts.length,
-      itemsCreated: created,
-      itemsUpdated: updated,
+      itemsProcessed: result.remoteActive,
+      itemsCreated: result.ingested,
+      itemsUpdated: result.resetsSynthesized,
       itemsFailed: errors.length,
     });
 
     return {
       success: true,
-      items_processed: alerts.length,
-      items_created: created,
-      items_updated: updated,
+      items_processed: result.remoteActive,
+      items_created: result.ingested,
+      items_updated: result.resetsSynthesized,
       items_failed: errors.length,
       errors: errors.length ? errors : undefined,
     };

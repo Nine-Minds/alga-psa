@@ -6,7 +6,6 @@ let knexMock: any;
 type DbState = {
   rmm_integrations: Array<any>;
   tenant_external_entity_mappings: Array<any>;
-  rmm_alerts: Array<any>;
 };
 
 function createFakeKnex(state: DbState) {
@@ -38,23 +37,19 @@ function createFakeKnex(state: DbState) {
       for (const c of cols) picked[c] = row[c];
       return picked;
     }
-
-    async update(patch: any) {
-      const rows = this.filtered();
-      for (const r of rows) Object.assign(r, patch);
-      return rows.length;
-    }
-
-    async insert(row: any) {
-      state[this.table].push(row);
-      return [row];
-    }
   }
 
   const knex = ((table: string) => new QB(table as any)) as any;
   knex.fn = { now: () => now };
   return knex;
 }
+
+const processRmmAlertEvent = vi.fn(async () => ({
+  outcome: 'ticket_created',
+  alertId: 'alert-1',
+  ticketId: 'ticket-1',
+  warnings: [],
+}));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => secretProvider),
@@ -70,14 +65,24 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
-describe('Tactical webhook alert upsert', () => {
+vi.mock('@alga-psa/shared/rmm/alerts', () => ({
+  processRmmAlertEvent,
+}));
+
+vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({
+  buildRmmAlertPipelineDeps: vi.fn(() => ({})),
+}));
+
+describe('Tactical webhook alert normalization into the shared pipeline', () => {
   let state: DbState;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-13T12:00:00.000Z'));
+    processRmmAlertEvent.mockClear();
 
     state = {
       rmm_integrations: [
@@ -88,7 +93,6 @@ describe('Tactical webhook alert upsert', () => {
         },
       ],
       tenant_external_entity_mappings: [],
-      rmm_alerts: [],
     };
     knexMock = createFakeKnex(state);
 
@@ -104,84 +108,79 @@ describe('Tactical webhook alert upsert', () => {
     vi.useRealTimers();
   });
 
-  it('accepts minimal payload with agent_id and upserts an alert record', async () => {
-    const { POST } = await import('server/src/app/api/webhooks/tacticalrmm/route');
-    const req = new Request('http://localhost/api/webhooks/tacticalrmm?tenant=tenant_1', {
+  function webhookRequest(body: Record<string, unknown>, secret = 'expected_secret') {
+    return new Request('http://localhost/api/webhooks/tacticalrmm?tenant=tenant_1', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'X-Alga-Webhook-Secret': 'expected_secret',
+        'X-Alga-Webhook-Secret': secret,
       },
-      body: JSON.stringify({
+      body: JSON.stringify(body),
+    });
+  }
+
+  it('normalizes a trigger payload and runs it through the pipeline', async () => {
+    const { POST } = await import('server/src/app/api/webhooks/tacticalrmm/route');
+    const res = await POST(
+      webhookRequest({
         agent_id: 'a1',
+        alert_id: '42',
         event: 'trigger',
         severity: 'critical',
         message: 'Test alert',
+        alert_type: 'cpu_check',
+        hostname: 'SERVER-01',
+        client_id: 7,
         alert_time: '2026-02-13T12:00:00.000Z',
-      }),
-    });
+      })
+    );
 
-    const res = await POST(req);
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.recorded).toBe(true);
+    expect(json.outcome).toBe('ticket_created');
 
-    expect(state.rmm_alerts).toHaveLength(1);
-    expect(state.rmm_alerts[0]).toEqual(
+    expect(processRmmAlertEvent).toHaveBeenCalledTimes(1);
+    const [, event] = processRmmAlertEvent.mock.calls[0] as any[];
+    expect(event).toEqual(
       expect.objectContaining({
-        tenant: 'tenant_1',
-        integration_id: 'integration_1',
-        external_device_id: 'a1',
-        status: 'active',
+        tenantId: 'tenant_1',
+        integrationId: 'integration_1',
+        provider: 'tacticalrmm',
+        kind: 'triggered',
+        externalAlertId: '42',
+        externalDeviceId: 'a1',
         severity: 'critical',
+        message: 'Test alert',
+        alertClass: 'cpu_check',
+        deviceName: 'SERVER-01',
+        externalOrganizationId: '7',
+        occurredAt: '2026-02-13T12:00:00.000Z',
       })
     );
   });
 
-  it('associates alert to asset when agent_id mapping exists, otherwise asset_id is null', async () => {
-    state.tenant_external_entity_mappings.push({
-      tenant: 'tenant_1',
-      integration_type: 'tacticalrmm',
-      alga_entity_type: 'asset',
-      external_entity_id: 'a1',
-      alga_entity_id: 'asset_1',
-    });
-
+  it('maps resolve events to kind reset and synthesizes an external id when absent', async () => {
     const { POST } = await import('server/src/app/api/webhooks/tacticalrmm/route');
-    const req1 = new Request('http://localhost/api/webhooks/tacticalrmm?tenant=tenant_1', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'X-Alga-Webhook-Secret': 'expected_secret',
-      },
-      body: JSON.stringify({
+    const res = await POST(
+      webhookRequest({
         agent_id: 'a1',
-        event: 'trigger',
+        event: 'resolved',
         alert_time: '2026-02-13T12:00:00.000Z',
-      }),
-    });
+      })
+    );
 
-    const res1 = await POST(req1);
-    expect(res1.status).toBe(200);
-    expect(state.rmm_alerts[0]?.asset_id).toBe('asset_1');
+    expect(res.status).toBe(200);
+    const [, event] = processRmmAlertEvent.mock.calls[0] as any[];
+    expect(event.kind).toBe('reset');
+    expect(event.externalAlertId).toBe('a1:resolved:2026-02-13T12:00:00.000Z');
+  });
 
-    const req2 = new Request('http://localhost/api/webhooks/tacticalrmm?tenant=tenant_1', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'X-Alga-Webhook-Secret': 'expected_secret',
-      },
-      body: JSON.stringify({
-        agent_id: 'a2',
-        event: 'trigger',
-        alert_time: '2026-02-13T12:00:01.000Z',
-      }),
-    });
-
-    const res2 = await POST(req2);
-    expect(res2.status).toBe(200);
-    expect(state.rmm_alerts[1]?.asset_id).toBeNull();
+  it('rejects a wrong webhook secret without touching the pipeline', async () => {
+    const { POST } = await import('server/src/app/api/webhooks/tacticalrmm/route');
+    const res = await POST(webhookRequest({ agent_id: 'a1' }, 'wrong_secret'));
+    expect(res.status).toBe(401);
+    expect(processRmmAlertEvent).not.toHaveBeenCalled();
   });
 });
-
