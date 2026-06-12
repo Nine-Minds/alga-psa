@@ -130,3 +130,22 @@ Validation: rmmalerts unit 40/40; tactical unit 36/37 (1 pre-existing main
 failure); rmmAlertPipeline integration 20/20; tsc clean on touched packages.
 Flow 6 observed live: interval change converged ~3 min, disable unscheduled,
 pre-fix leaked schedule self-healed on first tick.
+
+## Deferred: "run workflow" as an alert-rule action (2026-06-12)
+
+Considered and deliberately held off. Coverage today: workflows can already
+trigger on RMM_ALERT_TRIGGERED/RESOLVED (system event catalog) and on ticket
+creation, and can call rmm.alerts.create_ticket; the rule action would mainly
+add rule-level filtering as the trigger plus rule context in the payload.
+
+If revisited, the design direction we converged on: run-workflow as an
+independent action toggle (composes with create-ticket; "replace" = create
+ticket off + workflow on), launched fire-and-forget via
+launchPublishedWorkflowRun after the processing transaction commits. Two
+gaps must be closed for replace mode to be safe: (1) storm protection
+without a ticket — dedup should treat an active same-dedup-key alert as an
+occurrence even before any ticket exists, else flap storms launch one
+workflow per firing during the async gap; (2) lifecycle hooks — workflow-
+created tickets keep auto-resolve/reset-on-close only when created through
+rmm.alerts.create_ticket (which maintains rmm_alerts.ticket_id). The
+transactional-vs-eventual ticket guarantee is the documented trade-off.
