@@ -355,7 +355,7 @@ async function performBulkSsoAssignment(
           provider_email: adminDb.raw('excluded.provider_email'),
           metadata: adminDb.raw('excluded.metadata'),
           last_used_at: adminDb.raw('excluded.last_used_at'),
-          updated_at: adminDb.fn.now(),
+          updated_at: new Date().toISOString(),
         });
     } else if (mode === 'unlink' && deleteTuples.length > 0) {
       await adminDb(ACCOUNT_TABLE)

@@ -292,7 +292,7 @@ export class WorkflowStepQuotaService {
           limit_source: summary.limitSource,
           tier: summary.tier,
           metadata_json: metadataJson,
-          updated_at: trx.fn.now(),
+          updated_at: new Date().toISOString(),
         });
 
       const usage = await trx<UsageRow>('workflow_step_usage_periods')

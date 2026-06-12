@@ -76,7 +76,7 @@ export async function ensureTemplateLineSnapshot(
     throw new Error(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
   }
 
-  const now = knex.fn.now();
+  const now = new Date().toISOString();
   const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
 
   // All terms columns are now stored directly on contract_lines

@@ -1203,7 +1203,7 @@ export class StripeService {
       })
       .onConflict(['tenant', 'addon_key'])
       .merge({
-        activated_at: db.fn.now(),
+        activated_at: new Date().toISOString(),
         expires_at: null,
         metadata,
       });

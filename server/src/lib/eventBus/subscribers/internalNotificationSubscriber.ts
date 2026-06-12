@@ -27,6 +27,9 @@ import {
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
+import { resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { formatInTimeZone } from 'date-fns-tz';
+import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTime } from '@alga-psa/scheduling/actions';
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
@@ -2541,6 +2544,28 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
   try {
     const db = await getConnection(tenantId);
 
+    // requestedDate/requestedTime are the requester's wall-clock. Render the
+    // schedule entry's UTC instant per recipient, labeled with their timezone.
+    const scheduleEntryId = (payload as any).scheduleEntryId as string | undefined;
+    const request = await db('appointment_requests')
+      .where({ appointment_request_id: appointmentRequestId, tenant: tenantId })
+      .select('requester_timezone', 'schedule_entry_id')
+      .first();
+    const entryId = scheduleEntryId || request?.schedule_entry_id;
+    const entry = entryId
+      ? await db('schedule_entries')
+          .where({ entry_id: entryId, tenant: tenantId })
+          .select('scheduled_start')
+          .first()
+      : null;
+    const startInstant = entry?.scheduled_start ? new Date(entry.scheduled_start) : null;
+    const formatFor = async (timeZone: string) => startInstant
+      ? {
+          date: await formatAppointmentDate(formatInTimeZone(startInstant, timeZone, 'yyyy-MM-dd'), 'en'),
+          time: `${await formatAppointmentTime(formatInTimeZone(startInstant, timeZone, 'HH:mm'), 'en')} (${formatInTimeZone(startInstant, timeZone, 'zzz')})`,
+        }
+      : { date: requestedDate, time: requestedTime };
+
     // Get technician name for client notification
     let technicianName = 'Your technician';
     if (assignedUserId) {
@@ -2556,6 +2581,7 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
 
     // 1. Send notification to CLIENT
     if (clientUserId) {
+      const clientFormatted = await formatFor(normalizeIanaTimeZone(request?.requester_timezone ?? null));
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: clientUserId,
@@ -2565,8 +2591,8 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
         link: `/client-portal/appointments/${appointmentRequestId}`,
         data: {
           serviceName,
-          appointmentDate: requestedDate,
-          appointmentTime: requestedTime,
+          appointmentDate: clientFormatted.date,
+          appointmentTime: clientFormatted.time,
           technicianName
         }
       });
@@ -2591,6 +2617,7 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
         }
       }
 
+      const technicianFormatted = await formatFor(await resolveEffectiveTimeZone(db, tenantId, assignedUserId));
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: assignedUserId,
@@ -2600,8 +2627,8 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
         link: `/msp/schedule`,
         data: {
           serviceName,
-          appointmentDate: requestedDate,
-          appointmentTime: requestedTime,
+          appointmentDate: technicianFormatted.date,
+          appointmentTime: technicianFormatted.time,
           clientName
         }
       });

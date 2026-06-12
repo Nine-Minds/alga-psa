@@ -7,6 +7,7 @@ import {
   IAvailabilitySetting
 } from '@alga-psa/types';
 import { Knex } from 'knex';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * AvailabilityService
@@ -84,14 +85,19 @@ export async function getAvailableTimeSlots(
     const { knex } = await createTenantKnex();
     const tenantTimezone = await getTenantTimezone(knex, tenantId);
 
-    // Validate date is not in the past and within booking window
-    // Parse date in UTC to avoid timezone issues
+    // Validate date is not in the past and within booking window. "Today" is
+    // evaluated in the requester's timezone (fallback tenant tz, then UTC) so
+    // same-day requests from users west of UTC aren't dropped after 00:00 UTC.
     const [year, month, day] = date.split('-').map(Number);
     const targetDate = new Date(Date.UTC(year, month - 1, day));
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    let todayLocal: string;
+    try {
+      todayLocal = formatInTimeZone(new Date(), userTimezone || tenantTimezone || 'UTC', 'yyyy-MM-dd');
+    } catch {
+      todayLocal = new Date().toISOString().split('T')[0];
+    }
 
-    if (targetDate < today) {
+    if (date < todayLocal) {
       return [];
     }
 

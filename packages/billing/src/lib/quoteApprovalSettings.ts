@@ -74,7 +74,7 @@ export async function setQuoteApprovalWorkflowRequired(
     .onConflict('tenant')
     .merge({
       settings: JSON.stringify(updatedSettings),
-      updated_at: knexOrTrx.fn.now(),
+      updated_at: new Date().toISOString(),
     });
 
   return { approvalRequired };

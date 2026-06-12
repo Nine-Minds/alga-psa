@@ -142,7 +142,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         email,
         is_private_email: isPrivateEmail,
         apple_refresh_token_enc: refreshTokenEnc,
-        last_sign_in_at: knex.fn.now(),
+        last_sign_in_at: new Date().toISOString(),
       });
 
     return NextResponse.json({

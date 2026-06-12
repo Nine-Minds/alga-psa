@@ -126,7 +126,9 @@ export const upsertBoardCloseRules = withAuth(
         require_no_open_children: input.require_no_open_children ?? false,
         required_fields: JSON.stringify(requiredFields),
         is_enabled: input.is_enabled ?? true,
-        updated_at: trx.fn.now(),
+        // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
+        // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+        updated_at: new Date().toISOString(),
       };
 
       const [row] = await trx('board_close_rules')

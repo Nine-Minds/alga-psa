@@ -28,7 +28,7 @@ function toIsoOrNull(value: unknown): string | null {
 }
 
 export async function upsertAssetFact(knex: Knex, input: AssetFactUpsertInput): Promise<void> {
-  const now = knex.fn.now();
+  const now = new Date().toISOString();
   await knex('asset_facts')
     .insert({
       tenant: input.tenant,

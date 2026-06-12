@@ -40,7 +40,7 @@ export async function discoverManagedTenantsForTenant(
 
   const persistedRows = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
+    const now = new Date().toISOString();
 
     const insertRows = discovered.map((item) => ({
       tenant,
