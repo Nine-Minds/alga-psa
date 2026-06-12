@@ -135,14 +135,18 @@ describe('hudu asset layout map — DB integration', () => {
     expect(await getHuduAssetLayoutTypeMap(db, tenantId)).toEqual({ '11': 'mobile_device' });
   });
 
-  it('T205: invalid stored values coerce to unknown on read (forward-compat)', async () => {
+  it('T205/T318: slug-shaped values survive the read; non-slug junk coerces to unknown', async () => {
+    // F315 contract: storage keeps every slug-shaped string (custom registry
+    // slugs must round-trip); registry membership is enforced at import time
+    // by resolveAssetTypeForLayout. Only non-slug junk coerces on read.
     await upsertHuduIntegration(db, tenantId, {
-      settings: { asset_layout_type_map: { '7': 'mainframe', '9': 'printer' } },
+      settings: { asset_layout_type_map: { '7': 'mainframe', '9': 'printer', '11': 'Main Frame!' } },
     });
 
     expect(await getHuduAssetLayoutTypeMap(db, tenantId)).toEqual({
-      '7': 'unknown',
+      '7': 'mainframe',
       '9': 'printer',
+      '11': 'unknown',
     });
   });
 });
