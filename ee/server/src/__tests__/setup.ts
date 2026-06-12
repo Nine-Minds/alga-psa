@@ -6,9 +6,25 @@
 import '@testing-library/jest-dom';
 import dotenv from 'dotenv';
 import { vi } from 'vitest';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 
 const envPath = `${process.cwd()}/.env.test`;
 dotenv.config({ path: envPath });
+
+// Initialize i18next so useTranslation returns a stable `t` like production.
+// Without an instance, react-i18next hands out a fresh fallback `t` on every
+// render, which turns any `useMemo`/`useEffect` keyed on `t` into per-render
+// work — WorkflowAiSchemaSection spun forever in CI because of this. Missing
+// keys resolve to each call's defaultValue, same as the uninitialized fallback.
+if (!i18n.isInitialized) {
+  void i18n.use(initReactI18next).init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: {} },
+    interpolation: { escapeValue: false },
+  });
+}
 
 // Mock Next.js router
 vi.mock('next/router', () => ({
