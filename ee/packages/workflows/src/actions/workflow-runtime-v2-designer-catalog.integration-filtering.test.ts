@@ -120,6 +120,18 @@ vi.mock('@alga-psa/workflows/runtime', () => {
         }
       ]
     }),
+    resolveAvailableIntegrationModuleKeys: vi.fn(async (knex: any, tenantId: string | null | undefined) => {
+      // Mirrors the real registry-backed resolver for the fixture's single
+      // module (rmm:ninjaone); the registry itself is unit-tested separately.
+      const available = new Set<string>();
+      if (!tenantId) return available;
+      const row = await knex('rmm_integrations')
+        .where({ tenant: tenantId, provider: 'ninjaone', is_active: true })
+        .whereNotNull('connected_at')
+        .first();
+      if (row) available.add('app:ninjaone');
+      return available;
+    }),
     getWorkflowIntegrationModuleRegistry: () => ({
       list: () => [
         {

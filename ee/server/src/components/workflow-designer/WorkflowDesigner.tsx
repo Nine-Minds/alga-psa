@@ -16,7 +16,7 @@ import {
   MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList, Ticket,
   FolderKanban, Handshake, Contact, Wand2, AppWindow, Hourglass, ShieldAlert,
-  CalendarPlus, Timer, BellRing
+  CalendarPlus, Timer, BellRing, Gauge, ShieldCheck, MessagesSquare
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -3488,6 +3488,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'transform': return <Wand2 className={iconClass} />;
         case 'ai': return <Bot className={iconClass} />;
         case 'ninjaone': return <ShieldAlert className={iconClass} />;
+        case 'tacticalrmm': return <Terminal className={iconClass} />;
+        case 'levelio': return <Gauge className={iconClass} />;
+        case 'huntress': return <ShieldCheck className={iconClass} />;
+        case 'teams': return <MessagesSquare className={iconClass} />;
         case 'app': return <AppWindow className={iconClass} />;
         default: return <Box className={iconClass} />;
       }
@@ -3523,6 +3527,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       
       // Business Operations - Scheduling
       if (actionId === 'scheduling.assign_user') return <CalendarPlus className={iconClass} />;
+      if (actionId === 'scheduling.create_entry') return <CalendarPlus className={iconClass} />;
       
       // Business Operations - Projects
       if (actionId === 'projects.create_task') return <SquareCheck className={iconClass} />;

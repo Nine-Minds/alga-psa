@@ -3,126 +3,195 @@
     "id": "T001",
     "mode": "automated",
     "description": "Availability registry: registered resolver is invoked with (knex, tenantId); module whose availabilityKey has no resolver is unavailable (fail closed); resolver throwing marks module unavailable without propagating (catalog listing does not throw).",
-    "implemented": false,
-    "featureIds": ["F001", "F002"]
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
   },
   {
     "id": "T002",
     "mode": "automated",
     "description": "rmmIntegrationAvailability: true for active+connected rmm_integrations row of the matching provider; false when inactive, connected_at null, row absent, or provider mismatched.",
-    "implemented": false,
-    "featureIds": ["F003"]
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T003",
     "mode": "automated",
     "description": "NinjaOne migration parity: designer catalog output (group, actions, ordering) identical before/after for a connected NinjaOne tenant; app:ninjaone absent for a disconnected tenant.",
-    "implemented": false,
-    "featureIds": ["F005", "F002"]
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F002"
+    ]
   },
   {
     "id": "T004",
     "mode": "automated",
     "description": "registerIntegrationWorkflowModule idempotency: invoking registration twice yields no duplicate module tiles, actions, or resolvers.",
-    "implemented": false,
-    "featureIds": ["F004"]
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T005",
     "mode": "automated",
     "description": "Catalog gating matrix: with tactical+level connected and huntress+teams not, exactly app:tacticalrmm and app:levelio appear alongside core groups; connecting/disconnecting flips tiles accordingly.",
-    "implemented": false,
-    "featureIds": ["F002", "F013", "F019", "F023", "F029"]
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F013",
+      "F019",
+      "F023",
+      "F029"
+    ]
   },
   {
     "id": "T006",
     "mode": "automated",
     "description": "NinjaOne run_script handler: happy path passes type/id/parameters/runAs to client and returns vendor response; vendor 4xx surfaces status + message without credentials; scripting_options returns discovery list.",
-    "implemented": false,
-    "featureIds": ["F006", "F007", "F032"]
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F032"
+    ]
   },
   {
     "id": "T007",
     "mode": "automated",
     "description": "Tactical handlers (mocked client): agents.find/get mapping; scripts.list returns id+name+shell; run_script returns output; run_command and reboot mark side-effects; not-connected integration yields actionable error.",
-    "implemented": false,
-    "featureIds": ["F008", "F009", "F010", "F011", "F012", "F032"]
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F032"
+    ]
   },
   {
     "id": "T008",
     "mode": "automated",
     "description": "TacticalRmmClient new wrappers: correct method/path/payload for getAgent, listScripts, runScript, runCommand, reboot under both api_key and Knox auth modes.",
-    "implemented": false,
-    "featureIds": ["F008"]
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
   },
   {
     "id": "T009",
     "mode": "automated",
     "description": "Level handlers (mocked client): devices.find group filter pass-through; alerts.resolve posts to /v2/alerts/{id}/resolve; automations.trigger posts token + device_ids[] and maps no-webhook-trigger failure to actionable error; run_status returns run state.",
-    "implemented": false,
-    "featureIds": ["F014", "F015", "F016", "F017", "F018", "F032"]
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F032"
+    ]
   },
   {
     "id": "T010",
     "mode": "automated",
     "description": "Huntress thin client: Basic auth header from tenant secrets; min-interval spacing enforced; 429 retried with backoff then surfaced; incidents.resolve sends the write call; reads map filters correctly.",
-    "implemented": false,
-    "featureIds": ["F020", "F021", "F022", "F032"]
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F022",
+      "F032"
+    ]
   },
   {
     "id": "T011",
     "mode": "automated",
     "description": "Teams handlers: notify_user errors actionably when user lacks linked Microsoft account; send_dm errors actionably when no conversation reference exists; post_to_channel errors actionably when app not installed in team; happy paths invoke delivery/bot connector with expected payloads (mocked).",
-    "implemented": false,
-    "featureIds": ["F024", "F025", "F026", "F027", "F028", "F032"]
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F027",
+      "F028",
+      "F032"
+    ]
   },
   {
     "id": "T012",
     "mode": "automated",
     "description": "Teams availability resolver: available only when install_status='active' AND add-on active; either missing => unavailable.",
-    "implemented": false,
-    "featureIds": ["F024"]
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
   },
   {
     "id": "T013",
     "mode": "automated",
     "description": "scheduling.create_entry: creates entry visible via model layer with assignee/ticket link; validation errors for unknown user and end-before-start; output includes entry id.",
-    "implemented": false,
-    "featureIds": ["F030"]
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
   },
   {
     "id": "T014",
     "mode": "manual",
     "description": "Local-test stack: connect/disconnect Tactical and Level; verify palette tiles appear/disappear in the designer without restart artifacts; NinjaOne tile unchanged throughout.",
     "implemented": false,
-    "featureIds": ["F002", "F005", "F013", "F019"]
+    "featureIds": [
+      "F002",
+      "F005",
+      "F013",
+      "F019"
+    ]
   },
   {
     "id": "T015",
     "mode": "manual",
     "description": "Local-test stack with Tactical mock server: workflow runs tacticalrmm.scripts.list then agents.run_script; script output visible in run inspector and usable in a downstream ticket note step.",
     "implemented": false,
-    "featureIds": ["F011", "F012"]
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T016",
     "mode": "manual",
     "description": "Teams test tenant: notify_user lands in activity feed; send_dm arrives from bot; post_to_channel posts in a channel of a team with the app installed and errors actionably in one without.",
     "implemented": false,
-    "featureIds": ["F025", "F026", "F027", "F028"]
+    "featureIds": [
+      "F025",
+      "F026",
+      "F027",
+      "F028"
+    ]
   },
   {
     "id": "T017",
     "mode": "manual",
     "description": "scheduling.create_entry from a workflow: entry appears on the dispatch board for the assignee and (when a calendar is connected) syncs to the external calendar.",
     "implemented": false,
-    "featureIds": ["F030"]
+    "featureIds": [
+      "F030"
+    ]
   },
   {
     "id": "T018",
     "mode": "manual",
     "description": "Designer icons: the four new tiles render their integration logos at palette and node sizes (no missing-icon fallback).",
     "implemented": false,
-    "featureIds": ["F031"]
+    "featureIds": [
+      "F031"
+    ]
   }
 ]
