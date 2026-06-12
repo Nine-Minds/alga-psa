@@ -40,6 +40,14 @@ Working memory for the RMM alert handling effort. Approved design lives at
 - (2026-06-11) Precedent for shared provider-agnostic RMM code: `shared/rmm/contracts.ts` + `shared/rmm/sharedAssetIngestionService.ts` (used by Tanium and Tactical device sync). The alert pipeline mirrors this layout.
 - (2026-06-11) Legacy-bus events `RMM_ALERT_TRIGGERED`/`RMM_ALERT_RESOLVED` are published today but have no subscribers and are not in the workflow v2 catalog. Workflow v2 currently only sees `INTEGRATION_WEBHOOK_RECEIVED`.
 
+## Implementation status (2026-06-12, mid-flight)
+
+Done and committed: corrective migration (20260612090000) + event-catalog (…0100) and notification (…0200) migrations; shared pipeline in shared/rmm/alerts (contracts, evaluator, windowMatcher, dedup, ticketCreator, untouched, processRmmAlertEvent, reconciliation, createTicketForAlertId, outboundRegistry); NinjaOne/Tactical/Level webhooks normalized into it; TICKET_CLOSED outbound-reset subscriber + NinjaOne adapter (CE stub in packages/ee); rmmAlertNotificationSubscriber (in-app + email); rules+windows CRUD actions (packages/integrations/src/actions/integrations/rmmAlertRuleActions.ts); rmm.alerts.create_ticket workflow action; pg-boss reconciliation dispatcher (EE init, NinjaOne fetcher) — **deviation: pg-boss instead of design-doc Temporal** (Huntress precedent, CE compatibility; F083 connect/disconnect becomes "dispatcher polls only active integrations"); OAuth CSRF fix (ninjaone_oauth_state tenant secret, one-time use); legacy ee ninjaone alertProcessor/ticketCreator deleted, manual button + workflow action use shared createTicketForAlertId.
+
+Remaining: FR-7 settings UI (Alert Rules + Maintenance Windows + polling settings section in provider panes — providerSettingsComponents map in packages/integrations RmmIntegrationsSetup.tsx); test core T001–T032 (old tactical webhook unit tests will need adapting to the pipeline; old ee alertProcessor tests reference deleted module — replace with shared-module tests); flip features.json/tests.json implemented flags; update design doc for the pg-boss deviation + id-space caveat.
+
+Verification caveats for smoke testing: NinjaOne webhook external ids are activity ids while the alerts API returns uids — reconciliation only trusts poller-ingested ids for staleness (RECONCILIATION_INGEST_MARKER in metadata) and dedup absorbs cross-source duplicates; verify uid/id behavior against a live sandbox. Tactical/Level reconciliation fetchers intentionally deferred until their list-alerts API shapes are verified live (F082 open).
+
 ## Commands / Runbooks
 
 - Run server migrations: from `server/`, `npx knex migrate:latest` (see existing env scripts; use the worktree's compose stack via the alga-env-manager skill).
