@@ -759,6 +759,7 @@
         "selectAsset": "Asset selecteren",
         "serial": "Serienummer",
         "archivedLabel": "Gearchiveerd",
+        "excludedHint": "Niet geïmporteerd (layout uitgesloten)",
         "buttons": {
           "importAll": "Alle assets zonder match importeren",
           "importingAll": "Bezig met importeren...",
@@ -808,7 +809,7 @@
           "lastSynced": "Laatst gesynchroniseerd: {{timestamp}}"
         },
         "import": {
-          "summary": "Import voltooid: {{created}} aangemaakt · {{failed}} mislukt."
+          "summary": "Import voltooid: {{created}} aangemaakt · {{skipped}} overgeslagen · {{failed}} mislukt."
         },
         "success": {
           "saved": "Asset-toewijzingen opgeslagen: {{total}}",
@@ -939,6 +940,7 @@
           "printer": "Printer",
           "unknown": "Onbekend"
         },
+        "excludeOption": "Niet importeren",
         "buttons": {
           "save": "Layout-toewijzing opslaan",
           "saving": "Opslaan..."

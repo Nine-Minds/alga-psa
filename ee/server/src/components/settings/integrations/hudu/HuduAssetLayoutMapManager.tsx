@@ -15,8 +15,11 @@ import type {
   HuduAssetLayoutMapEntry,
   HuduLayoutMapActionResult,
 } from '../../../../lib/actions/integrations/huduLayoutMapActions';
-import { ALGA_ASSET_TYPES } from '../../../../lib/integrations/hudu/assetLayoutMap';
-import type { AlgaAssetType, HuduAssetLayoutTypeMap } from '../../../../lib/integrations/hudu/assetLayoutMap';
+import { ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED } from '../../../../lib/integrations/hudu/assetLayoutMap';
+import type {
+  HuduAssetLayoutTypeMap,
+  HuduLayoutAssignment,
+} from '../../../../lib/integrations/hudu/assetLayoutMap';
 
 // Explicit type guard: the EE tsconfig is non-strict, where `!result.success`
 // alone does not narrow the discriminated union.
@@ -37,8 +40,8 @@ const HuduAssetLayoutMapManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const assetTypeLabel = (assetType: AlgaAssetType): string => {
-    switch (assetType) {
+  const assetTypeLabel = (assignment: HuduLayoutAssignment): string => {
+    switch (assignment) {
       case 'workstation':
         return t('integrations.hudu.layoutMap.types.workstation', { defaultValue: 'Workstation' });
       case 'network_device':
@@ -49,14 +52,16 @@ const HuduAssetLayoutMapManager: React.FC = () => {
         return t('integrations.hudu.layoutMap.types.mobileDevice', { defaultValue: 'Mobile device' });
       case 'printer':
         return t('integrations.hudu.layoutMap.types.printer', { defaultValue: 'Printer' });
+      case HUDU_LAYOUT_EXCLUDED:
+        return t('integrations.hudu.layoutMap.excludeOption', { defaultValue: "Don't import" });
       default:
         return t('integrations.hudu.layoutMap.types.unknown', { defaultValue: 'Unknown' });
     }
   };
 
-  const typeOptions = ALGA_ASSET_TYPES.map((assetType) => ({
-    value: assetType,
-    label: assetTypeLabel(assetType),
+  const typeOptions = [...ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED].map((assignment) => ({
+    value: assignment,
+    label: assetTypeLabel(assignment),
   }));
 
   const loadLayouts = async () => {
@@ -98,9 +103,9 @@ const HuduAssetLayoutMapManager: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSelect = (layoutId: number, assetType: string) => {
+  const handleSelect = (layoutId: number, assignment: string) => {
     if (isSaving) return;
-    setSelections((prev) => ({ ...prev, [String(layoutId)]: assetType as AlgaAssetType }));
+    setSelections((prev) => ({ ...prev, [String(layoutId)]: assignment as HuduLayoutAssignment }));
   };
 
   const handleSave = async () => {

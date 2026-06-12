@@ -134,6 +134,44 @@ describe('HuduAssetLayoutMapManager', () => {
     await screen.findByText('Asset layout map saved.');
   });
 
+  it("T258: every row's select offers Don't import and Save persists 'excluded'", async () => {
+    setHuduAssetLayoutMapMock.mockResolvedValue({
+      success: true,
+      data: { map: { '7': 'excluded', '9': 'server' } },
+    });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    const computerSelect = screen.getByTestId('hudu-layout-type-select-7') as HTMLSelectElement;
+    const excludeOption = Array.from(computerSelect.options).find((o) => o.value === 'excluded');
+    expect(excludeOption?.textContent).toBe("Don't import");
+
+    fireEvent.change(computerSelect, { target: { value: 'excluded' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save layout map' }));
+
+    await waitFor(() => {
+      expect(setHuduAssetLayoutMapMock).toHaveBeenCalledTimes(1);
+    });
+    expect(setHuduAssetLayoutMapMock).toHaveBeenCalledWith({ '7': 'excluded', '9': 'server' });
+    await screen.findByText('Asset layout map saved.');
+  });
+
+  it("T258: a stored 'excluded' assignment prefills the select", async () => {
+    getHuduAssetLayoutMapMock.mockResolvedValue({
+      success: true,
+      data: {
+        layouts: [{ id: 7, name: 'API Secrets', suggestedType: 'unknown', configuredType: 'excluded' }],
+        map: { '7': 'excluded' },
+      },
+    });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('API Secrets');
+
+    expect((screen.getByTestId('hudu-layout-type-select-7') as HTMLSelectElement).value).toBe('excluded');
+  });
+
   it('T208: a save failure surfaces the error alert', async () => {
     setHuduAssetLayoutMapMock.mockResolvedValue({ success: false, error: 'boom' });
 

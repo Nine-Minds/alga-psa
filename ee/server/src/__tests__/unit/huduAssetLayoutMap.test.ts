@@ -63,6 +63,8 @@ vi.mock('@ee/lib/integrations/hudu/huduClient', () => ({
 // Dynamic import: a static import would evaluate the hoisted mock factories
 // before the mock consts above are initialized (TDZ — huduPermissions idiom).
 const {
+  HUDU_LAYOUT_EXCLUDED,
+  isLayoutExcluded,
   normalizeAssetLayoutTypeMap,
   parseAssetLayoutTypeMap,
   resolveAssetTypeForLayout,
@@ -170,6 +172,63 @@ describe('F204: asset_layout_type_map contract (parse/normalize)', () => {
     expect(normalizeAssetLayoutTypeMap(['workstation'])).toEqual({});
     expect(parseAssetLayoutTypeMap(null)).toEqual({});
     expect(parseAssetLayoutTypeMap({ asset_layout_type_map: 'bogus' })).toEqual({});
+  });
+});
+
+describe("T257: 'excluded' assignment (F256)", () => {
+  it("normalize keeps 'excluded' intact while invalid values still coerce to 'unknown'", () => {
+    expect(normalizeAssetLayoutTypeMap({ '7': 'excluded', '9': 'mainframe', '11': 'printer' })).toEqual({
+      '7': 'excluded',
+      '9': 'unknown',
+      '11': 'printer',
+    });
+    expect(parseAssetLayoutTypeMap({ asset_layout_type_map: { '7': 'excluded' } })).toEqual({
+      '7': 'excluded',
+    });
+  });
+
+  it("isLayoutExcluded flags only 'excluded' entries — excluded is distinct from unknown", () => {
+    const map = { '7': HUDU_LAYOUT_EXCLUDED, '9': 'unknown', '11': 'printer' } as const;
+    expect(isLayoutExcluded(map, 7)).toBe(true);
+    expect(isLayoutExcluded(map, '7')).toBe(true);
+    expect(isLayoutExcluded(map, 9)).toBe(false);
+    expect(isLayoutExcluded(map, 11)).toBe(false);
+    expect(isLayoutExcluded(map, 999)).toBe(false);
+    expect(isLayoutExcluded({}, 7)).toBe(false);
+    expect(isLayoutExcluded(null, 7)).toBe(false);
+    expect(isLayoutExcluded(undefined, 7)).toBe(false);
+  });
+
+  it("resolveAssetTypeForLayout never returns 'excluded' — an excluded layout resolves to 'unknown'", () => {
+    const map = { '7': HUDU_LAYOUT_EXCLUDED, '9': 'printer' } as const;
+    expect(resolveAssetTypeForLayout(map, 7)).toBe('unknown');
+    expect(resolveAssetTypeForLayout(map, 9)).toBe('printer');
+  });
+
+  it("set/get round-trips 'excluded' through the actions and surfaces it as configuredType", async () => {
+    const { setHuduAssetLayoutMap, getHuduAssetLayoutMap } = await importActions();
+
+    const saved = await setHuduAssetLayoutMap({ '7': 'excluded', '9': 'printer' });
+    expect(saved).toEqual({ success: true, data: { map: { '7': 'excluded', '9': 'printer' } } });
+    expect(upsertHuduIntegrationMock).toHaveBeenCalledWith(knexCallableMock, TENANT, {
+      settings: { asset_layout_type_map: { '7': 'excluded', '9': 'printer' } },
+    });
+
+    getHuduIntegrationMock.mockResolvedValue({
+      tenant: TENANT,
+      settings: { asset_layout_type_map: { '7': 'excluded' } },
+    });
+    const result = await getHuduAssetLayoutMap();
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        layouts: [
+          { id: 7, name: 'Computer Assets', suggestedType: 'workstation', configuredType: 'excluded' },
+          { id: 9, name: 'Printers', suggestedType: 'printer', configuredType: null },
+        ],
+        map: { '7': 'excluded' },
+      },
+    });
   });
 });
 

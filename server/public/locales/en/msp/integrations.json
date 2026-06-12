@@ -759,6 +759,7 @@
         "selectAsset": "Select asset",
         "serial": "Serial",
         "archivedLabel": "Archived",
+        "excludedHint": "Not imported (layout excluded)",
         "buttons": {
           "importAll": "Import all unmatched",
           "importingAll": "Importing...",
@@ -808,7 +809,7 @@
           "lastSynced": "Last synced: {{timestamp}}"
         },
         "import": {
-          "summary": "Import finished: {{created}} created · {{failed}} failed."
+          "summary": "Import finished: {{created}} created · {{skipped}} skipped · {{failed}} failed."
         },
         "success": {
           "saved": "Asset mappings saved: {{total}}",
@@ -939,6 +940,7 @@
           "printer": "Printer",
           "unknown": "Unknown"
         },
+        "excludeOption": "Don't import",
         "buttons": {
           "save": "Save layout map",
           "saving": "Saving..."

@@ -165,6 +165,7 @@ function buildRows(): HuduAssetMappingView[] {
       primary_serial: 'SN-1',
       url: 'https://docs.example.com/a/1',
       archived: false,
+      layout_excluded: false,
       mapping: { mapping_id: 'map-1', asset_id: 'asset-1', asset_name: 'DC-01', stale: false },
       suggestion: null,
     },
@@ -176,6 +177,7 @@ function buildRows(): HuduAssetMappingView[] {
       primary_serial: null,
       url: null,
       archived: false,
+      layout_excluded: false,
       mapping: null,
       suggestion: { asset_id: 'asset-2', asset_name: 'FW-01', source: 'exact_name', confidence: 0.9 },
     },
@@ -187,6 +189,7 @@ function buildRows(): HuduAssetMappingView[] {
       primary_serial: null,
       url: null,
       archived: false,
+      layout_excluded: false,
       mapping: null,
       suggestion: null,
     },
@@ -198,6 +201,7 @@ function buildRows(): HuduAssetMappingView[] {
       primary_serial: 'SN-4',
       url: null,
       archived: true,
+      layout_excluded: false,
       mapping: { mapping_id: 'map-4', asset_id: 'asset-4', asset_name: 'OLD-01', stale: true },
       suggestion: null,
     },
@@ -471,7 +475,7 @@ describe('HuduAssetMappingManager', () => {
     it('renders the created/failed summary and the failed row stays importable', async () => {
       importAllUnmatchedHuduAssetsMock.mockResolvedValue({
         success: true,
-        data: { created: 2, failed: [{ huduAssetId: 3, error: 'create failed', code: 'create_failed' }] },
+        data: { created: 2, skipped: 0, failed: [{ huduAssetId: 3, error: 'create failed', code: 'create_failed' }] },
       });
 
       await renderManager();
@@ -483,7 +487,7 @@ describe('HuduAssetMappingManager', () => {
       });
       await waitFor(() => {
         expect(document.getElementById('hudu-asset-import-summary')?.textContent).toContain(
-          'Import finished: 2 created · 1 failed.'
+          'Import finished: 2 created · 0 skipped · 1 failed.'
         );
       });
       expect(document.getElementById('hudu-asset-import-failure-3')?.textContent).toContain('create failed');
@@ -498,7 +502,7 @@ describe('HuduAssetMappingManager', () => {
         error: 'HTTP 429',
         code: 'rate_limited',
         errorKind: 'rate_limited',
-        partial: { created: 1, failed: [] },
+        partial: { created: 1, skipped: 0, failed: [] },
       });
 
       await renderManager();
@@ -507,12 +511,70 @@ describe('HuduAssetMappingManager', () => {
 
       await waitFor(() => {
         expect(document.getElementById('hudu-asset-import-summary')?.textContent).toContain(
-          'Import finished: 1 created · 0 failed.'
+          'Import finished: 1 created · 0 skipped · 0 failed.'
         );
       });
       expect(document.getElementById('hudu-asset-mapping-error')?.textContent).toContain(
         'Hudu rate limit reached. Try again later.'
       );
+    });
+  });
+
+  describe('T261: excluded-layout rows', () => {
+    const withExcluded = (rows: HuduAssetMappingView[]): HuduAssetMappingView[] =>
+      rows.map((row) => (row.hudu_asset_id === 3 ? { ...row, layout_excluded: true } : row));
+
+    it('hides the per-row Import, shows the Excluded hint, and disables Import all when nothing else is unmatched', async () => {
+      mockMappings(withExcluded(buildRows()));
+
+      await renderManager();
+
+      // Row 3 is plain-unmapped but excluded: no Import affordance, hint shown.
+      expect(document.getElementById('hudu-asset-import-3')).toBeNull();
+      expect(document.getElementById('hudu-asset-excluded-3')?.textContent).toBe(
+        'Not imported (layout excluded)'
+      );
+      // The other rows show no hint.
+      expect(document.getElementById('hudu-asset-excluded-1')).toBeNull();
+      // It was the only unmatched row, so the Import-all count is zero → disabled.
+      expect((document.getElementById('hudu-asset-import-all-btn') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('Import all stays enabled when a non-excluded unmatched row remains', async () => {
+      const rows = withExcluded(buildRows()).map((row) =>
+        row.hudu_asset_id === 2 ? { ...row, suggestion: null } : row
+      );
+      mockMappings(rows);
+
+      await renderManager();
+
+      // Row 2 (unmatched, not excluded) keeps the trigger live; row 3 still has no Import.
+      expect((document.getElementById('hudu-asset-import-all-btn') as HTMLButtonElement).disabled).toBe(false);
+      expect(document.getElementById('hudu-asset-import-2')).not.toBeNull();
+      expect(document.getElementById('hudu-asset-import-3')).toBeNull();
+    });
+
+    it('an excluded row is still stage- and mappable to an existing asset', async () => {
+      mockMappings(withExcluded(buildRows()));
+      setHuduAssetMappingMock.mockResolvedValue({ success: true, data: { mapping_id: 'map-excluded' } });
+
+      await renderManager();
+
+      fireEvent.click(document.getElementById('hudu-asset-row-action-2')!); // dismiss suggestion
+      fireEvent.change(screen.getByTestId('hudu-asset-picker-3'), { target: { value: 'asset-3' } });
+
+      expect(document.getElementById('hudu-asset-status-3')?.textContent).toBe('Pending');
+
+      fireEvent.click(screen.getByRole('button', { name: /Save mappings/ }));
+
+      await waitFor(() => {
+        expect(setHuduAssetMappingMock).toHaveBeenCalledWith(
+          expect.objectContaining({ clientId: CLIENT_ID, assetId: 'asset-3', huduAssetId: 3 })
+        );
+      });
+      await waitFor(() => {
+        expect(document.getElementById('hudu-asset-status-3')?.textContent).toBe('Mapped');
+      });
     });
   });
 

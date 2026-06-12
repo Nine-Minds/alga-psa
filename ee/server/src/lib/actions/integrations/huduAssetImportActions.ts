@@ -27,6 +27,7 @@ import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import {
   getHuduAssetLayoutTypeMap,
+  isLayoutExcluded,
   resolveAssetTypeForLayout,
 } from '../../integrations/hudu/assetLayoutMap';
 import type { AlgaAssetType } from '../../integrations/hudu/assetLayoutMap';
@@ -48,6 +49,7 @@ export type HuduAssetImportErrorCode =
   | 'client_not_mapped'
   | 'hudu_asset_not_found'
   | 'hudu_asset_already_mapped'
+  | 'layout_excluded'
   | 'fetch_failed'
   | 'rate_limited'
   | 'create_failed'
@@ -87,6 +89,8 @@ export interface ImportAllUnmatchedHuduAssetsInput {
 
 export interface HuduAssetBulkImportSummary {
   created: number;
+  /** F258: unmatched assets whose layout is marked "Don't import" (FR8). */
+  skipped: number;
   failed: Array<{ huduAssetId: number; error: string; code?: HuduAssetImportErrorCode }>;
 }
 
@@ -195,6 +199,15 @@ async function importHuduAssetCore(
   }
 
   const layoutMap = await getHuduAssetLayoutTypeMap(knex, tenant);
+  // F258: excluded layouts fail typed before any serial/tag work (FR8).
+  if (huduAsset.asset_layout_id != null && isLayoutExcluded(layoutMap, huduAsset.asset_layout_id)) {
+    return {
+      success: false,
+      error: `Hudu asset ${huduAsset.id} belongs to a layout marked "Don't import".`,
+      code: 'layout_excluded',
+    };
+  }
+
   const assetType =
     huduAsset.asset_layout_id != null ? resolveAssetTypeForLayout(layoutMap, huduAsset.asset_layout_id) : 'unknown';
   const assetTag = await deriveHuduAssetTag(knex, tenant, {
@@ -303,12 +316,13 @@ export const importHuduAsset = withHuduAssetCreateAccess(
 
 /**
  * F217/F218: import every plain-Unmapped Hudu asset (no mapping row, no
- * suggestion) sequentially. Per-item failures are isolated into the summary;
+ * suggestion) sequentially. Excluded-layout assets are skipped (counted in
+ * the summary, F258). Per-item failures are isolated into the summary;
  * a rate-limited Hudu fetch stops the batch with the partial summary.
  */
 export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
   async (_user, { tenant }, input: ImportAllUnmatchedHuduAssetsInput): Promise<HuduAssetBulkImportResult> => {
-    const summary: HuduAssetBulkImportSummary = { created: 0, failed: [] };
+    const summary: HuduAssetBulkImportSummary = { created: 0, skipped: 0, failed: [] };
     try {
       if (!input?.clientId) {
         return { success: false, error: 'clientId is required.', partial: summary };
@@ -341,7 +355,13 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
         (asset) => !mappedHuduAssetIds.has(String(asset.id)) && !suggestions.has(asset.id)
       );
 
-      for (const asset of unmatched) {
+      const layoutMap = await getHuduAssetLayoutTypeMap(knex, tenant);
+      const importable = unmatched.filter(
+        (asset) => !(asset.asset_layout_id != null && isLayoutExcluded(layoutMap, asset.asset_layout_id))
+      );
+      summary.skipped = unmatched.length - importable.length;
+
+      for (const asset of importable) {
         const result = await importHuduAssetCore(tenant, input.clientId, asset.id);
         if (result.success) {
           summary.created += 1;
@@ -353,6 +373,7 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
             tenant,
             clientId: input.clientId,
             created: summary.created,
+            skipped: summary.skipped,
             failed: summary.failed.length,
           });
           return {
@@ -374,6 +395,7 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
         tenant,
         clientId: input.clientId,
         created: summary.created,
+        skipped: summary.skipped,
         failed: summary.failed.length,
       });
 

@@ -23,7 +23,11 @@ import {
   setHuduAssetLayoutTypeMap,
   suggestAssetTypeForLayout,
 } from '../../integrations/hudu/assetLayoutMap';
-import type { AlgaAssetType, HuduAssetLayoutTypeMap } from '../../integrations/hudu/assetLayoutMap';
+import type {
+  AlgaAssetType,
+  HuduAssetLayoutTypeMap,
+  HuduLayoutAssignment,
+} from '../../integrations/hudu/assetLayoutMap';
 
 export type HuduLayoutMapActionResult<T> =
   | { success: true; data: T }
@@ -33,7 +37,7 @@ export interface HuduAssetLayoutMapEntry {
   id: number;
   name: string;
   suggestedType: AlgaAssetType;
-  configuredType: AlgaAssetType | null;
+  configuredType: HuduLayoutAssignment | null;
 }
 
 export interface HuduAssetLayoutMapData {

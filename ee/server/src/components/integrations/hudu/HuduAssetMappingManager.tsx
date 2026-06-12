@@ -463,7 +463,8 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
   const suggestedCount = rows.filter((row) => rowStatus(row) === 'suggested').length;
   const unmappedCount = rows.length - mappedCount - suggestedCount;
   const dirtyCount = rows.filter(isDirty).length;
-  const unmatchedCount = rows.filter((row) => !row.mapping && !row.suggestion).length;
+  // Excluded-layout rows never import (F259) — they don't count toward Import all.
+  const unmatchedCount = rows.filter((row) => !row.mapping && !row.suggestion && !row.layout_excluded).length;
   const selectOptions = assetOptions.map((asset) => ({ value: asset.asset_id, label: asset.name }));
 
   if (isUnmapped) {
@@ -577,8 +578,9 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
           >
             <span>
               {t('integrations.hudu.assets.import.summary', {
-                defaultValue: 'Import finished: {{created}} created · {{failed}} failed.',
+                defaultValue: 'Import finished: {{created}} created · {{skipped}} skipped · {{failed}} failed.',
                 created: bulkSummary.created,
+                skipped: bulkSummary.skipped,
                 failed: bulkSummary.failed.length,
               })}
             </span>
@@ -654,7 +656,7 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
                       ? 'pending'
                       : 'unmapped'
                     : rowStatus(row);
-                  const importable = !row.mapping && selectedAssetId === null;
+                  const importable = !row.mapping && selectedAssetId === null && !row.layout_excluded;
                   const meta = [
                     row.asset_layout_name,
                     row.primary_serial
@@ -686,6 +688,16 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
                           </span>
                         )}
                         {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
+                        {row.layout_excluded && (
+                          <div
+                            id={`hudu-asset-excluded-${row.hudu_asset_id}`}
+                            className="text-xs text-muted-foreground"
+                          >
+                            {t('integrations.hudu.assets.excludedHint', {
+                              defaultValue: 'Not imported (layout excluded)',
+                            })}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className={`flex items-center gap-1 ${isBusy ? 'pointer-events-none opacity-60' : ''}`}>

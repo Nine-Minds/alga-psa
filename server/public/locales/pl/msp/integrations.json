@@ -759,6 +759,7 @@
         "selectAsset": "Wybierz zasób",
         "serial": "Numer seryjny",
         "archivedLabel": "Zarchiwizowany",
+        "excludedHint": "Nie zaimportowano (układ wykluczony)",
         "buttons": {
           "importAll": "Importuj wszystkie niedopasowane",
           "importingAll": "Importowanie...",
@@ -808,7 +809,7 @@
           "lastSynced": "Ostatnia synchronizacja: {{timestamp}}"
         },
         "import": {
-          "summary": "Import zakończony: {{created}} utworzone · {{failed}} nieudane."
+          "summary": "Import zakończony: {{created}} utworzone · {{skipped}} pominięte · {{failed}} nieudane."
         },
         "success": {
           "saved": "Zapisano mapowania zasobów: {{total}}",
@@ -939,6 +940,7 @@
           "printer": "Drukarka",
           "unknown": "Nieznany"
         },
+        "excludeOption": "Nie importuj",
         "buttons": {
           "save": "Zapisz mapowanie układów",
           "saving": "Zapisywanie..."

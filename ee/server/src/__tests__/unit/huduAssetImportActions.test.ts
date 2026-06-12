@@ -432,6 +432,7 @@ describe('T222: importAllUnmatchedHuduAssets', () => {
       success: true,
       data: {
         created: 2,
+        skipped: 0,
         failed: [{ huduAssetId: 2, error: 'Invalid input data: boom', code: 'create_failed' }],
       },
     });
@@ -465,7 +466,7 @@ describe('T222: importAllUnmatchedHuduAssets', () => {
 
     const result = await importAllUnmatchedHuduAssets({ clientId: CLIENT_1 });
 
-    expect(result).toEqual({ success: true, data: { created: 1, failed: [] } });
+    expect(result).toEqual({ success: true, data: { created: 1, skipped: 0, failed: [] } });
     expect(createAssetMock).toHaveBeenCalledTimes(1);
     expect(createAssetMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'Printer Closet B' }));
   });
@@ -491,7 +492,7 @@ describe('T223: bulk rate-limit stop', () => {
       error: 'Hudu rate limit exceeded (429).',
       code: 'rate_limited',
       errorKind: 'rate_limited',
-      partial: { created: 2, failed: [] },
+      partial: { created: 2, skipped: 0, failed: [] },
     });
     expect(createAssetMock).toHaveBeenCalledTimes(2);
     expect(setHuduAssetMappingRowMock).toHaveBeenCalledTimes(2);
@@ -506,9 +507,79 @@ describe('T223: bulk rate-limit stop', () => {
       error: 'Hudu rate limit exceeded (429).',
       code: 'rate_limited',
       errorKind: 'rate_limited',
-      partial: { created: 0, failed: [] },
+      partial: { created: 0, skipped: 0, failed: [] },
     });
     expect(createAssetMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// T259 — single import of an excluded layout fails typed, nothing created
+// ============================================================================
+
+describe('T259: layout_excluded single import', () => {
+  it('returns the typed layout_excluded failure without creating or mapping anything', async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'excluded' });
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    expect(result).toMatchObject({ success: false, code: 'layout_excluded' });
+    expect((result as { error: string }).error).toContain("Don't import");
+    expect(createAssetMock).not.toHaveBeenCalled();
+    expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
+    expect(deleteAssetMock).not.toHaveBeenCalled();
+  });
+
+  it('only the excluded layout is blocked — other layouts still import', async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'excluded' });
+    const { importHuduAsset } = await importActions();
+
+    // Asset 3 is layout 12 (not excluded, unconfigured → unknown).
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 3 });
+
+    expect(result).toMatchObject({ success: true, data: { asset_type: 'unknown' } });
+    expect(createAssetMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================================
+// T260 — bulk import skips excluded layouts with an accurate summary
+// ============================================================================
+
+describe('T260: bulk import skips excluded layouts', () => {
+  it('excluded-layout assets are skipped entirely and counted in the summary', async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'workstation', '12': 'excluded' });
+    const { importAllUnmatchedHuduAssets } = await importActions();
+
+    const result = await importAllUnmatchedHuduAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({ success: true, data: { created: 2, skipped: 1, failed: [] } });
+    // The excluded printer (layout 12) was never attempted.
+    expect(createAssetMock).toHaveBeenCalledTimes(2);
+    expect(createAssetMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Printer Closet B' })
+    );
+    expect(setHuduAssetMappingRowMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('a mid-batch rate limit keeps the skipped count in the partial summary', async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '12': 'excluded' });
+    getHuduCompanyAssetsMock
+      .mockResolvedValueOnce(okAssetsResult()) // bulk pre-fetch
+      .mockResolvedValueOnce(okAssetsResult()) // item 1
+      .mockResolvedValueOnce(RATE_LIMITED); // item 2 → stop
+    const { importAllUnmatchedHuduAssets } = await importActions();
+
+    const result = await importAllUnmatchedHuduAssets({ clientId: CLIENT_1 });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Hudu rate limit exceeded (429).',
+      code: 'rate_limited',
+      errorKind: 'rate_limited',
+      partial: { created: 1, skipped: 1, failed: [] },
+    });
   });
 });
 

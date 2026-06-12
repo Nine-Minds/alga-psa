@@ -98,8 +98,11 @@ export type {
 
 export {
   HUDU_ASSET_LAYOUT_TYPE_MAP_KEY,
+  HUDU_LAYOUT_EXCLUDED,
   ALGA_ASSET_TYPES,
   isAlgaAssetType,
+  isHuduLayoutAssignment,
+  isLayoutExcluded,
   normalizeAssetLayoutTypeMap,
   parseAssetLayoutTypeMap,
   getHuduAssetLayoutTypeMap,
@@ -107,7 +110,7 @@ export {
   suggestAssetTypeForLayout,
   resolveAssetTypeForLayout,
 } from './assetLayoutMap';
-export type { AlgaAssetType, HuduAssetLayoutTypeMap } from './assetLayoutMap';
+export type { AlgaAssetType, HuduLayoutAssignment, HuduAssetLayoutTypeMap } from './assetLayoutMap';
 
 export {
   HUDU_SERIAL_CONFIDENCE,

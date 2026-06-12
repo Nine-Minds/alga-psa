@@ -24,10 +24,19 @@ export const ALGA_ASSET_TYPES = [
 
 export type AlgaAssetType = (typeof ALGA_ASSET_TYPES)[number];
 
-export type HuduAssetLayoutTypeMap = Record<string, AlgaAssetType>;
+/** F256: "Don't import" sentinel stored alongside the six asset types (FR6). */
+export const HUDU_LAYOUT_EXCLUDED = 'excluded' as const;
+
+export type HuduLayoutAssignment = AlgaAssetType | typeof HUDU_LAYOUT_EXCLUDED;
+
+export type HuduAssetLayoutTypeMap = Record<string, HuduLayoutAssignment>;
 
 export function isAlgaAssetType(value: unknown): value is AlgaAssetType {
   return typeof value === 'string' && (ALGA_ASSET_TYPES as readonly string[]).includes(value);
+}
+
+export function isHuduLayoutAssignment(value: unknown): value is HuduLayoutAssignment {
+  return isAlgaAssetType(value) || value === HUDU_LAYOUT_EXCLUDED;
 }
 
 /** Coerce an arbitrary value into a valid map: non-object → {}, unknown types → 'unknown'. */
@@ -35,7 +44,7 @@ export function normalizeAssetLayoutTypeMap(value: unknown): HuduAssetLayoutType
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const map: HuduAssetLayoutTypeMap = {};
   for (const [layoutId, assetType] of Object.entries(value as Record<string, unknown>)) {
-    map[String(layoutId)] = isAlgaAssetType(assetType) ? assetType : 'unknown';
+    map[String(layoutId)] = isHuduLayoutAssignment(assetType) ? assetType : 'unknown';
   }
   return map;
 }
@@ -91,7 +100,19 @@ export function suggestAssetTypeForLayout(layoutName: string): AlgaAssetType {
   return 'unknown';
 }
 
-/** F208: configured type for a layout, falling back to 'unknown' (FR12). */
+/** F256: whether a layout is marked "Don't import" (FR6) — check BEFORE resolving a type. */
+export function isLayoutExcluded(
+  map: HuduAssetLayoutTypeMap | null | undefined,
+  layoutId: string | number
+): boolean {
+  return map?.[String(layoutId)] === HUDU_LAYOUT_EXCLUDED;
+}
+
+/**
+ * F208: configured type for a layout, falling back to 'unknown' (FR12).
+ * Always a valid AlgaAssetType — an 'excluded' entry resolves to 'unknown',
+ * so importing callers must check isLayoutExcluded first (F256).
+ */
 export function resolveAssetTypeForLayout(
   map: HuduAssetLayoutTypeMap | null | undefined,
   layoutId: string | number

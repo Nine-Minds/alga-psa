@@ -27,6 +27,7 @@ import type { HuduCompanyFetchOptions, HuduLinkedItem } from './huduDataActions'
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import { resolveHuduCompanyIdForClient as resolveHuduCompanyIdForClientRow } from '../../integrations/hudu/companyMapping';
+import { getHuduAssetLayoutTypeMap, isLayoutExcluded } from '../../integrations/hudu/assetLayoutMap';
 import { getCachedHuduList } from '../../integrations/hudu/referenceData';
 import { suggestHuduAssetMappings } from '../../integrations/hudu/assetMatching';
 import type { AlgaMatcherAsset, HuduAssetMappingSuggestion } from '../../integrations/hudu/assetMatching';
@@ -53,6 +54,8 @@ export interface HuduAssetMappingView {
   primary_serial: string | null;
   url: string | null;
   archived: boolean;
+  /** F259: the asset's layout is marked "Don't import" — not importable, still mappable. */
+  layout_excluded: boolean;
   mapping: { mapping_id: string; asset_id: string; asset_name: string | null; stale: boolean } | null;
   suggestion: HuduAssetMappingSuggestion | null;
 }
@@ -162,6 +165,10 @@ export const getHuduAssetMappings = withHuduAssetAccess(
         mappingRows.map((m) => ({ asset_id: m.alga_entity_id, hudu_asset_id: m.external_entity_id }))
       );
 
+      // F259: exclusion is exposed on the view rows (this action is asset-read
+      // gated; the layout-map action's system_settings gate would block techs).
+      const layoutMap = await getHuduAssetLayoutTypeMap(knex, tenant);
+
       const assets: HuduAssetMappingView[] = huduAssets.map((asset) => {
         const mapping = mappingByHuduAssetId.get(String(asset.id));
         return {
@@ -172,6 +179,7 @@ export const getHuduAssetMappings = withHuduAssetAccess(
           primary_serial: asset.primary_serial ?? null,
           url: asset.hudu_url ?? asset.url ?? null,
           archived: asset.archived === true,
+          layout_excluded: asset.asset_layout_id != null && isLayoutExcluded(layoutMap, asset.asset_layout_id),
           mapping: mapping
             ? {
                 mapping_id: mapping.id,

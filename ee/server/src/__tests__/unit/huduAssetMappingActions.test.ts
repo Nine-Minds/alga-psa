@@ -48,6 +48,7 @@ const resolveHuduCompanyIdForClientMock = vi.fn();
 const getHuduAssetMappingRowsMock = vi.fn();
 const setHuduAssetMappingRowMock = vi.fn();
 const clearHuduAssetMappingRowMock = vi.fn();
+const getHuduAssetLayoutTypeMapMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -90,6 +91,12 @@ vi.mock('@ee/lib/integrations/hudu/assetMapping', async (importOriginal) => ({
   getHuduAssetMappingRows: getHuduAssetMappingRowsMock,
   setHuduAssetMappingRow: setHuduAssetMappingRowMock,
   clearHuduAssetMappingRow: clearHuduAssetMappingRowMock,
+}));
+
+// Keep isLayoutExcluded REAL; fake only the settings read (F259).
+vi.mock('@ee/lib/integrations/hudu/assetLayoutMap', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  getHuduAssetLayoutTypeMap: getHuduAssetLayoutTypeMapMock,
 }));
 
 async function importActions() {
@@ -149,6 +156,7 @@ beforeEach(() => {
   getHuduAssetMappingRowsMock.mockResolvedValue([]);
   setHuduAssetMappingRowMock.mockResolvedValue({ ok: true, mapping: { id: 'am-9' } });
   clearHuduAssetMappingRowMock.mockResolvedValue(1);
+  getHuduAssetLayoutTypeMapMock.mockResolvedValue({});
 });
 
 // ============================================================================
@@ -479,6 +487,7 @@ describe('T216: getHuduAssetMappings', () => {
           primary_serial: 'SN-EC-1001',
           url: 'https://hudu.example.com/a/1',
           archived: false,
+          layout_excluded: false,
           mapping: { mapping_id: 'am-1', asset_id: ASSET_1, asset_name: 'Mapped Asset', stale: true },
           suggestion: null,
         },
@@ -490,6 +499,7 @@ describe('T216: getHuduAssetMappings', () => {
           primary_serial: null,
           url: 'https://hudu.example.com/a/2',
           archived: false,
+          layout_excluded: false,
           mapping: null,
           // Near-name fuzzy match against the unmapped Alga asset.
           suggestion: { asset_id: ASSET_2, asset_name: 'EC-SRV-1', source: 'fuzzy_name', confidence: 0.8889 },
@@ -502,11 +512,26 @@ describe('T216: getHuduAssetMappings', () => {
           primary_serial: null,
           url: null,
           archived: true,
+          layout_excluded: false,
           mapping: null,
           suggestion: null,
         },
       ],
     });
+  });
+
+  it("T261/F259: rows whose layout is marked 'excluded' carry layout_excluded (layout-less rows do not)", async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'excluded' });
+    const { getHuduAssetMappings } = await importActions();
+
+    const result = await getHuduAssetMappings(CLIENT_1);
+
+    if (result.state !== 'ok') throw new Error(`expected ok state, got ${result.state}`);
+    expect(result.assets.map((a) => [a.hudu_asset_id, a.layout_excluded])).toEqual([
+      [1, true],
+      [2, true],
+      [3, false], // no asset_layout_id → never excluded
+    ]);
   });
 
   it('short-circuits to the typed unmapped state without touching the DB', async () => {
