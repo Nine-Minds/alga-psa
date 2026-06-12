@@ -909,6 +909,19 @@
         "returnButton": "Voltar às configurações do QuickBooks",
         "success": "Conectado com sucesso ao QuickBooks Online!",
         "title": "Status da conexão com o QuickBooks"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off \"Automatically apply credits\".",
+        "configTitle": "Sync Configuration",
+        "connectedCompanies": "Connected Companies",
+        "defaultClass": "Default Class",
+        "defaultDepartment": "Default Department",
+        "defaultRealm": "Default",
+        "depositAccount": "Deposit Account",
+        "makeDefault": "Make default",
+        "noDefault": "No default",
+        "saving": "Saving…",
+        "undepositedFunds": "Undeposited Funds (default)"
       }
     },
     "rmm": {

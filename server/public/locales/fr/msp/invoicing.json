@@ -285,7 +285,8 @@
       "invoiceDate": "Date de la facture",
       "dueDate": "Date d'échéance",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finaliser",
@@ -340,7 +341,8 @@
       "amount": "Montant",
       "finalizedDate": "Date de finalisation",
       "status": "Statut",
-      "actions": "Actes"
+      "actions": "Actes",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Télécharger des PDF",
@@ -578,7 +580,13 @@
       "reverseDraft": "Brouillon inversé",
       "sendEmail": "Envoyer un e-mail",
       "unfinalize": "Définaliser",
-      "viewSourceQuote": "Afficher le devis source"
+      "viewSourceQuote": "Afficher le devis source",
+      "applyCredit": "Appliquer un crédit",
+      "driftAccept": "Accepter la version QuickBooks",
+      "driftReexport": "Réexporter vers QuickBooks",
+      "syncNow": "Synchroniser avec QuickBooks",
+      "viewInQbo": "Afficher dans QuickBooks",
+      "voidInvoice": "Annuler la facture"
     },
     "loading": "Chargement de l'aperçu...",
     "empty": "Sélectionnez une facture à prévisualiser",
@@ -594,6 +602,17 @@
         "sendEmail": "envoyer un email",
         "unfinalize": "définaliser la facture"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Appliquer un crédit"
+    },
+    "voidDialog": {
+      "title": "Annuler la facture",
+      "description": "L'annulation de cette facture est définitive. Veuillez indiquer un motif.",
+      "reasonPlaceholder": "Motif de l'annulation...",
+      "cancel": "Annuler",
+      "confirm": "Annuler la facture",
+      "voiding": "Annulation…"
     }
   },
   "templateEditor": {

@@ -305,7 +305,8 @@
       "invoiceDate": "Data faktury",
       "dueDate": "Termin",
       "status": "Status",
-      "actions": "Działania"
+      "actions": "Działania",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Sfinalizować",
@@ -370,7 +371,8 @@
       "amount": "Kwota",
       "finalizedDate": "Ostateczna data",
       "status": "Status",
-      "actions": "Działania"
+      "actions": "Działania",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Pobierz pliki PDF",
@@ -610,7 +612,13 @@
       "reverseDraft": "Odwrotny projekt",
       "sendEmail": "Wyślij e-mail",
       "unfinalize": "Cofnij finalizację",
-      "viewSourceQuote": "Wyświetl cytat źródłowy"
+      "viewSourceQuote": "Wyświetl cytat źródłowy",
+      "applyCredit": "Zastosuj kredyt",
+      "driftAccept": "Zaakceptuj wersję z QuickBooks",
+      "driftReexport": "Eksportuj ponownie do QuickBooks",
+      "syncNow": "Synchronizuj z QuickBooks",
+      "viewInQbo": "Zobacz w QuickBooks",
+      "voidInvoice": "Anuluj fakturę"
     },
     "loading": "Ładowanie podglądu...",
     "empty": "Wybierz fakturę do podglądu",
@@ -626,6 +634,17 @@
         "sendEmail": "wyślij e-mail",
         "unfinalize": "anulować finalizację faktury"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Zastosuj kredyt"
+    },
+    "voidDialog": {
+      "title": "Anuluj fakturę",
+      "description": "Anulowanie tej faktury jest nieodwracalne. Podaj powód.",
+      "reasonPlaceholder": "Powód anulowania...",
+      "cancel": "Anuluj",
+      "confirm": "Anuluj fakturę",
+      "voiding": "Anulowanie…"
     }
   },
   "templateEditor": {

@@ -909,6 +909,19 @@
         "returnButton": "55555",
         "success": "55555",
         "title": "55555"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "55555",
+        "configTitle": "55555",
+        "connectedCompanies": "55555",
+        "defaultClass": "55555",
+        "defaultDepartment": "55555",
+        "defaultRealm": "55555",
+        "depositAccount": "55555",
+        "makeDefault": "55555",
+        "noDefault": "55555",
+        "saving": "55555",
+        "undepositedFunds": "55555"
       }
     },
     "rmm": {

@@ -647,13 +647,15 @@
         "endDate": "55555",
         "clientSearch": "55555",
         "invoiceStatuses": "55555",
-        "notes": "55555"
+        "notes": "55555",
+        "realm": "55555"
       },
       "placeholders": {
         "clientSearch": "55555",
         "invoiceStatuses": "55555",
         "notes": "55555"
-      }
+      },
+      "defaultRealmLabel": "55555 {{realmId}} 55555"
     },
     "detailDialog": {
       "title": "55555",

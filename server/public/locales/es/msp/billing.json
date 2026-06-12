@@ -647,13 +647,15 @@
         "endDate": "Fecha de finalización",
         "clientSearch": "Búsqueda de clientes",
         "invoiceStatuses": "Estados de factura",
-        "notes": "Notas"
+        "notes": "Notas",
+        "realm": "Empresa de destino (realm)"
       },
       "placeholders": {
         "clientSearch": "Filtro de nombre de cliente opcional",
         "invoiceStatuses": "Separados por comas (opcional), p.e. finalizado, publicado",
         "notes": "Notas opcionales"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (predeterminado)"
     },
     "detailDialog": {
       "title": "Lote de exportación contable",

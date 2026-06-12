@@ -909,6 +909,19 @@
         "returnButton": "Volver a la configuración de QuickBooks",
         "success": "¡Conexión exitosa con QuickBooks Online!",
         "title": "Estado de la conexión con QuickBooks"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "QuickBooks está configurado para aplicar créditos automáticamente, lo que entra en conflicto con las aplicaciones de crédito gestionadas desde Alga: QuickBooks puede aplicar las notas de crédito exportadas a otra factura antes de la sincronización. En QuickBooks, vaya a «Account and Settings → Advanced → Automation» y desactive «Automatically apply credits».",
+        "configTitle": "Configuración de sincronización",
+        "connectedCompanies": "Empresas conectadas",
+        "defaultClass": "Clase predeterminada",
+        "defaultDepartment": "Departamento predeterminado",
+        "defaultRealm": "Predeterminado",
+        "depositAccount": "Cuenta de depósito",
+        "makeDefault": "Establecer como predeterminado",
+        "noDefault": "Sin valor predeterminado",
+        "saving": "Guardando…",
+        "undepositedFunds": "Fondos sin depositar (predeterminado)"
       }
     },
     "rmm": {

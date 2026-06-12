@@ -909,6 +909,19 @@
         "returnButton": "Zurück zu den QuickBooks-Einstellungen",
         "success": "Erfolgreich mit QuickBooks Online verbunden!",
         "title": "QuickBooks-Verbindungsstatus"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "QuickBooks ist so eingestellt, dass Guthaben automatisch angewendet werden. Das steht im Konflikt mit den von Alga gesteuerten Guthabenanwendungen: QuickBooks kann exportierte Gutschriften vor der Synchronisierung auf eine andere Rechnung anwenden. Öffnen Sie in QuickBooks „Account and Settings → Advanced → Automation“ und deaktivieren Sie „Automatically apply credits“.",
+        "configTitle": "Synchronisierungskonfiguration",
+        "connectedCompanies": "Verbundene Unternehmen",
+        "defaultClass": "Standardklasse",
+        "defaultDepartment": "Standardabteilung",
+        "defaultRealm": "Standard",
+        "depositAccount": "Einzahlungskonto",
+        "makeDefault": "Als Standard festlegen",
+        "noDefault": "Kein Standard",
+        "saving": "Speichern…",
+        "undepositedFunds": "Nicht eingezahlte Mittel (Standard)"
       }
     },
     "rmm": {

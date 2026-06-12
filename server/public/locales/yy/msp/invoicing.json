@@ -285,7 +285,8 @@
       "invoiceDate": "55555",
       "dueDate": "55555",
       "status": "55555",
-      "actions": "55555"
+      "actions": "55555",
+      "quickbooks": "55555"
     },
     "actions": {
       "finalize": "55555",
@@ -340,7 +341,8 @@
       "amount": "55555",
       "finalizedDate": "55555",
       "status": "55555",
-      "actions": "55555"
+      "actions": "55555",
+      "quickbooks": "55555"
     },
     "actions": {
       "downloadPdfs": "55555",
@@ -578,7 +580,13 @@
       "reverseDraft": "55555",
       "sendEmail": "55555",
       "unfinalize": "55555",
-      "viewSourceQuote": "55555"
+      "viewSourceQuote": "55555",
+      "applyCredit": "55555",
+      "driftAccept": "55555",
+      "driftReexport": "55555",
+      "syncNow": "55555",
+      "viewInQbo": "55555",
+      "voidInvoice": "55555"
     },
     "loading": "55555",
     "empty": "55555",
@@ -594,6 +602,17 @@
         "sendEmail": "55555",
         "unfinalize": "55555"
       }
+    },
+    "applyCreditDialog": {
+      "title": "55555"
+    },
+    "voidDialog": {
+      "title": "55555",
+      "description": "55555",
+      "reasonPlaceholder": "55555",
+      "cancel": "55555",
+      "confirm": "55555",
+      "voiding": "55555"
     }
   },
   "templateEditor": {

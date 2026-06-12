@@ -647,13 +647,15 @@
         "endDate": "Data di fine",
         "clientSearch": "Ricerca cliente",
         "invoiceStatuses": "Stati delle fatture",
-        "notes": "Note"
+        "notes": "Note",
+        "realm": "Azienda di destinazione (realm)"
       },
       "placeholders": {
         "clientSearch": "Filtro nome client opzionale",
         "invoiceStatuses": "Separati da virgole (facoltativo), ad es. finalizzato, pubblicato",
         "notes": "Note facoltative"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (predefinito)"
     },
     "detailDialog": {
       "title": "Batch di esportazione contabile",

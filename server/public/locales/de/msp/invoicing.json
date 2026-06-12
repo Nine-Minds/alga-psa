@@ -285,7 +285,8 @@
       "invoiceDate": "Rechnungsdatum",
       "dueDate": "Fälligkeitsdatum",
       "status": "Status",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Abschließen",
@@ -340,7 +341,8 @@
       "amount": "Betrag",
       "finalizedDate": "Endgültiges Datum",
       "status": "Status",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "PDFs herunterladen",
@@ -578,7 +580,13 @@
       "reverseDraft": "Umgekehrter Entwurf",
       "sendEmail": "E-Mail senden",
       "unfinalize": "Abschließen aufheben",
-      "viewSourceQuote": "Quellzitat anzeigen"
+      "viewSourceQuote": "Quellzitat anzeigen",
+      "applyCredit": "Guthaben anwenden",
+      "driftAccept": "QuickBooks-Version übernehmen",
+      "driftReexport": "Erneut nach QuickBooks exportieren",
+      "syncNow": "Mit QuickBooks synchronisieren",
+      "viewInQbo": "In QuickBooks anzeigen",
+      "voidInvoice": "Rechnung stornieren"
     },
     "loading": "Vorschau wird geladen...",
     "empty": "Wählen Sie eine Rechnung zur Vorschau aus",
@@ -594,6 +602,17 @@
         "sendEmail": "E-Mail senden",
         "unfinalize": "Rechnung rückgängig machen"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Guthaben anwenden"
+    },
+    "voidDialog": {
+      "title": "Rechnung stornieren",
+      "description": "Das Stornieren dieser Rechnung ist endgültig. Bitte geben Sie einen Grund an.",
+      "reasonPlaceholder": "Grund für die Stornierung...",
+      "cancel": "Abbrechen",
+      "confirm": "Rechnung stornieren",
+      "voiding": "Wird storniert…"
     }
   },
   "templateEditor": {

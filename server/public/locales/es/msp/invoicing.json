@@ -285,7 +285,8 @@
       "invoiceDate": "Fecha de la factura",
       "dueDate": "Fecha de vencimiento",
       "status": "Estado",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalizar",
@@ -340,7 +341,8 @@
       "amount": "Importe",
       "finalizedDate": "Fecha finalizada",
       "status": "Estado",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Descargar archivos PDF",
@@ -578,7 +580,13 @@
       "reverseDraft": "Borrador inverso",
       "sendEmail": "Enviar correo electrónico",
       "unfinalize": "Desfinalizar",
-      "viewSourceQuote": "Ver cotización fuente"
+      "viewSourceQuote": "Ver cotización fuente",
+      "applyCredit": "Aplicar crédito",
+      "driftAccept": "Aceptar la versión de QuickBooks",
+      "driftReexport": "Reexportar a QuickBooks",
+      "syncNow": "Sincronizar con QuickBooks",
+      "viewInQbo": "Ver en QuickBooks",
+      "voidInvoice": "Anular factura"
     },
     "loading": "Cargando vista previa...",
     "empty": "Seleccione una factura para obtener una vista previa",
@@ -594,6 +602,17 @@
         "sendEmail": "enviar correo electrónico",
         "unfinalize": "desfinalizar factura"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Aplicar crédito"
+    },
+    "voidDialog": {
+      "title": "Anular factura",
+      "description": "La anulación de esta factura es permanente. Indique un motivo.",
+      "reasonPlaceholder": "Motivo de la anulación...",
+      "cancel": "Cancelar",
+      "confirm": "Anular factura",
+      "voiding": "Anulando…"
     }
   },
   "templateEditor": {

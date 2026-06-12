@@ -909,6 +909,19 @@
         "returnButton": "Terug naar QuickBooks-instellingen",
         "success": "Succesvol verbonden met QuickBooks Online!",
         "title": "Status QuickBooks-verbinding"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "QuickBooks staat ingesteld om tegoeden automatisch toe te passen, wat conflicteert met tegoedtoepassingen vanuit Alga: QuickBooks kan geëxporteerde creditnota's vóór de synchronisatie op een andere factuur toepassen. Ga in QuickBooks naar \"Account and Settings → Advanced → Automation\" en schakel \"Automatically apply credits\" uit.",
+        "configTitle": "Synchronisatieconfiguratie",
+        "connectedCompanies": "Verbonden bedrijven",
+        "defaultClass": "Standaardklasse",
+        "defaultDepartment": "Standaardafdeling",
+        "defaultRealm": "Standaard",
+        "depositAccount": "Stortingsrekening",
+        "makeDefault": "Als standaard instellen",
+        "noDefault": "Geen standaard",
+        "saving": "Opslaan…",
+        "undepositedFunds": "Niet-gestorte middelen (standaard)"
       }
     },
     "rmm": {

@@ -909,6 +909,19 @@
         "returnButton": "Powrót do ustawień QuickBooks",
         "success": "Pomyślnie połączono z QuickBooks Online!",
         "title": "Status połączenia z QuickBooks"
+      },
+      "sync": {
+        "autoApplyCreditsWarning": "QuickBooks jest ustawiony na automatyczne stosowanie kredytów, co koliduje z aplikowaniem kredytów sterowanym z Alga: QuickBooks może zastosować wyeksportowane noty kredytowe do innej faktury przed synchronizacją. W QuickBooks przejdź do „Account and Settings → Advanced → Automation” i wyłącz opcję „Automatically apply credits”.",
+        "configTitle": "Konfiguracja synchronizacji",
+        "connectedCompanies": "Połączone firmy",
+        "defaultClass": "Klasa domyślna",
+        "defaultDepartment": "Dział domyślny",
+        "defaultRealm": "Domyślny",
+        "depositAccount": "Konto wpłat",
+        "makeDefault": "Ustaw jako domyślne",
+        "noDefault": "Brak domyślnego",
+        "saving": "Zapisywanie…",
+        "undepositedFunds": "Środki niezdeponowane (domyślnie)"
       }
     },
     "rmm": {

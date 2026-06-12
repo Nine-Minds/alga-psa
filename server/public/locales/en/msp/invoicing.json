@@ -285,7 +285,8 @@
       "invoiceDate": "Invoice Date",
       "dueDate": "Due Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalize",
@@ -340,7 +341,8 @@
       "amount": "Amount",
       "finalizedDate": "Finalized Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Download PDFs",
@@ -578,7 +580,13 @@
       "reverseDraft": "Reverse Draft",
       "sendEmail": "Send Email",
       "unfinalize": "Unfinalize",
-      "viewSourceQuote": "View Source Quote"
+      "viewSourceQuote": "View Source Quote",
+      "applyCredit": "Apply Credit",
+      "driftAccept": "Accept QuickBooks Version",
+      "driftReexport": "Re-export to QuickBooks",
+      "syncNow": "Sync to QuickBooks",
+      "viewInQbo": "View in QuickBooks",
+      "voidInvoice": "Void Invoice"
     },
     "loading": "Loading Preview...",
     "empty": "Select an invoice to preview",
@@ -594,6 +602,17 @@
         "sendEmail": "send email",
         "unfinalize": "unfinalize invoice"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Apply Credit"
+    },
+    "voidDialog": {
+      "title": "Void Invoice",
+      "description": "Voiding this invoice is permanent. Please provide a reason.",
+      "reasonPlaceholder": "Reason for voiding...",
+      "cancel": "Cancel",
+      "confirm": "Void Invoice",
+      "voiding": "Voiding..."
     }
   },
   "templateEditor": {

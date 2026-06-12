@@ -647,13 +647,15 @@
         "endDate": "Data zakończenia",
         "clientSearch": "Wyszukiwanie klienta",
         "invoiceStatuses": "Statusy faktur",
-        "notes": "Notatki"
+        "notes": "Notatki",
+        "realm": "Firma docelowa (realm)"
       },
       "placeholders": {
         "clientSearch": "Opcjonalny filtr nazw klientów",
         "invoiceStatuses": "Oddzielone przecinkami (opcjonalnie), np. sfinalizowane, wysłane",
         "notes": "Opcjonalne notatki"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (domyślny)"
     },
     "detailDialog": {
       "title": "Księgowa partia eksportowa",

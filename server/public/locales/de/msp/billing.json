@@ -647,13 +647,15 @@
         "endDate": "Enddatum",
         "clientSearch": "Kundensuche",
         "invoiceStatuses": "Rechnungsstatus",
-        "notes": "Notizen"
+        "notes": "Notizen",
+        "realm": "Zielunternehmen (Realm)"
       },
       "placeholders": {
         "clientSearch": "Optionaler Clientnamenfilter",
         "invoiceStatuses": "Komma-getrennt (optional), z.B. abgeschlossen, veröffentlicht",
         "notes": "Optionale Notizen"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (Standard)"
     },
     "detailDialog": {
       "title": "Buchhaltungsexportstapel",

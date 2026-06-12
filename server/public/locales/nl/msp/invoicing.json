@@ -285,7 +285,8 @@
       "invoiceDate": "Factuurdatum",
       "dueDate": "Vervaldatum",
       "status": "Status",
-      "actions": "Acties"
+      "actions": "Acties",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Voltooien",
@@ -340,7 +341,8 @@
       "amount": "Hoeveelheid",
       "finalizedDate": "Definitieve datum",
       "status": "Status",
-      "actions": "Acties"
+      "actions": "Acties",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "PDF's downloaden",
@@ -578,7 +580,13 @@
       "reverseDraft": "Omgekeerde diepgang",
       "sendEmail": "E-mail verzenden",
       "unfinalize": "Finaliseren ongedaan maken",
-      "viewSourceQuote": "Broncitaat bekijken"
+      "viewSourceQuote": "Broncitaat bekijken",
+      "applyCredit": "Tegoed toepassen",
+      "driftAccept": "QuickBooks-versie accepteren",
+      "driftReexport": "Opnieuw exporteren naar QuickBooks",
+      "syncNow": "Synchroniseren met QuickBooks",
+      "viewInQbo": "Bekijken in QuickBooks",
+      "voidInvoice": "Factuur ongeldig maken"
     },
     "loading": "Voorbeeld laden...",
     "empty": "Selecteer een factuur waarvan u een voorbeeld wilt bekijken",
@@ -594,6 +602,17 @@
         "sendEmail": "stuur een e-mail",
         "unfinalize": "factuur ongedaan maken"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Tegoed toepassen"
+    },
+    "voidDialog": {
+      "title": "Factuur ongeldig maken",
+      "description": "Het ongeldig maken van deze factuur is definitief. Geef een reden op.",
+      "reasonPlaceholder": "Reden voor ongeldig maken...",
+      "cancel": "Annuleren",
+      "confirm": "Factuur ongeldig maken",
+      "voiding": "Ongeldig maken…"
     }
   },
   "templateEditor": {

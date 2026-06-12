@@ -285,7 +285,8 @@
       "invoiceDate": "Data fattura",
       "dueDate": "Scadenza",
       "status": "Stato",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalizzare",
@@ -340,7 +341,8 @@
       "amount": "Importo",
       "finalizedDate": "Data definitiva",
       "status": "Stato",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Scarica PDF",
@@ -578,7 +580,13 @@
       "reverseDraft": "Bozza inversa",
       "sendEmail": "Invia e-mail",
       "unfinalize": "Definalizza",
-      "viewSourceQuote": "Visualizza citazione della fonte"
+      "viewSourceQuote": "Visualizza citazione della fonte",
+      "applyCredit": "Applica credito",
+      "driftAccept": "Accetta la versione QuickBooks",
+      "driftReexport": "Riesporta in QuickBooks",
+      "syncNow": "Sincronizza con QuickBooks",
+      "viewInQbo": "Visualizza in QuickBooks",
+      "voidInvoice": "Annulla fattura"
     },
     "loading": "Caricamento anteprima...",
     "empty": "Seleziona una fattura per visualizzarne l'anteprima",
@@ -594,6 +602,17 @@
         "sendEmail": "inviare e-mail",
         "unfinalize": "annullare la finalizzazione della fattura"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Applica credito"
+    },
+    "voidDialog": {
+      "title": "Annulla fattura",
+      "description": "L'annullamento di questa fattura è definitivo. Fornisci una motivazione.",
+      "reasonPlaceholder": "Motivo dell'annullamento...",
+      "cancel": "Annulla",
+      "confirm": "Annulla fattura",
+      "voiding": "Annullamento…"
     }
   },
   "templateEditor": {
