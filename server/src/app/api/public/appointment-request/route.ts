@@ -5,7 +5,8 @@ import {
   createPublicAppointmentRequestSchema,
   CreatePublicAppointmentRequestInput
 } from '@/lib/schemas/appointmentSchemas';
-import { getTenantIdBySlug } from '@alga-psa/db';
+import { getTenantIdBySlug, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@alga-psa/client-portal/services/availabilityService';
 import { SystemEmailService } from '@alga-psa/email';
@@ -256,6 +257,14 @@ export async function POST(req: NextRequest) {
       ip: clientIp
     });
 
+    // requested_date/requested_time are the requester's wall-clock in requester_timezone.
+    const requesterTz = normalizeIanaTimeZone(validatedData.requester_timezone || null);
+    const requestInstant = fromZonedTime(
+      `${validatedData.requested_date}T${validatedData.requested_time}:00`,
+      requesterTz
+    );
+    const requesterTzLabel = ` (${formatInTimeZone(requestInstant, requesterTz, 'zzz')})`;
+
     // Send confirmation email to requester
     try {
       const emailService = SystemEmailService.getInstance();
@@ -269,7 +278,7 @@ export async function POST(req: NextRequest) {
         requesterEmail: validatedData.email,
         serviceName: service.service_name,
         requestedDate: await formatDate(validatedData.requested_date, 'en'),
-        requestedTime: await formatTime(validatedData.requested_time, 'en'),
+        requestedTime: `${await formatTime(validatedData.requested_time, 'en')}${requesterTzLabel}`,
         duration: service.default_duration || 60,
         referenceNumber: referenceNumber,
         responseTime: '24 hours',
@@ -327,7 +336,7 @@ export async function POST(req: NextRequest) {
           .where(function() {
             this.where('is_inactive', false).orWhereNull('is_inactive');
           })
-          .select('user_id', 'email', 'first_name', 'last_name');
+          .select('user_id', 'email', 'first_name', 'last_name', 'timezone');
 
         // Get preferred technician name for email
         let preferredTechnicianName = 'Not specified';
@@ -338,7 +347,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const tenantDefaultTz = await resolveEffectiveTimeZone(knex, tenantId, null);
+
         for (const staffUser of staffUsers) {
+          // Staff see the request in their own timezone, labeled.
+          const staffTz = staffUser.timezone ? normalizeIanaTimeZone(staffUser.timezone) : tenantDefaultTz;
           await emailService.sendNewAppointmentRequest(staffUser.email, {
             requesterName: validatedData.name,
             requesterEmail: validatedData.email,
@@ -346,8 +359,8 @@ export async function POST(req: NextRequest) {
             companyName: validatedData.company || undefined,
             clientName: validatedData.company || 'Public Request',
             serviceName: service.service_name,
-            requestedDate: await formatDate(validatedData.requested_date, 'en'),
-            requestedTime: await formatTime(validatedData.requested_time, 'en'),
+            requestedDate: await formatDate(formatInTimeZone(requestInstant, staffTz, 'yyyy-MM-dd'), 'en'),
+            requestedTime: `${await formatTime(formatInTimeZone(requestInstant, staffTz, 'HH:mm'), 'en')} (${formatInTimeZone(requestInstant, staffTz, 'zzz')})`,
             duration: service.default_duration || 60,
             preferredTechnician: preferredTechnicianName,
             description: validatedData.message || undefined,

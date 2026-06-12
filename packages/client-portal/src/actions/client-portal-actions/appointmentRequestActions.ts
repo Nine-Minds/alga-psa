@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, normalizeIanaTimeZone, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
@@ -36,7 +36,7 @@ import { isValidEmail } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
-import { fromZonedTime } from 'date-fns-tz';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -588,13 +588,21 @@ export const createAppointmentRequest = withAuth(async (
       // Get tenant settings for email templates
       const tenantSettings = await getTenantSettings(tenant);
 
+      // requested_date/requested_time are the requester's wall-clock in requester_timezone.
+      const requesterTz = normalizeIanaTimeZone(validatedData.requester_timezone || null);
+      const requestInstant = fromZonedTime(
+        `${validatedData.requested_date}T${validatedData.requested_time}:00`,
+        requesterTz
+      );
+      const requesterTzLabel = ` (${formatInTimeZone(requestInstant, requesterTz, 'zzz')})`;
+
       // Send confirmation email to client using template
       await emailService.sendAppointmentRequestReceived({
         requesterName: contact.full_name || 'Customer',
         requesterEmail: contact.email || currentUser.email || '',
         serviceName: service.service_name,
         requestedDate: await formatDate(validatedData.requested_date, 'en'),
-        requestedTime: await formatTime(validatedData.requested_time, 'en'),
+        requestedTime: `${await formatTime(validatedData.requested_time, 'en')}${requesterTzLabel}`,
         duration: validatedData.requested_duration,
         referenceNumber: appointmentRequest.appointment_request_id.slice(0, 8).toUpperCase(),
         responseTime: '24 hours',
@@ -630,7 +638,7 @@ export const createAppointmentRequest = withAuth(async (
             return await trx('users')
               .where({ tenant })
               .whereIn('user_id', Array.from(notifyUserIds))
-              .select('user_id', 'email', 'first_name', 'last_name');
+              .select('user_id', 'email', 'first_name', 'last_name', 'timezone');
           })
         : [];
 
@@ -652,15 +660,21 @@ export const createAppointmentRequest = withAuth(async (
         }
       }
 
+      const tenantDefaultTz = await resolveEffectiveTimeZone(db, tenant, null);
+      const staffTzFor = (staffUser: { timezone?: string | null }) =>
+        staffUser.timezone ? normalizeIanaTimeZone(staffUser.timezone) : tenantDefaultTz;
+
       for (const staffUser of staffUsers) {
         if (!isValidEmail(staffUser.email)) continue;
+        // Staff see the request in their own timezone, labeled.
+        const staffTz = staffTzFor(staffUser);
         await emailService.sendNewAppointmentRequest(staffUser.email, {
           requesterName: contact.full_name || 'Unknown',
           requesterEmail: contact.email || currentUser.email || '',
           clientName: clientCompanyName,
           serviceName: service.service_name,
-          requestedDate: await formatDate(validatedData.requested_date, 'en'),
-          requestedTime: await formatTime(validatedData.requested_time, 'en'),
+          requestedDate: await formatDate(formatInTimeZone(requestInstant, staffTz, 'yyyy-MM-dd'), 'en'),
+          requestedTime: `${await formatTime(formatInTimeZone(requestInstant, staffTz, 'HH:mm'), 'en')} (${formatInTimeZone(requestInstant, staffTz, 'zzz')})`,
           duration: validatedData.requested_duration,
           preferredTechnician: preferredTechnicianName,
           referenceNumber: appointmentRequest.appointment_request_id.slice(0, 8).toUpperCase(),
@@ -688,7 +702,7 @@ export const createAppointmentRequest = withAuth(async (
             data: {
               serviceName: service.service_name,
               requestedDate: await formatDate(validatedData.requested_date, 'en'),
-              requestedTime: await formatTime(validatedData.requested_time, 'en')
+              requestedTime: `${await formatTime(validatedData.requested_time, 'en')}${requesterTzLabel}`
             }
           });
         }
@@ -708,8 +722,8 @@ export const createAppointmentRequest = withAuth(async (
             requesterName: contact.full_name || 'Unknown',
             clientName: clientCompanyName,
             serviceName: service.service_name,
-            requestedDate: await formatDate(validatedData.requested_date, 'en'),
-            requestedTime: await formatTime(validatedData.requested_time, 'en')
+            requestedDate: await formatDate(formatInTimeZone(requestInstant, staffTzFor(staffUser), 'yyyy-MM-dd'), 'en'),
+            requestedTime: `${await formatTime(formatInTimeZone(requestInstant, staffTzFor(staffUser), 'HH:mm'), 'en')} (${formatInTimeZone(requestInstant, staffTzFor(staffUser), 'zzz')})`
           },
           metadata: {
             appointment_request_id: appointmentRequest.appointment_request_id,
