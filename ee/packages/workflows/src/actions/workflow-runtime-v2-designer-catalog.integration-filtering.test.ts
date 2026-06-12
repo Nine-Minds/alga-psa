@@ -187,20 +187,24 @@ describe('workflow designer catalog integration module filtering', () => {
     knexMock.schema.hasTable.mockClear();
   });
 
-  it('T003: tenant with active NinjaOne integration receives NinjaOne designer catalog record', async () => {
+  it('T003: tenant with active NinjaOne integration receives an available NinjaOne catalog record', async () => {
     fixture.ninjaOneActive = true;
 
     const catalog = await listWorkflowDesignerActionCatalogAction();
 
-    expect(catalog.some((record) => record.groupKey === 'app:ninjaone')).toBe(true);
+    const ninjaRecord = catalog.find((record) => record.groupKey === 'app:ninjaone');
+    expect(ninjaRecord).toBeDefined();
+    expect(ninjaRecord?.available).toBe(true);
   });
 
-  it('T004: tenant without active/connected NinjaOne integration does not receive NinjaOne catalog record', async () => {
+  it('T004: disconnected NinjaOne keeps its catalog record but flagged unavailable (palette hides, steps render)', async () => {
     fixture.ninjaOneActive = false;
 
     const catalog = await listWorkflowDesignerActionCatalogAction();
 
-    expect(catalog.some((record) => record.groupKey === 'app:ninjaone')).toBe(false);
+    const ninjaRecord = catalog.find((record) => record.groupKey === 'app:ninjaone');
+    expect(ninjaRecord).toBeDefined();
+    expect(ninjaRecord?.available).toBe(false);
   });
 
   it('T005: extension app filtering remains enabled alongside first-party integration filtering', async () => {

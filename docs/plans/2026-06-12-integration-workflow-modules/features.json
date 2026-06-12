@@ -260,5 +260,29 @@
     "prdRefs": [
       "9"
     ]
+  },
+  {
+    "id": "F033",
+    "description": "WorkflowDesignerCatalogRecord gains optional available flag; listWorkflowDesignerActionCatalogAction keeps first-party integration records when disconnected and annotates available=true/false instead of filtering them out (extension-app filtering unchanged).",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Designer palette excludes catalog records with available === false client-side, preserving the hide-when-not-enabled palette decision.",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Editor disconnected state for existing steps: GroupedActionConfigSection renders an amber '{group} is not connected' banner when record.available === false (action select stays usable), and the step card shows a Disconnected badge with explanatory tooltip; config panel now renders for steps of disconnected integrations instead of silently dropping the group section.",
+    "implemented": true,
+    "prdRefs": [
+      "11"
+    ]
   }
 ]

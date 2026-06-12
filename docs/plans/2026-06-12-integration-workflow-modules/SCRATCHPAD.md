@@ -92,3 +92,29 @@ tsc clean throughout.
 branch (palette gating on connect/disconnect, Tactical mock run_script
 round-trip, Teams live tenant, dispatch-board + calendar sync check,
 icon render).
+
+### 2026-06-12 — editor disconnected-state (F033–F035) + dep tidy-up
+
+The "circular dependency" first cited for Teams was actually a **stale,
+unused** `@alga-psa/workflows` entry in ee-microsoft-teams's package.json
+(left behind when payload builders moved to `@alga-psa/workflow-streams`);
+removed. The real reuse blocker (source-mapped exports vs dist-external
+workflows runtime) stands and is documented above.
+
+Disconnected-integration editor behavior, decided with Robert:
+availability gates ADDING, not VIEWING. First-party app catalog records
+are now annotated `available: boolean` instead of removed; the palette
+filters client-side; existing steps get a Disconnected badge on the step
+card and an amber banner in the grouped config section (which previously
+disappeared silently because the catalog record was filtered out). Input
+mapping always kept working (it resolves from the unfiltered registry
+list). Publish-time and disconnect-time warnings considered and
+deferred (PRD §11).
+
+Local test-env caveats: ee/server component tests cannot run here
+(pre-existing `React.act is not a function` in @testing-library setup,
+and contract tests fail to load on `node:` builtins) — T019 and the icon
+contract test follow existing patterns and run in CI. ee/server tsc needs
+`NODE_OPTIONS=--max-old-space-size=8192`; its remaining errors are
+pre-existing (chat registry / agent-tooling / msp-composition, absent
+generated packages on a fresh copy) — none in workflow-designer.

@@ -3343,6 +3343,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       });
 
     const groupedActionItems = designerActionCatalog
+      // Disconnected integrations stay out of the palette; their records are
+      // kept in the catalog so existing steps render with group context.
+      .filter((record) => record.available !== false)
       .filter((record) => record.actions.length > 0 || record.tileKind === 'transform')
       .map((record, index) => {
         const defaultAction = record.defaultActionId
@@ -5609,6 +5612,10 @@ const StepCard: React.FC<{
   const isBlock = step.type.startsWith('control.');
   const colors = getStepTypeColor(step.type);
   const icon = getStepTypeIcon(step.type);
+  const groupedRecord = step.type === 'action.call' && designerActionCatalog
+    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)
+    : undefined;
+  const integrationDisconnected = groupedRecord?.available === false;
 
   return (
     <Card
@@ -5675,6 +5682,19 @@ const StepCard: React.FC<{
                   <Link className="h-3.5 w-3.5" />
                 </span>
               )
+            )}
+            {/* Disconnected integration badge */}
+            {integrationDisconnected && (
+              <Badge
+                id={`workflow-step-disconnected-${step.id}`}
+                className="text-xs border border-amber-300 bg-amber-100 text-amber-900"
+                title={t('designer.stepCard.disconnectedTitle', {
+                  defaultValue: '{{group}} is not connected; this step will fail at run time until it is reconnected.',
+                  group: groupedRecord?.label ?? '',
+                })}
+              >
+                {t('designer.stepCard.badges.disconnected', { defaultValue: 'Disconnected' })}
+              </Badge>
             )}
             {/* Error badge */}
             {errorCount > 0 && (

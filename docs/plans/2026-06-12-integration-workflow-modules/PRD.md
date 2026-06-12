@@ -210,3 +210,18 @@ the local-test stack: palette gating on connect/disconnect, Tactical mock
 run-script round-trip, Teams notify/DM/channel in a test tenant,
 schedule entry on the dispatch board. No migrations and no new tables; all
 gating is read-path, so rollout is inert until an integration is connected.
+
+## 11. Editor behavior for disconnected integrations
+
+Availability gates ADDING, not VIEWING. The designer catalog keeps
+first-party integration records when the integration is disconnected,
+flagged `available: false`; extension-app filtering is unchanged. The
+palette excludes unavailable records (the original hide-when-not-enabled
+decision stands). Existing steps referencing a disconnected integration
+keep full group context: the grouped action config section renders with an
+amber "not connected" banner naming the integration, the step card shows a
+"Disconnected" badge with an explanatory tooltip, and the input-mapping
+editor remains fully usable (it always resolved schemas from the
+unfiltered registry). Publish stays allowed; runs fail with the handlers'
+actionable INTEGRATION_INACTIVE errors. Publish-time and disconnect-time
+warnings were considered and deferred.

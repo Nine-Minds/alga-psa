@@ -3209,10 +3209,15 @@ export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { t
   const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
   const availableFirstPartyKeys = await loadAvailableFirstPartyIntegrationAppKeys(knex, tenant);
   const firstPartyModuleKeys: Set<string> = new Set(integrationModules.map((module) => module.groupKey));
-  return catalog.filter((record) => {
-    if (record.tileKind !== 'app') return true;
-    if (firstPartyModuleKeys.has(record.groupKey)) return availableFirstPartyKeys.has(record.groupKey);
-    return availableAppKeys.has(record.groupKey);
+  return catalog.flatMap((record) => {
+    if (record.tileKind !== 'app') return [record];
+    // First-party integration records stay in the catalog when disconnected,
+    // flagged unavailable: the palette hides them, but existing steps keep
+    // their group context so the editor can explain the disconnected state.
+    if (firstPartyModuleKeys.has(record.groupKey)) {
+      return [{ ...record, available: availableFirstPartyKeys.has(record.groupKey) }];
+    }
+    return availableAppKeys.has(record.groupKey) ? [record] : [];
   });
 });
 

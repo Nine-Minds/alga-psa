@@ -193,5 +193,26 @@
     "featureIds": [
       "F031"
     ]
+  },
+  {
+    "id": "T019",
+    "mode": "automated",
+    "description": "GroupedActionConfigSection: disconnected banner renders for available=false records with action select still enabled; no banner when available is true or unspecified (core records). Catalog action returns available=false record for disconnected first-party integration (T003/T004 updated).",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F035"
+    ]
+  },
+  {
+    "id": "T020",
+    "mode": "manual",
+    "description": "Live editor: with a saved workflow using Tactical actions, disconnect Tactical; reload designer: tile absent from palette, step shows Disconnected badge, config panel shows banner and remains editable; reconnect restores tile and clears badge/banner.",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035"
+    ]
   }
 ]

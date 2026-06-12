@@ -29,6 +29,12 @@ export type WorkflowDesignerCatalogRecord = {
   defaultActionId?: string;
   description?: string;
   actions: WorkflowDesignerCatalogAction[];
+  /**
+   * False when the record's integration is not connected for the tenant.
+   * Availability gates ADDING (palette) — existing steps still render from
+   * the record so the editor can explain why they will fail at run time.
+   */
+  available?: boolean;
 };
 
 export type WorkflowDesignerCatalogSourceAction = {
