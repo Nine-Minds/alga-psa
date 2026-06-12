@@ -451,6 +451,70 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     await db('rmm_maintenance_windows').where({ tenant: tenantId, window_id: windowId }).del();
   });
 
+  it('a ticket with a time entry counts as touched and survives the reset', async () => {
+    const trigger = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'ext-timed', conditionIdentity: 'BACKUP_FAIL', alertClass: 'BACKUP_FAIL' })
+    );
+    expect(trigger.outcome).toBe('ticket_created');
+
+    await db('time_entries').insert({
+      tenant: tenantId,
+      entry_id: uuidv4(),
+      user_id: userId,
+      start_time: new Date(Date.now() - 600_000).toISOString(),
+      end_time: new Date().toISOString(),
+      work_item_id: trigger.ticketId!,
+      work_item_type: 'ticket',
+      billable_duration: 10,
+      work_date: new Date().toISOString().slice(0, 10),
+      work_timezone: 'UTC',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    const reset = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'ext-timed', kind: 'reset' })
+    );
+    expect(reset.outcome).toBe('resolved');
+    const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: trigger.ticketId! }).first();
+    expect(ticket.status_id).toBe(statusOpenId);
+  });
+
+  it('a manual status change counts as touched and survives the reset', async () => {
+    const inProgressId = uuidv4();
+    await db('statuses').insert({
+      tenant: tenantId,
+      status_id: inProgressId,
+      name: 'In Progress',
+      ...((await hasColumn('statuses', 'item_type')) ? { item_type: 'ticket' } : {}),
+      ...((await hasColumn('statuses', 'status_type')) ? { status_type: 'ticket' } : {}),
+      is_closed: false,
+      is_default: false,
+      order_number: 15,
+      created_by: userId,
+    });
+
+    const trigger = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'ext-moved', conditionIdentity: 'AV_THREAT', alertClass: 'AV_THREAT' })
+    );
+    expect(trigger.outcome).toBe('ticket_created');
+
+    await db('tickets')
+      .where({ tenant: tenantId, ticket_id: trigger.ticketId! })
+      .update({ status_id: inProgressId });
+
+    const reset = await processRmmAlertEvent(
+      { knex: db },
+      event({ externalAlertId: 'ext-moved', kind: 'reset' })
+    );
+    expect(reset.outcome).toBe('resolved');
+    const ticket = await db('tickets').where({ tenant: tenantId, ticket_id: trigger.ticketId! }).first();
+    expect(ticket.status_id).toBe(inProgressId); // stayed where the human put it
+  });
+
   it('publishes workflow events for non-suppressed outcomes via injected deps', async () => {
     const published: Array<{ eventType: string; payload: Record<string, unknown> }> = [];
     const deps = {

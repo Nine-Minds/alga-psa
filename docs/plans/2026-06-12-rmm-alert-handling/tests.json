@@ -60,7 +60,7 @@
   {
     "id": "T008",
     "description": "Unit (table-driven): untouched determination — human comment, time entry, manual status change each count as touched; rule auto-assignment does not",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
