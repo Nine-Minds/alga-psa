@@ -9,6 +9,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { processRmmAlertEvent, type NormalizedRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
+import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 
 export const runtime = 'nodejs';
 
@@ -112,39 +114,28 @@ export async function POST(req: Request) {
       // ignore
     }
 
-    const existing = await knex('rmm_alerts')
-      .where({
-        tenant,
-        integration_id: integration.integration_id,
-        external_alert_id: externalAlertId,
-      })
-      .first(['alert_id']);
-
-    const baseRow = {
-      tenant,
-      integration_id: integration.integration_id,
-      external_alert_id: externalAlertId,
-      external_device_id: agentId,
-      asset_id: assetId || null,
+    // Alert handling (windows, rules, dedup, ticketing, lifecycle) lives in
+    // the shared provider-agnostic pipeline.
+    const normalized: NormalizedRmmAlertEvent = {
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      provider: PROVIDER,
+      kind: status === 'resolved' ? 'reset' : 'triggered',
+      externalAlertId,
+      externalDeviceId: agentId,
+      conditionIdentity: body.check_id ? String(body.check_id) : body.alert_type ? String(body.alert_type) : event,
+      activityType: 'tacticalrmm_webhook',
+      alertClass: body.alert_type ? String(body.alert_type) : null,
+      sourceType: 'tacticalrmm_webhook',
       severity,
-      priority: null,
-      activity_type: 'tacticalrmm_webhook',
-      status,
       message,
-      source_data: JSON.stringify(body),
-      triggered_at: triggeredAt,
-      resolved_at: status === 'resolved' ? new Date().toISOString() : null,
-      updated_at: knex.fn.now(),
+      deviceName: body.hostname ? String(body.hostname) : body.agent_hostname ? String(body.agent_hostname) : null,
+      externalOrganizationId: body.client_id != null ? String(body.client_id) : null,
+      occurredAt: parseOccurredAt(triggeredAt),
+      raw: body as Record<string, unknown>,
     };
 
-    if (existing?.alert_id) {
-      await knex('rmm_alerts')
-        .where({ tenant, alert_id: existing.alert_id })
-        .update(baseRow);
-    } else {
-      await knex('rmm_alerts')
-        .insert({ ...baseRow, created_at: knex.fn.now() });
-    }
+    const result = await processRmmAlertEvent({ knex, deps: buildRmmAlertPipelineDeps() }, normalized);
 
     // Best-effort: refresh the affected agent, but don't fail the webhook response.
     try {
@@ -153,8 +144,19 @@ export async function POST(req: Request) {
       // ignore
     }
 
-    return NextResponse.json({ ok: true, recorded: true }, { status: 200 });
+    return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Webhook error' }, { status: 500 });
   }
+}
+
+/** alert_time may be ISO or epoch seconds; fall back to now. */
+function parseOccurredAt(value: string): string {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 1_000_000_000) {
+    const millis = numeric > 1_000_000_000_000 ? numeric : numeric * 1000;
+    return new Date(millis).toISOString();
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
