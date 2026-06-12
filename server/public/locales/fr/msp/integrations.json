@@ -953,6 +953,15 @@
         "errors": {
           "load": "Échec du chargement des modèles d'actifs Hudu.",
           "save": "Échec de l'enregistrement du mappage des modèles d'actifs."
+        },
+        "createType": {
+          "button": "Créer un type à partir du modèle",
+          "creating": "Création...",
+          "success": "Type d'actif créé et affecté à ce modèle.",
+          "errors": {
+            "create": "Échec de la création d'un type d'actif à partir de ce modèle.",
+            "slugConflict": "Un type d'actif portant ce nom existe déjà. Sélectionnez-le plutôt dans la liste."
+          }
         }
       },
       "settings": {

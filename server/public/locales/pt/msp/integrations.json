@@ -953,6 +953,15 @@
         "errors": {
           "load": "Falha ao carregar os layouts de ativos do Hudu.",
           "save": "Falha ao salvar o mapeamento de layouts de ativos."
+        },
+        "createType": {
+          "button": "Criar tipo a partir do layout",
+          "creating": "Criando...",
+          "success": "Tipo de ativo criado e atribuído a este layout.",
+          "errors": {
+            "create": "Falha ao criar um tipo de ativo a partir deste layout.",
+            "slugConflict": "Já existe um tipo de ativo com este nome. Selecione-o na lista."
+          }
         }
       },
       "settings": {

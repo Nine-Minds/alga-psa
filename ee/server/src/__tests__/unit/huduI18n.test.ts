@@ -1,5 +1,12 @@
 /**
  * T100 (F100) + T246–T248 (F235–F237) — static i18n verification for the Hudu UI.
+ * T321 (F318) — extended to the Custom Asset Types surfaces: the EE
+ * HuduLayoutCreateTypeButton plus the CE packages/assets components
+ * (AssetTypesManager, AssetTypeSchemaEditor, CustomTypeFieldsPanel,
+ * AssetTypeBreakdownCard, CustomTypeDetailsPanel, useAssetTypeOptions,
+ * AssetForm, QuickAddAsset) and the SettingsPage Asset Types tab. Non-Hudu
+ * sources declare their own `keyPattern`; template-literal keys (kind picker,
+ * builtin type labels) are pinned via `extraKeys`.
  *
  * Two halves:
  * 1. Key resolution — every `t('integrations.hudu…' / 'integrations.categories.
@@ -48,6 +55,26 @@ import integrationsSettingsPageSource from '@alga-psa/integrations/components/se
 import documentsPageSource from '@alga-psa/documents/components/DocumentsPage.tsx?raw';
 // @ts-expect-error Vite raw import (static source scan).
 import huduDocumentationCardSource from '@alga-psa/assets/components/panels/HuduDocumentationCard.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import huduLayoutCreateTypeButtonSource from '@ee/components/settings/integrations/hudu/HuduLayoutCreateTypeButton.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import assetTypesManagerSource from '@alga-psa/assets/components/settings/AssetTypesManager.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import assetTypeSchemaEditorSource from '@alga-psa/assets/components/settings/AssetTypeSchemaEditor.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import customTypeFieldsPanelSource from '@alga-psa/assets/components/shared/CustomTypeFieldsPanel.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import assetTypeBreakdownCardSource from '@alga-psa/assets/components/AssetTypeBreakdownCard.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import customTypeDetailsPanelSource from '@alga-psa/assets/components/panels/CustomTypeDetailsPanel.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import useAssetTypeOptionsSource from '@alga-psa/assets/components/shared/useAssetTypeOptions.ts?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import assetFormSource from '@alga-psa/assets/components/AssetForm.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import quickAddAssetSource from '@alga-psa/assets/components/QuickAddAsset.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import settingsPageSource from '@/components/settings/SettingsPage.tsx?raw';
 
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
@@ -85,6 +112,15 @@ function collectHuduKeys(source: string): string[] {
   return collectTranslationKeys(source).filter((key) => HUDU_KEY_PATTERN.test(key));
 }
 
+/** Keys owned by a scanned source: pattern-filtered literals + pinned template-literal expansions. */
+function collectScannedKeys(entry: ScannedSource): string[] {
+  const pattern = entry.keyPattern ?? HUDU_KEY_PATTERN;
+  return [
+    ...collectTranslationKeys(entry.source).filter((key) => pattern.test(key)),
+    ...(entry.extraKeys ?? []),
+  ];
+}
+
 function resolveKey(locale: Record<string, unknown>, key: string): unknown {
   let node: unknown = locale;
   for (const part of key.split('.')) {
@@ -100,8 +136,12 @@ interface ScannedSource {
   namespace: Namespace;
   /** Lower bound on collected keys — guards the extraction regex against rot. */
   minKeys: number;
-  /** Hudu-owned components get the hardcoded-string sweep; host pages do not. */
+  /** Owned components get the hardcoded-string sweep; host pages do not. */
   sweep: boolean;
+  /** Key families owned by this source (defaults to the Hudu families). */
+  keyPattern?: RegExp;
+  /** Template-literal `t(\`…${x}\`)` expansions the regex cannot collect. */
+  extraKeys?: string[];
 }
 
 const keySources: ScannedSource[] = [
@@ -190,11 +230,99 @@ const keySources: ScannedSource[] = [
     minKeys: 2,
     sweep: true,
   },
+  // --- T321 (F318): Custom Asset Types surfaces -------------------------
+  {
+    label: 'HuduLayoutCreateTypeButton.tsx',
+    source: huduLayoutCreateTypeButtonSource as string,
+    namespace: 'msp/integrations',
+    minKeys: 5,
+    sweep: true,
+  },
+  {
+    label: 'AssetTypesManager.tsx',
+    source: assetTypesManagerSource as string,
+    namespace: 'msp/settings',
+    minKeys: 40,
+    sweep: true,
+    keyPattern: /^settings\.assetTypes\./,
+  },
+  {
+    label: 'AssetTypeSchemaEditor.tsx',
+    source: assetTypeSchemaEditorSource as string,
+    namespace: 'msp/settings',
+    minKeys: 20,
+    sweep: true,
+    keyPattern: /^settings\.assetTypes\./,
+    extraKeys: ['text', 'number', 'date', 'select', 'url', 'boolean'].map(
+      (kind) => `settings.assetTypes.editor.kinds.${kind}`
+    ),
+  },
+  {
+    // No t() calls — schema labels are tenant data; sweep-only entry.
+    label: 'CustomTypeFieldsPanel.tsx',
+    source: customTypeFieldsPanelSource as string,
+    namespace: 'msp/assets',
+    minKeys: 0,
+    sweep: true,
+    keyPattern: /^customTypeFieldsPanel\./,
+  },
+  {
+    label: 'AssetTypeBreakdownCard.tsx',
+    source: assetTypeBreakdownCardSource as string,
+    namespace: 'msp/assets',
+    minKeys: 1,
+    sweep: true,
+    keyPattern: /^assetTypeBreakdown\./,
+  },
+  {
+    label: 'CustomTypeDetailsPanel.tsx',
+    source: customTypeDetailsPanelSource as string,
+    namespace: 'msp/assets',
+    minKeys: 3,
+    sweep: true,
+    keyPattern: /^customTypeDetailsPanel\./,
+  },
+  {
+    label: 'useAssetTypeOptions.ts (builtin type labels)',
+    source: useAssetTypeOptionsSource as string,
+    namespace: 'msp/assets',
+    minKeys: 6,
+    sweep: false,
+    keyPattern: /^quickAddAsset\.assetTypes\./,
+    extraKeys: ['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown'].map(
+      (slug) => `quickAddAsset.assetTypes.${slug}`
+    ),
+  },
+  {
+    label: 'AssetForm.tsx (registry-aware form keys)',
+    source: assetFormSource as string,
+    namespace: 'msp/assets',
+    minKeys: 40,
+    sweep: false,
+    keyPattern: /^(assetForm|quickAddAsset|common)\./,
+  },
+  {
+    label: 'QuickAddAsset.tsx (registry-aware form keys)',
+    source: quickAddAssetSource as string,
+    namespace: 'msp/assets',
+    minKeys: 40,
+    sweep: false,
+    keyPattern: /^(assetForm|quickAddAsset|common)\./,
+  },
+  {
+    label: 'SettingsPage.tsx (Asset Types tab)',
+    source: settingsPageSource as string,
+    namespace: 'msp/settings',
+    minKeys: 3,
+    sweep: false,
+    keyPattern: /^settings\.assetTypes\./,
+  },
 ];
 
-describe('T100: every Hudu translation key resolves in the en locale', () => {
-  it.each(keySources)('$label keys resolve in $namespace', ({ source, namespace, minKeys, label }) => {
-    const keys = collectHuduKeys(source);
+describe('T100/T321: every scanned translation key resolves in the en locale', () => {
+  it.each(keySources)('$label keys resolve in $namespace', (entry) => {
+    const { namespace, minKeys, label } = entry;
+    const keys = collectScannedKeys(entry);
     expect(keys.length, `${label}: key extraction found too few keys — regex rot?`).toBeGreaterThanOrEqual(
       minKeys
     );
@@ -227,8 +355,8 @@ const NAMESPACE_FILES: Record<Namespace, string> = {
   common: 'common.json',
 };
 
-describe('T100: every Hudu translation key is translated in every shipped locale', () => {
-  it.each(TRANSLATED_LOCALES)('all Hudu keys resolve in the %s locale', (locale) => {
+describe('T100/T321: every scanned translation key is translated in every shipped locale', () => {
+  it.each(TRANSLATED_LOCALES)('all scanned keys resolve in the %s locale', (locale) => {
     const localeData = Object.fromEntries(
       (Object.keys(NAMESPACE_FILES) as Namespace[]).map((ns) => [
         ns,
@@ -237,11 +365,11 @@ describe('T100: every Hudu translation key is translated in every shipped locale
     ) as Record<Namespace, Record<string, unknown>>;
 
     const missing: string[] = [];
-    for (const { source, namespace } of keySources) {
-      for (const key of collectHuduKeys(source)) {
-        const value = resolveKey(localeData[namespace], key);
+    for (const entry of keySources) {
+      for (const key of collectScannedKeys(entry)) {
+        const value = resolveKey(localeData[entry.namespace], key);
         if (typeof value !== 'string' || value.trim() === '') {
-          missing.push(`${locale}:${namespace}:${key}`);
+          missing.push(`${locale}:${entry.namespace}:${key}`);
         }
       }
     }
@@ -305,8 +433,8 @@ function findHardcodedTextNodes(source: string): string[] {
   return violations;
 }
 
-describe('T100: no hardcoded user-facing strings in the Hudu components', () => {
-  const componentSources = keySources.filter((entry) => entry.sweep); // the Hudu-owned components
+describe('T100/T321: no hardcoded user-facing strings in the scanned components', () => {
+  const componentSources = keySources.filter((entry) => entry.sweep); // the owned components
 
   it.each(componentSources)('$label has no literal multi-word JSX text', ({ source, label }) => {
     expect(findHardcodedTextNodes(source), `${label}: untranslated literal text`).toEqual([]);

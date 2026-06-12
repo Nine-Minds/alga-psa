@@ -953,6 +953,15 @@
         "errors": {
           "load": "Hudu-Asset-Layouts konnten nicht geladen werden.",
           "save": "Asset-Layout-Zuordnung konnte nicht gespeichert werden."
+        },
+        "createType": {
+          "button": "Typ aus Layout erstellen",
+          "creating": "Wird erstellt...",
+          "success": "Asset-Typ erstellt und diesem Layout zugewiesen.",
+          "errors": {
+            "create": "Aus diesem Layout konnte kein Asset-Typ erstellt werden.",
+            "slugConflict": "Ein Asset-Typ mit diesem Namen existiert bereits. Wählen Sie ihn stattdessen aus der Liste aus."
+          }
         }
       },
       "settings": {

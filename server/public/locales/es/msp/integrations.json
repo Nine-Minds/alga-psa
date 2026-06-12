@@ -953,6 +953,15 @@
         "errors": {
           "load": "No se pudieron cargar los diseños de activos de Hudu.",
           "save": "No se pudo guardar la asignación de diseños de activos."
+        },
+        "createType": {
+          "button": "Crear tipo desde el diseño",
+          "creating": "Creando...",
+          "success": "Tipo de activo creado y asignado a este diseño.",
+          "errors": {
+            "create": "No se pudo crear un tipo de activo desde este diseño.",
+            "slugConflict": "Ya existe un tipo de activo con este nombre. Selecciónelo de la lista en su lugar."
+          }
         }
       },
       "settings": {

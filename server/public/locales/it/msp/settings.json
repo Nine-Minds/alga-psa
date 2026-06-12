@@ -1894,5 +1894,97 @@
   "language": {
     "selectLanguage": "Seleziona una lingua",
     "languagesUpdated": "Lingue disponibili aggiornate"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Risorse",
+      "title": "Tipi di risorsa",
+      "description": "Gestisci i tipi di risorsa disponibili nel modulo risorse. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "loading": "Caricamento dei tipi di risorsa...",
+      "table": {
+        "name": "Nome",
+        "builtin": "Integrato",
+        "slug": "Identificatore",
+        "fieldCount": "Campi",
+        "order": "Ordine",
+        "actions": "Azioni",
+        "openMenu": "Apri menu"
+      },
+      "actions": {
+        "addType": "Aggiungi tipo di risorsa",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "create": "Crea",
+        "confirmDelete": "Elimina"
+      },
+      "dialog": {
+        "createTitle": "Aggiungi tipo di risorsa",
+        "editTitle": "Modifica tipo di risorsa",
+        "nameLabel": "Nome",
+        "namePlaceholder": "es. Firewall",
+        "displayOrderLabel": "Ordine di visualizzazione",
+        "iconLabel": "Icona",
+        "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
+      },
+      "deleteDialog": {
+        "title": "Elimina tipo di risorsa",
+        "message": "Questa operazione rimuove definitivamente \"{{name}}\" dal registro dei tipi di risorsa."
+      },
+      "messages": {
+        "created": "Tipo di risorsa creato",
+        "updated": "Tipo di risorsa aggiornato",
+        "deleted": "Tipo di risorsa eliminato"
+      },
+      "errors": {
+        "fetchFailed": "Impossibile caricare i tipi di risorsa.",
+        "saveFailed": "Impossibile salvare il tipo di risorsa.",
+        "deleteFailed": "Impossibile eliminare il tipo di risorsa.",
+        "invalidName": "Inserisci un nome per questo tipo di risorsa.",
+        "invalidSchema": "Lo schema di campi non è valido. Correggi i campi evidenziati e riprova.",
+        "reservedSlug": "L'identificatore \"{{slug}}\" è riservato a un tipo integrato. Scegli un altro nome.",
+        "slugConflict": "Esiste già un tipo di risorsa con l'identificatore \"{{slug}}\".",
+        "notFound": "Questo tipo di risorsa non esiste più.",
+        "builtinImmutable": "I tipi integrati consentono solo la modifica di nome e icona.",
+        "builtinUndeletable": "I tipi integrati non possono essere eliminati.",
+        "inUse": "Questo tipo è ancora utilizzato da {{assetCount}} risorsa/e. Riassegna quelle risorse prima di eliminarlo.",
+        "unknown": "Qualcosa è andato storto."
+      },
+      "editor": {
+        "title": "Campi",
+        "empty": "Ancora nessun campo. Aggiungi campi per costruire il modulo di creazione/modifica di questo tipo.",
+        "addField": "Aggiungi campo",
+        "fieldLabel": "Etichetta",
+        "fieldLabelPlaceholder": "es. Numero di serie",
+        "fieldKey": "Chiave",
+        "fieldKeyPlaceholder": "es. serial_number",
+        "fieldKind": "Tipo",
+        "fieldRequired": "Obbligatorio",
+        "fieldOptions": "Opzioni (separate da virgola)",
+        "fieldOptionsPlaceholder": "es. Oro, Argento, Bronzo",
+        "moveUp": "Sposta campo in su",
+        "moveDown": "Sposta campo in giù",
+        "removeField": "Rimuovi campo",
+        "kinds": {
+          "text": "Testo",
+          "number": "Numero",
+          "date": "Data",
+          "select": "Selezione",
+          "url": "URL",
+          "boolean": "Sì / No"
+        },
+        "errors": {
+          "invalidKey": "La chiave deve iniziare con una lettera minuscola e usare solo lettere minuscole, numeri e trattini bassi.",
+          "duplicateKey": "Ogni chiave di campo deve essere univoca.",
+          "missingLabel": "L'etichetta è obbligatoria.",
+          "invalidKind": "Scegli un tipo di campo valido.",
+          "invalidRequired": "\"Obbligatorio\" deve essere attivato o disattivato.",
+          "missingOptions": "I campi di selezione richiedono almeno un'opzione.",
+          "invalidOptions": "Le opzioni non possono essere vuote.",
+          "invalidField": "Questo campo non è valido."
+        }
+      }
+    }
   }
 }

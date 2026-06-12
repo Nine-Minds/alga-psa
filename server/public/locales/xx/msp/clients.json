@@ -187,6 +187,8 @@
     "billing": "11111",
     "interactions": "11111",
     "notes": "11111",
+    "huduTab": "11111",
+    "huduPasswordsTab": "11111",
     "clientLocations": "11111",
     "billingDashboard": "11111",
     "clientAndContacts": "11111",

@@ -1894,5 +1894,97 @@
   "language": {
     "selectLanguage": "Seleccionar un idioma",
     "languagesUpdated": "Idiomas disponibles actualizados"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Activos",
+      "title": "Tipos de activos",
+      "description": "Administre los tipos de activos disponibles en su módulo de activos. Los tipos personalizados llevan un esquema de campos que define sus formularios de creación y edición.",
+      "loading": "Cargando tipos de activos...",
+      "table": {
+        "name": "Nombre",
+        "builtin": "Integrado",
+        "slug": "Identificador",
+        "fieldCount": "Campos",
+        "order": "Orden",
+        "actions": "Acciones",
+        "openMenu": "Abrir menú"
+      },
+      "actions": {
+        "addType": "Agregar tipo de activo",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "create": "Crear",
+        "confirmDelete": "Eliminar"
+      },
+      "dialog": {
+        "createTitle": "Agregar tipo de activo",
+        "editTitle": "Editar tipo de activo",
+        "nameLabel": "Nombre",
+        "namePlaceholder": "p. ej., Firewall",
+        "displayOrderLabel": "Orden de visualización",
+        "iconLabel": "Icono",
+        "builtinSchemaHint": "Los tipos integrados usan formularios fijos administrados por AlgaPSA, por lo que su esquema de campos no se puede editar. Aún puede cambiar el nombre del tipo o su icono."
+      },
+      "deleteDialog": {
+        "title": "Eliminar tipo de activo",
+        "message": "Esto elimina permanentemente \"{{name}}\" del registro de tipos de activos."
+      },
+      "messages": {
+        "created": "Tipo de activo creado",
+        "updated": "Tipo de activo actualizado",
+        "deleted": "Tipo de activo eliminado"
+      },
+      "errors": {
+        "fetchFailed": "No se pudieron cargar los tipos de activos.",
+        "saveFailed": "No se pudo guardar el tipo de activo.",
+        "deleteFailed": "No se pudo eliminar el tipo de activo.",
+        "invalidName": "Ingrese un nombre para este tipo de activo.",
+        "invalidSchema": "El esquema de campos no es válido. Corrija los campos resaltados e inténtelo de nuevo.",
+        "reservedSlug": "El identificador \"{{slug}}\" está reservado para un tipo integrado. Elija otro nombre.",
+        "slugConflict": "Ya existe un tipo de activo con el identificador \"{{slug}}\".",
+        "notFound": "Este tipo de activo ya no existe.",
+        "builtinImmutable": "Los tipos integrados solo permiten cambiar el nombre y el icono.",
+        "builtinUndeletable": "Los tipos integrados no se pueden eliminar.",
+        "inUse": "Este tipo todavía lo usan {{assetCount}} activo(s). Reasigne esos activos antes de eliminarlo.",
+        "unknown": "Algo salió mal."
+      },
+      "editor": {
+        "title": "Campos",
+        "empty": "Aún no hay campos. Agregue campos para construir el formulario de creación/edición de este tipo.",
+        "addField": "Agregar campo",
+        "fieldLabel": "Etiqueta",
+        "fieldLabelPlaceholder": "p. ej., Número de serie",
+        "fieldKey": "Clave",
+        "fieldKeyPlaceholder": "p. ej., serial_number",
+        "fieldKind": "Tipo",
+        "fieldRequired": "Obligatorio",
+        "fieldOptions": "Opciones (separadas por comas)",
+        "fieldOptionsPlaceholder": "p. ej., Oro, Plata, Bronce",
+        "moveUp": "Mover campo hacia arriba",
+        "moveDown": "Mover campo hacia abajo",
+        "removeField": "Quitar campo",
+        "kinds": {
+          "text": "Texto",
+          "number": "Número",
+          "date": "Fecha",
+          "select": "Selección",
+          "url": "URL",
+          "boolean": "Sí / No"
+        },
+        "errors": {
+          "invalidKey": "La clave debe comenzar con una letra minúscula y usar solo letras minúsculas, números y guiones bajos.",
+          "duplicateKey": "Cada clave de campo debe ser única.",
+          "missingLabel": "La etiqueta es obligatoria.",
+          "invalidKind": "Elija un tipo de campo válido.",
+          "invalidRequired": "\"Obligatorio\" debe estar activado o desactivado.",
+          "missingOptions": "Los campos de selección necesitan al menos una opción.",
+          "invalidOptions": "Las opciones no pueden estar vacías.",
+          "invalidField": "Este campo no es válido."
+        }
+      }
+    }
   }
 }

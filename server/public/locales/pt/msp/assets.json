@@ -601,7 +601,8 @@
       "serialNumber": "Serial Number",
       "status": "Status",
       "purchaseDate": "Purchase Date",
-      "warrantyEndDate": "Warranty End Date"
+      "warrantyEndDate": "Warranty End Date",
+      "assetType": "Tipo"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -644,7 +645,8 @@
       "networkDevice": "Network Device Details",
       "server": "Server Details",
       "mobileDevice": "Mobile Device Details",
-      "printer": "Printer Details"
+      "printer": "Printer Details",
+      "custom": "Detalhes de {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -942,7 +944,8 @@
       "network_device": "Network Device",
       "server": "Server",
       "mobile_device": "Mobile Device",
-      "printer": "Printer"
+      "printer": "Printer",
+      "unknown": "Desconhecido"
     },
     "networkDeviceTypes": {
       "switch": "Switch",
@@ -1356,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Falha ao carregar o ticket",
     "openTicketFailed": "Falha ao abrir o ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Ativos por tipo"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Detalhes de {{name}}",
+    "values": {
+      "yes": "Sim",
+      "no": "Não"
+    }
   }
 }

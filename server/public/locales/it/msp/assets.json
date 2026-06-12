@@ -601,7 +601,8 @@
       "serialNumber": "Numero di serie",
       "status": "Stato",
       "purchaseDate": "Data di acquisto",
-      "warrantyEndDate": "Data di fine garanzia"
+      "warrantyEndDate": "Data di fine garanzia",
+      "assetType": "Tipo"
     },
     "placeholders": {
       "loadingClients": "Caricamento clienti…",
@@ -644,7 +645,8 @@
       "networkDevice": "Dettagli del dispositivo di rete",
       "server": "Dettagli del server",
       "mobileDevice": "Dettagli del dispositivo mobile",
-      "printer": "Dettagli della stampante"
+      "printer": "Dettagli della stampante",
+      "custom": "Dettagli di {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -927,7 +929,7 @@
       "customLocation": "Inserisci una posizione o un'area personalizzata",
       "loadingLocations": "Caricamento posizioni...",
       "selectClientFirst": "Seleziona prima un cliente",
-      "selectLocation": "Seleziona posizione"
+      "selectLocation": "Seleziona una posizione"
     },
     "sections": {
       "typeSpecificDetails": "Dettagli specifici del tipo"
@@ -942,7 +944,8 @@
       "network_device": "Dispositivo di rete",
       "server": "Server",
       "mobile_device": "Dispositivo mobile",
-      "printer": "Stampante"
+      "printer": "Stampante",
+      "unknown": "Sconosciuto"
     },
     "networkDeviceTypes": {
       "switch": "Interruttore",
@@ -1356,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Impossibile caricare il ticket",
     "openTicketFailed": "Impossibile aprire il ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Risorse per tipo"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Dettagli di {{name}}",
+    "values": {
+      "yes": "Sì",
+      "no": "No"
+    }
   }
 }

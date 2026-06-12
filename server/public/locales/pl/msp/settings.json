@@ -1908,5 +1908,97 @@
   "language": {
     "selectLanguage": "Wybierz język",
     "languagesUpdated": "Dostępne języki zaktualizowane"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Zasoby",
+      "title": "Typy zasobów",
+      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "loading": "Ładowanie typów zasobów...",
+      "table": {
+        "name": "Nazwa",
+        "builtin": "Wbudowany",
+        "slug": "Identyfikator",
+        "fieldCount": "Pola",
+        "order": "Kolejność",
+        "actions": "Akcje",
+        "openMenu": "Otwórz menu"
+      },
+      "actions": {
+        "addType": "Dodaj typ zasobu",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "save": "Zapisz",
+        "create": "Utwórz",
+        "confirmDelete": "Usuń"
+      },
+      "dialog": {
+        "createTitle": "Dodaj typ zasobu",
+        "editTitle": "Edytuj typ zasobu",
+        "nameLabel": "Nazwa",
+        "namePlaceholder": "np. Firewall",
+        "displayOrderLabel": "Kolejność wyświetlania",
+        "iconLabel": "Ikona",
+        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+      },
+      "deleteDialog": {
+        "title": "Usuń typ zasobu",
+        "message": "Spowoduje to trwałe usunięcie \"{{name}}\" z rejestru typów zasobów."
+      },
+      "messages": {
+        "created": "Utworzono typ zasobu",
+        "updated": "Zaktualizowano typ zasobu",
+        "deleted": "Usunięto typ zasobu"
+      },
+      "errors": {
+        "fetchFailed": "Nie udało się załadować typów zasobów.",
+        "saveFailed": "Nie udało się zapisać typu zasobu.",
+        "deleteFailed": "Nie udało się usunąć typu zasobu.",
+        "invalidName": "Wprowadź nazwę dla tego typu zasobu.",
+        "invalidSchema": "Schemat pól jest nieprawidłowy. Popraw wyróżnione pola i spróbuj ponownie.",
+        "reservedSlug": "Identyfikator \"{{slug}}\" jest zarezerwowany dla typu wbudowanego. Wybierz inną nazwę.",
+        "slugConflict": "Typ zasobu o identyfikatorze \"{{slug}}\" już istnieje.",
+        "notFound": "Ten typ zasobu już nie istnieje.",
+        "builtinImmutable": "Typy wbudowane pozwalają tylko na zmianę nazwy i ikony.",
+        "builtinUndeletable": "Typów wbudowanych nie można usunąć.",
+        "inUse": "Ten typ jest nadal używany przez {{assetCount}} zasób(ów). Przypisz te zasoby ponownie przed jego usunięciem.",
+        "unknown": "Coś poszło nie tak."
+      },
+      "editor": {
+        "title": "Pola",
+        "empty": "Brak pól. Dodaj pola, aby zbudować formularz tworzenia/edycji dla tego typu.",
+        "addField": "Dodaj pole",
+        "fieldLabel": "Etykieta",
+        "fieldLabelPlaceholder": "np. Numer seryjny",
+        "fieldKey": "Klucz",
+        "fieldKeyPlaceholder": "np. serial_number",
+        "fieldKind": "Rodzaj",
+        "fieldRequired": "Wymagane",
+        "fieldOptions": "Opcje (rozdzielone przecinkami)",
+        "fieldOptionsPlaceholder": "np. Złoto, Srebro, Brąz",
+        "moveUp": "Przenieś pole w górę",
+        "moveDown": "Przenieś pole w dół",
+        "removeField": "Usuń pole",
+        "kinds": {
+          "text": "Tekst",
+          "number": "Liczba",
+          "date": "Data",
+          "select": "Wybór",
+          "url": "URL",
+          "boolean": "Tak / Nie"
+        },
+        "errors": {
+          "invalidKey": "Klucz musi zaczynać się od małej litery i zawierać tylko małe litery, cyfry i podkreślenia.",
+          "duplicateKey": "Każdy klucz pola musi być unikalny.",
+          "missingLabel": "Etykieta jest wymagana.",
+          "invalidKind": "Wybierz prawidłowy rodzaj pola.",
+          "invalidRequired": "\"Wymagane\" musi być włączone lub wyłączone.",
+          "missingOptions": "Pola wyboru wymagają co najmniej jednej opcji.",
+          "invalidOptions": "Opcje nie mogą być puste.",
+          "invalidField": "To pole jest nieprawidłowe."
+        }
+      }
+    }
   }
 }

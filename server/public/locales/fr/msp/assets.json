@@ -549,7 +549,7 @@
       "clientsLoadFailed": "Impossible de charger les clients",
       "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
       "updateFailed": "Échec de la mise à jour de l'élément",
-      "validation": "Veuillez corriger les champs en surbrillance avant d'enregistrer."
+      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer."
     },
     "actions": {
       "viewClient": "Afficher le client",
@@ -601,7 +601,8 @@
       "serialNumber": "Numéro de série",
       "status": "Statut",
       "purchaseDate": "Date d'achat",
-      "warrantyEndDate": "Date de fin de garantie"
+      "warrantyEndDate": "Date de fin de garantie",
+      "assetType": "Type"
     },
     "placeholders": {
       "loadingClients": "Chargement des clients…",
@@ -644,7 +645,8 @@
       "networkDevice": "Détails du périphérique réseau",
       "server": "Détails du serveur",
       "mobileDevice": "Détails de l'appareil mobile",
-      "printer": "Détails de l'imprimante"
+      "printer": "Détails de l'imprimante",
+      "custom": "Détails de {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -924,10 +926,10 @@
       "selectType": "Sélectionnez le type",
       "selectStatus": "Sélectionnez le statut",
       "serialNumber": "Entrez le numéro de série",
-      "customLocation": "Saisissez un emplacement ou une zone personnalisée",
+      "customLocation": "Entrez un emplacement ou une zone personnalisée",
       "loadingLocations": "Chargement des emplacements...",
       "selectClientFirst": "Sélectionnez d'abord un client",
-      "selectLocation": "Sélectionner un emplacement"
+      "selectLocation": "Sélectionnez un emplacement"
     },
     "sections": {
       "typeSpecificDetails": "Détails spécifiques au type"
@@ -942,7 +944,8 @@
       "network_device": "Périphérique réseau",
       "server": "Serveur",
       "mobile_device": "Appareil mobile",
-      "printer": "Imprimante"
+      "printer": "Imprimante",
+      "unknown": "Inconnu"
     },
     "networkDeviceTypes": {
       "switch": "Changer",
@@ -1356,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "Échec du chargement du ticket",
     "openTicketFailed": "Échec de l'ouverture du ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Actifs par type"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Détails de {{name}}",
+    "values": {
+      "yes": "Oui",
+      "no": "Non"
+    }
   }
 }

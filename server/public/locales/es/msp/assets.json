@@ -601,7 +601,8 @@
       "serialNumber": "Número de serie",
       "status": "Estado",
       "purchaseDate": "Fecha de compra",
-      "warrantyEndDate": "Fecha de finalización de la garantía"
+      "warrantyEndDate": "Fecha de finalización de la garantía",
+      "assetType": "Tipo"
     },
     "placeholders": {
       "loadingClients": "Cargando clientes…",
@@ -644,7 +645,8 @@
       "networkDevice": "Detalles del dispositivo de red",
       "server": "Detalles del servidor",
       "mobileDevice": "Detalles del dispositivo móvil",
-      "printer": "Detalles de la impresora"
+      "printer": "Detalles de la impresora",
+      "custom": "Detalles de {{typeName}}"
     }
   },
   "assetFormClient": {
@@ -924,9 +926,9 @@
       "selectType": "Seleccionar tipo",
       "selectStatus": "Seleccionar estado",
       "serialNumber": "Introduzca el número de serie",
-      "customLocation": "Introduzca una ubicación o área personalizada",
+      "customLocation": "Ingrese una ubicación o área personalizada",
       "loadingLocations": "Cargando ubicaciones...",
-      "selectClientFirst": "Seleccione primero un cliente",
+      "selectClientFirst": "Seleccione un cliente primero",
       "selectLocation": "Seleccionar ubicación"
     },
     "sections": {
@@ -942,7 +944,8 @@
       "network_device": "Dispositivo de red",
       "server": "Servidor",
       "mobile_device": "Dispositivo móvil",
-      "printer": "Impresora"
+      "printer": "Impresora",
+      "unknown": "Desconocido"
     },
     "networkDeviceTypes": {
       "switch": "Conmutador",
@@ -1356,5 +1359,15 @@
   "crossFeature": {
     "loadTicketFailed": "No se pudo cargar el ticket",
     "openTicketFailed": "No se pudo abrir el ticket"
+  },
+  "assetTypeBreakdown": {
+    "title": "Activos por tipo"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Detalles de {{name}}",
+    "values": {
+      "yes": "Sí",
+      "no": "No"
+    }
   }
 }

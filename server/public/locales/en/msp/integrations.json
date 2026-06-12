@@ -953,6 +953,15 @@
         "errors": {
           "load": "Failed to load Hudu asset layouts.",
           "save": "Failed to save the asset layout map."
+        },
+        "createType": {
+          "button": "Create type from layout",
+          "creating": "Creating...",
+          "success": "Asset type created and assigned to this layout.",
+          "errors": {
+            "create": "Failed to create an asset type from this layout.",
+            "slugConflict": "An asset type with this name already exists. Choose it from the list instead."
+          }
         }
       },
       "settings": {

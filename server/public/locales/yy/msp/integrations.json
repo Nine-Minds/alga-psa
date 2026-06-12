@@ -717,6 +717,309 @@
         }
       }
     },
+    "hudu": {
+      "clientTab": {
+        "source": "55555",
+        "openInHudu": "55555",
+        "refresh": "55555",
+        "loading": "55555",
+        "notConnected": "55555",
+        "unmapped": "55555",
+        "unreachable": "55555",
+        "assetsTitle": "55555",
+        "assetsEmpty": "55555",
+        "articlesTitle": "55555",
+        "articlesEmpty": "55555",
+        "serial": "55555",
+        "folder": "55555"
+      },
+      "passwordsTab": {
+        "source": "55555",
+        "openInHudu": "55555",
+        "refresh": "55555",
+        "loading": "55555",
+        "notConnected": "55555",
+        "unmapped": "55555",
+        "unreachable": "55555",
+        "noPasswordAccess": "55555",
+        "title": "55555",
+        "empty": "55555",
+        "reveal": "55555",
+        "hide": "55555",
+        "copy": "55555",
+        "revealNoAccess": "55555",
+        "revealNotFound": "55555",
+        "revealFailed": "55555"
+      },
+      "assets": {
+        "title": "55555",
+        "description": "55555",
+        "loading": "55555",
+        "empty": "55555",
+        "selectAsset": "55555",
+        "serial": "55555",
+        "archivedLabel": "55555",
+        "excludedHint": "55555",
+        "buttons": {
+          "importAll": "55555",
+          "importingAll": "55555",
+          "sync": "55555",
+          "syncing": "55555",
+          "import": "55555",
+          "importing": "55555",
+          "save": "55555",
+          "saving": "55555",
+          "discard": "55555"
+        },
+        "counters": {
+          "mapped": "55555",
+          "suggested": "55555",
+          "unmapped": "55555",
+          "total": "55555"
+        },
+        "table": {
+          "huduAsset": "55555",
+          "algaAsset": "55555",
+          "status": "55555",
+          "actions": "55555"
+        },
+        "status": {
+          "mapped": "55555",
+          "suggested": "55555",
+          "unmapped": "55555",
+          "pending": "55555",
+          "stale": "55555"
+        },
+        "suggestion": {
+          "label": "55555",
+          "source": {
+            "serial": "55555",
+            "exactName": "55555",
+            "fuzzyName": "55555"
+          }
+        },
+        "rowActions": {
+          "unmap": "55555",
+          "revert": "55555",
+          "dismiss": "55555"
+        },
+        "pendingSummary": "55555 {{total}} 55555",
+        "sync": {
+          "summary": "55555 {{updated}} 55555 {{unchanged}} 55555 {{stale}} 55555",
+          "rmmSkipped": "55555 {{rmmSkipped}} 55555",
+          "lastSynced": "55555 {{timestamp}} 55555"
+        },
+        "import": {
+          "summary": "55555 {{created}} 55555 {{skipped}} 55555 {{failed}} 55555"
+        },
+        "success": {
+          "saved": "55555 {{total}} 55555",
+          "imported": "55555 {{name}} 55555"
+        },
+        "errors": {
+          "load": "55555",
+          "save": "55555",
+          "import": "55555",
+          "importAll": "55555",
+          "serialConflict": "55555 {{name}} 55555",
+          "sync": "55555",
+          "rateLimited": "55555",
+          "unmapped": "55555",
+          "assetAlreadyMapped": "55555",
+          "huduAssetAlreadyMapped": "55555",
+          "mappingConflict": "55555",
+          "notFound": "55555"
+        },
+        "toasts": {
+          "errorTitle": "55555"
+        }
+      },
+      "documents": {
+        "sectionTitle": "55555",
+        "loading": "55555",
+        "empty": "55555",
+        "unreachable": "55555"
+      },
+      "documentsTab": {
+        "title": "55555",
+        "source": "55555",
+        "searchPlaceholder": "55555",
+        "loading": "55555",
+        "empty": "55555",
+        "notConnected": "55555",
+        "unreachable": "55555",
+        "articleColumn": "55555",
+        "clientColumn": "55555",
+        "companyColumn": "55555",
+        "updatedColumn": "55555",
+        "unmapped": "55555",
+        "previous": "55555",
+        "next": "55555",
+        "pageLabel": "55555"
+      },
+      "mapping": {
+        "title": "55555",
+        "description": "55555",
+        "loading": "55555",
+        "companyId": "55555",
+        "idInIntegration": "55555",
+        "selectClient": "55555",
+        "buttons": {
+          "refresh": "55555",
+          "refreshing": "55555",
+          "save": "55555",
+          "saving": "55555",
+          "discard": "55555"
+        },
+        "counters": {
+          "mapped": "55555",
+          "suggested": "55555",
+          "unmapped": "55555",
+          "total": "55555"
+        },
+        "table": {
+          "huduCompany": "55555",
+          "algaClient": "55555",
+          "status": "55555"
+        },
+        "status": {
+          "mapped": "55555",
+          "suggested": "55555",
+          "unmapped": "55555",
+          "pending": "55555"
+        },
+        "suggestion": {
+          "label": "55555",
+          "source": {
+            "integrationId": "55555",
+            "exactName": "55555",
+            "fuzzyName": "55555"
+          }
+        },
+        "empty": {
+          "title": "55555",
+          "hint": "55555"
+        },
+        "unmappedHint": "55555",
+        "success": {
+          "refreshed": "55555",
+          "saved": "55555 {{total}} 55555"
+        },
+        "errors": {
+          "load": "55555",
+          "refresh": "55555",
+          "save": "55555",
+          "clientAlreadyMapped": "55555",
+          "companyAlreadyMapped": "55555",
+          "mappingConflict": "55555",
+          "notFound": "55555"
+        },
+        "toasts": {
+          "errorTitle": "55555"
+        },
+        "pendingSummary": "55555 {{total}} 55555",
+        "rowActions": {
+          "unmap": "55555",
+          "revert": "55555",
+          "dismiss": "55555"
+        }
+      },
+      "layoutMap": {
+        "title": "55555",
+        "description": "55555",
+        "loading": "55555",
+        "empty": "55555",
+        "suggested": "55555",
+        "table": {
+          "huduLayout": "55555",
+          "algaAssetType": "55555"
+        },
+        "types": {
+          "workstation": "55555",
+          "networkDevice": "55555",
+          "server": "55555",
+          "mobileDevice": "55555",
+          "printer": "55555",
+          "unknown": "55555"
+        },
+        "excludeOption": "55555",
+        "buttons": {
+          "save": "55555",
+          "saving": "55555"
+        },
+        "success": {
+          "saved": "55555"
+        },
+        "errors": {
+          "load": "55555",
+          "save": "55555"
+        },
+        "createType": {
+          "button": "55555",
+          "creating": "55555",
+          "success": "55555",
+          "errors": {
+            "create": "55555",
+            "slugConflict": "55555"
+          }
+        }
+      },
+      "settings": {
+        "title": "55555",
+        "description": "55555",
+        "loading": "55555",
+        "detectedInstance": "55555",
+        "status": {
+          "connected": "55555",
+          "notConnected": "55555",
+          "error": "55555"
+        },
+        "passwordAccess": {
+          "enabled": "55555",
+          "disabled": "55555"
+        },
+        "fields": {
+          "baseUrl": {
+            "label": "55555",
+            "placeholder": "55555"
+          },
+          "apiKey": {
+            "label": "55555",
+            "placeholder": "55555",
+            "keepExisting": "55555",
+            "writeOnlyHint": "55555"
+          }
+        },
+        "buttons": {
+          "test": "55555",
+          "testing": "55555",
+          "connect": "55555",
+          "connecting": "55555",
+          "disconnect": "55555",
+          "disconnecting": "55555"
+        },
+        "success": {
+          "connected": "55555",
+          "testPassedWithPasswords": "55555",
+          "testPassedNoPasswords": "55555",
+          "disconnected": "55555"
+        },
+        "errors": {
+          "loadStatus": "55555",
+          "baseUrlRequired": "55555",
+          "baseUrlFormat": "55555",
+          "invalidBaseUrl": "55555",
+          "unreachable": "55555",
+          "invalidKey": "55555",
+          "testFailed": "55555",
+          "connectFailed": "55555",
+          "disconnectFailed": "55555"
+        },
+        "toasts": {
+          "errorTitle": "55555"
+        }
+      }
+    },
     "microsoft": {
       "settings": {
         "actions": {

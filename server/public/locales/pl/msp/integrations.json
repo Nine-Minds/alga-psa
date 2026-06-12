@@ -953,6 +953,15 @@
         "errors": {
           "load": "Nie udało się załadować układów zasobów Hudu.",
           "save": "Nie udało się zapisać mapowania układów zasobów."
+        },
+        "createType": {
+          "button": "Utwórz typ z układu",
+          "creating": "Tworzenie...",
+          "success": "Utworzono typ zasobu i przypisano go do tego układu.",
+          "errors": {
+            "create": "Nie udało się utworzyć typu zasobu z tego układu.",
+            "slugConflict": "Typ zasobu o tej nazwie już istnieje. Wybierz go z listy."
+          }
         }
       },
       "settings": {

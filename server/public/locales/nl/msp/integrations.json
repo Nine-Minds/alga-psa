@@ -953,6 +953,15 @@
         "errors": {
           "load": "Kan Hudu-asset-layouts niet laden.",
           "save": "Kan de asset-layout-toewijzing niet opslaan."
+        },
+        "createType": {
+          "button": "Type aanmaken op basis van layout",
+          "creating": "Aanmaken...",
+          "success": "Assettype aangemaakt en aan deze layout toegewezen.",
+          "errors": {
+            "create": "Kan geen assettype aanmaken op basis van deze layout.",
+            "slugConflict": "Er bestaat al een assettype met deze naam. Kies het in plaats daarvan uit de lijst."
+          }
         }
       },
       "settings": {

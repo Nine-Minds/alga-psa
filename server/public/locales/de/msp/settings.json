@@ -1894,5 +1894,97 @@
   "language": {
     "selectLanguage": "Sprache auswählen",
     "languagesUpdated": "Verfügbare Sprachen aktualisiert"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Assets",
+      "title": "Asset-Typen",
+      "description": "Verwalten Sie die in Ihrem Asset-Modul verfügbaren Asset-Typen. Benutzerdefinierte Typen tragen ein Feldschema, das ihre Erstell-/Bearbeitungsformulare bestimmt.",
+      "loading": "Asset-Typen werden geladen...",
+      "table": {
+        "name": "Name",
+        "builtin": "Integriert",
+        "slug": "Bezeichner",
+        "fieldCount": "Felder",
+        "order": "Reihenfolge",
+        "actions": "Aktionen",
+        "openMenu": "Menü öffnen"
+      },
+      "actions": {
+        "addType": "Asset-Typ hinzufügen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "save": "Speichern",
+        "create": "Erstellen",
+        "confirmDelete": "Löschen"
+      },
+      "dialog": {
+        "createTitle": "Asset-Typ hinzufügen",
+        "editTitle": "Asset-Typ bearbeiten",
+        "nameLabel": "Name",
+        "namePlaceholder": "z. B. Firewall",
+        "displayOrderLabel": "Anzeigereihenfolge",
+        "iconLabel": "Symbol",
+        "builtinSchemaHint": "Integrierte Typen verwenden feste, von AlgaPSA verwaltete Formulare; ihr Feldschema kann daher nicht bearbeitet werden. Sie können den Typ weiterhin umbenennen oder sein Symbol ändern."
+      },
+      "deleteDialog": {
+        "title": "Asset-Typ löschen",
+        "message": "Dadurch wird \"{{name}}\" dauerhaft aus Ihrem Asset-Typ-Register entfernt."
+      },
+      "messages": {
+        "created": "Asset-Typ erstellt",
+        "updated": "Asset-Typ aktualisiert",
+        "deleted": "Asset-Typ gelöscht"
+      },
+      "errors": {
+        "fetchFailed": "Asset-Typen konnten nicht geladen werden.",
+        "saveFailed": "Asset-Typ konnte nicht gespeichert werden.",
+        "deleteFailed": "Asset-Typ konnte nicht gelöscht werden.",
+        "invalidName": "Geben Sie einen Namen für diesen Asset-Typ ein.",
+        "invalidSchema": "Das Feldschema ist ungültig. Korrigieren Sie die markierten Felder und versuchen Sie es erneut.",
+        "reservedSlug": "Der Bezeichner \"{{slug}}\" ist für einen integrierten Typ reserviert. Wählen Sie einen anderen Namen.",
+        "slugConflict": "Ein Asset-Typ mit dem Bezeichner \"{{slug}}\" existiert bereits.",
+        "notFound": "Dieser Asset-Typ existiert nicht mehr.",
+        "builtinImmutable": "Bei integrierten Typen können nur Name und Symbol geändert werden.",
+        "builtinUndeletable": "Integrierte Typen können nicht gelöscht werden.",
+        "inUse": "Dieser Typ wird noch von {{assetCount}} Asset(s) verwendet. Weisen Sie diese Assets neu zu, bevor Sie ihn löschen.",
+        "unknown": "Etwas ist schiefgelaufen."
+      },
+      "editor": {
+        "title": "Felder",
+        "empty": "Noch keine Felder. Fügen Sie Felder hinzu, um das Erstell-/Bearbeitungsformular für diesen Typ aufzubauen.",
+        "addField": "Feld hinzufügen",
+        "fieldLabel": "Beschriftung",
+        "fieldLabelPlaceholder": "z. B. Seriennummer",
+        "fieldKey": "Schlüssel",
+        "fieldKeyPlaceholder": "z. B. serial_number",
+        "fieldKind": "Art",
+        "fieldRequired": "Erforderlich",
+        "fieldOptions": "Optionen (durch Komma getrennt)",
+        "fieldOptionsPlaceholder": "z. B. Gold, Silber, Bronze",
+        "moveUp": "Feld nach oben verschieben",
+        "moveDown": "Feld nach unten verschieben",
+        "removeField": "Feld entfernen",
+        "kinds": {
+          "text": "Text",
+          "number": "Zahl",
+          "date": "Datum",
+          "select": "Auswahl",
+          "url": "URL",
+          "boolean": "Ja / Nein"
+        },
+        "errors": {
+          "invalidKey": "Der Schlüssel muss mit einem Kleinbuchstaben beginnen und darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten.",
+          "duplicateKey": "Jeder Feldschlüssel muss eindeutig sein.",
+          "missingLabel": "Beschriftung ist erforderlich.",
+          "invalidKind": "Wählen Sie eine gültige Feldart.",
+          "invalidRequired": "\"Erforderlich\" muss ein- oder ausgeschaltet sein.",
+          "missingOptions": "Auswahlfelder benötigen mindestens eine Option.",
+          "invalidOptions": "Optionen dürfen nicht leer sein.",
+          "invalidField": "Dieses Feld ist ungültig."
+        }
+      }
+    }
   }
 }

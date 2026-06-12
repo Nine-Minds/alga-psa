@@ -953,6 +953,15 @@
         "errors": {
           "load": "Impossibile caricare i layout degli asset Hudu.",
           "save": "Impossibile salvare la mappatura dei layout degli asset."
+        },
+        "createType": {
+          "button": "Crea tipo dal layout",
+          "creating": "Creazione...",
+          "success": "Tipo di asset creato e assegnato a questo layout.",
+          "errors": {
+            "create": "Impossibile creare un tipo di asset da questo layout.",
+            "slugConflict": "Esiste già un tipo di asset con questo nome. Selezionalo invece dall'elenco."
+          }
         }
       },
       "settings": {
