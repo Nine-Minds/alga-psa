@@ -1,0 +1,365 @@
+[
+  {
+    "id": "F201",
+    "description": "HuduClient.listAssetLayouts(): typed GET /api/v1/asset_layouts (id, name), short server-side cache",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "prdRefs": [
+      "Data / Integration Notes"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "HuduClient.listAllArticles({page, search}): global articles (no company_id), one Hudu page per call; verify search param (?search= vs ?name=) against local instance",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "prdRefs": [
+      "FR14",
+      "OQ1"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "New endpoints propagate Phase 1 typed error kinds (auth, not-found, rate-limit 429)",
+    "implemented": true,
+    "commitGroup": "hudu-client-ext",
+    "prdRefs": [
+      "NFR2"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "asset_layout_type_map jsonb contract + repository get/set on hudu_integrations.settings",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "getHuduAssetLayoutMap/setHuduAssetLayoutMap actions behind EE+flag+system_settings update guard",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "prdRefs": [
+      "FR11",
+      "FR16"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "suggestAssetTypeForLayout(name) heuristic (server/workstation/printer/mobile/network keywords, unknown fallback)",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Asset layouts block in HuduIntegrationSettings: live layout list x asset-type select, heuristic prefill, explicit Save",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Import resolves unconfigured layouts to asset_type 'unknown'",
+    "implemented": true,
+    "commitGroup": "layout-type-config",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Pure suggestHuduAssetMappings(): serial exact 1.0 -> name exact 0.9 -> fuzzy >=0.8 (reuses huduNameSimilarity incl. suffix rules), greedy one-to-one, mapped rows/assets excluded",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Empty/missing serials never produce a serial match",
+    "implemented": true,
+    "commitGroup": "asset-matcher",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "Asset mapping persistence on tenant_external_entity_mappings (alga_entity_type='asset', tenant_id column): set/clear/list with typed one-to-one conflict errors, metadata (hudu_asset_name, hudu_company_id, asset_layout_id/name, primary_serial, url)",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "getHuduAssetMappings(clientId) action: company assets (Phase 1 fetch/cache) + client's Alga assets + mapping rows + suggestions -> view model",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "prdRefs": [
+      "FR2",
+      "FR3"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "setHuduAssetMapping/clearHuduAssetMapping actions: EE+flag guard + asset update RBAC; replace = explicit clear+set",
+    "implemented": true,
+    "commitGroup": "asset-mapping-data",
+    "prdRefs": [
+      "FR3",
+      "FR16"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "importHuduAsset action: createAsset (name, serial_number=primary_serial, asset_type from layout map, client_id) + mapping row created atomically",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "asset_tag derivation: primary_serial when present and free, else hudu-<hudu asset id>; collision pre-check",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "prdRefs": [
+      "FR4",
+      "R2"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "Import uses the same default asset status as the manual create form",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "prdRefs": [
+      "FR4",
+      "OQ2"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "importAllUnmatchedHuduAssets action: sequential, per-item failure isolation, {created, failed} summary; asset create RBAC",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "prdRefs": [
+      "FR5",
+      "FR6"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "Mid-batch 429 stops the batch with a typed rate-limit error + partial summary",
+    "implemented": true,
+    "commitGroup": "asset-import",
+    "prdRefs": [
+      "NFR2"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "syncHuduClientAssets action: refetch company assets, update name/serial_number on mapped Alga assets when changed (Hudu wins on synced fields only)",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "Sync never changes asset_type or any non-synced Alga field, never deletes assets or mappings",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "prdRefs": [
+      "FR7",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "Stale flagging: archived/missing Hudu asset -> mapping metadata stale:true; cleared automatically on reappearance",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "Sync stamps last_synced_at on touched mapping rows and returns {updated, unchanged, stale} summary; asset update RBAC",
+    "implemented": true,
+    "commitGroup": "asset-sync",
+    "prdRefs": [
+      "FR9",
+      "FR10"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "Client Hudu tab Assets section becomes mapping manager: counters, per-row Alga asset picker, badges (Mapped/Suggested/Unmapped/Pending/Stale)",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "Staged Save/Discard bar with company-manager semantics: picker stages, Save commits, suggestions confirmed by Save, per-row dismiss/revert/unmap",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "Per-row Import on unmatched rows + 'Import all unmatched' with result summary; failures reported inline",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "'Sync from Hudu' button with last-synced timestamp and {updated, unchanged, stale} summary",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "Import/Sync affordances hidden without asset create/update RBAC respectively; Phase 1 empty/disconnected/error states preserved",
+    "implemented": true,
+    "commitGroup": "asset-mapping-ui",
+    "prdRefs": [
+      "FR6",
+      "FR10"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "HuduClientDocumentsSection: collapsed 'Hudu Documentation (N)' listing article name + updated_at + deep-link (link-only)",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "Section injected into ClientDetails documents tab via Phase 1 gate (EE+flag+connected+mapped); zero render otherwise",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "Hudu fetch errors isolated to the section; native documents UI unaffected",
+    "implemented": true,
+    "commitGroup": "client-docs-section",
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "listHuduArticlesAcrossCompanies action: one Hudu page per call, search passthrough, company->client resolution via companies cache + mapping rows, full server-side guard chain",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "prdRefs": [
+      "FR14",
+      "FR16"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "useHuduDocumentsTab gate hook (EE + flag + connected) for the Documents page",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "prdRefs": [
+      "FR15"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "Documents page 'Hudu' tab: search box, paged table (Hudu 25/page, prev/next), resolved client name or Unmapped badge, deep-links",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "prdRefs": [
+      "FR15"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "CE/flag-off builds show no trace of the tab and import no EE modules",
+    "implemented": true,
+    "commitGroup": "global-docs",
+    "prdRefs": [
+      "FR15",
+      "R4"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "All new UI strings via t(key, {defaultValue}) with keys added to en msp/integrations + msp/documents/clients namespaces as applicable",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "prdRefs": [
+      "NFR5"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "de/es/fr/it/nl/pl/pt translations for all new keys, matching established Hudu terminology per locale",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "prdRefs": [
+      "NFR5"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "huduI18n static test extended to scan the new Phase 2 components (key resolution + hardcoded-string sweep)",
+    "implemented": true,
+    "commitGroup": "i18n-phase2",
+    "prdRefs": [
+      "NFR5"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "Every new server action enforces the guard chain (401 unauth, 403 RBAC, 404 flag-off, CE 501) server-side",
+    "implemented": true,
+    "commitGroup": "regression-phase2",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "Phase 1 behavior unchanged: company mapping, passwords, client tab suites stay green; no new columns on mapping table (direction-agnostic)",
+    "implemented": true,
+    "commitGroup": "regression-phase2",
+    "prdRefs": [
+      "NFR4"
+    ]
+  }
+]
