@@ -378,7 +378,12 @@ export function isPrinterAsset(asset: unknown): asset is PrinterAsset {
 
 // Request interfaces
 export interface CreateAssetRequest {
-  asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
+  /**
+   * Built-in slugs: 'workstation' | 'network_device' | 'server' |
+   * 'mobile_device' | 'printer' | 'unknown'. Any other value must match a
+   * tenant asset_type_registry slug (custom type).
+   */
+  asset_type: string;
   client_id: string;
   asset_tag: string;
   name: string;
@@ -393,6 +398,8 @@ export interface CreateAssetRequest {
   server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;
   mobile_device?: Omit<MobileDeviceAsset, 'tenant' | 'asset_id'>;
   printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
+  /** Custom-type schema fields plus integration namespaces (e.g. hudu_fields). */
+  attributes?: Record<string, unknown>;
 }
 
 export type UpdateAssetRequest = Partial<CreateAssetRequest>;

@@ -8,6 +8,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
@@ -24,15 +27,13 @@ interface QuickAddAssetProps {
 
 type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
 type AssetStatus = 'active' | 'inactive' | 'maintenance';
-type AssetType = 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer';
 
 const STATUS_OPTION_VALUES: AssetStatus[] = ['active', 'inactive', 'maintenance'];
-const ASSET_TYPE_OPTION_VALUES: AssetType[] = ['workstation', 'network_device', 'server', 'mobile_device', 'printer'];
 
 interface FormData {
   name: string;
   asset_tag: string;
-  asset_type: AssetType | '';
+  asset_type: string;
   status: AssetStatus;
   serial_number: string;
   location_id: string | null;
@@ -57,6 +58,9 @@ interface FormData {
   printer: {
     model: string;
   };
+  // F309: custom-type schema field values, keyed by fields_schema key.
+  // Kept across type switches so re-selecting a type restores its values.
+  attributes: Record<string, unknown>;
 }
 
 export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = false }: QuickAddAssetProps) {
@@ -73,18 +77,17 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
+  const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
     value,
     label: t(`quickAddAsset.statusOptions.${value}`, {
       defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
     })
   }));
-  const assetTypeOptions: SelectOption[] = ASSET_TYPE_OPTION_VALUES.map((value) => ({
-    value,
-    label: t(`quickAddAsset.assetTypes.${value}`, {
-      defaultValue: value.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
-    })
-  }));
+  // F308: type options come from the tenant registry (built-ins first with
+  // their existing labels, then custom types by registry name).
+  const registryEntries = useAssetTypeRegistry(open);
+  const assetTypeOptions: SelectOption[] = buildAssetTypeOptions(registryEntries, t);
 
   const handleClose = () => {
     setOpen(false);
@@ -120,8 +123,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     },
     printer: {
       model: ''
-    }
+    },
+    attributes: {}
   });
+
+  // F309: registry entry for the selected slug when it is a custom type.
+  const selectedCustomType = findCustomAssetType(registryEntries, formData.asset_type);
+  const customTypeFields = selectedCustomType?.fields_schema ?? [];
 
   useEffect(() => {
     if (defaultOpen) {
@@ -221,7 +229,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     e.preventDefault();
     setHasAttemptedSubmit(true);
 
-    const validationErrors = validateForm();
+    // F309: required enforcement for custom-type schema fields.
+    const attributeIssues = selectedCustomType
+      ? validateAttributesAgainstSchema(customTypeFields, formData.attributes, { requireAll: true })
+      : [];
+    setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
+
+    const validationErrors = [...validateForm(), ...attributeIssues.map((issue) => issue.message)];
     if (validationErrors.length > 0) {
       setError(validationErrors.join('\n'));
       return;
@@ -251,6 +265,11 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         location: formData.location.trim() || undefined,
         serial_number: formData.serial_number || undefined
       };
+
+      // F309: custom-type schema values land in payload.attributes.
+      if (selectedCustomType) {
+        assetData.attributes = pickSchemaAttributes(customTypeFields, formData.attributes);
+      }
 
       // Add type-specific data based on the selected type
       switch (formData.asset_type) {
@@ -328,8 +347,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         network_device: { device_type: 'switch', management_ip: '' },
         server: { os_type: '', os_version: '' },
         mobile_device: { os_type: '', model: '', is_supervised: false },
-        printer: { model: '' }
+        printer: { model: '' },
+        attributes: {}
       });
+      setAttributeErrors({});
       if (!clientId) {
         setSelectedClientId(null);
       }
@@ -346,6 +367,31 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
 
   const renderTypeSpecificFields = () => {
     if (!formData.asset_type) return null;
+
+    // F309: custom types render their fields_schema instead of the built-in
+    // extension panels; values read/write formData.attributes[key].
+    if (selectedCustomType) {
+      return (
+        <CustomTypeFieldsPanel
+          fields={customTypeFields}
+          values={formData.attributes}
+          errors={attributeErrors}
+          onChange={(key, value) => {
+            setFormData(prev => ({
+              ...prev,
+              attributes: { ...prev.attributes, [key]: value }
+            }));
+            setAttributeErrors(prev => {
+              if (!(key in prev)) return prev;
+              const { [key]: _removed, ...rest } = prev;
+              return rest;
+            });
+            clearErrorIfSubmitted();
+          }}
+          idPrefix="quick-add-asset"
+        />
+      );
+    }
 
     switch (formData.asset_type) {
       case 'workstation':
@@ -693,10 +739,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 options={assetTypeOptions}
                 value={formData.asset_type}
                 onValueChange={(value) => {
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    asset_type: value as AssetType 
+                  // D4: keep attributes values across type switches — fields
+                  // not in the new schema simply stop rendering.
+                  setFormData(prev => ({
+                    ...prev,
+                    asset_type: value
                   }));
+                  setAttributeErrors({});
                   clearErrorIfSubmitted();
                 }}
                 placeholder={t('quickAddAsset.placeholders.selectType', {
@@ -735,7 +784,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               />
             </div>
 
-            {formData.asset_type && (
+            {formData.asset_type && (!selectedCustomType || customTypeFields.length > 0) && (
               <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">
                   {t('quickAddAsset.sections.typeSpecificDetails', {
