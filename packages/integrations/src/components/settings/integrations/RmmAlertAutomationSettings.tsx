@@ -1618,7 +1618,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
           <CardHeader>
             <CardTitle>Alert Polling</CardTitle>
             <CardDescription>
-              NinjaOne alerts are fetched on a schedule. Configure the polling interval below.
+              Alga periodically fetches active alerts from the RMM to catch anything a webhook missed. Configure the polling interval below.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
