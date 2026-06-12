@@ -751,6 +751,109 @@
         "revealNotFound": "Ce mot de passe est introuvable dans Hudu.",
         "revealFailed": "Le mot de passe n'a pas pu être affiché. Réessayez plus tard."
       },
+      "assets": {
+        "title": "Actifs",
+        "description": "Mappez les actifs Hudu aux actifs AlgaPSA, importez les actifs sans correspondance et récupérez les mises à jour depuis Hudu.",
+        "loading": "Chargement des mappages d'actifs...",
+        "empty": "Aucun actif Hudu pour cette entreprise.",
+        "selectAsset": "Sélectionner un actif",
+        "serial": "Numéro de série",
+        "archivedLabel": "Archivé",
+        "buttons": {
+          "importAll": "Importer tous les actifs sans correspondance",
+          "importingAll": "Importation...",
+          "sync": "Synchroniser depuis Hudu",
+          "syncing": "Synchronisation...",
+          "import": "Importer",
+          "importing": "Importation...",
+          "save": "Enregistrer les mappages",
+          "saving": "Enregistrement...",
+          "discard": "Abandonner"
+        },
+        "counters": {
+          "mapped": "mappés",
+          "suggested": "suggérés",
+          "unmapped": "non mappés",
+          "total": "total"
+        },
+        "table": {
+          "huduAsset": "Actif Hudu",
+          "algaAsset": "Actif AlgaPSA",
+          "status": "Statut",
+          "actions": "Actions"
+        },
+        "status": {
+          "mapped": "Mappé",
+          "suggested": "Suggéré",
+          "unmapped": "Non mappé",
+          "pending": "En attente",
+          "stale": "Obsolète"
+        },
+        "suggestion": {
+          "label": "Suggestion",
+          "source": {
+            "serial": "Correspondance de numéro de série",
+            "exactName": "Nom exact",
+            "fuzzyName": "Nom similaire"
+          }
+        },
+        "rowActions": {
+          "unmap": "Supprimer le mappage",
+          "revert": "Annuler la modification",
+          "dismiss": "Ignorer la suggestion"
+        },
+        "pendingSummary": "Modifications non enregistrées : {{total}}",
+        "sync": {
+          "summary": "Synchronisation terminée : {{updated}} mis à jour · {{unchanged}} inchangés · {{stale}} obsolètes.",
+          "lastSynced": "Dernière synchronisation : {{timestamp}}"
+        },
+        "import": {
+          "summary": "Importation terminée : {{created}} créés · {{failed}} en échec."
+        },
+        "success": {
+          "saved": "Mappages d'actifs enregistrés : {{total}}",
+          "imported": "« {{name}} » importé depuis Hudu."
+        },
+        "errors": {
+          "load": "Échec du chargement des mappages d'actifs Hudu.",
+          "save": "Échec de la mise à jour du mappage de l'actif.",
+          "import": "Échec de l'importation de l'actif Hudu.",
+          "importAll": "Échec de l'importation en masse.",
+          "sync": "Échec de la synchronisation depuis Hudu.",
+          "rateLimited": "Limite de requêtes Hudu atteinte. Réessayez plus tard.",
+          "unmapped": "Ce client n'est pas mappé à une entreprise Hudu.",
+          "assetAlreadyMapped": "Cet actif est déjà mappé à un autre actif Hudu. Supprimez d'abord le mappage existant.",
+          "huduAssetAlreadyMapped": "Cet actif Hudu est déjà mappé à un actif. Supprimez d'abord le mappage existant.",
+          "mappingConflict": "Ce mappage est en conflit avec un mappage existant. Actualisez et réessayez.",
+          "notFound": "Mappage introuvable. Actualisez et réessayez."
+        },
+        "toasts": {
+          "errorTitle": "Erreur de mappage d'actif Hudu"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Documentation Hudu",
+        "loading": "Chargement des articles Hudu...",
+        "empty": "Aucun article Hudu",
+        "unreachable": "Impossible de joindre Hudu. Réessayez plus tard."
+      },
+      "documentsTab": {
+        "title": "Articles Hudu",
+        "source": "Source : Hudu",
+        "searchPlaceholder": "Rechercher des articles Hudu...",
+        "loading": "Chargement des articles Hudu...",
+        "empty": "Aucun article Hudu trouvé.",
+        "notConnected": "Hudu n'est pas connecté. Un administrateur peut le connecter dans Paramètres → Intégrations.",
+        "unreachable": "Impossible de joindre Hudu. Réessayez plus tard.",
+        "articleColumn": "Article",
+        "clientColumn": "Client",
+        "companyColumn": "Entreprise Hudu",
+        "updatedColumn": "Mis à jour",
+        "unmapped": "Non mappé",
+        "previous": "Précédent",
+        "next": "Suivant",
+        "pageLabel": "Page"
+      },
       "mapping": {
         "title": "Mappages d'entreprises",
         "description": "Mappez les entreprises Hudu aux clients AlgaPSA pour afficher leur documentation.",
@@ -816,6 +919,36 @@
           "unmap": "Supprimer le mappage",
           "revert": "Annuler la modification",
           "dismiss": "Ignorer la suggestion"
+        }
+      },
+      "layoutMap": {
+        "title": "Modèles d'actifs",
+        "description": "Choisissez le type d'actif AlgaPSA sous lequel chaque modèle d'actif Hudu est importé. Les modèles non configurés sont importés comme Inconnu.",
+        "loading": "Chargement des modèles d'actifs...",
+        "empty": "Aucun modèle d'actif trouvé dans Hudu.",
+        "suggested": "Suggestion",
+        "table": {
+          "huduLayout": "Modèle Hudu",
+          "algaAssetType": "Type d'actif AlgaPSA"
+        },
+        "types": {
+          "workstation": "Poste de travail",
+          "networkDevice": "Périphérique réseau",
+          "server": "Serveur",
+          "mobileDevice": "Appareil mobile",
+          "printer": "Imprimante",
+          "unknown": "Inconnu"
+        },
+        "buttons": {
+          "save": "Enregistrer le mappage des modèles",
+          "saving": "Enregistrement..."
+        },
+        "success": {
+          "saved": "Mappage des modèles d'actifs enregistré."
+        },
+        "errors": {
+          "load": "Échec du chargement des modèles d'actifs Hudu.",
+          "save": "Échec de l'enregistrement du mappage des modèles d'actifs."
         }
       },
       "settings": {

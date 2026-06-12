@@ -1,14 +1,15 @@
 /**
- * T100 (F100) — static i18n verification for the Hudu UI.
+ * T100 (F100) + T246–T248 (F235–F237) — static i18n verification for the Hudu UI.
  *
  * Two halves:
  * 1. Key resolution — every `t('integrations.hudu…' / 'integrations.categories.
- *    itDocumentation…' / 'integrations.items.hudu…' / 'clientDetails.hudu…')`
- *    key used by the Hudu components (and the two ClientDetails tab labels +
- *    the IntegrationsSettingsPage category/item entries) must resolve to a
+ *    itDocumentation…' / 'integrations.items.hudu…' / 'clientDetails.hudu…' /
+ *    'documents.huduTab…')` key used by the Hudu components (plus the two
+ *    ClientDetails tab labels, the IntegrationsSettingsPage category/item
+ *    entries, and the two DocumentsPage tab labels) must resolve to a
  *    non-empty string in the matching en locale JSON for its namespace:
- *    msp/integrations → integrations.json, msp/clients → clients.json,
- *    msp/settings → settings.json.
+ *    msp/integrations → msp/integrations.json, msp/clients → msp/clients.json,
+ *    msp/settings → msp/settings.json, common → common.json.
  * 2. Hardcoded-string sweep — no literal user-facing text nodes in the Hudu
  *    component JSX (everything must go through t(key, { defaultValue })).
  *
@@ -30,29 +31,40 @@ import huduClientTabSource from '@ee/components/integrations/hudu/HuduClientTab.
 // @ts-expect-error Vite raw import (static source scan).
 import huduClientPasswordsTabSource from '@ee/components/integrations/hudu/HuduClientPasswordsTab.tsx?raw';
 // @ts-expect-error Vite raw import (static source scan).
+import huduAssetLayoutMapManagerSource from '@ee/components/settings/integrations/hudu/HuduAssetLayoutMapManager.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import huduAssetMappingManagerSource from '@ee/components/integrations/hudu/HuduAssetMappingManager.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import huduClientDocumentsSectionSource from '@ee/components/integrations/hudu/HuduClientDocumentsSection.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import huduDocumentsTabSource from '@ee/components/integrations/hudu/HuduDocumentsTab.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
 import clientDetailsSource from '@alga-psa/clients/components/clients/ClientDetails.tsx?raw';
 // @ts-expect-error Vite raw import (static source scan).
 import integrationsSettingsPageSource from '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage.tsx?raw';
+// @ts-expect-error Vite raw import (static source scan).
+import documentsPageSource from '@alga-psa/documents/components/DocumentsPage.tsx?raw';
 
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
 function readLocale(file: string, locale = 'en'): Record<string, unknown> {
   return JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'server', 'public', 'locales', locale, 'msp', file), 'utf8')
+    fs.readFileSync(path.join(repoRoot, 'server', 'public', 'locales', locale, file), 'utf8')
   );
 }
 
 const locales = {
-  'msp/integrations': readLocale('integrations.json'),
-  'msp/clients': readLocale('clients.json'),
-  'msp/settings': readLocale('settings.json'),
+  'msp/integrations': readLocale('msp/integrations.json'),
+  'msp/clients': readLocale('msp/clients.json'),
+  'msp/settings': readLocale('msp/settings.json'),
+  common: readLocale('common.json'),
 } as const;
 
 type Namespace = keyof typeof locales;
 
 /** Only the Hudu-owned key families are this test's concern. */
 const HUDU_KEY_PATTERN =
-  /^(integrations\.hudu\.|integrations\.categories\.itDocumentation\.|integrations\.items\.hudu\.|clientDetails\.hudu)/;
+  /^(integrations\.hudu\.|integrations\.categories\.itDocumentation\.|integrations\.items\.hudu\.|clientDetails\.hudu|documents\.huduTab\.)/;
 
 /** All `t('…')` first-argument string literals in a source. */
 function collectTranslationKeys(source: string): string[] {
@@ -83,6 +95,8 @@ interface ScannedSource {
   namespace: Namespace;
   /** Lower bound on collected keys — guards the extraction regex against rot. */
   minKeys: number;
+  /** Hudu-owned components get the hardcoded-string sweep; host pages do not. */
+  sweep: boolean;
 }
 
 const keySources: ScannedSource[] = [
@@ -91,36 +105,77 @@ const keySources: ScannedSource[] = [
     source: huduIntegrationSettingsSource as string,
     namespace: 'msp/integrations',
     minKeys: 25,
+    sweep: true,
   },
   {
     label: 'HuduCompanyMappingManager.tsx',
     source: huduCompanyMappingManagerSource as string,
     namespace: 'msp/integrations',
     minKeys: 25,
+    sweep: true,
   },
   {
     label: 'HuduClientTab.tsx',
     source: huduClientTabSource as string,
     namespace: 'msp/integrations',
     minKeys: 10,
+    sweep: true,
   },
   {
     label: 'HuduClientPasswordsTab.tsx',
     source: huduClientPasswordsTabSource as string,
     namespace: 'msp/integrations',
     minKeys: 14,
+    sweep: true,
+  },
+  {
+    label: 'HuduAssetLayoutMapManager.tsx',
+    source: huduAssetLayoutMapManagerSource as string,
+    namespace: 'msp/integrations',
+    minKeys: 18,
+    sweep: true,
+  },
+  {
+    label: 'HuduAssetMappingManager.tsx',
+    source: huduAssetMappingManagerSource as string,
+    namespace: 'msp/integrations',
+    minKeys: 40,
+    sweep: true,
+  },
+  {
+    label: 'HuduClientDocumentsSection.tsx',
+    source: huduClientDocumentsSectionSource as string,
+    namespace: 'msp/integrations',
+    minKeys: 4,
+    sweep: true,
+  },
+  {
+    label: 'HuduDocumentsTab.tsx',
+    source: huduDocumentsTabSource as string,
+    namespace: 'msp/integrations',
+    minKeys: 14,
+    sweep: true,
   },
   {
     label: 'ClientDetails.tsx (hudu tab labels)',
     source: clientDetailsSource as string,
     namespace: 'msp/clients',
     minKeys: 2,
+    sweep: false,
   },
   {
     label: 'IntegrationsSettingsPage.tsx (category + item)',
     source: integrationsSettingsPageSource as string,
     namespace: 'msp/settings',
     minKeys: 4,
+    sweep: false,
+  },
+  {
+    label: 'DocumentsPage.tsx (hudu tab labels)',
+    source: documentsPageSource as string,
+    namespace: 'common',
+    minKeys: 2,
+    sweep: false,
   },
 ];
 
@@ -142,14 +197,20 @@ describe('T100: every Hudu translation key resolves in the en locale', () => {
     const keys = collectHuduKeys(clientDetailsSource as string).sort();
     expect(keys).toEqual(['clientDetails.huduPasswordsTab', 'clientDetails.huduTab']);
   });
+
+  it('the two DocumentsPage Hudu tab labels are exactly the expected keys', () => {
+    const keys = collectHuduKeys(documentsPageSource as string).sort();
+    expect(keys).toEqual(['documents.huduTab.documentsTabLabel', 'documents.huduTab.tabLabel']);
+  });
 });
 
 // Every shipped real language (xx/yy pseudo-locales excluded by convention).
 const TRANSLATED_LOCALES = ['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt'] as const;
 const NAMESPACE_FILES: Record<Namespace, string> = {
-  'msp/integrations': 'integrations.json',
-  'msp/clients': 'clients.json',
-  'msp/settings': 'settings.json',
+  'msp/integrations': 'msp/integrations.json',
+  'msp/clients': 'msp/clients.json',
+  'msp/settings': 'msp/settings.json',
+  common: 'common.json',
 };
 
 describe('T100: every Hudu translation key is translated in every shipped locale', () => {
@@ -231,7 +292,7 @@ function findHardcodedTextNodes(source: string): string[] {
 }
 
 describe('T100: no hardcoded user-facing strings in the Hudu components', () => {
-  const componentSources = keySources.slice(0, 4); // the four Hudu-owned components
+  const componentSources = keySources.filter((entry) => entry.sweep); // the Hudu-owned components
 
   it.each(componentSources)('$label has no literal multi-word JSX text', ({ source, label }) => {
     expect(findHardcodedTextNodes(source), `${label}: untranslated literal text`).toEqual([]);

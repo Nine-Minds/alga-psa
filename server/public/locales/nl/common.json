@@ -588,6 +588,10 @@
       "entityPlaceholder": "Selecteer {{entityType}}",
       "entitySearchPlaceholder": "{{entityType}} zoeken...",
       "noEntities": "Geen {{entityType}} gevonden"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Documenten",
+      "tabLabel": "Hudu"
     }
   },
   "fields": {

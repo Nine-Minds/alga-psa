@@ -751,6 +751,109 @@
         "revealNotFound": "No se pudo encontrar esta contraseña en Hudu.",
         "revealFailed": "No se pudo mostrar la contraseña. Inténtelo de nuevo más tarde."
       },
+      "assets": {
+        "title": "Activos",
+        "description": "Asigne activos de Hudu a activos de AlgaPSA, importe los que no tengan coincidencia y obtenga actualizaciones desde Hudu.",
+        "loading": "Cargando asignaciones de activos...",
+        "empty": "No hay activos de Hudu para esta empresa.",
+        "selectAsset": "Seleccionar activo",
+        "serial": "Número de serie",
+        "archivedLabel": "Archivado",
+        "buttons": {
+          "importAll": "Importar todos los no coincidentes",
+          "importingAll": "Importando...",
+          "sync": "Sincronizar desde Hudu",
+          "syncing": "Sincronizando...",
+          "import": "Importar",
+          "importing": "Importando...",
+          "save": "Guardar asignaciones",
+          "saving": "Guardando...",
+          "discard": "Descartar"
+        },
+        "counters": {
+          "mapped": "asignados",
+          "suggested": "sugeridos",
+          "unmapped": "sin asignar",
+          "total": "en total"
+        },
+        "table": {
+          "huduAsset": "Activo de Hudu",
+          "algaAsset": "Activo de AlgaPSA",
+          "status": "Estado",
+          "actions": "Acciones"
+        },
+        "status": {
+          "mapped": "Asignado",
+          "suggested": "Sugerido",
+          "unmapped": "Sin asignar",
+          "pending": "Pendiente",
+          "stale": "Obsoleto"
+        },
+        "suggestion": {
+          "label": "Sugerencia",
+          "source": {
+            "serial": "Coincidencia de número de serie",
+            "exactName": "Nombre exacto",
+            "fuzzyName": "Nombre aproximado"
+          }
+        },
+        "rowActions": {
+          "unmap": "Quitar asignación",
+          "revert": "Revertir cambio",
+          "dismiss": "Descartar sugerencia"
+        },
+        "pendingSummary": "Cambios sin guardar: {{total}}",
+        "sync": {
+          "summary": "Sincronización completada: {{updated}} actualizados · {{unchanged}} sin cambios · {{stale}} obsoletos.",
+          "lastSynced": "Última sincronización: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Importación finalizada: {{created}} creados · {{failed}} fallidos."
+        },
+        "success": {
+          "saved": "Asignaciones de activos guardadas: {{total}}",
+          "imported": "Se importó «{{name}}» desde Hudu."
+        },
+        "errors": {
+          "load": "No se pudieron cargar las asignaciones de activos de Hudu.",
+          "save": "No se pudo actualizar la asignación del activo.",
+          "import": "No se pudo importar el activo de Hudu.",
+          "importAll": "La importación masiva falló.",
+          "sync": "No se pudo sincronizar desde Hudu.",
+          "rateLimited": "Se alcanzó el límite de solicitudes de Hudu. Inténtelo de nuevo más tarde.",
+          "unmapped": "Este cliente no está asignado a una empresa de Hudu.",
+          "assetAlreadyMapped": "Ese activo ya está asignado a otro activo de Hudu. Elimine primero la asignación existente.",
+          "huduAssetAlreadyMapped": "Este activo de Hudu ya está asignado a un activo. Elimine primero la asignación existente.",
+          "mappingConflict": "Esta asignación entra en conflicto con una existente. Actualice y vuelva a intentarlo.",
+          "notFound": "No se encontró la asignación. Actualice y vuelva a intentarlo."
+        },
+        "toasts": {
+          "errorTitle": "Error de asignación de activos de Hudu"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Documentación de Hudu",
+        "loading": "Cargando artículos de Hudu...",
+        "empty": "No hay artículos de Hudu",
+        "unreachable": "No se pudo contactar con Hudu. Inténtelo de nuevo más tarde."
+      },
+      "documentsTab": {
+        "title": "Artículos de Hudu",
+        "source": "Origen: Hudu",
+        "searchPlaceholder": "Buscar artículos de Hudu...",
+        "loading": "Cargando artículos de Hudu...",
+        "empty": "No se encontraron artículos de Hudu.",
+        "notConnected": "Hudu no está conectado. Un administrador puede conectarlo en Configuración → Integraciones.",
+        "unreachable": "No se pudo contactar con Hudu. Inténtelo de nuevo más tarde.",
+        "articleColumn": "Artículo",
+        "clientColumn": "Cliente",
+        "companyColumn": "Empresa de Hudu",
+        "updatedColumn": "Actualizado",
+        "unmapped": "Sin asignar",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "pageLabel": "Página"
+      },
       "mapping": {
         "title": "Asignaciones de empresas",
         "description": "Asigne empresas de Hudu a clientes de AlgaPSA para mostrar su documentación.",
@@ -816,6 +919,36 @@
           "unmap": "Quitar asignación",
           "revert": "Revertir cambio",
           "dismiss": "Descartar sugerencia"
+        }
+      },
+      "layoutMap": {
+        "title": "Diseños de activos",
+        "description": "Elija como qué tipo de activo de AlgaPSA se importa cada diseño de activo de Hudu. Los diseños sin configurar se importan como Desconocido.",
+        "loading": "Cargando diseños de activos...",
+        "empty": "No se encontraron diseños de activos en Hudu.",
+        "suggested": "Sugerencia",
+        "table": {
+          "huduLayout": "Diseño de Hudu",
+          "algaAssetType": "Tipo de activo de AlgaPSA"
+        },
+        "types": {
+          "workstation": "Puesto de trabajo",
+          "networkDevice": "Dispositivo de red",
+          "server": "Servidor",
+          "mobileDevice": "Dispositivo móvil",
+          "printer": "Impresora",
+          "unknown": "Desconocido"
+        },
+        "buttons": {
+          "save": "Guardar asignación de diseños",
+          "saving": "Guardando..."
+        },
+        "success": {
+          "saved": "Asignación de diseños de activos guardada."
+        },
+        "errors": {
+          "load": "No se pudieron cargar los diseños de activos de Hudu.",
+          "save": "No se pudo guardar la asignación de diseños de activos."
         }
       },
       "settings": {

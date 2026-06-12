@@ -751,6 +751,109 @@
         "revealNotFound": "Questa password non è stata trovata in Hudu.",
         "revealFailed": "Impossibile mostrare la password. Riprova più tardi."
       },
+      "assets": {
+        "title": "Asset",
+        "description": "Mappa gli asset Hudu agli asset AlgaPSA, importa quelli senza corrispondenza e recupera gli aggiornamenti da Hudu.",
+        "loading": "Caricamento mappature degli asset...",
+        "empty": "Nessun asset Hudu per questa azienda.",
+        "selectAsset": "Seleziona asset",
+        "serial": "Seriale",
+        "archivedLabel": "Archiviato",
+        "buttons": {
+          "importAll": "Importa tutti quelli senza corrispondenza",
+          "importingAll": "Importazione in corso...",
+          "sync": "Sincronizza da Hudu",
+          "syncing": "Sincronizzazione in corso...",
+          "import": "Importa",
+          "importing": "Importazione in corso...",
+          "save": "Salva mappature",
+          "saving": "Salvataggio in corso...",
+          "discard": "Scarta"
+        },
+        "counters": {
+          "mapped": "mappati",
+          "suggested": "suggeriti",
+          "unmapped": "non mappati",
+          "total": "totali"
+        },
+        "table": {
+          "huduAsset": "Asset Hudu",
+          "algaAsset": "Asset AlgaPSA",
+          "status": "Stato",
+          "actions": "Azioni"
+        },
+        "status": {
+          "mapped": "Mappato",
+          "suggested": "Suggerito",
+          "unmapped": "Non mappato",
+          "pending": "In sospeso",
+          "stale": "Obsoleto"
+        },
+        "suggestion": {
+          "label": "Suggerimento",
+          "source": {
+            "serial": "Corrispondenza del seriale",
+            "exactName": "Nome esatto",
+            "fuzzyName": "Nome simile"
+          }
+        },
+        "rowActions": {
+          "unmap": "Rimuovi mappatura",
+          "revert": "Annulla modifica",
+          "dismiss": "Ignora suggerimento"
+        },
+        "pendingSummary": "Modifiche non salvate: {{total}}",
+        "sync": {
+          "summary": "Sincronizzazione completata: {{updated}} aggiornati · {{unchanged}} invariati · {{stale}} obsoleti.",
+          "lastSynced": "Ultima sincronizzazione: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Importazione completata: {{created}} creati · {{failed}} non riusciti."
+        },
+        "success": {
+          "saved": "Mappature degli asset salvate: {{total}}",
+          "imported": "«{{name}}» importato da Hudu."
+        },
+        "errors": {
+          "load": "Impossibile caricare le mappature degli asset Hudu.",
+          "save": "Impossibile aggiornare la mappatura dell'asset.",
+          "import": "Impossibile importare l'asset Hudu.",
+          "importAll": "Importazione in blocco non riuscita.",
+          "sync": "Impossibile sincronizzare da Hudu.",
+          "rateLimited": "Limite di richieste Hudu raggiunto. Riprova più tardi.",
+          "unmapped": "Questo cliente non è mappato a un'azienda Hudu.",
+          "assetAlreadyMapped": "Questo asset è già mappato a un altro asset Hudu. Rimuovi prima la mappatura esistente.",
+          "huduAssetAlreadyMapped": "Questo asset Hudu è già mappato a un asset. Rimuovi prima la mappatura esistente.",
+          "mappingConflict": "Questa mappatura è in conflitto con una esistente. Aggiorna e riprova.",
+          "notFound": "Mappatura non trovata. Aggiorna e riprova."
+        },
+        "toasts": {
+          "errorTitle": "Errore di mappatura degli asset Hudu"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Documentazione Hudu",
+        "loading": "Caricamento articoli Hudu...",
+        "empty": "Nessun articolo Hudu",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi."
+      },
+      "documentsTab": {
+        "title": "Articoli Hudu",
+        "source": "Origine: Hudu",
+        "searchPlaceholder": "Cerca articoli Hudu...",
+        "loading": "Caricamento articoli Hudu...",
+        "empty": "Nessun articolo Hudu trovato.",
+        "notConnected": "Hudu non è connesso. Un amministratore può connetterlo in Impostazioni → Integrazioni.",
+        "unreachable": "Impossibile raggiungere Hudu. Riprova più tardi.",
+        "articleColumn": "Articolo",
+        "clientColumn": "Cliente",
+        "companyColumn": "Azienda Hudu",
+        "updatedColumn": "Aggiornato",
+        "unmapped": "Non mappato",
+        "previous": "Precedente",
+        "next": "Successivo",
+        "pageLabel": "Pagina"
+      },
       "mapping": {
         "title": "Mappature delle aziende",
         "description": "Mappa le aziende Hudu ai clienti AlgaPSA per mostrarne la documentazione.",
@@ -816,6 +919,36 @@
           "unmap": "Rimuovi mappatura",
           "revert": "Annulla modifica",
           "dismiss": "Ignora suggerimento"
+        }
+      },
+      "layoutMap": {
+        "title": "Layout degli asset",
+        "description": "Scegli come quale tipo di asset AlgaPSA viene importato ciascun layout di asset Hudu. I layout non configurati vengono importati come Sconosciuto.",
+        "loading": "Caricamento layout degli asset...",
+        "empty": "Nessun layout di asset trovato in Hudu.",
+        "suggested": "Suggerimento",
+        "table": {
+          "huduLayout": "Layout Hudu",
+          "algaAssetType": "Tipo di asset AlgaPSA"
+        },
+        "types": {
+          "workstation": "Stazione di lavoro",
+          "networkDevice": "Dispositivo di rete",
+          "server": "Server",
+          "mobileDevice": "Dispositivo mobile",
+          "printer": "Stampante",
+          "unknown": "Sconosciuto"
+        },
+        "buttons": {
+          "save": "Salva mappatura dei layout",
+          "saving": "Salvataggio in corso..."
+        },
+        "success": {
+          "saved": "Mappatura dei layout degli asset salvata."
+        },
+        "errors": {
+          "load": "Impossibile caricare i layout degli asset Hudu.",
+          "save": "Impossibile salvare la mappatura dei layout degli asset."
         }
       },
       "settings": {

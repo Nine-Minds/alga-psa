@@ -751,6 +751,109 @@
         "revealNotFound": "Dit wachtwoord kon niet worden gevonden in Hudu.",
         "revealFailed": "Het wachtwoord kon niet worden getoond. Probeer het later opnieuw."
       },
+      "assets": {
+        "title": "Assets",
+        "description": "Wijs Hudu-assets toe aan AlgaPSA-assets, importeer assets zonder match en haal updates op uit Hudu.",
+        "loading": "Asset-toewijzingen laden...",
+        "empty": "Geen Hudu-assets voor dit bedrijf.",
+        "selectAsset": "Asset selecteren",
+        "serial": "Serienummer",
+        "archivedLabel": "Gearchiveerd",
+        "buttons": {
+          "importAll": "Alle assets zonder match importeren",
+          "importingAll": "Bezig met importeren...",
+          "sync": "Synchroniseren vanuit Hudu",
+          "syncing": "Bezig met synchroniseren...",
+          "import": "Importeren",
+          "importing": "Bezig met importeren...",
+          "save": "Toewijzingen opslaan",
+          "saving": "Opslaan...",
+          "discard": "Verwerpen"
+        },
+        "counters": {
+          "mapped": "toegewezen",
+          "suggested": "voorgesteld",
+          "unmapped": "niet toegewezen",
+          "total": "totaal"
+        },
+        "table": {
+          "huduAsset": "Hudu-asset",
+          "algaAsset": "AlgaPSA-asset",
+          "status": "Status",
+          "actions": "Acties"
+        },
+        "status": {
+          "mapped": "Toegewezen",
+          "suggested": "Voorgesteld",
+          "unmapped": "Niet toegewezen",
+          "pending": "In afwachting",
+          "stale": "Verouderd"
+        },
+        "suggestion": {
+          "label": "Voorgesteld",
+          "source": {
+            "serial": "Serienummer-match",
+            "exactName": "Exacte naam",
+            "fuzzyName": "Vergelijkbare naam"
+          }
+        },
+        "rowActions": {
+          "unmap": "Toewijzing opheffen",
+          "revert": "Wijziging ongedaan maken",
+          "dismiss": "Suggestie negeren"
+        },
+        "pendingSummary": "Niet-opgeslagen wijzigingen: {{total}}",
+        "sync": {
+          "summary": "Synchronisatie voltooid: {{updated}} bijgewerkt · {{unchanged}} ongewijzigd · {{stale}} verouderd.",
+          "lastSynced": "Laatst gesynchroniseerd: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Import voltooid: {{created}} aangemaakt · {{failed}} mislukt."
+        },
+        "success": {
+          "saved": "Asset-toewijzingen opgeslagen: {{total}}",
+          "imported": "\"{{name}}\" geïmporteerd uit Hudu."
+        },
+        "errors": {
+          "load": "Kan Hudu-asset-toewijzingen niet laden.",
+          "save": "Kan de asset-toewijzing niet bijwerken.",
+          "import": "Kan het Hudu-asset niet importeren.",
+          "importAll": "Bulkimport mislukt.",
+          "sync": "Kan niet synchroniseren vanuit Hudu.",
+          "rateLimited": "Hudu-aanvraaglimiet bereikt. Probeer het later opnieuw.",
+          "unmapped": "Deze klant is niet toegewezen aan een Hudu-bedrijf.",
+          "assetAlreadyMapped": "Dat asset is al toegewezen aan een ander Hudu-asset. Verwijder eerst de bestaande toewijzing.",
+          "huduAssetAlreadyMapped": "Dit Hudu-asset is al toegewezen aan een asset. Verwijder eerst de bestaande toewijzing.",
+          "mappingConflict": "Deze toewijzing conflicteert met een bestaande toewijzing. Vernieuw en probeer het opnieuw.",
+          "notFound": "Toewijzing niet gevonden. Vernieuw en probeer het opnieuw."
+        },
+        "toasts": {
+          "errorTitle": "Hudu-asset-toewijzingsfout"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Hudu-documentatie",
+        "loading": "Hudu-artikelen laden...",
+        "empty": "Geen Hudu-artikelen",
+        "unreachable": "Hudu kon niet worden bereikt. Probeer het later opnieuw."
+      },
+      "documentsTab": {
+        "title": "Hudu-artikelen",
+        "source": "Bron: Hudu",
+        "searchPlaceholder": "Hudu-artikelen zoeken...",
+        "loading": "Hudu-artikelen laden...",
+        "empty": "Geen Hudu-artikelen gevonden.",
+        "notConnected": "Hudu is niet verbonden. Een beheerder kan de verbinding maken onder Instellingen → Integraties.",
+        "unreachable": "Hudu kon niet worden bereikt. Probeer het later opnieuw.",
+        "articleColumn": "Artikel",
+        "clientColumn": "Klant",
+        "companyColumn": "Hudu-bedrijf",
+        "updatedColumn": "Bijgewerkt",
+        "unmapped": "Niet toegewezen",
+        "previous": "Vorige",
+        "next": "Volgende",
+        "pageLabel": "Pagina"
+      },
       "mapping": {
         "title": "Bedrijfstoewijzingen",
         "description": "Wijs Hudu-bedrijven toe aan AlgaPSA-klanten om hun documentatie weer te geven.",
@@ -816,6 +919,36 @@
           "unmap": "Toewijzing opheffen",
           "revert": "Wijziging ongedaan maken",
           "dismiss": "Suggestie negeren"
+        }
+      },
+      "layoutMap": {
+        "title": "Asset-layouts",
+        "description": "Kies als welk AlgaPSA-assettype elke Hudu-asset-layout wordt geïmporteerd. Niet-geconfigureerde layouts worden geïmporteerd als Onbekend.",
+        "loading": "Asset-layouts laden...",
+        "empty": "Geen asset-layouts gevonden in Hudu.",
+        "suggested": "Voorgesteld",
+        "table": {
+          "huduLayout": "Hudu-layout",
+          "algaAssetType": "AlgaPSA-assettype"
+        },
+        "types": {
+          "workstation": "Werkstation",
+          "networkDevice": "Netwerkapparaat",
+          "server": "Server",
+          "mobileDevice": "Mobiel apparaat",
+          "printer": "Printer",
+          "unknown": "Onbekend"
+        },
+        "buttons": {
+          "save": "Layout-toewijzing opslaan",
+          "saving": "Opslaan..."
+        },
+        "success": {
+          "saved": "Asset-layout-toewijzing opgeslagen."
+        },
+        "errors": {
+          "load": "Kan Hudu-asset-layouts niet laden.",
+          "save": "Kan de asset-layout-toewijzing niet opslaan."
         }
       },
       "settings": {

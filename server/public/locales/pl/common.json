@@ -658,6 +658,10 @@
       "entityPlaceholder": "Wybierz: {{entityType}}",
       "entitySearchPlaceholder": "Szukaj: {{entityType}}...",
       "noEntities": "Nie znaleziono: {{entityType}}"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Dokumenty",
+      "tabLabel": "Hudu"
     }
   },
   "surveys": {

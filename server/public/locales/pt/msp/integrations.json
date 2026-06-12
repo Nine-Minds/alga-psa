@@ -751,6 +751,109 @@
         "revealNotFound": "Esta senha não foi encontrada no Hudu.",
         "revealFailed": "Não foi possível revelar a senha. Tente novamente mais tarde."
       },
+      "assets": {
+        "title": "Ativos",
+        "description": "Mapeie ativos do Hudu para ativos do AlgaPSA, importe os sem correspondência e obtenha atualizações do Hudu.",
+        "loading": "Carregando mapeamentos de ativos...",
+        "empty": "Nenhum ativo do Hudu para esta empresa.",
+        "selectAsset": "Selecionar ativo",
+        "serial": "Número de série",
+        "archivedLabel": "Arquivado",
+        "buttons": {
+          "importAll": "Importar todos sem correspondência",
+          "importingAll": "Importando...",
+          "sync": "Sincronizar do Hudu",
+          "syncing": "Sincronizando...",
+          "import": "Importar",
+          "importing": "Importando...",
+          "save": "Salvar mapeamentos",
+          "saving": "Salvando...",
+          "discard": "Descartar"
+        },
+        "counters": {
+          "mapped": "mapeados",
+          "suggested": "sugeridos",
+          "unmapped": "não mapeados",
+          "total": "total"
+        },
+        "table": {
+          "huduAsset": "Ativo Hudu",
+          "algaAsset": "Ativo AlgaPSA",
+          "status": "Status",
+          "actions": "Ações"
+        },
+        "status": {
+          "mapped": "Mapeado",
+          "suggested": "Sugerido",
+          "unmapped": "Não mapeado",
+          "pending": "Pendente",
+          "stale": "Desatualizado"
+        },
+        "suggestion": {
+          "label": "Sugerido",
+          "source": {
+            "serial": "Correspondência de número de série",
+            "exactName": "Nome exato",
+            "fuzzyName": "Nome aproximado"
+          }
+        },
+        "rowActions": {
+          "unmap": "Remover mapeamento",
+          "revert": "Reverter alteração",
+          "dismiss": "Descartar sugestão"
+        },
+        "pendingSummary": "Alterações não salvas: {{total}}",
+        "sync": {
+          "summary": "Sincronização concluída: {{updated}} atualizados · {{unchanged}} inalterados · {{stale}} desatualizados.",
+          "lastSynced": "Última sincronização: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Importação concluída: {{created}} criados · {{failed}} com falha."
+        },
+        "success": {
+          "saved": "Mapeamentos de ativos salvos: {{total}}",
+          "imported": "\"{{name}}\" importado do Hudu."
+        },
+        "errors": {
+          "load": "Falha ao carregar os mapeamentos de ativos do Hudu.",
+          "save": "Falha ao atualizar o mapeamento do ativo.",
+          "import": "Falha ao importar o ativo do Hudu.",
+          "importAll": "Falha na importação em massa.",
+          "sync": "Falha ao sincronizar do Hudu.",
+          "rateLimited": "Limite de requisições do Hudu atingido. Tente novamente mais tarde.",
+          "unmapped": "Este cliente não está mapeado para uma empresa do Hudu.",
+          "assetAlreadyMapped": "Esse ativo já está mapeado para outro ativo do Hudu. Limpe o mapeamento existente primeiro.",
+          "huduAssetAlreadyMapped": "Este ativo do Hudu já está mapeado para um ativo. Limpe o mapeamento existente primeiro.",
+          "mappingConflict": "Este mapeamento conflita com um mapeamento existente. Atualize e tente novamente.",
+          "notFound": "Mapeamento não encontrado. Atualize e tente novamente."
+        },
+        "toasts": {
+          "errorTitle": "Erro de mapeamento de ativos do Hudu"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Documentação do Hudu",
+        "loading": "Carregando artigos do Hudu...",
+        "empty": "Nenhum artigo do Hudu",
+        "unreachable": "Não foi possível acessar o Hudu. Tente novamente mais tarde."
+      },
+      "documentsTab": {
+        "title": "Artigos do Hudu",
+        "source": "Origem: Hudu",
+        "searchPlaceholder": "Pesquisar artigos do Hudu...",
+        "loading": "Carregando artigos do Hudu...",
+        "empty": "Nenhum artigo do Hudu encontrado.",
+        "notConnected": "O Hudu não está conectado. Um administrador pode conectá-lo em Configurações → Integrações.",
+        "unreachable": "Não foi possível acessar o Hudu. Tente novamente mais tarde.",
+        "articleColumn": "Artigo",
+        "clientColumn": "Cliente",
+        "companyColumn": "Empresa Hudu",
+        "updatedColumn": "Atualizado",
+        "unmapped": "Não mapeado",
+        "previous": "Anterior",
+        "next": "Próxima",
+        "pageLabel": "Página"
+      },
       "mapping": {
         "title": "Mapeamentos de empresas",
         "description": "Mapeie empresas do Hudu para clientes do AlgaPSA para exibir sua documentação.",
@@ -816,6 +919,36 @@
           "unmap": "Remover mapeamento",
           "revert": "Reverter alteração",
           "dismiss": "Descartar sugestão"
+        }
+      },
+      "layoutMap": {
+        "title": "Layouts de ativos",
+        "description": "Escolha como qual tipo de ativo do AlgaPSA cada layout de ativo do Hudu é importado. Layouts não configurados são importados como Desconhecido.",
+        "loading": "Carregando layouts de ativos...",
+        "empty": "Nenhum layout de ativo encontrado no Hudu.",
+        "suggested": "Sugerido",
+        "table": {
+          "huduLayout": "Layout Hudu",
+          "algaAssetType": "Tipo de ativo do AlgaPSA"
+        },
+        "types": {
+          "workstation": "Estação de trabalho",
+          "networkDevice": "Dispositivo de rede",
+          "server": "Servidor",
+          "mobileDevice": "Dispositivo móvel",
+          "printer": "Impressora",
+          "unknown": "Desconhecido"
+        },
+        "buttons": {
+          "save": "Salvar mapeamento de layouts",
+          "saving": "Salvando..."
+        },
+        "success": {
+          "saved": "Mapeamento de layouts de ativos salvo."
+        },
+        "errors": {
+          "load": "Falha ao carregar os layouts de ativos do Hudu.",
+          "save": "Falha ao salvar o mapeamento de layouts de ativos."
         }
       },
       "settings": {

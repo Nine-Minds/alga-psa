@@ -751,6 +751,109 @@
         "revealNotFound": "This password could not be found in Hudu.",
         "revealFailed": "The password could not be revealed. Try again later."
       },
+      "assets": {
+        "title": "Assets",
+        "description": "Map Hudu assets to AlgaPSA assets, import unmatched ones, and pull updates from Hudu.",
+        "loading": "Loading asset mappings...",
+        "empty": "No Hudu assets for this company.",
+        "selectAsset": "Select asset",
+        "serial": "Serial",
+        "archivedLabel": "Archived",
+        "buttons": {
+          "importAll": "Import all unmatched",
+          "importingAll": "Importing...",
+          "sync": "Sync from Hudu",
+          "syncing": "Syncing...",
+          "import": "Import",
+          "importing": "Importing...",
+          "save": "Save mappings",
+          "saving": "Saving...",
+          "discard": "Discard"
+        },
+        "counters": {
+          "mapped": "mapped",
+          "suggested": "suggested",
+          "unmapped": "unmapped",
+          "total": "total"
+        },
+        "table": {
+          "huduAsset": "Hudu Asset",
+          "algaAsset": "AlgaPSA Asset",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "status": {
+          "mapped": "Mapped",
+          "suggested": "Suggested",
+          "unmapped": "Unmapped",
+          "pending": "Pending",
+          "stale": "Stale"
+        },
+        "suggestion": {
+          "label": "Suggested",
+          "source": {
+            "serial": "Serial match",
+            "exactName": "Exact name",
+            "fuzzyName": "Similar name"
+          }
+        },
+        "rowActions": {
+          "unmap": "Unmap",
+          "revert": "Revert change",
+          "dismiss": "Dismiss suggestion"
+        },
+        "pendingSummary": "Unsaved changes: {{total}}",
+        "sync": {
+          "summary": "Sync complete: {{updated}} updated · {{unchanged}} unchanged · {{stale}} stale.",
+          "lastSynced": "Last synced: {{timestamp}}"
+        },
+        "import": {
+          "summary": "Import finished: {{created}} created · {{failed}} failed."
+        },
+        "success": {
+          "saved": "Asset mappings saved: {{total}}",
+          "imported": "Imported \"{{name}}\" from Hudu."
+        },
+        "errors": {
+          "load": "Failed to load Hudu asset mappings.",
+          "save": "Failed to update the asset mapping.",
+          "import": "Failed to import the Hudu asset.",
+          "importAll": "Bulk import failed.",
+          "sync": "Failed to sync from Hudu.",
+          "rateLimited": "Hudu rate limit reached. Try again later.",
+          "unmapped": "This client is not mapped to a Hudu company.",
+          "assetAlreadyMapped": "That asset is already mapped to another Hudu asset. Clear the existing mapping first.",
+          "huduAssetAlreadyMapped": "This Hudu asset is already mapped to an asset. Clear the existing mapping first.",
+          "mappingConflict": "This mapping conflicts with an existing one. Refresh and try again.",
+          "notFound": "Mapping not found. Refresh and try again."
+        },
+        "toasts": {
+          "errorTitle": "Hudu asset mapping error"
+        }
+      },
+      "documents": {
+        "sectionTitle": "Hudu Documentation",
+        "loading": "Loading Hudu articles...",
+        "empty": "No Hudu articles",
+        "unreachable": "Hudu could not be reached. Try again later."
+      },
+      "documentsTab": {
+        "title": "Hudu articles",
+        "source": "Source: Hudu",
+        "searchPlaceholder": "Search Hudu articles...",
+        "loading": "Loading Hudu articles...",
+        "empty": "No Hudu articles found.",
+        "notConnected": "Hudu is not connected. An administrator can connect it under Settings → Integrations.",
+        "unreachable": "Hudu could not be reached. Try again later.",
+        "articleColumn": "Article",
+        "clientColumn": "Client",
+        "companyColumn": "Hudu company",
+        "updatedColumn": "Updated",
+        "unmapped": "Unmapped",
+        "previous": "Previous",
+        "next": "Next",
+        "pageLabel": "Page"
+      },
       "mapping": {
         "title": "Company Mappings",
         "description": "Map Hudu companies to AlgaPSA clients to surface their documentation.",
@@ -816,6 +919,36 @@
           "unmap": "Unmap",
           "revert": "Revert change",
           "dismiss": "Dismiss suggestion"
+        }
+      },
+      "layoutMap": {
+        "title": "Asset Layouts",
+        "description": "Choose which AlgaPSA asset type each Hudu asset layout imports as. Unconfigured layouts import as Unknown.",
+        "loading": "Loading asset layouts...",
+        "empty": "No asset layouts found in Hudu.",
+        "suggested": "Suggested",
+        "table": {
+          "huduLayout": "Hudu Layout",
+          "algaAssetType": "AlgaPSA Asset Type"
+        },
+        "types": {
+          "workstation": "Workstation",
+          "networkDevice": "Network device",
+          "server": "Server",
+          "mobileDevice": "Mobile device",
+          "printer": "Printer",
+          "unknown": "Unknown"
+        },
+        "buttons": {
+          "save": "Save layout map",
+          "saving": "Saving..."
+        },
+        "success": {
+          "saved": "Asset layout map saved."
+        },
+        "errors": {
+          "load": "Failed to load Hudu asset layouts.",
+          "save": "Failed to save the asset layout map."
         }
       },
       "settings": {
