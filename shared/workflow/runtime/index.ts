@@ -10,6 +10,11 @@ export {
   getWorkflowIntegrationModuleRegistry,
   type WorkflowIntegrationModuleDefinition
 } from './registries/integrationModuleRegistry';
+export {
+  WorkflowModuleAvailabilityRegistry,
+  getWorkflowModuleAvailabilityRegistry,
+  type WorkflowModuleAvailabilityResolver
+} from './registries/moduleAvailabilityRegistry';
 export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';

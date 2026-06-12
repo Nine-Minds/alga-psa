@@ -2,10 +2,10 @@ import {
   initializeWorkflowRuntimeV2 as initializeSharedWorkflowRuntimeV2,
   isWorkflowRuntimeV2Initialized,
 } from '../../../../../shared/workflow/runtime/init';
-import { getWorkflowIntegrationModuleRegistry } from '../../../../../shared/workflow/runtime';
-import { registerNinjaOneWorkflowActionsV2 } from './actions/registerNinjaOneWorkflowActions';
+import { registerNinjaOneWorkflowModule } from './actions/registerNinjaOneWorkflowActions';
 
 export * from '../../../../../shared/workflow/runtime';
+export * from './integrationModules';
 export * from '../../../../../shared/workflow/runtime/ai/aiSchema';
 export * from '../../../../../shared/workflow/runtime/client';
 export * from '../../../../../shared/workflow/runtime/designer/actionCatalog';
@@ -43,27 +43,7 @@ export { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../../../../../shared/workfl
 
 export function initializeWorkflowRuntimeV2(): void {
   initializeSharedWorkflowRuntimeV2();
-  registerNinjaOneWorkflowActionsV2();
-  const moduleRegistry = getWorkflowIntegrationModuleRegistry();
-  if (!moduleRegistry.list().some((module) => module.groupKey === 'app:ninjaone')) {
-    moduleRegistry.register({
-      groupKey: 'app:ninjaone',
-      label: 'NinjaOne',
-      description: 'NinjaOne RMM actions for devices and alerts.',
-      tileKind: 'app',
-      iconToken: 'ninjaone',
-      defaultActionId: 'ninjaone.devices.find',
-      allowedActionIds: [
-        'ninjaone.devices.find',
-        'ninjaone.devices.sync',
-        'ninjaone.devices.reboot',
-        'ninjaone.alerts.list_active',
-        'ninjaone.alerts.get',
-        'ninjaone.alerts.reset'
-      ],
-      availabilityKey: 'rmm:ninjaone'
-    });
-  }
+  registerNinjaOneWorkflowModule();
 }
 
 export { isWorkflowRuntimeV2Initialized };

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
+import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
 
 const loadNinjaOneRuntimeSupport = () => import('./ninjaOneWorkflowRuntimeSupport');
 
@@ -351,4 +352,28 @@ export function registerNinjaOneWorkflowActionsV2(): void {
   });
 
   ninjaOneRegistered = true;
+}
+
+export function registerNinjaOneWorkflowModule(): void {
+  registerIntegrationWorkflowModule({
+    module: {
+      groupKey: 'app:ninjaone',
+      label: 'NinjaOne',
+      description: 'NinjaOne RMM actions for devices and alerts.',
+      tileKind: 'app',
+      iconToken: 'ninjaone',
+      defaultActionId: 'ninjaone.devices.find',
+      allowedActionIds: [
+        'ninjaone.devices.find',
+        'ninjaone.devices.sync',
+        'ninjaone.devices.reboot',
+        'ninjaone.alerts.list_active',
+        'ninjaone.alerts.get',
+        'ninjaone.alerts.reset'
+      ],
+      availabilityKey: 'rmm:ninjaone'
+    },
+    availability: rmmIntegrationAvailability('ninjaone'),
+    registerActions: () => registerNinjaOneWorkflowActionsV2()
+  });
 }

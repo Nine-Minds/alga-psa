@@ -23,6 +23,7 @@ import {
   resolveActionCallOutputSchema,
   buildWorkflowDesignerActionCatalog,
   getWorkflowIntegrationModuleRegistry,
+  resolveAvailableIntegrationModuleKeys,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -211,24 +212,7 @@ const loadAvailableFirstPartyIntegrationAppKeys = async (
   knex: Knex,
   tenantId: string | null | undefined
 ): Promise<Set<string>> => {
-  if (!tenantId) return new Set();
-  const available = new Set<string>();
-  const registry = getWorkflowIntegrationModuleRegistry();
-  for (const module of registry.list()) {
-    if (!module.availabilityKey) continue;
-    if (module.availabilityKey === 'rmm:ninjaone') {
-      const row = await knex('rmm_integrations')
-        .where({
-          tenant: tenantId,
-          provider: 'ninjaone',
-          is_active: true
-        })
-        .whereNotNull('connected_at')
-        .first();
-      if (row) available.add(module.groupKey);
-    }
-  }
-  return available;
+  return resolveAvailableIntegrationModuleKeys(knex, tenantId);
 };
 
 const isEnterpriseEdition = (): boolean => {
