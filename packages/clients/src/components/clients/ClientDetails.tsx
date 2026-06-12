@@ -84,6 +84,7 @@ import {
 } from './clientDetailsEntraSyncAction';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
+import HuduClientDocumentsSection from './HuduClientDocumentsSection';
 import { useHuduClientTab } from './useHuduClientTab';
 
 const EMPTY_CONTACTS: IContact[] = [];
@@ -1729,6 +1730,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 },
             }) : (
               <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
+            )}
+            {huduClientTab.visible && (
+              <HuduClientDocumentsSection clientId={client.client_id} />
             )}
           </div>
         ) : null
