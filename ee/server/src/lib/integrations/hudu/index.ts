@@ -11,6 +11,9 @@ export type {
   HuduResource,
   HuduCompany,
   HuduAsset,
+  HuduAssetLayout,
+  HuduAssetLayoutFieldDef,
+  HuduAssetLayoutDetail,
   HuduArticle,
   HuduAssetPassword,
   HuduAssetPasswordSummary,
@@ -19,6 +22,7 @@ export type {
   HuduArticlesResponse,
   HuduAssetPasswordsResponse,
   HuduCompanyResponse,
+  HuduAssetLayoutResponse,
   HuduAssetPasswordResponse,
 } from './contracts';
 
@@ -111,6 +115,14 @@ export {
   resolveAssetTypeForLayout,
 } from './assetLayoutMap';
 export type { AlgaAssetType, HuduLayoutAssignment, HuduAssetLayoutTypeMap } from './assetLayoutMap';
+
+export {
+  deriveAssetFieldKey,
+  parseHuduListSelectOptions,
+  buildFieldsSchemaFromHuduLayout,
+  projectHuduFieldsOntoSchema,
+} from './layoutFieldSchema';
+export type { HuduSchemaProjection } from './layoutFieldSchema';
 
 export {
   HUDU_SERIAL_CONFIDENCE,

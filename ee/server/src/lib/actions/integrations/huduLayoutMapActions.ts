@@ -17,6 +17,12 @@ import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { createAssetType, listAssetTypes } from '@alga-psa/assets/lib/assetTypeRegistry';
+import type {
+  AssetTypeRegistryError,
+  AssetTypeRegistryResult,
+} from '@alga-psa/assets/lib/assetTypeRegistry';
+import type { AssetTypeRegistryEntry } from '@alga-psa/types';
 import { createHuduClient } from '../../integrations/hudu/huduClient';
 import {
   getHuduAssetLayoutTypeMap,
@@ -28,6 +34,7 @@ import type {
   HuduAssetLayoutTypeMap,
   HuduLayoutAssignment,
 } from '../../integrations/hudu/assetLayoutMap';
+import { buildFieldsSchemaFromHuduLayout } from '../../integrations/hudu/layoutFieldSchema';
 
 export type HuduLayoutMapActionResult<T> =
   | { success: true; data: T }
@@ -40,9 +47,17 @@ export interface HuduAssetLayoutMapEntry {
   configuredType: HuduLayoutAssignment | null;
 }
 
+/** F315: registry projection the settings select offers (built-ins + customs). */
+export interface HuduAssetTypeOption {
+  slug: string;
+  name: string;
+  is_builtin: boolean;
+}
+
 export interface HuduAssetLayoutMapData {
   layouts: HuduAssetLayoutMapEntry[];
   map: HuduAssetLayoutTypeMap;
+  types: HuduAssetTypeOption[];
 }
 
 type HuduActionPermission = 'read' | 'update';
@@ -80,9 +95,19 @@ function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+// Explicit type guard: the EE tsconfig is non-strict, where `!result.ok`
+// alone does not narrow the discriminated union.
+function isRegistryFailure<T>(
+  result: AssetTypeRegistryResult<T>
+): result is { ok: false; error: AssetTypeRegistryError } {
+  return !result.ok;
+}
+
 /**
- * F205: live asset layouts joined with the stored map; each layout carries a
- * heuristic suggestion (FR12) and the configured type when one is stored.
+ * F205/F315: live asset layouts joined with the stored map; each layout
+ * carries a heuristic suggestion (FR12) and the configured type when one is
+ * stored. `types` is the tenant's asset type registry (built-ins + customs)
+ * so the settings select can target any registered type.
  */
 export const getHuduAssetLayoutMap = withHuduSettingsAccess(
   'read',
@@ -90,6 +115,11 @@ export const getHuduAssetLayoutMap = withHuduSettingsAccess(
     try {
       const { knex } = await createTenantKnex(tenant);
       const map = await getHuduAssetLayoutTypeMap(knex, tenant);
+      const types = (await listAssetTypes(knex, tenant)).map(({ slug, name, is_builtin }) => ({
+        slug,
+        name,
+        is_builtin,
+      }));
 
       const client = await createHuduClient(tenant);
       const layouts = (await client.listAssetLayouts()).map((layout) => ({
@@ -99,9 +129,100 @@ export const getHuduAssetLayoutMap = withHuduSettingsAccess(
         configuredType: map[String(layout.id)] ?? null,
       }));
 
-      return { success: true, data: { layouts, map } };
+      return { success: true, data: { layouts, map, types } };
     } catch (error) {
       logger.error('[HuduLayoutMapActions] getHuduAssetLayoutMap failed', { tenant, error: toErrorMessage(error) });
+      return { success: false, error: toErrorMessage(error) };
+    }
+  }
+);
+
+export type HuduCreateTypeFromLayoutErrorCode =
+  | 'slug_conflict'
+  | 'reserved_slug'
+  | 'invalid_name'
+  | 'invalid_schema';
+
+export type HuduCreateTypeFromLayoutResult =
+  | { success: true; data: { type: AssetTypeRegistryEntry; map: HuduAssetLayoutTypeMap } }
+  | { success: false; error: string; code?: HuduCreateTypeFromLayoutErrorCode; slug?: string };
+
+export interface CreateAssetTypeFromHuduLayoutInput {
+  layoutId: number | string;
+}
+
+/**
+ * F316: one action — fetch the layout's field definitions, mirror them into a
+ * new custom asset type (name = layout name, slug auto), then store the
+ * layoutId→slug assignment. Slug conflicts surface typed for the UI.
+ */
+export const createAssetTypeFromHuduLayout = withHuduSettingsAccess(
+  'update',
+  async (
+    _user,
+    { tenant },
+    input: CreateAssetTypeFromHuduLayoutInput
+  ): Promise<HuduCreateTypeFromLayoutResult> => {
+    try {
+      const layoutId = input?.layoutId;
+      if (layoutId === undefined || layoutId === null || layoutId === '') {
+        return { success: false, error: 'layoutId is required.' };
+      }
+
+      const client = await createHuduClient(tenant);
+      const layout = await client.getAssetLayout(Number(layoutId));
+      const fieldsSchema = buildFieldsSchemaFromHuduLayout(layout?.fields);
+
+      const { knex } = await createTenantKnex(tenant);
+      const created = await createAssetType(knex, tenant, {
+        name: layout.name,
+        fields_schema: fieldsSchema,
+      });
+      if (isRegistryFailure(created)) {
+        const { error } = created;
+        const slug = 'slug' in error ? error.slug : undefined;
+        switch (error.code) {
+          case 'slug_conflict':
+          case 'reserved_slug':
+            return {
+              success: false,
+              error: `An asset type already exists for slug "${slug}".`,
+              code: error.code,
+              slug,
+            };
+          case 'invalid_name':
+            return { success: false, error: error.message, code: 'invalid_name' };
+          case 'invalid_schema':
+            return {
+              success: false,
+              error: `The generated schema is invalid: ${error.issues.map((issue) => issue.message).join('; ')}`,
+              code: 'invalid_schema',
+            };
+          default:
+            return { success: false, error: `Failed to create the asset type (${error.code}).` };
+        }
+      }
+
+      const createdType = created.value;
+      const current = await getHuduAssetLayoutTypeMap(knex, tenant);
+      const map = await setHuduAssetLayoutTypeMap(knex, tenant, {
+        ...current,
+        [String(layoutId)]: createdType.slug,
+      });
+
+      logger.info('[HuduLayoutMapActions] asset type created from layout', {
+        tenant,
+        layoutId: String(layoutId),
+        slug: createdType.slug,
+        fields: createdType.fields_schema.length,
+      });
+
+      return { success: true, data: { type: createdType, map } };
+    } catch (error) {
+      logger.error('[HuduLayoutMapActions] createAssetTypeFromHuduLayout failed', {
+        tenant,
+        error: toErrorMessage(error),
+      });
       return { success: false, error: toErrorMessage(error) };
     }
   }

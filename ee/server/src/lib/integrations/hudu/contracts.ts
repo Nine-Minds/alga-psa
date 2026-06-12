@@ -73,6 +73,24 @@ export interface HuduAssetLayout {
   name: string;
 }
 
+/**
+ * Hudu Asset Layout field definition (GET /asset_layouts/{id}, verified live).
+ * `options` is a single string for ListSelect fields; `required` may be null.
+ */
+export interface HuduAssetLayoutFieldDef {
+  id?: number;
+  label: string;
+  field_type?: string | null;
+  required?: boolean | null;
+  position?: number | null;
+  options?: string | null;
+}
+
+/** Hudu Asset Layout with its field definitions (single-layout GET). */
+export interface HuduAssetLayoutDetail extends HuduAssetLayout {
+  fields?: HuduAssetLayoutFieldDef[];
+}
+
 /** Hudu Article (knowledge-base document). */
 export interface HuduArticle {
   id: number;
@@ -133,6 +151,9 @@ export interface HuduAssetPasswordsResponse {
 /** Single-resource responses are keyed by the singular resource name. */
 export interface HuduCompanyResponse {
   company: HuduCompany;
+}
+export interface HuduAssetLayoutResponse {
+  asset_layout: HuduAssetLayoutDetail;
 }
 export interface HuduAssetPasswordResponse {
   asset_password: HuduAssetPassword;

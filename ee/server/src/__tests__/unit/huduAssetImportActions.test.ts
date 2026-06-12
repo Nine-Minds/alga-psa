@@ -1,14 +1,18 @@
 /**
  * T218–T223 — Hudu asset import actions (single + bulk).
- * T251/T252 — HuduAsset contract fields[] + the attributes namespace write.
+ * T251/T252 — HuduAsset contract fields[] + the attributes namespace (now
+ * riding createAsset's attributes payload — single write, F317).
  * T264/T265 — tenant-wide serial-conflict pre-check (typed serial_conflict,
  * per-row in bulk, batch never aborted).
+ * T320 — custom-target import: registry-validated resolve (F315) + schema-key
+ * projection alongside hudu_fields (F317).
  *
  * Unit-mocked like huduAssetMappingActions.test.ts: auth, flag, tiers, knex,
- * the Phase 1 fetch (huduDataActions), createAsset/deleteAsset and the
- * mapping-row writes are fakes; the matcher (assetMatching), the layout-type
- * resolver and the import/attributes helpers (assetImport, assetAttributes)
- * stay REAL.
+ * the Phase 1 fetch (huduDataActions), createAsset/deleteAsset, the registry
+ * read (listAssetTypes) and the mapping-row writes are fakes; the matcher
+ * (assetMatching), the layout-type resolver and the import/attributes/
+ * projection helpers (assetImport, assetAttributes, layoutFieldSchema) stay
+ * REAL.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -40,12 +44,13 @@ let serialConflictRows: Array<{
   serial_number: string;
 }> = [];
 let serialConflictQueries: Array<{ sql: string; bindings: unknown[] }> = [];
+// F317 regression: the import must NOT issue any post-create knex update —
+// attributes ride createAsset's payload now. Any update lands here.
 let attributeUpdates: Array<{
   table: string;
   where: Record<string, unknown> | undefined;
   payload: Record<string, any>;
 }> = [];
-let attributesUpdateError: Error | null = null;
 const knexCallableMock = vi.fn((_table: string) => {
   let whereArg: Record<string, unknown> | undefined;
   let whereRawArgs: { sql: string; bindings: unknown[] } | undefined;
@@ -74,11 +79,7 @@ const knexCallableMock = vi.fn((_table: string) => {
       ? { asset_id: 'asset-owning-tag' }
       : undefined;
   });
-  // writeHuduAssetAttributes: where({ tenant, asset_id }).update({ attributes: raw })
   qb.update = vi.fn(async (payload: Record<string, any>) => {
-    if (attributesUpdateError) {
-      throw attributesUpdateError;
-    }
     attributeUpdates.push({ table: _table, where: whereArg, payload });
     return 1;
   });
@@ -89,6 +90,7 @@ const knexCallableMock = vi.fn((_table: string) => {
 const getHuduCompanyAssetsMock = vi.fn();
 const createAssetMock = vi.fn();
 const deleteAssetMock = vi.fn();
+const listAssetTypesMock = vi.fn();
 const getHuduAssetMappingRowsMock = vi.fn();
 const setHuduAssetMappingRowMock = vi.fn();
 const resolveAlgaAssetIdForHuduAssetMock = vi.fn();
@@ -125,6 +127,11 @@ vi.mock('@ee/lib/actions/integrations/huduDataActions', () => ({
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
   createAsset: createAssetMock,
   deleteAsset: deleteAssetMock,
+}));
+
+// F315: the registry read is knex-level — fake it; the resolver stays REAL.
+vi.mock('@alga-psa/assets/lib/assetTypeRegistry', () => ({
+  listAssetTypes: listAssetTypesMock,
 }));
 
 vi.mock('@ee/lib/integrations/hudu/assetMapping', async (importOriginal) => ({
@@ -206,6 +213,11 @@ const RATE_LIMITED = {
   errorKind: 'rate_limited',
 };
 
+// The six built-ins as the default tenant registry (custom entries per test).
+const BUILTIN_REGISTRY = ['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown'].map(
+  (slug) => ({ slug, name: slug, is_builtin: true, fields_schema: [] })
+);
+
 beforeEach(() => {
   vi.clearAllMocks();
   assetsRows = [];
@@ -213,7 +225,6 @@ beforeEach(() => {
   serialConflictRows = [];
   serialConflictQueries = [];
   attributeUpdates = [];
-  attributesUpdateError = null;
 
   hasPermissionMock.mockResolvedValue(true);
   isEnabledMock.mockResolvedValue(true);
@@ -222,6 +233,7 @@ beforeEach(() => {
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
 
+  listAssetTypesMock.mockResolvedValue(BUILTIN_REGISTRY);
   getHuduCompanyAssetsMock.mockResolvedValue(okAssetsResult());
   createAssetMock.mockImplementation(async (data: { name: string }) => ({
     asset_id: `created-${data.name}`,
@@ -255,6 +267,15 @@ describe('T218: importHuduAsset', () => {
       name: 'EC-WS-001',
       status: huduImportAssetStatus(),
       serial_number: 'SN-EC-1001',
+      // F317: the Hudu namespace rides createAsset's attributes (single write).
+      attributes: {
+        hudu_fields: [
+          { label: 'Hostname', value: 'EC-WS-001' },
+          { label: 'Warranty Expiry', value: '2027-01-31' },
+          { label: 'Notes', value: 'Dock on desk' },
+        ],
+        hudu_synced_at: expect.any(String),
+      },
     });
     // huduCompanyId becomes the row's external_realm_id (= String(hudu company id)).
     expect(setHuduAssetMappingRowMock).toHaveBeenCalledTimes(1);
@@ -755,31 +776,26 @@ describe('T251: HuduAsset contract', () => {
 });
 
 // ============================================================================
-// T252 — import writes the Hudu attributes namespace
+// T252 — the Hudu attributes namespace rides createAsset's payload (F317)
 // ============================================================================
 
-describe('T252: import attributes write', () => {
-  it('jsonb-merges position-ordered hudu_fields + hudu_synced_at onto the created asset', async () => {
+describe('T252: import attributes payload', () => {
+  it('passes position-ordered hudu_fields + hudu_synced_at through createAsset — no post-create write', async () => {
     const { importHuduAsset } = await importActions();
 
     const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
     expect(result).toMatchObject({ success: true });
 
-    expect(attributeUpdates).toHaveLength(1);
-    expect(attributeUpdates[0].table).toBe('assets');
-    expect(attributeUpdates[0].where).toEqual({ tenant: TENANT, asset_id: 'created-EC-WS-001' });
-
-    const raw = attributeUpdates[0].payload.attributes as { sql: string; bindings: string };
-    // Sibling-key preservation rides the jsonb merge (proven against the real
-    // DB in huduAssetSyncActions.test.ts's persistence block).
-    expect(raw.sql).toContain(`coalesce(attributes, '{}'::jsonb) ||`);
-    const merged = JSON.parse(raw.bindings);
-    expect(merged.hudu_fields).toEqual([
+    expect(createAssetMock).toHaveBeenCalledTimes(1);
+    const attributes = createAssetMock.mock.calls[0][0].attributes as Record<string, any>;
+    expect(attributes.hudu_fields).toEqual([
       { label: 'Hostname', value: 'EC-WS-001' },
       { label: 'Warranty Expiry', value: '2027-01-31' },
       { label: 'Notes', value: 'Dock on desk' },
     ]);
-    expect(new Date(merged.hudu_synced_at).toISOString()).toBe(merged.hudu_synced_at);
+    expect(new Date(attributes.hudu_synced_at).toISOString()).toBe(attributes.hudu_synced_at);
+    // The Phase 2.1 jsonb-merge update is gone — createAsset is the only write.
+    expect(attributeUpdates).toHaveLength(0);
   });
 
   it('an asset without Hudu fields still gets the namespace with an empty hudu_fields', async () => {
@@ -787,20 +803,147 @@ describe('T252: import attributes write', () => {
 
     await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 2 });
 
-    expect(attributeUpdates).toHaveLength(1);
-    const merged = JSON.parse((attributeUpdates[0].payload.attributes as { bindings: string }).bindings);
-    expect(merged.hudu_fields).toEqual([]);
-    expect(typeof merged.hudu_synced_at).toBe('string');
+    const attributes = createAssetMock.mock.calls[0][0].attributes as Record<string, any>;
+    expect(attributes.hudu_fields).toEqual([]);
+    expect(typeof attributes.hudu_synced_at).toBe('string');
+    expect(attributeUpdates).toHaveLength(0);
   });
 
-  it('a failed attributes write best-effort deletes the just-created asset (typed create_failed)', async () => {
-    attributesUpdateError = new Error('attributes write boom');
+  it('a createAsset failure is typed create_failed with nothing left to clean up', async () => {
+    createAssetMock.mockRejectedValue(new Error('attributes payload boom'));
     const { importHuduAsset } = await importActions();
 
     const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
 
-    expect(result).toEqual({ success: false, error: 'attributes write boom', code: 'create_failed' });
-    expect(deleteAssetMock).toHaveBeenCalledWith('created-EC-WS-001', { suppressRevalidate: true });
+    expect(result).toEqual({ success: false, error: 'attributes payload boom', code: 'create_failed' });
+    expect(deleteAssetMock).not.toHaveBeenCalled();
     expect(setHuduAssetMappingRowMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// T320 — custom-target import projects schema keys alongside hudu_fields
+// ============================================================================
+
+describe('T320: custom-target import projection (F315/F317)', () => {
+  const CUSTOM_TYPE = {
+    slug: 'rack_mounted_ups',
+    name: 'Rack Mounted UPS',
+    is_builtin: false,
+    fields_schema: [
+      { key: 'hostname', label: 'Hostname', kind: 'text' },
+      { key: 'warranty_expiry', label: 'Warranty Expiry', kind: 'date' },
+      { key: 'port_count', label: 'Port Count', kind: 'number' },
+      { key: 'monitored', label: 'Monitored?', kind: 'boolean' },
+      { key: 'environment', label: 'Environment', kind: 'select', options: ['Prod', 'Dev'] },
+    ],
+  };
+
+  beforeEach(() => {
+    listAssetTypesMock.mockResolvedValue([...BUILTIN_REGISTRY, CUSTOM_TYPE]);
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'rack_mounted_ups' });
+  });
+
+  function withAssetFields(fields: Array<Record<string, unknown>>) {
+    const result = okAssetsResult();
+    (result.items[0] as { fields: unknown }).fields = fields;
+    getHuduCompanyAssetsMock.mockResolvedValue(result);
+  }
+
+  it('projects schema-keyed values + hudu_fields in ONE createAsset payload and resolves the custom slug', async () => {
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    expect(createAssetMock).toHaveBeenCalledTimes(1);
+    const payload = createAssetMock.mock.calls[0][0];
+    expect(payload.asset_type).toBe('rack_mounted_ups');
+    expect(payload.attributes).toEqual({
+      hostname: 'EC-WS-001',
+      warranty_expiry: '2027-01-31',
+      hudu_fields: [
+        { label: 'Hostname', value: 'EC-WS-001' },
+        { label: 'Warranty Expiry', value: '2027-01-31' },
+        { label: 'Notes', value: 'Dock on desk' },
+      ],
+      hudu_synced_at: expect.any(String),
+    });
+    expect(attributeUpdates).toHaveLength(0);
+    expect(result).toMatchObject({ success: true, data: { asset_type: 'rack_mounted_ups' } });
+    expect(result).not.toHaveProperty('data.projection_skipped');
+  });
+
+  it('matches by normalized label so generated types round-trip 1:1 (messy labels, coerced kinds)', async () => {
+    withAssetFields([
+      { label: ' Warranty—Expiry?? ', value: '2027-01-31', position: 2 },
+      { label: 'PORT  COUNT', value: '42', position: 3 },
+      { label: 'Monitored?', value: 'Yes', position: 4 },
+      { label: 'Environment', value: 'Prod', position: 5 },
+      { label: 'Hostname', value: 'EC-WS-001', position: 1 },
+    ]);
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    const attributes = createAssetMock.mock.calls[0][0].attributes as Record<string, unknown>;
+    expect(attributes).toMatchObject({
+      hostname: 'EC-WS-001',
+      warranty_expiry: '2027-01-31',
+      port_count: 42, // numeric string parsed for the number kind
+      monitored: true, // boolean-ish string coerced for the boolean kind
+      environment: 'Prod', // select value kept as-is
+    });
+    expect(result).toMatchObject({ success: true });
+  });
+
+  it('a value that fails its kind is skipped (reported, still visible in hudu_fields) — import succeeds', async () => {
+    withAssetFields([
+      { label: 'Hostname', value: 'EC-WS-001', position: 1 },
+      { label: 'Port Count', value: 'twenty', position: 2 },
+      { label: 'Environment', value: 'Sandbox', position: 3 },
+    ]);
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    const attributes = createAssetMock.mock.calls[0][0].attributes as Record<string, unknown>;
+    expect(attributes.hostname).toBe('EC-WS-001');
+    expect(attributes).not.toHaveProperty('port_count');
+    expect(attributes).not.toHaveProperty('environment'); // not in the select's options
+    // The raw values stay visible in the namespace copy.
+    expect(attributes.hudu_fields).toEqual([
+      { label: 'Hostname', value: 'EC-WS-001' },
+      { label: 'Port Count', value: 'twenty' },
+      { label: 'Environment', value: 'Sandbox' },
+    ]);
+    expect(result).toMatchObject({
+      success: true,
+      data: { projection_skipped: ['port_count', 'environment'] },
+    });
+  });
+
+  it("a configured slug that is no longer in the registry resolves to 'unknown' (no projection)", async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'ghost_type' });
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    const payload = createAssetMock.mock.calls[0][0];
+    expect(payload.asset_type).toBe('unknown');
+    expect(Object.keys(payload.attributes).sort()).toEqual(['hudu_fields', 'hudu_synced_at']);
+    expect(result).toMatchObject({ success: true, data: { asset_type: 'unknown' } });
+  });
+
+  it('builtin-target imports are unaffected: no projected keys, just the Hudu namespace', async () => {
+    getHuduAssetLayoutTypeMapMock.mockResolvedValue({ '7': 'workstation' });
+    const { importHuduAsset } = await importActions();
+
+    const result = await importHuduAsset({ clientId: CLIENT_1, huduAssetId: 1 });
+
+    const payload = createAssetMock.mock.calls[0][0];
+    expect(payload.asset_type).toBe('workstation');
+    expect(Object.keys(payload.attributes).sort()).toEqual(['hudu_fields', 'hudu_synced_at']);
+    expect(result).toMatchObject({ success: true, data: { asset_type: 'workstation' } });
+    expect(result).not.toHaveProperty('data.projection_skipped');
   });
 });

@@ -19,6 +19,7 @@ import type {
   HuduCompany,
   HuduAsset,
   HuduAssetLayout,
+  HuduAssetLayoutDetail,
   HuduArticle,
   HuduAssetPassword,
 } from './contracts';
@@ -182,6 +183,15 @@ export class HuduClient {
     const data = await this.request<{ asset_layouts: HuduAssetLayout[] }>('get', '/asset_layouts');
     const layouts = Array.isArray(data?.asset_layouts) ? data.asset_layouts : [];
     return layouts.map((layout) => ({ id: layout.id, name: layout.name }));
+  }
+
+  /** One asset layout WITH its field definitions (F316 create-type source). */
+  async getAssetLayout(id: number): Promise<HuduAssetLayoutDetail> {
+    const data = await this.request<{ asset_layout: HuduAssetLayoutDetail }>(
+      'get',
+      `/asset_layouts/${id}`
+    );
+    return data.asset_layout;
   }
 
   /**

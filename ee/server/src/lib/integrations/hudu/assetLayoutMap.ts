@@ -27,19 +27,30 @@ export type AlgaAssetType = (typeof ALGA_ASSET_TYPES)[number];
 /** F256: "Don't import" sentinel stored alongside the six asset types (FR6). */
 export const HUDU_LAYOUT_EXCLUDED = 'excluded' as const;
 
-export type HuduLayoutAssignment = AlgaAssetType | typeof HUDU_LAYOUT_EXCLUDED;
+/**
+ * F315: assignments are any registry slug (built-in or custom) or 'excluded'.
+ * Storage keeps every slug-shaped string; registry membership is enforced at
+ * import time by resolveAssetTypeForLayout (a stale custom slug → 'unknown').
+ */
+export type HuduLayoutAssignment = AlgaAssetType | typeof HUDU_LAYOUT_EXCLUDED | (string & {});
 
 export type HuduAssetLayoutTypeMap = Record<string, HuduLayoutAssignment>;
+
+/** Same shape generateAssetTypeSlug produces (assetTypeRegistry). */
+const ASSET_TYPE_SLUG_PATTERN = /^[a-z][a-z0-9_]*$/;
 
 export function isAlgaAssetType(value: unknown): value is AlgaAssetType {
   return typeof value === 'string' && (ALGA_ASSET_TYPES as readonly string[]).includes(value);
 }
 
 export function isHuduLayoutAssignment(value: unknown): value is HuduLayoutAssignment {
-  return isAlgaAssetType(value) || value === HUDU_LAYOUT_EXCLUDED;
+  return (
+    value === HUDU_LAYOUT_EXCLUDED ||
+    (typeof value === 'string' && ASSET_TYPE_SLUG_PATTERN.test(value))
+  );
 }
 
-/** Coerce an arbitrary value into a valid map: non-object → {}, unknown types → 'unknown'. */
+/** Coerce an arbitrary value into a valid map: non-object → {}, non-slug junk → 'unknown'. */
 export function normalizeAssetLayoutTypeMap(value: unknown): HuduAssetLayoutTypeMap {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const map: HuduAssetLayoutTypeMap = {};
@@ -109,14 +120,26 @@ export function isLayoutExcluded(
 }
 
 /**
- * F208: configured type for a layout, falling back to 'unknown' (FR12).
- * Always a valid AlgaAssetType — an 'excluded' entry resolves to 'unknown',
- * so importing callers must check isLayoutExcluded first (F256).
+ * F208/F315: configured type for a layout, falling back to 'unknown' (FR12).
+ * Built-ins always resolve; a custom slug resolves only when it is in the
+ * caller-supplied registry slug set (the import action passes the tenant's
+ * live registry — this module stays knex-free). An 'excluded' entry resolves
+ * to 'unknown', so importing callers must check isLayoutExcluded first (F256).
  */
 export function resolveAssetTypeForLayout(
   map: HuduAssetLayoutTypeMap | null | undefined,
-  layoutId: string | number
-): AlgaAssetType {
+  layoutId: string | number,
+  registrySlugs?: ReadonlySet<string>
+): string {
   const configured = map?.[String(layoutId)];
-  return isAlgaAssetType(configured) ? configured : 'unknown';
+  if (isAlgaAssetType(configured)) return configured;
+  if (
+    typeof configured === 'string' &&
+    configured !== HUDU_LAYOUT_EXCLUDED &&
+    ASSET_TYPE_SLUG_PATTERN.test(configured) &&
+    registrySlugs?.has(configured)
+  ) {
+    return configured;
+  }
+  return 'unknown';
 }

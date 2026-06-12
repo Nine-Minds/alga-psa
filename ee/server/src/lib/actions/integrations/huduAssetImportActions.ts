@@ -22,6 +22,7 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { createAsset, deleteAsset } from '@alga-psa/assets/actions/assetActions';
+import { listAssetTypes } from '@alga-psa/assets/lib/assetTypeRegistry';
 import { getHuduCompanyAssets } from './huduDataActions';
 import type { HuduLinkedItem } from './huduDataActions';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
@@ -31,7 +32,7 @@ import {
   isLayoutExcluded,
   resolveAssetTypeForLayout,
 } from '../../integrations/hudu/assetLayoutMap';
-import type { AlgaAssetType } from '../../integrations/hudu/assetLayoutMap';
+import { projectHuduFieldsOntoSchema } from '../../integrations/hudu/layoutFieldSchema';
 import { suggestHuduAssetMappings } from '../../integrations/hudu/assetMatching';
 import type { AlgaMatcherAsset } from '../../integrations/hudu/assetMatching';
 import {
@@ -41,10 +42,7 @@ import {
 } from '../../integrations/hudu/assetMapping';
 import type { HuduAssetMappingWriteResult } from '../../integrations/hudu/assetMapping';
 import { deriveHuduAssetTag, huduImportAssetStatus } from '../../integrations/hudu/assetImport';
-import {
-  buildHuduFieldsAttribute,
-  writeHuduAssetAttributes,
-} from '../../integrations/hudu/assetAttributes';
+import { buildHuduFieldsAttribute } from '../../integrations/hudu/assetAttributes';
 
 export type HuduAssetImportErrorCode =
   | 'client_not_mapped'
@@ -78,8 +76,11 @@ export type HuduAssetImportResult =
         asset_id: string;
         mapping_id: string;
         asset_tag: string;
-        asset_type: AlgaAssetType;
+        /** Built-in slug or a registry custom slug (F315). */
+        asset_type: string;
         status: string;
+        /** F317: schema keys whose Hudu value failed projection validation. */
+        projection_skipped?: string[];
       };
     }
   | HuduAssetImportFailure;
@@ -253,18 +254,32 @@ async function importHuduAssetCore(
     };
   }
 
+  // F315: a configured custom slug only resolves when it's still in the
+  // tenant's registry; F317: a custom target additionally gets the Hudu field
+  // values projected onto its fields_schema keys.
+  const registryTypes = await listAssetTypes(knex, tenant);
   const assetType =
-    huduAsset.asset_layout_id != null ? resolveAssetTypeForLayout(layoutMap, huduAsset.asset_layout_id) : 'unknown';
+    huduAsset.asset_layout_id != null
+      ? resolveAssetTypeForLayout(
+          layoutMap,
+          huduAsset.asset_layout_id,
+          new Set(registryTypes.map((type) => type.slug))
+        )
+      : 'unknown';
+  const customType = registryTypes.find((type) => type.slug === assetType && !type.is_builtin);
+  const projection = customType
+    ? projectHuduFieldsOntoSchema(customType.fields_schema, huduAsset.fields)
+    : { attributes: {}, skipped: [] };
+
   const assetTag = await deriveHuduAssetTag(knex, tenant, {
     huduAssetId: huduAsset.id,
     primarySerial: huduAsset.primary_serial,
   });
   const status = huduImportAssetStatus();
 
-  // CreateAssetRequest carries no attributes param, so the Hudu namespace is
-  // written via a jsonb-merge update right after createAsset (NinjaOne writes
-  // its extras through direct knex writes the same way).
-  let createdAssetId: string | undefined;
+  // One write: projected schema keys + the Hudu namespace ride createAsset's
+  // attributes payload (F317) — no post-create jsonb merge anymore.
+  let createdAssetId: string;
   try {
     const created = await createAsset({
       asset_type: assetType,
@@ -273,19 +288,14 @@ async function importHuduAssetCore(
       name: huduAsset.name,
       status,
       serial_number: huduAsset.primary_serial ?? undefined,
+      attributes: {
+        ...projection.attributes,
+        hudu_fields: buildHuduFieldsAttribute(huduAsset.fields),
+        hudu_synced_at: new Date().toISOString(),
+      },
     });
     createdAssetId = created.asset_id;
-    await writeHuduAssetAttributes(
-      knex,
-      tenant,
-      createdAssetId,
-      buildHuduFieldsAttribute(huduAsset.fields),
-      new Date().toISOString()
-    );
   } catch (error) {
-    if (createdAssetId) {
-      await cleanUpOrphanAsset(createdAssetId);
-    }
     return { success: false, error: toErrorMessage(error), code: 'create_failed' };
   }
 
@@ -312,6 +322,7 @@ async function importHuduAssetCore(
           asset_tag: assetTag,
           asset_type: assetType,
           status,
+          ...(projection.skipped.length > 0 ? { projection_skipped: projection.skipped } : {}),
         },
       };
     }

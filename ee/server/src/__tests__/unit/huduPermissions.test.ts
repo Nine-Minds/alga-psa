@@ -137,6 +137,7 @@ const manageEntries: GateEntry[] = [
   { name: 'setHuduCompanyMapping', run: () => huduMappingActions.setHuduCompanyMapping({ clientId: CLIENT_ID, huduCompanyId: 1 }) },
   { name: 'clearHuduCompanyMapping', run: () => huduMappingActions.clearHuduCompanyMapping({ mappingId: 'mapping-1' }) },
   { name: 'setHuduAssetLayoutMap', run: () => huduLayoutMapActions.setHuduAssetLayoutMap({ '7': 'workstation' }) },
+  { name: 'createAssetTypeFromHuduLayout', run: () => huduLayoutMapActions.createAssetTypeFromHuduLayout({ layoutId: 7 }) },
 ];
 
 /** Everything requiring system_settings READ (view surfaced data). */

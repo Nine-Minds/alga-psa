@@ -11,14 +11,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HuduAssetLayoutMapManager from '@ee/components/settings/integrations/hudu/HuduAssetLayoutMapManager';
 
-const { getHuduAssetLayoutMapMock, setHuduAssetLayoutMapMock } = vi.hoisted(() => ({
-  getHuduAssetLayoutMapMock: vi.fn(),
-  setHuduAssetLayoutMapMock: vi.fn(),
-}));
+const { getHuduAssetLayoutMapMock, setHuduAssetLayoutMapMock, createAssetTypeFromHuduLayoutMock } =
+  vi.hoisted(() => ({
+    getHuduAssetLayoutMapMock: vi.fn(),
+    setHuduAssetLayoutMapMock: vi.fn(),
+    createAssetTypeFromHuduLayoutMock: vi.fn(),
+  }));
 
 vi.mock('@ee/lib/actions/integrations/huduLayoutMapActions', () => ({
   getHuduAssetLayoutMap: getHuduAssetLayoutMapMock,
   setHuduAssetLayoutMap: setHuduAssetLayoutMapMock,
+  createAssetTypeFromHuduLayout: createAssetTypeFromHuduLayoutMock,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -89,10 +92,20 @@ const layoutsData = {
   map: { '9': 'server' },
 };
 
+// F315: registry-backed payload variant (built-ins + a custom type).
+const registryTypes = [
+  { slug: 'workstation', name: 'Workstation', is_builtin: true },
+  { slug: 'server', name: 'Server', is_builtin: true },
+  { slug: 'unknown', name: 'Unknown', is_builtin: true },
+  { slug: 'firewall_rules', name: 'Firewall Rules', is_builtin: false },
+];
+const layoutsDataWithTypes = { ...layoutsData, types: registryTypes };
+
 describe('HuduAssetLayoutMapManager', () => {
   beforeEach(() => {
     getHuduAssetLayoutMapMock.mockReset();
     setHuduAssetLayoutMapMock.mockReset();
+    createAssetTypeFromHuduLayoutMock.mockReset();
     getHuduAssetLayoutMapMock.mockResolvedValue({ success: true, data: layoutsData });
   });
 
@@ -203,5 +216,134 @@ describe('HuduAssetLayoutMapManager', () => {
 
     await screen.findByText('No asset layouts found in Hudu.');
     expect(screen.queryByRole('button', { name: 'Save layout map' })).toBeNull();
+  });
+
+  it("T318: registry types drive the select — customs by registry name, built-ins translated, Don't import last", async () => {
+    getHuduAssetLayoutMapMock.mockResolvedValue({ success: true, data: layoutsDataWithTypes });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    const select = screen.getByTestId('hudu-layout-type-select-7') as HTMLSelectElement;
+    const options = Array.from(select.options).map((o) => ({ value: o.value, label: o.textContent }));
+    expect(options).toEqual([
+      { value: 'workstation', label: 'Workstation' },
+      { value: 'server', label: 'Server' },
+      { value: 'unknown', label: 'Unknown' },
+      { value: 'firewall_rules', label: 'Firewall Rules' },
+      { value: 'excluded', label: "Don't import" },
+    ]);
+  });
+
+  it('T318: a custom slug is selectable and Save persists it', async () => {
+    getHuduAssetLayoutMapMock.mockResolvedValue({ success: true, data: layoutsDataWithTypes });
+    setHuduAssetLayoutMapMock.mockResolvedValue({
+      success: true,
+      data: { map: { '7': 'firewall_rules', '9': 'server' } },
+    });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    fireEvent.change(screen.getByTestId('hudu-layout-type-select-7'), {
+      target: { value: 'firewall_rules' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save layout map' }));
+
+    await waitFor(() => {
+      expect(setHuduAssetLayoutMapMock).toHaveBeenCalledWith({ '7': 'firewall_rules', '9': 'server' });
+    });
+    await screen.findByText('Asset layout map saved.');
+  });
+
+  it('T319: the create-type button runs the action, refreshes the table and shows the new assignment', async () => {
+    getHuduAssetLayoutMapMock
+      .mockResolvedValueOnce({ success: true, data: layoutsDataWithTypes })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          layouts: [
+            { id: 7, name: 'Computer Assets', suggestedType: 'workstation', configuredType: 'computer_assets' },
+            { id: 9, name: 'Databases', suggestedType: 'unknown', configuredType: 'server' },
+          ],
+          map: { '7': 'computer_assets', '9': 'server' },
+          types: [...registryTypes, { slug: 'computer_assets', name: 'Computer Assets', is_builtin: false }],
+        },
+      });
+    createAssetTypeFromHuduLayoutMock.mockResolvedValue({
+      success: true,
+      data: {
+        type: { slug: 'computer_assets', name: 'Computer Assets', is_builtin: false, fields_schema: [] },
+        map: { '7': 'computer_assets', '9': 'server' },
+      },
+    });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    const button = document.getElementById('hudu-layout-create-type-7') as HTMLButtonElement;
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(createAssetTypeFromHuduLayoutMock).toHaveBeenCalledWith({ layoutId: 7 });
+    });
+    await screen.findByText('Asset type created and assigned to this layout.');
+    // The table reloaded and now reflects the stored assignment.
+    expect(getHuduAssetLayoutMapMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect((screen.getByTestId('hudu-layout-type-select-7') as HTMLSelectElement).value).toBe(
+        'computer_assets'
+      );
+    });
+  });
+
+  it('T319: a slug conflict surfaces inline without refreshing the table', async () => {
+    getHuduAssetLayoutMapMock.mockResolvedValue({ success: true, data: layoutsDataWithTypes });
+    createAssetTypeFromHuduLayoutMock.mockResolvedValue({
+      success: false,
+      error: 'An asset type already exists for slug "computer_assets".',
+      code: 'slug_conflict',
+      slug: 'computer_assets',
+    });
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    fireEvent.click(document.getElementById('hudu-layout-create-type-7') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain(
+        'An asset type with this name already exists. Choose it from the list instead.'
+      );
+    });
+    expect(getHuduAssetLayoutMapMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T319: the create-type button is disabled while the action runs', async () => {
+    getHuduAssetLayoutMapMock.mockResolvedValue({ success: true, data: layoutsDataWithTypes });
+    let resolveCreate: (value: unknown) => void = () => undefined;
+    createAssetTypeFromHuduLayoutMock.mockImplementation(
+      () => new Promise((resolve) => { resolveCreate = resolve; })
+    );
+
+    render(<HuduAssetLayoutMapManager />);
+    await screen.findByText('Computer Assets');
+
+    const button = document.getElementById('hudu-layout-create-type-7') as HTMLButtonElement;
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect((document.getElementById('hudu-layout-create-type-7') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    resolveCreate({
+      success: true,
+      data: { type: { slug: 'computer_assets', name: 'Computer Assets' }, map: { '7': 'computer_assets' } },
+    });
+    await screen.findByText('Asset type created and assigned to this layout.');
+    await waitFor(() => {
+      expect((document.getElementById('hudu-layout-create-type-7') as HTMLButtonElement).disabled).toBe(false);
+    });
   });
 });

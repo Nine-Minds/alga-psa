@@ -13,8 +13,10 @@ import {
 } from '../../../../lib/actions/integrations/huduLayoutMapActions';
 import type {
   HuduAssetLayoutMapEntry,
+  HuduAssetTypeOption,
   HuduLayoutMapActionResult,
 } from '../../../../lib/actions/integrations/huduLayoutMapActions';
+import HuduLayoutCreateTypeButton from './HuduLayoutCreateTypeButton';
 import { ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED } from '../../../../lib/integrations/hudu/assetLayoutMap';
 import type {
   HuduAssetLayoutTypeMap,
@@ -33,6 +35,8 @@ const HuduAssetLayoutMapManager: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
 
   const [layouts, setLayouts] = useState<HuduAssetLayoutMapEntry[]>([]);
+  // F315: tenant asset type registry (built-ins + customs) backing the selects.
+  const [registryTypes, setRegistryTypes] = useState<HuduAssetTypeOption[]>([]);
   // Each layout's current pick: configured ?? heuristic suggestion (FR12 prefill).
   const [selections, setSelections] = useState<HuduAssetLayoutTypeMap>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -59,10 +63,20 @@ const HuduAssetLayoutMapManager: React.FC = () => {
     }
   };
 
-  const typeOptions = [...ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED].map((assignment) => ({
-    value: assignment,
-    label: assetTypeLabel(assignment),
-  }));
+  // Registry-sourced options (custom types use their registry name) with the
+  // built-in fallback when the payload carries no registry list.
+  const typeOptions = [
+    ...(registryTypes.length > 0
+      ? registryTypes.map((type) => ({
+          value: type.slug,
+          label: type.is_builtin ? assetTypeLabel(type.slug) : type.name,
+        }))
+      : ALGA_ASSET_TYPES.map((assignment) => ({
+          value: assignment as string,
+          label: assetTypeLabel(assignment),
+        }))),
+    { value: HUDU_LAYOUT_EXCLUDED as string, label: assetTypeLabel(HUDU_LAYOUT_EXCLUDED) },
+  ];
 
   const loadLayouts = async () => {
     setIsLoading(true);
@@ -79,6 +93,7 @@ const HuduAssetLayoutMapManager: React.FC = () => {
         setLayouts([]);
       } else {
         setLayouts(result.data.layouts);
+        setRegistryTypes(result.data.types ?? []);
         const prefill: HuduAssetLayoutTypeMap = {};
         for (const layout of result.data.layouts) {
           prefill[String(layout.id)] = layout.configuredType ?? layout.suggestedType;
@@ -228,14 +243,29 @@ const HuduAssetLayoutMapManager: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <CustomSelect
-                          id={`hudu-layout-type-select-${layout.id}`}
-                          options={typeOptions}
-                          value={selections[String(layout.id)] ?? 'unknown'}
-                          onValueChange={(value) => handleSelect(layout.id, value)}
-                          disabled={isSaving}
-                          className="w-full"
-                        />
+                        <div className="flex flex-col gap-2">
+                          <CustomSelect
+                            id={`hudu-layout-type-select-${layout.id}`}
+                            options={typeOptions}
+                            value={selections[String(layout.id)] ?? 'unknown'}
+                            onValueChange={(value) => handleSelect(layout.id, value)}
+                            disabled={isSaving}
+                            className="w-full"
+                          />
+                          <HuduLayoutCreateTypeButton
+                            layoutId={layout.id}
+                            disabled={isSaving}
+                            onSuccess={(message) => {
+                              setError(null);
+                              setSuccessMessage(message);
+                              void loadLayouts();
+                            }}
+                            onError={(message) => {
+                              setSuccessMessage(null);
+                              setError(message);
+                            }}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
