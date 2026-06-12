@@ -397,13 +397,14 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
   const [validationErrors, setValidationErrors] = useState<string[]>(derivedState.validationErrors);
   const [fallbackMessage, setFallbackMessage] = useState<string | null>(derivedState.fallbackMessage);
 
+  // Every setter below must bail out (return the current state) when nothing
+  // changed: `derivedState` is rebuilt whenever `t` changes identity — which is
+  // every render under react-i18next's uninitialized fallback — so an updater
+  // that returns a fresh array/object for equal content re-renders forever.
   useEffect(() => {
     setMode(derivedState.mode);
     setSimpleFields((currentFields) => {
-      if (
-        derivedState.mode === 'simple' &&
-        areEquivalentSimpleFields(currentFields, derivedState.fields)
-      ) {
+      if (areEquivalentSimpleFields(currentFields, derivedState.fields)) {
         return currentFields;
       }
 
@@ -418,7 +419,12 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
       return cloneFields(derivedState.fields);
     });
     setAdvancedText(derivedState.advancedText);
-    setValidationErrors(derivedState.validationErrors);
+    setValidationErrors((currentErrors) =>
+      currentErrors.length === derivedState.validationErrors.length &&
+      currentErrors.every((message, index) => message === derivedState.validationErrors[index])
+        ? currentErrors
+        : derivedState.validationErrors
+    );
     setFallbackMessage(derivedState.fallbackMessage);
   }, [derivedState]);
 

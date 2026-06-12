@@ -94,9 +94,14 @@ jobs:
           # Fixed shuffle seed so order-dependent failures are reproducible across reruns.
           VITEST_SEED: '20260610'
 
+      # sebastian-ee's inferred test target is a bare `vitest` over its full
+      # 209-file suite (~50 minutes serial — far past this job's 30-minute
+      # backstop, which it blew via WorkflowAiSchemaSection's render-loop hang
+      # before that was fixed). Excluded until the suite gets a bounded
+      # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
         continue-on-error: true
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
