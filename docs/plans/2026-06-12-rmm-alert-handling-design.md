@@ -196,23 +196,30 @@ recurring schedule.
 
 ## Alert polling (reconciliation)
 
-Per-integration Temporal schedules (the Entra per-tenant pattern):
-`rmm-alert-reconciliation:{tenant}:{integration}` runs
-`rmmAlertReconciliationWorkflow` on the `tenant-workflows` queue every N
-minutes — default 15, configurable 5–60 in integration settings, on by
-default. Schedules are reconciled at temporal-worker boot
-(`setupSchedules.ts` scans `rmm_integrations`: active + polling-enabled →
-upsert with the configured interval; otherwise delete), and the NinjaOne
-connect/disconnect flows ensure/remove their schedule immediately. Every
-activity run re-checks the integration's `is_active` and polling-enabled
-state, so a schedule that outlives its integration between boots is a
-harmless no-op. Interval changes saved in settings take effect at the next
-worker boot (or NinjaOne reconnect). Huntress incident polling was migrated
-onto the same model (`huntress-incident-poll:{tenant}:{integration}` →
-`huntressIncidentPollWorkflow`), replacing its pg-boss dispatcher; the
-activities are thin wrappers over the existing ee/server poll logic, reached
-from the temporal worker via its `@ee` alias — no duplication. Each cycle
-works through the same normalized pipeline:
+Polling rides Alga's job-runner abstraction (`IJobRunner`,
+`JobRunnerFactory`): the same handlers
+(`server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts`, registered in the
+central `JobHandlerRegistry` for the server and in
+`initializeJobHandlersForWorker` for the temporal worker) run on whichever
+backend the edition selects — **Temporal Schedules in EE, pg-boss cron in
+CE** — so TacticalRMM keeps polling in community deployments. Each
+integration gets one recurring job keyed by singletonKey
+`<job>:<tenant>:<integration>`: `rmm-alert-reconciliation` (interval from
+`settings.alertPolling`, 5–60 min, default 15, on by default) and
+`huntress-incident-poll` (from `pollIntervalMinutes`, default 5), which
+replaced Huntress's pg-boss dispatcher.
+
+A small control loop, `reconcileRmmPollingSchedules()`, converges the
+recurring jobs onto `rmm_integrations` state — creating jobs for new
+connections, recreating them when intervals change, cancelling them on
+disconnect or polling-disable. It runs every 5 minutes from `initializeApp`,
+once at server boot, and immediately from the NinjaOne connect/disconnect
+flows, so settings changes take effect without operator intervention.
+Handlers also re-check integration eligibility per run, making any schedule
+that briefly outlives its integration a harmless no-op.
+`TemporalJobRunner.scheduleRecurringJob` was upgraded to update an existing
+schedule's spec instead of silently keeping the old one. Each cycle works
+through the same normalized pipeline:
 
 1. Fetch active alerts from the RMM (`NinjaOneClient.getAlerts()`; Tactical's
    alerts API) and upsert any the webhooks missed as `triggered` events, so

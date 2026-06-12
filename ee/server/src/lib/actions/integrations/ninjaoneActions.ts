@@ -327,21 +327,6 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
         'disconnect'
       );
 
-      // Remove the per-integration alert reconciliation schedule without
-      // waiting for the next temporal-worker boot (leftovers no-op anyway).
-      try {
-        const { removeRmmAlertPollingSchedule } = await import('../../integrations/rmm/alertPollingSchedule');
-        await removeRmmAlertPollingSchedule({
-          tenantId: tenant,
-          integrationId: String(existingIntegration.integration_id),
-        });
-      } catch (scheduleError) {
-        logger.warn('[NinjaOneActions] Failed to remove alert polling schedule', {
-          tenant,
-          error: extractErrorInfo(scheduleError),
-        });
-      }
-
       existingIntegration = await knex('rmm_integrations')
         .where({ tenant, provider: 'ninjaone' })
         .first();
@@ -386,6 +371,22 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
           settings: JSON.stringify(settings),
           updated_at: knex.fn.now(),
         });
+
+      // Now that the integration is inactive, converge polling jobs so the
+      // recurring alert reconciliation is cancelled immediately rather than
+      // waiting for the periodic reconciler tick.
+      try {
+        const { reconcileRmmPollingSchedules } = await import(
+          'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+        );
+        const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
+        await reconcileRmmPollingSchedules(await initializeJobRunner());
+      } catch (scheduleError) {
+        logger.warn('[NinjaOneActions] Failed to converge polling schedules on disconnect', {
+          tenant,
+          error: extractErrorInfo(scheduleError),
+        });
+      }
     }
 
     // Emit workflow v2 integration disconnected event (best-effort)

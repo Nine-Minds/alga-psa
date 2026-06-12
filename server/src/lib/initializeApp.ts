@@ -604,10 +604,31 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
   }
 
-  // Huntress incident polling and RMM alert reconciliation run as
-  // per-integration Temporal schedules, reconciled at temporal-worker boot
-  // (ee/temporal-workflows/src/schedules/setupSchedules.ts) — no pg-boss
-  // registration here.
+  // RMM polling (alert reconciliation + Huntress incidents) runs as
+  // per-integration recurring jobs on the job-runner abstraction — Temporal
+  // Schedules in EE, pg-boss cron in CE. This small control loop keeps those
+  // jobs converged with rmm_integrations state (connects, disconnects,
+  // interval changes) without operator intervention; see
+  // server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts for the model.
+  try {
+    const RECONCILER_JOB = 'rmm-polling-schedule-reconciler';
+    jobScheduler.registerJobHandler(RECONCILER_JOB, async () => {
+      const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+      const runner = await initializeJobRunner();
+      await reconcileRmmPollingSchedules(runner);
+    });
+    const existingReconciler = await jobScheduler.getJobs({ jobName: RECONCILER_JOB });
+    if (existingReconciler.length === 0) {
+      await jobScheduler.scheduleRecurringJob(RECONCILER_JOB, '5 minutes', { tenantId: 'system' });
+    }
+
+    // One pass at boot so fresh deployments don't wait for the first tick.
+    const { reconcileRmmPollingSchedules } = await import('./jobs/handlers/rmmAlertPollingHandlers');
+    const runner = await initializeJobRunner();
+    await reconcileRmmPollingSchedules(runner);
+  } catch (error) {
+    logger.error('Failed to set up RMM polling schedule reconciler:', error);
+  }
 }
 
 // Helper function to setup development environment

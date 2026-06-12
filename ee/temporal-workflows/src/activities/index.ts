@@ -31,4 +31,3 @@ export {
   logAuditEvent,
   type AuditEventInput,
 } from "./resend-welcome-email-activities";
-export * from "./rmm-alert-polling-activities";

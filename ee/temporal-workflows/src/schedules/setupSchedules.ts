@@ -8,9 +8,7 @@ import {
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   entraAllTenantsSyncWorkflow,
-  huntressIncidentPollWorkflow,
   premiumTrialExpiryWorkflow,
-  rmmAlertReconciliationWorkflow,
 } from '../workflows';
 import * as dotenv from 'dotenv';
 
@@ -33,10 +31,10 @@ const logger = createLogger({
 const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
 const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
 const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
-const RMM_ALERT_POLL_SCHEDULE_PREFIX = 'rmm-alert-reconciliation';
-const HUNTRESS_POLL_SCHEDULE_PREFIX = 'huntress-incident-poll';
-/** Providers with a registered alert fetcher (see rmm-alert-polling-activities). */
-const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+// Note: RMM alert reconciliation and Huntress incident polling are NOT set up
+// here. They run as per-integration recurring jobs on the job-runner
+// abstraction (Temporal Schedules in EE via TemporalJobRunner), converged by
+// the reconciler in server/src/lib/jobs/handlers/rmmAlertPollingHandlers.ts.
 
 interface EntraScheduleConfigRow {
   tenantId: string;
@@ -161,96 +159,6 @@ async function backfillNinjaOneProactiveSchedules(): Promise<void> {
     skipped,
     failed,
   });
-}
-
-/**
- * Per-integration polling schedules for RMM alert reconciliation and Huntress
- * incident polls. Reconciled at worker boot: active integrations get a
- * schedule honoring their configured interval; inactive or polling-disabled
- * ones have any leftover schedule deleted. The activities also re-check
- * eligibility per run, so a schedule that outlives its integration between
- * boots is a harmless no-op.
- */
-async function reconcileRmmPollingSchedules(client: Client): Promise<void> {
-  const knex = await getAdminConnection();
-  const rows = await knex('rmm_integrations')
-    .whereIn('provider', [...RMM_ALERT_POLLING_PROVIDERS, 'huntress'])
-    .select('tenant', 'integration_id', 'provider', 'is_active', 'settings');
-
-  for (const row of rows) {
-    const tenantId = String(row.tenant);
-    const integrationId = String(row.integration_id);
-    const provider = String(row.provider);
-    const settings = typeof row.settings === 'string' ? safeParseJson(row.settings) : row.settings ?? {};
-
-    try {
-      if (provider === 'huntress') {
-        const scheduleId = `${HUNTRESS_POLL_SCHEDULE_PREFIX}:${tenantId}:${integrationId}`;
-        if (!row.is_active) {
-          await deleteScheduleIfExists(client, scheduleId);
-          continue;
-        }
-        const rawInterval = Number((settings as Record<string, unknown>)?.pollIntervalMinutes);
-        const intervalMinutes = Number.isFinite(rawInterval) ? Math.min(1440, Math.max(5, Math.round(rawInterval))) : 5;
-        await upsertSchedule(client, scheduleId, {
-          spec: { intervals: [{ every: `${intervalMinutes}m` }] },
-          action: {
-            type: 'startWorkflow',
-            workflowType: huntressIncidentPollWorkflow,
-            args: [{ tenantId, integrationId }],
-            taskQueue: 'tenant-workflows',
-            workflowExecutionTimeout: '30m',
-          },
-          policies: {
-            overlap: ScheduleOverlapPolicy.SKIP,
-            catchupWindow: '5m',
-          },
-        });
-        continue;
-      }
-
-      const scheduleId = `${RMM_ALERT_POLL_SCHEDULE_PREFIX}:${tenantId}:${integrationId}`;
-      const polling = ((settings as Record<string, unknown>)?.alertPolling ?? {}) as Record<string, unknown>;
-      const pollingEnabled = polling.enabled !== false;
-      if (!row.is_active || !pollingEnabled) {
-        await deleteScheduleIfExists(client, scheduleId);
-        continue;
-      }
-      const rawInterval = Number(polling.intervalMinutes);
-      const intervalMinutes = Number.isFinite(rawInterval) ? Math.min(60, Math.max(5, Math.round(rawInterval))) : 15;
-      await upsertSchedule(client, scheduleId, {
-        spec: { intervals: [{ every: `${intervalMinutes}m` }] },
-        action: {
-          type: 'startWorkflow',
-          workflowType: rmmAlertReconciliationWorkflow,
-          args: [{ tenantId, integrationId, provider }],
-          taskQueue: 'tenant-workflows',
-          workflowExecutionTimeout: '30m',
-        },
-        policies: {
-          overlap: ScheduleOverlapPolicy.SKIP,
-          catchupWindow: '5m',
-        },
-      });
-    } catch (error: any) {
-      logger.warn('Failed to reconcile RMM polling schedule', {
-        tenantId,
-        integrationId,
-        provider,
-        error: error?.message || 'Unknown error',
-      });
-    }
-  }
-
-  logger.info('RMM polling schedule reconciliation completed', { integrations: rows.length });
-}
-
-function safeParseJson(value: string): Record<string, unknown> {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
 }
 
 async function upsertSchedule(client: Client, scheduleId: string, input: any): Promise<void> {
@@ -450,8 +358,6 @@ export async function setupSchedules() {
         },
       });
     }
-
-    await reconcileRmmPollingSchedules(client);
 
     await backfillNinjaOneProactiveSchedules();
 

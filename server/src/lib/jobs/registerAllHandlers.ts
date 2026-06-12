@@ -58,6 +58,14 @@ import {
   workflowRecurringScheduledRunHandler,
   WorkflowScheduledRunJobData,
 } from './handlers/workflowScheduledRunHandlers';
+import {
+  rmmAlertReconciliationHandler,
+  huntressIncidentPollHandler,
+  RmmAlertReconciliationJobData,
+  HuntressIncidentPollJobData,
+  RMM_ALERT_RECONCILIATION_JOB,
+  HUNTRESS_INCIDENT_POLL_JOB,
+} from './handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from './handlers/autoCloseTicketsHandler';
 import {
@@ -485,6 +493,36 @@ export async function registerAllJobHandlers(
       registerOpts
     );
   }
+
+  // ============================================================================
+  // RMM POLLING HANDLERS
+  // ============================================================================
+  // Per-integration recurring jobs managed by reconcileRmmPollingSchedules()
+  // (see rmmAlertPollingHandlers.ts for how RMM polling rides the job runner).
+
+  JobHandlerRegistry.register<RmmAlertReconciliationJobData & BaseJobData>(
+    {
+      name: RMM_ALERT_RECONCILIATION_JOB,
+      handler: async (jobId, data) => {
+        await rmmAlertReconciliationHandler(jobId, data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 600000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<HuntressIncidentPollJobData & BaseJobData>(
+    {
+      name: HUNTRESS_INCIDENT_POLL_JOB,
+      handler: async (jobId, data) => {
+        await huntressIncidentPollHandler(jobId, data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 600000,
+    },
+    registerOpts
+  );
 
   // Mark registry as initialized
   JobHandlerRegistry.markInitialized();

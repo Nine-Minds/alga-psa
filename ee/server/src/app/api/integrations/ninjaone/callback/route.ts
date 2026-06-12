@@ -386,27 +386,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Ensure the per-integration alert reconciliation schedule exists without
-    // waiting for the next temporal-worker boot.
+    // Converge the per-integration alert polling job immediately so a fresh
+    // connection starts polling without waiting for the periodic reconciler.
     try {
-      const integrationRow = await runWithTenant(tenantId, async () => {
-        const { knex } = await createTenantKnex();
-        return knex('rmm_integrations')
-          .where({ tenant: tenantId, provider: 'ninjaone' })
-          .first('integration_id');
-      });
-      if (integrationRow?.integration_id) {
-        const { ensureRmmAlertPollingSchedule } = await import(
-          '../../../../../lib/integrations/rmm/alertPollingSchedule'
-        );
-        await ensureRmmAlertPollingSchedule({
-          tenantId,
-          integrationId: String(integrationRow.integration_id),
-          provider: 'ninjaone',
-        });
-      }
+      const { reconcileRmmPollingSchedules } = await import(
+        'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+      );
+      const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
+      await reconcileRmmPollingSchedules(await initializeJobRunner());
     } catch (scheduleError) {
-      console.warn('[NinjaOne Callback] Failed to ensure alert polling schedule (worker boot will heal)', scheduleError);
+      console.warn('[NinjaOne Callback] Failed to converge alert polling schedule (reconciler will catch up)', scheduleError);
     }
 
     // 8. Register webhook with NinjaOne
