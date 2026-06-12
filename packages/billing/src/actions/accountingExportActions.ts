@@ -157,6 +157,21 @@ export const updateAccountingExportBatchStatus = withAuth(async (
   });
 });
 
+export const cancelAccountingExportBatch = withAuth(async (
+  user,
+  { tenant },
+  batchId: string,
+  reason?: string
+): Promise<AccountingExportBatch | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'update');
+  if (denied) return denied;
+  const service = await AccountingExportService.create();
+  return service.cancelBatch(batchId, {
+    cancelledBy: user.user_id,
+    reason: reason ?? null
+  });
+});
+
 export const getAccountingExportBatch = withAuth(async (
   user,
   { tenant },

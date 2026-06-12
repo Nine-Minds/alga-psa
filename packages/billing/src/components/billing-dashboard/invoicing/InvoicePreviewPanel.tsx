@@ -21,6 +21,7 @@ import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
+import CreditApplicationUI from '../CreditApplicationUI';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -53,6 +54,12 @@ interface InvoicePreviewPanelProps {
   isFinalized: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
+  /** Client owning the invoice; enables the manual Apply Credit action. */
+  clientId?: string | null;
+  /** Invoice total in minor units; caps the manual credit application. */
+  invoiceTotal?: number;
+  /** Called after a credit is applied so the parent can refresh its list. */
+  onCreditApplied?: () => Promise<void> | void;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -69,7 +76,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onDraftInvoiceUpdated,
   isFinalized,
   creditApplied = 0,
-  draftInvoiceSummary = null
+  draftInvoiceSummary = null,
+  clientId = null,
+  invoiceTotal = 0,
+  onCreditApplied
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
@@ -92,6 +102,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voidLoading, setVoidLoading] = useState(false);
+  const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // QBO sync status for this invoice
@@ -629,6 +640,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
 
+              {isFinalized && clientId && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+                <Button
+                  id="invoice-apply-credit-button"
+                  variant="secondary"
+                  onClick={() => setApplyCreditOpen(true)}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  {t('invoicePreview.actions.applyCredit', { defaultValue: 'Apply Credit' })}
+                </Button>
+              )}
+
               {isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
                 <Button
                   id="invoice-void-button"
@@ -645,6 +668,27 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
             </div>
+
+            {clientId && (
+              <Dialog
+                id="apply-credit-dialog"
+                isOpen={applyCreditOpen}
+                onClose={() => setApplyCreditOpen(false)}
+                title={t('invoicePreview.applyCreditDialog.title', { defaultValue: 'Apply Credit' })}
+              >
+                <CreditApplicationUI
+                  clientId={clientId}
+                  invoiceId={invoiceId ?? undefined}
+                  invoiceAmount={Math.max((invoiceTotal ?? 0) - creditApplied, 0)}
+                  onApplyCredit={async () => {
+                    setApplyCreditOpen(false);
+                    setPreviewRefreshCounter((prev) => prev + 1);
+                    await onCreditApplied?.();
+                  }}
+                  onCancel={() => setApplyCreditOpen(false)}
+                />
+              </Dialog>
+            )}
 
             <Dialog
               id="void-invoice-dialog"

@@ -181,7 +181,7 @@ describe('QboOnboardingWizard contracts', () => {
     expect(screen.getByText(/Backfill payment status for linked invoices/)).toBeInTheDocument();
   });
 
-  it('T090: finish step calls completeOnboardingWizard with date and toggle values', async () => {
+  it('T090: finish step calls completeOnboardingWizard with date and toggle values (auto-sync defaults OFF per plan F004)', async () => {
     const { QboOnboardingWizard } = await import('./QboOnboardingWizard');
     render(<QboOnboardingWizard />);
 
@@ -191,7 +191,7 @@ describe('QboOnboardingWizard contracts', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Next$/ }));
     await waitFor(() => { expect(document.getElementById('qbo-wizard-step-2')).toBeInTheDocument(); });
 
-    // Finish button
+    // Finish button — without touching the switch, auto-sync must stay OFF
     const finishBtn = screen.getByRole('button', { name: /Complete setup/i });
     fireEvent.click(finishBtn);
 
@@ -199,6 +199,29 @@ describe('QboOnboardingWizard contracts', () => {
       expect(completeOnboardingWizardMock).toHaveBeenCalledWith(
         expect.objectContaining({
           autoSyncStartDate: expect.any(String),
+          enableAutoSync: false,
+        })
+      );
+    });
+  });
+
+  it('T090b: toggling the auto-sync switch on sends enableAutoSync: true', async () => {
+    const { QboOnboardingWizard } = await import('./QboOnboardingWizard');
+    render(<QboOnboardingWizard />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Next$/ }));
+    await waitFor(() => { expect(document.getElementById('qbo-wizard-step-1')).toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole('button', { name: /^Next$/ }));
+    await waitFor(() => { expect(document.getElementById('qbo-wizard-step-2')).toBeInTheDocument(); });
+
+    // Opt in explicitly at go-live
+    fireEvent.click(document.getElementById('qbo-golive-autosync')!);
+
+    fireEvent.click(screen.getByRole('button', { name: /Complete setup/i }));
+
+    await waitFor(() => {
+      expect(completeOnboardingWizardMock).toHaveBeenCalledWith(
+        expect.objectContaining({
           enableAutoSync: true,
         })
       );

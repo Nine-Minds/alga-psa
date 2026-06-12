@@ -142,7 +142,9 @@ describe('drainApplyCreditOps', () => {
       })
     });
 
-    // QBO read returns the invoice with CustomerRef
+    // First read: CreditMemo balance check (full credit still available)
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 100 });
+    // Second read: the invoice with CustomerRef
     qboReadMock.mockResolvedValueOnce({ Id: 'qbo-inv-99', CustomerRef: { value: 'customer-77' } });
     // QBO create returns a Payment with Id
     qboCreateMock.mockResolvedValueOnce({ Id: 'qbo-payment-1' });
@@ -307,6 +309,8 @@ describe('drainApplyCreditOps', () => {
       })
     });
 
+    // CreditMemo balance check still runs; the customer read should not.
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 100 });
     qboCreateMock.mockResolvedValueOnce({ Id: 'qbo-payment-2' });
     const stats = makeStats();
 
@@ -321,11 +325,134 @@ describe('drainApplyCreditOps', () => {
       stats
     });
 
-    // Should NOT have called read because customerId was in metadata
-    expect(qboReadMock).not.toHaveBeenCalled();
+    // Should NOT have read the Invoice because customerId was in metadata
+    expect(qboReadMock).toHaveBeenCalledTimes(1);
+    expect(qboReadMock).toHaveBeenCalledWith('CreditMemo', 'qbo-cm-42');
     expect(qboCreateMock).toHaveBeenCalledWith(
       'Payment',
       expect.objectContaining({ CustomerRef: { value: 'customer-from-meta' } })
     );
+  });
+
+  it('QBO already consumed the credit (auto-apply race) → exception filed, no payment pushed', async () => {
+    const op = makePendingOp(); // applies 10000 cents
+    const markFailed = vi.fn(async () => 'pending');
+    const ops = makeOps({ listPending: vi.fn(async () => [op]), markFailed });
+
+    const ledger = makeLedger({
+      findByAlgaId: vi.fn(async (entityType: string, entityId: string) => {
+        if (entityType === 'credit_application') return undefined;
+        if (entityId === 'inv-cn-1') {
+          return { id: 'map-cn', external_entity_id: 'qbo-cm-42', metadata: null };
+        }
+        if (entityId === 'inv-target-1') {
+          return { id: 'map-inv', external_entity_id: 'qbo-inv-99', metadata: { customerId: 'customer-77' } };
+        }
+        return undefined;
+      })
+    });
+
+    // CM read shows QBO already spent the credit elsewhere (Balance 0 of $100)
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 0 });
+
+    const exceptions = makeExceptions();
+    const stats = makeStats();
+
+    await drainApplyCreditOps({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER,
+      targetRealm: REALM,
+      ops,
+      ledger,
+      exceptions,
+      stats
+    });
+
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_export_error',
+        entityType: 'credit_allocation',
+        entityId: 'alloc-1',
+        context: expect.objectContaining({ reason: 'qbo_credit_already_consumed' })
+      })
+    );
+    expect(markFailed).toHaveBeenCalled();
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
+  it('CM balance read failure → op retries later without pushing blind', async () => {
+    const op = makePendingOp();
+    const markFailed = vi.fn(async () => 'pending');
+    const ops = makeOps({ listPending: vi.fn(async () => [op]), markFailed });
+
+    const ledger = makeLedger({
+      findByAlgaId: vi.fn(async (entityType: string, entityId: string) => {
+        if (entityType === 'credit_application') return undefined;
+        if (entityId === 'inv-cn-1') {
+          return { id: 'map-cn', external_entity_id: 'qbo-cm-42', metadata: null };
+        }
+        if (entityId === 'inv-target-1') {
+          return { id: 'map-inv', external_entity_id: 'qbo-inv-99', metadata: { customerId: 'customer-77' } };
+        }
+        return undefined;
+      })
+    });
+
+    qboReadMock.mockRejectedValueOnce(new Error('rate limited'));
+
+    const exceptions = makeExceptions();
+
+    await drainApplyCreditOps({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER,
+      targetRealm: REALM,
+      ops,
+      ledger,
+      exceptions,
+      stats: makeStats()
+    });
+
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(markFailed).toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+  });
+
+  it('successful push resolves a previously filed conflict exception', async () => {
+    const op = makePendingOp();
+    const ops = makeOps({ listPending: vi.fn(async () => [op]) });
+
+    const ledger = makeLedger({
+      findByAlgaId: vi.fn(async (entityType: string, entityId: string) => {
+        if (entityType === 'credit_application') return undefined;
+        if (entityId === 'inv-cn-1') {
+          return { id: 'map-cn', external_entity_id: 'qbo-cm-42', metadata: null };
+        }
+        if (entityId === 'inv-target-1') {
+          return { id: 'map-inv', external_entity_id: 'qbo-inv-99', metadata: { customerId: 'customer-77' } };
+        }
+        return undefined;
+      })
+    });
+
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 100 });
+    qboCreateMock.mockResolvedValueOnce({ Id: 'qbo-payment-3' });
+
+    const exceptions = makeExceptions();
+
+    await drainApplyCreditOps({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER,
+      targetRealm: REALM,
+      ops,
+      ledger,
+      exceptions,
+      stats: makeStats()
+    });
+
+    expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_export_error', 'credit_allocation', 'alloc-1');
   });
 });

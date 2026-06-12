@@ -14,7 +14,8 @@ vi.mock('../services/accountingSync/syncProducers', () => ({
   enqueueInvoiceVoid: vi.fn(async () => undefined)
 }));
 
-import { reverseCreditApplicationsForInvoice } from './voidInvoiceActions';
+import { reverseCreditApplicationsForInvoice, voidInvoice } from './voidInvoiceActions';
+import { createTenantKnex } from '@alga-psa/db';
 
 // ── Helper: build a fake transaction (knex-like) ────────────────────────────
 
@@ -191,5 +192,119 @@ describe('reverseCreditApplicationsForInvoice', () => {
     expect(callLog).not.toContain('transactions.insert');
     // But invoices.update still runs (credit_applied zeroed) since creditAppTxns.length > 0
     expect(callLog).toContain('invoices.update');
+  });
+});
+
+// ── voidInvoice: credit-note claw-back ──────────────────────────────────────
+
+interface VoidHarnessOptions {
+  /** Some of the issued credit was already spent (trips the guard). */
+  consumed?: boolean;
+}
+
+/**
+ * Fake knex for the voidInvoice credit-note path. The issuance transaction is
+ * typed 'credit_issuance_from_negative_invoice' — the type real credit notes
+ * write — which the pre-fix code missed entirely (it queried only
+ * 'credit_issuance'), leaving phantom spendable credit after a void.
+ */
+function makeVoidHarness(options: VoidHarnessOptions = {}) {
+  const log: Array<{ table: string; op: string; args: any }> = [];
+  const issuanceTxn = { transaction_id: 'txn-iss-1', client_id: 'client-1', amount: 1800 };
+  const invoiceRow = {
+    invoice_id: 'inv-cn-1',
+    tenant: 'tenant-1',
+    finalized_at: '2026-06-01T00:00:00.000Z',
+    status: 'sent',
+    invoice_type: 'credit_note',
+    total_amount: -1800,
+    client_id: 'client-1',
+    is_prepayment: false,
+    credit_applied: 0
+  };
+
+  const knex: any = vi.fn((tableName: string) => {
+    const builder: any = {};
+    const filters: Array<[string, any[]]> = [];
+    builder.where = vi.fn((...args: any[]) => { filters.push(['where', args]); return builder; });
+    builder.whereIn = vi.fn((...args: any[]) => { filters.push(['whereIn', args]); return builder; });
+    builder.sum = vi.fn(() => builder);
+    builder.select = vi.fn(async () => (tableName === 'transactions' ? [issuanceTxn] : []));
+    builder.first = vi.fn(async () => {
+      if (tableName === 'invoices') return invoiceRow;
+      if (tableName === 'invoice_payments') return { total: 0 };
+      if (tableName === 'credit_tracking') {
+        const usesWhereIn = filters.some(([method]) => method === 'whereIn');
+        if (usesWhereIn) {
+          // consumed-credit guard: remaining_amount < amount
+          return options.consumed ? { credit_id: 'cr-1' } : undefined;
+        }
+        // claw-back lookup by transaction_id
+        return { credit_id: 'cr-1', remaining_amount: 1800 };
+      }
+      return undefined;
+    });
+    builder.insert = vi.fn(async (row: any) => { log.push({ table: tableName, op: 'insert', args: row }); });
+    builder.update = vi.fn(async (row: any) => { log.push({ table: tableName, op: 'update', args: row }); return 1; });
+    builder.decrement = vi.fn((column: string, amount: number) => {
+      log.push({ table: tableName, op: 'decrement', args: { column, amount } });
+      return builder;
+    });
+    builder.increment = vi.fn(() => builder);
+    return builder;
+  });
+  knex.raw = vi.fn((sql: string) => sql);
+
+  return { knex, log };
+}
+
+describe('voidInvoice (credit note)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('claws back unconsumed issued credit: balance decremented, tracking zeroed, adjustment written', async () => {
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    await (voidInvoice as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'duplicate credit note'
+    );
+
+    // Pool credit removed from the client balance…
+    expect(log).toContainEqual({
+      table: 'clients',
+      op: 'decrement',
+      args: { column: 'credit_balance', amount: 1800 }
+    });
+    // …tracking row zeroed…
+    expect(log.some((e) => e.table === 'credit_tracking' && e.op === 'update' && e.args.remaining_amount === 0)).toBe(true);
+    // …auditable claw-back transaction written…
+    const adjustment = log.find((e) => e.table === 'transactions' && e.op === 'insert' && e.args.type === 'credit_adjustment');
+    expect(adjustment?.args.amount).toBe(-1800);
+    expect(adjustment?.args.metadata?.reason).toBe('credit_note_voided');
+    // …and the document itself voided.
+    expect(log.some((e) => e.table === 'invoices' && e.op === 'update' && e.args.status === 'cancelled')).toBe(true);
+    expect(log.some((e) => e.table === 'transactions' && e.op === 'insert' && e.args.type === 'invoice_cancelled')).toBe(true);
+  });
+
+  it('blocks the void when issued credit was already spent', async () => {
+    const { knex, log } = makeVoidHarness({ consumed: true });
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    await expect(
+      (voidInvoice as any)(
+        { user_id: 'user-1' },
+        { tenant: 'tenant-1' },
+        'inv-cn-1',
+        'too late'
+      )
+    ).rejects.toThrow(/applied credit/);
+
+    // Nothing was mutated.
+    expect(log.filter((e) => e.op !== 'decrement').every((e) => e.op !== 'insert' && e.op !== 'update')).toBe(true);
   });
 });

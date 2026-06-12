@@ -106,6 +106,74 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     const qboCreditMemoId = creditMemoMapping.external_entity_id;
     const qboInvoiceId = invoiceMapping.external_entity_id;
 
+    // ── Defensive: confirm the CreditMemo still carries this credit ────
+    // QBO's company setting 'Automatically apply credits' (ON by default)
+    // may have already applied the exported CreditMemo to the customer's
+    // oldest open invoice — possibly a different one than Alga chose. A
+    // bookkeeper applying it by hand has the same effect. Pushing the
+    // linking Payment blindly would double-apply the credit, so check the
+    // CM's remaining balance first and surface a conflict instead.
+    try {
+      const qboCreditMemo = await qboClient.read<any>('CreditMemo', qboCreditMemoId);
+      const remainingDollars = Number(qboCreditMemo?.Balance);
+      const remainingCents = Number.isFinite(remainingDollars) ? Math.round(remainingDollars * 100) : null;
+
+      if (!qboCreditMemo || (remainingCents !== null && remainingCents < payload.amountCents)) {
+        const message = !qboCreditMemo
+          ? `QBO CreditMemo ${qboCreditMemoId} no longer exists`
+          : `QBO CreditMemo ${qboCreditMemoId} has only ${remainingCents} cents of credit remaining; ` +
+            `Alga applied ${payload.amountCents} cents — QBO likely auto-applied the credit to another invoice`;
+
+        logger.warn('[creditApplicationApplier] Credit memo conflict; not pushing application', {
+          opId: op.op_id,
+          qboCreditMemoId,
+          remainingCents,
+          requestedCents: payload.amountCents
+        });
+
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'credit_allocation',
+          entityId: op.alga_entity_id,
+          title: 'Credit was already applied in QuickBooks — Alga application not synced',
+          context: {
+            reason: 'qbo_credit_already_consumed',
+            alga_entity_id: op.alga_entity_id,
+            alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+            alga_target_invoice_id: payload.targetInvoiceId,
+            qbo_credit_memo_id: qboCreditMemoId,
+            qbo_invoice_id: qboInvoiceId,
+            requested_amount_cents: payload.amountCents,
+            remaining_credit_cents: remainingCents,
+            message,
+            details:
+              `${message}. Check QuickBooks Account and Settings → Advanced → Automation → ` +
+              `'Automatically apply credits' and reconcile which invoice should carry the credit. ` +
+              `Once the credit is freed in QuickBooks, the application retries automatically.`,
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+
+        await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        continue;
+      }
+    } catch (error) {
+      // Read failure is transient — retry next cycle rather than push blind.
+      const message = error instanceof Error ? error.message : 'Failed to read QBO credit memo';
+      logger.warn('[creditApplicationApplier] Could not verify credit memo balance; retrying later', {
+        opId: op.op_id,
+        qboCreditMemoId,
+        error: message
+      });
+      await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      deps.stats.opsFailed += 1;
+      continue;
+    }
+
     // ── Resolve the QBO customer ID from the target invoice mapping ────
     // The customer ref is stored in the invoice's QBO entity. We look it
     // up from the metadata; if unavailable we fetch from QBO directly.
@@ -215,6 +283,9 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
 
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
+
+      // The application landed, so any earlier conflict exception is moot.
+      await deps.exceptions.resolve('accounting_sync_export_error', 'credit_allocation', op.alga_entity_id);
 
       logger.info('[creditApplicationApplier] Credit application synced to QBO', {
         tenantId: deps.tenantId,

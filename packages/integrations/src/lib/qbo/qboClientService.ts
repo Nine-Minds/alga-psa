@@ -633,6 +633,17 @@ export class QboClientService {
     return results;
   }
 
+  /**
+   * Company Preferences singleton (Account and Settings). Lets sync surfaces
+   * detect company settings that conflict with Alga-driven flows — e.g.
+   * SalesFormsPrefs.AutoApplyCredit (ON by default for new QBO companies)
+   * races Alga's explicit credit application.
+   */
+  public async getPreferences<T = any>(): Promise<T | null> {
+    const results = await this.query<T>('SELECT * FROM Preferences');
+    return results[0] ?? null;
+  }
+
   private async getClientInfo<T>(): Promise<T[]> {
     const url = this.buildCompanyUrl(`/companyinfo/${this.realmId}`);
 

@@ -1,7 +1,12 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
-import type { AccountingChangeSet, AccountingExportAdapter, AccountingExternalChange } from '@alga-psa/types';
+import type {
+  AccountingChangeSet,
+  AccountingExportAdapter,
+  AccountingExportBatch,
+  AccountingExternalChange
+} from '@alga-psa/types';
 import {
   emptyCycleStats,
   MAPPING_SYNC_STATUS,
@@ -296,26 +301,19 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
 
   let batchId: string | null = null;
   try {
-    const selector = new AccountingExportInvoiceSelector(deps.knex, deps.tenantId);
-    const { batch } = await selector.createBatchFromFilters({
-      adapterType: deps.adapterType,
-      targetRealm: deps.targetRealm,
-      origin: 'scheduled',
-      notes: 'Scheduled accounting sync',
-      filters: {
-        invoiceIds,
-        // Re-exports (drift resolution) must not be filtered out as already-synced.
-        excludeSyncedInvoices: false
-      }
-    });
+    const batch = await createScheduledBatch(deps, invoiceIds);
     batchId = batch.batch_id;
 
     const exportService = await AccountingExportService.createForTenant(deps.tenantId);
+
     await exportService.executeBatch(batch.batch_id);
 
     for (const op of pending) {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
+
+      // The export landed, so any earlier export-failure exception is moot.
+      await deps.exceptions.resolve('accounting_sync_export_error', 'invoice', op.alga_entity_id);
 
       // Re-exported drifted invoices are back in agreement. The deliver step may
       // already have reset the mapping to synced, so resolve unconditionally —
@@ -335,6 +333,7 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
 
     if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_EMPTY_BATCH') {
       // Everything queued was already exported — the ops are satisfied.
+      await cancelScheduledBatchIfBlocking(deps, batchId);
       for (const op of pending) {
         await deps.ops.markDone(deps.tenantId, op.op_id);
         deps.stats.opsProcessed += 1;
@@ -342,22 +341,43 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
       return;
     }
 
+    // A failed scheduled batch must not survive in a status that trips the
+    // duplicate-selection guard, or every later drain for these invoices dies
+    // on "batch already exists" without ever re-attempting the export.
+    await cancelScheduledBatchIfBlocking(deps, batchId);
+
+    // Validation failures are deterministic — retrying cannot fix a missing
+    // mapping — so the exception is filed on the first failure instead of
+    // after the attempts cap. Dedupe keeps repeat cycles from spamming the
+    // inbox. Transient errors (network, rate limits, 5xx) keep the
+    // retry-then-alert shape.
+    const isValidationFailure =
+      error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_VALIDATION_FAILED';
+    const validationErrors =
+      isValidationFailure && Array.isArray((error.details as any)?.validationErrors)
+        ? ((error.details as any).validationErrors as Array<{ code: string; message: string }>)
+        : undefined;
+
     for (const op of pending) {
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
 
-      if (nextStatus === 'skipped') {
+      if (isValidationFailure || nextStatus === 'skipped') {
         const result = await deps.exceptions.createOrUpdate({
           type: 'accounting_sync_export_error',
           entityType: 'invoice',
           entityId: op.alga_entity_id,
-          title: 'Scheduled accounting export keeps failing',
+          title: isValidationFailure
+            ? 'Scheduled accounting export failed validation'
+            : 'Scheduled accounting export keeps failing',
           context: {
             alga_invoice_id: op.alga_entity_id,
             batch_id: batchId,
             attempts: op.attempts + 1,
             message,
-            details: message,
+            details: validationErrors?.length
+              ? validationErrors.map((item) => `${item.code}: ${item.message}`).join('\n')
+              : message,
             realm: deps.targetRealm
           }
         });
@@ -374,5 +394,86 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
       invoiceCount: invoiceIds.length,
       error: message
     });
+  }
+}
+
+/**
+ * Create the scheduled batch, recovering once from a wedged predecessor: if
+ * the duplicate-selection guard points at an engine-owned scheduled batch
+ * that a previous failed drain left behind, cancel it and retry — operators
+ * fix the underlying problem (e.g. restore a mapping), and the next drain
+ * must be able to try the export again. Manual batches are operator-owned
+ * and never auto-cancelled.
+ */
+async function createScheduledBatch(deps: DrainDeps, invoiceIds: string[]): Promise<AccountingExportBatch> {
+  const selector = new AccountingExportInvoiceSelector(deps.knex, deps.tenantId);
+  const createOptions = {
+    adapterType: deps.adapterType,
+    targetRealm: deps.targetRealm,
+    origin: 'scheduled' as const,
+    notes: 'Scheduled accounting sync',
+    filters: {
+      invoiceIds,
+      // Re-exports (drift resolution) must not be filtered out as already-synced.
+      excludeSyncedInvoices: false
+    }
+  };
+
+  try {
+    const { batch } = await selector.createBatchFromFilters(createOptions);
+    return batch;
+  } catch (error) {
+    const staleBatchId =
+      error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE'
+        ? ((error.details as any)?.batchId as string | undefined)
+        : undefined;
+    if (!staleBatchId) {
+      throw error;
+    }
+
+    const cancelled = await cancelScheduledBatchIfBlocking(deps, staleBatchId);
+    if (!cancelled) {
+      throw error;
+    }
+
+    const { batch } = await selector.createBatchFromFilters(createOptions);
+    return batch;
+  }
+}
+
+/**
+ * Cancel an engine-owned scheduled batch if it sits in a status the
+ * duplicate-selection guard treats as blocking. Returns true when the batch
+ * was cancelled. The batch (and its validation errors) stays readable in the
+ * exports UI as a historical record.
+ */
+async function cancelScheduledBatchIfBlocking(deps: DrainDeps, batchId: string | null): Promise<boolean> {
+  if (!batchId) {
+    return false;
+  }
+
+  try {
+    const exportService = await AccountingExportService.createForTenant(deps.tenantId);
+    const { batch } = await exportService.getBatchWithDetails(batchId);
+    if (!batch || batch.origin !== 'scheduled') {
+      return false;
+    }
+
+    const blocking: Array<AccountingExportBatch['status']> = ['pending', 'validating', 'needs_attention', 'ready'];
+    if (!blocking.includes(batch.status)) {
+      return false;
+    }
+
+    await exportService.cancelBatch(batchId, {
+      reason: 'Auto-cancelled by scheduled sync: batch did not deliver and would block future scheduled exports'
+    });
+    return true;
+  } catch (error) {
+    logger.warn('[accountingSync] Failed to auto-cancel scheduled export batch', {
+      tenantId: deps.tenantId,
+      batchId,
+      error: error instanceof Error ? error.message : error
+    });
+    return false;
   }
 }

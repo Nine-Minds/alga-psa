@@ -177,6 +177,18 @@ export default function QboSyncHealthPanel() {
             </div>
           </div>
 
+          {/* QBO 'Automatically apply credits' conflicts with Alga-driven credit application */}
+          {health.autoApplyCreditsEnabled === true && (
+            <Alert variant="warning" id="qbo-auto-apply-credits-warning">
+              <AlertDescription>
+                {t('integrations.qbo.sync.autoApplyCreditsWarning', {
+                  defaultValue:
+                    'QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off "Automatically apply credits".',
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Refresh token expiry */}
           {health.refreshTokenExpiresAt && (() => {
             const expiresMs = new Date(health.refreshTokenExpiresAt!).getTime() - Date.now();

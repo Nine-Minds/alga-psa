@@ -366,4 +366,93 @@ describe('drainRecordPaymentOps', () => {
       })
     );
   });
+
+  it('files an exception when QBO books the payment as unapplied credit (UnappliedAmt > 0)', async () => {
+    const invoiceMapping = { id: 'im', alga_entity_id: 'inv-1', external_entity_id: 'qbo-inv-219', sync_status: 'synced', metadata: {} };
+    const customerMapping = { id: 'cm', alga_entity_id: 'client-1', external_entity_id: 'qbo-cust-1', sync_status: 'synced', metadata: {} };
+
+    const ledger = makeFakeLedger({
+      findByAlgaId: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(invoiceMapping)
+        .mockResolvedValueOnce(customerMapping)
+    });
+
+    // SMK-42 shape: QBO accepted the create but dropped the application line —
+    // the invoice was already settled on the QBO side.
+    vi.mocked(QboClientService.create).mockResolvedValue(
+      makeQboClient({ Id: 'qbo-pay-229', SyncToken: '0', TotalAmt: 50, UnappliedAmt: 50, Line: [] }) as any
+    );
+
+    const ops = makeFakeOps([makePendingOp()]);
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await drainRecordPaymentOps({
+      knex: makeKnex(),
+      tenantId: 't1',
+      adapterType: 'quickbooks_online',
+      targetRealm: 'r1',
+      ops: ops as any,
+      ledger: ledger as any,
+      exceptions: exceptions as any,
+      stats
+    });
+
+    // The money landed — op stays done and the mapping is written…
+    expect(ops.markDone).toHaveBeenCalledWith('t1', 'op-rp-1');
+    expect(ledger.insert).toHaveBeenCalled();
+    // …but the operator is told the application was dropped.
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_unmapped_payment',
+        entityType: 'invoice_payment',
+        entityId: 'pay-alga-1',
+        context: expect.objectContaining({
+          reason: 'pushed_payment_unapplied',
+          external_payment_id: 'qbo-pay-229',
+          unapplied_amount: 50
+        })
+      })
+    );
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
+  it('does not file an exception when the payment fully applies (UnappliedAmt = 0)', async () => {
+    const invoiceMapping = { id: 'im', alga_entity_id: 'inv-1', external_entity_id: 'qbo-inv-1', sync_status: 'synced', metadata: {} };
+    const customerMapping = { id: 'cm', alga_entity_id: 'client-1', external_entity_id: 'qbo-cust-1', sync_status: 'synced', metadata: {} };
+
+    const ledger = makeFakeLedger({
+      findByAlgaId: vi.fn()
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(invoiceMapping)
+        .mockResolvedValueOnce(customerMapping)
+    });
+
+    vi.mocked(QboClientService.create).mockResolvedValue(
+      makeQboClient({
+        Id: 'qbo-pay-1',
+        SyncToken: '0',
+        TotalAmt: 50,
+        UnappliedAmt: 0,
+        Line: [{ Amount: 50, LinkedTxn: [{ TxnId: 'qbo-inv-1', TxnType: 'Invoice' }] }]
+      }) as any
+    );
+
+    const ops = makeFakeOps([makePendingOp()]);
+    const exceptions = makeFakeExceptions();
+
+    await drainRecordPaymentOps({
+      knex: makeKnex(),
+      tenantId: 't1',
+      adapterType: 'quickbooks_online',
+      targetRealm: 'r1',
+      ops: ops as any,
+      ledger: ledger as any,
+      exceptions: exceptions as any,
+      stats: emptyCycleStats()
+    });
+
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+  });
 });
