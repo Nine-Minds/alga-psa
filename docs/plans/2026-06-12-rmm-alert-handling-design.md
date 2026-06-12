@@ -40,6 +40,8 @@ preserving, so corrective schema work can be additive without backfill.
 | Provider scope | Provider-generic pipeline; NinjaOne and TacticalRMM both wired |
 | Processing model | Synchronous in the webhook request (local DB work only) |
 | Migration strategy | One additive corrective migration; never rewrite the deployed one |
+| Maintenance windows | Suppress before rule matching; alert stored as `suppressed`; the poller processes still-active alerts after the window ends |
+| Alert polling | Per-integration Temporal schedule (default on, every 15 min) reconciles missed triggers and missed resets through the same pipeline |
 
 ## Architecture
 
@@ -66,11 +68,12 @@ Each route maps its payload to a `NormalizedRmmAlertEvent` (a thin
 
 **Triggered:** upsert `rmm_alerts` on `(tenant, integration_id,
 external_alert_id)` → compute `dedup_key` (device + condition identity; for
-NinjaOne, `statusCode` falling back to `activityType`) → evaluate rules (first
-match by `priority_order`; a rule with no conditions is a catch-all) → dedup
-check → create a ticket or append an occurrence comment to the existing open
-ticket → publish events. The matched rule's ID is stored on the alert row so
-later lifecycle steps do not re-evaluate rules.
+NinjaOne, `statusCode` falling back to `activityType`) → maintenance-window
+check (a match stores the alert as `suppressed` and stops) → evaluate rules
+(first match by `priority_order`; a rule with no conditions is a catch-all) →
+dedup check → create a ticket or append an occurrence comment to the existing
+open ticket → publish events. The matched rule's ID is stored on the alert row
+so later lifecycle steps do not re-evaluate rules.
 
 **Reset:** mark the alert resolved. If a ticket is linked and the matched rule
 has `autoResolveTicket`: always add a comment; close the ticket only if it is
@@ -104,6 +107,14 @@ One additive migration.
 - `occurrence_count` int default 1, `last_occurrence_at` timestamptz
 - `matched_rule_id` uuid null
 - `auto_ticket_created` boolean default false
+- `suppressed_by_window_id` uuid null (alert `status` gains a `suppressed`
+  value)
+
+New table `rmm_maintenance_windows`: `tenant`, `window_id`, optional scoping
+columns `integration_id`, `client_id`, `asset_id` (null = applies to all of
+that dimension), `name`, `is_active`, `starts_at`/`ends_at` for one-off
+windows, and a `recurrence` jsonb
+(`{ type: 'weekly', days, startTime, endTime, timezone }`) for recurring ones.
 
 The raw payload standardizes on the existing `metadata` jsonb column. Code that
 writes `source_data` changes to `metadata`.
@@ -164,6 +175,43 @@ create a ticket. Dedup is always on; it is not per-rule configurable.
 time entries, and no manual status change since creation. Rule-driven
 auto-assignment does not count as touched.
 
+## Maintenance windows
+
+The pipeline checks windows before rule matching. An alert is suppressed when
+an active window matches all of its non-null scopes (integration, client,
+asset) at the alert's `occurredAt` — one-off windows by `starts_at`/`ends_at`,
+weekly recurring windows by day and time range in the window's timezone.
+
+A suppressed alert is stored with `status = 'suppressed'` and
+`suppressed_by_window_id`. It creates no ticket, sends no notifications, and
+publishes no workflow events. A reset arriving for a suppressed alert resolves
+it quietly. When a window ends, the reconciliation poller processes
+still-active suppressed alerts through the normal rules path, so a condition
+that fired during maintenance and is still firing afterward becomes a ticket.
+
+Windows have their own CRUD server actions (admin-gated, Zod-validated) and a
+"Maintenance Windows" subsection beside Alert Rules in RMM settings: a list
+plus an editor with client/asset scope pickers and a one-off or weekly
+recurring schedule.
+
+## Alert polling (reconciliation)
+
+A per-integration Temporal scheduled workflow (following the existing Entra
+per-tenant schedule pattern) runs every N minutes: default 15, configurable
+5–60 in integration settings, on by default for connected integrations. The
+schedule is created when an integration connects and removed when it
+disconnects. Each cycle works through the same normalized pipeline:
+
+1. Fetch active alerts from the RMM (`NinjaOneClient.getAlerts()`; Tactical's
+   alerts API) and upsert any the webhooks missed as `triggered` events, so
+   rules, dedup, and tickets apply identically.
+2. Synthesize `reset` events for local active alerts no longer active in the
+   RMM, catching missed reset webhooks (the main source of stale tickets).
+3. Process expired-window suppressed alerts that are still active.
+
+Webhooks remain the primary low-latency path; polling is the backstop. Ingest
+idempotency makes the overlap harmless.
+
 ## Rules CRUD and UI
 
 Server actions in `packages/integrations` (alongside `tacticalRmmActions.ts`):
@@ -223,5 +271,12 @@ Integration (repo integration-testing patterns):
 - ticket close → outbound adapter called (and skipped when the rule opts out)
 - the same webhook delivered twice → no-op
 - a Tactical webhook through the same pipeline
+- alert during a matching window → suppressed, no ticket; outside the window →
+  normal processing
+- poll cycle: missed trigger upserted into a ticket, stale active alert reset,
+  expired-window suppressed alert processed
+- alert arriving via both webhook and poller → single ticket
 
-The existing `alertProcessor` tests move to the new shared module.
+The existing `alertProcessor` tests move to the new shared module. Unit tests
+also cover window matching (one-off, weekly recurrence with timezone, scope
+combinations).

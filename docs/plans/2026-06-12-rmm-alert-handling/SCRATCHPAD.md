@@ -18,6 +18,8 @@ Working memory for the RMM alert handling effort. Approved design lives at
 - (2026-06-11) Schema direction: rules use JSONB `conditions`/`actions` (the alertProcessor model wins). One additive corrective migration; the deployed `20251124000001` migration is never rewritten. Deployed data is negligible — no backfill.
 - (2026-06-11) Raw alert payload standardizes on the existing `metadata` jsonb column; code that wrote `source_data` changes to `metadata`.
 - (2026-06-11) `rmm_organization_mappings.auto_create_tickets` is deprecated; rules with `organizationIds` conditions are the single source of truth.
+- (2026-06-12) Maintenance windows and alert polling added to scope (originally non-goals) for competitor parity. Windows suppress before rule matching; suppressed alerts are stored but produce no ticket/notification/workflow event. The reconciliation poller owns window-end processing of still-active suppressed alerts.
+- (2026-06-12) Polling is a per-integration Temporal schedule (Entra per-tenant pattern): default on, 15-minute default interval, 5–60 configurable, created on connect / removed on disconnect. Cycles upsert missed triggers and synthesize resets for stale active alerts, all through the same pipeline.
 
 ## Discoveries / Constraints
 
@@ -54,3 +56,5 @@ Working memory for the RMM alert handling effort. Approved design lives at
 
 - Does TacticalRMM's API expose alert resolution for the outbound adapter? If not, ship the adapter for NinjaOne only and mark the capability off for Tactical (pipeline skips it cleanly).
 - Exact event-bus event name for ticket closure (TICKET_UPDATED with closed status vs. a dedicated TICKET_CLOSED) — confirm against `server/src/lib/eventBus/` when wiring the subscriber.
+- Confirm Tactical's alerts API supports listing active alerts for reconciliation (NinjaOne's `getAlerts()` already exists in the client).
+- Reconciliation poller and `resolveAlert` semantics: a poller-synthesized reset should be distinguishable in the ticket comment ("alert no longer active in RMM" vs. "alert reset received").

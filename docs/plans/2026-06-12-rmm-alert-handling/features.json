@@ -66,5 +66,20 @@
   { "id": "F065", "description": "Matched rule notifyUserIds produce email notifications per user preference", "implemented": false, "prdRefs": ["FR-8"] },
   { "id": "F066", "description": "CSRF validation implemented in the NinjaOne OAuth callback using the state payload's csrf and timestamp", "implemented": false, "prdRefs": ["FR-9"] },
   { "id": "F067", "description": "ninjaone/alerts modules moved into shared/rmm/alerts with imports updated and the superseded resetInNinjaOne TODO removed", "implemented": false, "prdRefs": ["FR-9"] },
-  { "id": "F068", "description": "rmm_organization_mappings.auto_create_tickets deprecated: no read paths remain; rules are the sole gate for ticket creation", "implemented": false, "prdRefs": ["FR-9"] }
+  { "id": "F068", "description": "rmm_organization_mappings.auto_create_tickets deprecated: no read paths remain; rules are the sole gate for ticket creation", "implemented": false, "prdRefs": ["FR-9"] },
+  { "id": "F069", "description": "Migration creates rmm_maintenance_windows (optional integration/client/asset scopes, one-off starts_at/ends_at, weekly recurrence jsonb, name, is_active)", "implemented": false, "prdRefs": ["FR-1", "FR-10"] },
+  { "id": "F070", "description": "Migration adds suppressed_by_window_id to rmm_alerts; alert status supports 'suppressed'", "implemented": false, "prdRefs": ["FR-1", "FR-10"] },
+  { "id": "F071", "description": "Pipeline checks maintenance windows before rule matching: an active window matching all its non-null scopes at occurredAt suppresses the alert", "implemented": false, "prdRefs": ["FR-10"] },
+  { "id": "F072", "description": "Weekly recurring windows evaluate day and time range in the window's timezone; one-off windows by starts_at/ends_at", "implemented": false, "prdRefs": ["FR-10"] },
+  { "id": "F073", "description": "Suppressed alerts are stored with status suppressed and suppressed_by_window_id: no ticket, no notifications, no workflow events", "implemented": false, "prdRefs": ["FR-10"] },
+  { "id": "F074", "description": "A reset for a suppressed alert resolves it quietly with no ticket actions", "implemented": false, "prdRefs": ["FR-10"] },
+  { "id": "F075", "description": "Maintenance window CRUD server actions (list/create/update/delete), admin-gated, Zod-validated", "implemented": false, "prdRefs": ["FR-10"] },
+  { "id": "F076", "description": "Maintenance Windows settings subsection beside Alert Rules: list plus editor with client/asset scope pickers and one-off or weekly recurring schedule with timezone", "implemented": false, "prdRefs": ["FR-7", "FR-10"] },
+  { "id": "F077", "description": "Per-integration Temporal schedule runs alert reconciliation every N minutes (default 15, configurable 5–60, default on for connected integrations)", "implemented": false, "prdRefs": ["FR-11"] },
+  { "id": "F078", "description": "Poll cycle fetches RMM-active alerts and upserts ones missing locally as triggered events through the shared pipeline", "implemented": false, "prdRefs": ["FR-11"] },
+  { "id": "F079", "description": "Poll cycle synthesizes reset events for local active alerts no longer active in the RMM", "implemented": false, "prdRefs": ["FR-11"] },
+  { "id": "F080", "description": "Poll cycle processes still-active suppressed alerts whose window has ended through the normal rules path", "implemented": false, "prdRefs": ["FR-10", "FR-11"] },
+  { "id": "F081", "description": "Polling enable/disable and interval setting exposed in integration settings UI with 5–60 minute bounds", "implemented": false, "prdRefs": ["FR-7", "FR-11"] },
+  { "id": "F082", "description": "TacticalRMM reconciliation uses its alerts API through the same scheduled workflow", "implemented": false, "prdRefs": ["FR-11"] },
+  { "id": "F083", "description": "Reconciliation schedule is created when an integration connects and removed when it disconnects", "implemented": false, "prdRefs": ["FR-11"] }
 ]

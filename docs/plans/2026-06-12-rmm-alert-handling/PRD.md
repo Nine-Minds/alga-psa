@@ -31,13 +31,16 @@ Competing PSAs (ConnectWise, Autotask, Halo) treat all of this as table stakes.
 - Closing an alert-linked ticket resets the alert in the RMM (per-rule opt-out).
 - Rules are manageable from the integration settings UI by admins.
 - Alert events are first-class workflow v2 triggers; matched rules can notify users.
+- Maintenance windows suppress alert ticketing for a client, asset, or
+  integration during planned work, without losing the alerts.
+- Scheduled polling reconciles missed webhooks: missed triggers become tickets,
+  missed resets close stale tickets, and post-window still-active alerts get
+  processed.
 - One pipeline serves NinjaOne and TacticalRMM; a third provider only needs a
   normalizer and an optional outbound adapter.
 
 ## Non-goals
 
-- Maintenance/blackout windows for alert suppression.
-- Scheduled polling of RMM alert APIs (webhook-only ingestion).
 - RMM device-count billing integration, scheduled device sync, or org auto-matching.
 - Per-rule dedup configuration (dedup behavior is fixed).
 - Migrating NinjaOne device sync onto `sharedAssetIngestionService` (separate effort).
@@ -64,6 +67,11 @@ Competing PSAs (ConnectWise, Autotask, Halo) treat all of this as table stakes.
   title/description templates with placeholder hints, auto-resolve toggle,
   reset-on-close toggle, notify-users picker).
 - Save-time validation errors (e.g., bad regex) shown inline in the dialog.
+- "Maintenance Windows" subsection beside Alert Rules: a list plus an editor
+  with client/asset scope pickers and a one-off or weekly recurring schedule
+  (with timezone).
+- Alert polling enable/disable and interval (5–60 minutes) in integration
+  settings.
 - Existing per-asset `AssetAlertsSection` remains the alert-viewing surface.
 
 ## Requirements
@@ -74,10 +82,12 @@ Competing PSAs (ConnectWise, Autotask, Halo) treat all of this as table stakes.
 
 One additive migration. `rmm_alerts` gains `activity_type`, `acknowledged_at`,
 `acknowledged_by`, `dedup_key` (indexed with tenant + integration), `occurrence_count`
-(default 1), `last_occurrence_at`, `matched_rule_id`, `auto_ticket_created`.
+(default 1), `last_occurrence_at`, `matched_rule_id`, `auto_ticket_created`,
+and `suppressed_by_window_id` (status gains a `suppressed` value).
 Raw payloads standardize on the existing `metadata` jsonb. `rmm_alert_rules`
 gains `conditions` and `actions` jsonb and drops the eleven flat filter/action
-columns. The deployed `20251124000001` migration is not rewritten; no backfill.
+columns. New `rmm_maintenance_windows` table (FR-10). The deployed
+`20251124000001` migration is not rewritten; no backfill.
 
 #### FR-2 Contracts and normalizers
 
@@ -147,9 +157,34 @@ Implement CSRF validation in the NinjaOne OAuth callback. Move
 `resetInNinjaOne` TODO. Deprecate `rmm_organization_mappings.auto_create_tickets`
 (no read paths remain).
 
+#### FR-10 Maintenance windows
+
+New `rmm_maintenance_windows` table: optional `integration_id`/`client_id`/
+`asset_id` scopes (null = all of that dimension), one-off `starts_at`/`ends_at`
+or weekly `recurrence` jsonb (days, time range, timezone), `name`, `is_active`.
+The pipeline checks windows before rule matching: an alert matching all
+non-null scopes of an active window at its `occurredAt` is stored with
+`status = 'suppressed'` and `suppressed_by_window_id` — no ticket, no
+notifications, no workflow events. A reset for a suppressed alert resolves it
+quietly. Window CRUD server actions are admin-gated and Zod-validated, with the
+settings UI described in UX notes.
+
+#### FR-11 Alert polling (reconciliation)
+
+A per-integration Temporal scheduled workflow (Entra per-tenant schedule
+pattern), default on for connected integrations, every 15 minutes (configurable
+5–60), created on connect and removed on disconnect. Each cycle, through the
+same pipeline: (1) upsert RMM-active alerts missing locally as `triggered`
+events; (2) synthesize `reset` events for local active alerts no longer active
+in the RMM; (3) process still-active suppressed alerts whose window ended
+through the normal rules path. Webhooks stay primary; ingest idempotency makes
+overlap harmless.
+
 ### Non-functional Requirements
 
-- Ingest path makes no external API calls; webhook latency stays bounded.
+- Webhook ingest path makes no external API calls; webhook latency stays
+  bounded. RMM API calls happen only in the poller and the ticket-close
+  subscriber, both off the request path.
 - All queries tenant-scoped (CitusDB composite keys: `tenant` + entity id).
 - Webhook response semantics preserved: 200 unmapped org, 200 success, 500
   unexpected error (RMM retries; ingest idempotency makes this safe).
@@ -200,4 +235,9 @@ event name).
   and call `rmm.alerts.create_ticket`.
 - Matched rules with `notifyUserIds` produce in-app and email notifications per
   user preference.
+- An alert firing inside a matching maintenance window creates no ticket and no
+  notifications; the same alert outside the window processes normally; a
+  condition still firing after its window ends becomes a ticket via the poller.
+- With webhooks disabled, a poll cycle turns RMM-active alerts into tickets per
+  the rules and closes stale tickets whose alerts cleared in the RMM.
 - All features in `features.json` implemented; all tests in `tests.json` pass.
