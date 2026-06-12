@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
+    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"
+  },
   "page": {
     "title": "Beheerdersinstellingen"
   },
@@ -359,9 +363,9 @@
         "new": "Nieuw",
         "lead": "Leider"
       },
-      "memberCount": "{{count}} lid",
-      "memberCount_plural": "{{count}} leden",
-      "leadName": "Leider: {{name}}"
+      "leadName": "Leider: {{name}}",
+      "memberCount_one": "{{count}} lid",
+      "memberCount_other": "{{count}} leden"
     },
     "messages": {
       "error": {
@@ -916,8 +920,8 @@
       "messages": {
         "success": {
           "deleted": "Interactietype verwijderd",
-          "imported": "{{count}} interactietype geïmporteerd",
-          "imported_plural": "{{count}} interactietypen geïmporteerd"
+          "imported_one": "{{count}} interactietype geïmporteerd",
+          "imported_other": "{{count}} interactietypen geïmporteerd"
         },
         "error": {
           "fetchFailed": "Kan interactietypen niet ophalen",
@@ -1049,7 +1053,22 @@
       "milestoneCompleted": "Projectmijlpaal voltooid",
       "dayAgo": "1 dag geleden",
       "createTicket": "Ticket aanmaken",
-      "viewProjects": "Projecten bekijken"
+      "viewProjects": "Projecten bekijken",
+      "activeDevices": "Actieve apparaten",
+      "basicSupport": "Basisondersteuning",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Goedemorgen, Alex 👋",
+      "navAppointments": "Afspraken",
+      "navDashboard": "Dashboard",
+      "navDevices": "Mijn apparaten",
+      "navProjects": "Projecten",
+      "navServiceRequests": "Serviceverzoeken",
+      "navTickets": "Tickets",
+      "serviceRequests": "Serviceverzoeken",
+      "upcomingShort": "Aankomend",
+      "upcomingVisits": "Aankomende bezoeken",
+      "welcomeBack": "Welkom terug",
+      "workspaceSection": "Werkruimte"
     },
     "signInPreview": {
       "portalTitle": "Klantenportaal",
@@ -1507,8 +1526,6 @@
     },
     "sessions": {
       "title": "Alle gebruikerssessies",
-      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
       "filters": {
         "search": "Zoeken",
         "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
@@ -1551,7 +1568,9 @@
         "loading": "Sessies laden...",
         "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
         "noSessions": "Geen actieve sessies gevonden"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     }
   },
   "ssoBulk": {

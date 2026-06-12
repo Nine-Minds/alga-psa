@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} unsaved change",
+    "unsavedChanges_other": "{{count}} unsaved changes"
+  },
   "page": {
     "title": "Admin Settings"
   },
@@ -359,9 +363,9 @@
         "new": "New",
         "lead": "Lead"
       },
-      "memberCount": "{{count}} member",
-      "memberCount_plural": "{{count}} members",
-      "leadName": "Lead: {{name}}"
+      "leadName": "Lead: {{name}}",
+      "memberCount_one": "{{count}} member",
+      "memberCount_other": "{{count}} members"
     },
     "messages": {
       "error": {
@@ -916,8 +920,8 @@
       "messages": {
         "success": {
           "deleted": "Interaction type deleted",
-          "imported": "Imported {{count}} interaction type",
-          "imported_plural": "Imported {{count}} interaction types"
+          "imported_one": "Imported {{count}} interaction type",
+          "imported_other": "Imported {{count}} interaction types"
         },
         "error": {
           "fetchFailed": "Failed to fetch interaction types",
@@ -1049,7 +1053,22 @@
       "milestoneCompleted": "Project milestone completed",
       "dayAgo": "1 day ago",
       "createTicket": "Create Ticket",
-      "viewProjects": "View Projects"
+      "viewProjects": "View Projects",
+      "activeDevices": "Active devices",
+      "basicSupport": "Basic Support",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Good morning, Alex 👋",
+      "navAppointments": "Appointments",
+      "navDashboard": "Dashboard",
+      "navDevices": "My devices",
+      "navProjects": "Projects",
+      "navServiceRequests": "Service Requests",
+      "navTickets": "Tickets",
+      "serviceRequests": "Service requests",
+      "upcomingShort": "Upcoming",
+      "upcomingVisits": "Upcoming visits",
+      "welcomeBack": "Welcome back",
+      "workspaceSection": "Workspace"
     },
     "signInPreview": {
       "portalTitle": "Client Portal",
@@ -1507,8 +1526,6 @@
     },
     "sessions": {
       "title": "All User Sessions",
-      "subtitle": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_plural": "{{sessionCount}} active sessions across {{userCount}} users",
       "filters": {
         "search": "Search",
         "searchPlaceholder": "Search by name, email, device, or IP...",
@@ -1551,7 +1568,9 @@
         "loading": "Loading sessions...",
         "noMatch": "No sessions match your search",
         "noSessions": "No active sessions found"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
+      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
     }
   },
   "ssoBulk": {

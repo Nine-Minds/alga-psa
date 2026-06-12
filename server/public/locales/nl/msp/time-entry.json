@@ -121,7 +121,10 @@
       "minimumDuration": "Minimale duur is 1 minuut",
       "serviceRequired": "Voor tijdinvoer is service nodig",
       "timePeriodRange": "Datum moet binnen de huidige periode vallen ({{periodRange}})",
-      "endAfterStartPicker": "De eindtijd moet na de starttijd liggen"
+      "endAfterStartPicker": "De eindtijd moet na de starttijd liggen",
+      "durationSameDay": "De duur moet op dezelfde dag eindigen",
+      "endSameDay": "De eindtijd moet op dezelfde dag vallen als de starttijd",
+      "invalidTimeRange": "Voer een geldig tijdsbereik in"
     }
   },
   "workItemPicker": {
@@ -365,6 +368,10 @@
     "active": "Actief"
   },
   "intervals": {
+    "createdFromNote_one": "Gemaakt op basis van {{count}} interval",
+    "createdFromNote_other": "Gemaakt op basis van {{count}} intervallen",
+    "selectedCount_one": "{{count}} interval geselecteerd",
+    "selectedCount_other": "{{count}} intervallen geselecteerd",
     "title": "Tickettijdsintervallen",
     "hideShortIntervals": "Verberg intervallen van minder dan 1 minuut",
     "totalTime": "Totale tijd: {{value}}",

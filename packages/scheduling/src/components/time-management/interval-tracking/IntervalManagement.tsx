@@ -192,7 +192,7 @@ export function IntervalManagement({
         start_time: earliestStart.toISOString(),
         end_time: latestEnd.toISOString(),
         billable_duration: durationMinutes,
-        notes: `Created from ${selectedIntervals.length} interval${selectedIntervals.length !== 1 ? 's' : ''}`,
+        notes: t('intervals.createdFromNote', { defaultValue: 'Created from {{count}} intervals', count: selectedIntervals.length }),
         user_id: userId
       };
       

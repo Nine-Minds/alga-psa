@@ -64,11 +64,11 @@
     "deletePhase": "Supprimer la phase",
     "cancel": "Annuler",
     "save": "Enregistrer",
-    "taskCount": "{{count}} tâche",
     "taskCount_other": "{{count}} tâches",
     "startLabel": "Début",
     "dueLabel": "Échéance",
-    "notSet": "Non défini"
+    "notSet": "Non défini",
+    "taskCount_one": "{{count}} tâche"
   },
   "projectList": {
     "addProject": "Ajouter un projet",
@@ -326,18 +326,22 @@
     "primaryAgentRequired": "Un agent principal est requis lorsque des agents supplémentaires sont assignés",
     "keepCreatedTicketsTitle": "Conserver les tickets créés ?",
     "keepCreatedTicketsMessage": "Souhaitez-vous conserver ces tickets ou les supprimer ?",
-    "createdTicketsIntro": "Vous avez créé {{count}} ticket{{plural}} pendant cette session :",
+    "createdTicketsIntro_one": "Vous avez créé {{count}} ticket pendant cette session :",
+    "createdTicketsIntro_other": "Vous avez créé {{count}} tickets pendant cette session :",
     "keepUploadedDocumentsTitle": "Conserver les documents téléversés ?",
     "keepUploadedDocumentsMessage": "Souhaitez-vous conserver ces documents dans la section Documents ou les supprimer ?",
-    "documentsCleanupIntro": "Vous avez {{count}} document{{plural}} qui {{wasWere}} {{cleanupType}} :",
-    "uploadedOrCreated": "téléversé ou créé",
-    "createdOnly": "créé",
-    "uploadedOnly": "téléversé",
+    "documentsCleanupIntro_one": "Vous avez {{count}} document qui a été {{cleanupType}} :",
+    "documentsCleanupIntro_other": "Vous avez {{count}} documents qui ont été {{cleanupType}} :",
+    "uploadedOrCreated": "téléversé(s) ou créé(s)",
+    "createdOnly": "créé(s)",
+    "uploadedOnly": "téléversé(s)",
     "createdDocumentTag": "créé",
     "uploadedDocumentTag": "téléversé",
     "andMore": "…et {{count}} de plus",
-    "documentCleanupFailure": "{{count}} document{{plural}} n’ont pas pu être supprimés et resteront dans Documents",
-    "ticketCleanupFailure": "{{count}} ticket{{plural}} n’ont pas pu être supprimés",
+    "documentCleanupFailure_one": "{{count}} document n’a pas pu être supprimé et restera dans Documents",
+    "documentCleanupFailure_other": "{{count}} documents n’ont pas pu être supprimés et resteront dans Documents",
+    "ticketCleanupFailure_one": "{{count}} ticket n’a pas pu être supprimé",
+    "ticketCleanupFailure_other": "{{count}} tickets n’ont pas pu être supprimés",
     "checklistItemPlaceholder": "Élément de checklist",
     "reorderChecklistItem": "Glisser pour réorganiser",
     "insertChecklistItem": "Insérer un élément ici",
@@ -516,12 +520,14 @@
     "fieldsToExport": "Champs à exporter",
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner",
-    "phasesSelected": "{{selected}} phase{{plural}} sélectionnées sur {{total}}",
+    "phasesSelected_one": "{{selected}} phase sélectionnée sur {{total}}",
+    "phasesSelected_other": "{{selected}} phase(s) sélectionnée(s) sur {{total}}",
     "fieldsSelected": "{{selected}} champs sur {{total}} sélectionnés",
     "exportTasks": "Exporter les tâches",
     "exporting": "Export des tâches...",
     "completeTitle": "Export terminé",
-    "success": "Export CSV réussi pour {{count}} tâche{{plural}}.",
+    "success_one": "Export CSV réussi pour {{count}} tâche.",
+    "success_other": "Export CSV réussi pour {{count}} tâches.",
     "failed": "Échec de l’export des tâches",
     "done": "Terminé",
     "fields": {
@@ -543,7 +549,8 @@
       "updatedAt": "Mis à jour le"
     },
     "exportSelected": "Exporter {{count}} sélectionnée(s)",
-    "selectedTasksNotice": "Export de {{count}} tâche{{plural}} sélectionnée(s)."
+    "selectedTasksNotice_one": "Export de {{count}} tâche sélectionnée.",
+    "selectedTasksNotice_other": "Export de {{count}} tâches sélectionnées."
   },
   "import": {
     "title": "Importer des phases et des tâches",
@@ -594,7 +601,8 @@
     "importTasksButton": "Importer {{tasks}} tâches",
     "mapUnmatchedAgentsTitle": "Mapper les agents non reconnus",
     "agentResolutionIntro": "Les noms d'agents suivants de votre CSV ne correspondent à aucun utilisateur existant. Choisissez comment gérer chacun d'eux. Le premier agent d'une liste séparée par des virgules devient le responsable principal, et les agents supplémentaires deviennent des ressources de tâche.",
-    "taskCountLabel": "({{count}} tâche{{plural}})",
+    "taskCountLabel_one": "({{count}} tâche)",
+    "taskCountLabel_other": "({{count}} tâches)",
     "tasksList": "Tâches : {{tasks}}",
     "andMore": " et {{count}} de plus…",
     "mapToExistingUser": "Associer à un utilisateur existant :",
@@ -732,8 +740,8 @@
       "openFailed": "Impossible d'ouvrir la tâche",
       "task": "Tâche",
       "tasks": "Tâches",
-      "badgeCount": "{{count}} Tâche",
-      "badgeCount_other": "{{count}} Tâches"
+      "badgeCount_other": "{{count}} Tâches",
+      "badgeCount_one": "{{count}} Tâche"
     },
     "bulkMoveTask": {
       "title": "Déplacer les tâches",
@@ -1474,5 +1482,13 @@
       "confirm_other": "Ajouter des étiquettes à {{count}} tâches",
       "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :"
     }
+  },
+  "common:actions": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "done": "Terminé",
+    "edit": "Modifier",
+    "save": "Enregistrer"
   }
 }

@@ -72,7 +72,7 @@
         }
       },
       "actions": {
-        "save": "Ahorrar"
+        "save": "Guardar"
       },
       "toast": {
         "updated": "Se actualizó la configuración de vencimiento de crédito."
@@ -91,16 +91,16 @@
           "help": "Elija si las fechas de vencimiento de renovación deben crear tickets o permanecer solo en cola de forma predeterminada."
         },
         "ticketBoard": {
-          "label": "Tablero de boletos de renovación",
+          "label": "Tablero de tickets de renovación",
           "placeholderLoading": "Cargando tableros...",
           "placeholderSelect": "Seleccionar tablero"
         },
         "ticketStatus": {
-          "label": "Estado del billete de renovación",
+          "label": "Estado del ticket de renovación",
           "placeholderLoading": "Cargando estados...",
           "placeholderSelect": "Seleccionar estado",
           "placeholderSelectBoardFirst": "Seleccione un tablero primero",
-          "help": "Los estados de los boletos de renovación se aplican al tablero seleccionado."
+          "help": "Los estados de los tickets de renovación se aplican al tablero seleccionado."
         }
       },
       "options": {
@@ -111,15 +111,15 @@
         "unnamedBoard": "Tablero sin nombre"
       },
       "actions": {
-        "save": "Ahorrar",
-        "saving": "Ahorro..."
+        "save": "Guardar",
+        "saving": "Guardando..."
       },
       "toast": {
         "updated": "Se han actualizado las configuraciones de automatización de renovación."
       },
       "errors": {
         "load": "No se pudo cargar la configuración de automatización de renovación",
-        "loadStatuses": "No se pudieron cargar los estados de los boletos de renovación",
+        "loadStatuses": "No se pudieron cargar los estados de los tickets de renovación",
         "save": "No se pudo guardar la configuración de automatización de renovación"
       }
     }
@@ -168,7 +168,7 @@
       "actions": {
         "cancel": "Cancelar",
         "save": "Guardar configuración",
-        "saving": "Ahorro..."
+        "saving": "Guardando..."
       },
       "toast": {
         "saved": "La configuración de la fuente de impuestos se guardó correctamente."
@@ -205,7 +205,7 @@
         "deactivate": "Desactivar",
         "cancel": "Cancelar",
         "save": "Guardar cambios",
-        "saving": "Ahorro..."
+        "saving": "Guardando..."
       },
       "toast": {
         "created": "Región fiscal creada correctamente.",
@@ -269,8 +269,8 @@
         "edit": "Editar",
         "delete": "Borrar",
         "cancel": "Cancelar",
-        "save": "Ahorrar",
-        "saving": "Ahorro...",
+        "save": "Guardar",
+        "saving": "Guardando...",
         "deleting": "Eliminando..."
       },
       "delete": {
@@ -339,8 +339,8 @@
         "edit": "Editar",
         "delete": "Borrar",
         "cancel": "Cancelar",
-        "save": "Ahorrar",
-        "saving": "Ahorro...",
+        "save": "Guardar",
+        "saving": "Guardando...",
         "deleting": "Eliminando..."
       },
       "delete": {
@@ -391,8 +391,8 @@
         "edit": "Editar",
         "delete": "Borrar",
         "cancel": "Cancelar",
-        "save": "Ahorrar",
-        "saving": "Ahorro...",
+        "save": "Guardar",
+        "saving": "Guardando...",
         "deleting": "Eliminando..."
       },
       "delete": {
@@ -508,7 +508,7 @@
     "actions": {
       "add": "Agregar tipo personalizado",
       "importFromStandard": "Importar desde tipos de servicios estándar",
-      "save": "Ahorrar",
+      "save": "Guardar",
       "close": "Cerca"
     },
     "validation": {
@@ -535,9 +535,9 @@
       "reorder": "Importar con diferente orden:"
     },
     "toast": {
-      "importedCount": "Tipo de servicio {{count}} importado",
       "importedCount_other": "Tipos de servicio {{count}} importados",
-      "skippedItem": "{{name}}: {{reason}}"
+      "skippedItem": "{{name}}: {{reason}}",
+      "importedCount_one": "Tipo de servicio {{count}} importado"
     },
     "errors": {
       "fetch": "No se pudieron recuperar los tipos de servicio",
@@ -796,7 +796,7 @@
       "remove": "Eliminar",
       "cancel": "Cancelar",
       "create": "Crear",
-      "save": "Ahorrar"
+      "save": "Guardar"
     },
     "fields": {
       "productName": {
@@ -932,7 +932,7 @@
       "actions": {
         "cancel": "Cancelar",
         "save": "Guardar estado de exención de impuestos",
-        "saving": "Ahorro..."
+        "saving": "Guardando..."
       }
     },
     "advanced": {
@@ -985,7 +985,7 @@
       "importWithResolutions": "Importar con resoluciones",
       "remove": "Eliminar",
       "reset": "Reiniciar",
-      "save": "Ahorrar",
+      "save": "Guardar",
       "update": "Actualizar"
     },
     "columns": {

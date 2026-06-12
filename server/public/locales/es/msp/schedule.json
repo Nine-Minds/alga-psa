@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Boleto",
+        "ticket": "Ticket",
         "projectTask": "Tarea del proyecto",
         "nonBillableCategory": "Categoría no facturable",
         "adHoc": "Entrada ad hoc",
@@ -91,7 +91,8 @@
         "single": "Sólo este evento",
         "future": "Este y futuros eventos.",
         "all": "Todos los eventos"
-      }
+      },
+      "messageWithTeamsWarning": "¿Está seguro de que desea eliminar esta entrada del programa? Esta acción no se puede deshacer. Esto también eliminará la reunión de Microsoft Teams."
     },
     "print": {
       "title": "Agenda del calendario",
@@ -123,8 +124,8 @@
   "requests": {
     "errors": {
       "load": "No se pudieron cargar las solicitudes de citas",
-      "ticketNotFound": "Boleto no encontrado",
-      "loadTicket": "No se pudo cargar el boleto",
+      "ticketNotFound": "Ticket no encontrado",
+      "loadTicket": "No se pudo cargar el ticket",
       "assignTechnicianRequired": "Por favor asigne un técnico",
       "approve": "No se pudo aprobar la solicitud",
       "declineReasonRequired": "Por favor proporcione una razón para rechazar",
@@ -153,7 +154,7 @@
       "loading": "Cargando solicitudes...",
       "empty": "No se encontraron {{status}} solicitudes",
       "duration": "{{count}} minutos",
-      "ticketFallback": "Boleto #{{ticket}}",
+      "ticketFallback": "Ticket #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Solicitud pública"
       }
@@ -175,7 +176,7 @@
         "requestedTime": "Hora solicitada",
         "duration": "Duración",
         "status": "Estado",
-        "linkedTicket": "Boleto vinculado",
+        "linkedTicket": "Ticket vinculado",
         "description": "Descripción",
         "teamsMeeting": "Reunión de Teams"
       },
@@ -189,13 +190,13 @@
         "assignedTechnician": "Asignar técnico *",
         "finalDateTime": "Fecha y hora finales",
         "internalNotes": "Notas internas (opcional)",
-        "linkedTicket": "Enlace al boleto (opcional)",
+        "linkedTicket": "Enlace al ticket (opcional)",
         "generateTeamsMeeting": "Generar enlace de reunión de Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Seleccionar técnico",
         "internalNotes": "Agregue cualquier nota interna...",
-        "linkedTicket": "Ingrese el ID del boleto para vincular..."
+        "linkedTicket": "Ingrese el ID del ticket para vincular..."
       },
       "actions": {
         "approve": "Aprobar",
@@ -345,7 +346,7 @@
         }
       },
       "actions": {
-        "save": "Ahorre horas de usuario"
+        "save": "Guardar horas de usuario"
       },
       "feedback": {
         "selectUserError": "Por favor seleccione un usuario",
@@ -546,7 +547,9 @@
         "title": "Cita aprobada",
         "descriptionWithDate": "Esta cita se originó a partir de una solicitud de un cliente y fue aprobada el {{date}}.",
         "description": "Esta cita se originó a partir de una solicitud de un cliente.",
-        "joinTeamsMeeting": "Unirse a la reunión de Teams"
+        "joinTeamsMeeting": "Unirse a la reunión de Teams",
+        "downloadRecording": "Descargar grabación",
+        "viewTranscript": "Ver transcripción"
       },
       "pending": {
         "title": "Solicitud de cita pendiente",
@@ -630,5 +633,28 @@
       "future": "Este y futuros eventos.",
       "all": "Todos los eventos"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Cliente",
+      "contact": "Contacto",
+      "duration": "Duración",
+      "endTime": "Hora de finalización",
+      "notes": "Notas",
+      "startTime": "Hora de inicio",
+      "status": "Estado",
+      "title": "Título",
+      "user": "Usuario"
+    },
+    "noClient": "Ningún cliente asociado",
+    "noContact": "Ningún contacto asociado",
+    "noTitle": "Sin título",
+    "notAvailable": "N/D",
+    "title": "Detalles de la interacción",
+    "unknownUser": "Desconocido"
   }
 }

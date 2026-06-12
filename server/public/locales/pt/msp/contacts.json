@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Last Phone Type Usage",
-      "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
+      "message_one": "The following custom phone type is no longer used by any contact: {{labels}}. Delete the type definition, or keep it for future use?",
+      "message_other": "The following custom phone types are no longer used by any contact: {{labels}}. Delete the type definitions, or keep them for future use?",
       "deleteType": "Delete Type",
       "keepType": "Keep Type"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
       "tags": "Tags",
       "notes": "Notes",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefone"
     },
     "status": {
       "label": "Status",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} board",
+    "boardCount_other": "{{count}} boards",
     "title": "Portal Access",
     "description": "Client portal access management for a contact, including invitations and role updates",
     "loadingDescription": "Loading portal information...",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "Notas guardadas",
       "saveFailed": "Falha ao guardar as notas"
+    }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Adicionar ticket",
+      "empty": "Nenhum ticket encontrado para este contacto",
+      "filters": {
+        "allAssignees": "Todos os responsáveis",
+        "allPriorities": "Todas as prioridades",
+        "categoryPlaceholder": "Filtrar por categoria",
+        "reset": "Repor",
+        "searchPlaceholder": "Pesquisar tickets...",
+        "statusPlaceholder": "Selecionar estado"
+      },
+      "loadMore": {
+        "label": "Carregar mais tickets",
+        "loading": "A carregar..."
+      },
+      "loading": "A carregar...",
+      "title": "Tickets do contacto",
+      "toasts": {
+        "clientNotFound": "Cliente não encontrado",
+        "loadClientFailed": "Falha ao carregar os detalhes do cliente",
+        "loadTicketFailed": "Falha ao carregar o ticket",
+        "openTicketFailed": "Falha ao abrir o ticket",
+        "userNotAuthenticated": "Utilizador não autenticado"
+      }
     }
   }
 }

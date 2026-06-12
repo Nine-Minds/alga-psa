@@ -47,6 +47,7 @@ describe('Invoicing locale smoke', () => {
       'annotations',
       'purchaseOrder',
       'common',
+      'designer',
     ]);
   });
 

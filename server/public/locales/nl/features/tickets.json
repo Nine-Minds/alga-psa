@@ -1,4 +1,38 @@
 {
+  "importDialog": {
+    "errorCount_one": "{{count}} fout:",
+    "errorCount_other": "{{count}} fouten:",
+    "warningCount_one": "{{count}} waarschuwing:",
+    "warningCount_other": "{{count}} waarschuwingen:",
+    "unmatchedPriorities_one": "{{count}} prioriteit",
+    "unmatchedPriorities_other": "{{count}} prioriteiten",
+    "unmatchedStatuses_one": "{{count}} status",
+    "unmatchedStatuses_other": "{{count}} statussen",
+    "unmatchedCategories_one": "{{count}} categorie",
+    "unmatchedCategories_other": "{{count}} categorieën",
+    "skippedCount_one": "{{count}} ticket is overgeslagen.",
+    "skippedCount_other": "{{count}} tickets zijn overgeslagen.",
+    "importTickets_one": "{{count}} ticket importeren",
+    "importTickets_other": "{{count}} tickets importeren",
+    "unmatchedClients_one": "{{count}} klant",
+    "unmatchedClients_other": "{{count}} klanten",
+    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_other": "{{count}} agenten",
+    "unmatchedTeams_one": "{{count}} team",
+    "unmatchedTeams_other": "{{count}} teams",
+    "unmatchedContacts_one": "{{count}} contact",
+    "unmatchedContacts_other": "{{count}} contacten",
+    "unmatchedDateFormats_one": "{{count}} datumnotatie",
+    "unmatchedDateFormats_other": "{{count}} datumnotaties",
+    "unmatchedValuesIntro_one": "{{count}} waarde uit je CSV kon niet automatisch worden gekoppeld.",
+    "unmatchedValuesIntro_other": "{{count}} waarden uit je CSV konden niet automatisch worden gekoppeld.",
+    "ticketCount_one": "({{count}} ticket)",
+    "ticketCount_other": "({{count}} tickets)",
+    "skipDropped_one": "Overslaan ({{count}} ticket vervalt)",
+    "skipDropped_other": "Overslaan ({{count}} tickets vervallen)",
+    "createdSuccess_one": "{{count}} ticket succesvol aangemaakt.",
+    "createdSuccess_other": "{{count}} tickets succesvol aangemaakt."
+  },
   "title": "Supporttickets",
   "subtitle": "Bekijk en beheer je supporttickets",
   "backToTickets": "Terug naar tickets",
@@ -164,7 +198,8 @@
     "proceed": "Doorgaan",
     "export": "Exporteren",
     "reset": "Opnieuw instellen",
-    "importSelected": "Selectie importeren"
+    "importSelected": "Selectie importeren",
+    "printOptions": "Afdrukopties"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -240,13 +275,23 @@
     "updateClientFailed": "Klant kon niet worden bijgewerkt",
     "updateLocationFailed": "Locatie kon niet worden bijgewerkt",
     "deleteCommentFailed": "Opmerking kon niet worden verwijderd",
+    "pastedImagesDeleted_one": "{{count}} geplakte afbeelding verwijderd.",
+    "pastedImagesDeleted_other": "{{count}} geplakte afbeeldingen verwijderd.",
+    "pastedImagesDeleteFailed_one": "{{count}} geplakte afbeelding kon niet worden verwijderd.",
+    "pastedImagesDeleteFailed_other": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "deleteCommentConfirm": "Weet je zeker dat je deze opmerking wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteCommentWithImages_one": "Deze opmerking bevat {{count}} geplakte afbeelding die als ticketdocument is geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeelding definitief verwijderen?",
+    "deleteCommentWithImages_other": "Deze opmerking bevat {{count}} geplakte afbeeldingen die als ticketdocumenten zijn geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeeldingen definitief verwijderen?",
     "removeFromBundleFailed": "Ticket kon niet uit bundel worden verwijderd",
     "unbundleFailed": "Ticket kon niet worden ontkoppeld",
     "addToBundleFailed": "Ticket kon niet aan bundel worden toegevoegd",
     "promoteMasterFailed": "Hoofdticket kon niet worden gepromoveerd",
     "updateBundleSettingsFailed": "Bundelinstellingen konden niet worden bijgewerkt",
     "assetLoadFailed": "Kan de assetdetails niet laden",
-    "assetNotFound": "Apparaat niet gevonden"
+    "assetNotFound": "Apparaat niet gevonden",
+    "addCommentFailed": "Kan opmerking niet toevoegen",
+    "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
+    "timeEntryDeleted": "Tijdregistratie verwijderd"
   },
   "conversation": {
     "comments": "Reacties",
@@ -288,7 +333,8 @@
     "inboundChildReplies": "Inkomende reacties op onderliggende tickets (alleen-lezen)",
     "childTicket": "Onderliggend ticket",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "Dit concept bevat geplakte afbeeldingen die al als ticketdocumenten zijn geüpload. Behouden of permanent verwijderen?"
+    "clipboardDraftCancelMessage": "Dit concept bevat geplakte afbeeldingen die al als ticketdocumenten zijn geüpload. Behouden of permanent verwijderen?",
+    "replyCommentAriaLabel": "Reageren op opmerking"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -427,7 +473,10 @@
         "title": "Afdrukopties",
         "selectedTitle": "Afdrukopties ({{count}} geselecteerd)",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van tickets."
-      }
+      },
+      "selectedAction": "Geselecteerde afdrukken ({{count}})",
+      "selectedTitle": "Geselecteerde tickets ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
     "exportAction": "CSV exporteren",
@@ -495,7 +544,9 @@
       "success_one": "{{count}} ticket verplaatst",
       "success_other": "{{count}} tickets verplaatst",
       "partialFailure": "Sommige tickets konden niet worden verplaatst",
-      "failure": "Verplaatsen van geselecteerde tickets is mislukt"
+      "failure": "Verplaatsen van geselecteerde tickets is mislukt",
+      "confirm": "{{count}} tickets verplaatsen",
+      "success": "{{count}} tickets verplaatst"
     },
     "delete": {
       "dialogTitle": "Geselecteerde tickets verwijderen",
@@ -510,7 +561,9 @@
       "success_one": "{{count}} ticket verwijderd",
       "success_other": "{{count}} tickets verwijderd",
       "partialFailure": "Sommige tickets konden niet worden verwijderd",
-      "failure": "Verwijderen van geselecteerde tickets is mislukt"
+      "failure": "Verwijderen van geselecteerde tickets is mislukt",
+      "confirm": "Weet je zeker dat je deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "success": "{{count}} tickets verwijderd"
     },
     "bundle": {
       "dialogTitle": "Tickets bundelen",
@@ -794,7 +847,9 @@
     "openEmailNotificationLogs": "E-mailnotificatie-logboeken bekijken",
     "clipboardDraftMessage": "Deze beschrijving bevat geplakte afbeeldingen die al als ticketdocumenten zijn geüpload. Wil je ze behouden of permanent verwijderen?",
     "clearDueDate": "Vervaldatum wissen",
-    "paused": "Gepauzeerd"
+    "paused": "Gepauzeerd",
+    "openActivityLog": "Activiteitenlog bekijken",
+    "resolveLiveConflict": "Los conflicten van live-updates op voordat je je wijzigingen opslaat."
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
@@ -997,7 +1052,11 @@
       "responseState": "Reactiestatus",
       "ticketOrigin": "Ticketbron",
       "tags": "Labels"
-    }
+    },
+    "appliedFiltersSummary": "(van {{count}} ticket dat aan de toegepaste filters voldoet)",
+    "completeMessage": "{{count}} ticket succesvol geëxporteerd naar CSV.",
+    "confirm": "{{count}} ticket exporteren",
+    "selectedTicketsSummary": "{{count}} geselecteerd ticket wordt geëxporteerd"
   },
   "materials": {
     "title": "Materialen",
@@ -1112,7 +1171,9 @@
     "selectedCount_other": "{{count}} categorieën",
     "excludingCount_one": "exclusief {{count}} categorie",
     "excludingCount_other": "exclusief {{count}} categorieën",
-    "excludingPrefix": "exclusief {{name}}"
+    "excludingPrefix": "exclusief {{name}}",
+    "excludingCount": "exclusief {{count}} categorie",
+    "selectedCount": "{{count}} categorieën"
   },
   "navigation": {
     "previousTicket": "Vorige ticket",
@@ -1220,7 +1281,8 @@
     }
   },
   "common": {
-    "continueEditing": "Doorgaan met bewerken"
+    "continueEditing": "Doorgaan met bewerken",
+    "cancel": "Annuleren"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1343,44 @@
     "excludingCount_other": "exclusief {{count}} boards",
     "placeholder": "Filteren op board",
     "title": "Board-kiezer",
-    "searchPlaceholder": "Boards zoeken..."
+    "searchPlaceholder": "Boards zoeken...",
+    "excludingCount": "exclusief {{count}} boards",
+    "selectedCount": "{{count}} boards",
+    "statusActive": "Actief",
+    "statusAll": "Alle",
+    "statusInactive": "Inactief"
+  },
+  "checklist": {
+    "addFailed": "Kan checklistitem niet toevoegen",
+    "addItem": "Toevoegen",
+    "addItemPlaceholder": "Een checklistitem toevoegen",
+    "applyTemplate": "Sjabloon toepassen",
+    "applyTemplateFailed": "Kan checklistsjabloon niet toepassen",
+    "clickToRename": "Klik om te hernoemen",
+    "deleteFailed": "Kan checklistitem niet verwijderen",
+    "deleteItem": "Item verwijderen",
+    "empty": "Nog geen checklistitems.",
+    "itemMenu": "Menu voor checklistitem",
+    "loadTemplatesFailed": "Kan checklistsjablonen niet laden",
+    "loading": "Checklist laden...",
+    "markOptional": "Markeren als optioneel",
+    "markRequired": "Markeren als verplicht",
+    "moveDown": "Omlaag verplaatsen",
+    "moveUp": "Omhoog verplaatsen",
+    "noTemplates": "Geen sjablonen beschikbaar.",
+    "progress": "{{done}} van {{total}} voltooid",
+    "renameFailed": "Kan checklistitem niet hernoemen",
+    "reorderFailed": "Kan volgorde van checklistitems niet wijzigen",
+    "requiredBadge": "Verplicht",
+    "templateAlreadyApplied": "Dit sjabloon is al toegepast op dit ticket.",
+    "templateApplied": "Checklistsjabloon toegepast.",
+    "templatesLoading": "Sjablonen laden...",
+    "title": "Checklist",
+    "toggleFailed": "Kan checklistitem niet bijwerken",
+    "updateFailed": "Kan checklistitem niet bijwerken"
+  },
+  "integration": {
+    "loadTicketFailed": "Kan ticket niet laden",
+    "noUserSession": "Geen gebruikerssessie gevonden"
   }
 }

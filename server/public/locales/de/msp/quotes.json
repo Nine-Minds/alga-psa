@@ -69,7 +69,7 @@
     "states": {
       "generating": "Generieren...",
       "loading": "Laden...",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "sending": "Senden..."
     }
   },
@@ -149,7 +149,9 @@
       "back": "Zurück",
       "moreActions": "Weitere Aktionen",
       "cancel": "Abbrechen",
-      "previewPdf": "PDF-Vorschau"
+      "previewPdf": "PDF-Vorschau",
+      "backToQuotes": "Zurück zu den Angeboten",
+      "backToTemplates": "Zurück zu den Angebotsvorlagen"
     },
     "headings": {
       "editQuote": "Angebot bearbeiten",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Konvertierten Vertrag öffnen",
       "openConvertedInvoice": "Öffnen Sie die umgewandelte Rechnung",
       "preview": "Vorschau",
-      "saveAsTemplate": "Als Vorlage speichern"
+      "saveAsTemplate": "Als Vorlage speichern",
+      "back": "Zurück"
     },
     "sections": {
       "activityLog": "Aktivitätsprotokoll",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Phase: {{phase}}",
-      "templateQuote": "Vorlagenangebot"
+      "templateQuote": "Vorlagenangebot",
+      "customItem": "Benutzerdefinierte Position",
+      "optional": "Optional",
+      "recurring": "Wiederkehrend"
     },
     "loading": "Angebotsdetails werden geladen...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Vorschau wird geladen..."
     },
     "table": {
-      "description": "Beschreibung"
+      "description": "Beschreibung",
+      "billing": "Abrechnung",
+      "quantity": "Menge",
+      "total": "Gesamt",
+      "unitPrice": "Einzelpreis"
     },
     "locations": {
       "groupHeading": "Standort",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Machen",
-      "shape": "Form"
+      "shape": "Form",
+      "renderFailed": "Rendern fehlgeschlagen.",
+      "shapeFailed": "Formung fehlgeschlagen.",
+      "shapingFailed": "Formung fehlgeschlagen."
     },
     "tabs": {
       "code": "Code",

@@ -648,13 +648,15 @@
         "endDate": "Einddatum",
         "clientSearch": "Klant zoeken",
         "invoiceStatuses": "Factuurstatussen",
-        "notes": "Opmerkingen"
+        "notes": "Opmerkingen",
+        "realm": "Doelbedrijf (realm)"
       },
       "placeholders": {
         "clientSearch": "Optioneel klantnaamfilter",
         "invoiceStatuses": "Door komma's gescheiden (optioneel), b.v. afgerond, geplaatst",
         "notes": "Optionele opmerkingen"
-      }
+      },
+      "defaultRealmLabel": "{{realmId}} (standaard)"
     },
     "detailDialog": {
       "title": "Boekhoudkundige exportbatch",

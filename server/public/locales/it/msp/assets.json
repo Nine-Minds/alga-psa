@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Seleziona tutte le risorse visibili",
       "selectAsset": "Seleziona risorsa {{name}}",
-      "selectedAssets": "{{count}} risorsa{{suffix}} selezionata",
+      "selectedAssets_one": "{{count}} risorsa selezionata",
+      "selectedAssets_other": "{{count}} risorse selezionate",
       "clearSelection": "Cancella selezione",
       "bulkActionsComingSoon": "Azioni collettive in arrivo"
     },
@@ -109,7 +110,7 @@
       "openActionsForAsset": "Azioni aperte per la risorsa {{name}}",
       "viewDetails": "Visualizza i dettagli",
       "editAsset": "Modifica risorsa",
-      "createTicket": "Crea biglietto",
+      "createTicket": "Crea ticket",
       "refreshData": "Aggiorna i dati"
     },
     "table": {
@@ -216,6 +217,49 @@
         "title": "Opzioni di stampa",
         "description": "Scegli quali colonne includere durante la stampa degli asset."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Cancella",
+        "delete": "Elimina",
+        "selectedCount": "{{count}} selezionate",
+        "setLocation": "Imposta posizione",
+        "setStatus": "Imposta stato"
+      },
+      "actions": {
+        "apply": "Applica",
+        "applying": "Applicazione...",
+        "deleteAssets": "Elimina",
+        "deleting": "Eliminazione...",
+        "updateLocation": "Aggiornamento posizione",
+        "updateStatus": "Aggiornamento stato"
+      },
+      "deleteDialog": {
+        "description": "Elimina {{count}} risorsa/e selezionata/e. Le risorse con dipendenze potrebbero essere ignorate.",
+        "title": "Elimina risorse selezionate"
+      },
+      "errors": {
+        "deleteFailed": "Impossibile eliminare le risorse selezionate.",
+        "updateLocationFailed": "Impossibile aggiornare le posizioni delle risorse selezionate.",
+        "updateStatusFailed": "Impossibile aggiornare le risorse selezionate."
+      },
+      "locationDialog": {
+        "clearLocation": "Rimuovi posizione",
+        "customLocation": "Posizione personalizzata",
+        "customPlaceholder": "Inserisci una posizione o un'area personalizzata",
+        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
+        "loadingLocations": "Caricamento posizioni...",
+        "savedDisabled": "Le posizioni salvate del cliente sono disponibili solo quando tutte le risorse selezionate sono visibili e appartengono a un unico cliente.",
+        "savedLocation": "Posizione salvata del cliente",
+        "selectLocation": "Seleziona posizione",
+        "title": "Imposta posizione delle risorse"
+      },
+      "partialFailure": "{{action}} completato per {{succeeded}} risorsa/e; {{failed}} non riuscite.",
+      "statusDialog": {
+        "description": "Aggiorna {{count}} risorsa/e selezionata/e.",
+        "title": "Imposta stato delle risorse"
+      },
+      "success": "{{action}} completato per {{count}} risorsa/e."
     }
   },
   "assetDashboardGrid": {
@@ -233,7 +277,7 @@
     "tabs": {
       "overview": "Panoramica",
       "maintenance": "Manutenzione",
-      "tickets": "Biglietti",
+      "tickets": "Ticket",
       "configuration": "Configurazione",
       "documents": "Documenti"
     },
@@ -279,11 +323,11 @@
       "noLogs": "I registri di manutenzione verranno visualizzati qui dopo la prima voce di servizio."
     },
     "tickets": {
-      "empty": "Nessun biglietto ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
+      "empty": "Nessun ticket ancora collegato a questa risorsa. Utilizza l'azione rapida per crearne uno.",
       "linked": "Collegato {{date}}",
       "client": "Cliente: {{name}}",
       "assignee": "Assegnatario: {{name}}",
-      "openTicket": "Biglietto aperto"
+      "openTicket": "Ticket aperto"
     },
     "configuration": {
       "coreAttributes": "Attributi fondamentali",
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "pochi istanti fa",
-      "minutesAgo": "{{count}} minuto{{suffix}} fa",
-      "hoursAgo": "{{count}} ora{{suffix}} fa",
-      "daysAgo": "{{count}} giorno{{suffix}} fa"
+      "minutesAgo_one": "{{count}} minuto fa",
+      "minutesAgo_other": "{{count}} minuti fa",
+      "hoursAgo_one": "{{count}} ora fa",
+      "hoursAgo_other": "{{count}} ore fa",
+      "daysAgo_one": "{{count}} giorno fa",
+      "daysAgo_other": "{{count}} giorni fa"
     }
   },
   "assetDetailHeader": {
@@ -352,7 +399,7 @@
     "backToAssets": "Torna alle risorse",
     "assetTag": "Etichetta risorsa: {{tag}}",
     "actions": {
-      "createTicket": "Crea biglietto",
+      "createTicket": "Crea ticket",
       "menu": "Azioni",
       "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
@@ -501,7 +548,8 @@
       "loadFailed": "Impossibile caricare i dettagli della risorsa",
       "clientsLoadFailed": "Impossibile caricare i client",
       "locationsLoadFailed": "Impossibile caricare posizioni per questo client",
-      "updateFailed": "Impossibile aggiornare la risorsa"
+      "updateFailed": "Impossibile aggiornare la risorsa",
+      "validation": "Correggi i campi evidenziati prima di salvare."
     },
     "actions": {
       "viewClient": "Visualizza cliente",
@@ -609,7 +657,7 @@
     "description": "Schede metriche e rollup per ticket, manutenzione, tempi di attività e indicatori di stato delle risorse",
     "labels": {
       "healthStatus": "Stato di salute",
-      "openTickets": "Biglietti aperti",
+      "openTickets": "Ticket aperti",
       "securityStatus": "Stato di sicurezza",
       "warranty": "Garanzia"
     },
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "Aggiungi risorsa",
       "showLess": "Mostra meno",
-      "moreAssets": "{{count}} altra risorsa{{suffix}}"
+      "moreAssets_one": "{{count}} altra risorsa",
+      "moreAssets_other": "{{count}} altre risorse"
     },
     "errors": {
       "loadAvailableAssets": "Impossibile caricare le risorse disponibili",
@@ -719,8 +768,10 @@
       "removeFailed": "Impossibile rimuovere l'associazione della risorsa"
     },
     "success": {
-      "associated": "{{count}} asset{{suffix}} associato correttamente",
-      "associatedPartial": "{{count}} asset{{suffix}} associato correttamente, {{failed}} non riuscito (potrebbe essere già associato)",
+      "associated_one": "{{count}} risorsa associata correttamente",
+      "associated_other": "{{count}} risorse associate correttamente",
+      "associatedPartial_one": "{{count}} risorsa associata correttamente, {{failed}} non riuscita (forse già associata)",
+      "associatedPartial_other": "{{count}} risorse associate correttamente, {{failed}} non riuscite (forse già associate)",
       "removed": "Associazione della risorsa rimossa"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "Tipo..."
       },
       "actions": {
-        "addAssets": "Aggiungi risorsa{{suffix}}"
+        "addAssets_one": "Aggiungi risorsa",
+        "addAssets_other": "Aggiungi risorse"
       }
     },
     "table": {
@@ -778,19 +830,19 @@
     },
     "defaultTitle": "Problema con {{name}}",
     "actions": {
-      "open": "Crea biglietto",
-      "create": "Crea biglietto",
+      "open": "Crea ticket",
+      "create": "Crea ticket",
       "creating": "Creazione..."
     },
     "fields": {
       "title": "Titolo",
       "description": "Descrizione",
-      "board": "Asse",
+      "board": "Bacheca",
       "status": "Stato",
       "priority": "Priorità"
     },
     "placeholders": {
-      "title": "Inserisci il titolo del biglietto",
+      "title": "Inserisci il titolo del ticket",
       "description": "Descrivi il problema...",
       "loadingBoards": "Caricamento schede...",
       "selectBoard": "Seleziona scheda...",
@@ -805,10 +857,10 @@
       "loadBoards": "Impossibile caricare le schede",
       "loadStatuses": "Impossibile caricare gli stati",
       "requiredFields": "Inserisci titolo, consiglio, stato e priorità",
-      "createFailed": "Impossibile creare il biglietto"
+      "createFailed": "Impossibile creare il ticket"
     },
     "success": {
-      "created": "Biglietto creato con successo"
+      "created": "Ticket creato con successo"
     }
   },
   "deleteAssetButton": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "Etichetta risorsa *",
       "typeRequired": "Tipo *",
       "status": "Stato",
-      "serialNumber": "Numero di serie"
+      "serialNumber": "Numero di serie",
+      "customLocationOption": "Posizione personalizzata",
+      "location": "Posizione"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -869,7 +923,11 @@
       "assetTag": "Inserisci il tag risorsa",
       "selectType": "Seleziona il tipo",
       "selectStatus": "Seleziona lo stato",
-      "serialNumber": "Inserisci il numero di serie"
+      "serialNumber": "Inserisci il numero di serie",
+      "customLocation": "Inserisci una posizione o un'area personalizzata",
+      "loadingLocations": "Caricamento posizioni...",
+      "selectClientFirst": "Seleziona prima un cliente",
+      "selectLocation": "Seleziona posizione"
     },
     "sections": {
       "typeSpecificDetails": "Dettagli specifici del tipo"
@@ -914,7 +972,7 @@
       "justNow": "Proprio adesso",
       "minutesAgo": "{{count}}m fa",
       "hoursAgo": "{{count}}h fa",
-      "daysAgo": "{{count}}d fa"
+      "daysAgo": "{{count}}g fa"
     }
   },
   "assetInfoPanel": {
@@ -979,7 +1037,8 @@
       "uptime": "Tempo di attività",
       "lastSync": "Ultima sincronizzazione RMM",
       "network": "Rete",
-      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}",
+      "taniumCriticality": "Criticità Tanium"
     },
     "values": {
       "never": "Mai"
@@ -1136,13 +1195,19 @@
       "actions": "Azioni"
     },
     "frequency": {
-      "every": "Ogni {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Ogni {{frequency}}",
+      "every_other": "Ogni {{count}} {{frequency}}",
       "units": {
-        "daily": "giorno",
-        "weekly": "settimana",
-        "monthly": "mese",
-        "quarterly": "trimestre",
-        "yearly": "anno"
+        "daily_one": "giorno",
+        "daily_other": "giorni",
+        "weekly_one": "settimana",
+        "weekly_other": "settimane",
+        "monthly_one": "mese",
+        "monthly_other": "mesi",
+        "quarterly_one": "trimestre",
+        "quarterly_other": "trimestri",
+        "yearly_one": "anno",
+        "yearly_other": "anni"
       }
     },
     "status": {
@@ -1230,16 +1295,16 @@
     "title": "Cronologia del servizio",
     "description": "Scheda Cronologia servizi che riepiloga la manutenzione e l'attività dei ticket per la risorsa",
     "actions": {
-      "createTicket": "Crea biglietto"
+      "createTicket": "Crea ticket"
     },
     "table": {
-      "ticketId": "Identificativo del biglietto",
-      "subject": "Soggetto",
+      "ticketId": "Identificativo del ticket",
+      "subject": "Oggetto",
       "status": "Stato",
       "priority": "Priorità",
       "dateLinked": "Data collegata"
     },
-    "empty": "Nessun biglietto collegato a questa risorsa.",
+    "empty": "Nessun ticket collegato a questa risorsa.",
     "clientFallback": "Cliente sconosciuto"
   },
   "softwareInventoryTab": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "Avvisi attivi",
     "acknowledge": "Conferma",
     "createTicket": "Crea ticket"
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa",
+    "printSelected": "Stampa selezionati ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Impossibile caricare il ticket",
+    "openTicketFailed": "Impossibile aprire il ticket"
   }
 }

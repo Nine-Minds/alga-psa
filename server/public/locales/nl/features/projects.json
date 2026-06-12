@@ -64,11 +64,11 @@
     "deletePhase": "Fase verwijderen",
     "cancel": "Annuleren",
     "save": "Opslaan",
-    "taskCount": "{{count}} taak",
     "taskCount_other": "{{count}} taken",
     "startLabel": "Start",
     "dueLabel": "Vervaldatum",
-    "notSet": "Niet ingesteld"
+    "notSet": "Niet ingesteld",
+    "taskCount_one": "{{count}} taak"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -326,18 +326,22 @@
     "primaryAgentRequired": "Primaire agent is vereist wanneer er extra agenten worden toegewezen",
     "keepCreatedTicketsTitle": "Gemaakte tickets behouden?",
     "keepCreatedTicketsMessage": "Wilt u deze tickets behouden of verwijderen?",
-    "createdTicketsIntro": "Je hebt tijdens deze sessie {{count}} ticket{{plural}} gemaakt:",
+    "createdTicketsIntro_one": "Je hebt tijdens deze sessie {{count}} ticket gemaakt:",
+    "createdTicketsIntro_other": "Je hebt tijdens deze sessie {{count}} tickets gemaakt:",
     "keepUploadedDocumentsTitle": "Geüploade documenten behouden?",
     "keepUploadedDocumentsMessage": "Wilt u deze documenten in de sectie Documenten behouden of verwijderen?",
-    "documentsCleanupIntro": "U heeft {{count}} document{{plural}} dat {{wasWere}} {{cleanupType}}:",
+    "documentsCleanupIntro_one": "Je hebt {{count}} document dat {{cleanupType}} is:",
+    "documentsCleanupIntro_other": "Je hebt {{count}} documenten die {{cleanupType}} zijn:",
     "uploadedOrCreated": "geüpload of gemaakt",
     "createdOnly": "gemaakt",
     "uploadedOnly": "geüpload",
     "createdDocumentTag": "gemaakt",
     "uploadedDocumentTag": "geüpload",
     "andMore": "…en {{count}} meer",
-    "documentCleanupFailure": "{{count}} document{{plural}} kan niet worden verwijderd en blijft in Documenten staan",
-    "ticketCleanupFailure": "{{count}} ticket{{plural}} kon niet worden verwijderd",
+    "documentCleanupFailure_one": "{{count}} document kon niet worden verwijderd en blijft in Documenten staan",
+    "documentCleanupFailure_other": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "ticketCleanupFailure_one": "{{count}} ticket kon niet worden verwijderd",
+    "ticketCleanupFailure_other": "{{count}} tickets konden niet worden verwijderd",
     "checklistItemPlaceholder": "Controlelijstitem",
     "reorderChecklistItem": "Sleep om opnieuw te ordenen",
     "insertChecklistItem": "Item hier invoegen",
@@ -436,17 +440,17 @@
     "selectFolderDescription": "Kies waar u dit nieuwe document wilt opslaan"
   },
   "taskTicketLinks": {
-    "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan dit kaartje",
-    "title": "Bijbehorende kaartjes",
+    "restrictedTooltip": "Beperkte details — je bent niet toegewezen aan dit ticket",
+    "title": "Gekoppelde tickets",
     "linkExistingTitle": "Koppel bestaand ticket",
     "createTicket": "Ticket aanmaken",
     "linkTicket": "Linkticket",
     "selectTicket": "Selecteer Ticket",
     "selectTicketPlaceholder": "Een ticket kiezen",
-    "searchTicketsPlaceholder": "Zoek kaartjes...",
+    "searchTicketsPlaceholder": "Zoek tickets...",
     "categoryPlaceholder": "Categorie",
     "assignedToLabel": "Toegewezen aan",
-    "boardLabel": "Board",
+    "boardLabel": "Bord",
     "statusLabel": "Status",
     "priorityLabel": "Prioriteit",
     "allStatuses": "Alle statussen",
@@ -516,12 +520,14 @@
     "fieldsToExport": "Velden om te exporteren",
     "selectAll": "Selecteer alles",
     "deselectAll": "Deselecteer alles",
-    "phasesSelected": "{{selected}} van {{total}} fase{{plural}} geselecteerd",
+    "phasesSelected_one": "{{selected}} van {{total}} fase geselecteerd",
+    "phasesSelected_other": "{{selected}} van {{total}} fasen geselecteerd",
     "fieldsSelected": "{{selected}} van {{total}} velden geselecteerd",
     "exportTasks": "Taken exporteren",
     "exporting": "Taken exporteren...",
     "completeTitle": "Exporteren voltooid",
-    "success": "{{count}} taak{{plural}} naar CSV geëxporteerd.",
+    "success_one": "{{count}} taak naar CSV geëxporteerd.",
+    "success_other": "{{count}} taken naar CSV geëxporteerd.",
     "failed": "Kan taken niet exporteren",
     "done": "Klaar",
     "fields": {
@@ -543,7 +549,8 @@
       "updatedAt": "Bijgewerkt op"
     },
     "exportSelected": "{{count}} geselecteerde exporteren",
-    "selectedTasksNotice": "{{count}} geselecteerde taak{{plural}} exporteren."
+    "selectedTasksNotice_one": "{{count}} geselecteerde taak wordt geëxporteerd.",
+    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -594,7 +601,8 @@
     "importTasksButton": "{{tasks}} taken importeren",
     "mapUnmatchedAgentsTitle": "Breng ongeëvenaarde agenten in kaart",
     "agentResolutionIntro": "De volgende agentnamen uit uw CSV komen niet overeen met bestaande gebruikers. Kies hoe u elk wilt behandelen. De eerste agent in een door komma's gescheiden lijst wordt de primaire toegewezene, en aanvullende agenten worden taakresources.",
-    "taskCountLabel": "({{count}} taak{{plural}})",
+    "taskCountLabel_one": "({{count}} taak)",
+    "taskCountLabel_other": "({{count}} taken)",
     "tasksList": "Taken: {{tasks}}",
     "andMore": " en {{count}} meer…",
     "mapToExistingUser": "Toewijzen aan bestaande gebruiker:",
@@ -717,7 +725,7 @@
     },
     "prefillFromTicket": {
       "title": "Vooraf invullen vanaf ticket",
-      "searchTicketsPlaceholder": "Zoek kaartjes...",
+      "searchTicketsPlaceholder": "Zoek tickets...",
       "selectTicket": "Selecteer Ticket",
       "linkTicketLabel": "Koppel dit ticket aan de taak",
       "confirm": "Voorvullen",
@@ -732,8 +740,8 @@
       "openFailed": "Kan taak niet openen",
       "task": "Taak",
       "tasks": "Taken",
-      "badgeCount": "{{count}} Taak",
-      "badgeCount_other": "{{count}} Taken"
+      "badgeCount_other": "{{count}} Taken",
+      "badgeCount_one": "{{count}} Taak"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",
@@ -1474,5 +1482,13 @@
       "confirm_other": "Labels toevoegen aan {{count}} taken",
       "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
     }
+  },
+  "common:actions": {
+    "back": "Terug",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "done": "Klaar",
+    "edit": "Bewerken",
+    "save": "Opslaan"
   }
 }

@@ -91,7 +91,8 @@
         "single": "Only this event",
         "future": "This and future events",
         "all": "All events"
-      }
+      },
+      "messageWithTeamsWarning": "Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting."
     },
     "print": {
       "title": "Schedule Agenda",
@@ -546,7 +547,9 @@
         "title": "Approved Appointment",
         "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
         "description": "This appointment originated from a client request.",
-        "joinTeamsMeeting": "Join Teams Meeting"
+        "joinTeamsMeeting": "Join Teams Meeting",
+        "downloadRecording": "Download recording",
+        "viewTranscript": "View transcript"
       },
       "pending": {
         "title": "Pending Appointment Request",
@@ -630,5 +633,28 @@
       "future": "This and future events",
       "all": "All events"
     }
+  },
+  "actions": {
+    "print": "Print",
+    "printOptions": "Print options"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Client",
+      "contact": "Contact",
+      "duration": "Duration",
+      "endTime": "End Time",
+      "notes": "Notes",
+      "startTime": "Start Time",
+      "status": "Status",
+      "title": "Title",
+      "user": "User"
+    },
+    "noClient": "No client associated",
+    "noContact": "No contact associated",
+    "noTitle": "No title",
+    "notAvailable": "N/A",
+    "title": "Interaction Details",
+    "unknownUser": "Unknown"
   }
 }

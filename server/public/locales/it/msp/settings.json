@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} modifica non salvata",
+    "unsavedChanges_other": "{{count}} modifiche non salvate"
+  },
   "page": {
     "title": "Impostazioni di amministrazione"
   },
@@ -359,9 +363,9 @@
         "new": "Nuovo",
         "lead": "Responsabile"
       },
-      "memberCount": "{{count}} membro",
-      "memberCount_plural": "{{count}} membri",
-      "leadName": "Responsabile: {{name}}"
+      "leadName": "Responsabile: {{name}}",
+      "memberCount_one": "{{count}} membro",
+      "memberCount_other": "{{count}} membri"
     },
     "messages": {
       "error": {
@@ -916,8 +920,8 @@
       "messages": {
         "success": {
           "deleted": "Tipo di interazione eliminato",
-          "imported": "{{count}} tipo di interazione importato",
-          "imported_plural": "{{count}} tipi di interazione importati"
+          "imported_one": "{{count}} tipo di interazione importato",
+          "imported_other": "{{count}} tipi di interazione importati"
         },
         "error": {
           "fetchFailed": "Impossibile recuperare i tipi di interazione",
@@ -1049,7 +1053,22 @@
       "milestoneCompleted": "Traguardo del progetto completato",
       "dayAgo": "1 giorno fa",
       "createTicket": "Crea ticket",
-      "viewProjects": "Visualizza progetti"
+      "viewProjects": "Visualizza progetti",
+      "activeDevices": "Dispositivi attivi",
+      "basicSupport": "Supporto Base",
+      "dashboardTitle": "Dashboard",
+      "greeting": "Buongiorno, Alex 👋",
+      "navAppointments": "Appuntamenti",
+      "navDashboard": "Dashboard",
+      "navDevices": "I miei dispositivi",
+      "navProjects": "Progetti",
+      "navServiceRequests": "Richieste di servizio",
+      "navTickets": "Ticket",
+      "serviceRequests": "Richieste di servizio",
+      "upcomingShort": "In arrivo",
+      "upcomingVisits": "Prossime visite",
+      "welcomeBack": "Bentornato",
+      "workspaceSection": "Area di lavoro"
     },
     "signInPreview": {
       "portalTitle": "Portale clienti",
@@ -1507,8 +1526,6 @@
     },
     "sessions": {
       "title": "Tutte le sessioni utente",
-      "subtitle": "{{sessionCount}} sessione attiva su {{userCount}} utente",
-      "subtitle_plural": "{{sessionCount}} sessioni attive su {{userCount}} utenti",
       "filters": {
         "search": "Cerca",
         "searchPlaceholder": "Cerca per nome, email, dispositivo o IP...",
@@ -1551,7 +1568,9 @@
         "loading": "Caricamento sessioni...",
         "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} sessione attiva su {{userCount}} utente",
+      "subtitle_other": "{{sessionCount}} sessioni attive su {{userCount}} utenti"
     }
   },
   "ssoBulk": {

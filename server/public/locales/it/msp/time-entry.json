@@ -121,7 +121,10 @@
       "minimumDuration": "La durata minima è 1 minuto",
       "serviceRequired": "Il servizio è richiesto per gli inserimenti dell'orario",
       "timePeriodRange": "La data deve essere compresa nel periodo corrente ({{periodRange}})",
-      "endAfterStartPicker": "L'ora di fine deve essere successiva all'ora di inizio"
+      "endAfterStartPicker": "L'ora di fine deve essere successiva all'ora di inizio",
+      "durationSameDay": "La durata deve terminare nello stesso giorno",
+      "endSameDay": "L'ora di fine deve essere nello stesso giorno dell'ora di inizio",
+      "invalidTimeRange": "Inserisci un intervallo di tempo valido"
     }
   },
   "workItemPicker": {
@@ -286,7 +289,7 @@
       "failedInteraction": "Impossibile caricare i dettagli dell'interazione",
       "interactionNotFound": "Interazione non trovata",
       "noUserSession": "Nessuna sessione utente trovata",
-      "failedTicket": "Impossibile caricare il biglietto",
+      "failedTicket": "Impossibile caricare il ticket",
       "failedTask": "Impossibile caricare l'attività",
       "failedTaskPhase": "Impossibile caricare la fase dell'attività",
       "failedTaskProjectMetadata": "Impossibile caricare i metadati del progetto dell'attività",
@@ -365,7 +368,11 @@
     "active": "Attivo"
   },
   "intervals": {
-    "title": "Intervalli di tempo del biglietto",
+    "createdFromNote_one": "Creato da {{count}} intervallo",
+    "createdFromNote_other": "Creato da {{count}} intervalli",
+    "selectedCount_one": "{{count}} intervallo selezionato",
+    "selectedCount_other": "{{count}} intervalli selezionati",
+    "title": "Intervalli di tempo del ticket",
     "hideShortIntervals": "Nascondi intervalli inferiori a 1 minuto",
     "totalTime": "Tempo totale: {{value}}",
     "selectedOne": "{{count}} intervallo selezionato",
@@ -383,10 +390,10 @@
     "states": {
       "loading": "Caricamento intervalli...",
       "noIntervalsThisPeriod": "Nessun intervallo trovato per questo periodo di tempo",
-      "noIntervalsThisTicket": "Nessun intervallo trovato per questo biglietto",
+      "noIntervalsThisTicket": "Nessun intervallo trovato per questo ticket",
       "noIntervalsLongerThanMinute": "Nessun intervallo più lungo di 1 minuto trovato"
     },
-    "entryName": "Inserimento orario biglietto",
+    "entryName": "Inserimento orario ticket",
     "messages": {
       "cannotFindTimeSheet": "Impossibile creare l'inserimento dell'orario: impossibile trovare o creare il foglio presenze",
       "mergeFirst": "Unisci gli intervalli prima di creare una voce temporale",

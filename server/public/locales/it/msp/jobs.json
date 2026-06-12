@@ -98,5 +98,9 @@
       "processed": "Elaborato:",
       "retries": "Nuovi tentativi:"
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
   }
 }

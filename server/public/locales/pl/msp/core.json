@@ -155,7 +155,11 @@
       "failedLast24h": "Błędy z ostatnich 24 h",
       "openJobCenter": "Otwórz centrum zadań"
     },
-    "breadcrumb": "Ścieżka nawigacji",
+    "breadcrumb": {
+      "label": "Ścieżka nawigacji",
+      "dashboard": "Panel",
+      "home": "Strona główna"
+    },
     "tenantBadge": {
       "ariaLabel": "Aktywny tenant {{tenant}}"
     },
@@ -279,7 +283,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Tablice",
       "category": "Categories",
       "tag": "Tags",
       "status": "Statusy"
@@ -309,7 +313,7 @@
       "interaction": "Interactions",
       "schedule_entry": "Schedule entries",
       "time_entry": "Time entries",
-      "board": "Boards",
+      "board": "Tablice",
       "category": "Categories",
       "tag": "Tags",
       "status": "Statusy"

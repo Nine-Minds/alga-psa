@@ -113,7 +113,8 @@
       "archive": "Archivieren",
       "saveMetadata": "Metadaten speichern",
       "saving": "Speichern...",
-      "delete": "Endgültig löschen"
+      "delete": "Endgültig löschen",
+      "saveContent": "Speichern"
     },
     "feedback": {
       "permissionDenied": "Zugriff verweigert",
@@ -160,6 +161,10 @@
       "delete": {
         "title": "Artikel löschen",
         "message": "Möchten Sie \"{{title}}\" wirklich endgültig löschen? Dies entfernt den Artikel und seinen Inhalt und kann nicht rückgängig gemacht werden."
+      },
+      "archive": {
+        "message": "Möchten Sie \"{{title}}\" wirklich archivieren? Archivierte Artikel werden im Kundenportal ausgeblendet und können später endgültig gelöscht werden.",
+        "title": "Artikel archivieren"
       }
     }
   },
@@ -310,6 +315,7 @@
     }
   },
   "common": {
-    "done": "Fertig"
+    "done": "Fertig",
+    "cancel": "Abbrechen"
   }
 }

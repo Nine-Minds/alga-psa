@@ -28,7 +28,12 @@
       "inactive": "55555",
       "loading": "55555",
       "na": "55555",
-      "none": "55555"
+      "none": "55555",
+      "archived": "55555",
+      "draft": "55555",
+      "expired": "55555",
+      "published": "55555",
+      "terminated": "55555"
     },
     "no": "55555",
     "yes": "55555"
@@ -83,34 +88,43 @@
     "selectedSingle": "55555 {{count}} 55555",
     "selectedPlural": "55555 {{count}} 55555",
     "createSuccess": "55555 {{name}} 55555",
-    "exportSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555",
-    "bulkDeleteSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
-    "bulkInactiveFailed": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "exportSuccess_one": "55555 {{count}} 55555",
+    "exportSuccess_other": "55555 {{count}} 55555",
+    "bulkDeleteSuccess_one": "55555 {{count}} 55555",
+    "bulkDeleteSuccess_other": "55555 {{count}} 55555",
+    "bulkInactiveFailed_one": "55555 {{count}} 55555",
+    "bulkInactiveFailed_other": "55555 {{count}} 55555",
     "bulkInactiveWithContactsSuccess": "55555 {{clientCount}} 55555 {{clientsLabel}} 55555 {{contactCount}} 55555 {{contactsLabel}} 55555",
     "singleInactiveSuccess": "55555 {{name}} 55555",
     "singleInactiveWithContactsSuccess_one": "55555 {{name}} 55555 {{count}} 55555",
     "singleInactiveWithContactsSuccess_other": "55555 {{name}} 55555 {{count}} 55555",
-    "bulkInactiveSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
-    "bulkInactiveShortSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
+    "bulkInactiveSuccess_one": "55555 {{count}} 55555",
+    "bulkInactiveSuccess_other": "55555 {{count}} 55555",
+    "bulkInactiveShortSuccess_one": "55555 {{count}} 55555",
+    "bulkInactiveShortSuccess_other": "55555 {{count}} 55555",
     "bulkInactiveWithContactsShortSuccess": "55555 {{clientCount}} 55555 {{clientsLabel}} 55555 {{contactCount}} 55555 {{contactsLabel}} 55555",
     "bulkInactiveShortError": "55555",
-    "bulkReactivateFailed": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "bulkReactivateFailed_one": "55555 {{count}} 55555",
+    "bulkReactivateFailed_other": "55555 {{count}} 55555",
     "bulkReactivateWithContactsSuccess": "55555 {{clientCount}} 55555 {{clientsLabel}} 55555 {{contactCount}} 55555 {{contactsLabel}} 55555",
-    "bulkReactivateSuccess": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
+    "bulkReactivateSuccess_one": "55555 {{count}} 55555",
+    "bulkReactivateSuccess_other": "55555 {{count}} 55555",
     "deleteClientUnable": "55555",
     "deleteSinglePrompt": "55555 {{name}} 55555",
     "markFailedAsInactive": "55555 {{count}} 55555",
-    "multiDeleteSuccessSummary": "55555 {{count}} 55555 {{clientsLabel}} 55555 {{verb}} 55555",
-    "multiDeleteFailedSummary": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "multiDeleteSuccessSummary_one": "55555 {{count}} 55555",
+    "multiDeleteSuccessSummary_other": "55555 {{count}} 55555",
+    "multiDeleteFailedSummary_one": "55555 {{count}} 55555",
+    "multiDeleteFailedSummary_other": "55555 {{count}} 55555",
     "inactiveAlternative": "55555",
     "table": {
       "client": "55555"
     },
     "entities": {
-      "client": "55555",
-      "clients": "55555",
-      "contact": "55555",
-      "contacts": "55555"
+      "client_one": "55555",
+      "client_other": "55555",
+      "contact_one": "55555",
+      "contact_other": "55555"
     },
     "dependency": {
       "contact": "55555",
@@ -132,7 +146,8 @@
       "bucketUsageRecord": "55555",
       "bucketUsageRecords": "55555"
     },
-    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "deleteSelectedPrompt_one": "55555 {{count}} 55555",
+    "deleteSelectedPrompt_other": "55555 {{count}} 55555",
     "clientTypes": {
       "company": "55555",
       "individual": "55555"
@@ -215,8 +230,10 @@
     "inboundDomainRemoved": "55555",
     "inboundDomainRemoveFailed": "55555",
     "deleteError": "55555",
-    "deactivateWithContactsSuccess": "55555 {{count}} 55555",
-    "reactivateWithContactsSuccess": "55555 {{count}} 55555",
+    "deactivateWithContactsSuccess_one": "55555 {{count}} 55555",
+    "deactivateWithContactsSuccess_other": "55555 {{count}} 55555",
+    "reactivateWithContactsSuccess_one": "55555 {{count}} 55555",
+    "reactivateWithContactsSuccess_other": "55555 {{count}} 55555",
     "singleInactiveSuccess": "55555 {{name}} 55555",
     "slaPolicy": "55555",
     "defaultPolicy": "55555 {{name}} 55555",
@@ -249,7 +266,13 @@
       "status": "55555"
     },
     "deactivateClientDescription": "55555",
-    "deactivateClientOnlyDescription": "55555"
+    "deactivateClientOnlyDescription": "55555",
+    "nameAliasAddFailed": "55555",
+    "nameAliasAdded": "55555",
+    "nameAliasRemoveFailed": "55555",
+    "nameAliasRemoved": "55555",
+    "nameAliases": "55555",
+    "noNameAliases": "55555"
   },
   "quickAddClient": {
     "title": "55555",
@@ -416,7 +439,8 @@
     "invalidDate": "55555",
     "formattingError": "55555",
     "removeAssignmentTitle": "55555",
-    "removeAssignmentMessage": "55555"
+    "removeAssignmentMessage": "55555",
+    "contracts": "55555"
   },
   "clientBillingSchedule": {
     "title": "55555",
@@ -520,7 +544,9 @@
     "manualDue": "55555 {{date}} 55555",
     "addError": "55555",
     "deactivateError": "55555",
-    "updateError": "55555"
+    "updateError": "55555",
+    "createContract": "55555",
+    "quickAdd": "55555"
   },
   "clientContractDialog": {
     "assignTitle": "55555",
@@ -1015,7 +1041,10 @@
   },
   "actions": {
     "cancel": "55555",
-    "delete": "55555"
+    "delete": "55555",
+    "print": "55555",
+    "printOptions": "55555",
+    "printSelected": "55555 {{count}} 55555"
   },
   "clients": {
     "locations": {
@@ -1127,6 +1156,168 @@
     "messages": {
       "saveSuccess": "55555",
       "saveFailed": "55555"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "55555",
+      "join": "55555",
+      "noArtifacts": "55555",
+      "recordingArtifact": "55555",
+      "refreshFailed": "55555",
+      "refreshRecordings": "55555",
+      "sectionTitle": "55555",
+      "transcriptArtifact": "55555",
+      "viewTranscript": "55555"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "55555",
+          "addContact": "55555",
+          "addUser": "55555",
+          "badge": {
+            "clientLocation": "55555",
+            "contact": "55555",
+            "email": "55555",
+            "internal": "55555"
+          },
+          "duplicateEmail": "55555",
+          "emailPlaceholder": "55555",
+          "empty": "55555",
+          "helper": "55555",
+          "invalidEmail": "55555",
+          "label": "55555",
+          "remove": "55555 {{name}} 55555",
+          "tabs": {
+            "contacts": "55555",
+            "email": "55555",
+            "users": "55555"
+          }
+        },
+        "checkingCapability": "55555",
+        "createFailed": "55555",
+        "createToggle": "55555",
+        "endRequired": "55555",
+        "startRequired": "55555",
+        "unavailable": "55555"
+      }
+    },
+    "feed": {
+      "addInteraction": "55555",
+      "allTypes": "55555",
+      "applyFilters": "55555",
+      "endDate": "55555",
+      "filter": "55555",
+      "filterDialogTitle": "55555",
+      "reset": "55555",
+      "searchPlaceholder": "55555",
+      "startDate": "55555",
+      "title": "55555",
+      "typePlaceholder": "55555"
+    },
+    "overall": {
+      "allContacts": "55555",
+      "allStatuses": "55555",
+      "allUsers": "55555",
+      "byUser": "55555 {{name}} 55555",
+      "collapse": "55555",
+      "contactsFromClient": "55555",
+      "endTime": "55555",
+      "endTimeLabel": "55555",
+      "endTimePlaceholder": "55555",
+      "expand": "55555",
+      "startTime": "55555",
+      "startTimeLabel": "55555",
+      "startTimePlaceholder": "55555",
+      "statusPlaceholder": "55555",
+      "title": "55555"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "55555",
+    "loading": "55555",
+    "notFound": "55555"
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "55555",
+        "details": "55555",
+        "location": "55555",
+        "name": "55555",
+        "purchaseDate": "55555",
+        "serialNumber": "55555",
+        "status": "55555",
+        "type": "55555",
+        "warrantyEnd": "55555"
+      },
+      "details": {
+        "local": "55555",
+        "network": "55555",
+        "noIp": "55555",
+        "none": "55555"
+      },
+      "drawerLoadError": "55555",
+      "expiredSuffix": "55555",
+      "filterByType": "55555",
+      "inventory": {
+        "subtitle": "55555",
+        "title": "55555"
+      },
+      "loading": "55555",
+      "loadingHint": "55555",
+      "maintenanceTypes": {
+        "subtitle": "55555",
+        "title": "55555"
+      },
+      "overview": {
+        "assetsWithMaintenance": "55555",
+        "coverageRate": "55555",
+        "subtitle": "55555",
+        "title": "55555",
+        "totalSchedules": "55555"
+      },
+      "summary": {
+        "activeBadge": "55555",
+        "maintenanceRate": "55555",
+        "needsAttention": "55555",
+        "overdueMaintenance": "55555",
+        "scheduledBadge": "55555",
+        "totalAssets": "55555",
+        "upcomingMaintenance": "55555"
+      },
+      "typePlaceholder": "55555",
+      "types": {
+        "all": "55555",
+        "mobileDevice": "55555",
+        "networkDevice": "55555",
+        "printer": "55555",
+        "server": "55555",
+        "workstation": "55555"
+      }
+    },
+    "tickets": {
+      "addTicket": "55555",
+      "filters": {
+        "allAssignees": "55555",
+        "allPriorities": "55555",
+        "categoryPlaceholder": "55555",
+        "reset": "55555",
+        "searchPlaceholder": "55555",
+        "statusPlaceholder": "55555"
+      },
+      "loadMore": {
+        "label": "55555",
+        "loading": "55555"
+      },
+      "loading": "55555",
+      "title": "55555",
+      "toasts": {
+        "loadTicketFailed": "55555",
+        "openTicketFailed": "55555",
+        "userNotAuthenticated": "55555"
+      }
     }
   }
 }

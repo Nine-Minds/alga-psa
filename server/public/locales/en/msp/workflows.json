@@ -24,7 +24,10 @@
   "actions": {
     "create": "Create workflow",
     "open": "Open",
-    "close": "Close"
+    "close": "Close",
+    "print": "Print",
+    "printOptions": "Print options",
+    "printSelected": "Print selected ({{count}})"
   },
   "runList": {
     "shareTooltip": "Print and export",
@@ -60,7 +63,8 @@
       "cancelSelected": "Cancel selected ({{count}})",
       "clearSelection": "Clear selection",
       "details": "Details",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "preview": "Preview"
     },
     "table": {
       "runId": "Run ID",
@@ -124,6 +128,15 @@
         "title": "Print options",
         "description": "Choose which columns to include when printing workflow runs."
       }
+    },
+    "preview": {
+      "close": "Close",
+      "next": "Next",
+      "openFullPage": "Open full page",
+      "position": "{{current}} of {{total}} loaded runs",
+      "previous": "Previous",
+      "selectedRun": "Selected run",
+      "title": "Run preview"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Mapped",
       "identity": "Identity",
       "runErrorFallback": "Run error",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Technical detail:"
     },
     "stepTimeline": {
       "title": "Step Timeline",
@@ -179,7 +193,8 @@
         "duration": "Duration",
         "nextRetry": "Next Retry",
         "started": "Started",
-        "error": "Error"
+        "error": "Error",
+        "action": "Action"
       },
       "empty": "No step history yet."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Next Retry",
       "errorTitle": "Error",
       "stepErrorFallback": "Step error",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Technical detail:"
     },
     "waitHistory": {
       "title": "Wait History",
@@ -241,7 +257,8 @@
         "step": "Step",
         "event": "Event",
         "correlation": "Correlation"
-      }
+      },
+      "loading": "Loading logs..."
     },
     "audit": {
       "title": "Audit Trail",
@@ -253,7 +270,9 @@
         "operation": "Operation",
         "user": "User",
         "details": "Details"
-      }
+      },
+      "loading": "Loading audit trail...",
+      "unknownUser": "Unknown user"
     },
     "dialogs": {
       "reasonLabel": "Reason",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "Export CSV",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "refresh": "Refresh"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Select a workflow to view audit history.",
-      "empty": "No audit entries yet."
+      "empty": "No audit entries yet.",
+      "loading": "Loading audit entries..."
     },
     "values": {
       "system": "system"
@@ -577,6 +598,19 @@
         "events": "Events",
         "eventCatalog": "Event Catalog",
         "deadLetter": "Dead Letter"
+      },
+      "quota": {
+        "consumedLabel": "Consumed",
+        "consumedUnit": "consumed",
+        "loading": "Loading...",
+        "planLimit": "{{limit}} limit",
+        "remainingLabel": "Remaining",
+        "remainingUnit": "remaining",
+        "resetsOn": "Resets {{date}}",
+        "title": "Workflow actions",
+        "unavailable": "Unavailable",
+        "unlimitedPlan": "Unlimited plan",
+        "unlimitedRemaining": "Unlimited"
       }
     },
     "toolbar": {
@@ -1323,6 +1357,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} step)",
+    "stepCount_other": "({{count}} steps)",
     "start": "Start",
     "insertStepHere": "Insert step here",
     "emptyDisabled": "No steps yet.",
@@ -1437,7 +1473,10 @@
     "softEnumPlaceholder": "Select or enter value",
     "softEnumSearchPlaceholder": "Search or enter a custom value",
     "softEnumNoResults": "No suggestions",
-    "softEnumUseCustom": "Use \"{{value}}\""
+    "softEnumUseCustom": "Use \"{{value}}\"",
+    "expression": {
+      "placeholder": "e.g. payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
@@ -1542,7 +1581,8 @@
     },
     "actions": {
       "replay": "Replay",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "refresh": "Refresh"
     },
     "status": {
       "running": "Running",
@@ -1550,7 +1590,8 @@
       "retrying": "Retrying",
       "failed": "Failed",
       "pending": "Pending",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "loading": "Loading"
     },
     "failure": {
       "title": "Run failed",
@@ -1567,7 +1608,9 @@
         "loadingDefinition": "Loading workflow definition…",
         "loadingDefinitionPlain": "Loading workflow definition...",
         "noSteps": "No steps to display."
-      }
+      },
+      "selectPrompt": "Select a step to highlight it.",
+      "selectedStep": "Selected: {{label}}"
     },
     "details": {
       "title": "Run Details",
@@ -1697,8 +1740,14 @@
       "reasonRequired": "Reason is required (min 3 characters).",
       "canceled": "Run canceled.",
       "replayStarted": "Run replay started.",
-      "actionFailed": "Failed to perform action."
-    }
+      "actionFailed": "Failed to perform action.",
+      "loadFailed": "Failed to load run studio"
+    },
+    "lastRefreshed": "Last refreshed {{time}}",
+    "navigation": {
+      "backToRuns": "← Back to workflow runs"
+    },
+    "title": "Workflow Run Studio"
   },
   "schedules": {
     "common": {

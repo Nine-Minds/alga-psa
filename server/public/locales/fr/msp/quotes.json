@@ -149,7 +149,9 @@
       "back": "Retour",
       "moreActions": "Plus d'actions",
       "cancel": "Annuler",
-      "previewPdf": "Aperçu PDF"
+      "previewPdf": "Aperçu PDF",
+      "backToQuotes": "Retour aux devis",
+      "backToTemplates": "Retour aux modèles de devis"
     },
     "headings": {
       "editQuote": "Modifier le devis",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Contrat converti ouvert",
       "openConvertedInvoice": "Ouvrir la facture convertie",
       "preview": "Aperçu",
-      "saveAsTemplate": "Enregistrer comme modèle"
+      "saveAsTemplate": "Enregistrer comme modèle",
+      "back": "Retour"
     },
     "sections": {
       "activityLog": "Journal d'activité",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Phase : {{phase}}",
-      "templateQuote": "Modèle de devis"
+      "templateQuote": "Modèle de devis",
+      "customItem": "Article personnalisé",
+      "optional": "Facultatif",
+      "recurring": "Récurrent"
     },
     "loading": "Chargement des détails du devis...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Chargement de l'aperçu..."
     },
     "table": {
-      "description": "Description"
+      "description": "Description",
+      "billing": "Facturation",
+      "quantity": "Qté",
+      "total": "Total",
+      "unitPrice": "Prix unitaire"
     },
     "locations": {
       "groupHeading": "Emplacement",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Rendre",
-      "shape": "Forme"
+      "shape": "Forme",
+      "renderFailed": "Échec du rendu.",
+      "shapeFailed": "Échec de la mise en forme.",
+      "shapingFailed": "La mise en forme a échoué."
     },
     "tabs": {
       "code": "Code",

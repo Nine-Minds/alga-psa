@@ -1431,7 +1431,9 @@
         "noticePeriodDays_other": "55555 {{count}} 55555",
         "ongoing": "55555",
         "renewalTermMonths_one": "55555 {{count}} 55555",
-        "renewalTermMonths_other": "55555 {{count}} 55555"
+        "renewalTermMonths_other": "55555 {{count}} 55555",
+        "noticePeriodDays": "55555 {{count}} 55555",
+        "renewalTermMonths": "55555 {{count}} 55555"
       }
     },
     "template": {
@@ -1501,11 +1503,14 @@
       "productItem": "55555 {{index}} 55555",
       "products": "55555",
       "quantity": "55555",
-      "selectProductPlaceholder": "55555"
+      "selectProductPlaceholder": "55555",
+      "catalogPriceInCurrency": "55555 {{currency}} 55555"
     },
     "validation": {
       "noDefaultPriceEnterUnitPrice": "55555",
-      "productMissingPrice": "55555"
+      "productMissingPrice": "55555",
+      "noCurrencyPriceEnterUnitPrice": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     }
   },
   "wizardHourly": {
@@ -1528,7 +1533,9 @@
       "hourlyServices": "55555",
       "selectServicePlaceholder": "55555",
       "serviceItem": "55555 {{index}} 55555",
-      "setBucketOfHours": "55555"
+      "setBucketOfHours": "55555",
+      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     },
     "minimumBillableTime": {
       "hint": "55555",
@@ -1586,7 +1593,9 @@
       "setBucketAllocation": "55555",
       "unitOfMeasure": "55555",
       "unitOfMeasureHint": "55555",
-      "unitOfMeasurePlaceholder": "55555"
+      "unitOfMeasurePlaceholder": "55555",
+      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
+      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
     },
     "summary": {
       "labels": {

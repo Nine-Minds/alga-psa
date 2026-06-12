@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Biglietto",
+        "ticket": "Ticket",
         "projectTask": "Compito del progetto",
         "nonBillableCategory": "Categoria non fatturabile",
         "adHoc": "Inserimento ad hoc",
@@ -91,7 +91,8 @@
         "single": "Solo questo evento",
         "future": "Questo e gli eventi futuri",
         "all": "Tutti gli eventi"
-      }
+      },
+      "messageWithTeamsWarning": "Sei sicuro di voler eliminare questa voce di pianificazione? Questa azione non può essere annullata. Verrà eliminata anche la riunione Microsoft Teams."
     },
     "print": {
       "title": "Agenda pianificata",
@@ -123,8 +124,8 @@
   "requests": {
     "errors": {
       "load": "Impossibile caricare le richieste di appuntamento",
-      "ticketNotFound": "Biglietto non trovato",
-      "loadTicket": "Impossibile caricare il biglietto",
+      "ticketNotFound": "Ticket non trovato",
+      "loadTicket": "Impossibile caricare il ticket",
       "assignTechnicianRequired": "Si prega di assegnare un tecnico",
       "approve": "Impossibile approvare la richiesta",
       "declineReasonRequired": "Si prega di fornire un motivo per rifiutare",
@@ -153,7 +154,7 @@
       "loading": "Caricamento richieste...",
       "empty": "Nessuna richiesta {{status}} trovata",
       "duration": "{{count}} minuti",
-      "ticketFallback": "Biglietto n.{{ticket}}",
+      "ticketFallback": "Ticket n.{{ticket}}",
       "fallbacks": {
         "publicRequest": "Richiesta pubblica"
       }
@@ -175,7 +176,7 @@
         "requestedTime": "Orario richiesto",
         "duration": "Durata",
         "status": "Stato",
-        "linkedTicket": "Biglietto collegato",
+        "linkedTicket": "Ticket collegato",
         "description": "Descrizione",
         "teamsMeeting": "Riunione Teams"
       },
@@ -189,7 +190,7 @@
         "assignedTechnician": "Assegna Tecnico *",
         "finalDateTime": "Data e ora finali",
         "internalNotes": "Note interne (facoltativo)",
-        "linkedTicket": "Link al biglietto (facoltativo)",
+        "linkedTicket": "Link al ticket (facoltativo)",
         "generateTeamsMeeting": "Genera link riunione Microsoft Teams"
       },
       "placeholders": {
@@ -546,7 +547,9 @@
         "title": "Appuntamento approvato",
         "descriptionWithDate": "Questo appuntamento ha avuto origine da una richiesta del cliente ed è stato approvato il {{date}}.",
         "description": "Questo appuntamento è nato da una richiesta del cliente.",
-        "joinTeamsMeeting": "Partecipa alla riunione Teams"
+        "joinTeamsMeeting": "Partecipa alla riunione Teams",
+        "downloadRecording": "Scarica registrazione",
+        "viewTranscript": "Visualizza trascrizione"
       },
       "pending": {
         "title": "Richiesta di appuntamento in sospeso",
@@ -630,5 +633,28 @@
       "future": "Questo e gli eventi futuri",
       "all": "Tutti gli eventi"
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Cliente",
+      "contact": "Contatto",
+      "duration": "Durata",
+      "endTime": "Ora di fine",
+      "notes": "Note",
+      "startTime": "Ora di inizio",
+      "status": "Stato",
+      "title": "Titolo",
+      "user": "Utente"
+    },
+    "noClient": "Nessun cliente associato",
+    "noContact": "Nessun contatto associato",
+    "noTitle": "Nessun titolo",
+    "notAvailable": "N/D",
+    "title": "Dettagli dell'interazione",
+    "unknownUser": "Sconosciuto"
   }
 }

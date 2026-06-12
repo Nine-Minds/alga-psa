@@ -101,7 +101,8 @@
     "selection": {
       "selectAllVisibleAssets": "Wählen Sie alle sichtbaren Assets aus",
       "selectAsset": "Asset {{name}} auswählen",
-      "selectedAssets": "{{count}} Asset{{suffix}} ausgewählt",
+      "selectedAssets_one": "{{count}} Asset ausgewählt",
+      "selectedAssets_other": "{{count}} Assets ausgewählt",
       "clearSelection": "Auswahl aufheben",
       "bulkActionsComingSoon": "Massenaktionen folgen bald"
     },
@@ -216,6 +217,49 @@
         "title": "Druckoptionen",
         "description": "Wählen Sie die beim Drucken von Assets enthaltenen Spalten."
       }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Auswahl aufheben",
+        "delete": "Löschen",
+        "selectedCount": "{{count}} ausgewählt",
+        "setLocation": "Standort festlegen",
+        "setStatus": "Status festlegen"
+      },
+      "actions": {
+        "apply": "Anwenden",
+        "applying": "Wird angewendet...",
+        "deleteAssets": "Löschen",
+        "deleting": "Wird gelöscht...",
+        "updateLocation": "Standortaktualisierung",
+        "updateStatus": "Statusaktualisierung"
+      },
+      "deleteDialog": {
+        "description": "{{count}} ausgewählte(s) Asset(s) löschen. Assets mit Abhängigkeiten werden möglicherweise übersprungen.",
+        "title": "Ausgewählte Assets löschen"
+      },
+      "errors": {
+        "deleteFailed": "Die ausgewählten Assets konnten nicht gelöscht werden.",
+        "updateLocationFailed": "Die Standorte der ausgewählten Assets konnten nicht aktualisiert werden.",
+        "updateStatusFailed": "Die ausgewählten Assets konnten nicht aktualisiert werden."
+      },
+      "locationDialog": {
+        "clearLocation": "Standort entfernen",
+        "customLocation": "Benutzerdefinierter Standort",
+        "customPlaceholder": "Benutzerdefinierten Standort oder Bereich eingeben",
+        "description": "{{count}} ausgewählte(s) Asset(s) aktualisieren.",
+        "loadingLocations": "Standorte werden geladen...",
+        "savedDisabled": "Gespeicherte Kundenstandorte sind nur verfügbar, wenn alle ausgewählten Assets sichtbar sind und zu einem Kunden gehören.",
+        "savedLocation": "Gespeicherter Kundenstandort",
+        "selectLocation": "Standort auswählen",
+        "title": "Asset-Standort festlegen"
+      },
+      "partialFailure": "{{action}} für {{succeeded}} Asset(s) abgeschlossen; {{failed}} fehlgeschlagen.",
+      "statusDialog": {
+        "description": "{{count}} ausgewählte(s) Asset(s) aktualisieren.",
+        "title": "Asset-Status festlegen"
+      },
+      "success": "{{action}} für {{count}} Asset(s) abgeschlossen."
     }
   },
   "assetDashboardGrid": {
@@ -341,9 +385,12 @@
     },
     "relative": {
       "momentsAgo": "vor wenigen Augenblicken",
-      "minutesAgo": "Vor {{count}} Minute{{suffix}}",
-      "hoursAgo": "Vor {{count}} Stunde{{suffix}}",
-      "daysAgo": "Vor {{count}} Tag{{suffix}}"
+      "minutesAgo_one": "Vor {{count}} Minute",
+      "minutesAgo_other": "Vor {{count}} Minuten",
+      "hoursAgo_one": "Vor {{count}} Stunde",
+      "hoursAgo_other": "Vor {{count}} Stunden",
+      "daysAgo_one": "Vor {{count}} Tag",
+      "daysAgo_other": "Vor {{count}} Tagen"
     }
   },
   "assetDetailHeader": {
@@ -501,7 +548,8 @@
       "loadFailed": "Asset-Details konnten nicht geladen werden",
       "clientsLoadFailed": "Clients können nicht geladen werden",
       "locationsLoadFailed": "Standorte für diesen Client können nicht geladen werden",
-      "updateFailed": "Das Asset konnte nicht aktualisiert werden"
+      "updateFailed": "Das Asset konnte nicht aktualisiert werden",
+      "validation": "Bitte korrigieren Sie die markierten Felder, bevor Sie speichern."
     },
     "actions": {
       "viewClient": "Kunden ansehen",
@@ -707,7 +755,8 @@
     "actions": {
       "addAsset": "Asset hinzufügen",
       "showLess": "Weniger anzeigen",
-      "moreAssets": "{{count}} mehr Asset{{suffix}}"
+      "moreAssets_one": "{{count}} weiteres Asset",
+      "moreAssets_other": "{{count}} weitere Assets"
     },
     "errors": {
       "loadAvailableAssets": "Die verfügbaren Assets konnten nicht geladen werden",
@@ -719,8 +768,10 @@
       "removeFailed": "Die Asset-Verknüpfung konnte nicht entfernt werden"
     },
     "success": {
-      "associated": "{{count}} Asset{{suffix}} erfolgreich verknüpft",
-      "associatedPartial": "{{count}} Asset{{suffix}} erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
+      "associated_one": "{{count}} Asset erfolgreich verknüpft",
+      "associated_other": "{{count}} Assets erfolgreich verknüpft",
+      "associatedPartial_one": "{{count}} Asset erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
+      "associatedPartial_other": "{{count}} Assets erfolgreich verknüpft, {{failed}} fehlgeschlagen (möglicherweise bereits verknüpft)",
       "removed": "Asset-Zuordnung entfernt"
     },
     "empty": {
@@ -743,7 +794,8 @@
         "placeholder": "Typ..."
       },
       "actions": {
-        "addAssets": "Asset{{suffix}} hinzufügen"
+        "addAssets_one": "Asset hinzufügen",
+        "addAssets_other": "Assets hinzufügen"
       }
     },
     "table": {
@@ -853,7 +905,9 @@
       "assetTagRequired": "Asset-Tag *",
       "typeRequired": "Typ *",
       "status": "Status",
-      "serialNumber": "Seriennummer"
+      "serialNumber": "Seriennummer",
+      "customLocationOption": "Benutzerdefinierter Standort",
+      "location": "Standort"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -869,7 +923,11 @@
       "assetTag": "Geben Sie das Asset-Tag ein",
       "selectType": "Typ auswählen",
       "selectStatus": "Status auswählen",
-      "serialNumber": "Geben Sie die Seriennummer ein"
+      "serialNumber": "Geben Sie die Seriennummer ein",
+      "customLocation": "Benutzerdefinierten Standort oder Bereich eingeben",
+      "loadingLocations": "Standorte werden geladen...",
+      "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
+      "selectLocation": "Standort auswählen"
     },
     "sections": {
       "typeSpecificDetails": "Typspezifische Details"
@@ -979,7 +1037,8 @@
       "uptime": "Betriebszeit",
       "lastSync": "Letzte RMM Synchronisierung",
       "network": "Netzwerk",
-      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}",
+      "taniumCriticality": "Tanium-Kritikalität"
     },
     "values": {
       "never": "Nie"
@@ -1136,13 +1195,19 @@
       "actions": "Aktionen"
     },
     "frequency": {
-      "every": "Alle {{count}} {{frequency}}{{suffix}}",
+      "every_one": "Pro {{frequency}}",
+      "every_other": "Alle {{count}} {{frequency}}",
       "units": {
-        "daily": "Tag",
-        "weekly": "Woche",
-        "monthly": "Monat",
-        "quarterly": "Quartal",
-        "yearly": "Jahr"
+        "daily_one": "Tag",
+        "daily_other": "Tage",
+        "weekly_one": "Woche",
+        "weekly_other": "Wochen",
+        "monthly_one": "Monat",
+        "monthly_other": "Monate",
+        "quarterly_one": "Quartal",
+        "quarterly_other": "Quartale",
+        "yearly_one": "Jahr",
+        "yearly_other": "Jahre"
       }
     },
     "status": {
@@ -1278,5 +1343,14 @@
     "activeAlerts": "Aktive Warnungen",
     "acknowledge": "Bestätigen",
     "createTicket": "Ticket erstellen"
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen",
+    "printSelected": "Ausgewählte drucken ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Ticket konnte nicht geladen werden",
+    "openTicketFailed": "Ticket konnte nicht geöffnet werden"
   }
 }

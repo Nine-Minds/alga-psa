@@ -535,9 +535,9 @@
       "reorder": "55555"
     },
     "toast": {
-      "importedCount": "55555 {{count}} 55555",
       "importedCount_other": "55555 {{count}} 55555",
-      "skippedItem": "55555 {{name}} 55555 {{reason}} 55555"
+      "skippedItem": "55555 {{name}} 55555 {{reason}} 55555",
+      "importedCount_one": "55555 {{count}} 55555"
     },
     "errors": {
       "fetch": "55555",

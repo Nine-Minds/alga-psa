@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Billet",
+        "ticket": "Ticket",
         "projectTask": "Tâche de projet",
         "nonBillableCategory": "Catégorie non facturable",
         "adHoc": "Entrée ponctuelle",
@@ -91,7 +91,8 @@
         "single": "Seulement cet événement",
         "future": "Cet événement et les événements à venir",
         "all": "Tous les événements"
-      }
+      },
+      "messageWithTeamsWarning": "Êtes-vous sûr de vouloir supprimer cette entrée de planning ? Cette action ne peut pas être annulée. La réunion Microsoft Teams sera également supprimée."
     },
     "print": {
       "title": "Agenda du planning",
@@ -123,7 +124,7 @@
   "requests": {
     "errors": {
       "load": "Échec du chargement des demandes de rendez-vous",
-      "ticketNotFound": "Billet introuvable",
+      "ticketNotFound": "Ticket introuvable",
       "loadTicket": "Échec du chargement du ticket",
       "assignTechnicianRequired": "Veuillez affecter un technicien",
       "approve": "Échec de l'approbation de la demande",
@@ -153,7 +154,7 @@
       "loading": "Chargement des demandes...",
       "empty": "Aucune requête {{status}} trouvée",
       "duration": "{{count}} minutes",
-      "ticketFallback": "Billet n°{{ticket}}",
+      "ticketFallback": "Ticket n°{{ticket}}",
       "fallbacks": {
         "publicRequest": "Demande publique"
       }
@@ -175,7 +176,7 @@
         "requestedTime": "Heure demandée",
         "duration": "Durée",
         "status": "Statut",
-        "linkedTicket": "Billet lié",
+        "linkedTicket": "Ticket lié",
         "description": "Description",
         "teamsMeeting": "Réunion Teams"
       },
@@ -189,7 +190,7 @@
         "assignedTechnician": "Attribuer un technicien *",
         "finalDateTime": "Date et heure finales",
         "internalNotes": "Notes internes (facultatif)",
-        "linkedTicket": "Lien vers le billet (facultatif)",
+        "linkedTicket": "Lien vers le ticket (facultatif)",
         "generateTeamsMeeting": "Générer un lien de réunion Microsoft Teams"
       },
       "placeholders": {
@@ -349,7 +350,7 @@
       },
       "feedback": {
         "selectUserError": "Veuillez sélectionner un utilisateur",
-        "saveSuccess": "Heures utilisateur économisées",
+        "saveSuccess": "Heures des utilisateurs enregistrées",
         "saveError": "Échec de l'enregistrement des heures utilisateur",
         "deleteSuccess": "Disponibilité de l'utilisateur supprimée",
         "deleteError": "Échec de la suppression de la disponibilité de l'utilisateur"
@@ -546,7 +547,9 @@
         "title": "Nomination approuvée",
         "descriptionWithDate": "Ce rendez-vous découle d'une demande d'un client et a été approuvé le {{date}}.",
         "description": "Ce rendez-vous est né d'une demande d'un client.",
-        "joinTeamsMeeting": "Rejoindre la réunion Teams"
+        "joinTeamsMeeting": "Rejoindre la réunion Teams",
+        "downloadRecording": "Télécharger l'enregistrement",
+        "viewTranscript": "Voir la transcription"
       },
       "pending": {
         "title": "Demande de rendez-vous en attente",
@@ -630,5 +633,28 @@
       "future": "Cet événement et les événements à venir",
       "all": "Tous les événements"
     }
+  },
+  "actions": {
+    "print": "Imprimer",
+    "printOptions": "Options d'impression"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Client",
+      "contact": "Contact",
+      "duration": "Durée",
+      "endTime": "Heure de fin",
+      "notes": "Notes",
+      "startTime": "Heure de début",
+      "status": "Statut",
+      "title": "Titre",
+      "user": "Utilisateur"
+    },
+    "noClient": "Aucun client associé",
+    "noContact": "Aucun contact associé",
+    "noTitle": "Sans titre",
+    "notAvailable": "N/A",
+    "title": "Détails de l'interaction",
+    "unknownUser": "Inconnu"
   }
 }

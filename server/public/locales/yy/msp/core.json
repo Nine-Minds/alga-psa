@@ -160,7 +160,11 @@
       "failedLast24h": "55555",
       "openJobCenter": "55555"
     },
-    "breadcrumb": "55555",
+    "breadcrumb": {
+      "label": "55555",
+      "dashboard": "55555",
+      "home": "55555"
+    },
     "tenantBadge": {
       "ariaLabel": "55555 {{tenant}} 55555"
     },

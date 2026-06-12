@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reacción",
+    "ariaSummary_other": "{{emoji}} {{count}} reacciones",
+    "ariaYouReacted": ", has reaccionado"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Vence en {{count}} día, el {{date}}",
+    "expiresInDaysOn_other": "Vence en {{count}} días, el {{date}}",
+    "expiringForClient_one": "{{count}} crédito de {{clientName}} vencerá pronto",
+    "expiringForClient_other": "{{count}} créditos de {{clientName}} vencerán pronto"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "La prueba Enterprise vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Enterprise.",
+    "trialExpiresIn_other": "La prueba Enterprise vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Enterprise.",
+    "trialDaysRemaining_one": "Prueba Enterprise activa: queda {{count}} día.",
+    "trialDaysRemaining_other": "Prueba Enterprise activa: quedan {{count}} días.",
+    "licenseExpiresIn_one": "La licencia vence en {{count}} día. Renueve para evitar interrupciones del servicio.",
+    "licenseExpiresIn_other": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio."
+  },
   "nav": {
     "dashboard": "Panel",
     "tickets": "Tickets",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Restablecer opciones de impresión",
     "share": "Compartir",
     "done": "Listo",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "printSelected": "Imprimir seleccionados ({{count}})"
   },
   "status": {
     "loading": "Cargando...",
@@ -506,7 +526,10 @@
         "visible": "Visible para el cliente",
         "hidden": "Solo interno"
       },
-      "clientVisibilityLabel": "Visibilidad para el cliente"
+      "clientVisibilityLabel": "Visibilidad para el cliente",
+      "entityOptions": {
+        "all": "Todas las entidades"
+      }
     },
     "selector": {
       "title": "Seleccionar documentos",
@@ -534,7 +557,10 @@
       "uploadingProgress": "Subiendo {{current}} de {{total}}",
       "pending": "Pendiente",
       "error": "No se pudo subir el documento",
-      "fileError": "No se pudo subir el archivo"
+      "fileError": "No se pudo subir el archivo",
+      "associatedEntityTypeLabel": "Asociar con",
+      "noAssociation": "Sin asociación",
+      "selectAssociatedEntityError": "Selecciona una entidad asociada antes de subir."
     },
     "folders": {
       "root": "Raíz",
@@ -593,7 +619,20 @@
     "downloadVideo": "Descargar video",
     "downloadAsPdf": "Descargar como PDF",
     "downloadAsMarkdown": "Descargar como Markdown",
-    "move": "Mover"
+    "move": "Mover",
+    "associatedEntityPicker": {
+      "allEntities": "Todas las entidades",
+      "loadingClients": "Cargando clientes...",
+      "loadingContacts": "Cargando contactos...",
+      "noEntityTypes": "No se encontraron tipos de entidad",
+      "typeLabel": "Tipo de entidad asociada",
+      "typePlaceholder": "Seleccionar tipo de entidad",
+      "typeSearchPlaceholder": "Buscar tipos de entidad...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Seleccionar {{entityType}}",
+      "entitySearchPlaceholder": "Buscar {{entityType}}...",
+      "noEntities": "No se encontraron {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -919,7 +958,8 @@
       "revoke": "Revocar",
       "revoking": "Revocando...",
       "loggingOut": "Cerrando sesión...",
-      "logoutFromOther": "Cerrar sesión de {{count}} otro dispositivo{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Cerrar sesión de {{count}} otro dispositivo",
+      "logoutFromOther_other": "Cerrar sesión de {{count}} otros dispositivos"
     },
     "confirmations": {
       "logoutCurrent": "Esto cerrará tu sesión actual. ¿Estás seguro?",
@@ -1009,7 +1049,10 @@
     "deleteCommentAriaLabel": "Eliminar comentario",
     "deleteComment": "Eliminar comentario",
     "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer.",
-    "update": "Actualizar"
+    "update": "Actualizar",
+    "create": "Crear",
+    "replyComment": "Responder al comentario",
+    "saving": "Guardando..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} columnas ocultas por falta de espacio.",
     "showAll": "Mostrar todo",
     "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "columnsHidden": "{{count}} columnas ocultas por espacio limitado."
   }
 }

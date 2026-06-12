@@ -349,7 +349,7 @@
     "actions": {
       "saving": "Économie...",
       "addTier": "Ajouter un niveau",
-      "save": "Niveaux de taux d'économie"
+      "save": "Enregistrer les niveaux de tarifs"
     },
     "title": "Niveaux tarifaires et remises sur quantité",
     "description": "Configurez différents tarifs en fonction des plages de quantités. Des quantités plus élevées peuvent bénéficier de tarifs réduits.",

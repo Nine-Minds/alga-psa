@@ -235,7 +235,7 @@
     },
     "actions": {
       "cancel": "Annuleren",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "save": "Configuratie opslaan"
     },
     "title": "Serviceconfiguratie",
@@ -347,7 +347,7 @@
       "unlimited": "Onbeperkt"
     },
     "actions": {
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "addTier": "Niveau toevoegen",
       "save": "Tariefniveaus opslaan"
     },
@@ -382,7 +382,7 @@
       "save": "Kan belastinginstellingen niet opslaan"
     },
     "actions": {
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "save": "Belastinginstellingen opslaan"
     },
     "title": "Belastinginstellingen",

@@ -123,7 +123,27 @@
       "goToPage": "Vai alla pagina",
       "dismissError": "Impossibile rifiutare l'attività: {{message}}"
     },
-    "retryLater": "Riprova più tardi."
+    "retryLater": "Riprova più tardi.",
+    "adHoc": {
+      "endBeforeStart": "L'ora di fine deve essere successiva all'ora di inizio.",
+      "fields": {
+        "end": "Fine (facoltativo)",
+        "noTime": "Nessun orario",
+        "notes": "Note",
+        "notesPlaceholder": "Aggiungi note…",
+        "start": "Inizio (facoltativo)",
+        "title": "Titolo",
+        "titlePlaceholder": "Titolo"
+      },
+      "loadError": "Impossibile caricare questo elemento. Riprova più tardi.",
+      "saveError": "Impossibile salvare l'elemento.",
+      "saveSuccess": "Elemento salvato",
+      "statusDone": "Completato",
+      "statusOpen": "Aperto",
+      "title": "Elemento ad hoc",
+      "toggleDoneError": "Impossibile aggiornare l'elemento."
+    },
+    "enterpriseOnly": "Le attività del workflow sono una funzionalità Enterprise."
   },
   "groupedView": {
     "addGroup": "Aggiungi gruppo",
@@ -322,7 +342,8 @@
       },
       "errors": {
         "loadFailed": "Impossibile caricare le attività di pianificazione. Riprovi più tardi.",
-        "refreshFailed": "Impossibile aggiornare le attività di pianificazione. Riprovi più tardi."
+        "refreshFailed": "Impossibile aggiornare le attività di pianificazione. Riprovi più tardi.",
+        "addAdHocFailed": "Impossibile aggiungere l'attività. Riprova."
       },
       "filterDialog": {
         "title": "Filtra le voci della pianificazione",
@@ -417,7 +438,13 @@
       "priority": "Priorità",
       "dueDate": "Data di scadenza",
       "showClosed": "Mostra chiuse",
-      "search": "Cerca"
+      "search": "Cerca",
+      "client": "Cliente",
+      "dueDateShort": "Scadenza",
+      "tags": "Tag",
+      "tagsSelected": "{{count}} tag",
+      "tasksCompact": "Attività",
+      "ticketsCompact": "Ticket"
     },
     "activityTypeOptions": {
       "schedule": "Pianificazione",
@@ -434,10 +461,16 @@
       "search": "Cerca attività...",
       "searchBoards": "Cerca board...",
       "searchStatuses": "Cerca stati...",
-      "searchProjects": "Cerca progetti..."
+      "searchProjects": "Cerca progetti...",
+      "allClients": "Tutti i clienti",
+      "fromDateShort": "Dal",
+      "projectTaskTags": "Filtra tag delle attività...",
+      "ticketTags": "Filtra tag dei ticket...",
+      "toDateShort": "Al"
     },
     "actions": {
-      "reset": "Reimposta"
+      "reset": "Reimposta",
+      "clearClient": "Rimuovi filtro cliente"
     },
     "statusClosedSuffix": " (chiuso)",
     "summary": {
@@ -451,7 +484,16 @@
       "phases_other": "{{count}} fasi",
       "excludingName": "escl. {{name}}",
       "excludingCount_one": "escl. {{count}}",
-      "excludingCount_other": "escl. {{count}}"
+      "excludingCount_other": "escl. {{count}}",
+      "boards": "{{count}} board",
+      "excludingCount": "escl. {{count}}",
+      "phases": "{{count}} fasi",
+      "projects": "{{count}} progetti",
+      "statuses": "{{count}} stati"
     }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
   }
 }

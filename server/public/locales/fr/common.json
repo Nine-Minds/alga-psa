@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} réaction",
+    "ariaSummary_other": "{{emoji}} {{count}} réactions",
+    "ariaYouReacted": ", vous avez réagi"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Expire dans {{count}} jour, le {{date}}",
+    "expiresInDaysOn_other": "Expire dans {{count}} jours, le {{date}}",
+    "expiringForClient_one": "{{count}} crédit pour {{clientName}} expirera bientôt",
+    "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "L'essai Enterprise expire dans {{count}} jour. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
+    "trialExpiresIn_other": "L'essai Enterprise expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
+    "trialDaysRemaining_one": "Essai Enterprise actif — {{count}} jour restant.",
+    "trialDaysRemaining_other": "Essai Enterprise actif — {{count}} jours restants.",
+    "licenseExpiresIn_one": "La licence expire dans {{count}} jour. Renouvelez pour éviter toute interruption de service.",
+    "licenseExpiresIn_other": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service."
+  },
   "nav": {
     "dashboard": "Tableau de bord",
     "tickets": "Tickets",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Réinitialiser les options d’impression",
     "share": "Partager",
     "done": "Terminé",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "printSelected": "Imprimer la sélection ({{count}})"
   },
   "status": {
     "loading": "Chargement...",
@@ -462,7 +482,10 @@
         "visible": "Visible pour le client",
         "hidden": "Interne uniquement"
       },
-      "clientVisibilityLabel": "Visibilité pour le client"
+      "clientVisibilityLabel": "Visibilité pour le client",
+      "entityOptions": {
+        "all": "Toutes les entités"
+      }
     },
     "selector": {
       "title": "Sélectionner des documents",
@@ -490,7 +513,10 @@
       "uploadingProgress": "Téléversement de {{current}} sur {{total}}",
       "pending": "En attente",
       "error": "Impossible de téléverser le document",
-      "fileError": "Impossible de téléverser le fichier"
+      "fileError": "Impossible de téléverser le fichier",
+      "associatedEntityTypeLabel": "Associer à",
+      "noAssociation": "Aucune association",
+      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser."
     },
     "folders": {
       "root": "Racine",
@@ -549,7 +575,20 @@
     "downloadVideo": "Télécharger la vidéo",
     "downloadAsPdf": "Télécharger en PDF",
     "downloadAsMarkdown": "Télécharger en Markdown",
-    "move": "Déplacer"
+    "move": "Déplacer",
+    "associatedEntityPicker": {
+      "allEntities": "Toutes les entités",
+      "loadingClients": "Chargement des clients...",
+      "loadingContacts": "Chargement des contacts...",
+      "noEntityTypes": "Aucun type d'entité trouvé",
+      "typeLabel": "Type d'entité associé",
+      "typePlaceholder": "Sélectionner un type d'entité",
+      "typeSearchPlaceholder": "Rechercher des types d'entité...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Sélectionner {{entityType}}",
+      "entitySearchPlaceholder": "Rechercher {{entityType}}...",
+      "noEntities": "Aucun {{entityType}} trouvé"
+    }
   },
   "fields": {
     "notes": "Notes"
@@ -919,7 +958,8 @@
       "revoke": "Révoquer",
       "revoking": "Révocation...",
       "loggingOut": "Déconnexion...",
-      "logoutFromOther": "Déconnecter de {{count}} autre appareil{{count, plural, one {} other {s}}}"
+      "logoutFromOther_one": "Déconnecter de {{count}} autre appareil",
+      "logoutFromOther_other": "Déconnecter de {{count}} autres appareils"
     },
     "confirmations": {
       "logoutCurrent": "Cela vous déconnectera de votre session actuelle. Êtes-vous sûr ?",
@@ -1009,7 +1049,10 @@
     "deleteCommentAriaLabel": "Supprimer le commentaire",
     "deleteComment": "Supprimer le commentaire",
     "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.",
-    "update": "Mettre à jour"
+    "update": "Mettre à jour",
+    "create": "Créer",
+    "replyComment": "Répondre au commentaire",
+    "saving": "Enregistrement..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} colonnes masquées faute de place.",
     "showAll": "Tout afficher",
     "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
-    "showLess": "Afficher moins"
+    "showLess": "Afficher moins",
+    "columnsHidden": "{{count}} colonnes masquées en raison de l'espace limité."
   }
 }

@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} map",
+    "folderCount_other": "{{count}} mappen"
+  },
   "title": "Documenten",
   "noDocuments": "Geen documenten toegevoegd",
   "upload": "Document uploaden",
@@ -273,5 +277,10 @@
   "uploadHint": "Upload bestanden om met deze taak te delen",
   "file": "bestand",
   "files": "bestanden",
-  "view": "Bekijken"
+  "view": "Bekijken",
+  "common:pagination": {
+    "next": "Volgende",
+    "pageOf": "Pagina {{current}} van {{total}}",
+    "previous": "Vorige"
+  }
 }

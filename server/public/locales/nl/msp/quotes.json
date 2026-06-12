@@ -69,7 +69,7 @@
     "states": {
       "generating": "Genereren...",
       "loading": "Laden...",
-      "saving": "Besparing...",
+      "saving": "Opslaan...",
       "sending": "Verzenden..."
     }
   },
@@ -149,7 +149,9 @@
       "back": "Terug",
       "moreActions": "Meer acties",
       "cancel": "Annuleren",
-      "previewPdf": "Pdf-voorvertoning"
+      "previewPdf": "Pdf-voorvertoning",
+      "backToQuotes": "Terug naar offertes",
+      "backToTemplates": "Terug naar offertesjablonen"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -348,7 +350,8 @@
       "openConvertedContract": "Open geconverteerd contract",
       "openConvertedInvoice": "Open de geconverteerde factuur",
       "preview": "Voorbeeld",
-      "saveAsTemplate": "Opslaan als sjabloon"
+      "saveAsTemplate": "Opslaan als sjabloon",
+      "back": "Terug"
     },
     "sections": {
       "activityLog": "Activiteitenlogboek",
@@ -414,7 +417,10 @@
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "Sjabloonofferte"
+      "templateQuote": "Sjabloonofferte",
+      "customItem": "Aangepast item",
+      "optional": "Optioneel",
+      "recurring": "Terugkerend"
     },
     "loading": "Offertegegevens laden...",
     "notices": {
@@ -431,7 +437,11 @@
       "loading": "Voorbeeld laden..."
     },
     "table": {
-      "description": "Beschrijving"
+      "description": "Beschrijving",
+      "billing": "Facturering",
+      "quantity": "Aantal",
+      "total": "Totaal",
+      "unitPrice": "Eenheidsprijs"
     },
     "locations": {
       "groupHeading": "Locatie",
@@ -721,7 +731,10 @@
     },
     "pipeline": {
       "render": "Veroorzaken",
-      "shape": "Vorm"
+      "shape": "Vorm",
+      "renderFailed": "Renderen mislukt.",
+      "shapeFailed": "Shape mislukt.",
+      "shapingFailed": "Shaping mislukt."
     },
     "tabs": {
       "code": "Code",

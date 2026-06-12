@@ -64,11 +64,11 @@
     "deletePhase": "Phase löschen",
     "cancel": "Abbrechen",
     "save": "Speichern",
-    "taskCount": "{{count}} Aufgabe",
     "taskCount_other": "{{count}} Aufgaben",
     "startLabel": "Start",
     "dueLabel": "Fällig",
-    "notSet": "Nicht festgelegt"
+    "notSet": "Nicht festgelegt",
+    "taskCount_one": "{{count}} Aufgabe"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -326,18 +326,22 @@
     "primaryAgentRequired": "Ein Hauptagent ist erforderlich, wenn zusätzliche Agenten zugewiesen sind",
     "keepCreatedTicketsTitle": "Erstellte Tickets behalten?",
     "keepCreatedTicketsMessage": "Möchten Sie diese Tickets behalten oder löschen?",
-    "createdTicketsIntro": "Sie haben in dieser Sitzung {{count}} Ticket{{plural}} erstellt:",
+    "createdTicketsIntro_one": "Sie haben in dieser Sitzung {{count}} Ticket erstellt:",
+    "createdTicketsIntro_other": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
     "keepUploadedDocumentsTitle": "Hochgeladene Dokumente behalten?",
     "keepUploadedDocumentsMessage": "Möchten Sie diese Dokumente im Bereich Dokumente behalten oder löschen?",
-    "documentsCleanupIntro": "Sie haben {{count}} Dokument{{plural}}, das {{wasWere}} {{cleanupType}}:",
+    "documentsCleanupIntro_one": "Sie haben {{count}} Dokument, das {{cleanupType}} wurde:",
+    "documentsCleanupIntro_other": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
     "uploadedOrCreated": "hochgeladen oder erstellt",
     "createdOnly": "erstellt",
     "uploadedOnly": "hochgeladen",
     "createdDocumentTag": "erstellt",
     "uploadedDocumentTag": "hochgeladen",
     "andMore": "…und {{count}} weitere",
-    "documentCleanupFailure": "{{count}} Dokument{{plural}} konnten nicht gelöscht werden und verbleiben in Dokumente",
-    "ticketCleanupFailure": "{{count}} Ticket{{plural}} konnten nicht gelöscht werden",
+    "documentCleanupFailure_one": "{{count}} Dokument konnte nicht gelöscht werden und verbleibt in Dokumente",
+    "documentCleanupFailure_other": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "ticketCleanupFailure_one": "{{count}} Ticket konnte nicht gelöscht werden",
+    "ticketCleanupFailure_other": "{{count}} Tickets konnten nicht gelöscht werden",
     "checklistItemPlaceholder": "Checklistenpunkt",
     "reorderChecklistItem": "Zum Neuanordnen ziehen",
     "insertChecklistItem": "Element hier einfügen",
@@ -516,12 +520,14 @@
     "fieldsToExport": "Zu exportierende Felder",
     "selectAll": "Alle auswählen",
     "deselectAll": "Auswahl aufheben",
-    "phasesSelected": "{{selected}} von {{total}} Phase{{plural}} ausgewählt",
+    "phasesSelected_one": "{{selected}} von {{total}} Phase ausgewählt",
+    "phasesSelected_other": "{{selected}} von {{total}} Phasen ausgewählt",
     "fieldsSelected": "{{selected}} von {{total}} Feldern ausgewählt",
     "exportTasks": "Aufgaben exportieren",
     "exporting": "Aufgaben werden exportiert...",
     "completeTitle": "Export abgeschlossen",
-    "success": "{{count}} Aufgabe{{plural}} erfolgreich als CSV exportiert.",
+    "success_one": "{{count}} Aufgabe erfolgreich als CSV exportiert.",
+    "success_other": "{{count}} Aufgaben erfolgreich als CSV exportiert.",
     "failed": "Aufgaben konnten nicht exportiert werden",
     "done": "Erledigt",
     "fields": {
@@ -543,7 +549,8 @@
       "updatedAt": "Aktualisiert am"
     },
     "exportSelected": "{{count}} ausgewählte exportieren",
-    "selectedTasksNotice": "{{count}} ausgewählte Aufgabe{{plural}} werden exportiert."
+    "selectedTasksNotice_one": "{{count}} ausgewählte Aufgabe wird exportiert.",
+    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert."
   },
   "import": {
     "title": "Phasen und Aufgaben importieren",
@@ -594,7 +601,8 @@
     "importTasksButton": "{{tasks}} Aufgaben importieren",
     "mapUnmatchedAgentsTitle": "Nicht zugeordnete Agenten zuordnen",
     "agentResolutionIntro": "Die folgenden Agentennamen aus Ihrer CSV-Datei stimmen mit keinem vorhandenen Benutzer überein. Wählen Sie aus, wie mit jedem umgegangen werden soll. Der erste Agent in einer durch Kommas getrennten Liste wird zum primären Zuständigen, und weitere Agenten werden zu Aufgabenressourcen.",
-    "taskCountLabel": "({{count}} Aufgabe{{plural}})",
+    "taskCountLabel_one": "({{count}} Aufgabe)",
+    "taskCountLabel_other": "({{count}} Aufgaben)",
     "tasksList": "Aufgaben: {{tasks}}",
     "andMore": " und {{count}} weitere…",
     "mapToExistingUser": "Vorhandenem Benutzer zuordnen:",
@@ -732,8 +740,8 @@
       "openFailed": "Aufgabe konnte nicht geöffnet werden",
       "task": "Aufgabe",
       "tasks": "Aufgaben",
-      "badgeCount": "{{count}} Aufgabe",
-      "badgeCount_other": "{{count}} Aufgaben"
+      "badgeCount_other": "{{count}} Aufgaben",
+      "badgeCount_one": "{{count}} Aufgabe"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",
@@ -1474,5 +1482,13 @@
       "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
       "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
     }
+  },
+  "common:actions": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "done": "Fertig",
+    "edit": "Bearbeiten",
+    "save": "Speichern"
   }
 }

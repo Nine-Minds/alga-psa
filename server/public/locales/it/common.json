@@ -1,4 +1,23 @@
 {
+  "reactions": {
+    "ariaSummary_one": "{{emoji}} {{count}} reazione",
+    "ariaSummary_other": "{{emoji}} {{count}} reazioni",
+    "ariaYouReacted": ", hai reagito"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Scade tra {{count}} giorno, il {{date}}",
+    "expiresInDaysOn_other": "Scade tra {{count}} giorni, il {{date}}",
+    "expiringForClient_one": "{{count}} credito di {{clientName}} scadrà presto",
+    "expiringForClient_other": "{{count}} crediti di {{clientName}} scadranno presto"
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "La prova Enterprise scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Enterprise.",
+    "trialExpiresIn_other": "La prova Enterprise scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Enterprise.",
+    "trialDaysRemaining_one": "Prova Enterprise attiva — {{count}} giorno rimanente.",
+    "trialDaysRemaining_other": "Prova Enterprise attiva — {{count}} giorni rimanenti.",
+    "licenseExpiresIn_one": "La licenza scade tra {{count}} giorno. Rinnova per evitare interruzioni del servizio.",
+    "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio."
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Ticket",
@@ -48,7 +67,8 @@
     "resetPrintOptions": "Reimposta opzioni di stampa",
     "share": "Condividi",
     "done": "Fatto",
-    "continue": "Continua"
+    "continue": "Continua",
+    "printSelected": "Stampa selezionati ({{count}})"
   },
   "status": {
     "loading": "Caricamento...",
@@ -506,7 +526,10 @@
         "visible": "Visibile al cliente",
         "hidden": "Solo interno"
       },
-      "clientVisibilityLabel": "Visibilità cliente"
+      "clientVisibilityLabel": "Visibilità cliente",
+      "entityOptions": {
+        "all": "Tutte le entità"
+      }
     },
     "selector": {
       "title": "Seleziona documenti",
@@ -534,7 +557,10 @@
       "uploadingProgress": "Caricamento {{current}} di {{total}}",
       "pending": "In attesa",
       "error": "Impossibile caricare il documento",
-      "fileError": "Impossibile caricare il file"
+      "fileError": "Impossibile caricare il file",
+      "associatedEntityTypeLabel": "Associa a",
+      "noAssociation": "Nessuna associazione",
+      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare."
     },
     "folders": {
       "root": "Radice",
@@ -593,7 +619,20 @@
     "downloadVideo": "Scarica video",
     "downloadAsPdf": "Scarica come PDF",
     "downloadAsMarkdown": "Scarica come Markdown",
-    "move": "Sposta"
+    "move": "Sposta",
+    "associatedEntityPicker": {
+      "allEntities": "Tutte le entità",
+      "loadingClients": "Caricamento clienti...",
+      "loadingContacts": "Caricamento contatti...",
+      "noEntityTypes": "Nessun tipo di entità trovato",
+      "typeLabel": "Tipo di entità associata",
+      "typePlaceholder": "Seleziona tipo di entità",
+      "typeSearchPlaceholder": "Cerca tipi di entità...",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Seleziona {{entityType}}",
+      "entitySearchPlaceholder": "Cerca {{entityType}}...",
+      "noEntities": "Nessun risultato per {{entityType}}"
+    }
   },
   "surveys": {
     "common": {
@@ -919,7 +958,8 @@
       "revoke": "Revoca",
       "revoking": "Revoca in corso...",
       "loggingOut": "Disconnessione...",
-      "logoutFromOther": "Disconnetti da {{count}} altro dispositivo{{count, plural, one {} other {i}}}"
+      "logoutFromOther_one": "Disconnetti da {{count}} altro dispositivo",
+      "logoutFromOther_other": "Disconnetti da {{count}} altri dispositivi"
     },
     "confirmations": {
       "logoutCurrent": "Questo ti disconnetterà dalla tua sessione corrente. Sei sicuro?",
@@ -1009,7 +1049,10 @@
     "deleteCommentAriaLabel": "Elimina commento",
     "deleteComment": "Elimina commento",
     "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
-    "update": "Aggiorna"
+    "update": "Aggiorna",
+    "create": "Crea",
+    "replyComment": "Rispondi al commento",
+    "saving": "Salvataggio..."
   },
   "enums": {
     "addOnDescription": {
@@ -1180,6 +1223,7 @@
     "columnsHidden_other": "{{count}} colonne nascoste per spazio limitato.",
     "showAll": "Mostra tutto",
     "showingAllColumns": "Vengono mostrate tutte le colonne; scorri orizzontalmente per vederle.",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "columnsHidden": "{{count}} colonne nascoste per mancanza di spazio."
   }
 }

@@ -1,4 +1,8 @@
 {
+  "templatesSettings": {
+    "folderCount_one": "{{count}} dossier",
+    "folderCount_other": "{{count}} dossiers"
+  },
   "title": "Documents",
   "noDocuments": "Aucun document joint",
   "upload": "Téléverser un document",
@@ -273,5 +277,10 @@
   "uploadHint": "Téléversez des fichiers à partager avec cette tâche",
   "file": "fichier",
   "files": "fichiers",
-  "view": "Voir"
+  "view": "Voir",
+  "common:pagination": {
+    "next": "Suivant",
+    "pageOf": "Page {{current}} sur {{total}}",
+    "previous": "Précédent"
+  }
 }

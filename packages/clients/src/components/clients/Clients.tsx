@@ -440,15 +440,11 @@ const Clients: React.FC = () => {
   // For multi-delete functionality, we need to track clients
   
   const formatClientCountLabel = useCallback((count: number) => {
-    return count === 1
-      ? t('clientsPage.entities.client', { defaultValue: 'client' })
-      : t('clientsPage.entities.clients', { defaultValue: 'clients' });
+    return t('clientsPage.entities.client', { count, defaultValue_one: 'client', defaultValue_other: 'clients' });
   }, [t]);
 
   const formatContactCountLabel = useCallback((count: number) => {
-    return count === 1
-      ? t('clientsPage.entities.contact', { defaultValue: 'contact' })
-      : t('clientsPage.entities.contacts', { defaultValue: 'contacts' });
+    return t('clientsPage.entities.contact', { count, defaultValue_one: 'contact', defaultValue_other: 'contacts' });
   }, [t]);
 
   const formatSelectedSummary = useCallback((count: number) => {
@@ -856,9 +852,8 @@ const Clients: React.FC = () => {
 
       if (failCount > 0) {
         toast.error(t('clientsPage.bulkInactiveFailed', {
-          defaultValue: '{{count}} {{clientsLabel}} could not be marked as inactive.',
+          defaultValue: '{{count}} clients could not be marked as inactive.',
           count: failCount,
-          clientsLabel: formatClientCountLabel(failCount),
         }));
       }
       if (successCount > 0) {
@@ -872,10 +867,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkInactiveSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive successfully.',
+            defaultValue: '{{count}} clients have been marked as inactive successfully.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -920,9 +913,8 @@ const Clients: React.FC = () => {
 
       if (failCount > 0) {
         toast.error(t('clientsPage.bulkReactivateFailed', {
-          defaultValue: '{{count}} {{clientsLabel}} could not be reactivated.',
+          defaultValue: '{{count}} clients could not be reactivated.',
           count: failCount,
-          clientsLabel: formatClientCountLabel(failCount),
         }));
       }
       if (successCount > 0) {
@@ -936,10 +928,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkReactivateSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been reactivated successfully.',
+            defaultValue: '{{count}} clients have been reactivated successfully.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -1035,10 +1025,8 @@ const Clients: React.FC = () => {
         setMultiDeleteError(null);
         setMultiDeleteResults(null);
         toast.success(t('clientsPage.bulkDeleteSuccess', {
-          defaultValue: '{{count}} {{clientsLabel}} {{verb}} been deleted successfully.',
+          defaultValue: '{{count}} clients have been deleted successfully.',
           count: successfulDeletes.length,
-          clientsLabel: formatClientCountLabel(successfulDeletes.length),
-          verb: successfulDeletes.length === 1 ? 'has' : 'have',
         }));
       } else {
         // Store structured results for better UI display
@@ -1097,10 +1085,8 @@ const Clients: React.FC = () => {
           }));
         } else {
           toast.success(t('clientsPage.bulkInactiveShortSuccess', {
-            defaultValue: '{{count}} {{clientsLabel}} {{verb}} been marked as inactive.',
+            defaultValue: '{{count}} clients have been marked as inactive.',
             count: successCount,
-            clientsLabel: formatClientCountLabel(successCount),
-            verb: successCount === 1 ? 'has' : 'have',
           }));
         }
       }
@@ -1154,9 +1140,8 @@ const Clients: React.FC = () => {
       }
       
       toast.success(t('clientsPage.exportSuccess', {
-        defaultValue: 'Exported {{count}} {{clientsLabel}} to CSV',
+        defaultValue: 'Exported {{count}} clients to CSV',
         count: clientsToExport.length,
-        clientsLabel: formatClientCountLabel(clientsToExport.length),
       }));
     } catch (error) {
       console.error('Error exporting clients to CSV:', error);
@@ -1647,10 +1632,8 @@ const Clients: React.FC = () => {
                   <Alert variant="success">
                     <AlertDescription>
                       {t('clientsPage.multiDeleteSuccessSummary', {
-                        defaultValue: '{{count}} {{clientsLabel}} {{verb}} successfully deleted.',
+                        defaultValue: '{{count}} clients were successfully deleted.',
                         count: multiDeleteResults.successCount,
-                        clientsLabel: formatClientCountLabel(multiDeleteResults.successCount),
-                        verb: multiDeleteResults.successCount === 1 ? 'was' : 'were',
                       })}
                     </AlertDescription>
                   </Alert>
@@ -1663,9 +1646,8 @@ const Clients: React.FC = () => {
                       <AlertDescription>
                         <p className="font-semibold mb-2">
                           {t('clientsPage.multiDeleteFailedSummary', {
-                            defaultValue: '{{count}} {{clientsLabel}} could not be deleted',
+                            defaultValue: '{{count}} clients could not be deleted',
                             count: multiDeleteResults.failedClients.length,
-                            clientsLabel: formatClientCountLabel(multiDeleteResults.failedClients.length),
                           })}
                         </p>
                         <p className="text-sm">
@@ -1712,9 +1694,8 @@ const Clients: React.FC = () => {
             ) : (
               <p className="text-gray-600">
                 {t('clientsPage.deleteSelectedPrompt', {
-                  defaultValue: 'Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.',
+                  defaultValue: 'Are you sure you want to delete {{count}} selected clients? This action cannot be undone.',
                   count: selectedClients.length,
-                  clientsLabel: formatClientCountLabel(selectedClients.length),
                 })}
               </p>
             )}

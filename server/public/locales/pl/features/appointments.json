@@ -121,7 +121,9 @@
     "approved": "Zatwierdzono",
     "cancelButton": "Anuluj wizytę",
     "teamsMeeting": "Spotkanie Teams",
-    "joinTeamsMeeting": "Dołącz do spotkania Teams"
+    "joinTeamsMeeting": "Dołącz do spotkania Teams",
+    "downloadRecording": "Pobierz nagranie",
+    "viewTranscript": "Zobacz transkrypcję"
   },
   "cancel": {
     "title": "Anuluj wizytę",

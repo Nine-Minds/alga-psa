@@ -285,7 +285,8 @@
       "invoiceDate": "Fecha de la factura",
       "dueDate": "Fecha de vencimiento",
       "status": "Estado",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalizar",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "No se pudieron finalizar {{count}} facturas y se omitieron."
     },
     "reverseDialog": {
-      "title": "Borrador de factura inversa",
       "title_other": "Invertir facturas en borrador",
       "message_one": "Revertir este borrador de factura lo eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "message_other": "Revertir los borradores de facturas {{count}} los eliminará y liberará cualquier entrada de tiempo o registro de uso vinculado. Esta acción no se puede deshacer.",
       "confirm": "Borrador inverso",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "title_one": "Borrador de factura inversa"
     },
     "pendingTaxDialog": {
       "title": "Factura en espera del impuesto externo",
@@ -340,7 +341,8 @@
       "amount": "Importe",
       "finalizedDate": "Fecha finalizada",
       "status": "Estado",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Descargar archivos PDF",
@@ -578,7 +580,13 @@
       "reverseDraft": "Borrador inverso",
       "sendEmail": "Enviar correo electrónico",
       "unfinalize": "Desfinalizar",
-      "viewSourceQuote": "Ver cotización fuente"
+      "viewSourceQuote": "Ver cotización fuente",
+      "applyCredit": "Aplicar crédito",
+      "driftAccept": "Aceptar la versión de QuickBooks",
+      "driftReexport": "Reexportar a QuickBooks",
+      "syncNow": "Sincronizar con QuickBooks",
+      "viewInQbo": "Ver en QuickBooks",
+      "voidInvoice": "Anular factura"
     },
     "loading": "Cargando vista previa...",
     "empty": "Seleccione una factura para obtener una vista previa",
@@ -594,6 +602,17 @@
         "sendEmail": "enviar correo electrónico",
         "unfinalize": "desfinalizar factura"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Aplicar crédito"
+    },
+    "voidDialog": {
+      "title": "Anular factura",
+      "description": "La anulación de esta factura es permanente. Indique un motivo.",
+      "reasonPlaceholder": "Motivo de la anulación...",
+      "cancel": "Cancelar",
+      "confirm": "Anular factura",
+      "voiding": "Anulando…"
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "Dirección del tenant",
         "description": "La dirección de su empresa."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Límite de la plantilla"
+    },
+    "dragOverlay": {
+      "component": "Componente"
     }
   }
 }

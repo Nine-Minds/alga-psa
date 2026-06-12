@@ -24,7 +24,10 @@
   "actions": {
     "create": "Crear flujo de trabajo",
     "open": "Abrir",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "print": "Imprimir",
+    "printOptions": "Opciones de impresión",
+    "printSelected": "Imprimir seleccionados ({{count}})"
   },
   "runList": {
     "shareTooltip": "Imprimir y exportar",
@@ -60,7 +63,8 @@
       "cancelSelected": "Cancelar selección ({{count}})",
       "clearSelection": "Borrar selección",
       "details": "Detalles",
-      "loadMore": "Cargar más"
+      "loadMore": "Cargar más",
+      "preview": "Vista previa"
     },
     "table": {
       "runId": "ID de ejecución",
@@ -124,6 +128,15 @@
         "title": "Opciones de impresión",
         "description": "Elige qué columnas incluir al imprimir las ejecuciones de flujo de trabajo."
       }
+    },
+    "preview": {
+      "close": "Cerrar",
+      "next": "Siguiente",
+      "openFullPage": "Abrir página completa",
+      "position": "{{current}} de {{total}} ejecuciones cargadas",
+      "previous": "Anterior",
+      "selectedRun": "Ejecución seleccionada",
+      "title": "Vista previa de la ejecución"
     }
   },
   "runDetails": {
@@ -162,7 +175,8 @@
       "mapped": "Mapeado",
       "identity": "Identidad",
       "runErrorFallback": "Error de ejecución",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Detalle técnico:"
     },
     "stepTimeline": {
       "title": "Cronología del paso",
@@ -179,7 +193,8 @@
         "duration": "Duración",
         "nextRetry": "Próximo reintento",
         "started": "Iniciado",
-        "error": "Error"
+        "error": "Error",
+        "action": "Acción"
       },
       "empty": "Aún no hay historial de pasos."
     },
@@ -195,7 +210,8 @@
       "nextRetryLabel": "Próximo reintento",
       "errorTitle": "Error",
       "stepErrorFallback": "Error de paso",
-      "errorCategoryFallback": "Error"
+      "errorCategoryFallback": "Error",
+      "technicalDetailLabel": "Detalle técnico:"
     },
     "waitHistory": {
       "title": "Historial de esperas",
@@ -241,7 +257,8 @@
         "step": "Paso",
         "event": "Evento",
         "correlation": "Correlación"
-      }
+      },
+      "loading": "Cargando registros..."
     },
     "audit": {
       "title": "Registro de auditoría",
@@ -253,7 +270,9 @@
         "operation": "Operación",
         "user": "Usuario",
         "details": "Detalles"
-      }
+      },
+      "loading": "Cargando registro de auditoría...",
+      "unknownUser": "Usuario desconocido"
     },
     "dialogs": {
       "reasonLabel": "Motivo",
@@ -538,7 +557,8 @@
     },
     "actions": {
       "exportCsv": "Exportar CSV",
-      "loadMore": "Cargar más"
+      "loadMore": "Cargar más",
+      "refresh": "Actualizar"
     },
     "table": {
       "columns": {
@@ -550,7 +570,8 @@
     },
     "states": {
       "selectWorkflow": "Seleccione un flujo de trabajo para ver el historial de auditoría.",
-      "empty": "Aún no hay entradas de auditoría."
+      "empty": "Aún no hay entradas de auditoría.",
+      "loading": "Cargando entradas de auditoría..."
     },
     "values": {
       "system": "sistema"
@@ -577,6 +598,19 @@
         "events": "Eventos",
         "eventCatalog": "Catálogo de eventos",
         "deadLetter": "Carta muerta"
+      },
+      "quota": {
+        "consumedLabel": "Consumidas",
+        "consumedUnit": "consumidas",
+        "loading": "Cargando...",
+        "planLimit": "Límite de {{limit}}",
+        "remainingLabel": "Restantes",
+        "remainingUnit": "restantes",
+        "resetsOn": "Se restablece el {{date}}",
+        "title": "Acciones del flujo de trabajo",
+        "unavailable": "No disponible",
+        "unlimitedPlan": "Plan ilimitado",
+        "unlimitedRemaining": "Ilimitado"
       }
     },
     "toolbar": {
@@ -808,6 +842,60 @@
       "links.list_namespaces": {
         "label": "Enumerar espacios de nombres de vínculos",
         "description": "Enumerar los espacios de nombres de vínculos de entidad de flujo de trabajo usados por este inquilino."
+      },
+      "ai": {
+        "infer": {
+          "label": "Inferir salida estructurada",
+          "description": "Genera datos estructurados de flujo de trabajo a partir de un prompt usando el proveedor de IA configurado."
+        }
+      },
+      "store": {
+        "get": {
+          "label": "Obtener valor almacenado",
+          "description": "Lee una entrada clave/valor persistida del flujo de trabajo."
+        },
+        "set": {
+          "label": "Establecer valor almacenado",
+          "description": "Persiste una entrada clave/valor del flujo de trabajo."
+        },
+        "delete": {
+          "label": "Eliminar valor almacenado",
+          "description": "Elimina una entrada clave/valor persistida del flujo de trabajo."
+        },
+        "increment": {
+          "label": "Incrementar número almacenado",
+          "description": "Incrementa atómicamente un número persistido del flujo de trabajo."
+        },
+        "list": {
+          "label": "Listar valores almacenados",
+          "description": "Lista las entradas clave/valor persistidas del flujo de trabajo en un espacio de nombres."
+        },
+        "list_namespaces": {
+          "label": "Listar espacios de nombres del almacén",
+          "description": "Lista los espacios de nombres del almacén de datos de flujos de trabajo usados por este inquilino."
+        }
+      },
+      "links": {
+        "upsert": {
+          "label": "Crear o actualizar enlace de entidad",
+          "description": "Crea o actualiza un enlace persistido entre dos entidades de flujo de trabajo."
+        },
+        "lookup": {
+          "label": "Buscar enlaces de entidad",
+          "description": "Busca enlaces de entidad persistidos por entidad de origen y dirección."
+        },
+        "delete": {
+          "label": "Eliminar enlaces de entidad",
+          "description": "Elimina enlaces de entidad persistidos por lado y relación opcional."
+        },
+        "list": {
+          "label": "Listar enlaces de entidad",
+          "description": "Lista los enlaces de entidad persistidos en un espacio de nombres."
+        },
+        "list_namespaces": {
+          "label": "Listar espacios de nombres de enlaces",
+          "description": "Lista los espacios de nombres de enlaces de entidades usados por este inquilino."
+        }
       }
     },
     "validation": {
@@ -876,6 +964,28 @@
         "control.return": {
           "label": "Retornar",
           "description": "Detener ejecución"
+        },
+        "control": {
+          "if": {
+            "label": "Si",
+            "description": "Bifurcación condicional"
+          },
+          "forEach": {
+            "label": "Para cada",
+            "description": "Iterar sobre elementos"
+          },
+          "tryCatch": {
+            "label": "Try/Catch",
+            "description": "Manejar errores"
+          },
+          "callWorkflow": {
+            "label": "Llamar flujo de trabajo",
+            "description": "Invocar otro flujo de trabajo"
+          },
+          "return": {
+            "label": "Retornar",
+            "description": "Detener la ejecución"
+          }
         }
       },
       "nodes": {
@@ -910,6 +1020,52 @@
         "human.task": {
           "label": "Tarea humana",
           "description": "Pausar para la finalización de una tarea humana"
+        },
+        "state": {
+          "set": {
+            "label": "Establecer estado",
+            "description": "Actualizar el estado del flujo de trabajo"
+          }
+        },
+        "event": {
+          "wait": {
+            "label": "Esperar evento",
+            "description": "Esperar un evento externo"
+          }
+        },
+        "time": {
+          "wait": {
+            "label": "Esperar tiempo",
+            "description": "Esperar una duración o hasta una fecha/hora"
+          }
+        },
+        "transform": {
+          "assign": {
+            "label": "Asignar",
+            "description": "Asignar valores al payload o a las variables"
+          }
+        },
+        "action": {
+          "call": {
+            "label": "Llamar acción",
+            "description": "Invocar una acción registrada"
+          }
+        },
+        "email": {
+          "parseBody": {
+            "label": "Analizar cuerpo del correo",
+            "description": "Analizar y sanear el cuerpo de la respuesta de correo"
+          },
+          "renderCommentBlocks": {
+            "label": "Renderizar bloques de comentarios",
+            "description": "Renderizar bloques de comentarios a partir del contenido del correo"
+          }
+        },
+        "human": {
+          "task": {
+            "label": "Tarea humana",
+            "description": "Pausar hasta que se complete la tarea humana"
+          }
         }
       },
       "groups": {
@@ -1323,6 +1479,8 @@
     }
   },
   "pipeline": {
+    "stepCount_one": "({{count}} paso)",
+    "stepCount_other": "({{count}} pasos)",
     "start": "Inicio",
     "insertStepHere": "Insertar paso aquí",
     "emptyDisabled": "Aún no hay pasos.",
@@ -1437,7 +1595,10 @@
     "softEnumPlaceholder": "Seleccionar o introducir un valor",
     "softEnumSearchPlaceholder": "Buscar o introducir un valor personalizado",
     "softEnumNoResults": "Sin sugerencias",
-    "softEnumUseCustom": "Usar «{{value}}»"
+    "softEnumUseCustom": "Usar «{{value}}»",
+    "expression": {
+      "placeholder": "p. ej. payload.body.task_name"
+    }
   },
   "schemaReference": {
     "selectAction": "Seleccione una acción para ver su esquema de entrada/salida",
@@ -1542,7 +1703,8 @@
     },
     "actions": {
       "replay": "Repetir",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "refresh": "Actualizar"
     },
     "status": {
       "running": "En ejecución",
@@ -1550,7 +1712,8 @@
       "retrying": "Reintentando",
       "failed": "Fallido",
       "pending": "Pendiente",
-      "canceled": "Cancelado"
+      "canceled": "Cancelado",
+      "loading": "Cargando"
     },
     "failure": {
       "title": "La ejecución falló",
@@ -1567,7 +1730,9 @@
         "loadingDefinition": "Cargando la definición del flujo de trabajo…",
         "loadingDefinitionPlain": "Cargando la definición del flujo de trabajo...",
         "noSteps": "No hay pasos para mostrar."
-      }
+      },
+      "selectPrompt": "Seleccione un paso para resaltarlo.",
+      "selectedStep": "Seleccionado: {{label}}"
     },
     "details": {
       "title": "Detalles de la ejecución",
@@ -1697,8 +1862,14 @@
       "reasonRequired": "El motivo es obligatorio (mín. 3 caracteres).",
       "canceled": "Ejecución cancelada.",
       "replayStarted": "Repetición de la ejecución iniciada.",
-      "actionFailed": "Error al realizar la acción."
-    }
+      "actionFailed": "Error al realizar la acción.",
+      "loadFailed": "Error al cargar el estudio de ejecuciones"
+    },
+    "lastRefreshed": "Última actualización {{time}}",
+    "navigation": {
+      "backToRuns": "← Volver a las ejecuciones de flujos de trabajo"
+    },
+    "title": "Estudio de ejecuciones de flujo de trabajo"
   },
   "schedules": {
     "common": {

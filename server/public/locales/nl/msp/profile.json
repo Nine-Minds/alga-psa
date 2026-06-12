@@ -149,8 +149,6 @@
     },
     "sessions": {
       "title": "Alle gebruikerssessies",
-      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
       "filters": {
         "search": "Zoeken",
         "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
@@ -195,7 +193,9 @@
         "loading": "Sessies laden...",
         "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
         "noSessions": "Geen actieve sessies gevonden"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     },
     "webhooks": {
       "title": "Uitgaande webhooks",

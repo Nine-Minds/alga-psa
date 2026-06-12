@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Zuletzt verwendeter Telefontyp",
-      "message": "Der folgende benutzerdefinierte Telefontyp{{suffix}} wird von keinem Kontakt mehr verwendet: {{labels}}. Die Typdefinition löschen{{definitionSuffix}} oder für spätere Verwendung behalten?",
+      "message_one": "Der folgende benutzerdefinierte Telefontyp wird von keinem Kontakt mehr verwendet: {{labels}}. Typdefinition löschen oder für spätere Verwendung behalten?",
+      "message_other": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
       "keepType": "Typ behalten"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "Falls gesetzt, überschreibt dies das Kundenziel für genau diesen Absenderkontakt. Vorrang: Kontaktüberschreibung -> Kundenziel -> Standard des Anbieters.",
       "tags": "Tags",
       "notes": "Notizen",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefon"
     },
     "status": {
       "label": "Status",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} Board",
+    "boardCount_other": "{{count}} Boards",
     "title": "Portalzugriff",
     "description": "Verwaltung des Kundenportalzugriffs für einen Kontakt, einschließlich Einladungen und Rollenaktualisierungen",
     "loadingDescription": "Portalinformationen werden geladen...",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "Notizen gespeichert",
       "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ticket hinzufügen",
+      "empty": "Keine Tickets für diesen Kontakt gefunden",
+      "filters": {
+        "allAssignees": "Alle Zuständigen",
+        "allPriorities": "Alle Prioritäten",
+        "categoryPlaceholder": "Nach Kategorie filtern",
+        "reset": "Zurücksetzen",
+        "searchPlaceholder": "Tickets suchen...",
+        "statusPlaceholder": "Status auswählen"
+      },
+      "loadMore": {
+        "label": "Mehr Tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Laden...",
+      "title": "Kontakt-Tickets",
+      "toasts": {
+        "clientNotFound": "Kunde nicht gefunden",
+        "loadClientFailed": "Kundendetails konnten nicht geladen werden",
+        "loadTicketFailed": "Ticket konnte nicht geladen werden",
+        "openTicketFailed": "Ticket konnte nicht geöffnet werden",
+        "userNotAuthenticated": "Benutzer nicht authentifiziert"
+      }
     }
   }
 }

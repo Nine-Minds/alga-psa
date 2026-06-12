@@ -91,7 +91,8 @@
         "single": "Nur dieses Ereignis",
         "future": "Dieses und zukünftige Ereignisse",
         "all": "Alle Ereignisse"
-      }
+      },
+      "messageWithTeamsWarning": "Möchten Sie diesen Zeitplaneintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden. Dadurch wird auch die Microsoft Teams-Besprechung gelöscht."
     },
     "print": {
       "title": "Terminagenda",
@@ -546,7 +547,9 @@
         "title": "Genehmigter Termin",
         "descriptionWithDate": "Dieser Termin entstand aus einer Kundenanfrage und wurde am {{date}} genehmigt.",
         "description": "Dieser Termin entstand aus einer Kundenanfrage.",
-        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
+        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen",
+        "downloadRecording": "Aufzeichnung herunterladen",
+        "viewTranscript": "Transkript anzeigen"
       },
       "pending": {
         "title": "Ausstehende Terminanfrage",
@@ -630,5 +633,28 @@
       "future": "Dieses und zukünftige Ereignisse",
       "all": "Alle Ereignisse"
     }
+  },
+  "actions": {
+    "print": "Drucken",
+    "printOptions": "Druckoptionen"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Kunde",
+      "contact": "Kontakt",
+      "duration": "Dauer",
+      "endTime": "Endzeit",
+      "notes": "Notizen",
+      "startTime": "Startzeit",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Benutzer"
+    },
+    "noClient": "Kein Kunde zugeordnet",
+    "noContact": "Kein Kontakt zugeordnet",
+    "noTitle": "Kein Titel",
+    "notAvailable": "k. A.",
+    "title": "Interaktionsdetails",
+    "unknownUser": "Unbekannt"
   }
 }

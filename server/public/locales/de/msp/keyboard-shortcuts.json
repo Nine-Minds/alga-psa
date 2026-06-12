@@ -16,14 +16,19 @@
       "resetAll": "Alle zurücksetzen",
       "replace": "Ersetzen",
       "copyCheatsheet": "Spickzettel kopieren",
-      "printCheatsheet": "Drucken"
+      "printCheatsheet": "Drucken",
+      "reassign": "Neu zuweisen",
+      "rebind": "Neu belegen",
+      "reset": "Zurücksetzen",
+      "resetAllTo": "Alle auf {{profile}} zurücksetzen"
     },
     "messages": {
       "bindingUpdated": "Tastenkürzel aktualisiert",
       "enabledUpdated": "Tastenkürzel aktualisiert",
       "resetOne": "Tastenkürzel zurückgesetzt",
       "resetAll": "Tastenkürzel zurückgesetzt",
-      "cheatsheetCopied": "Spickzettel in Zwischenablage kopiert"
+      "cheatsheetCopied": "Spickzettel in Zwischenablage kopiert",
+      "profileChanged": "Profil geändert"
     },
     "errors": {
       "saveFailed": "Tastenkürzel-Einstellungen konnten nicht gespeichert werden",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Vorhandenes Kürzel ersetzen?",
-      "message": "{{binding}} ist bereits {{action}} zugewiesen."
+      "message": "{{binding}} ist bereits {{action}} zugewiesen.",
+      "indicator": "Steht in Konflikt mit einer anderen Aktion"
     },
     "advisory": {
       "hostileCombo": "{{binding}} kann mit Browser- oder Systemkürzeln für {{action}} kollidieren."
-    }
+    },
+    "boundTo": "Belegt mit",
+    "chords": {
+      "empty": "Keine passenden Tastenfolgen.",
+      "search": "Suchen…",
+      "title": "Tastenfolgen-Kürzel"
+    },
+    "hint": "Bewegen Sie den Mauszeiger über eine Taste für eine Vorschau, klicken Sie zum Neubelegen. Schalten Sie oben die Modifikator-Ebenen um, um Kürzel mit Präfix zu sehen.",
+    "modified": "Geändert",
+    "notSet": "Nicht festgelegt",
+    "modHint": "mod entspricht auf diesem Gerät {{modKey}}"
   },
   "help": {
     "title": "Tastenkürzel",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "Kombinationen",
+    "thenPress": "dann…"
   }
 }

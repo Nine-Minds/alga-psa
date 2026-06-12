@@ -1,4 +1,8 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "11111 {{count}} 11111",
+    "unsavedChanges_other": "11111 {{count}} 11111"
+  },
   "page": {
     "title": "11111"
   },
@@ -359,9 +363,9 @@
         "new": "11111",
         "lead": "11111"
       },
-      "memberCount": "11111 {{count}} 11111",
-      "memberCount_plural": "11111 {{count}} 11111",
-      "leadName": "11111 {{name}} 11111"
+      "leadName": "11111 {{name}} 11111",
+      "memberCount_one": "11111 {{count}} 11111",
+      "memberCount_other": "11111 {{count}} 11111"
     },
     "messages": {
       "error": {
@@ -916,8 +920,8 @@
       "messages": {
         "success": {
           "deleted": "11111",
-          "imported": "11111 {{count}} 11111",
-          "imported_plural": "11111 {{count}} 11111"
+          "imported_one": "11111 {{count}} 11111",
+          "imported_other": "11111 {{count}} 11111"
         },
         "error": {
           "fetchFailed": "11111",
@@ -1049,7 +1053,22 @@
       "milestoneCompleted": "11111",
       "dayAgo": "11111",
       "createTicket": "11111",
-      "viewProjects": "11111"
+      "viewProjects": "11111",
+      "activeDevices": "11111",
+      "basicSupport": "11111",
+      "dashboardTitle": "11111",
+      "greeting": "11111",
+      "navAppointments": "11111",
+      "navDashboard": "11111",
+      "navDevices": "11111",
+      "navProjects": "11111",
+      "navServiceRequests": "11111",
+      "navTickets": "11111",
+      "serviceRequests": "11111",
+      "upcomingShort": "11111",
+      "upcomingVisits": "11111",
+      "welcomeBack": "11111",
+      "workspaceSection": "11111"
     },
     "signInPreview": {
       "portalTitle": "11111",
@@ -1507,8 +1526,6 @@
     },
     "sessions": {
       "title": "11111",
-      "subtitle": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
-      "subtitle_plural": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
       "filters": {
         "search": "11111",
         "searchPlaceholder": "11111",
@@ -1551,7 +1568,9 @@
         "loading": "11111",
         "noMatch": "11111",
         "noSessions": "11111"
-      }
+      },
+      "subtitle_one": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
+      "subtitle_other": "11111 {{sessionCount}} 11111 {{userCount}} 11111"
     }
   },
   "ssoBulk": {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
@@ -16,6 +17,7 @@ import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
  * TierContext so it remains accurate regardless of session freshness.
  */
 export default function LicenseBanner() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -35,10 +37,10 @@ export default function LicenseBanner() {
   switch (state) {
     case 'trial':
       if (daysRemaining !== null && daysRemaining <= 7) {
-        message = `Enterprise trial expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Enter a license key to keep Enterprise features.`;
+        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.', count: daysRemaining });
         urgency = 'warning';
       } else if (daysRemaining !== null) {
-        message = `Enterprise trial active — ${daysRemaining} days remaining.`;
+        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Enterprise trial active — {{count}} days remaining.', count: daysRemaining });
         urgency = 'info';
       }
       break;
@@ -53,7 +55,7 @@ export default function LicenseBanner() {
       break;
     case 'licensed':
       if (daysRemaining !== null && daysRemaining <= 14) {
-        message = `License expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}. Renew to avoid service interruption.`;
+        message = t('licenseBanner.licenseExpiresIn', { defaultValue: 'License expires in {{count}} days. Renew to avoid service interruption.', count: daysRemaining });
         urgency = daysRemaining <= 3 ? 'error' : 'warning';
       }
       break;

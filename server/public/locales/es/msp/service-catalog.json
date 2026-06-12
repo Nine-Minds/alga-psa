@@ -235,7 +235,7 @@
     },
     "actions": {
       "cancel": "Cancelar",
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "save": "Guardar configuración"
     },
     "title": "Configuración del servicio",
@@ -347,7 +347,7 @@
       "unlimited": "Ilimitado"
     },
     "actions": {
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "addTier": "Agregar nivel",
       "save": "Guardar niveles de tarifas"
     },
@@ -382,7 +382,7 @@
       "save": "No se pudo guardar la configuración de impuestos"
     },
     "actions": {
-      "saving": "Ahorro...",
+      "saving": "Guardando...",
       "save": "Guardar configuración de impuestos"
     },
     "title": "Configuración de impuestos",

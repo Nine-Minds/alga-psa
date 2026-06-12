@@ -28,7 +28,12 @@
       "inactive": "Inaktiv",
       "loading": "Laden...",
       "na": "n. z.",
-      "none": "Keine"
+      "none": "Keine",
+      "archived": "Archiviert",
+      "draft": "Entwurf",
+      "expired": "Abgelaufen",
+      "published": "Veröffentlicht",
+      "terminated": "Gekündigt"
     },
     "no": "Nein",
     "yes": "Ja"
@@ -83,32 +88,41 @@
     "selectedSingle": "{{count}} Ausgewählt",
     "selectedPlural": "{{count}} Ausgewählt",
     "createSuccess": "{{name}} wurde erfolgreich erstellt.",
-    "exportSuccess": "{{count}} {{clientsLabel}} in CSV exportiert",
-    "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} wurden erfolgreich gelöscht.",
-    "bulkInactiveFailed": "{{count}} {{clientsLabel}} konnte nicht als inaktiv markiert werden.",
+    "exportSuccess_one": "{{count}} Kunde in CSV exportiert",
+    "exportSuccess_other": "{{count}} Kunden in CSV exportiert",
+    "bulkDeleteSuccess_one": "{{count}} Kunde wurde erfolgreich gelöscht.",
+    "bulkDeleteSuccess_other": "{{count}} Kunden wurden erfolgreich gelöscht.",
+    "bulkInactiveFailed_one": "{{count}} Kunde konnte nicht als inaktiv markiert werden.",
+    "bulkInactiveFailed_other": "{{count}} Kunden konnten nicht als inaktiv markiert werden.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} und {{contactCount}} {{contactsLabel}} wurden erfolgreich als inaktiv markiert.",
     "singleInactiveSuccess": "{{name}} wurde erfolgreich als inaktiv markiert.",
-    "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} wurden erfolgreich als inaktiv markiert.",
-    "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} wurden als inaktiv markiert.",
+    "bulkInactiveSuccess_one": "{{count}} Kunde wurde erfolgreich als inaktiv markiert.",
+    "bulkInactiveSuccess_other": "{{count}} Kunden wurden erfolgreich als inaktiv markiert.",
+    "bulkInactiveShortSuccess_one": "{{count}} Kunde wurde als inaktiv markiert.",
+    "bulkInactiveShortSuccess_other": "{{count}} Kunden wurden als inaktiv markiert.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} und {{contactCount}} {{contactsLabel}} wurden als inaktiv markiert.",
     "bulkInactiveShortError": "Beim Markieren von Clients als inaktiv ist ein Fehler aufgetreten.",
-    "bulkReactivateFailed": "{{count}} {{clientsLabel}} konnte nicht reaktiviert werden.",
+    "bulkReactivateFailed_one": "{{count}} Kunde konnte nicht reaktiviert werden.",
+    "bulkReactivateFailed_other": "{{count}} Kunden konnten nicht reaktiviert werden.",
     "bulkReactivateWithContactsSuccess": "{{clientCount}} {{clientsLabel}} und {{contactCount}} {{contactsLabel}} wurden erfolgreich reaktiviert.",
-    "bulkReactivateSuccess": "{{count}} {{clientsLabel}} {{verb}} wurden erfolgreich reaktiviert.",
+    "bulkReactivateSuccess_one": "{{count}} Kunde wurde erfolgreich reaktiviert.",
+    "bulkReactivateSuccess_other": "{{count}} Kunden wurden erfolgreich reaktiviert.",
     "deleteClientUnable": "Dieser Client kann nicht gelöscht werden.",
     "deleteSinglePrompt": "Sind Sie sicher, dass Sie {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "markFailedAsInactive": "Markieren Sie {{count}} als inaktiv",
-    "multiDeleteSuccessSummary": "{{count}} {{clientsLabel}} {{verb}} erfolgreich gelöscht.",
-    "multiDeleteFailedSummary": "{{count}} {{clientsLabel}} konnte nicht gelöscht werden",
+    "multiDeleteSuccessSummary_one": "{{count}} Kunde erfolgreich gelöscht.",
+    "multiDeleteSuccessSummary_other": "{{count}} Kunden erfolgreich gelöscht.",
+    "multiDeleteFailedSummary_one": "{{count}} Kunde konnte nicht gelöscht werden",
+    "multiDeleteFailedSummary_other": "{{count}} Kunden konnten nicht gelöscht werden",
     "inactiveAlternative": "Sie können diesen Client stattdessen als inaktiv markieren. Inaktive Clients werden in den meisten Ansichten ausgeblendet, behalten jedoch alle ihre Daten und können später als aktiv markiert werden.",
     "table": {
       "client": "Kunde"
     },
     "entities": {
-      "client": "Kunde",
-      "clients": "Kunden",
-      "contact": "Kontakt",
-      "contacts": "Kontakte"
+      "client_one": "Kunde",
+      "client_other": "Kunden",
+      "contact_one": "Kontakt",
+      "contact_other": "Kontakte"
     },
     "dependency": {
       "contact": "Kontakt",
@@ -130,7 +144,8 @@
       "bucketUsageRecord": "Bucket-Nutzungsdatensatz",
       "bucketUsageRecords": "Bucket-Nutzungsdatensätze"
     },
-    "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSelectedPrompt_one": "Sind Sie sicher, dass Sie {{count}} ausgewählten Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSelectedPrompt_other": "Sind Sie sicher, dass Sie {{count}} ausgewählte Kunden löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
     "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
     "clientTypes": {
@@ -155,8 +170,7 @@
         "description": "Wählen Sie die beim Drucken von Kunden enthaltenen Spalten."
       }
     },
-    "shareTooltip": "Drucken, importieren und exportieren"
-    ,
+    "shareTooltip": "Drucken, importieren und exportieren",
     "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
     "clientNotFound": "Kunde nicht gefunden.",
     "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
@@ -211,8 +225,10 @@
     "reactivateError": "Beim Reaktivieren des Clients ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "entraSyncError": "Entra-Synchronisierung konnte nicht gestartet werden.",
     "deleteError": "Client konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
-    "deactivateWithContactsSuccess": "Client- und {{count}}-Kontakt(e) wurden erfolgreich deaktiviert.",
-    "reactivateWithContactsSuccess": "Kunden- und {{count}}-Kontakt(e) wurden erfolgreich reaktiviert.",
+    "deactivateWithContactsSuccess_one": "Der Kunde und {{count}} Kontakt wurden erfolgreich deaktiviert.",
+    "deactivateWithContactsSuccess_other": "Der Kunde und {{count}} Kontakte wurden erfolgreich deaktiviert.",
+    "reactivateWithContactsSuccess_one": "Der Kunde und {{count}} Kontakt wurden erfolgreich reaktiviert.",
+    "reactivateWithContactsSuccess_other": "Der Kunde und {{count}} Kontakte wurden erfolgreich reaktiviert.",
     "singleInactiveSuccess": "{{name}} wurde erfolgreich als inaktiv markiert.",
     "slaPolicy": "SLA-Richtlinie",
     "defaultPolicy": "{{name}} (Standard)",
@@ -248,10 +264,15 @@
       "accountManager": "Kundenbetreuer",
       "url": "URL",
       "status": "Status"
-    }
-    ,
+    },
     "deactivateClientDescription": "Deaktiviert den Datensatz, ohne seine Daten zu löschen.",
-    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv."
+    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv.",
+    "nameAliasAddFailed": "Alias konnte nicht hinzugefügt werden",
+    "nameAliasAdded": "Alias hinzugefügt",
+    "nameAliasRemoveFailed": "Alias konnte nicht entfernt werden",
+    "nameAliasRemoved": "Alias entfernt",
+    "nameAliases": "Aliasse für den Abgleich",
+    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen."
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",
@@ -418,7 +439,8 @@
     "invalidDate": "Ungültiges Datum",
     "formattingError": "Formatierungsfehler",
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
-    "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht."
+    "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
+    "contracts": "Verträge"
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -522,7 +544,9 @@
     "manualDue": "Manuell (fällig {{date}})",
     "addError": "Der Vertrag konnte nicht zum Kunden hinzugefügt werden",
     "deactivateError": "Der Vertrag konnte nicht deaktiviert werden",
-    "updateError": "Der Vertrag konnte nicht aktualisiert werden"
+    "updateError": "Der Vertrag konnte nicht aktualisiert werden",
+    "createContract": "Vertrag erstellen",
+    "quickAdd": "Schnell hinzufügen"
   },
   "clientContractDialog": {
     "assignTitle": "Vertrag dem Kunden zuordnen",
@@ -1017,7 +1041,10 @@
   },
   "actions": {
     "cancel": "Abbrechen",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "print": "Drucken",
+    "printOptions": "Druckoptionen",
+    "printSelected": "Ausgewählte drucken ({{count}})"
   },
   "clients": {
     "locations": {
@@ -1129,6 +1156,168 @@
     "messages": {
       "saveSuccess": "Notizen gespeichert",
       "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
+  },
+  "interactions": {
+    "onlineMeeting": {
+      "downloadRecording": "Aufzeichnung herunterladen",
+      "join": "Teilnehmen",
+      "noArtifacts": "Es sind noch keine Aufzeichnungen oder Transkripte verfügbar.",
+      "recordingArtifact": "Aufzeichnung",
+      "refreshFailed": "Aufzeichnungen konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "refreshRecordings": "Aufzeichnungen aktualisieren",
+      "sectionTitle": "Online-Besprechung",
+      "transcriptArtifact": "Transkript",
+      "viewTranscript": "Transkript anzeigen"
+    },
+    "quickAdd": {
+      "teams": {
+        "attendees": {
+          "add": "Hinzufügen",
+          "addContact": "Kontakte auswählen...",
+          "addUser": "Interne Benutzer auswählen...",
+          "badge": {
+            "clientLocation": "Kundenstandort",
+            "contact": "Kontakt",
+            "email": "E-Mail",
+            "internal": "Intern"
+          },
+          "duplicateEmail": "Diese E-Mail-Adresse steht bereits auf der Teilnehmerliste.",
+          "emailPlaceholder": "name@example.com",
+          "empty": "Noch keine Teilnehmer hinzugefügt.",
+          "helper": "Teilnehmer erhalten eine Teams-Kalendereinladung vom Besprechungsorganisator.",
+          "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
+          "label": "Teilnehmer",
+          "remove": "{{name}} entfernen",
+          "tabs": {
+            "contacts": "Kontakte",
+            "email": "E-Mail",
+            "users": "Benutzer"
+          }
+        },
+        "checkingCapability": "Verfügbarkeit von Teams-Besprechungen wird geprüft...",
+        "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
+        "createToggle": "Teams-Besprechung erstellen",
+        "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
+        "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
+        "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
+      }
+    },
+    "feed": {
+      "addInteraction": "Interaktion hinzufügen",
+      "allTypes": "Alle Typen",
+      "applyFilters": "Filter anwenden",
+      "endDate": "Enddatum",
+      "filter": "Filter",
+      "filterDialogTitle": "Interaktionen filtern",
+      "reset": "Zurücksetzen",
+      "searchPlaceholder": "Interaktionen suchen",
+      "startDate": "Startdatum",
+      "title": "Interaktionen",
+      "typePlaceholder": "Interaktionstyp"
+    },
+    "overall": {
+      "allContacts": "Alle Kontakte",
+      "allStatuses": "Alle Status",
+      "allUsers": "Alle Benutzer",
+      "byUser": "Von {{name}}",
+      "collapse": "Letzte Interaktionen einklappen",
+      "contactsFromClient": "Kontakte des ausgewählten Kunden",
+      "endTime": "Endzeit",
+      "endTimeLabel": "Endzeit der Interaktion",
+      "endTimePlaceholder": "Bis zu dieser Endzeit filtern",
+      "expand": "Letzte Interaktionen ausklappen",
+      "startTime": "Startzeit",
+      "startTimeLabel": "Startzeit der Interaktion",
+      "startTimePlaceholder": "Ab dieser Startzeit filtern",
+      "statusPlaceholder": "Status",
+      "title": "Letzte Interaktionen"
+    }
+  },
+  "clientDrawer": {
+    "loadFailed": "Kundendetails konnten nicht geladen werden.",
+    "loading": "Laden...",
+    "notFound": "Kunde nicht gefunden."
+  },
+  "clientTabs": {
+    "assets": {
+      "columns": {
+        "assetTag": "Asset-Tag",
+        "details": "Details",
+        "location": "Standort",
+        "name": "Name",
+        "purchaseDate": "Kaufdatum",
+        "serialNumber": "Seriennummer",
+        "status": "Status",
+        "type": "Typ",
+        "warrantyEnd": "Garantieende"
+      },
+      "details": {
+        "local": "Lokal",
+        "network": "Netzwerk",
+        "noIp": "Keine IP",
+        "none": "Keine Details verfügbar"
+      },
+      "drawerLoadError": "Asset-Details können derzeit nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "expiredSuffix": "(Abgelaufen)",
+      "filterByType": "Nach Typ filtern",
+      "inventory": {
+        "subtitle": "Alle Assets des Kunden verwalten und nachverfolgen",
+        "title": "Asset-Inventar"
+      },
+      "loading": "Assets werden geladen...",
+      "loadingHint": "Bitte warten Sie, während wir Ihre Daten abrufen",
+      "maintenanceTypes": {
+        "subtitle": "Aufschlüsselung nach Kategorie",
+        "title": "Wartungstypen"
+      },
+      "overview": {
+        "assetsWithMaintenance": "Assets mit Wartung",
+        "coverageRate": "Abdeckungsrate",
+        "subtitle": "Wartungsstatistiken",
+        "title": "Asset-Übersicht",
+        "totalSchedules": "Wartungspläne gesamt"
+      },
+      "summary": {
+        "activeBadge": "Aktiv",
+        "maintenanceRate": "Wartungsrate",
+        "needsAttention": "Erfordert Aufmerksamkeit",
+        "overdueMaintenance": "Überfällige Wartung",
+        "scheduledBadge": "Geplant",
+        "totalAssets": "Assets gesamt",
+        "upcomingMaintenance": "Bevorstehende Wartung"
+      },
+      "typePlaceholder": "Alle Asset-Typen...",
+      "types": {
+        "all": "Alle Asset-Typen",
+        "mobileDevice": "Mobilgerät",
+        "networkDevice": "Netzwerkgerät",
+        "printer": "Drucker",
+        "server": "Server",
+        "workstation": "Arbeitsplatz"
+      }
+    },
+    "tickets": {
+      "addTicket": "Ticket hinzufügen",
+      "filters": {
+        "allAssignees": "Alle Zuständigen",
+        "allPriorities": "Alle Prioritäten",
+        "categoryPlaceholder": "Nach Kategorie filtern",
+        "reset": "Zurücksetzen",
+        "searchPlaceholder": "Tickets suchen...",
+        "statusPlaceholder": "Status auswählen"
+      },
+      "loadMore": {
+        "label": "Mehr Tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Tickets werden geladen...",
+      "title": "Kunden-Tickets",
+      "toasts": {
+        "loadTicketFailed": "Ticket konnte nicht geladen werden",
+        "openTicketFailed": "Ticket konnte nicht geöffnet werden",
+        "userNotAuthenticated": "Benutzer nicht authentifiziert"
+      }
     }
   }
 }

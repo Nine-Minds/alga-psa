@@ -16,14 +16,19 @@
       "resetAll": "Reset all",
       "replace": "Replace",
       "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "printCheatsheet": "Print",
+      "reassign": "Reassign",
+      "rebind": "Rebind",
+      "reset": "Reset",
+      "resetAllTo": "Reset all to {{profile}}"
     },
     "messages": {
       "bindingUpdated": "Keyboard shortcut updated",
       "enabledUpdated": "Keyboard shortcut updated",
       "resetOne": "Keyboard shortcut reset",
       "resetAll": "Keyboard shortcuts reset",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Cheatsheet copied to clipboard",
+      "profileChanged": "Profile changed"
     },
     "errors": {
       "saveFailed": "Failed to save keyboard shortcut preferences",
@@ -36,11 +41,22 @@
     },
     "conflict": {
       "title": "Replace existing shortcut?",
-      "message": "{{binding}} is already assigned to {{action}}."
+      "message": "{{binding}} is already assigned to {{action}}.",
+      "indicator": "Conflicts with another action"
     },
     "advisory": {
       "hostileCombo": "{{binding}} may conflict with browser or operating system shortcuts for {{action}}."
-    }
+    },
+    "boundTo": "Bound to",
+    "chords": {
+      "empty": "No chords match.",
+      "search": "Search…",
+      "title": "Chord shortcuts"
+    },
+    "hint": "Hover a key to preview, click to rebind. Toggle modifier layers above to see prefixed shortcuts.",
+    "modified": "Modified",
+    "notSet": "Not set",
+    "modHint": "mod resolves to {{modKey}} on this device"
   },
   "help": {
     "title": "Keyboard shortcuts",
@@ -362,5 +378,9 @@
       "alt": "Alt",
       "shift": "Shift"
     }
+  },
+  "hud": {
+    "combinations": "combinations",
+    "thenPress": "then…"
   }
 }

@@ -1,4 +1,10 @@
 {
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} niezapisana zmiana",
+    "unsavedChanges_few": "{{count}} niezapisane zmiany",
+    "unsavedChanges_many": "{{count}} niezapisanych zmian",
+    "unsavedChanges_other": "{{count}} niezapisanych zmian"
+  },
   "page": {
     "title": "Ustawienia administratora"
   },
@@ -359,9 +365,11 @@
         "new": "Nowy",
         "lead": "Lider"
       },
-      "memberCount": "{{count}} członek",
       "leadName": "Lider: {{name}}",
-      "memberCount_plural": "{{count}} członków"
+      "memberCount_one": "{{count}} członek",
+      "memberCount_few": "{{count}} członków",
+      "memberCount_many": "{{count}} członków",
+      "memberCount_other": "{{count}} członka"
     },
     "messages": {
       "error": {
@@ -916,8 +924,10 @@
       "messages": {
         "success": {
           "deleted": "Typ interakcji został usunięty",
-          "imported": "Zaimportowano {{count}} typ interakcji",
-          "imported_plural": "Zaimportowano {{count}} typów interakcji"
+          "imported_one": "Zaimportowano {{count}} typ interakcji",
+          "imported_few": "Zaimportowano {{count}} typy interakcji",
+          "imported_many": "Zaimportowano {{count}} typów interakcji",
+          "imported_other": "Zaimportowano {{count}} typu interakcji"
         },
         "error": {
           "fetchFailed": "Nie udało się pobrać typów interakcji",
@@ -1049,7 +1059,22 @@
       "milestoneCompleted": "Kamień milowy projektu został ukończony",
       "dayAgo": "1 dzień temu",
       "createTicket": "Utwórz zgłoszenie",
-      "viewProjects": "Wyświetl projekty"
+      "viewProjects": "Wyświetl projekty",
+      "activeDevices": "Aktywne urządzenia",
+      "basicSupport": "Wsparcie podstawowe",
+      "dashboardTitle": "Panel",
+      "greeting": "Dzień dobry, Alex 👋",
+      "navAppointments": "Wizyty",
+      "navDashboard": "Panel",
+      "navDevices": "Moje urządzenia",
+      "navProjects": "Projekty",
+      "navServiceRequests": "Zgłoszenia serwisowe",
+      "navTickets": "Zgłoszenia",
+      "serviceRequests": "Zgłoszenia serwisowe",
+      "upcomingShort": "Nadchodzące",
+      "upcomingVisits": "Nadchodzące wizyty",
+      "welcomeBack": "Witaj ponownie",
+      "workspaceSection": "Obszar roboczy"
     },
     "signInPreview": {
       "portalTitle": "Portal klienta",
@@ -1507,8 +1532,6 @@
     },
     "sessions": {
       "title": "Wszystkie sesje użytkowników",
-      "subtitle": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
-      "subtitle_plural": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
       "filters": {
         "search": "Szukaj",
         "searchPlaceholder": "Szukaj po nazwie, e-mailu, urządzeniu lub adresie IP...",
@@ -1551,7 +1574,11 @@
         "loading": "Ładowanie sesji...",
         "noMatch": "Żadne sesje nie pasują do wyszukiwania",
         "noSessions": "Nie znaleziono aktywnych sesji"
-      }
+      },
+      "subtitle_one": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
+      "subtitle_few": "{{sessionCount}} aktywne sesje u {{userCount}} użytkowników",
+      "subtitle_many": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
+      "subtitle_other": "{{sessionCount}} aktywnej sesji u {{userCount}} użytkowników"
     }
   },
   "ssoBulk": {

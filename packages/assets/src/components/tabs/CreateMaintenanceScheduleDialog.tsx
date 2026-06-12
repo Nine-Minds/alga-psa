@@ -321,9 +321,9 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
                 {frequency && t('maintenanceSchedulesTab.frequency.every', {
                   count: parseInt(frequencyInterval, 10) || 0,
                   frequency: t(`maintenanceSchedulesTab.frequency.units.${frequency}`, {
+                    count: parseInt(frequencyInterval, 10) || 0,
                     defaultValue: frequency
-                  }),
-                  suffix: parseInt(frequencyInterval, 10) > 1 ? 's' : ''
+                  })
                 })}
               </p>
             </div>

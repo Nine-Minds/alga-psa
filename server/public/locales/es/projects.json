@@ -1,0 +1,15 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Asignado",
+        "description": "Descripción",
+        "dueDate": "Fecha de vencimiento",
+        "estimatedHours": "Horas estimadas",
+        "phase": "Fase",
+        "status": "Estado",
+        "wbsCode": "Código WBS"
+      }
+    }
+  }
+}

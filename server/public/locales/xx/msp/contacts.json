@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "11111",
-      "message": "11111 {{suffix}} 11111 {{labels}} 11111 {{definitionSuffix}} 11111",
+      "message_one": "11111 {{labels}} 11111",
+      "message_other": "11111 {{labels}} 11111",
       "deleteType": "11111",
       "keepType": "11111"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "11111",
       "tags": "11111",
       "notes": "11111",
-      "status": "11111"
+      "status": "11111",
+      "phone": "11111"
     },
     "status": {
       "label": "11111",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "11111 {{count}} 11111",
+    "boardCount_other": "11111 {{count}} 11111",
     "title": "11111",
     "description": "11111",
     "loadingDescription": "11111",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "11111",
       "saveFailed": "11111"
+    }
+  },
+  "actions": {
+    "print": "11111",
+    "printOptions": "11111"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "11111",
+      "empty": "11111",
+      "filters": {
+        "allAssignees": "11111",
+        "allPriorities": "11111",
+        "categoryPlaceholder": "11111",
+        "reset": "11111",
+        "searchPlaceholder": "11111",
+        "statusPlaceholder": "11111"
+      },
+      "loadMore": {
+        "label": "11111",
+        "loading": "11111"
+      },
+      "loading": "11111",
+      "title": "11111",
+      "toasts": {
+        "clientNotFound": "11111",
+        "loadClientFailed": "11111",
+        "loadTicketFailed": "11111",
+        "openTicketFailed": "11111",
+        "userNotAuthenticated": "11111"
+      }
     }
   }
 }

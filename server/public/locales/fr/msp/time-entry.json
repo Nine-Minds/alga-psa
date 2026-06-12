@@ -121,7 +121,10 @@
       "minimumDuration": "La durée minimale est de 1 minute",
       "serviceRequired": "Un service est requis pour les entrées de temps",
       "timePeriodRange": "La date doit être comprise dans la période actuelle ({{periodRange}})",
-      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début"
+      "endAfterStartPicker": "L'heure de fin doit être postérieure à l'heure de début",
+      "durationSameDay": "La durée doit se terminer le même jour",
+      "endSameDay": "L'heure de fin doit être le même jour que l'heure de début",
+      "invalidTimeRange": "Saisissez une plage horaire valide"
     }
   },
   "workItemPicker": {
@@ -365,7 +368,11 @@
     "active": "Actif"
   },
   "intervals": {
-    "title": "Intervalles horaires des billets",
+    "createdFromNote_one": "Créé à partir de {{count}} intervalle",
+    "createdFromNote_other": "Créé à partir de {{count}} intervalles",
+    "selectedCount_one": "{{count}} intervalle sélectionné",
+    "selectedCount_other": "{{count}} intervalles sélectionnés",
+    "title": "Intervalles de temps des tickets",
     "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
     "totalTime": "Durée totale: {{value}}",
     "selectedOne": "{{count}} intervalle sélectionné",
@@ -386,7 +393,7 @@
       "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
       "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
     },
-    "entryName": "Entrée de l'heure du billet",
+    "entryName": "Entrée de temps du ticket",
     "messages": {
       "cannotFindTimeSheet": "Impossible de créer une saisie de temps - impossible de trouver ou de créer une feuille de temps",
       "mergeFirst": "Veuillez fusionner les intervalles avant de créer une entrée de temps",

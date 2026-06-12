@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -87,6 +88,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   initialUsers,
   onImportComplete,
 }) => {
+  const { t } = useTranslation('features/tickets');
   // Core state
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -731,7 +733,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   // Next step label for preview
   const nextStepLabel = useMemo(() => {
     if (hasAnyUnmatched) return 'Resolve Unmatched Data';
-    return `Import ${totalTickets} Ticket${totalTickets === 1 ? '' : 's'}`;
+    return t('importDialog.importTickets', { defaultValue: 'Import {{count}} Tickets', count: totalTickets });
   }, [hasAnyUnmatched, totalTickets]);
 
   // Check for incomplete mappings across all resolution types
@@ -1132,14 +1134,14 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                 <AlertDescription>
                   <strong>{totalUnmatchedCount} value(s)</strong> from your CSV don&apos;t match existing data
                   ({[
-                    unmatchedClients.length > 0 && `${unmatchedClients.length} client${unmatchedClients.length > 1 ? 's' : ''}`,
-                    unmatchedPriorities.length > 0 && `${unmatchedPriorities.length} priorit${unmatchedPriorities.length > 1 ? 'ies' : 'y'}`,
-                    unmatchedStatuses.length > 0 && `${unmatchedStatuses.length} status${unmatchedStatuses.length > 1 ? 'es' : ''}`,
-                    unmatchedCategories.length > 0 && `${unmatchedCategories.length} categor${unmatchedCategories.length > 1 ? 'ies' : 'y'}`,
-                    unmatchedAgents.length > 0 && `${unmatchedAgents.length} agent${unmatchedAgents.length > 1 ? 's' : ''}`,
-                    unmatchedTeams.length > 0 && `${unmatchedTeams.length} team${unmatchedTeams.length > 1 ? 's' : ''}`,
-                    effectiveUnmatchedContacts.length > 0 && `${effectiveUnmatchedContacts.length} contact${effectiveUnmatchedContacts.length > 1 ? 's' : ''}`,
-                    unparsableDateGroups.length > 0 && `${unparsableDateGroups.length} date format${unparsableDateGroups.length > 1 ? 's' : ''}`,
+                    unmatchedClients.length > 0 && t('importDialog.unmatchedClients', { defaultValue: '{{count}} clients', count: unmatchedClients.length }),
+                    unmatchedPriorities.length > 0 && t('importDialog.unmatchedPriorities', { defaultValue: '{{count}} priorities', count: unmatchedPriorities.length }),
+                    unmatchedStatuses.length > 0 && t('importDialog.unmatchedStatuses', { defaultValue: '{{count}} statuses', count: unmatchedStatuses.length }),
+                    unmatchedCategories.length > 0 && t('importDialog.unmatchedCategories', { defaultValue: '{{count}} categories', count: unmatchedCategories.length }),
+                    unmatchedAgents.length > 0 && t('importDialog.unmatchedAgents', { defaultValue: '{{count}} agents', count: unmatchedAgents.length }),
+                    unmatchedTeams.length > 0 && t('importDialog.unmatchedTeams', { defaultValue: '{{count}} teams', count: unmatchedTeams.length }),
+                    effectiveUnmatchedContacts.length > 0 && t('importDialog.unmatchedContacts', { defaultValue: '{{count}} contacts', count: effectiveUnmatchedContacts.length }),
+                    unparsableDateGroups.length > 0 && t('importDialog.unmatchedDateFormats', { defaultValue: '{{count}} date formats', count: unparsableDateGroups.length }),
                   ].filter(Boolean).join(', ')}).
                   You&apos;ll resolve these in the next step.
                 </AlertDescription>
@@ -1192,7 +1194,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               Resolve Unmatched Data
             </h3>
             <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] mb-4">
-              {totalUnmatchedCount} value{totalUnmatchedCount === 1 ? '' : 's'} from your CSV couldn&apos;t be automatically matched.
+              {t('importDialog.unmatchedValuesIntro', { defaultValue: "{{count}} values from your CSV couldn't be automatically matched.", count: totalUnmatchedCount })}
               Choose how to handle each one below.
             </p>
 
@@ -1214,7 +1216,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`client-${info.name}`}
                               value={res.action}
@@ -1224,7 +1226,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               options={[
                                 { value: 'create', label: 'Create new' },
                                 { value: 'map_to_existing', label: 'Map to existing' },
-                                { value: 'skip', label: `Skip (${info.ticketCount} ticket${info.ticketCount === 1 ? '' : 's'} dropped)` },
+                                { value: 'skip', label: t('importDialog.skipDropped', { defaultValue: 'Skip ({{count}} tickets dropped)', count: info.ticketCount }) },
                               ]}
                             />
                             {res.action === 'create' && (
@@ -1262,7 +1264,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`prio-${info.name}`}
                               value={res.action}
@@ -1300,7 +1302,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`status-${info.name}`}
                               value={res.action}
@@ -1338,7 +1340,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`cat-${info.name}`}
                               value={res.action}
@@ -1376,7 +1378,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`agent-${info.name}`}
                               value={res.action}
@@ -1415,7 +1417,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                         if (!res) return null;
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
-                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span></div>
+                            <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
                             <RadioGroup
                               name={`team-${info.name}`}
                               value={res.action}
@@ -1462,7 +1464,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                           <div key={info.resolutionKey} className="pt-3 space-y-2">
                             <div>
                               <span className="font-medium text-sm">&quot;{info.name}&quot;</span>
-                              <span className="text-xs text-gray-500"> ({info.ticketCount} ticket{info.ticketCount === 1 ? '' : 's'})</span>
+                              <span className="text-xs text-gray-500"> {t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span>
                               {clientLabel && (
                                 <span className="text-xs text-[rgb(var(--color-text-500))] ml-1">
                                   — on {clientLabel}
@@ -1614,9 +1616,9 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                   Import Complete
                 </h3>
                 <p className="text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-                  Successfully created <strong>{importResult.ticketsCreated}</strong> ticket{importResult.ticketsCreated === 1 ? '' : 's'}.
+                  {t('importDialog.createdSuccess', { defaultValue: 'Successfully created {{count}} tickets.', count: importResult.ticketsCreated })}
                   {importResult.ticketsSkipped > 0 && (
-                    <> <strong>{importResult.ticketsSkipped}</strong> ticket{importResult.ticketsSkipped === 1 ? ' was' : 's were'} skipped.</>
+                    <> {t('importDialog.skippedCount', { defaultValue: '{{count}} tickets were skipped.', count: importResult.ticketsSkipped })}</>
                   )}
                 </p>
                 {importResult.ticketNumbers.length > 0 && (
@@ -1647,7 +1649,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               <div className="mt-4 text-left">
                 <Alert variant="destructive">
                   <AlertDescription>
-                    <p className="font-medium mb-2">{importResult.errors.length} error{importResult.errors.length === 1 ? '' : 's'}:</p>
+                    <p className="font-medium mb-2">{t('importDialog.errorCount', { defaultValue: '{{count}} errors:', count: importResult.errors.length })}</p>
                     <div className="max-h-40 overflow-y-auto text-sm">
                       {importResult.errors.slice(0, 20).map((error, i) => (
                         <div key={i} className="mb-1">&#8226; {error}</div>
@@ -1665,7 +1667,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               <div className="mt-4 text-left">
                 <Alert variant="warning">
                   <AlertDescription>
-                    <p className="font-medium mb-2">{importResult.warnings.length} warning{importResult.warnings.length === 1 ? '' : 's'}:</p>
+                    <p className="font-medium mb-2">{t('importDialog.warningCount', { defaultValue: '{{count}} warnings:', count: importResult.warnings.length })}</p>
                     <div className="max-h-40 overflow-y-auto text-sm">
                       {importResult.warnings.slice(0, 20).map((warning, i) => (
                         <div key={i} className="mb-1">&#8226; {warning}</div>

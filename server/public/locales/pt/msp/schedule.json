@@ -91,7 +91,8 @@
         "single": "Only this event",
         "future": "This and future events",
         "all": "All events"
-      }
+      },
+      "messageWithTeamsWarning": "Tem certeza de que deseja excluir esta entrada da agenda? Esta ação não pode ser desfeita. Isto também excluirá a reunião do Microsoft Teams."
     },
     "print": {
       "title": "Agenda da programação",
@@ -546,7 +547,9 @@
         "title": "Approved Appointment",
         "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
         "description": "This appointment originated from a client request.",
-        "joinTeamsMeeting": "Participar na reunião do Teams"
+        "joinTeamsMeeting": "Participar na reunião do Teams",
+        "downloadRecording": "Baixar gravação",
+        "viewTranscript": "Ver transcrição"
       },
       "pending": {
         "title": "Pending Appointment Request",
@@ -630,5 +633,28 @@
       "future": "This and future events",
       "all": "All events"
     }
+  },
+  "actions": {
+    "print": "Imprimir",
+    "printOptions": "Opções de impressão"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Cliente",
+      "contact": "Contacto",
+      "duration": "Duração",
+      "endTime": "Hora de fim",
+      "notes": "Notas",
+      "startTime": "Hora de início",
+      "status": "Estado",
+      "title": "Título",
+      "user": "Utilizador"
+    },
+    "noClient": "Nenhum cliente associado",
+    "noContact": "Nenhum contacto associado",
+    "noTitle": "Sem título",
+    "notAvailable": "N/D",
+    "title": "Detalhes da interação",
+    "unknownUser": "Desconhecido"
   }
 }

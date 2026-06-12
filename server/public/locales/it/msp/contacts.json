@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Ultimo utilizzo del tipo di telefono",
-      "message": "Il seguente tipo di telefono personalizzato{{suffix}} non è più usato da alcun contatto: {{labels}}. Eliminare la definizione del tipo{{definitionSuffix}}, o mantenerla per un uso futuro?",
+      "message_one": "Il seguente tipo di telefono personalizzato non è più usato da alcun contatto: {{labels}}. Eliminare la definizione del tipo o mantenerla per un uso futuro?",
+      "message_other": "I seguenti tipi di telefono personalizzati non sono più usati da alcun contatto: {{labels}}. Eliminare le definizioni dei tipi o mantenerle per un uso futuro?",
       "deleteType": "Elimina tipo",
       "keepType": "Mantieni tipo"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "Se impostato, sovrascrive la destinazione del cliente per questo specifico contatto mittente. Priorità: sovrascrittura contatto -> destinazione cliente -> valore predefinito del provider.",
       "tags": "Tag",
       "notes": "Note",
-      "status": "Stato"
+      "status": "Stato",
+      "phone": "Telefono"
     },
     "status": {
       "label": "Stato",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} bacheca",
+    "boardCount_other": "{{count}} bacheche",
     "title": "Accesso al portale",
     "description": "Gestione dell'accesso al portale clienti per un contatto, inclusi inviti e aggiornamenti dei ruoli",
     "loadingDescription": "Caricamento delle informazioni del portale...",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "Note salvate",
       "saveFailed": "Impossibile salvare le note"
+    }
+  },
+  "actions": {
+    "print": "Stampa",
+    "printOptions": "Opzioni di stampa"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Aggiungi ticket",
+      "empty": "Nessun ticket trovato per questo contatto",
+      "filters": {
+        "allAssignees": "Tutti gli assegnatari",
+        "allPriorities": "Tutte le priorità",
+        "categoryPlaceholder": "Filtra per categoria",
+        "reset": "Reimposta",
+        "searchPlaceholder": "Cerca ticket...",
+        "statusPlaceholder": "Seleziona stato"
+      },
+      "loadMore": {
+        "label": "Carica altri ticket",
+        "loading": "Caricamento..."
+      },
+      "loading": "Caricamento...",
+      "title": "Ticket del contatto",
+      "toasts": {
+        "clientNotFound": "Cliente non trovato",
+        "loadClientFailed": "Impossibile caricare i dettagli del cliente",
+        "loadTicketFailed": "Impossibile caricare il ticket",
+        "openTicketFailed": "Impossibile aprire il ticket",
+        "userNotAuthenticated": "Utente non autenticato"
+      }
     }
   }
 }

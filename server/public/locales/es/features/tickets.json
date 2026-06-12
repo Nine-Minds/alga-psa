@@ -1,4 +1,38 @@
 {
+  "importDialog": {
+    "errorCount_one": "{{count}} error:",
+    "errorCount_other": "{{count}} errores:",
+    "warningCount_one": "{{count}} advertencia:",
+    "warningCount_other": "{{count}} advertencias:",
+    "unmatchedPriorities_one": "{{count}} prioridad",
+    "unmatchedPriorities_other": "{{count}} prioridades",
+    "unmatchedStatuses_one": "{{count}} estado",
+    "unmatchedStatuses_other": "{{count}} estados",
+    "unmatchedCategories_one": "{{count}} categoría",
+    "unmatchedCategories_other": "{{count}} categorías",
+    "skippedCount_one": "Se omitió {{count}} ticket.",
+    "skippedCount_other": "Se omitieron {{count}} tickets.",
+    "importTickets_one": "Importar {{count}} ticket",
+    "importTickets_other": "Importar {{count}} tickets",
+    "unmatchedClients_one": "{{count}} cliente",
+    "unmatchedClients_other": "{{count}} clientes",
+    "unmatchedAgents_one": "{{count}} agente",
+    "unmatchedAgents_other": "{{count}} agentes",
+    "unmatchedTeams_one": "{{count}} equipo",
+    "unmatchedTeams_other": "{{count}} equipos",
+    "unmatchedContacts_one": "{{count}} contacto",
+    "unmatchedContacts_other": "{{count}} contactos",
+    "unmatchedDateFormats_one": "{{count}} formato de fecha",
+    "unmatchedDateFormats_other": "{{count}} formatos de fecha",
+    "unmatchedValuesIntro_one": "{{count}} valor de su CSV no se pudo asociar automáticamente.",
+    "unmatchedValuesIntro_other": "{{count}} valores de su CSV no se pudieron asociar automáticamente.",
+    "ticketCount_one": "({{count}} ticket)",
+    "ticketCount_other": "({{count}} tickets)",
+    "skipDropped_one": "Omitir (se descartará {{count}} ticket)",
+    "skipDropped_other": "Omitir (se descartarán {{count}} tickets)",
+    "createdSuccess_one": "Se creó {{count}} ticket correctamente.",
+    "createdSuccess_other": "Se crearon {{count}} tickets correctamente."
+  },
   "title": "Tickets de soporte",
   "subtitle": "Consulta y gestiona tus tickets de soporte",
   "backToTickets": "Volver a los tickets",
@@ -164,7 +198,8 @@
     "proceed": "Continuar",
     "export": "Exportar",
     "reset": "Restablecer",
-    "importSelected": "Importar seleccionados"
+    "importSelected": "Importar seleccionados",
+    "printOptions": "Opciones de impresión"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -240,13 +275,23 @@
     "updateClientFailed": "Error al actualizar el cliente",
     "updateLocationFailed": "Error al actualizar la ubicación",
     "deleteCommentFailed": "Error al eliminar el comentario",
+    "pastedImagesDeleted_one": "Se eliminó {{count}} imagen pegada.",
+    "pastedImagesDeleted_other": "Se eliminaron {{count}} imágenes pegadas.",
+    "pastedImagesDeleteFailed_one": "No se pudo eliminar {{count}} imagen pegada.",
+    "pastedImagesDeleteFailed_other": "No se pudieron eliminar {{count}} imágenes pegadas.",
+    "deleteCommentConfirm": "¿Seguro que desea eliminar este comentario? Esta acción no se puede deshacer.",
+    "deleteCommentWithImages_one": "Este comentario incluye {{count}} imagen pegada que se subió como documento del ticket. ¿Eliminar solo el comentario o también eliminar permanentemente la imagen pegada?",
+    "deleteCommentWithImages_other": "Este comentario incluye {{count}} imágenes pegadas que se subieron como documentos del ticket. ¿Eliminar solo el comentario o también eliminar permanentemente las imágenes pegadas?",
     "removeFromBundleFailed": "Error al eliminar el ticket del grupo",
     "unbundleFailed": "Error al desagrupar el ticket",
     "addToBundleFailed": "Error al añadir el ticket al grupo",
     "promoteMasterFailed": "Error al promover el principal",
     "updateBundleSettingsFailed": "Error al actualizar la configuración del grupo",
     "assetLoadFailed": "Error al cargar los detalles del activo",
-    "assetNotFound": "Activo no encontrado"
+    "assetNotFound": "Activo no encontrado",
+    "addCommentFailed": "Error al agregar el comentario",
+    "deleteTimeEntryFailed": "Error al eliminar la entrada de tiempo",
+    "timeEntryDeleted": "Entrada de tiempo eliminada"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -288,7 +333,8 @@
     "inboundChildReplies": "Respuestas entrantes en tickets secundarios (solo lectura)",
     "childTicket": "Ticket secundario",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "Este borrador incluye imágenes pegadas que ya se cargaron como documentos del ticket. ¿Mantenerlas o eliminarlas permanentemente?"
+    "clipboardDraftCancelMessage": "Este borrador incluye imágenes pegadas que ya se cargaron como documentos del ticket. ¿Mantenerlas o eliminarlas permanentemente?",
+    "replyCommentAriaLabel": "Responder al comentario"
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",
@@ -427,7 +473,10 @@
         "title": "Opciones de impresión",
         "selectedTitle": "Opciones de impresión ({{count}} seleccionados)",
         "description": "Elige qué columnas incluir al imprimir los tickets."
-      }
+      },
+      "selectedAction": "Imprimir seleccionados ({{count}})",
+      "selectedTitle": "Tickets seleccionados ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Exportar seleccionados ({{count}})",
     "exportAction": "Exportar CSV",
@@ -495,7 +544,9 @@
       "success_one": "{{count}} ticket movido",
       "success_other": "{{count}} tickets movidos",
       "partialFailure": "Algunos tickets no se pudieron mover",
-      "failure": "No se pudieron mover los tickets seleccionados"
+      "failure": "No se pudieron mover los tickets seleccionados",
+      "confirm": "Mover {{count}} tickets",
+      "success": "{{count}} tickets movidos"
     },
     "delete": {
       "dialogTitle": "Eliminar tickets seleccionados",
@@ -510,7 +561,9 @@
       "success_one": "{{count}} ticket eliminado",
       "success_other": "{{count}} tickets eliminados",
       "partialFailure": "Algunos tickets no se pudieron eliminar",
-      "failure": "No se pudieron eliminar los tickets seleccionados"
+      "failure": "No se pudieron eliminar los tickets seleccionados",
+      "confirm": "¿Seguro que quieres eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
+      "success": "{{count}} tickets eliminados"
     },
     "bundle": {
       "dialogTitle": "Agrupar tickets",
@@ -794,7 +847,9 @@
     "openEmailNotificationLogs": "Ver registros de notificaciones por correo",
     "clipboardDraftMessage": "Esta descripción incluye imágenes pegadas que ya se cargaron como documentos del ticket. ¿Quieres conservarlas o eliminarlas de forma permanente?",
     "clearDueDate": "Limpiar fecha de vencimiento",
-    "paused": "Pausado"
+    "paused": "Pausado",
+    "openActivityLog": "Ver registro de actividad",
+    "resolveLiveConflict": "Resuelve los conflictos de actualización en vivo antes de guardar tus cambios."
   },
   "properties": {
     "timeEntry": "Entrada de tiempo",
@@ -804,7 +859,7 @@
     "pause": "Pausa",
     "reset": "Restablecer",
     "enterWorkDescription": "Ingresar descripción del trabajo",
-    "liveTimerDisabled": "El temporizador de boletos en vivo está deshabilitado para este foro.",
+    "liveTimerDisabled": "El temporizador en vivo de tickets está deshabilitado para este tablero.",
     "addTimeEntry": "Agregar entrada de tiempo",
     "trackedIntervals": "Intervalos rastreados",
     "contactInfo": "Información de contacto",
@@ -845,7 +900,7 @@
     "contactEmail": "Correo electrónico de contacto",
     "clientEmail": "Correo electrónico del cliente",
     "assignedTeam": "Equipo asignado",
-    "teamLead": "Cliente potencial",
+    "teamLead": "Responsable",
     "team": "Equipo",
     "noTeamAssigned": "No hay equipo asignado",
     "additionalAgents": "Agentes adicionales",
@@ -956,7 +1011,7 @@
     }
   },
   "export": {
-    "title": "Exportar boletos",
+    "title": "Exportar tickets",
     "fieldsToExport": "Campos para exportar",
     "selectedFields_one": "{{count}} de {{total}} campo seleccionado",
     "selectedFields_other": "{{count}} de {{total}} campos seleccionados",
@@ -969,15 +1024,15 @@
     "completeDescription_one": "Se exportó correctamente {{count}} ticket a CSV.",
     "completeDescription_other": "Se exportaron correctamente {{count}} tickets a CSV.",
     "exportFailed": "No se pudieron exportar los tickets",
-    "summary_one": "Exportar boleto seleccionado de {{selected}}",
-    "summary_other": "Exportar boletos de {{selected}} seleccionados",
-    "summaryMatching_one": "(de boletos de {{total}} que coinciden con los filtros aplicados)",
-    "summaryMatching_other": "(de boletos de {{total}} que coinciden con los filtros aplicados)",
+    "summary_one": "Exportando {{selected}} ticket seleccionado",
+    "summary_other": "Exportando {{selected}} tickets seleccionados",
+    "summaryMatching_one": "(de {{total}} ticket que coincide con los filtros aplicados)",
+    "summaryMatching_other": "(de {{total}} tickets que coinciden con los filtros aplicados)",
     "fieldsTitle": "Campos para exportar",
     "selectAll": "Seleccionar todo",
     "deselectAll": "Deseleccionar todo",
     "selectedCount": "{{selected}} de campos de {{total}} seleccionados",
-    "confirm_one": "Exportar boleto de {{count}}",
+    "confirm_one": "Exportar {{count}} ticket",
     "confirm_other": "Exportar {{count}} Tickets",
     "completeMessage_one": "Se exportó correctamente {{count}} ticket a CSV.",
     "completeMessage_other": "Se exportaron correctamente {{count}} tickets a CSV.",
@@ -997,7 +1052,11 @@
       "responseState": "Estado de respuesta",
       "ticketOrigin": "Origen del ticket",
       "tags": "Etiquetas"
-    }
+    },
+    "appliedFiltersSummary": "(de {{count}} ticket que coincide con los filtros aplicados)",
+    "completeMessage": "Se exportó correctamente {{count}} ticket a CSV.",
+    "confirm": "Exportar {{count}} Ticket",
+    "selectedTicketsSummary": "Exportando {{count}} ticket seleccionado"
   },
   "materials": {
     "title": "Materiales",
@@ -1112,7 +1171,9 @@
     "selectedCount_other": "{{count}} categorías",
     "excludingCount_one": "excluyendo {{count}} categoría",
     "excludingCount_other": "excluyendo {{count}} categorías",
-    "excludingPrefix": "excluyendo {{name}}"
+    "excludingPrefix": "excluyendo {{name}}",
+    "excludingCount": "excluyendo {{count}} categoría",
+    "selectedCount": "{{count}} categorías"
   },
   "navigation": {
     "previousTicket": "Ticket anterior",
@@ -1220,7 +1281,8 @@
     }
   },
   "common": {
-    "continueEditing": "Continuar editando"
+    "continueEditing": "Continuar editando",
+    "cancel": "Cancelar"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1343,44 @@
     "excludingCount_other": "excluyendo {{count}} tableros",
     "placeholder": "Filtrar por tablero",
     "title": "Selector de tablero",
-    "searchPlaceholder": "Buscar tableros..."
+    "searchPlaceholder": "Buscar tableros...",
+    "excludingCount": "excluyendo {{count}} tableros",
+    "selectedCount": "{{count}} tableros",
+    "statusActive": "Activos",
+    "statusAll": "Todos",
+    "statusInactive": "Inactivos"
+  },
+  "checklist": {
+    "addFailed": "Error al agregar el elemento de la lista de verificación",
+    "addItem": "Agregar",
+    "addItemPlaceholder": "Agregar un elemento a la lista de verificación",
+    "applyTemplate": "Aplicar plantilla",
+    "applyTemplateFailed": "Error al aplicar la plantilla de lista de verificación",
+    "clickToRename": "Haz clic para renombrar",
+    "deleteFailed": "Error al eliminar el elemento de la lista de verificación",
+    "deleteItem": "Eliminar elemento",
+    "empty": "Aún no hay elementos en la lista de verificación.",
+    "itemMenu": "Menú del elemento de la lista de verificación",
+    "loadTemplatesFailed": "Error al cargar las plantillas de lista de verificación",
+    "loading": "Cargando lista de verificación...",
+    "markOptional": "Marcar como opcional",
+    "markRequired": "Marcar como obligatorio",
+    "moveDown": "Mover hacia abajo",
+    "moveUp": "Mover hacia arriba",
+    "noTemplates": "No hay plantillas disponibles.",
+    "progress": "{{done}} de {{total}} completados",
+    "renameFailed": "Error al renombrar el elemento de la lista de verificación",
+    "reorderFailed": "Error al reordenar los elementos de la lista de verificación",
+    "requiredBadge": "Obligatorio",
+    "templateAlreadyApplied": "Esta plantilla ya se aplicó a este ticket.",
+    "templateApplied": "Plantilla de lista de verificación aplicada.",
+    "templatesLoading": "Cargando plantillas...",
+    "title": "Lista de verificación",
+    "toggleFailed": "Error al actualizar el elemento de la lista de verificación",
+    "updateFailed": "Error al actualizar el elemento de la lista de verificación"
+  },
+  "integration": {
+    "loadTicketFailed": "No se pudo cargar el ticket",
+    "noUserSession": "No se encontró ninguna sesión de usuario"
   }
 }

@@ -1,4 +1,38 @@
 {
+  "importDialog": {
+    "errorCount_one": "{{count}} erreur :",
+    "errorCount_other": "{{count}} erreurs :",
+    "warningCount_one": "{{count}} avertissement :",
+    "warningCount_other": "{{count}} avertissements :",
+    "unmatchedPriorities_one": "{{count}} priorité",
+    "unmatchedPriorities_other": "{{count}} priorités",
+    "unmatchedStatuses_one": "{{count}} statut",
+    "unmatchedStatuses_other": "{{count}} statuts",
+    "unmatchedCategories_one": "{{count}} catégorie",
+    "unmatchedCategories_other": "{{count}} catégories",
+    "skippedCount_one": "{{count}} ticket a été ignoré.",
+    "skippedCount_other": "{{count}} tickets ont été ignorés.",
+    "importTickets_one": "Importer {{count}} ticket",
+    "importTickets_other": "Importer {{count}} tickets",
+    "unmatchedClients_one": "{{count}} client",
+    "unmatchedClients_other": "{{count}} clients",
+    "unmatchedAgents_one": "{{count}} agent",
+    "unmatchedAgents_other": "{{count}} agents",
+    "unmatchedTeams_one": "{{count}} équipe",
+    "unmatchedTeams_other": "{{count}} équipes",
+    "unmatchedContacts_one": "{{count}} contact",
+    "unmatchedContacts_other": "{{count}} contacts",
+    "unmatchedDateFormats_one": "{{count}} format de date",
+    "unmatchedDateFormats_other": "{{count}} formats de date",
+    "unmatchedValuesIntro_one": "{{count}} valeur de votre CSV n'a pas pu être associée automatiquement.",
+    "unmatchedValuesIntro_other": "{{count}} valeurs de votre CSV n'ont pas pu être associées automatiquement.",
+    "ticketCount_one": "({{count}} ticket)",
+    "ticketCount_other": "({{count}} tickets)",
+    "skipDropped_one": "Ignorer ({{count}} ticket supprimé)",
+    "skipDropped_other": "Ignorer ({{count}} tickets supprimés)",
+    "createdSuccess_one": "{{count}} ticket créé avec succès.",
+    "createdSuccess_other": "{{count}} tickets créés avec succès."
+  },
   "title": "Tickets d'assistance",
   "subtitle": "Consultez et gérez vos tickets d'assistance",
   "backToTickets": "Retour aux tickets",
@@ -164,7 +198,8 @@
     "proceed": "Continuer",
     "export": "Exportation",
     "reset": "Réinitialiser",
-    "importSelected": "Importer la sélection"
+    "importSelected": "Importer la sélection",
+    "printOptions": "Options d'impression"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -240,13 +275,23 @@
     "updateClientFailed": "Échec de la mise à jour du client",
     "updateLocationFailed": "Échec de la mise à jour de l'emplacement",
     "deleteCommentFailed": "Échec de la suppression du commentaire",
+    "pastedImagesDeleted_one": "{{count}} image collée supprimée.",
+    "pastedImagesDeleted_other": "{{count}} images collées supprimées.",
+    "pastedImagesDeleteFailed_one": "Impossible de supprimer {{count}} image collée.",
+    "pastedImagesDeleteFailed_other": "Impossible de supprimer {{count}} images collées.",
+    "deleteCommentConfirm": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action ne peut pas être annulée.",
+    "deleteCommentWithImages_one": "Ce commentaire contient {{count}} image collée téléversée comme document de ticket. Supprimer uniquement le commentaire, ou aussi supprimer définitivement l'image collée ?",
+    "deleteCommentWithImages_other": "Ce commentaire contient {{count}} images collées téléversées comme documents de ticket. Supprimer uniquement le commentaire, ou aussi supprimer définitivement les images collées ?",
     "removeFromBundleFailed": "Échec de la suppression du ticket du groupe",
     "unbundleFailed": "Échec du dégroupement du ticket",
     "addToBundleFailed": "Échec de l'ajout du ticket au groupe",
     "promoteMasterFailed": "Échec de la promotion du principal",
     "updateBundleSettingsFailed": "Échec de la mise à jour des paramètres du groupe",
     "assetLoadFailed": "Échec du chargement des détails de l'actif",
-    "assetNotFound": "Actif introuvable"
+    "assetNotFound": "Actif introuvable",
+    "addCommentFailed": "Échec de l'ajout du commentaire",
+    "deleteTimeEntryFailed": "Échec de la suppression de l'entrée de temps",
+    "timeEntryDeleted": "Entrée de temps supprimée"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -288,7 +333,8 @@
     "inboundChildReplies": "Réponses entrantes sur les tickets enfants (lecture seule)",
     "childTicket": "Ticket enfant",
     "ticketPrefix": "Ticket {{number}}",
-    "clipboardDraftCancelMessage": "Ce brouillon inclut des images collées qui ont déjà été téléchargées comme documents de ticket. Les conserver ou les supprimer définitivement ?"
+    "clipboardDraftCancelMessage": "Ce brouillon inclut des images collées qui ont déjà été téléchargées comme documents de ticket. Les conserver ou les supprimer définitivement ?",
+    "replyCommentAriaLabel": "Répondre au commentaire"
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -427,7 +473,10 @@
         "title": "Options d'impression",
         "selectedTitle": "Options d'impression ({{count}} sélectionnés)",
         "description": "Choisissez les colonnes à inclure lors de l'impression des tickets."
-      }
+      },
+      "selectedAction": "Imprimer la sélection ({{count}})",
+      "selectedTitle": "Tickets sélectionnés ({{count}})",
+      "subtitle": "{{count}} tickets"
     },
     "exportSelectedAction": "Exporter la sélection ({{count}})",
     "exportAction": "Exporter CSV",
@@ -455,7 +504,7 @@
     "deleteDialogDescription_other": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
     "deleting": "Suppression...",
     "deleteConfirm_one": "Supprimer {{count}} Ticket",
-    "deleteConfirm_other": "Supprimer {{count}} Billets",
+    "deleteConfirm_other": "Supprimer {{count}} tickets",
     "deleteSuccess_one": "{{count}} ticket supprimé",
     "deleteSuccess_other": "{{count}} tickets supprimés",
     "deletePartialError": "Certains tickets n'ont pas pu être supprimés",
@@ -469,7 +518,7 @@
     "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu'ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le ticket principal.",
     "bundleSelectAtLeastTwo": "Sélectionnez au moins deux tickets à regrouper.",
     "bundleSelectMaster": "Sélectionnez un ticket principal.",
-    "bundleSuccess": "Billets regroupés",
+    "bundleSuccess": "Tickets regroupés",
     "bundleFailed": "Échec du regroupement des tickets",
     "multiClientConfirmTitle": "Le bundle s'étend sur plusieurs clients",
     "multiClientConfirmMessage": "Ce lot comprend des tickets provenant de plusieurs clients. Confirmez que vous souhaitez continuer.",
@@ -495,7 +544,9 @@
       "success_one": "{{count}} ticket déplacé",
       "success_other": "{{count}} tickets déplacés",
       "partialFailure": "Certains tickets n'ont pas pu être déplacés",
-      "failure": "Échec du déplacement des tickets sélectionnés"
+      "failure": "Échec du déplacement des tickets sélectionnés",
+      "confirm": "Déplacer {{count}} tickets",
+      "success": "{{count}} tickets déplacés"
     },
     "delete": {
       "dialogTitle": "Supprimer les tickets sélectionnés",
@@ -510,7 +561,9 @@
       "success_one": "{{count}} ticket supprimé",
       "success_other": "{{count}} tickets supprimés",
       "partialFailure": "Certains tickets n'ont pas pu être supprimés",
-      "failure": "Échec de la suppression des tickets sélectionnés"
+      "failure": "Échec de la suppression des tickets sélectionnés",
+      "confirm": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+      "success": "{{count}} tickets supprimés"
     },
     "bundle": {
       "dialogTitle": "Regrouper les tickets",
@@ -781,7 +834,7 @@
     "viewEmailNotificationLogs": "Afficher les journaux de notification par e-mail",
     "changesSaved": "Modifications enregistrées avec succès !",
     "additionalAgents": "Agents supplémentaires :",
-    "board": "Conseil",
+    "board": "Tableau",
     "itilCategory": "Catégorie ITIL",
     "loadingBoardConfig": "Chargement...",
     "selectStatusForNewBoard": "Sélectionnez un statut pour le nouveau tableau avant de sauvegarder.",
@@ -794,7 +847,9 @@
     "openEmailNotificationLogs": "Afficher les journaux de notifications par e-mail",
     "clipboardDraftMessage": "Cette description comprend des images collées qui ont déjà été téléversées comme documents du ticket. Voulez-vous les conserver ou les supprimer définitivement ?",
     "clearDueDate": "Effacer la date d'échéance",
-    "paused": "En pause"
+    "paused": "En pause",
+    "openActivityLog": "Voir le journal d'activité",
+    "resolveLiveConflict": "Résolvez les conflits de mise à jour en direct avant d'enregistrer vos modifications."
   },
   "properties": {
     "timeEntry": "Entrée de temps",
@@ -845,7 +900,7 @@
     "contactEmail": "E-mail de contact",
     "clientEmail": "Courriel du client",
     "assignedTeam": "Équipe assignée",
-    "teamLead": "Plomb",
+    "teamLead": "Responsable",
     "team": "Équipe",
     "noTeamAssigned": "Aucune équipe assignée",
     "additionalAgents": "Agents supplémentaires",
@@ -985,7 +1040,7 @@
     "failed": "Échec de l'exportation des tickets",
     "fields": {
       "isClosed": "Est fermé",
-      "board": "Conseil",
+      "board": "Tableau",
       "contact": "Contact",
       "assignedTeam": "Équipe assignée",
       "enteredBy": "Entré par",
@@ -997,7 +1052,11 @@
       "responseState": "État de réponse",
       "ticketOrigin": "Origine du ticket",
       "tags": "Balises"
-    }
+    },
+    "appliedFiltersSummary": "(sur {{count}} ticket correspondant aux filtres appliqués)",
+    "completeMessage": "{{count}} ticket exporté avec succès au format CSV.",
+    "confirm": "Exporter {{count}} ticket",
+    "selectedTicketsSummary": "Exportation de {{count}} ticket sélectionné"
   },
   "materials": {
     "title": "Matériaux",
@@ -1112,7 +1171,9 @@
     "selectedCount_other": "{{count}} catégories",
     "excludingCount_one": "à l'exclusion de {{count}} catégorie",
     "excludingCount_other": "à l'exclusion de {{count}} catégories",
-    "excludingPrefix": "à l'exclusion de {{name}}"
+    "excludingPrefix": "à l'exclusion de {{name}}",
+    "excludingCount": "en excluant {{count}} catégorie",
+    "selectedCount": "{{count}} catégories"
   },
   "navigation": {
     "previousTicket": "Ticket précédent",
@@ -1220,7 +1281,8 @@
     }
   },
   "common": {
-    "continueEditing": "Continuer l'édition"
+    "continueEditing": "Continuer l'édition",
+    "cancel": "Annuler"
   },
   "details": {
     "bundle": {
@@ -1281,6 +1343,44 @@
     "excludingCount_other": "hors {{count}} tableaux",
     "placeholder": "Filtrer par tableau",
     "title": "Sélecteur de tableau",
-    "searchPlaceholder": "Rechercher des tableaux..."
+    "searchPlaceholder": "Rechercher des tableaux...",
+    "excludingCount": "en excluant {{count}} tableaux",
+    "selectedCount": "{{count}} tableaux",
+    "statusActive": "Actifs",
+    "statusAll": "Tous",
+    "statusInactive": "Inactifs"
+  },
+  "checklist": {
+    "addFailed": "Échec de l'ajout de l'élément de la liste de contrôle",
+    "addItem": "Ajouter",
+    "addItemPlaceholder": "Ajouter un élément à la liste de contrôle",
+    "applyTemplate": "Appliquer un modèle",
+    "applyTemplateFailed": "Échec de l'application du modèle de liste de contrôle",
+    "clickToRename": "Cliquer pour renommer",
+    "deleteFailed": "Échec de la suppression de l'élément de la liste de contrôle",
+    "deleteItem": "Supprimer l'élément",
+    "empty": "Aucun élément dans la liste de contrôle pour le moment.",
+    "itemMenu": "Menu de l'élément de la liste de contrôle",
+    "loadTemplatesFailed": "Échec du chargement des modèles de liste de contrôle",
+    "loading": "Chargement de la liste de contrôle...",
+    "markOptional": "Marquer comme facultatif",
+    "markRequired": "Marquer comme obligatoire",
+    "moveDown": "Déplacer vers le bas",
+    "moveUp": "Déplacer vers le haut",
+    "noTemplates": "Aucun modèle disponible.",
+    "progress": "{{done}} sur {{total}} terminés",
+    "renameFailed": "Échec du renommage de l'élément de la liste de contrôle",
+    "reorderFailed": "Échec de la réorganisation des éléments de la liste de contrôle",
+    "requiredBadge": "Obligatoire",
+    "templateAlreadyApplied": "Ce modèle a déjà été appliqué à ce ticket.",
+    "templateApplied": "Modèle de liste de contrôle appliqué.",
+    "templatesLoading": "Chargement des modèles...",
+    "title": "Liste de contrôle",
+    "toggleFailed": "Échec de la mise à jour de l'élément de la liste de contrôle",
+    "updateFailed": "Échec de la mise à jour de l'élément de la liste de contrôle"
+  },
+  "integration": {
+    "loadTicketFailed": "Échec du chargement du ticket",
+    "noUserSession": "Aucune session utilisateur trouvée"
   }
 }

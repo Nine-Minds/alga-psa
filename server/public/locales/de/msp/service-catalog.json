@@ -235,7 +235,7 @@
     },
     "actions": {
       "cancel": "Abbrechen",
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "save": "Konfiguration speichern"
     },
     "title": "Dienstkonfiguration",
@@ -347,9 +347,9 @@
       "unlimited": "Unbegrenzt"
     },
     "actions": {
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "addTier": "Stufe hinzufügen",
-      "save": "Sparen Sie Tarifstufen"
+      "save": "Tarifstufen speichern"
     },
     "title": "Preisstufen und Mengenrabatte",
     "description": "Konfigurieren Sie unterschiedliche Tarife basierend auf Mengenbereichen. Für größere Mengen können ermäßigte Preise gelten.",
@@ -382,7 +382,7 @@
       "save": "Steuereinstellungen konnten nicht gespeichert werden"
     },
     "actions": {
-      "saving": "Sparen...",
+      "saving": "Speichern...",
       "save": "Steuereinstellungen speichern"
     },
     "title": "Steuereinstellungen",

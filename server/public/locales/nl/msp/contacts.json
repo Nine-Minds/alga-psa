@@ -65,7 +65,8 @@
     },
     "lastPhoneTypeUsage": {
       "title": "Laatste gebruik van telefoonsoort",
-      "message": "De volgende aangepaste telefoonsoort{{suffix}} wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen{{definitionSuffix}} of behouden voor toekomstig gebruik?",
+      "message_one": "De volgende aangepaste telefoonsoort wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen of behouden voor toekomstig gebruik?",
+      "message_other": "De volgende aangepaste telefoonsoorten worden niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinities verwijderen of behouden voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
       "keepType": "Soort behouden"
     },
@@ -115,7 +116,8 @@
       "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
       "tags": "Labels",
       "notes": "Notities",
-      "status": "Status"
+      "status": "Status",
+      "phone": "Telefoon"
     },
     "status": {
       "label": "Status",
@@ -312,6 +314,8 @@
     }
   },
   "contactPortalTab": {
+    "boardCount_one": "{{count}} bord",
+    "boardCount_other": "{{count}} borden",
     "title": "Portaaltoegang",
     "description": "Beheer van toegang tot het klantportaal voor een contact, inclusief uitnodigingen en rolupdates",
     "loadingDescription": "Portaalinformatie laden...",
@@ -614,6 +618,37 @@
     "messages": {
       "saveSuccess": "Notities opgeslagen",
       "saveFailed": "Notities opslaan is mislukt"
+    }
+  },
+  "actions": {
+    "print": "Afdrukken",
+    "printOptions": "Afdrukopties"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Ticket toevoegen",
+      "empty": "Geen tickets gevonden voor dit contact",
+      "filters": {
+        "allAssignees": "Alle toegewezen personen",
+        "allPriorities": "Alle prioriteiten",
+        "categoryPlaceholder": "Filteren op categorie",
+        "reset": "Resetten",
+        "searchPlaceholder": "Tickets zoeken...",
+        "statusPlaceholder": "Status selecteren"
+      },
+      "loadMore": {
+        "label": "Meer tickets laden",
+        "loading": "Laden..."
+      },
+      "loading": "Laden...",
+      "title": "Contacttickets",
+      "toasts": {
+        "clientNotFound": "Klant niet gevonden",
+        "loadClientFailed": "Kan klantgegevens niet laden",
+        "loadTicketFailed": "Kan ticket niet laden",
+        "openTicketFailed": "Kan ticket niet openen",
+        "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
+      }
     }
   }
 }

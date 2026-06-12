@@ -121,7 +121,7 @@
       },
       "conditions": {
         "unrestricted": "Si applica a ogni ticket e progetto",
-        "boards": "Board",
+        "boards": "Bacheche",
         "statuses": "Stati",
         "priorities": "Priorità",
         "any": "Qualsiasi"
@@ -149,7 +149,7 @@
       "labels": {
         "template": "Modello di sondaggio",
         "triggerType": "Tipo di trigger",
-        "boardIds": "Board",
+        "boardIds": "Bacheche",
         "statusIds": "Stati",
         "priorities": "Priorità",
         "enabled": "Trigger abilitato"

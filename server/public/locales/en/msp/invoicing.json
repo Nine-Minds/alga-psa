@@ -285,7 +285,8 @@
       "invoiceDate": "Invoice Date",
       "dueDate": "Due Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "finalize": "Finalize",
@@ -315,12 +316,12 @@
       "bulkFinalizeSkipped_other": "{{count}} invoices could not be finalized and were skipped."
     },
     "reverseDialog": {
-      "title": "Reverse Draft Invoice",
       "title_other": "Reverse Draft Invoices",
       "message_one": "Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.",
       "message_other": "Reversing {{count}} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.",
       "confirm": "Reverse Draft",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "title_one": "Reverse Draft Invoice"
     },
     "pendingTaxDialog": {
       "title": "Invoice awaiting external tax",
@@ -340,7 +341,8 @@
       "amount": "Amount",
       "finalizedDate": "Finalized Date",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "quickbooks": "QuickBooks"
     },
     "actions": {
       "downloadPdfs": "Download PDFs",
@@ -578,7 +580,13 @@
       "reverseDraft": "Reverse Draft",
       "sendEmail": "Send Email",
       "unfinalize": "Unfinalize",
-      "viewSourceQuote": "View Source Quote"
+      "viewSourceQuote": "View Source Quote",
+      "applyCredit": "Apply Credit",
+      "driftAccept": "Accept QuickBooks Version",
+      "driftReexport": "Re-export to QuickBooks",
+      "syncNow": "Sync to QuickBooks",
+      "viewInQbo": "View in QuickBooks",
+      "voidInvoice": "Void Invoice"
     },
     "loading": "Loading Preview...",
     "empty": "Select an invoice to preview",
@@ -594,6 +602,17 @@
         "sendEmail": "send email",
         "unfinalize": "unfinalize invoice"
       }
+    },
+    "applyCreditDialog": {
+      "title": "Apply Credit"
+    },
+    "voidDialog": {
+      "title": "Void Invoice",
+      "description": "Voiding this invoice is permanent. Please provide a reason.",
+      "reasonPlaceholder": "Reason for voiding...",
+      "cancel": "Cancel",
+      "confirm": "Void Invoice",
+      "voiding": "Voiding..."
     }
   },
   "templateEditor": {
@@ -1525,6 +1544,12 @@
         "label": "Tenant Address",
         "description": "Your company address."
       }
+    },
+    "canvas": {
+      "templateBoundary": "Template Boundary"
+    },
+    "dragOverlay": {
+      "component": "Component"
     }
   }
 }

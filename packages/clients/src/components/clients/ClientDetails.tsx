@@ -493,7 +493,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (result.contactsDeactivated > 0) {
         toast.success(t('clientDetails.deactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been deactivated successfully.',
           count: result.contactsDeactivated,
         }));
       } else {
@@ -617,7 +617,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (reactivateContacts && result.contactsReactivated > 0) {
         toast.success(t('clientDetails.reactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been reactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been reactivated successfully.',
           count: result.contactsReactivated,
         }));
       } else {
@@ -655,7 +655,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (deactivateContacts && result.contactsDeactivated > 0) {
         toast.success(t('clientDetails.deactivateWithContactsSuccess', {
-          defaultValue: 'Client and {{count}} contact(s) have been deactivated successfully.',
+          defaultValue: 'Client and {{count}} contacts have been deactivated successfully.',
           count: result.contactsDeactivated,
         }));
       } else {
