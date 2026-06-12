@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Affichez une ou plusieurs colonnes pour voir vos tâches.",
     "showAllColumns": "Afficher toutes les colonnes",
     "hideColumn": "Masquer la colonne",
+    "showColumn": "Afficher la colonne",
     "addTask": "Ajouter une tâche",
     "taskUpdatedSuccess": "Tâche mise à jour avec succès !",
     "hiddenColumnsAlert": "{{count}} colonnes masquées par manque de place. Redimensionnez le navigateur pour en voir plus.",

@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Mostre uma ou mais colunas para ver suas tarefas.",
     "showAllColumns": "Mostrar todas as colunas",
     "hideColumn": "Ocultar coluna",
+    "showColumn": "Mostrar coluna",
     "addTask": "Adicionar tarefa",
     "taskUpdatedSuccess": "Task updated successfully!",
     "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",

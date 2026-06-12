@@ -237,6 +237,7 @@
     "allColumnsHiddenHint": "Pokaż jedną lub więcej kolumn, aby zobaczyć swoje zadania.",
     "showAllColumns": "Pokaż wszystkie kolumny",
     "hideColumn": "Ukryj kolumnę",
+    "showColumn": "Pokaż kolumnę",
     "addTask": "Dodaj zadanie",
     "taskUpdatedSuccess": "Zadanie zaktualizowano pomyślnie!",
     "hiddenColumnsAlert": "{{count}} kolumn ukrytych z powodu ograniczonego miejsca. Zmień rozmiar przeglądarki, aby zobaczyć więcej.",

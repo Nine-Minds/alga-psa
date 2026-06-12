@@ -38,6 +38,7 @@ interface KanbanBoardProps {
   searchWholeWord?: boolean;
   zoomLevel?: number;
   hideHeader?: boolean;
+  revealedHiddenStatusIds?: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -120,6 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   searchWholeWord = false,
   zoomLevel = 50,
   hideHeader = false,
+  revealedHiddenStatusIds,
   onDrop,
   onDragOver,
   onAddCard,
@@ -218,6 +220,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             cardGap={cardGap}
             zoomLevel={zoomLevel}
             hideHeader={hideHeader}
+            isRevealedHidden={revealedHiddenStatusIds?.has(status.project_status_mapping_id) ?? false}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

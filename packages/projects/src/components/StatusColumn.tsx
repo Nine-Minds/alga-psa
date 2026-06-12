@@ -5,7 +5,7 @@ import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Circle, Plus, EyeOff } from 'lucide-react';
+import { Circle, Plus, Eye, EyeOff } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from '@alga-psa/types';
@@ -48,6 +48,7 @@ interface StatusColumnProps {
   cardGap?: number;
   zoomLevel?: number;
   hideHeader?: boolean;
+  isRevealedHidden?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -98,6 +99,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   cardGap = 8,
   zoomLevel = 50,
   hideHeader = false,
+  isRevealedHidden = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -342,7 +344,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
 
   return (
     <div
-      className={`${styles.kanbanColumn} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
+      className={`${styles.kanbanColumn} ${isRevealedHidden ? styles.revealedHiddenColumn : ''} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
         isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
       style={columnStyle}
@@ -365,7 +367,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               />
             )}
             <div
-              className={`flex ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
+              className={`flex ${isRevealedHidden ? styles.revealedHiddenHeader : ''} ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
               style={configuredColor ? {
                 backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
                 borderColor: isDark ? darkenColor(configuredColor, 0.40) : lightenColor(configuredColor, 0.40)
@@ -405,11 +407,15 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => onHideColumn(status)}
-                  tooltipText={t('projectDetail.hideColumn', 'Hide column')}
+                  tooltipText={isRevealedHidden
+                    ? t('projectDetail.showColumn', 'Show column')
+                    : t('projectDetail.hideColumn', 'Hide column')}
                   tooltip={true}
                   className={`${zoomLevel <= 30 ? '!w-5 !h-5' : '!w-6 !h-6'} !p-0 !min-w-0 text-gray-400 hover:text-gray-600`}
                 >
-                  <EyeOff className={zoomLevel <= 30 ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+                  {isRevealedHidden
+                    ? <Eye className={zoomLevel <= 30 ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
+                    : <EyeOff className={zoomLevel <= 30 ? 'w-3 h-3' : 'w-3.5 h-3.5'} />}
                 </Button>
               )}
             </div>

@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Muestra una o más columnas para ver tus tareas.",
     "showAllColumns": "Mostrar todas las columnas",
     "hideColumn": "Ocultar columna",
+    "showColumn": "Mostrar columna",
     "addTask": "Agregar tarea",
     "taskUpdatedSuccess": "¡Tarea actualizada correctamente!",
     "hiddenColumnsAlert": "{{count}} columnas ocultas por falta de espacio. Cambie el tamaño del navegador para ver más.",

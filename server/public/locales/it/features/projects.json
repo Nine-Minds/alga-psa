@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Mostra una o più colonne per vedere le tue attività.",
     "showAllColumns": "Mostra tutte le colonne",
     "hideColumn": "Nascondi colonna",
+    "showColumn": "Mostra colonna",
     "addTask": "Aggiungi attività",
     "taskUpdatedSuccess": "Attività aggiornata con successo!",
     "hiddenColumnsAlert": "{{count}} colonne nascoste per spazio limitato. Ridimensiona il browser per vederne altre.",

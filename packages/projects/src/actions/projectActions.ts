@@ -744,19 +744,6 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
             await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
-
-            // The per-user "hidden kanban columns" preference is keyed by phase
-            // inside its value ({ [phaseId]: mappingIds }). Strip this phase's
-            // entry from every user's map for this project so deleted phases
-            // don't leave orphaned keys behind. (Legacy flat-array values don't
-            // contain phase ids, so jsonb_exists skips them.)
-            await trx('user_preferences')
-                .where({ tenant, setting_name: projectKanbanHiddenStatusesKey(projectId) })
-                .whereRaw('jsonb_exists(setting_value, ?)', [phaseId])
-                .update({
-                    setting_value: trx.raw('setting_value - ?', [phaseId]),
-                    updated_at: trx.fn.now(),
-                });
         });
 
         if (projectIdForEvent) {

@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Show one or more columns to see your tasks.",
     "showAllColumns": "Show all columns",
     "hideColumn": "Hide column",
+    "showColumn": "Show column",
     "addTask": "Add Task",
     "taskUpdatedSuccess": "Task updated successfully!",
     "hiddenColumnsAlert": "{{count}} columns hidden due to limited space. Resize browser to see more.",

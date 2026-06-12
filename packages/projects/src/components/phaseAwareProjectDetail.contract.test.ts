@@ -34,7 +34,7 @@ describe('phase-aware MSP project UI contracts', () => {
     // per-user hidden-column layer (displayedKanbanStatuses).
     expect(projectDetailSource).toContain('statuses={displayedKanbanStatuses}');
     expect(projectDetailSource).toContain('const displayedKanbanStatuses = useMemo(');
-    expect(projectDetailSource).toContain('!hiddenStatusIdSet.has(status.project_status_mapping_id)');
+    expect(projectDetailSource).toContain('!hiddenStatusIdentitySet.has(getKanbanStatusIdentity(status))');
     expect(kanbanBoardSource).toContain('statuses: ProjectStatus[];');
     expect(kanbanBoardSource).toContain('{statuses.filter(status => status.is_visible).map((status, index)');
     expect(kanbanBoardSource).toContain(
@@ -47,12 +47,12 @@ describe('phase-aware MSP project UI contracts', () => {
     expect(taskStatusSelectSource).toContain('const visibleStatuses = useMemo(() =>');
     expect(taskStatusSelectSource).toContain('.filter(s => s.is_visible)');
     expect(taskStatusSelectSource).toContain('.sort((a, b) => a.display_order - b.display_order)');
+    expect(taskEditSource).toContain('getProjectTaskStatuses(phase.project_id, phase.phase_id)');
+    expect(taskEditSource).toContain('setSelectedPhaseStatuses(statuses);');
     expect(taskEditSource).toContain(
-      'const projectStatuses = await getProjectTaskStatuses(phase.project_id, phase.phase_id);'
+      'const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id, newPhase.phase_id);'
     );
-    expect(taskQuickAddSource).toContain(
-      'const statuses = await getProjectTaskStatuses(phase.project_id, phase.phase_id);'
-    );
-    expect(taskQuickAddSource).toContain('projectStatuses={selectedPhaseStatuses}');
+    expect(taskEditSource).toContain('projectStatuses={selectedPhaseStatuses}');
+    expect(taskQuickAddSource).toContain('projectStatuses={projectStatuses}');
   });
 });

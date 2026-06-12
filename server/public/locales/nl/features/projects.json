@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Toon een of meer kolommen om je taken te zien.",
     "showAllColumns": "Alle kolommen tonen",
     "hideColumn": "Kolom verbergen",
+    "showColumn": "Kolom tonen",
     "addTask": "Taak toevoegen",
     "taskUpdatedSuccess": "Taak succesvol bijgewerkt!",
     "hiddenColumnsAlert": "{{count}} kolommen verborgen wegens beperkte ruimte. Wijzig browsergrootte om meer te zien.",

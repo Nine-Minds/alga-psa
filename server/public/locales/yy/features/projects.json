@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "55555",
     "showAllColumns": "55555",
     "hideColumn": "55555",
+    "showColumn": "55555",
     "addTask": "55555",
     "taskUpdatedSuccess": "55555",
     "hiddenColumnsAlert": "55555 {{count}} 55555",

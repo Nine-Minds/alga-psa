@@ -235,6 +235,7 @@
     "allColumnsHiddenHint": "Blenden Sie eine oder mehrere Spalten ein, um Ihre Aufgaben zu sehen.",
     "showAllColumns": "Alle Spalten anzeigen",
     "hideColumn": "Spalte ausblenden",
+    "showColumn": "Spalte anzeigen",
     "addTask": "Aufgabe hinzufügen",
     "taskUpdatedSuccess": "Aufgabe erfolgreich aktualisiert!",
     "hiddenColumnsAlert": "{{count}} Spalten aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen.",
