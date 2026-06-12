@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 
-const getInvoiceForRenderingMock = vi.fn();
+const getEnrichedInvoiceViewModelMock = vi.fn();
 const getInvoicePurchaseOrderSummaryMock = vi.fn();
 const getResolvedInvoiceTemplateIdMock = vi.fn();
+const getInvoiceAnnotationsMock = vi.fn();
 const getQuoteByConvertedInvoiceIdMock = vi.fn();
-const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 const routerPushMock = vi.fn();
@@ -22,17 +22,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
-  getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
+  getEnrichedInvoiceViewModel: (...args: unknown[]) => getEnrichedInvoiceViewModelMock(...args),
   getInvoicePurchaseOrderSummary: (...args: unknown[]) => getInvoicePurchaseOrderSummaryMock(...args),
   getResolvedInvoiceTemplateId: (...args: unknown[]) => getResolvedInvoiceTemplateIdMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/actions/quoteActions', () => ({
-  getQuoteByConvertedInvoiceId: (...args: unknown[]) => getQuoteByConvertedInvoiceIdMock(...args),
+vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({
+  getInvoiceAnnotations: (...args: unknown[]) => getInvoiceAnnotationsMock(...args),
 }));
 
-vi.mock('../../../lib/adapters/invoiceAdapters', () => ({
-  mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+vi.mock('@alga-psa/billing/actions/quoteActions', () => ({
+  getQuoteByConvertedInvoiceId: (...args: unknown[]) => getQuoteByConvertedInvoiceIdMock(...args),
 }));
 
 vi.mock('../TemplateRenderer', () => ({
@@ -86,13 +86,9 @@ const defaultTemplates = [
   },
 ];
 
-const defaultInvoiceData = {
-  invoice_id: 'inv-1',
-  tax_source: 'internal',
-};
-
 const defaultViewModel = {
   invoiceNumber: 'INV-1001',
+  taxSource: 'internal',
   issueDate: '2026-04-01',
   dueDate: '2026-04-15',
   currencyCode: 'USD',
@@ -109,11 +105,11 @@ describe('InvoicePreviewPanel', () => {
   beforeEach(() => {
     cleanup();
     routerPushMock.mockReset();
-    getInvoiceForRenderingMock.mockReset();
+    getEnrichedInvoiceViewModelMock.mockReset();
     getInvoicePurchaseOrderSummaryMock.mockReset();
     getResolvedInvoiceTemplateIdMock.mockReset();
+    getInvoiceAnnotationsMock.mockReset();
     getQuoteByConvertedInvoiceIdMock.mockReset();
-    mapDbInvoiceToWasmViewModelMock.mockReset();
     templateRendererMock.mockReset();
     paperInvoiceMock.mockReset();
 
@@ -125,11 +121,11 @@ describe('InvoicePreviewPanel', () => {
 
     vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
-    getInvoiceForRenderingMock.mockResolvedValue(defaultInvoiceData);
+    getEnrichedInvoiceViewModelMock.mockResolvedValue(defaultViewModel);
     getInvoicePurchaseOrderSummaryMock.mockResolvedValue(null);
     getResolvedInvoiceTemplateIdMock.mockResolvedValue('tpl-resolved');
+    getInvoiceAnnotationsMock.mockResolvedValue([]);
     getQuoteByConvertedInvoiceIdMock.mockResolvedValue(null);
-    mapDbInvoiceToWasmViewModelMock.mockReturnValue(defaultViewModel);
   });
 
   afterEach(() => {
