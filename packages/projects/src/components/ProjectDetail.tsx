@@ -1765,77 +1765,78 @@ export default function ProjectDetail({
       return;
     }
 
-    try {
-      // Check if this is a status change or reorder
-      if (task.project_status_mapping_id !== targetStatusId) {
-        // Status change with position
+    // Capture order keys for the drop position up front (used for both the
+    // optimistic update and, on failure, the rollback).
+    const beforeTask = beforeTaskId ? projectTasks.find(t => t.task_id === beforeTaskId) : null;
+    const afterTask = afterTaskId ? projectTasks.find(t => t.task_id === afterTaskId) : null;
+    const newOrderKey = generateKeyBetween(beforeTask?.order_key || null, afterTask?.order_key || null);
+
+    // Helper to play the entry animation in the destination position.
+    const animateDroppedTask = () => {
+      setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
+      setTimeout(() => {
+        setAnimatingTasks(prev => {
+          const next = new Set(prev);
+          next.delete(draggedTaskId);
+          return next;
+        });
+      }, 500);
+    };
+
+    if (task.project_status_mapping_id !== targetStatusId) {
+      // Status change with position.
+      //
+      // Apply the move to local state *immediately* (optimistically) so the
+      // card appears in the target column right away. Previously we awaited the
+      // server round-trips before updating state, which let the card flash back
+      // into its original column (at full opacity, once the drag ghost cleared)
+      // until the request resolved.
+      setProjectTasks(prevTasks =>
+        prevTasks.map((t): IProjectTask =>
+          t.task_id === draggedTaskId
+            ? { ...t, project_status_mapping_id: targetStatusId, order_key: newOrderKey }
+            : t
+        )
+      );
+      animateDroppedTask();
+
+      try {
         const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
         const checklistItems = await getTaskChecklistItems(draggedTaskId);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-        
-        // Remove from current status and add to new status
-        setProjectTasks(prevTasks => {
-          const newTasks = prevTasks.filter(t => t.task_id !== draggedTaskId);
-          return [...newTasks, taskWithChecklist];
-        });
-        
-        // Add animation state
-        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
-        
-        // Remove the entering animation after a delay
-        setTimeout(() => {
-          setAnimatingTasks(prev => {
-            const next = new Set(prev);
-            next.delete(draggedTaskId);
-            return next;
-          });
-        }, 500);
-        
-        toast.success(t('projectDetail.taskMovedToNewStatus', 'Task moved to new status'));
-      } else {
-        // Reorder within same status - use the new reorderTask function
-        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
-        
-        // Update local state to reflect the new order immediately
-        // Generate a new order key for the moved task
-        
-        // Get the order keys from the before/after tasks
-        let beforeKey: string | null = null;
-        let afterKey: string | null = null;
-        
-        if (beforeTaskId) {
-          const beforeTask = projectTasks.find(t => t.task_id === beforeTaskId);
-          beforeKey = beforeTask?.order_key || null;
-        }
-        
-        if (afterTaskId) {
-          const afterTask = projectTasks.find(t => t.task_id === afterTaskId);
-          afterKey = afterTask?.order_key || null;
-        }
-        
-        const newOrderKey = generateKeyBetween(beforeKey, afterKey);
-        
-        // Update the task with the new order key
+
+        // Reconcile with the authoritative server values (final order_key, etc.).
         setProjectTasks(prevTasks =>
-          prevTasks.map((t): IProjectTask =>
-            t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
-          )
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? taskWithChecklist : t))
         );
-        
-        // Add animation state
-        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
-        
-        // Remove the entering animation after a delay
-        setTimeout(() => {
-          setAnimatingTasks(prev => {
-            const next = new Set(prev);
-            next.delete(draggedTaskId);
-            return next;
-          });
-        }, 500);
+
+        toast.success(t('projectDetail.taskMovedToNewStatus', 'Task moved to new status'));
+      } catch (error) {
+        // Roll back the optimistic move on failure.
+        setProjectTasks(prevTasks =>
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? task : t))
+        );
+        handleError(error, 'Failed to move task');
       }
-    } catch (error) {
-      handleError(error, 'Failed to move task');
+    } else {
+      // Reorder within the same status. Update local order immediately, then
+      // persist; roll back if the request fails.
+      setProjectTasks(prevTasks =>
+        prevTasks.map((t): IProjectTask =>
+          t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
+        )
+      );
+      animateDroppedTask();
+
+      try {
+        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
+      } catch (error) {
+        // Roll back the optimistic reorder on failure.
+        setProjectTasks(prevTasks =>
+          prevTasks.map((t): IProjectTask => (t.task_id === draggedTaskId ? task : t))
+        );
+        handleError(error, 'Failed to move task');
+      }
     }
   };
 
