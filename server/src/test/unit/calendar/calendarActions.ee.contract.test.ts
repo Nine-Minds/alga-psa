@@ -34,6 +34,12 @@ describe('calendar actions EE ownership', () => {
     expect(eeSource).toContain('CalendarWebhookMaintenanceService');
     expect(eeSource).toContain('GoogleCalendarAdapter');
     expect(eeSource).toContain('MicrosoftCalendarAdapter');
-    expect(eeForwarderSource).toContain("@alga-psa/ee-calendar/actions");
+    // The EE forwarder re-exports the concrete calendar action surface. To avoid
+    // enterprise dependency cycles the forwarder now goes through the stub module
+    // (../../calendarStubs); the real EE resolution happens via the shared source's
+    // dynamic import('@alga-psa/ee-calendar/actions') above.
+    expect(eeForwarderSource).toContain('initiateCalendarOAuth');
+    expect(eeForwarderSource).toContain('syncCalendarProvider');
+    expect(eeForwarderSource).toContain('calendarStubs');
   });
 });

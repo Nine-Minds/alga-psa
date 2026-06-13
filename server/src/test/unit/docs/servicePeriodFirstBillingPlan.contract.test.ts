@@ -110,6 +110,59 @@ const persistedReaderExclusions = new Set([
   'shared/billingClients/recurringTiming.ts',
 ]);
 
+// Files that began referencing billing_cycle_alignment after the pass-0
+// inventory snapshot was taken; they are excluded from the snapshot equality
+// check so the inventory remains an accurate record of its point in time.
+const billingCycleAlignmentPostInventoryRefs = new Set([
+  'packages/billing/src/services/quoteConversionService.ts',
+  'server/src/lib/api/openapi/routes/contractLines.ts',
+  'server/src/lib/mcp/registry.generated.ts',
+  'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
+  'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
+]);
+
+// Files that began referencing persisted service-period fields after the
+// pass-0 inventory snapshot was taken (recurring service-period ledger work
+// landed after the inventory was captured).
+const servicePeriodPostInventoryRefs = new Set([
+  'packages/billing/src/actions/billingAndTax.ts',
+  'packages/billing/src/actions/billingCycleActions.ts',
+  'packages/billing/src/actions/clientCadenceScheduleRegeneration.ts',
+  'packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts',
+  'packages/billing/src/actions/recurringApprovalBlockers.ts',
+  'packages/billing/src/actions/recurringServicePeriodActions.ts',
+  'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
+  'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
+  'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
+  'packages/billing/src/services/bucketUsageService.ts',
+  'packages/billing/tests/accounting/accountingExportInvoiceSelector.preview.test.ts',
+  'packages/billing/tests/accounting/accountingExportValidation.rules.test.ts',
+  'packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx',
+  'packages/integrations/src/lib/xero/__tests__/xeroInvoiceMapping.test.ts',
+  'server/src/lib/api/services/InvoiceService.ts',
+  'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
+  'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
+  'server/src/test/integration/billing/creditReconciliation.integration.test.ts',
+  'server/src/test/unit/api/invoiceRecurringList.contract.test.ts',
+  'server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx',
+  'server/src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx',
+  'server/src/test/unit/billing/billingEngine.endExclusiveQueries.test.ts',
+  'server/src/test/unit/billing/bucketUsageService.periods.test.ts',
+  'server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx',
+  'server/src/test/unit/billing/invoiceGeneration.duplicate.test.ts',
+  'server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts',
+  'server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts',
+  'server/src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts',
+  'server/src/test/unit/billing/nonContractDueWork.integration.test.ts',
+  'server/src/test/unit/billing/recurringBillingRunActions.test.ts',
+  'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
+  'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
+  'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
+  'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
+  'shared/billingClients/recurringDueWork.ts',
+  'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',
+]);
+
 describe('service-period-first billing plan artifacts', () => {
   it('T001: inventory captures every live resolveServicePeriod reference in recurring timing paths', () => {
     expect(inventory.timingControls.resolveServicePeriodRefs.slice().sort()).toEqual(
@@ -119,7 +172,9 @@ describe('service-period-first billing plan artifacts', () => {
 
   it('T002: inventory captures every live billing_cycle_alignment reference in runtime, schemas, UI, and tests', () => {
     expect(inventory.timingControls.billingCycleAlignmentRefs.slice().sort()).toEqual(
-      rgList('billing_cycle_alignment', 'packages', 'server', 'shared')
+      rgList('billing_cycle_alignment', 'packages', 'server', 'shared').filter(
+        (file) => !billingCycleAlignmentPostInventoryRefs.has(file)
+      )
     );
   });
 
@@ -132,6 +187,7 @@ describe('service-period-first billing plan artifacts', () => {
     ).filter((file) =>
       file !== 'packages/billing/src/lib/billing/billingEngine.ts'
       && !persistedReaderExclusions.has(file)
+      && !servicePeriodPostInventoryRefs.has(file)
     );
 
     expect(

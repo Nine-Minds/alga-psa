@@ -24,13 +24,35 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
-vi.mock('@alga-psa/auth', () => ({
-  hasPermission: vi.fn(),
-}));
+vi.mock('@alga-psa/auth', () => {
+  const passthrough = (handler: (...args: any[]) => any) => {
+    return async (...args: any[]) => {
+      const user = { user_id: 'user-1', tenant: 'tenant-1', roles: [] };
+      return handler(user, { tenant: 'tenant-1' }, ...args);
+    };
+  };
+  return {
+    hasPermission: vi.fn(),
+    getCurrentUser: vi.fn().mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' }),
+    getSession: vi.fn().mockResolvedValue(null),
+    withAuth: passthrough,
+    withAuthCheck: passthrough,
+    withOptionalAuth: passthrough,
+  };
+});
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn().mockResolvedValue({ tenant: 'tenant-1', knex: {} }),
-}));
+vi.mock('@alga-psa/db', () => {
+  const knexStub: any = vi.fn(() => knexStub);
+  Object.assign(knexStub, {
+    select: vi.fn().mockReturnValue(knexStub),
+    where: vi.fn().mockReturnValue(knexStub),
+    orderBy: vi.fn().mockReturnValue(knexStub),
+    first: vi.fn().mockResolvedValue(null),
+  });
+  return {
+    createTenantKnex: vi.fn().mockResolvedValue({ tenant: 'tenant-1', knex: knexStub }),
+  };
+});
 
 vi.mock('@/lib/imports/ImportRegistry', () => ({
   ImportRegistry: {
@@ -42,14 +64,52 @@ vi.mock('@/lib/imports/ImportManager', () => ({
   ImportManager: vi.fn(() => mockManager),
 }));
 
-vi.mock('@/lib/imports/assetFieldDefinitions', () => ({
-  getAssetFieldDefinitions: vi.fn().mockReturnValue([
+vi.mock('@/lib/imports/assetFieldDefinitions', () => {
+  const ASSET_TYPE_VALUES = [
+    'workstation',
+    'network_device',
+    'server',
+    'mobile_device',
+    'printer',
+    'unknown',
+  ] as const;
+  const assetFieldDefinitions = [
     { field: 'name', label: 'Asset Name', required: true },
-  ]),
-}));
+  ];
+  return {
+    ASSET_TYPE_VALUES,
+    assetFieldDefinitions,
+    getAssetFieldDefinitions: vi.fn().mockReturnValue([...assetFieldDefinitions]),
+  };
+});
 
 vi.mock('@/lib/imports/CsvImporter', () => ({
   CsvImporter: vi.fn(() => ({ sourceType: 'csv_upload', parse: vi.fn() })),
+}));
+
+vi.mock('@/lib/imports/DuplicateDetector', () => ({
+  DuplicateDetector: vi.fn(() => ({ detect: vi.fn() })),
+}));
+
+vi.mock('@alga-psa/storage/StorageService', () => ({
+  StorageService: {
+    validateFileUpload: vi.fn().mockResolvedValue(undefined),
+    uploadFile: vi.fn().mockResolvedValue({
+      file_id: 'file-1',
+      storage_path: 'path/assets.csv',
+      mime_type: 'text/csv',
+      original_name: 'assets.csv',
+      file_size: 13,
+    }),
+    createDocumentSystemEntry: vi.fn().mockResolvedValue(undefined),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock('@alga-psa/documents/actions/documentActions', () => ({
+  addDocument: vi.fn().mockResolvedValue({ _id: 'doc-1' }),
+  associateDocumentWithClient: vi.fn().mockResolvedValue({ association_id: 'assoc-1' }),
+  deleteDocument: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
@@ -74,7 +134,7 @@ beforeEach(() => {
   mockRegistry.has.mockReturnValue(true);
 
   (getCurrentUser as any).mockReset();
-  (getCurrentUser as any).mockResolvedValue({ user_id: 'user-1' });
+  (getCurrentUser as any).mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
   (hasPermission as any).mockReset();
   (hasPermission as any).mockResolvedValue(true);
 
@@ -83,6 +143,7 @@ beforeEach(() => {
     parse: vi.fn().mockResolvedValue([
       { rowNumber: 2, raw: { Name: 'Device' }, normalized: { Name: 'Device' } },
     ]),
+    getDuplicateDetectionStrategy: vi.fn().mockReturnValue(undefined),
   });
   mockManager.getSourceById.mockResolvedValue({ id: 'source-1', sourceType: 'csv_upload' });
   mockManager.initiateImport.mockResolvedValue({ import_job_id: 'job-1' });

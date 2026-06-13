@@ -14,10 +14,13 @@ describe('UserProfile calendar edition contract', () => {
     expect(source).not.toContain("import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';");
     expect(source).toContain("const CalendarProfileSettings = dynamic(");
     expect(source).toContain("() => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings)");
-    expect(source).toContain('const isCalendarTabAvailable = isCalendarEnterpriseEdition();');
+    // Calendar tab availability is derived from the shared edition helper (now
+    // additionally gated off for AlgaDesk).
+    expect(source).toContain('const isCalendarTabAvailable = isCalendarEnterpriseEdition()');
     expect(source).toContain('resolveUserProfileTab(tabParam, isCalendarTabAvailable)');
     expect(source).toContain('...(isCalendarTabAvailable ? [{');
-    expect(source).toContain('label: "Calendar"');
+    // The Calendar tab label is now internationalized.
+    expect(source).toContain("label: t('profile.tabs.calendar', { defaultValue: 'Calendar' })");
     expect(source).toContain('content: <CalendarProfileSettings />');
   });
 });

@@ -46,15 +46,60 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+// Stable singletons: components that key a useMemo/useEffect on `t` or `i18n`
+// would otherwise re-run forever (a synchronous render loop vitest's testTimeout
+// cannot interrupt) because every useTranslation() call returned fresh refs.
+const mockT = (_key: string, options?: string | { defaultValue?: string; [key: string]: unknown }) => {
+  if (typeof options === 'string') {
+    return options;
+  }
+  const template = options?.defaultValue ?? _key;
+  return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
+    const value = options?.[name];
+    return value === undefined ? match : String(value);
+  });
+};
+const mockI18n = { language: 'en' };
+const mockUseTranslation = () => ({ t: mockT, i18n: mockI18n });
+
+// Stable formatter singleton (en locale). Components key useMemo/useEffect on
+// the return value, so it must be referentially stable across renders.
+const mockFormatters = {
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return new Intl.DateTimeFormat('en', options).format(dateObj);
+  },
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+    new Intl.NumberFormat('en', options).format(value),
+  formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+    new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+  formatRelativeTime: (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    const diff = dateObj.getTime() - Date.now();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (Math.abs(days) > 0) return rtf.format(days, 'day');
+    if (Math.abs(hours) > 0) return rtf.format(hours, 'hour');
+    if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
+    return rtf.format(seconds, 'second');
+  },
+};
+const mockUseFormatters = () => mockFormatters;
+
+// Stable i18n context value used by useI18n/useOptionalI18n (locale-aware
+// shared components like DatePicker/CurrencyInput read this).
+const mockI18nContext = { locale: 'en', t: mockT, i18n: mockI18n };
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: string | { defaultValue?: string }) => {
-      if (typeof options === 'string') {
-        return options;
-      }
-      return options?.defaultValue ?? _key;
-    },
-  }),
+  useTranslation: mockUseTranslation,
+  useFormatters: mockUseFormatters,
+  useI18n: () => mockI18nContext,
+  useOptionalI18n: () => mockI18nContext,
+  detectClientLocale: () => 'en',
+  I18nProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('next/server', async () => {

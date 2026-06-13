@@ -11,6 +11,7 @@ describe('billing test helper recurring fixture wiring', () => {
 
     expect(source).toContain('cadenceOwner?: CadenceOwner;');
     expect(source).toContain("const cadenceOwner: CadenceOwner = options.cadenceOwner ?? 'client';");
-    expect(source).toContain('cadence_owner: cadenceOwner,');
+    expect(source).toContain('contractLineData.cadence_owner = cadenceOwner;');
+    expect(source).toContain('cadence_owner: cadenceOwner }');
   });
 });

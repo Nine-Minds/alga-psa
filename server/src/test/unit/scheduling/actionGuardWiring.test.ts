@@ -22,20 +22,20 @@ describe('delegation guard wiring (static)', () => {
 
   it('fetchTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
-    expect(src).toMatch(/export const fetchTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+    expect(src).toMatch(/export const fetchTimeSheet[\s\S]*assertCanActOnBehalf/);
   });
 
   it('fetchTimeEntriesForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf', () => {
     const srcActions = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
-    expect(srcActions).toMatch(/export const fetchTimeEntriesForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+    expect(srcActions).toMatch(/export const fetchTimeEntriesForTimeSheet[\s\S]*assertCanActOnBehalf/);
 
     const srcCrud = readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts');
-    expect(srcCrud).toMatch(/export const fetchTimeEntriesForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+    expect(srcCrud).toMatch(/export const fetchTimeEntriesForTimeSheet[\s\S]*assertCanActOnBehalf/);
   });
 
   it('fetchWorkItemsForTimeSheet enforces owner-or-delegate access via assertCanActOnBehalf', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeEntryWorkItemActions.ts');
-    expect(src).toMatch(/export const fetchWorkItemsForTimeSheet[\\s\\S]*assertCanActOnBehalf/);
+    expect(src).toMatch(/export const fetchWorkItemsForTimeSheet[\s\S]*assertCanActOnBehalf/);
   });
 
   it('reopen/reverse approval is blocked when a timesheet contains invoiced entries', () => {
@@ -45,7 +45,7 @@ describe('delegation guard wiring (static)', () => {
 
   it('reopen/reverse approval transitions timesheet and entries to CHANGES_REQUESTED', () => {
     const src = readRepoFile('packages/scheduling/src/actions/timeSheetActions.ts');
-    expect(src).toMatch(/reverseTimeSheetApproval[\\s\\S]*approval_status:\\s*'CHANGES_REQUESTED'/);
+    expect(src).toMatch(/reverseTimeSheetApproval[\s\S]*approval_status:\s*'CHANGES_REQUESTED'/);
 
     const ui = readRepoFile('packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx');
     expect(ui).toContain("timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED'");

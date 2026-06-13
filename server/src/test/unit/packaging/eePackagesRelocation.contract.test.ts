@@ -35,18 +35,17 @@ describe('EE package relocation scaffolding', () => {
     expect(pkg.dependencies).toMatchObject({
       '@alga-psa/core': '*',
       '@alga-psa/db': '*',
-      '@alga-psa/integrations': '*',
       '@alga-psa/types': '*',
     });
     expect(pkg.peerDependencies).toMatchObject({
       react: expect.any(String),
       'react-dom': expect.any(String),
     });
+    expect(pkg.scripts.test).toBe('vitest run --passWithNoTests');
 
     expect(project.name).toBe('@alga-psa/ee-calendar');
     expect(project.sourceRoot).toBe('ee/packages/calendar/src');
     expect(project.targets).toHaveProperty('build');
-    expect(project.targets).toHaveProperty('test');
     expect(project.targets).toHaveProperty('lint');
     expect(tsconfig.include).toContain('src/**/*');
   });
@@ -77,18 +76,18 @@ describe('EE package relocation scaffolding', () => {
     expect(pkg.dependencies).toMatchObject({
       '@alga-psa/auth': '*',
       '@alga-psa/core': '*',
-      '@alga-psa/integrations': '*',
-      '@alga-psa/notifications': '*',
+      '@alga-psa/db': '*',
+      '@alga-psa/types': '*',
     });
     expect(pkg.peerDependencies).toMatchObject({
       react: expect.any(String),
       'react-dom': expect.any(String),
     });
+    expect(pkg.scripts.test).toBe('vitest run --passWithNoTests');
 
     expect(project.name).toBe('@alga-psa/ee-microsoft-teams');
     expect(project.sourceRoot).toBe('ee/packages/microsoft-teams/src');
     expect(project.targets).toHaveProperty('build');
-    expect(project.targets).toHaveProperty('test');
     expect(project.targets).toHaveProperty('lint');
     expect(tsconfig.include).toContain('src/**/*');
   });
@@ -156,7 +155,9 @@ describe('EE package relocation scaffolding', () => {
     expect(teamsIndexSource).toContain("export * from './routes';");
     expect(teamsActionsSource).toContain('teamsActions');
     expect(teamsActionsSource).toContain('teamsPackageActions');
-    expect(teamsComponentsSource).toContain('TeamsIntegrationSettings');
+    // The shared Teams settings UI now lives in packages/integrations; the EE
+    // package keeps an intentionally empty components entrypoint.
+    expect(teamsComponentsSource.trim()).toBe('export {};');
     expect(teamsRoutesSource).toContain('handleTeamsBotMessagesPost');
     expect(teamsRoutesSource).toContain('TeamsTabPage');
     expect(teamsLibSource).toContain("export * from './notifications/teamsNotificationDelivery';");

@@ -135,6 +135,14 @@ function buildTeamsPackageStatus(overrides: Record<string, unknown> = {}) {
         id: 'primary-client-id',
         resource: 'api://psa.example.com/teams/primary-client-id',
       },
+      deepLinks: {
+        myWork: 'https://teams.microsoft.com/l/entity/primary-client-id/my_work',
+        ticketTemplate: 'https://teams.microsoft.com/l/entity/primary-client-id/ticket_template',
+        projectTaskTemplate: 'https://teams.microsoft.com/l/entity/primary-client-id/project_task_template',
+        approvalTemplate: 'https://teams.microsoft.com/l/entity/primary-client-id/approval_template',
+        timeEntryTemplate: 'https://teams.microsoft.com/l/entity/primary-client-id/time_entry_template',
+        contactTemplate: 'https://teams.microsoft.com/l/entity/primary-client-id/contact_template',
+      },
       manifest: {
         manifestVersion: '1.24',
       },
@@ -185,11 +193,17 @@ describe('TeamsIntegrationSettings contracts', () => {
     cleanup();
   });
 
-  it('T084/T189/T190: keeps the concrete Teams settings UI in ee/server while the CE stub stays inert', () => {
+  it('T084/T189/T190: keeps the concrete Teams settings UI in the shared integrations package (re-exported by ee/server) while the CE stub stays inert', () => {
     const ceStubSource = fs.readFileSync(ceStubTeamsSettingsPath, 'utf8');
+    const eeSource = fs.readFileSync(eeTeamsSettingsPath, 'utf8');
+    const sharedSource = fs.readFileSync(sharedTeamsSettingsPath, 'utf8');
 
+    // The concrete UI now lives in @alga-psa/integrations; the ee/server module
+    // re-exports it and the CE stub renders nothing.
     expect(fs.existsSync(eeTeamsSettingsPath)).toBe(true);
-    expect(fs.existsSync(sharedTeamsSettingsPath)).toBe(false);
+    expect(fs.existsSync(sharedTeamsSettingsPath)).toBe(true);
+    expect(eeSource).toContain("from '@alga-psa/integrations/components'");
+    expect(sharedSource).toContain('TeamsIntegrationSettings');
     expect(ceStubSource).toContain('return null');
   });
 
@@ -198,17 +212,21 @@ describe('TeamsIntegrationSettings contracts', () => {
     render(<TeamsIntegrationSettings />);
 
     expect((await screen.findAllByText('Microsoft Teams')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Current Teams setup')).toBeInTheDocument();
-    expect(screen.getByText('Selected profile:')).toBeInTheDocument();
+    expect(
+      screen.getByText('Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Primary Profile is bound for Teams.')).toBeInTheDocument();
     expect(screen.getByLabelText('Microsoft profile')).toHaveValue('profile-1');
-    expect(screen.getByLabelText('Personal tab')).toBeChecked();
-    expect(screen.getByLabelText('Message extension')).toBeChecked();
-    expect(screen.getByLabelText('Personal bot')).not.toBeChecked();
-    expect(screen.getByLabelText('Assignment events')).toBeChecked();
-    expect(screen.getByLabelText('Approval requests')).toBeChecked();
-    expect(screen.getByLabelText('Customer replies')).not.toBeChecked();
+    // Capability/notification checkboxes wrap their label + description in one
+    // <label>, so match by the leading label text.
+    expect(screen.getByLabelText(/Personal tab/)).toBeChecked();
+    expect(screen.getByLabelText(/Message extension/)).toBeChecked();
+    expect(screen.getByLabelText(/Personal bot/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Assignment events/)).toBeChecked();
+    expect(screen.getByLabelText(/Approval requests/)).toBeChecked();
+    expect(screen.getByLabelText(/Customer replies/)).not.toBeChecked();
 
-    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await user.click(screen.getByRole('button', { name: 'Reload' }));
 
     await waitFor(() => {
       expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalledTimes(2);
@@ -231,11 +249,14 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    expect(await screen.findByText('Install and readiness checklist')).toBeInTheDocument();
+    // The shared profile selector + checklist replaces duplicated credential entry.
+    expect(await screen.findByText('Microsoft profile selected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeDisabled();
-    expect(screen.getByText('Select a Microsoft profile to view the Teams app-registration values, redirect URIs, and scope guidance for this tenant.')).toBeInTheDocument();
-    expect(screen.getByText('Microsoft profile selected')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select one eligible Microsoft profile before saving or activating Teams.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Teams install state')).toBeInTheDocument();
+    // No duplicated raw credential entry fields.
     expect(screen.queryByLabelText('Client ID')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Client secret')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Tenant ID')).not.toBeInTheDocument();
@@ -247,16 +268,20 @@ describe('TeamsIntegrationSettings contracts', () => {
     expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/tab')).toBeInTheDocument();
     expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/bot')).toBeInTheDocument();
     expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/message-extension')).toBeInTheDocument();
-    expect(screen.getByText('openid, profile, email, offline_access')).toBeInTheDocument();
+    // Required Teams scopes are listed individually as guidance items.
+    expect(screen.getByText('Required scopes')).toBeInTheDocument();
+    expect(screen.getAllByText('offline_access').length).toBeGreaterThan(0);
     expect(screen.getByText('api://psa.example.com/teams/primary-client-id')).toBeInTheDocument();
   });
 
   it('T099/T100/T103/T104: keeps Teams settings copy aligned with Communication placement and MSP-technician scope', () => {
-    const eeSource = fs.readFileSync(eeTeamsSettingsPath, 'utf8');
+    // The concrete copy lives in the shared integrations source (ee/server just
+    // re-exports it).
+    const sharedSource = fs.readFileSync(sharedTeamsSettingsPath, 'utf8');
 
-    expect(eeSource).not.toContain('Providers');
-    expect(eeSource).toContain('technicians');
-    expect(eeSource).not.toContain('client users');
+    expect(sharedSource).not.toContain('Providers');
+    expect(sharedSource).toContain('technicians');
+    expect(sharedSource).not.toContain('client users');
   });
 
   it('saves draft Teams setup progress and shows recoverable save failures inline', async () => {
@@ -287,26 +312,29 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    await screen.findByText('Current Teams setup');
+    await screen.findByText('Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.');
     await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
-    await user.click(screen.getByLabelText('Personal bot'));
-    await user.click(screen.getByLabelText('Customer replies'));
-    await user.click(screen.getByLabelText('Add note'));
+    await user.click(screen.getByLabelText(/Personal bot/));
+    await user.click(screen.getByLabelText(/Customer replies/));
+    await user.click(screen.getByLabelText(/Add note/));
 
-    await user.click(screen.getByRole('button', { name: 'Save Draft' }));
-    expect(await screen.findByText('Selected Microsoft profile is not ready for Teams setup')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+    // Save failures surface a neutral message rather than the raw backend error.
+    expect(await screen.findByText('Failed to save Teams settings')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Save Draft' }));
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
 
     await waitFor(() => {
-      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith({
-        selectedProfileId: 'profile-1',
-        installStatus: 'install_pending',
-        enabledCapabilities: ['personal_tab', 'personal_bot'],
-        notificationCategories: ['assignment', 'customer_reply'],
-        allowedActions: ['assign_ticket', 'add_note'],
-        lastError: null,
-      });
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          selectedProfileId: 'profile-1',
+          installStatus: 'install_pending',
+          enabledCapabilities: ['personal_tab', 'personal_bot'],
+          notificationCategories: ['assignment', 'customer_reply'],
+          allowedActions: ['assign_ticket', 'add_note'],
+          lastError: null,
+        }),
+      );
     });
   });
 
@@ -328,23 +356,26 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    await screen.findByText('Current Teams setup');
+    await screen.findByText('Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.');
     await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
 
     await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
-    expect(await screen.findByText('A Microsoft profile must be selected before Teams can be activated')).toBeInTheDocument();
+    // Activation failures surface a neutral message rather than the raw backend error.
+    expect(await screen.findByText('Failed to save Teams settings')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
 
     await waitFor(() => {
-      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith({
-        selectedProfileId: 'profile-1',
-        installStatus: 'active',
-        enabledCapabilities: ['personal_tab', 'message_extension'],
-        notificationCategories: ['assignment', 'approval_request'],
-        allowedActions: ['assign_ticket', 'log_time'],
-        lastError: null,
-      });
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          selectedProfileId: 'profile-1',
+          installStatus: 'active',
+          enabledCapabilities: ['personal_tab', 'message_extension'],
+          notificationCategories: ['assignment', 'approval_request'],
+          allowedActions: ['assign_ticket', 'log_time'],
+          lastError: null,
+        }),
+      );
     });
   });
 
@@ -364,18 +395,20 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    await screen.findByText('Current Teams setup');
-    await user.click(screen.getByRole('button', { name: 'Deactivate Teams' }));
+    await screen.findByText('Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.');
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }));
 
     await waitFor(() => {
-      expect(saveTeamsIntegrationSettingsMock).toHaveBeenCalledWith({
-        selectedProfileId: 'profile-1',
-        installStatus: 'not_configured',
-        enabledCapabilities: ['personal_tab', 'message_extension'],
-        notificationCategories: ['assignment', 'approval_request'],
-        allowedActions: ['assign_ticket', 'log_time'],
-        lastError: null,
-      });
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selectedProfileId: 'profile-1',
+          installStatus: 'not_configured',
+          enabledCapabilities: ['personal_tab', 'message_extension'],
+          notificationCategories: ['assignment', 'approval_request'],
+          allowedActions: ['assign_ticket', 'log_time'],
+          lastError: null,
+        }),
+      );
     });
   });
 
@@ -411,22 +444,24 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    expect(await screen.findByText('Create or repair a Microsoft profile before configuring Teams.')).toBeInTheDocument();
-    expect(screen.getByText(/Teams setup stays blocked/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Open Microsoft Profiles' }));
-
-    expect(window.location.hash).toBe('#microsoft-profile-manager');
+    // With no eligible Microsoft profile, Teams setup surfaces guided remediation
+    // and keeps activation/persistence blocked until a profile is ready.
+    expect(
+      await screen.findByText('No Microsoft profiles are ready for Teams. Finish Microsoft setup first.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
+    // The incomplete profile is not offered as an eligible selection.
+    expect(screen.queryByRole('option', { name: 'Incomplete Profile' })).not.toBeInTheDocument();
   });
 
   it('T145: prepares and presents the tenant package download/install handoff from Teams setup', async () => {
     const user = userEvent.setup();
-    const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     render(<TeamsIntegrationSettings />);
 
-    await screen.findByText('Teams package handoff');
-    await user.click(screen.getByRole('button', { name: 'Prepare package handoff' }));
+    await screen.findByRole('button', { name: 'Generate package' });
+    await user.click(screen.getByRole('button', { name: 'Generate package' }));
 
     await waitFor(() => {
       expect(getTeamsAppPackageStatusMock).toHaveBeenCalledTimes(1);
@@ -434,14 +469,16 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     expect(await screen.findByText('alga-psa-teams-tenant-1.zip')).toBeInTheDocument();
     expect(screen.getAllByText('primary-client-id').length).toBeGreaterThan(0);
-    expect(screen.getByText('psa.example.com, token.botframework.com')).toBeInTheDocument();
+    // Valid domains render as individual guidance items rather than a joined string.
+    expect(screen.getAllByText('psa.example.com').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('token.botframework.com').length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: 'Download manifest JSON' }));
-
-    expect((URL.createObjectURL as any)).toHaveBeenCalledTimes(1);
-    expect(anchorClickSpy).toHaveBeenCalledTimes(1);
-    expect((URL.revokeObjectURL as any)).toHaveBeenCalledWith('blob:teams-manifest');
-    anchorClickSpy.mockRestore();
+    // The zip download is a real button; the manifest download is a data-URI
+    // anchor (download link) carrying the serialized manifest.
+    expect(screen.getByRole('button', { name: 'Download app package (.zip)' })).toBeInTheDocument();
+    const manifestLink = screen.getByRole('link', { name: 'Download manifest JSON' });
+    expect(manifestLink).toHaveAttribute('download', 'alga-psa-teams-tenant-1.json');
+    expect(manifestLink.getAttribute('href')).toContain('data:application/json');
   });
 
   it('T146: shows a recoverable package handoff error when package generation cannot proceed', async () => {
@@ -453,10 +490,11 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     render(<TeamsIntegrationSettings />);
 
-    await screen.findByText('Teams package handoff');
-    await user.click(screen.getByRole('button', { name: 'Prepare package handoff' }));
+    await screen.findByRole('button', { name: 'Generate package' });
+    await user.click(screen.getByRole('button', { name: 'Generate package' }));
 
-    expect(await screen.findByText('Selected Microsoft profile is not ready for Teams package generation')).toBeInTheDocument();
+    // Package generation failures surface a neutral message rather than the raw backend error.
+    expect(await screen.findByText('Failed to generate Teams app package')).toBeInTheDocument();
   });
 
   it('shows the backend zip-download error inline instead of relying on the browser download manager', async () => {

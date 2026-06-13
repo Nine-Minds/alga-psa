@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnex = vi.fn();
 
@@ -11,6 +11,10 @@ vi.mock('@alga-psa/auth', () => ({
     (fn: any) =>
     (...args: any[]) =>
       fn({ id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
 }));
 
 function buildThenableQuery(result: any[]) {
@@ -42,14 +46,53 @@ function buildThenableQuery(result: any[]) {
 describe('contractReportActions shared contract results', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-06-15T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('T032: report results keep the two known shared contracts split into separate client-owned rows', async () => {
-    const invoices = [
-      { client_contract_id: 'cc-green-thumb', total_billed_ytd: 240000 },
-      { client_contract_id: 'cc-btm-machinery', total_billed_ytd: 240000 },
-      { client_contract_id: 'cc-worrynot-works', total_billed_ytd: 180000 },
-      { client_contract_id: 'cc-benjamin-wolf-group', total_billed_ytd: 180000 },
+    // Revenue facts without canonical detail periods fall back to invoice-date YTD attribution.
+    const revenueFacts = [
+      {
+        item_id: 'charge-green-thumb',
+        client_contract_id: 'cc-green-thumb',
+        invoice_date: '2025-03-01',
+        net_amount: 240000,
+        item_detail_id: null,
+        service_period_end: null,
+        allocated_amount: null,
+      },
+      {
+        item_id: 'charge-btm-machinery',
+        client_contract_id: 'cc-btm-machinery',
+        invoice_date: '2025-03-01',
+        net_amount: 240000,
+        item_detail_id: null,
+        service_period_end: null,
+        allocated_amount: null,
+      },
+      {
+        item_id: 'charge-worrynot-works',
+        client_contract_id: 'cc-worrynot-works',
+        invoice_date: '2025-03-01',
+        net_amount: 180000,
+        item_detail_id: null,
+        service_period_end: null,
+        allocated_amount: null,
+      },
+      {
+        item_id: 'charge-benjamin-wolf-group',
+        client_contract_id: 'cc-benjamin-wolf-group',
+        invoice_date: '2025-03-01',
+        net_amount: 180000,
+        item_detail_id: null,
+        service_period_end: null,
+        allocated_amount: null,
+      },
     ];
     const assignments = [
       {
@@ -101,8 +144,8 @@ describe('contractReportActions shared contract results', () => {
     ];
 
     const knex: any = vi.fn((table: string) => {
-      if (table === 'invoices') {
-        return buildThenableQuery(invoices);
+      if (table === 'invoice_charges as ic') {
+        return buildThenableQuery(revenueFacts);
       }
       if (table === 'client_contracts as cc') {
         return buildThenableQuery(assignments);

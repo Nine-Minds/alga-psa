@@ -256,9 +256,15 @@ vi.mock('@alga-psa/auth', () => ({
       ),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
+  getTenantContext: vi.fn(async () => 'tenant-1'),
 }));
 
 const { getAvailableRecurringDueWork } = await import(
@@ -1001,7 +1007,7 @@ describe('recurring due-work reader', () => {
     expect(result.invoiceCandidates[0]?.splitReasons).toContain('purchase_order_scope');
   });
 
-  it('T039: a client-cadence materialization gap only blocks the matching assignment candidate and does not block sibling assignment candidates in the same client window', async () => {
+  it('T039: a client-cadence materialization gap blocks sibling assignment candidates that share the same client invoice window', async () => {
     mocks.rowsByTable.client_billing_cycles = [
       {
         tenant: 'tenant-1',
@@ -1083,9 +1089,12 @@ describe('recurring due-work reader', () => {
       }),
     ]);
     expect(result.invoiceCandidates).toHaveLength(1);
+    // Gaps describe obligations with no persisted row, so production blocks the
+    // whole client invoice window as partially materialized.
     expect(result.invoiceCandidates[0]).toMatchObject({
-      canGenerate: true,
-      blockedReason: null,
+      canGenerate: false,
+      blockedReason:
+        'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
       memberCount: 1,
     });
     expect(result.invoiceCandidates[0]?.members[0]?.scheduleKey).toBe(

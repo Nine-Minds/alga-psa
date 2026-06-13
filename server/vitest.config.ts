@@ -5,6 +5,14 @@ import path from 'path';
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
 export default defineConfig({
+  // The repo's tsconfig sets `jsx: "preserve"` (Next.js/SWC compiles JSX with
+  // the automatic runtime). esbuild does not understand "preserve" and falls
+  // back to the classic runtime, which requires `import React` in every .tsx
+  // file. Newer components rely on the automatic runtime and omit that import,
+  // so force esbuild to the automatic JSX runtime to match production compilation.
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     globals: true,
     environment: 'node',
@@ -70,6 +78,14 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: path.resolve(__dirname, './src') },
+      // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this
+      // EE-only module which lives under packages/ee/src (not ee/server/src). Resolve it
+      // explicitly before the generic '@ee' alias so Vite's import-analysis can transform
+      // the shared module even in CE test runs (the import itself only executes in EE mode).
+      {
+        find: /^@ee\/services\/email\/inboundEmailRuleAiClassifier$/,
+        replacement: path.resolve(__dirname, '../packages/ee/src/services/email/inboundEmailRuleAiClassifier.ts'),
+      },
       { find: '@ee', replacement: path.resolve(__dirname, '../ee/server/src') },
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
@@ -207,6 +223,13 @@ export default defineConfig({
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
+      // Route the bare `redis` specifier to a never-connecting stub. Modules
+      // loaded outside Vite's transform scope (e.g. hocuspocus/*.js at the repo
+      // root) import `createClient` directly and bypass per-test vi.mock('redis'),
+      // so the real client would open a live connection and hang unit tests.
+      // Tests that need specific Redis behavior still override this with their
+      // own vi.mock/vi.doMock('redis').
+      { find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: /^ajv\/dist\/2020$/, replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
       {
@@ -214,6 +237,11 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../node_modules/ajv/dist/refs/json-schema-draft-07.json'),
       },
       { find: '@tiptap/extension-collaboration-caret', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-collaboration-caret.ts') },
+      // BubbleMenu/FloatingMenu need a live ProseMirror view; stub them so toolbar
+      // children render inline in jsdom. Component-side imports of this subpath are
+      // not reliably caught by per-test vi.mock (cross-package resolution), so alias
+      // it globally for tests.
+      { find: '@tiptap/react/menus', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-react-menus.tsx') },
       { find: 'emoticon', replacement: path.resolve(__dirname, './src/test/stubs/emoticon.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },

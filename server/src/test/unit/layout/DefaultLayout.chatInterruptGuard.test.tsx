@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 const routerPush = vi.fn();
 const mockCancelHandler = vi.fn();
@@ -181,6 +182,23 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
 
+// AI Assistant availability is gated on both the experimental flag and the tier
+// add-on; stub the tier hook so only the flag drives the tests.
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({ hasAddOn: () => true }),
+}));
+
+// The Cmd/Ctrl+L close shortcut is registered through the keyboard-shortcuts
+// catalog, which needs a KeyboardShortcutsProvider in the tree. Force the 'other'
+// platform so `mod` resolves to Ctrl; the catalog keydown listener lives on
+// `document` and matches on `code`.
+const renderLayout = (children: React.ReactNode) =>
+  render(
+    <KeyboardShortcutsProvider platform="other">
+      <DefaultLayout>{children}</DefaultLayout>
+    </KeyboardShortcutsProvider>,
+  );
+
 describe('DefaultLayout AI interrupt guard', () => {
   beforeEach(() => {
     sidebarIsInterruptible = false;
@@ -203,11 +221,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('warns before closing the sidebar with Cmd+L while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout(<div>content</div>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -220,7 +234,15 @@ describe('DefaultLayout AI interrupt guard', () => {
     });
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', metaKey: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'l',
+          code: 'KeyL',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
     });
 
     expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
@@ -239,11 +261,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('warns before in-app navigation while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <a href="/msp/tickets">Go to tickets</a>
-      </DefaultLayout>
-    );
+    renderLayout(<a href="/msp/tickets">Go to tickets</a>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -273,11 +291,7 @@ describe('DefaultLayout AI interrupt guard', () => {
   it('blocks browser unload while AI work is interruptible', async () => {
     sidebarIsInterruptible = true;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>
-    );
+    renderLayout(<div>content</div>);
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');

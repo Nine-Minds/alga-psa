@@ -17,7 +17,7 @@ describe('recurring due-work reader source', () => {
     expect(billingAndTaxSource).not.toContain('mergeRecurringDueWorkRows');
     expect(billingAndTaxSource).not.toContain('buildClientScheduleDueWorkRow');
     expect(billingAndTaxSource).toContain(
-      'invoiceCandidates: blockedInvoiceCandidates.slice(offset, offset + pageSize)',
+      'invoiceCandidates: approvalBlockedInvoiceCandidates.slice(offset, offset + pageSize)',
     );
   });
 

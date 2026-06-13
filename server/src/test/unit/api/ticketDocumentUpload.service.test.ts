@@ -61,6 +61,7 @@ describe('TicketService.uploadTicketDocument', () => {
     const service = new TicketService();
     const insertedDocuments: Record<string, unknown>[] = [];
     const insertedAssociations: Record<string, unknown>[] = [];
+    const insertedAuditLogs: Record<string, unknown>[] = [];
 
     const trx = ((table: string) => {
       if (table === 'documents') {
@@ -76,6 +77,23 @@ describe('TicketService.uploadTicketDocument', () => {
           insert: vi.fn(async (record: Record<string, unknown>) => {
             insertedAssociations.push(record);
           }),
+        };
+      }
+
+      if (table === 'ticket_audit_logs') {
+        return {
+          insert: vi.fn(async (record: Record<string, unknown>) => {
+            insertedAuditLogs.push(record);
+          }),
+        };
+      }
+
+      if (table === 'users') {
+        // Best-effort actor display-name lookup inside writeTicketActivity.
+        return {
+          where: vi.fn(() => ({
+            first: vi.fn().mockResolvedValue(null),
+          })),
         };
       }
 
@@ -132,6 +150,14 @@ describe('TicketService.uploadTicketDocument', () => {
         entity_id: ticketId,
         entity_type: 'ticket',
         tenant: 'tenant-1',
+      }),
+    ]);
+    expect(insertedAuditLogs).toEqual([
+      expect.objectContaining({
+        tenant: 'tenant-1',
+        ticket_id: ticketId,
+        entity_id: insertedDocuments[0]?.document_id,
+        actor_user_id: 'user-1',
       }),
     ]);
     expect(result).toMatchObject({

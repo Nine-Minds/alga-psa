@@ -2,18 +2,20 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 let aiAssistantEnabled = false;
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/msp/dashboard',
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock('../../../components/layout/SidebarWithFeatureFlags', () => ({ default: () => null }));
@@ -31,6 +33,32 @@ vi.mock('server/src/components/chat/QuickAskOverlay', () => ({
 
 vi.mock('@alga-psa/msp-composition/user-activities', () => ({
   ActivityDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks', () => ({
+  SchedulingProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/projects', () => ({
+  MspTicketIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MspClientIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/clients', () => ({
+  MspClientDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MspClientCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks', () => ({
+  QuickAddClientProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/assets', () => ({
+  MspAssetCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/documents', () => ({
+  MspDocumentsCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@alga-psa/ui', () => ({
@@ -56,7 +84,40 @@ vi.mock('server/src/context/TierContext', () => ({
   }),
 }));
 
+// DefaultLayout's Quick Ask shortcut is registered through the keyboard-shortcuts
+// catalog (ai.quickAsk -> `mod+ArrowUp`), which needs a KeyboardShortcutsProvider
+// in the tree. Force the 'other' platform so `mod` resolves to Ctrl; the catalog
+// keydown listener lives on `document` and matches on `code` (ArrowUp).
+const renderLayout = () =>
+  render(
+    <KeyboardShortcutsProvider platform="other">
+      <DefaultLayout>
+        <div>content</div>
+      </DefaultLayout>
+    </KeyboardShortcutsProvider>,
+  );
+
+const dispatchQuickAskShortcut = () => {
+  const event = new KeyboardEvent('keydown', {
+    key: 'ArrowUp',
+    code: 'ArrowUp',
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+  act(() => {
+    document.dispatchEvent(event);
+  });
+  return preventDefaultSpy;
+};
+
 describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
   it('allows Quick Ask usage after enabling AI Assistant and reloading', async () => {
     vi.stubGlobal(
       'fetch',
@@ -68,21 +129,13 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
 
     aiAssistantEnabled = false;
 
-    const first = render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>,
-    );
+    const first = renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
     });
 
-    const disabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
-    const disabledPrevent = vi.spyOn(disabledEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(disabledEvent);
-    });
+    const disabledPrevent = dispatchQuickAskShortcut();
     expect(disabledPrevent).not.toHaveBeenCalled();
     expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
 
@@ -90,11 +143,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
 
     aiAssistantEnabled = true;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>,
-    );
+    renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -104,11 +153,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
       expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'false');
     });
 
-    const enabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
-    const enabledPrevent = vi.spyOn(enabledEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(enabledEvent);
-    });
+    const enabledPrevent = dispatchQuickAskShortcut();
 
     expect(enabledPrevent).toHaveBeenCalled();
     await waitFor(() => {
@@ -127,11 +172,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
 
     aiAssistantEnabled = true;
 
-    const first = render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>,
-    );
+    const first = renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -141,11 +182,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
       expect(screen.getByTestId('quick-ask-overlay')).toHaveAttribute('data-open', 'false');
     });
 
-    const enabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
-    const enabledPrevent = vi.spyOn(enabledEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(enabledEvent);
-    });
+    const enabledPrevent = dispatchQuickAskShortcut();
 
     expect(enabledPrevent).toHaveBeenCalled();
     await waitFor(() => {
@@ -156,11 +193,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
 
     aiAssistantEnabled = false;
 
-    render(
-      <DefaultLayout>
-        <div>content</div>
-      </DefaultLayout>,
-    );
+    renderLayout();
 
     await waitFor(() => {
       expect(isExperimentalFeatureEnabled).toHaveBeenCalledWith('aiAssistant');
@@ -168,11 +201,7 @@ describe('DefaultLayout AI Assistant gating (reload semantics)', () => {
 
     expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();
 
-    const disabledEvent = new KeyboardEvent('keydown', { key: 'ArrowUp', metaKey: true });
-    const disabledPrevent = vi.spyOn(disabledEvent, 'preventDefault');
-    act(() => {
-      window.dispatchEvent(disabledEvent);
-    });
+    const disabledPrevent = dispatchQuickAskShortcut();
 
     expect(disabledPrevent).not.toHaveBeenCalled();
     expect(screen.queryByTestId('quick-ask-overlay')).not.toBeInTheDocument();

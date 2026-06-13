@@ -114,9 +114,14 @@ function createFakeKnex(state: DbState) {
         toInsert.id = toInsert.id ?? `mapping_${++nextMappingId}`;
       }
 
+      if (this.table === 'assets' && !toInsert.asset_id) {
+        toInsert.asset_id = `asset_${++nextAssetId}`;
+      }
+
       rows.push(toInsert);
 
-      // Support onConflict merge for workstation/server assets only.
+      // Support onConflict merge for workstation/server assets only, plus
+      // insert(...).returning([...]) used by direct asset creation in the sync engine.
       return {
         onConflict: (_cols: string[]) => ({
           merge: async (mergePatch: any) => {
@@ -126,6 +131,10 @@ function createFakeKnex(state: DbState) {
             Object.assign(match, mergePatch);
           },
         }),
+        returning: async (cols?: string[] | string) => {
+          const colsArr = typeof cols === 'string' ? [cols] : cols;
+          return [applySelect(toInsert, colsArr as any)];
+        },
       };
     }
 

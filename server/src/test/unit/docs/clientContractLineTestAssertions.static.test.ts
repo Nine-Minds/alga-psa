@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
 
+// This scanner's own detector literals would otherwise match themselves.
+const selfPath = 'server/src/test/unit/docs/clientContractLineTestAssertions.static.test.ts';
+
 function getTrackedTestFiles(): string[] {
   return execSync('git ls-files -- server/src/test packages/billing/tests', {
     cwd: repoRoot,
@@ -14,7 +17,8 @@ function getTrackedTestFiles(): string[] {
     .split('\n')
     .map((filePath) => filePath.trim())
     .filter((filePath) => filePath.length > 0)
-    .filter((filePath) => filePath.endsWith('.test.ts') || filePath.endsWith('.spec.ts'));
+    .filter((filePath) => filePath.endsWith('.test.ts') || filePath.endsWith('.spec.ts'))
+    .filter((filePath) => filePath !== selfPath);
 }
 
 describe('client-contract-line test assertion hygiene (static)', () => {

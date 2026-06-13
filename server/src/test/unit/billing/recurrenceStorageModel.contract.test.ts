@@ -325,7 +325,7 @@ describe('recurrence storage model contracts', () => {
     expect(compatibilityHelper).toContain("return input.enableProration ? 'prorated' : DEFAULT_BILLING_CYCLE_ALIGNMENT;");
     expect(contractLineAction).toContain("import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';");
     expect(contractLineAction).toContain('fallbackAlignment: existingConfig?.billing_cycle_alignment,');
-    expect(contractWizardActions).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(contractWizardActions).toContain('billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,');
     expect(contractLineMappingActions).toContain('resolveBillingCycleAlignmentForCompatibility({');
     expect(contractLineDialog).toContain('resolveBillingCycleAlignmentForCompatibility({');
     expect(fixedPresetConfiguration).toContain('resolveBillingCycleAlignmentForCompatibility({');

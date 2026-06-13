@@ -17,6 +17,39 @@ import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGene
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
 import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: string | Record<string, unknown>) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      const template = (options?.defaultValue as string | undefined) ?? key;
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+        const value = options?.[name];
+        return value === undefined || value === null ? match : String(value);
+      });
+    },
+  }),
+  useOptionalI18n: () => null,
+  useFormatters: () => ({
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+    },
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en-US', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
     const getValue = (row: any, dataIndex: any) => {
@@ -46,7 +79,13 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: any) =>
+    isOpen ? (
+      <div data-testid="dialog">
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <div>{children}</div>,
@@ -217,7 +256,11 @@ function createContractRow() {
 }
 
 describe('Contract PO UI flows', () => {
-  const previewInvoiceForSelectionInputMock = vi.spyOn(invoiceGenerationActions, 'previewInvoiceForSelectionInput');
+  // Preview now flows through the grouped-preview action.
+  const previewGroupedInvoicesForSelectionInputsMock = vi.spyOn(
+    invoiceGenerationActions,
+    'previewGroupedInvoicesForSelectionInputs',
+  );
   const getPurchaseOrderOverageForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
     'getPurchaseOrderOverageForSelectionInput'
@@ -226,15 +269,22 @@ describe('Contract PO UI flows', () => {
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun'
   );
+  // Batch generation now flows through the grouped run action; single-invoice /
+  // preview generation still uses the per-target run action above.
+  const generateGroupedInvoicesAsRecurringBillingRunMock = vi.spyOn(
+    recurringBillingRunActions,
+    'generateGroupedInvoicesAsRecurringBillingRun'
+  );
   const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
   const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
 
   beforeEach(() => {
-    previewInvoiceForSelectionInputMock.mockReset();
+    previewGroupedInvoicesForSelectionInputsMock.mockReset();
     getPurchaseOrderOverageForSelectionInputMock.mockReset();
     generateInvoicesAsRecurringBillingRunMock.mockReset();
+    generateGroupedInvoicesAsRecurringBillingRunMock.mockReset();
     getRecurringInvoiceHistoryPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
     hardDeleteBillingCycleMock.mockReset();
@@ -260,6 +310,14 @@ describe('Contract PO UI flows', () => {
     });
     generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
       runId: 'run-1',
+      invoicesCreated: 0,
+      failedCount: 0,
+      failures: [],
+    });
+    generateGroupedInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-1',
+      selectionKey: 'selection-1',
+      retryKey: 'retry-1',
       invoicesCreated: 0,
       failedCount: 0,
       failures: [],
@@ -296,22 +354,26 @@ describe('Contract PO UI flows', () => {
 
     await waitFor(() => {
       expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledTimes(2);
-      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
-      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({
-              executionWindow: expect.objectContaining({
-                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+            selectorInputs: [
+              expect.objectContaining({
+                executionWindow: expect.objectContaining({
+                  periodKey: 'period:2025-01-01:2025-02-01:alpha',
+                }),
               }),
-            }),
+            ],
           }),
           expect.objectContaining({
-            selectorInput: expect.objectContaining({
-              executionWindow: expect.objectContaining({
-                periodKey: 'period:2025-01-01:2025-02-01:beta',
+            selectorInputs: [
+              expect.objectContaining({
+                executionWindow: expect.objectContaining({
+                  periodKey: 'period:2025-01-01:2025-02-01:beta',
+                }),
               }),
-            }),
+            ],
           }),
         ],
       });
@@ -357,15 +419,17 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
 
     await waitFor(() => {
-      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
-      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({
-              executionWindow: expect.objectContaining({
-                periodKey: 'period:2025-01-01:2025-02-01:beta',
+            selectorInputs: [
+              expect.objectContaining({
+                executionWindow: expect.objectContaining({
+                  periodKey: 'period:2025-01-01:2025-02-01:beta',
+                }),
               }),
-            }),
+            ],
           }),
         ],
         allowPoOverage: false,
@@ -378,21 +442,37 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T006: single invoice requires explicit override confirmation to proceed on overage', async () => {
+    const [alphaRow] = createPeriods();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([alphaRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
     getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
-    previewInvoiceForSelectionInputMock.mockResolvedValue({
+    previewGroupedInvoicesForSelectionInputsMock.mockResolvedValue({
       success: true,
-      data: {
-        invoiceNumber: 'INV-TEST',
-        issueDate: '2025-01-01',
-        dueDate: '2025-02-01',
-        currencyCode: 'USD',
-        customer: { name: 'Alpha Co', address: '1 Test St' },
-        tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
-        items: [],
-        subtotal: 0,
-        tax: 0,
-        total: 0,
-      },
+      invoiceCount: 1,
+      previews: [
+        {
+          previewGroupKey: 'group-alpha',
+          selectorInputs: [alphaRow.selectorInput],
+          data: {
+            invoiceNumber: 'INV-TEST',
+            issueDate: '2025-01-01',
+            dueDate: '2025-02-01',
+            currencyCode: 'USD',
+            customer: { name: 'Alpha Co', address: '1 Test St' },
+            tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            total: 0,
+          } as any,
+        },
+      ],
     });
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
@@ -520,14 +600,16 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
 
     await waitFor(() => {
-      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        groupedTargets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({
-              executionWindow: expect.objectContaining({
-                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+            selectorInputs: [
+              expect.objectContaining({
+                executionWindow: expect.objectContaining({
+                  periodKey: 'period:2025-01-01:2025-02-01:alpha',
+                }),
               }),
-            }),
+            ],
             billingCycleId: 'cycle-1',
           }),
         ],
@@ -550,20 +632,27 @@ describe('Contract PO UI flows', () => {
       overage_cents: 2500,
       po_number: 'PO-CONTRACT',
     } as any);
-    previewInvoiceForSelectionInputMock.mockResolvedValue({
+    previewGroupedInvoicesForSelectionInputsMock.mockResolvedValue({
       success: true,
-      data: {
-        invoiceNumber: 'INV-CONTRACT',
-        issueDate: '2025-04-08',
-        dueDate: '2025-05-08',
-        currencyCode: 'USD',
-        customer: { name: 'Zenith Health', address: '200 Support Way' },
-        tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
-        items: [],
-        subtotal: 0,
-        tax: 0,
-        total: 0,
-      },
+      invoiceCount: 1,
+      previews: [
+        {
+          previewGroupKey: 'group-contract',
+          selectorInputs: [contractRow.selectorInput],
+          data: {
+            invoiceNumber: 'INV-CONTRACT',
+            issueDate: '2025-04-08',
+            dueDate: '2025-05-08',
+            currencyCode: 'USD',
+            customer: { name: 'Zenith Health', address: '200 Support Way' },
+            tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            total: 0,
+          } as any,
+        },
+      ],
     });
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
@@ -585,7 +674,7 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
-      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledTimes(2);
+      expect(previewGroupedInvoicesForSelectionInputsMock).toHaveBeenCalledTimes(2);
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
@@ -610,6 +699,8 @@ describe('Contract PO UI flows', () => {
     });
 
     const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
-    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
+    // buildRecurringRunTargetFromSelection now normalizes a missing billing cycle
+    // to null (contract-cadence rows have no billing-cycle bridge).
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeNull();
   });
 });

@@ -13,6 +13,61 @@ vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
 }));
 
+// Resolve integration category labels/descriptions against the real msp/settings
+// translation bundle (the page calls t(key) without defaultValues).
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const path = await import('node:path');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const settings = require(
+    path.resolve(process.cwd(), 'public/locales/en/msp/settings.json'),
+  );
+  const get = (obj: any, key: string) =>
+    key.split('.').reduce((acc, part) => (acc == null ? undefined : acc[part]), obj);
+  const t = (key: string, options?: any) => {
+    const template = get(settings, key) ?? options?.defaultValue ?? key;
+    if (typeof template !== 'string') {
+      return key;
+    }
+    return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
+  return {
+    useTranslation: () => ({ t, i18n: { language: 'en' } }),
+    useFormatters: () => ({
+      formatDate: (d: Date | string) => String(d),
+      formatNumber: (n: number) => String(n),
+      formatCurrency: (n: number) => String(n),
+      formatRelativeTime: (d: Date | string) => String(d),
+    }),
+    useI18n: () => ({ locale: 'en' }),
+    useOptionalI18n: () => ({ locale: 'en' }),
+    detectClientLocale: () => 'en',
+    I18nProvider: ({ children }: any) => children,
+  };
+});
+
+// Drive edition exclusively via NEXT_PUBLIC_EDITION (the process-wide EDITION is
+// 'enterprise' in the test env and would otherwise freeze isEnterprise true).
+vi.mock('../../../../../../packages/integrations/src/lib/calendarAvailability', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../../../packages/integrations/src/lib/calendarAvailability')>();
+  const isCalendarEnterpriseEdition = (env: NodeJS.ProcessEnv = process.env) =>
+    (env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+  return {
+    ...actual,
+    isCalendarEnterpriseEdition,
+    getVisibleIntegrationCategoryIds: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleIntegrationCategoryIds(isEE),
+    resolveIntegrationSettingsCategory: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveIntegrationSettingsCategory(requested, isEE),
+    getVisibleUserProfileTabs: (isEE = isCalendarEnterpriseEdition()) =>
+      actual.getVisibleUserProfileTabs(isEE),
+    resolveUserProfileTab: (requested: string | null | undefined, isEE = isCalendarEnterpriseEdition()) =>
+      actual.resolveUserProfileTab(requested, isEE),
+  };
+});
+
 vi.mock('@alga-psa/ui/hooks', async () => {
   const actual = await vi.importActual<object>('@alga-psa/ui/hooks');
   return {
@@ -23,14 +78,15 @@ vi.mock('@alga-psa/ui/hooks', async () => {
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   __esModule: true,
-  default: ({ tabs, defaultTab }: { tabs: Array<{ label: string; content: React.ReactNode }>; defaultTab: string }) => {
-    const selected = tabs.find((tab) => tab.label === defaultTab) ?? tabs[0];
+  default: ({ tabs, defaultTab }: { tabs: Array<{ id: string; label: string; content: React.ReactNode }>; defaultTab: string }) => {
+    // The page selects tabs by id (matches the real CustomTabs contract), not label.
+    const selected = tabs.find((tab) => tab.id === defaultTab) ?? tabs[0];
 
     return (
       <div data-testid="custom-tabs-mock">
         <div>
           {tabs.map((tab) => (
-            <span key={tab.label}>{tab.label}</span>
+            <span key={tab.id}>{tab.label}</span>
           ))}
         </div>
         <div>{selected?.content}</div>
@@ -60,9 +116,12 @@ vi.mock('@alga-psa/integrations/components', () => ({
   CalendarIntegrationsSettings: () => <div data-testid="calendar-integrations-settings-stub" />,
 }));
 
-vi.mock('@enterprise/components/settings/integrations/EntraIntegrationSettings', () => ({
+// The page imports the Entra settings surface from the integrations entry barrel.
+vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  default: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
+  EntraIntegrationSettings: () => (
+    <div data-testid="entra-integration-settings-shell">Loading Entra integration settings...</div>
+  ),
 }));
 
 vi.mock('@product/billing/entry', () => ({

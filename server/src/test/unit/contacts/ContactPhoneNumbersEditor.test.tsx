@@ -8,6 +8,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContactPhoneNumberInput } from '@alga-psa/types';
 import ContactPhoneNumbersEditor from '@alga-psa/clients/components/contacts/ContactPhoneNumbersEditor';
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const template = typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+      return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (_match: string, name: string) => {
+        const value = options?.[name];
+        return value === null || value === undefined ? '' : String(value);
+      });
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));

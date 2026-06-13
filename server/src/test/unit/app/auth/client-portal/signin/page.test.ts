@@ -21,7 +21,7 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: getSessionMock,
 }));
 
-vi.mock('server/src/lib/models/UserSession', () => ({
+vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevoked: (...args: unknown[]) => isRevokedMock(...args),
   },

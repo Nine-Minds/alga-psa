@@ -186,7 +186,8 @@ describe('Workflow event launcher routing', () => {
         eventType: 'PING',
         sourcePayloadSchemaRef: TEST_SCHEMA_REF,
         triggerMappingApplied: false,
-        execute: true
+        payload: { foo: 'bar' },
+        executionKey: expect.stringMatching(/^event-\d+$/)
       })
     );
   });

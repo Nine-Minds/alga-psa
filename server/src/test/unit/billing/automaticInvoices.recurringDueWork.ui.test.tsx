@@ -195,6 +195,10 @@ vi.mock('@alga-psa/auth', () => ({
       ),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: dbMocks.createTenantKnex,
   withTransaction: dbMocks.withTransaction,
@@ -244,7 +248,13 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
+  Dialog: ({ isOpen, children, footer }: any) =>
+    isOpen ? (
+      <div data-testid="dialog">
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <div>{children}</div>,
@@ -822,13 +832,18 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     fireEvent.change(filterInput, { target: { value: 'Ready' } });
 
+    // Re-query live nodes inside waitFor: the debounced filter re-renders the
+    // tree and the previously captured needs-approval/ready table references go
+    // stale (the needs-approval section unmounts once no blocked rows remain).
     await waitFor(() => {
       expect(window.location.search).toContain('automaticClientFilter=Ready');
-      expect(within(needsApprovalSection).queryByText('Blocked Co')).toBeNull();
-      expect(within(readyTable).getByText('Ready Co')).toBeInTheDocument();
+      expect(screen.queryByText('Blocked Co')).toBeNull();
+      const liveReadyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+      expect(within(liveReadyTable).getByText('Ready Co')).toBeInTheDocument();
     });
 
-    expect(within(gapPanel).getByText('Repair Co')).toBeInTheDocument();
+    const liveGapPanel = screen.getByTestId('recurring-materialization-gap-panel');
+    expect(within(liveGapPanel).getByText('Repair Co')).toBeInTheDocument();
   });
 
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {

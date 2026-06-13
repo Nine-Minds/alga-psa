@@ -12,7 +12,7 @@ import {
   createTicketFromAssetSchema,
   ticketUpdateSchema,
   createCommentSchema
-} from '../ticketModel';
+} from '@alga-psa/shared/models/ticketModel';
 
 describe('TicketModel Validation Logic', () => {
   describe('validateData helper function', () => {
@@ -181,12 +181,14 @@ describe('TicketModel Validation Logic', () => {
         title: 'Asset Ticket',
         description: 'Issue with asset',
         priority_id: '123e4567-e89b-12d3-a456-426614174000',
+        status_id: '123e4567-e89b-12d3-a456-426614174003',
+        board_id: '123e4567-e89b-12d3-a456-426614174004',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
         client_id: '123e4567-e89b-12d3-a456-426614174002'
       };
 
       const result = TicketModel.validateCreateTicketFromAssetData(data);
-      
+
       expect(result.valid).toBe(true);
       expect(result.data).toEqual(data);
     });
@@ -196,6 +198,8 @@ describe('TicketModel Validation Logic', () => {
         title: 'Asset Ticket',
         description: 'Issue with asset',
         priority_id: 'invalid-uuid',
+        status_id: '123e4567-e89b-12d3-a456-426614174003',
+        board_id: '123e4567-e89b-12d3-a456-426614174004',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
         client_id: '123e4567-e89b-12d3-a456-426614174002'
       };
@@ -320,6 +324,8 @@ describe('TicketModel Validation Logic', () => {
         title: 'Asset Issue',
         description: 'Problem with the asset',
         priority_id: '123e4567-e89b-12d3-a456-426614174000',
+        status_id: '123e4567-e89b-12d3-a456-426614174003',
+        board_id: '123e4567-e89b-12d3-a456-426614174004',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
         client_id: '123e4567-e89b-12d3-a456-426614174002'
       };

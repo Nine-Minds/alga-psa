@@ -14,7 +14,7 @@ describe('recurring invoice linkage source guards', () => {
     expect(invoiceServiceSource).not.toContain('billing_cycle_id');
     expect(invoiceServiceSource).not.toContain('obligationTypeFilter');
     expect(invoiceServiceSource).toContain('buildPostDropRecurringObligationCandidates({');
-    expect(invoiceServiceSource).toContain('contractLineId: configRow.contract_line_id');
+    expect(invoiceServiceSource).toContain('contractLineId: resolvedContractLineId');
     expect(invoiceServiceSource).toContain('where(function recurringObligationMatch()');
   });
 

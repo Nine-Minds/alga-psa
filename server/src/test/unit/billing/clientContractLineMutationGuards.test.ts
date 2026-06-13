@@ -28,6 +28,12 @@ function createCanonicalDetailBuilder(servicePeriodEnd: string) {
   return builder;
 }
 
+// Mutations now require an assignment-scoped composite identity:
+// contract-<client_contract_id>-<contract_line_id>
+const CLIENT_CONTRACT_ID = '11111111-1111-1111-1111-111111111111';
+const CONTRACT_LINE_ID = '22222222-2222-2222-2222-222222222222';
+const ASSIGNMENT_SCOPED_LINE_ID = `contract-${CLIENT_CONTRACT_ID}-${CONTRACT_LINE_ID}`;
+
 describe('client contract line mutation guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,12 +53,12 @@ describe('client contract line mutation guards', () => {
 
     const { removeClientContractLine } = await import('@alga-psa/clients/actions/clientContractLineActions');
 
-    await expect(removeClientContractLine('line-1')).rejects.toThrow(
+    await expect(removeClientContractLine(ASSIGNMENT_SCOPED_LINE_ID)).rejects.toThrow(
       'Cannot deactivate contract line assignment before 2099-01-31 as it has been invoiced through that date.'
     );
 
     expect(knex).toHaveBeenCalledWith('invoice_charge_details as iid');
-    expect(detailBuilder.andWhere).toHaveBeenCalledWith('clsc.contract_line_id', 'line-1');
+    expect(detailBuilder.andWhere).toHaveBeenCalledWith('clsc.contract_line_id', ASSIGNMENT_SCOPED_LINE_ID);
     expect(detailBuilder.first).toHaveBeenCalledWith('iid.service_period_end');
     expect(withTransaction).not.toHaveBeenCalled();
   });
@@ -72,7 +78,7 @@ describe('client contract line mutation guards', () => {
     const { editClientContractLine } = await import('@alga-psa/clients/actions/clientContractLineActions');
 
     await expect(
-      editClientContractLine('line-1', { contract_line_id: 'replacement-line-2' } as any)
+      editClientContractLine(ASSIGNMENT_SCOPED_LINE_ID, { contract_line_id: 'replacement-line-2' } as any)
     ).rejects.toThrow(
       'Cannot replace contract line assignment after it has authoritative recurring detail periods through 2025-01-31. End the current line and add a new contract line instead.'
     );

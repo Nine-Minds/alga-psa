@@ -28,6 +28,14 @@ vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
   },
 }));
 
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+  return {
+    ...actual,
+    isFeatureFlagEnabled: featureFlagIsEnabledMock,
+  };
+});
+
 vi.mock('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
   resolveMicrosoftCredentialsForTenant: resolveMicrosoftCredentialsForTenantMock,
 }));
@@ -63,6 +71,17 @@ vi.mock('@enterprise/app/api/integrations/entra/mappings/confirm/route', () => (
 
 vi.mock('@enterprise/app/api/integrations/entra/status/route', () => ({
   GET: statusRouteGetMock,
+}));
+
+// The actions resolve EE route handlers through this entry map. In vitest the
+// real entry re-exports the OSS stub (every loader resolves to null), so wire
+// the loaders the tests exercise to the mocked @enterprise route handlers.
+vi.mock('@alga-psa/integrations/entra/routes/entry', () => ({
+  routes: {
+    route: async () => ({ GET: statusRouteGetMock }),
+    discoveryRoute: async () => ({ POST: discoveryRoutePostMock }),
+    mappingsConfirmRoute: async () => ({ POST: confirmMappingsRoutePostMock }),
+  },
 }));
 
 vi.mock('@enterprise/lib/integrations/entra/entraWorkflowClient', () => ({

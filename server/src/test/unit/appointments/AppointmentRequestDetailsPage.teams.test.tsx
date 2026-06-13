@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppointmentRequestDetailsPage } from '../../../../../packages/client-portal/src/components/appointments/AppointmentRequestDetailsPage';
@@ -103,6 +103,10 @@ describe('AppointmentRequestDetailsPage Teams UI', () => {
   });
 
   afterEach(() => {
+    // Unmount rendered trees between tests; without this, repeated renders of the
+    // same appointment accumulate in the DOM and findByText('Virtual Consultation')
+    // matches multiple nodes (order-dependent, surfaced under shuffle).
+    cleanup();
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });

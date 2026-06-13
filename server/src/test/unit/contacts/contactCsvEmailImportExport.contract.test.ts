@@ -55,9 +55,15 @@ describe('contact CSV hybrid email contract', () => {
     expect(rows[1]?.[3]).toContain('personal:alice.home@wonderland.com');
     expect(rows[1]?.[3]).toContain('billing:accounts@wonderland.com');
 
-    expect(contactsImportDialogSource).toContain("phone_number: 'Default Phone Number'");
-    expect(contactsImportDialogSource).toContain("primary_email_type: 'Primary Email Label'");
-    expect(contactsImportDialogSource).toContain("additional_email_addresses: 'Additional Email Addresses'");
+    expect(contactsImportDialogSource).toContain(
+      "phone_number: t('contactsImportDialog.fields.defaultPhoneNumber', { defaultValue: 'Default Phone Number' })"
+    );
+    expect(contactsImportDialogSource).toContain(
+      "primary_email_type: t('contactsImportDialog.fields.primaryEmailLabel', { defaultValue: 'Primary Email Label' })"
+    );
+    expect(contactsImportDialogSource).toContain(
+      "additional_email_addresses: t('contactsImportDialog.fields.additionalEmails', { defaultValue: 'Additional Email Addresses' })"
+    );
     expect(contactsImportDialogSource).toContain('primary_email_type (work/personal/billing/other or a custom label)');
     expect(contactsImportDialogSource).toContain('additional_email_addresses (use `label:email@example.com | label:email@example.com`)');
     expect(contactsImportDialogSource).toContain('phone_number (imports as the default work phone)');

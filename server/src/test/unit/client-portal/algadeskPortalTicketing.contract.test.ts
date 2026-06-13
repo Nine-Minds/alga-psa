@@ -12,7 +12,7 @@ describe('AlgaDesk client portal ticketing contracts', () => {
     const ticketsPage = read('src/app/client-portal/tickets/page.tsx');
     const ticketDetailPage = read('src/app/client-portal/tickets/[ticketId]/page.tsx');
 
-    expect(dashboardPage).toContain('return <ClientDashboard />');
+    expect(dashboardPage).toContain('return <ClientDashboard productCode={productCode} />');
     expect(ticketsPage).toContain('<TicketList />');
     expect(ticketDetailPage).toContain('<TicketDetailsContainer');
   });

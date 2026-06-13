@@ -13,6 +13,10 @@ vi.mock('@alga-psa/auth', () => ({
       fn({ id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 function buildThenableQuery(result: any) {
   const builder: any = {};
   builder.where = vi.fn(() => builder);

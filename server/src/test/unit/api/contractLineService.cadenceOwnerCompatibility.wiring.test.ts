@@ -15,8 +15,8 @@ describe('ContractLineService cadence_owner compatibility wiring', () => {
 
     expect(source).toContain('function normalizeContractLineCompatibility');
     expect(source.match(/normalizeContractLineCompatibility\(plan\)/g)?.length).toBeGreaterThanOrEqual(3);
-    expect(source).toContain(
-      "import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';",
+    expect(source).toMatch(
+      /import\s*{[^}]*\bresolveRecurringAuthoringPolicy\b[^}]*}\s*from '@shared\/billingClients\/recurringAuthoringPolicy';/,
     );
     expect(source.match(/const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy\(/g)?.length).toBeGreaterThanOrEqual(3);
     expect(source).toContain('updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;');

@@ -462,6 +462,11 @@ describe('invoice preview recurring timing', () => {
           },
         },
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(result).toEqual({
@@ -734,6 +739,11 @@ describe('invoice preview recurring timing', () => {
           },
         },
         recurringTimingSelectionSource: 'persisted',
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
       },
     );
     expect(result).toMatchObject({ success: true });

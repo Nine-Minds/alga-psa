@@ -25,7 +25,9 @@ describe('server action product access contract', () => {
     for (const relPath of guardedFiles) {
       const source = readFileSync(join(repoRoot, relPath), 'utf8');
       expect(
-        source.includes('assertPsaOnlyTenantAccess') || source.includes('assertTenantProductAccess')
+        source.includes('assertPsaOnlyTenantAccess') ||
+          source.includes('assertTenantProductAccess') ||
+          source.includes('assertPsaChatProductAccess')
       ).toBe(true);
     }
   });

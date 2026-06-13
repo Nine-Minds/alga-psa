@@ -34,11 +34,38 @@ const mockState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
-  ApiKeyServiceForApi: {
-    validateApiKeyAnyTenant: vi.fn(async () => mockState.validateResult),
-    validateApiKeyForTenant: vi.fn(async () => mockState.validateResult),
-  },
+// The route authenticates via authenticateApiKeyRequest, which (in production)
+// validates the key AND resolves the full user/tenant context from the DB. For
+// this unit test we mock the boundary directly: a non-null validateResult yields
+// an authenticated request whose context carries { tenant, userId }; otherwise
+// we throw the same UnauthorizedError the real middleware would, so handleApiError
+// maps it to a 401.
+class FakeUnauthorizedError extends Error {
+  statusCode = 401;
+  code = 'UNAUTHORIZED';
+  constructor(message = 'Unauthorized') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({
+  authenticateApiKeyRequest: vi.fn(async (req: Request) => {
+    const hasAuth =
+      Boolean(req.headers.get('authorization')) || Boolean(req.headers.get('x-api-key'));
+    if (!hasAuth) {
+      throw new FakeUnauthorizedError('API key required');
+    }
+    if (!mockState.validateResult) {
+      throw new FakeUnauthorizedError('Invalid API key');
+    }
+    const authed = req as Request & { context?: Record<string, unknown> };
+    authed.context = {
+      tenant: mockState.validateResult.tenant,
+      userId: mockState.validateResult.user_id,
+    };
+    return authed;
+  }),
 }));
 
 vi.mock('@/lib/mobileAuth/appleSignIn', () => ({

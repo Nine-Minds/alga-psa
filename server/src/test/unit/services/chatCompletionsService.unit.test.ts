@@ -884,6 +884,16 @@ describe('ChatCompletionsService (unit)', () => {
 
     expect(executeFunctionCallSpy).toHaveBeenCalledTimes(1);
     expect(streamedEvents).toEqual([
+      expect.objectContaining({
+        type: 'tool_executed',
+        assistantPreview: 'Automatically ran List tickets.',
+        functionCall: expect.objectContaining({
+          name: 'call_api_endpoint',
+          toolCallId: 'tool-call-stream-auto-get',
+          entryId: 'tickets.list',
+          arguments: { entryId: 'tickets.list' },
+        }),
+      }),
       { type: 'content_delta', delta: 'Streamed ticket result.' },
       { type: 'done' },
     ]);
@@ -912,7 +922,9 @@ describe('ChatCompletionsService (unit)', () => {
                       type: 'function',
                       function: {
                         name: 'call_api_endpoint',
-                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                        // Truncated mid-string so the streaming JSON repair cannot
+                        // recover it and the retry path is exercised.
+                        arguments: '{"entryId":"tickets.list","query":{"status":"op',
                       },
                     },
                   ],
@@ -977,7 +989,9 @@ describe('ChatCompletionsService (unit)', () => {
                       type: 'function',
                       function: {
                         name: 'call_api_endpoint',
-                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                        // Truncated mid-string so the streaming JSON repair cannot
+                        // recover it and the parse-failure logging is exercised.
+                        arguments: '{"entryId":"tickets.list","query":{"status":"op',
                       },
                     },
                   ],
@@ -1006,7 +1020,7 @@ describe('ChatCompletionsService (unit)', () => {
         source: 'stream',
         functionName: 'call_api_endpoint',
         toolCallId: 'tool-call-log-context',
-        rawArguments: '{"entryId":"tickets.list","query":{"status":"open"',
+        rawArguments: '{"entryId":"tickets.list","query":{"status":"op',
         rawArgumentsLength: expect.any(Number),
       }),
       expect.any(SyntaxError),

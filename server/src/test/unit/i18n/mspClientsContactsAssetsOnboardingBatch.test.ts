@@ -56,16 +56,34 @@ const extractVariables = (value: string): string[] => {
   return matches ? matches.map((match) => match.trim()) : [];
 };
 
+// CLDR plural suffixes vary per language (e.g. Polish adds _few/_many), so plural
+// variants are collapsed to their base key before comparing against English.
+const cldrPluralSuffix = /_(zero|one|two|few|many|other)$/;
+
+const normalizePluralKeys = (keys: Iterable<string>): string[] => {
+  const normalized = new Set<string>();
+  for (const key of keys) {
+    normalized.add(key.replace(cldrPluralSuffix, '_[plural]'));
+  }
+  return [...normalized].sort();
+};
+
 const assertLocaleBundleMatchesEnglish = (namespace: BatchNamespace) => {
   const englishLeaves = collectLeafEntries(readLocaleJson('en', namespace));
   const englishKeys = [...englishLeaves.keys()].sort();
+  const englishPluralKeys = normalizePluralKeys(englishLeaves.keys());
 
   for (const locale of productionLocales) {
     const localeLeaves = collectLeafEntries(readLocaleJson(locale, namespace));
-    expect([...localeLeaves.keys()].sort()).toEqual(englishKeys);
+    expect(normalizePluralKeys(localeLeaves.keys())).toEqual(englishPluralKeys);
 
     if (locale !== 'en') {
       for (const [key, englishValue] of englishLeaves) {
+        if (!localeLeaves.has(key)) {
+          // The locale uses a different CLDR plural form set; structural coverage is
+          // already asserted via the normalized key comparison above.
+          continue;
+        }
         expect(extractVariables(localeLeaves.get(key) ?? '')).toEqual(
           extractVariables(englishValue),
         );
@@ -74,6 +92,7 @@ const assertLocaleBundleMatchesEnglish = (namespace: BatchNamespace) => {
   }
 
   for (const locale of pseudoLocales) {
+    // Pseudo-locales are generated directly from English, so keys must match exactly.
     const pseudoLeaves = collectLeafEntries(readLocaleJson(locale, namespace));
     expect([...pseudoLeaves.keys()].sort()).toEqual(englishKeys);
   }

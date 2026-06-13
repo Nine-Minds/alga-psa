@@ -107,16 +107,23 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'common',
       'msp/core',
       'msp/settings',
+      'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
       'features/projects',
       'features/tickets',
+      'msp/billing-settings',
+      'msp/service-catalog',
+      'features/billing',
+      'msp/calendar',
+      'msp/integrations',
     ]);
 
     expect(ROUTE_NAMESPACES['/msp/service-requests']).toEqual([
       'common',
       'msp/core',
       'features/tickets',
+      'msp/service-requests',
     ]);
     expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/time-entry']);
     expect(ROUTE_NAMESPACES['/msp/time-sheet-approvals']).toEqual([
@@ -132,7 +139,11 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
   });
 
   it('T023/T033: Italian admin and time-entry locale files stay clear of the accent-audit anti-patterns', () => {
-    const accentAuditPattern = / e [a-z]| puo | gia | verra | funzionalita| necessario/;
+    // " e " followed by a lowercase letter is legitimate Italian ("and"), so the audit
+    // only flags dropped-accent forms (e.g. "puo" instead of "può", " e necessario"
+    // instead of " è necessario").
+    const accentAuditPattern =
+      /\b(puo|gia|verra|funzionalita|perche|cosi|piu)\b| e necessario| e possibile| e richiesto| e richiesta| e configurato| e configurata/;
 
     expect(readLocaleText('it', 'admin')).not.toMatch(accentAuditPattern);
     expect(readLocaleText('it', 'time-entry')).not.toMatch(accentAuditPattern);
@@ -176,13 +187,24 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
   });
 
   it('production locale files for reports, admin, and time-entry remain structurally aligned with English', () => {
+    // CLDR plural suffixes vary per language (e.g. Polish adds _few/_many), so plural
+    // variants are collapsed to their base key before comparing against English.
+    const cldrPluralSuffix = /_(zero|one|two|few|many|other)$/;
+    const normalizePluralKeys = (keys: Iterable<string>): string[] => {
+      const normalized = new Set<string>();
+      for (const key of keys) {
+        normalized.add(key.replace(cldrPluralSuffix, '_[plural]'));
+      }
+      return [...normalized].sort();
+    };
+
     for (const namespace of ['reports', 'admin', 'time-entry'] as const) {
       const englishLeaves = collectLeafEntries(readLocaleJson('en', namespace));
-      const englishKeys = [...englishLeaves.keys()].sort();
+      const englishKeys = normalizePluralKeys(englishLeaves.keys());
 
       for (const locale of productionLocales) {
         const localeLeaves = collectLeafEntries(readLocaleJson(locale, namespace));
-        expect([...localeLeaves.keys()].sort()).toEqual(englishKeys);
+        expect(normalizePluralKeys(localeLeaves.keys())).toEqual(englishKeys);
       }
     }
   });

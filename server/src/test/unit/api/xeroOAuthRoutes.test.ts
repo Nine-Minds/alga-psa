@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const getSessionMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn());
@@ -14,9 +15,31 @@ const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: getSessionMock
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (handler: (...handlerArgs: any[]) => any) =>
+    async (...args: any[]) => {
+      const session = await getSessionMock();
+      const user = session?.user;
+      if (!user) {
+        throw new Error('Unauthorized');
+      }
+      return handler(user, { tenant: user.tenant }, ...args);
+    };
+
+  const withOptionalAuth = (handler: (...handlerArgs: any[]) => any) =>
+    async (...args: any[]) => {
+      const session = await getSessionMock();
+      const user = session?.user ?? null;
+      return handler(user, user ? { tenant: user.tenant } : null, ...args);
+    };
+
+  return {
+    getSession: getSessionMock,
+    getCurrentUser: vi.fn(async () => (await getSessionMock())?.user ?? null),
+    withAuth,
+    withOptionalAuth
+  };
+});
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock
@@ -187,7 +210,9 @@ describe('Xero OAuth routes', () => {
     ).toString('base64url');
 
     const response = await GET(
-      new Request(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`)
+      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
+        headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }
+      })
     );
 
     expect(axiosPostMock).toHaveBeenCalledWith(
@@ -230,7 +255,9 @@ describe('Xero OAuth routes', () => {
     ).toString('base64url');
 
     const response = await GET(
-      new Request(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`)
+      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
+        headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }
+      })
     );
 
     expect(response.status).toBe(307);

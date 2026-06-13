@@ -126,6 +126,11 @@ vi.mock('@/lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+vi.mock('@/lib/api/rateLimit/enforce', () => ({
+  enforceApiRateLimit: vi.fn(async () => null),
+  shouldBypassRateLimit: vi.fn(() => false),
+}));
+
 vi.mock('@/lib/db/db', () => ({
   getConnection: vi.fn(async () => ((tableName: string) => {
     if (tableName !== 'statuses') {

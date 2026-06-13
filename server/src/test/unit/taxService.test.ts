@@ -2,17 +2,55 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../../interfaces/tax.interfaces';
 import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 
-import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll, Mocked } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mocked } from 'vitest';
 
 vi.mock('@alga-psa/billing/models/clientTaxSettings');
+
+// TaxService now resolves tenant context and a knex connection through
+// createTenantKnex() and queries the clients / client_tax_rates / tax_rates
+// tables directly. Mock @alga-psa/db so these unit tests supply both the tenant
+// context and per-table rows without ever touching a live database.
+const db = vi.hoisted(() => ({
+    rows: {} as Record<string, unknown>,
+    queriedTables: [] as string[],
+}));
+
+vi.mock('@alga-psa/db', () => {
+    const makeBuilder = (table: string) => {
+        const builder: Record<string, unknown> = {};
+        for (const method of [
+            'where', 'andWhere', 'orWhere', 'andWhereNot',
+            'whereNull', 'whereNotNull', 'select', 'orderBy',
+        ]) {
+            builder[method] = (..._args: unknown[]) => builder;
+        }
+        builder.first = async () => db.rows[table];
+        return builder;
+    };
+    const knex = (table: string) => {
+        db.queriedTables.push(table);
+        return makeBuilder(table);
+    };
+    (knex as unknown as { fn: { now: () => string } }).fn = { now: () => 'now()' };
+    return {
+        createTenantKnex: async () => ({ knex, tenant: 'test_tenant' }),
+        runWithTenant: async (_tenant: string, fn: () => unknown) => fn(),
+        withTransaction: async (knexOrTrx: unknown, fn: (trx: unknown) => unknown) => fn(knexOrTrx),
+        getTenantContext: async () => 'test_tenant',
+    };
+});
 
 describe('TaxService', () => {
     let taxService: TaxService;
     const mockClientTaxSettings = ClientTaxSettings as Mocked<typeof ClientTaxSettings>;
 
     beforeEach(() => {
-        taxService = new TaxService('test_tenant');
+        taxService = new TaxService();
         vi.clearAllMocks();
+        db.rows = {};
+        db.queriedTables.length = 0;
+        // Every calculateTax call first checks the client's tax-exempt flag.
+        db.rows['clients'] = { is_tax_exempt: false };
     });
 
     describe('calculateTax', () => {
@@ -37,7 +75,8 @@ describe('TaxService', () => {
             };
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+            db.rows['tax_rates'] = mockTaxRate;
             mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([]);
 
             const result = await taxService.calculateTax('client1', 100, '2023-06-01');
@@ -86,7 +125,8 @@ describe('TaxService', () => {
             ];
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+            db.rows['tax_rates'] = mockTaxRate;
             mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
             mockClientTaxSettings.getTaxHolidays.mockResolvedValue([]);
 
@@ -145,18 +185,20 @@ describe('TaxService', () => {
             ];
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+            db.rows['tax_rates'] = mockTaxRate;
             mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue(mockThresholds);
 
             const result = await taxService.calculateTax('client1', 250, '2023-06-01');
 
-            // Expected calculation:
-            // 0-100: 100 * 5% = 5
-            // 100-200: 100 * 10% = 10
-            // 200-250: 50 * 15% = 7.5
-            // Total Tax: 5 + 10 + 7.5 = 22.5
-            expect(result.taxAmount).toBeCloseTo(22.5, 2);
-            expect(result.taxRate).toBeCloseTo(9, 2); // 22.5 / 250 = 9%
+            // Expected calculation (amounts are smallest currency units, each
+            // threshold's tax is rounded up with Math.ceil):
+            // 0-100: ceil(100 * 5%) = 5
+            // 100-200: ceil(100 * 10%) = 10
+            // 200-250: ceil(50 * 15%) = ceil(7.5) = 8
+            // Total Tax: 5 + 10 + 8 = 23
+            expect(result.taxAmount).toBe(23);
+            expect(result.taxRate).toBeCloseTo(9.2, 2); // 23 / 250 = 9.2%
             expect(result.appliedThresholds).toEqual(mockThresholds);
         });
 
@@ -202,7 +244,8 @@ describe('TaxService', () => {
             ];
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+            db.rows['tax_rates'] = mockTaxRate;
             mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
             mockClientTaxSettings.getTaxHolidays.mockResolvedValue(mockHolidays);
 
@@ -249,13 +292,6 @@ describe('TaxService', () => {
 
     describe('getTaxType', () => {
         it('should return correct tax type', async () => {
-            const mockTaxSettings: IClientTaxSettings = {
-                tenant: 'test_tenant',
-                client_id: 'client1',
-                tax_rate_id: 'rate1',
-                is_reverse_charge_applicable: false,
-            };
-
             const mockTaxRate: ITaxRate = {
                 tax_rate_id: 'rate1',
                 tax_type: 'VAT',
@@ -268,8 +304,8 @@ describe('TaxService', () => {
                 name: 'Standard VAT',
             };
 
-            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+            db.rows['tax_rates'] = mockTaxRate;
 
             const result = await taxService.getTaxType('client1');
 

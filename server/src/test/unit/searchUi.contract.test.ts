@@ -16,9 +16,16 @@ describe('app-wide search UI contracts', () => {
 
   it('T123 binds Cmd+K and Ctrl+K to focus the SearchPalette input', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const catalogSource = readFileSync(
+      resolve(process.cwd(), '../packages/ui/src/keyboard-shortcuts/catalog.ts'),
+      'utf8',
+    );
 
-    expect(source).toContain("event.key.toLowerCase() !== 'k'");
-    expect(source).toContain('!event.metaKey && !event.ctrlKey');
+    // The Cmd+K / Ctrl+K binding now lives in the shared keyboard-shortcut catalog
+    // ('mod' resolves to metaKey on macOS and ctrlKey elsewhere) and SearchPalette
+    // subscribes to it via useCatalogShortcut to focus its input.
+    expect(catalogSource).toContain("entry('global.search', 'global', 'global', ['mod+k'])");
+    expect(source).toContain("useCatalogShortcut('global.search', focusSearchInput)");
     expect(source).toContain('inputRef.current?.focus()');
   });
 

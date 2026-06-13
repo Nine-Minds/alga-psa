@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
+const getUserPreferenceMock = vi.fn();
 const getCurrentTenantProductMock = vi.fn();
 const getConsolidatedTicketListDataMock = vi.fn();
 const getTicketingDisplaySettingsMock = vi.fn();
@@ -17,6 +18,7 @@ function MspTicketsPageClientMock() {
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
+  getUserPreference: getUserPreferenceMock,
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -54,6 +56,7 @@ describe('MSP tickets page product composition', () => {
 
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     getCurrentUserPermissionsMock.mockResolvedValue(['ticket:update']);
+    getUserPreferenceMock.mockResolvedValue(null);
     getConsolidatedTicketListDataMock.mockResolvedValue({
       tickets: [],
       totalCount: 0,

@@ -24,6 +24,11 @@ describe('UserAndTeamPicker selected team display', () => {
     expect(picker).toContain('teamIds.add(currentTeam.team_id);');
     expect(picker).toContain('<TeamAvatar');
     expect(picker).toContain('teamId={currentTeam.team_id}');
-    expect(picker).toContain('avatarUrl={teamAvatarUrls[currentTeam.team_id] ?? null}');
+    // The trigger avatar now resolves through resolveTeamAvatar, which reads the
+    // fetched teamAvatarUrls map with an initialTeamAvatarUrls fallback.
+    expect(picker).toContain('avatarUrl={resolveTeamAvatar(currentTeam.team_id)}');
+    expect(picker).toContain(
+      'teamAvatarUrls[teamId] ?? initialTeamAvatarUrls?.[teamId] ?? null',
+    );
   });
 });

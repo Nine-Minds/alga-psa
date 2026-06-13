@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Repo root, resolved from this file (server/src/test/unit) so the test works
+// regardless of the cwd vitest is launched from.
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
 describe('workflow event catalog migration coverage', () => {
   it('includes catalog rows for every event in event-proposals.md', async () => {
     const proposalsPath = path.join(
-      process.cwd(),
+      repoRoot,
       'ee',
       'docs',
       'plans',
@@ -13,7 +18,7 @@ describe('workflow event catalog migration coverage', () => {
       'event-proposals.md'
     );
     const migrationPath = path.join(
-      process.cwd(),
+      repoRoot,
       'server',
       'migrations',
       '20260123150000_upsert_domain_workflow_event_catalog_v2.cjs'
@@ -38,9 +43,10 @@ describe('workflow event catalog migration coverage', () => {
       expect(migrationEventTypes.has(eventType)).toBe(true);
     }
 
-    // Sanity check: migration computes payload_schema_ref from event_type.
-    expect(migration.includes('toPayloadSchemaRef')).toBe(true);
-    expect(migration.includes('payload_schema_ref: toPayloadSchemaRef(e.event_type)')).toBe(true);
+    // Sanity check: migration computes payload_schema_ref from event_type for
+    // every catalog row and writes it in the upsert (raw SQL form, Citus-safe).
+    expect(migration.includes('toPayloadSchemaRef(e.event_type)')).toBe(true);
+    expect(migration.includes('payload_schema_ref = EXCLUDED.payload_schema_ref')).toBe(true);
   });
 });
 

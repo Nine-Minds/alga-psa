@@ -1,11 +1,14 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InternalNotificationListResponse, UnreadCountResponse } from '@alga-psa/notifications';
-import { createTenantKnex } from '../../../lib/db';
+// Internal notification actions + their broadcaster moved into the shared
+// @alga-psa/notifications package. They now obtain createTenantKnex/withTransaction
+// from @alga-psa/db (createTenantKnex via dynamic import).
+import { createTenantKnex } from '@alga-psa/db';
 import {
   broadcastNotification,
   broadcastNotificationRead,
   broadcastAllNotificationsRead
-} from '../../../lib/realtime/internalNotificationBroadcaster';
+} from '@alga-psa/notifications/realtime/internalNotificationBroadcaster';
 import { randomUUID } from 'crypto';
 
 type Row = Record<string, any>;
@@ -391,6 +394,12 @@ function buildNotification(overrides: Partial<NotificationRow>): NotificationRow
 
 let currentDb: MockDb | null = null;
 
+// vi.mock factories are hoisted above module-level consts, so the spy must live
+// in a vi.hoisted holder to be referenceable from the @alga-psa/db factory.
+const dbHoisted = vi.hoisted(() => ({
+  withTransactionSpy: undefined as unknown as ReturnType<typeof vi.fn>,
+}));
+
 const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTransaction) => Promise<unknown>) => {
   if (!currentDb) {
     throw new Error('Mock database not configured');
@@ -398,21 +407,34 @@ const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTran
   const trx = createMockTransaction(currentDb);
   return callback(trx);
 });
+dbHoisted.withTransactionSpy = withTransactionSpy;
 
 vi.mock('@alga-psa/db', () => ({
-  withTransaction: withTransactionSpy
-}));
-
-vi.mock('../../../lib/db', () => ({
+  withTransaction: (...args: any[]) => dbHoisted.withTransactionSpy(...args),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   getConnection: vi.fn()
 }));
 
-vi.mock('../../../lib/realtime/internalNotificationBroadcaster', () => ({
+vi.mock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', () => ({
   broadcastNotification: vi.fn(),
   broadcastNotificationRead: vi.fn(),
   broadcastAllNotificationsRead: vi.fn(),
   broadcastUnreadCount: vi.fn()
+}));
+
+// Permission/hook/event-bus dependencies introduced when the actions moved into
+// the shared package — stub them so the data-access behavior under test stays
+// isolated from auth, post-creation hooks, and the workflow event bus.
+vi.mock('@alga-psa/notifications/lib/authHelpers', () => ({
+  hasPermissionAsync: vi.fn(async () => true),
+}));
+
+vi.mock('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks', () => ({
+  runPostCreationHooks: vi.fn(async () => undefined),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
 const createTenantKnexMock = vi.mocked(createTenantKnex);
@@ -428,7 +450,7 @@ let markAllAsReadAction: (tenant: string, userId: string) => Promise<{ updated_c
 let deleteNotificationAction: (tenant: string, userId: string, notificationId: string) => Promise<void>;
 
 beforeAll(async () => {
-  const module = await import('../../../lib/actions/internal-notification-actions/internalNotificationActions');
+  const module = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
   createNotificationFromTemplateAction = module.createNotificationFromTemplateAction as unknown as typeof createNotificationFromTemplateAction;
   getNotificationsAction = module.getNotificationsAction;
   getUnreadCountAction = module.getUnreadCountAction;
@@ -720,19 +742,17 @@ describe('internalNotificationActions data access', () => {
       expect(broadcastNotificationMock).not.toHaveBeenCalled();
     });
 
-    it('skips notification when subtype is disabled system-wide', async () => {
+    it('skips notification when subtype is disabled for the tenant', async () => {
+      // System-wide enablement is now controlled by per-tenant settings tables
+      // (tenant_internal_notification_subtype_settings), not the is_enabled flag
+      // on the global subtype catalog row.
       currentDb = createMockDb(buildBaseTables({
-        internal_notification_subtypes: [
+        tenant_internal_notification_subtype_settings: [
           {
-            internal_notification_subtype_id: 1,
-            internal_category_id: 10,
-            name: 'ticket-assigned',
-            description: null,
+            tenant: 'tenant-1',
+            subtype_id: 1,
             is_enabled: false,
-            is_default_enabled: true,
-            available_for_client_portal: true,
-            created_at: baseTimestamp,
-            updated_at: baseTimestamp
+            is_default_enabled: true
           }
         ]
       }));
@@ -749,18 +769,14 @@ describe('internalNotificationActions data access', () => {
       expect(broadcastNotificationMock).not.toHaveBeenCalled();
     });
 
-    it('skips notification when category is disabled system-wide', async () => {
+    it('skips notification when category is disabled for the tenant', async () => {
       currentDb = createMockDb(buildBaseTables({
-        internal_notification_categories: [
+        tenant_internal_notification_category_settings: [
           {
-            internal_notification_category_id: 10,
-            name: 'tickets',
-            description: null,
+            tenant: 'tenant-1',
+            category_id: 10,
             is_enabled: false,
-            is_default_enabled: true,
-            available_for_client_portal: true,
-            created_at: baseTimestamp,
-            updated_at: baseTimestamp
+            is_default_enabled: true
           }
         ]
       }));

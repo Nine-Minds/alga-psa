@@ -33,8 +33,17 @@ vi.mock('@alga-psa/clients/actions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children, isOpen }: any) => (isOpen ? <div>{children}</div> : null),
+  // The dialog footer (with the submit button) is passed via the `footer` prop,
+  // so the mock must render it alongside children.
+  Dialog: ({ children, footer, isOpen }: any) =>
+    isOpen ? (
+      <div>
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogDescription: ({ children }: any) => <div>{children}</div>,
   DialogTrigger: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
@@ -153,6 +162,11 @@ describe('QuickAddClient hybrid inline-contact payloads', () => {
     );
 
     await user.type(document.getElementById('client-name') as HTMLInputElement, 'Acme');
+
+    // The Contact Information section is collapsible and defaults to collapsed;
+    // expand it before interacting with the inline-contact fields.
+    await user.click(document.getElementById('toggle-contact-section') as HTMLButtonElement);
+
     await user.type(document.getElementById('contact-name') as HTMLInputElement, 'Alex Contact');
     await user.type(document.getElementById('client-contact-email-primary-email') as HTMLInputElement, 'alex@acme.com');
     await user.click(document.getElementById('client-contact-email-add') as HTMLButtonElement);
@@ -172,9 +186,17 @@ describe('QuickAddClient hybrid inline-contact payloads', () => {
     const phoneInputs = screen.getAllByLabelText('Phone Number');
     await user.type(phoneInputs[0]!, '+1 555 111 2222');
     await user.type(phoneInputs[1]!, '+1 555 333 4444');
-    await user.click(screen.getAllByRole('radio', { name: 'Default' })[1]!);
+    // Both the email and phone editors render "Default" radios, so scope the
+    // selection to the phone editor's radio group (name="<id>-default-phone")
+    // and mark the second phone as default.
+    const phoneDefaultRadios = document.querySelectorAll<HTMLInputElement>(
+      'input[name="client-contact-phone-default-phone"]'
+    );
+    await user.click(phoneDefaultRadios[1]!);
 
-    await user.click(screen.getByRole('button', { name: /create client/i }));
+    // The footer now has several create variants; click the primary "Create"
+    // button via its stable id (button text changed to "Create").
+    await user.click(document.getElementById('create-client-btn') as HTMLButtonElement);
 
     await waitFor(() => {
       expect(createClientContactMock).toHaveBeenCalledTimes(1);

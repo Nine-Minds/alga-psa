@@ -38,7 +38,18 @@ function createQueryBuilder(rows: Row[]) {
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
     select: vi.fn(() => builder),
-    where: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any, maybeValue?: any) => {
+    where: vi.fn((columnOrCriteria: string | Record<string, any> | ((this: any, qb?: any) => void), operatorOrValue?: any, maybeValue?: any) => {
+      if (typeof columnOrCriteria === 'function') {
+        // Grouped where callback (e.g. builder.whereNull(...).orWhere(...)).
+        // Run the callback against a permissive sub-builder without filtering.
+        const subBuilder: any = {};
+        for (const method of ['where', 'orWhere', 'whereNull', 'orWhereNull', 'whereNotNull', 'whereIn', 'orWhereIn']) {
+          subBuilder[method] = vi.fn(() => subBuilder);
+        }
+        columnOrCriteria.call(subBuilder, subBuilder);
+        return builder;
+      }
+
       if (typeof columnOrCriteria === 'object') {
         resultRows = resultRows.filter((row) =>
           Object.entries(columnOrCriteria).every(([column, expected]) =>
@@ -103,9 +114,15 @@ vi.mock('@alga-psa/auth', () => ({
       ),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
+  getTenantContext: vi.fn(async () => 'tenant-1'),
 }));
 
 const { getAvailableRecurringDueWork } = await import('../../../../../packages/billing/src/actions/billingAndTax');

@@ -19,6 +19,7 @@ describe('Calendar webhook route delegators', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.doUnmock('@alga-psa/ee-calendar/routes');
 
     if (originalEdition === undefined) {
       delete process.env.EDITION;
@@ -64,15 +65,13 @@ describe('Calendar webhook route delegators', () => {
     const eeMicrosoftPost = vi.fn(async () => new Response(JSON.stringify({ ok: 'microsoft-post' }), { status: 202 }));
     const eeMicrosoftOptions = vi.fn(async () => new Response(null, { status: 204 }));
 
-    vi.doMock('@enterprise/app/api/calendar/webhooks/google/route', () => ({
-      GET: eeGoogleGet,
-      POST: eeGooglePost,
-      OPTIONS: eeGoogleOptions,
-    }));
-    vi.doMock('@enterprise/app/api/calendar/webhooks/microsoft/route', () => ({
-      GET: eeMicrosoftGet,
-      POST: eeMicrosoftPost,
-      OPTIONS: eeMicrosoftOptions,
+    vi.doMock('@alga-psa/ee-calendar/routes', () => ({
+      handleGoogleCalendarWebhookGet: eeGoogleGet,
+      handleGoogleCalendarWebhookPost: eeGooglePost,
+      handleGoogleCalendarWebhookOptions: eeGoogleOptions,
+      handleMicrosoftCalendarWebhookGet: eeMicrosoftGet,
+      handleMicrosoftCalendarWebhookPost: eeMicrosoftPost,
+      handleMicrosoftCalendarWebhookOptions: eeMicrosoftOptions,
     }));
 
     const googleRoute = await import('@/app/api/calendar/webhooks/google/route');
